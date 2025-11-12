@@ -30,16 +30,16 @@ export function EditorLayout() {
     openFile: (filePath: string) => console.log('Open file:', filePath),
     openGitDiff: (filePath: string) => console.log('Open git diff:', filePath),
     navigateToPanel: (panelId: string) => console.log('Navigate to panel:', panelId),
-    notifyPanels: (event: any) => console.log('Notify panels:', event),
+    notifyPanels: (event: unknown) => console.log('Notify panels:', event),
   }), []);
 
   const mockPanelEvents = useMemo(() => ({
-    emit: (event: any) => console.log('Emit event:', event),
-    on: (type: string, handler: any) => {
+    emit: (event: unknown) => console.log('Emit event:', event),
+    on: (type: string, handler: unknown) => {
       console.log('Subscribe to:', type, handler);
       return () => console.log('Unsubscribe from:', type);
     },
-    off: (type: string, handler: any) => console.log('Unsubscribe from:', type, handler),
+    off: (type: string, handler: unknown) => console.log('Unsubscribe from:', type, handler),
   }), []);
 
   return (
@@ -57,6 +57,7 @@ export function EditorLayout() {
         middlePanel={
           <div className="h-full w-full overflow-hidden">
             <ThemedAIChatPanel
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               context={mockPanelContext as any}
               actions={mockPanelActions}
               events={mockPanelEvents}
@@ -74,9 +75,9 @@ export function EditorLayout() {
           </div>
         }
         defaultSizes={{
-          left: 20,
+          left: 25,
           middle: 50,
-          right: 30,
+          right: 25,
         }}
         minSizes={{
           left: 15,
@@ -87,7 +88,7 @@ export function EditorLayout() {
           left: true,
           right: true,
         }}
-        showCollapseButtons={true}
+        showCollapseButtons={false}
       />
     </div>
   );

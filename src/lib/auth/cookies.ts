@@ -14,7 +14,8 @@ export interface TokenData {
   github_access_token: string;
   workos_access_token: string;
   refresh_token: string;
-  expires_in: number;
+  expires_in?: number;
+  user?: UserData;
 }
 
 /**

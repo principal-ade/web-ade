@@ -141,8 +141,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Fetch user on mount
    */
   useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
+    void fetchUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const value: AuthContextType = {
     ...state,

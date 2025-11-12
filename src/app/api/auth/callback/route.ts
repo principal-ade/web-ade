@@ -17,10 +17,65 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const state = searchParams.get('state');
+    const code = searchParams.get('code');
+    const authError = searchParams.get('auth_error');
+
+    // Debug: Log all parameters and cookies received
+    console.log('Callback received:', {
+      state,
+      code,
+      authError,
+      allParams: Object.fromEntries(searchParams.entries()),
+      cookies: request.cookies.getAll(),
+    });
+
+    // Check if landing page handled auth and set cookie
+    const workosSession = request.cookies.get('workos_session');
+    if (workosSession) {
+      console.log('Found workos_session cookie from landing page');
+
+      try {
+        const sessionData = JSON.parse(workosSession.value);
+
+        // Set our own auth cookies with the data from landing page
+        const tokenData: TokenData = {
+          github_access_token: sessionData.github_access_token || sessionData.access_token,
+          workos_access_token: sessionData.access_token,
+          refresh_token: sessionData.refresh_token,
+          user: {
+            id: sessionData.id,
+            email: sessionData.email,
+            login: sessionData.login,
+            name: sessionData.name,
+            avatar_url: sessionData.avatar_url,
+          },
+        };
+
+        await setAuthCookies(tokenData);
+
+        // Clear the landing page cookie
+        const response = NextResponse.redirect(new URL('/editor', request.url));
+        response.cookies.delete('workos_session');
+
+        return response;
+      } catch (e) {
+        console.error('Failed to parse workos_session cookie:', e);
+      }
+    }
+
+    // Handle auth errors from landing page
+    if (authError) {
+      const errorMessage = searchParams.get('error_message') || 'Authentication failed';
+      console.error('Auth error from landing page:', authError, errorMessage);
+      return NextResponse.redirect(new URL(`/?error=${authError}`, request.url));
+    }
 
     if (!state) {
       return NextResponse.json(
-        { error: 'Missing state parameter' },
+        {
+          error: 'Missing state parameter',
+          received: Object.fromEntries(searchParams.entries()),
+        },
         { status: 400 }
       );
     }

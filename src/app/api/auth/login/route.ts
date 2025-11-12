@@ -1,5 +1,5 @@
 /**
- * POST /api/auth/login
+ * GET/POST /api/auth/login
  *
  * Initiates OAuth flow by:
  * 1. Generating PKCE challenge and state
@@ -12,7 +12,7 @@ import { NextResponse } from 'next/server';
 import { generatePKCE, generateState } from '@/lib/auth/pkce';
 import { setAuthSession } from '@/lib/auth/session';
 
-export async function POST() {
+async function handleLogin() {
   try {
     // Generate PKCE challenge and state
     const { codeVerifier, codeChallenge } = await generatePKCE();
@@ -27,8 +27,14 @@ export async function POST() {
       throw new Error('LANDING_PAGE_URL not configured');
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const returnUrl = `${appUrl}/auth/callback`;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
+    const returnUrl = `${appUrl}/api/auth/callback`;
+
+    console.log('Calling landing page:', {
+      url: `${landingPageUrl}/api/auth/workos/start`,
+      state,
+      returnUrl,
+    });
 
     const response = await fetch(`${landingPageUrl}/api/auth/workos/start`, {
       method: 'POST',
@@ -50,9 +56,13 @@ export async function POST() {
 
     const data = await response.json();
 
+    console.log('Landing page response:', data);
+
     if (!data.auth_url) {
       throw new Error('No auth_url returned from landing-page');
     }
+
+    console.log('Redirecting to OAuth URL:', data.auth_url);
 
     // Redirect user to OAuth provider
     return NextResponse.redirect(data.auth_url);
@@ -66,4 +76,12 @@ export async function POST() {
       { status: 500 }
     );
   }
+}
+
+export async function GET() {
+  return handleLogin();
+}
+
+export async function POST() {
+  return handleLogin();
 }
