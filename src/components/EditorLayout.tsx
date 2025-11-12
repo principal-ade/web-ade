@@ -2,10 +2,45 @@
 
 import { ThreePanelLayout } from '@principal-ade/panel-layouts';
 import { useTheme } from '@a24z/industry-theme';
+import { ThemedAIChatPanel } from '@principal-ade/industry-themed-ai-sdk/components';
+import { useMemo } from 'react';
 import '@a24z/panels/panels.css';
+import '@principal-ade/industry-themed-ai-sdk/styles.css';
 
 export function EditorLayout() {
   const { theme } = useTheme();
+
+  // Mock panel context for the AI chat panel
+  const mockPanelContext = useMemo(() => ({
+    repositoryPath: '/Users/example/project',
+    repository: { path: '/Users/example/project', name: 'example-project' },
+    gitStatus: { staged: [], unstaged: [], untracked: [], deleted: [] },
+    gitStatusLoading: false,
+    markdownFiles: [],
+    fileTree: null,
+    packages: null,
+    quality: null,
+    loading: false,
+    refresh: async () => {},
+    hasSlice: (slice: string) => slice === 'git',
+    isSliceLoading: () => false,
+  }), []);
+
+  const mockPanelActions = useMemo(() => ({
+    openFile: (filePath: string) => console.log('Open file:', filePath),
+    openGitDiff: (filePath: string) => console.log('Open git diff:', filePath),
+    navigateToPanel: (panelId: string) => console.log('Navigate to panel:', panelId),
+    notifyPanels: (event: any) => console.log('Notify panels:', event),
+  }), []);
+
+  const mockPanelEvents = useMemo(() => ({
+    emit: (event: any) => console.log('Emit event:', event),
+    on: (type: string, handler: any) => {
+      console.log('Subscribe to:', type);
+      return () => console.log('Unsubscribe from:', type);
+    },
+    off: (type: string, handler: any) => console.log('Unsubscribe from:', type),
+  }), []);
 
   return (
     <div className="h-full w-full">
@@ -20,11 +55,14 @@ export function EditorLayout() {
           </div>
         }
         middlePanel={
-          <div className="flex h-full w-full items-center justify-center p-4 text-sm">
-            <div className="text-center">
-              <h3 className="text-lg font-semibold mb-2">Middle Panel</h3>
-              <p className="text-gray-400">Editor</p>
-            </div>
+          <div className="h-full w-full overflow-hidden">
+            <ThemedAIChatPanel
+              context={mockPanelContext as any}
+              actions={mockPanelActions}
+              events={mockPanelEvents}
+              api="/api/chat"
+              placeholder="Ask me anything about your code..."
+            />
           </div>
         }
         rightPanel={
