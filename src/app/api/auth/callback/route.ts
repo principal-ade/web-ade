@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
     await clearAuthSession();
 
     // Redirect to dashboard
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.APP_URL || 'http://localhost:3000';
     return NextResponse.redirect(new URL('/dashboard', appUrl));
   } catch (error) {
     console.error('Callback error:', error);
@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Redirect to home with error
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.APP_URL || 'http://localhost:3000';
     return NextResponse.redirect(
       new URL('/?error=auth_failed', appUrl)
     );
