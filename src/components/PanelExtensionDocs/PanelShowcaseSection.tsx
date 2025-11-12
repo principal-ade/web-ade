@@ -64,7 +64,7 @@ export function PanelShowcaseSection() {
       case 'In Development':
         return theme.colors.warning || '#f59e0b';
       default:
-        return theme.colors.mutedForeground;
+        return theme.colors.textMuted;
     }
   };
 
@@ -72,10 +72,10 @@ export function PanelShowcaseSection() {
     <section className="py-20 px-6" style={{ background: theme.colors.muted }}>
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4" style={{ color: theme.colors.foreground }}>
+          <h2 className="text-4xl font-bold mb-4" style={{ color: theme.colors.text }}>
             Panel Showcase
           </h2>
-          <p className="text-lg max-w-2xl mx-auto" style={{ color: theme.colors.mutedForeground }}>
+          <p className="text-lg max-w-2xl mx-auto" style={{ color: theme.colors.textMuted }}>
             Example panels demonstrating the capabilities of the extension system
           </p>
         </div>
@@ -86,7 +86,7 @@ export function PanelShowcaseSection() {
               key={index}
               className="rounded-lg overflow-hidden transition-all hover:scale-102"
               style={{
-                background: theme.colors.card,
+                background: theme.colors.surface,
                 border: `1px solid ${theme.colors.border}`,
               }}
             >
@@ -99,7 +99,7 @@ export function PanelShowcaseSection() {
                   <panel.Icon className="w-12 h-12 flex-shrink-0" style={{ color: theme.colors.primary }} />
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-xl font-bold" style={{ color: theme.colors.foreground }}>
+                      <h3 className="text-xl font-bold" style={{ color: theme.colors.text }}>
                         {panel.name}
                       </h3>
                       <span
@@ -112,7 +112,7 @@ export function PanelShowcaseSection() {
                         {panel.status}
                       </span>
                     </div>
-                    <p className="text-sm mb-3" style={{ color: theme.colors.mutedForeground }}>
+                    <p className="text-sm mb-3" style={{ color: theme.colors.textMuted }}>
                       {panel.description}
                     </p>
                     <code
@@ -131,7 +131,7 @@ export function PanelShowcaseSection() {
 
               {/* Panel Preview */}
               <div className="p-6" style={{ background: theme.colors.background }}>
-                <div className="text-xs font-medium mb-3" style={{ color: theme.colors.mutedForeground }}>
+                <div className="text-xs font-medium mb-3" style={{ color: theme.colors.textMuted }}>
                   KEY FEATURES
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -142,7 +142,7 @@ export function PanelShowcaseSection() {
                       style={{ background: theme.colors.muted }}
                     >
                       <span style={{ color: theme.colors.primary }}>✓</span>
-                      <span style={{ color: theme.colors.foreground }}>{feature}</span>
+                      <span style={{ color: theme.colors.text }}>{feature}</span>
                     </div>
                   ))}
                 </div>
@@ -157,7 +157,7 @@ export function PanelShowcaseSection() {
                   className="px-4 py-2 rounded text-sm font-medium flex-1 transition-all"
                   style={{
                     background: theme.colors.primary,
-                    color: theme.colors.primaryForeground,
+                    color: theme.colors.background,
                   }}
                   disabled={panel.status !== 'Available'}
                 >
@@ -167,7 +167,7 @@ export function PanelShowcaseSection() {
                   className="px-4 py-2 rounded text-sm font-medium transition-all"
                   style={{
                     background: theme.colors.secondary,
-                    color: theme.colors.secondaryForeground,
+                    color: theme.colors.text,
                   }}
                 >
                   Learn More
@@ -181,14 +181,14 @@ export function PanelShowcaseSection() {
         <div
           className="mt-16 p-8 rounded-lg text-center"
           style={{
-            background: theme.colors.card,
+            background: theme.colors.surface,
             border: `1px solid ${theme.colors.border}`,
           }}
         >
-          <h3 className="text-2xl font-bold mb-3" style={{ color: theme.colors.foreground }}>
+          <h3 className="text-2xl font-bold mb-3" style={{ color: theme.colors.text }}>
             Build Your Own Panel
           </h3>
-          <p className="text-lg mb-6" style={{ color: theme.colors.mutedForeground }}>
+          <p className="text-lg mb-6" style={{ color: theme.colors.textMuted }}>
             Have an idea for a panel? The extension system makes it easy to create and share.
           </p>
           <div className="flex gap-4 justify-center">
@@ -196,7 +196,7 @@ export function PanelShowcaseSection() {
               className="px-6 py-3 rounded-lg font-medium transition-all hover:scale-105"
               style={{
                 background: theme.colors.primary,
-                color: theme.colors.primaryForeground,
+                color: theme.colors.background,
               }}
             >
               Read the Spec
@@ -205,7 +205,7 @@ export function PanelShowcaseSection() {
               className="px-6 py-3 rounded-lg font-medium transition-all hover:scale-105"
               style={{
                 background: theme.colors.secondary,
-                color: theme.colors.secondaryForeground,
+                color: theme.colors.text,
               }}
             >
               View Examples

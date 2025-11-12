@@ -92,10 +92,10 @@ export const onDataChange = (slice, data) => {
     <section className="py-20 px-6" style={{ background: theme.colors.muted }}>
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4" style={{ color: theme.colors.foreground }}>
+          <h2 className="text-4xl font-bold mb-4" style={{ color: theme.colors.text }}>
             Quick Start
           </h2>
-          <p className="text-lg max-w-2xl mx-auto" style={{ color: theme.colors.mutedForeground }}>
+          <p className="text-lg max-w-2xl mx-auto" style={{ color: theme.colors.textMuted }}>
             Create your first panel extension in 4 simple steps
           </p>
         </div>
@@ -103,7 +103,7 @@ export const onDataChange = (slice, data) => {
         <div
           className="rounded-lg overflow-hidden"
           style={{
-            background: theme.colors.card,
+            background: theme.colors.surface,
             border: `1px solid ${theme.colors.border}`,
           }}
         >
@@ -119,7 +119,7 @@ export const onDataChange = (slice, data) => {
                 className="px-6 py-3 text-sm font-medium transition-colors"
                 style={{
                   background: activeTab === index ? theme.colors.background : 'transparent',
-                  color: activeTab === index ? theme.colors.foreground : theme.colors.mutedForeground,
+                  color: activeTab === index ? theme.colors.text : theme.colors.textMuted,
                   borderBottom: activeTab === index ? `2px solid ${theme.colors.primary}` : 'none',
                 }}
               >
@@ -140,18 +140,18 @@ export const onDataChange = (slice, data) => {
               <pre
                 className="text-sm"
                 style={{
-                  color: theme.colors.foreground,
+                  color: theme.colors.text,
                   fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
                 }}
               >
-                <code>{codeExamples[activeTab].code}</code>
+                <code>{codeExamples[activeTab]?.code}</code>
               </pre>
             </div>
 
             <div className="mt-4 flex items-start gap-3">
               <Lightbulb className="w-6 h-6 flex-shrink-0" style={{ color: theme.colors.primary }} />
               <div>
-                <p className="text-sm" style={{ color: theme.colors.mutedForeground }}>
+                <p className="text-sm" style={{ color: theme.colors.textMuted }}>
                   {activeTab === 0 && 'The "panel-extension" keyword is required for discovery. Use peerDependencies for shared libraries.'}
                   {activeTab === 1 && 'Metadata must export id, name, and optionally icon, version, author, and description.'}
                   {activeTab === 2 && 'Your component receives context (data), actions (methods), and events (pub/sub) via props.'}
@@ -173,7 +173,7 @@ export const onDataChange = (slice, data) => {
               key={i}
               className="p-4 rounded-lg"
               style={{
-                background: theme.colors.card,
+                background: theme.colors.surface,
                 border: `1px solid ${theme.colors.border}`,
               }}
             >
@@ -188,7 +188,7 @@ export const onDataChange = (slice, data) => {
               >
                 {item.cmd}
               </code>
-              <p className="text-sm" style={{ color: theme.colors.mutedForeground }}>
+              <p className="text-sm" style={{ color: theme.colors.textMuted }}>
                 {item.desc}
               </p>
             </div>

@@ -36,10 +36,10 @@ export function EditorLayout() {
   const mockPanelEvents = useMemo(() => ({
     emit: (event: any) => console.log('Emit event:', event),
     on: (type: string, handler: any) => {
-      console.log('Subscribe to:', type);
+      console.log('Subscribe to:', type, handler);
       return () => console.log('Unsubscribe from:', type);
     },
-    off: (type: string, handler: any) => console.log('Unsubscribe from:', type),
+    off: (type: string, handler: any) => console.log('Unsubscribe from:', type, handler),
   }), []);
 
   return (

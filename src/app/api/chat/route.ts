@@ -15,8 +15,9 @@ const mockResponses = [
   "I can help you understand your codebase, write code, and answer technical questions.",
 ];
 
-function getRandomResponse() {
-  return mockResponses[Math.floor(Math.random() * mockResponses.length)];
+function getRandomResponse(): string {
+  const index = Math.floor(Math.random() * mockResponses.length);
+  return mockResponses[index] ?? mockResponses[0]!;
 }
 
 export async function POST(req: Request) {

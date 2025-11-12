@@ -18,17 +18,17 @@ export function HeroSection() {
           <div className="inline-block mb-4 px-4 py-2 rounded-full text-sm font-medium"
             style={{
               background: theme.colors.primary,
-              color: theme.colors.primaryForeground,
+              color: theme.colors.background,
             }}
           >
             Panel Extension System
           </div>
 
-          <h1 className="text-5xl font-bold mb-6" style={{ color: theme.colors.foreground }}>
+          <h1 className="text-5xl font-bold mb-6" style={{ color: theme.colors.text }}>
             Build Once, Run Anywhere
           </h1>
 
-          <p className="text-xl mb-8 max-w-3xl mx-auto" style={{ color: theme.colors.mutedForeground }}>
+          <p className="text-xl mb-8 max-w-3xl mx-auto" style={{ color: theme.colors.textMuted }}>
             Create powerful, reusable React components that seamlessly integrate into any application.
             Distributed via NPM, themed automatically, and loaded dynamically.
           </p>
@@ -38,7 +38,7 @@ export function HeroSection() {
               className="px-6 py-3 rounded-lg font-medium transition-all hover:scale-105"
               style={{
                 background: theme.colors.primary,
-                color: theme.colors.primaryForeground,
+                color: theme.colors.background,
               }}
             >
               Get Started →
@@ -47,7 +47,7 @@ export function HeroSection() {
               className="px-6 py-3 rounded-lg font-medium transition-all hover:scale-105"
               style={{
                 background: theme.colors.secondary,
-                color: theme.colors.secondaryForeground,
+                color: theme.colors.text,
               }}
             >
               View Spec
@@ -60,7 +60,7 @@ export function HeroSection() {
           <div
             className="rounded-lg p-8 shadow-2xl"
             style={{
-              background: theme.colors.card,
+              background: theme.colors.surface,
               border: `1px solid ${theme.colors.border}`,
             }}
           >
@@ -70,7 +70,7 @@ export function HeroSection() {
                 <div className="w-3 h-3 rounded-full" style={{ background: '#ffbd2e' }}></div>
                 <div className="w-3 h-3 rounded-full" style={{ background: '#27c93f' }}></div>
               </div>
-              <div className="text-sm" style={{ color: theme.colors.mutedForeground }}>
+              <div className="text-sm" style={{ color: theme.colors.textMuted }}>
                 Your Application
               </div>
             </div>
@@ -90,10 +90,10 @@ export function HeroSection() {
                   }}
                 >
                   <panel.Icon className="w-8 h-8 mx-auto mb-2" style={{ color: theme.colors.primary }} />
-                  <div className="text-sm font-medium" style={{ color: theme.colors.foreground }}>
+                  <div className="text-sm font-medium" style={{ color: theme.colors.text }}>
                     {panel.name}
                   </div>
-                  <div className="text-xs mt-2" style={{ color: theme.colors.mutedForeground }}>
+                  <div className="text-xs mt-2" style={{ color: theme.colors.textMuted }}>
                     npm package
                   </div>
                 </div>

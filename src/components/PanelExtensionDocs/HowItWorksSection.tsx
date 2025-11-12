@@ -31,10 +31,10 @@ export function HowItWorksSection() {
     <section className="py-20 px-6" style={{ background: theme.colors.background }}>
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4" style={{ color: theme.colors.foreground }}>
+          <h2 className="text-4xl font-bold mb-4" style={{ color: theme.colors.text }}>
             How It Works
           </h2>
-          <p className="text-lg max-w-2xl mx-auto" style={{ color: theme.colors.mutedForeground }}>
+          <p className="text-lg max-w-2xl mx-auto" style={{ color: theme.colors.textMuted }}>
             A simple, standardized flow from development to deployment
           </p>
         </div>
@@ -45,7 +45,7 @@ export function HowItWorksSection() {
               <div
                 className="p-8 rounded-lg h-full"
                 style={{
-                  background: theme.colors.card,
+                  background: theme.colors.surface,
                   border: `1px solid ${theme.colors.border}`,
                 }}
               >
@@ -53,17 +53,17 @@ export function HowItWorksSection() {
                 <div className="text-sm font-medium mb-2" style={{ color: theme.colors.primary }}>
                   Step {index + 1}
                 </div>
-                <h3 className="text-xl font-bold mb-3" style={{ color: theme.colors.foreground }}>
+                <h3 className="text-xl font-bold mb-3" style={{ color: theme.colors.text }}>
                   {step.title}
                 </h3>
-                <p className="mb-4" style={{ color: theme.colors.mutedForeground }}>
+                <p className="mb-4" style={{ color: theme.colors.textMuted }}>
                   {step.description}
                 </p>
                 <ul className="space-y-2">
                   {step.items.map((item, i) => (
                     <li key={i} className="flex items-center gap-2 text-sm">
                       <span style={{ color: theme.colors.primary }}>✓</span>
-                      <span style={{ color: theme.colors.foreground }}>{item}</span>
+                      <span style={{ color: theme.colors.text }}>{item}</span>
                     </li>
                   ))}
                 </ul>
@@ -86,59 +86,59 @@ export function HowItWorksSection() {
           <div
             className="p-8 rounded-lg"
             style={{
-              background: theme.colors.card,
+              background: theme.colors.surface,
               border: `1px solid ${theme.colors.border}`,
             }}
           >
-            <h3 className="text-xl font-bold mb-6 text-center" style={{ color: theme.colors.foreground }}>
+            <h3 className="text-xl font-bold mb-6 text-center" style={{ color: theme.colors.text }}>
               System Architecture
             </h3>
             <div className="grid md:grid-cols-3 gap-6">
               <div className="space-y-3">
                 <div className="font-medium" style={{ color: theme.colors.primary }}>Host Application</div>
                 <div className="p-4 rounded text-sm" style={{ background: theme.colors.muted }}>
-                  <div className="font-medium mb-2" style={{ color: theme.colors.foreground }}>Panel Discovery</div>
-                  <div style={{ color: theme.colors.mutedForeground }}>Scans node_modules</div>
+                  <div className="font-medium mb-2" style={{ color: theme.colors.text }}>Panel Discovery</div>
+                  <div style={{ color: theme.colors.textMuted }}>Scans node_modules</div>
                 </div>
                 <div className="p-4 rounded text-sm" style={{ background: theme.colors.muted }}>
-                  <div className="font-medium mb-2" style={{ color: theme.colors.foreground }}>Panel Loader</div>
-                  <div style={{ color: theme.colors.mutedForeground }}>Dynamic imports</div>
+                  <div className="font-medium mb-2" style={{ color: theme.colors.text }}>Panel Loader</div>
+                  <div style={{ color: theme.colors.textMuted }}>Dynamic imports</div>
                 </div>
                 <div className="p-4 rounded text-sm" style={{ background: theme.colors.muted }}>
-                  <div className="font-medium mb-2" style={{ color: theme.colors.foreground }}>Panel Harness</div>
-                  <div style={{ color: theme.colors.mutedForeground }}>Props injection</div>
+                  <div className="font-medium mb-2" style={{ color: theme.colors.text }}>Panel Harness</div>
+                  <div style={{ color: theme.colors.textMuted }}>Props injection</div>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div className="font-medium" style={{ color: theme.colors.primary }}>Panel Package</div>
                 <div className="p-4 rounded text-sm" style={{ background: theme.colors.muted }}>
-                  <div className="font-medium mb-2" style={{ color: theme.colors.foreground }}>Metadata Export</div>
-                  <div style={{ color: theme.colors.mutedForeground }}>id, name, icon, version</div>
+                  <div className="font-medium mb-2" style={{ color: theme.colors.text }}>Metadata Export</div>
+                  <div style={{ color: theme.colors.textMuted }}>id, name, icon, version</div>
                 </div>
                 <div className="p-4 rounded text-sm" style={{ background: theme.colors.muted }}>
-                  <div className="font-medium mb-2" style={{ color: theme.colors.foreground }}>Component Export</div>
-                  <div style={{ color: theme.colors.mutedForeground }}>React component</div>
+                  <div className="font-medium mb-2" style={{ color: theme.colors.text }}>Component Export</div>
+                  <div style={{ color: theme.colors.textMuted }}>React component</div>
                 </div>
                 <div className="p-4 rounded text-sm" style={{ background: theme.colors.muted }}>
-                  <div className="font-medium mb-2" style={{ color: theme.colors.foreground }}>Lifecycle Hooks</div>
-                  <div style={{ color: theme.colors.mutedForeground }}>onMount, onUnmount</div>
+                  <div className="font-medium mb-2" style={{ color: theme.colors.text }}>Lifecycle Hooks</div>
+                  <div style={{ color: theme.colors.textMuted }}>onMount, onUnmount</div>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div className="font-medium" style={{ color: theme.colors.primary }}>Runtime</div>
                 <div className="p-4 rounded text-sm" style={{ background: theme.colors.muted }}>
-                  <div className="font-medium mb-2" style={{ color: theme.colors.foreground }}>Context API</div>
-                  <div style={{ color: theme.colors.mutedForeground }}>Shared state</div>
+                  <div className="font-medium mb-2" style={{ color: theme.colors.text }}>Context API</div>
+                  <div style={{ color: theme.colors.textMuted }}>Shared state</div>
                 </div>
                 <div className="p-4 rounded text-sm" style={{ background: theme.colors.muted }}>
-                  <div className="font-medium mb-2" style={{ color: theme.colors.foreground }}>Actions</div>
-                  <div style={{ color: theme.colors.mutedForeground }}>File operations</div>
+                  <div className="font-medium mb-2" style={{ color: theme.colors.text }}>Actions</div>
+                  <div style={{ color: theme.colors.textMuted }}>File operations</div>
                 </div>
                 <div className="p-4 rounded text-sm" style={{ background: theme.colors.muted }}>
-                  <div className="font-medium mb-2" style={{ color: theme.colors.foreground }}>Event Bus</div>
-                  <div style={{ color: theme.colors.mutedForeground }}>Panel communication</div>
+                  <div className="font-medium mb-2" style={{ color: theme.colors.text }}>Event Bus</div>
+                  <div style={{ color: theme.colors.textMuted }}>Panel communication</div>
                 </div>
               </div>
             </div>

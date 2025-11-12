@@ -98,10 +98,10 @@ export function FeaturesSection() {
     <section className="py-20 px-6" style={{ background: theme.colors.background }}>
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4" style={{ color: theme.colors.foreground }}>
+          <h2 className="text-4xl font-bold mb-4" style={{ color: theme.colors.text }}>
             Powerful Features
           </h2>
-          <p className="text-lg max-w-2xl mx-auto" style={{ color: theme.colors.mutedForeground }}>
+          <p className="text-lg max-w-2xl mx-auto" style={{ color: theme.colors.textMuted }}>
             Everything you need to build professional, production-ready panel extensions
           </p>
         </div>
@@ -112,22 +112,22 @@ export function FeaturesSection() {
               key={index}
               className="p-6 rounded-lg transition-all hover:scale-105"
               style={{
-                background: theme.colors.card,
+                background: theme.colors.surface,
                 border: `1px solid ${theme.colors.border}`,
               }}
             >
               <feature.Icon className="w-10 h-10 mb-3" style={{ color: theme.colors.primary }} />
-              <h3 className="text-lg font-bold mb-2" style={{ color: theme.colors.foreground }}>
+              <h3 className="text-lg font-bold mb-2" style={{ color: theme.colors.text }}>
                 {feature.title}
               </h3>
-              <p className="text-sm mb-4" style={{ color: theme.colors.mutedForeground }}>
+              <p className="text-sm mb-4" style={{ color: theme.colors.textMuted }}>
                 {feature.description}
               </p>
               <ul className="space-y-1">
                 {feature.benefits.map((benefit, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm">
                     <span style={{ color: theme.colors.primary }}>•</span>
-                    <span style={{ color: theme.colors.foreground }}>{benefit}</span>
+                    <span style={{ color: theme.colors.text }}>{benefit}</span>
                   </li>
                 ))}
               </ul>
@@ -147,14 +147,14 @@ export function FeaturesSection() {
               key={i}
               className="text-center p-6 rounded-lg"
               style={{
-                background: theme.colors.card,
+                background: theme.colors.surface,
                 border: `1px solid ${theme.colors.border}`,
               }}
             >
               <div className="text-3xl font-bold mb-2" style={{ color: theme.colors.primary }}>
                 {stat.number}
               </div>
-              <div className="text-sm" style={{ color: theme.colors.mutedForeground }}>
+              <div className="text-sm" style={{ color: theme.colors.textMuted }}>
                 {stat.label}
               </div>
             </div>
