@@ -26,7 +26,8 @@ export async function GET(request: NextRequest) {
       code,
       authError,
       allParams: Object.fromEntries(searchParams.entries()),
-      cookies: request.cookies.getAll(),
+      cookieNames: request.cookies.getAll().map(c => c.name),
+      url: request.url,
     });
 
     // Check if landing page handled auth and set cookie
@@ -57,9 +58,11 @@ export async function GET(request: NextRequest) {
         const response = NextResponse.redirect(new URL('/editor', request.url));
         response.cookies.delete('workos_session');
 
+        console.log('Successfully authenticated via workos_session cookie');
         return response;
       } catch (e) {
         console.error('Failed to parse workos_session cookie:', e);
+        // Continue to other auth flows
       }
     }
 
