@@ -3,7 +3,7 @@
 import { useTheme } from '@a24z/industry-theme';
 import { FolderTree, MessageSquare, Terminal } from 'lucide-react';
 import Link from 'next/link';
-import { EditableConfigurablePanelLayout } from '@principal-ade/panel-layouts';
+import { EditableConfigurablePanelLayout, PanelLayout } from '@principal-ade/panel-layouts';
 import { EmptyStatePanel } from './EmptyStatePanel';
 import { useState } from 'react';
 import '@principal-ade/panel-layouts/styles.css';
@@ -11,7 +11,7 @@ import '@principal-ade/panel-layouts/styles.css';
 export function PrincipalADEWebSection() {
   const { theme } = useTheme();
   const [isEditMode, setIsEditMode] = useState(false);
-  const [layout, setLayout] = useState({
+  const [layout, setLayout] = useState<PanelLayout>({
     left: 'file-explorer',
     middle: 'ai-chat',
     right: 'terminal',

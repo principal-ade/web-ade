@@ -1,6 +1,6 @@
 'use client';
 
-import { EditableConfigurablePanelLayout } from '@principal-ade/panel-layouts';
+import { EditableConfigurablePanelLayout, PanelLayout } from '@principal-ade/panel-layouts';
 import { useTheme } from '@a24z/industry-theme';
 import { ThemedAIChatPanel } from '@principal-ade/industry-themed-ai-sdk/components';
 import { PanelProvider, usePanelProvider } from '@/contexts/PanelContext';
@@ -12,7 +12,7 @@ function EditorLayoutContent() {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
   const [isEditMode] = useState(false);
-  const [layout, setLayout] = useState({
+  const [layout, setLayout] = useState<PanelLayout>({
     left: 'file-tree',
     middle: 'ai-chat',
     right: 'terminal',
