@@ -3,12 +3,55 @@
 import { useTheme } from '@a24z/industry-theme';
 import { FolderTree, MessageSquare, Terminal } from 'lucide-react';
 import Link from 'next/link';
-import { ThreePanelLayout } from '@principal-ade/panel-layouts';
+import { EditableConfigurablePanelLayout } from '@principal-ade/panel-layouts';
 import { EmptyStatePanel } from './EmptyStatePanel';
-import '@a24z/panels/panels.css';
+import { useState } from 'react';
+import '@principal-ade/panel-layouts/styles.css';
 
 export function PrincipalADEWebSection() {
   const { theme } = useTheme();
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [layout, setLayout] = useState({
+    left: 'file-explorer',
+    middle: 'ai-chat',
+    right: 'terminal',
+  });
+
+  const panels = [
+    {
+      id: 'file-explorer',
+      label: 'File Explorer',
+      content: (
+        <EmptyStatePanel
+          title="File Explorer"
+          description="Browse your project files"
+          Icon={FolderTree}
+        />
+      ),
+    },
+    {
+      id: 'ai-chat',
+      label: 'AI Chat',
+      content: (
+        <EmptyStatePanel
+          title="AI Chat"
+          description="Chat with your AI assistant"
+          Icon={MessageSquare}
+        />
+      ),
+    },
+    {
+      id: 'terminal',
+      label: 'Terminal',
+      content: (
+        <EmptyStatePanel
+          title="Terminal"
+          description="Run commands and see output"
+          Icon={Terminal}
+        />
+      ),
+    },
+  ];
 
   return (
     <section
@@ -50,13 +93,14 @@ export function PrincipalADEWebSection() {
               Try Editor →
             </Link>
             <button
+              onClick={() => setIsEditMode(!isEditMode)}
               className="px-6 py-3 rounded-lg font-medium transition-all hover:scale-105"
               style={{
-                background: theme.colors.secondary,
-                color: theme.colors.text,
+                background: isEditMode ? theme.colors.primary : theme.colors.secondary,
+                color: isEditMode ? theme.colors.background : theme.colors.text,
               }}
             >
-              Learn More
+              {isEditMode ? 'Done Editing' : 'Customize Layout'}
             </button>
           </div>
         </div>
@@ -71,29 +115,12 @@ export function PrincipalADEWebSection() {
               height: '500px',
             }}
           >
-            <ThreePanelLayout
+            <EditableConfigurablePanelLayout
               theme={theme}
-              leftPanel={
-                <EmptyStatePanel
-                  title="File Explorer"
-                  description="Browse your project files"
-                  Icon={FolderTree}
-                />
-              }
-              middlePanel={
-                <EmptyStatePanel
-                  title="AI Chat"
-                  description="Chat with your AI assistant"
-                  Icon={MessageSquare}
-                />
-              }
-              rightPanel={
-                <EmptyStatePanel
-                  title="Terminal"
-                  description="Run commands and see output"
-                  Icon={Terminal}
-                />
-              }
+              panels={panels}
+              layout={layout}
+              isEditMode={isEditMode}
+              onLayoutChange={setLayout}
               defaultSizes={{
                 left: 25,
                 middle: 50,

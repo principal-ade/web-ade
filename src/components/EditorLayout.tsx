@@ -1,79 +1,73 @@
 'use client';
 
-import { ThreePanelLayout } from '@principal-ade/panel-layouts';
+import { EditableConfigurablePanelLayout } from '@principal-ade/panel-layouts';
 import { useTheme } from '@a24z/industry-theme';
 import { ThemedAIChatPanel } from '@principal-ade/industry-themed-ai-sdk/components';
-import { useMemo } from 'react';
-import '@a24z/panels/panels.css';
+import { PanelProvider, usePanelProvider } from '@/contexts/PanelContext';
+import { useState } from 'react';
+import '@principal-ade/panel-layouts/styles.css';
 import '@principal-ade/industry-themed-ai-sdk/styles.css';
 
-export function EditorLayout() {
+function EditorLayoutContent() {
   const { theme } = useTheme();
+  const { context, actions, events } = usePanelProvider();
+  const [isEditMode] = useState(false);
+  const [layout, setLayout] = useState({
+    left: 'file-tree',
+    middle: 'ai-chat',
+    right: 'terminal',
+  });
 
-  // Mock panel context for the AI chat panel
-  const mockPanelContext = useMemo(() => ({
-    repositoryPath: '/Users/example/project',
-    repository: { path: '/Users/example/project', name: 'example-project' },
-    gitStatus: { staged: [], unstaged: [], untracked: [], deleted: [] },
-    gitStatusLoading: false,
-    markdownFiles: [],
-    fileTree: null,
-    packages: null,
-    quality: null,
-    loading: false,
-    refresh: async () => {},
-    hasSlice: (slice: string) => slice === 'git',
-    isSliceLoading: () => false,
-  }), []);
-
-  const mockPanelActions = useMemo(() => ({
-    openFile: (filePath: string) => console.log('Open file:', filePath),
-    openGitDiff: (filePath: string) => console.log('Open git diff:', filePath),
-    navigateToPanel: (panelId: string) => console.log('Navigate to panel:', panelId),
-    notifyPanels: (event: unknown) => console.log('Notify panels:', event),
-  }), []);
-
-  const mockPanelEvents = useMemo(() => ({
-    emit: (event: unknown) => console.log('Emit event:', event),
-    on: (type: string, handler: unknown) => {
-      console.log('Subscribe to:', type, handler);
-      return () => console.log('Unsubscribe from:', type);
+  const panels = [
+    {
+      id: 'file-tree',
+      label: 'File Tree',
+      content: (
+        <div className="flex h-full w-full items-center justify-center p-4 text-sm">
+          <div className="text-center">
+            <h3 className="text-lg font-semibold mb-2">Left Panel</h3>
+            <p className="text-gray-400">File Tree</p>
+          </div>
+        </div>
+      ),
     },
-    off: (type: string, handler: unknown) => console.log('Unsubscribe from:', type, handler),
-  }), []);
+    {
+      id: 'ai-chat',
+      label: 'AI Chat',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <ThemedAIChatPanel
+            context={context}
+            actions={actions}
+            events={events}
+            api="/api/chat"
+            placeholder="Ask me anything about your code..."
+          />
+        </div>
+      ),
+    },
+    {
+      id: 'terminal',
+      label: 'Terminal',
+      content: (
+        <div className="flex h-full w-full items-center justify-center p-4 text-sm">
+          <div className="text-center">
+            <h3 className="text-lg font-semibold mb-2">Right Panel</h3>
+            <p className="text-gray-400">Output / Terminal</p>
+          </div>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="h-full w-full">
-      <ThreePanelLayout
+      <EditableConfigurablePanelLayout
         theme={theme}
-        leftPanel={
-          <div className="flex h-full w-full items-center justify-center p-4 text-sm">
-            <div className="text-center">
-              <h3 className="text-lg font-semibold mb-2">Left Panel</h3>
-              <p className="text-gray-400">File Tree</p>
-            </div>
-          </div>
-        }
-        middlePanel={
-          <div className="h-full w-full overflow-hidden">
-            <ThemedAIChatPanel
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              context={mockPanelContext as any}
-              actions={mockPanelActions}
-              events={mockPanelEvents}
-              api="/api/chat"
-              placeholder="Ask me anything about your code..."
-            />
-          </div>
-        }
-        rightPanel={
-          <div className="flex h-full w-full items-center justify-center p-4 text-sm">
-            <div className="text-center">
-              <h3 className="text-lg font-semibold mb-2">Right Panel</h3>
-              <p className="text-gray-400">Output / Terminal</p>
-            </div>
-          </div>
-        }
+        panels={panels}
+        layout={layout}
+        isEditMode={isEditMode}
+        onLayoutChange={setLayout}
         defaultSizes={{
           left: 25,
           middle: 50,
@@ -91,5 +85,22 @@ export function EditorLayout() {
         showCollapseButtons={false}
       />
     </div>
+  );
+}
+
+export function EditorLayout() {
+  return (
+    <PanelProvider
+      workspace={{
+        name: 'web-ade',
+        path: '/workspace',
+      }}
+      repository={{
+        name: 'web-ade',
+        path: '/workspace/web-ade',
+      }}
+    >
+      <EditorLayoutContent />
+    </PanelProvider>
   );
 }
