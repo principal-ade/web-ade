@@ -27,7 +27,7 @@ async function handleLogin() {
       throw new Error('LANDING_PAGE_URL not configured');
     }
 
-    const appUrl = process.env.APP_URL || 'http://localhost:3001';
+    const appUrl = 'https://app.principal-ade.com';
     const returnUrl = `${appUrl}/api/auth/callback`;
 
     console.log('Calling landing page:', {

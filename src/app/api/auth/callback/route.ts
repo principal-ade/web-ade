@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
     await clearAuthSession();
 
     // Redirect to dashboard
-    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+    const appUrl = 'https://app.principal-ade.com';
     return NextResponse.redirect(new URL('/dashboard', appUrl));
   } catch (error) {
     console.error('Callback error:', {
@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Redirect to home with error
-    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+    const appUrl = 'https://app.principal-ade.com';
     const errorUrl = new URL('/?error=auth_failed', appUrl);
 
     // Add error message for debugging (only in dev)
