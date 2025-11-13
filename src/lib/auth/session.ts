@@ -21,7 +21,7 @@ export interface AuthSessionData {
  * Iron-session configuration
  */
 const sessionOptions: SessionOptions = {
-  password: process.env.SESSION_SECRET!,
+  password: process.env.SESSION_SECRET || '',
   cookieName: 'web-ade-session',
   cookieOptions: {
     secure: process.env.NODE_ENV === 'production',
@@ -33,12 +33,24 @@ const sessionOptions: SessionOptions = {
 };
 
 /**
+ * Validates that required environment variables are present
+ */
+function validateSessionConfig(): void {
+  if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
+    throw new Error(
+      'SESSION_SECRET environment variable is required and must be at least 32 characters long'
+    );
+  }
+}
+
+/**
  * Gets the current auth session
  * @returns Iron session instance
  */
 export async function getAuthSession(): Promise<
   IronSession<AuthSessionData>
 > {
+  validateSessionConfig();
   const cookieStore = await cookies();
   return getIronSession<AuthSessionData>(cookieStore, sessionOptions);
 }
