@@ -139,7 +139,11 @@ export async function GET(request: NextRequest) {
     const appUrl = process.env.APP_URL || 'http://localhost:3000';
     return NextResponse.redirect(new URL('/dashboard', appUrl));
   } catch (error) {
-    console.error('Callback error:', error);
+    console.error('Callback error:', {
+      error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : undefined,
+      type: error?.constructor?.name,
+    });
 
     // Clear session on error
     try {
@@ -150,8 +154,13 @@ export async function GET(request: NextRequest) {
 
     // Redirect to home with error
     const appUrl = process.env.APP_URL || 'http://localhost:3000';
-    return NextResponse.redirect(
-      new URL('/?error=auth_failed', appUrl)
-    );
+    const errorUrl = new URL('/?error=auth_failed', appUrl);
+
+    // Add error message for debugging (only in dev)
+    if (process.env.NODE_ENV !== 'production' && error instanceof Error) {
+      errorUrl.searchParams.set('message', error.message);
+    }
+
+    return NextResponse.redirect(errorUrl);
   }
 }
