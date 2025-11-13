@@ -6,6 +6,7 @@ frontend:
         - npm ci
     build:
       commands:
+        - env | grep -e SESSION_SECRET -e APP_URL -e LANDING_PAGE_URL -e MESSAGING_SERVER_URL -e NODE_ENV >> .env.production
         - npm run build
   artifacts:
     baseDirectory: .next
