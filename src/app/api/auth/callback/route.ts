@@ -55,7 +55,8 @@ export async function GET(request: NextRequest) {
         await setAuthCookies(tokenData);
 
         // Clear the landing page cookie
-        const response = NextResponse.redirect(new URL('/editor', request.url));
+        const appUrl = 'https://app.principal-ade.com';
+        const response = NextResponse.redirect(new URL('/editor', appUrl));
         response.cookies.delete('workos_session');
 
         console.log('Successfully authenticated via workos_session cookie');
