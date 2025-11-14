@@ -109,7 +109,7 @@ export function PrincipalADEWebSection() {
 
   return (
     <section
-      className="relative overflow-hidden h-full flex items-center px-6"
+      className="relative overflow-hidden min-h-screen flex items-center px-6"
       style={{
         background: `linear-gradient(135deg, ${theme.colors.background} 0%, ${theme.colors.muted} 100%)`,
       }}
@@ -121,8 +121,7 @@ export function PrincipalADEWebSection() {
           </h1>
 
           <p className="text-xl mb-8 max-w-3xl mx-auto" style={{ color: theme.colors.textMuted }}>
-            Experience the next generation of AI-powered development. Built with extensible panels,
-            powered by advanced AI, and designed for modern workflows.
+            Experience the next generation of AI-Powered Work!
           </p>
 
           {/* Try Editor Button */}
