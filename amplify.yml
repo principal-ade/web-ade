@@ -7,6 +7,7 @@ frontend:
         - nvm use 20
         - rm -rf node_modules .next
         - npm ci
+        - npm list @tailwindcss/postcss tailwindcss
     build:
       commands:
         - env | grep -e SESSION_SECRET -e APP_URL -e LANDING_PAGE_URL -e MESSAGING_SERVER_URL -e NODE_ENV >> .env.production
