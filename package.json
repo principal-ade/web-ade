@@ -16,6 +16,7 @@
   "dependencies": {
     "@a24z/industry-theme": "^0.1.2",
     "@a24z/panels": "^1.0.37",
+    "@principal-ade/alexandria-docs-panel": "^0.1.0",
     "@principal-ade/industry-themed-ai-sdk": "^0.2.0",
     "@principal-ade/industry-themed-markdown-panels": "^0.2.0",
     "@principal-ade/panel-framework-core": "^0.1.1",
@@ -28,6 +29,7 @@
     "next": "15.5.6",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "react-markdown": "^10.1.0",
     "tailwindcss": "^4"
   },
   "devDependencies": {

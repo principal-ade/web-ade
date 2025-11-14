@@ -25,6 +25,7 @@ export function MermaidInitializer() {
         });
 
         // Expose mermaid to window for themed-markdown library
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (window as any).mermaid = mermaid;
 
         console.log('[MermaidInitializer] Mermaid initialized and exposed to window');

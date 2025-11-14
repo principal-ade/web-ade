@@ -18,26 +18,32 @@ const MarkdownPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the AlexandriaDocsPanel with SSR disabled
+const AlexandriaDocsPanelLoader = dynamic(
+  () => import('@principal-ade/alexandria-docs-panel').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 function EditorLayoutContent() {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
   const [isEditMode] = useState(false);
   const [layout, setLayout] = useState<PanelLayout>({
-    left: 'file-tree',
+    left: 'docs',
     middle: 'markdown-viewer',
     right: 'terminal',
   });
 
   const panels = [
     {
-      id: 'file-tree',
-      label: 'File Tree',
+      id: 'docs',
+      label: 'Docs',
       content: (
-        <div className="flex h-full w-full items-center justify-center p-4 text-sm">
-          <div className="text-center">
-            <h3 className="text-lg font-semibold mb-2">Left Panel</h3>
-            <p className="text-gray-400">File Tree</p>
-          </div>
+        <div className="h-full w-full overflow-hidden">
+          <AlexandriaDocsPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },
@@ -107,7 +113,11 @@ function EditorLayoutContent() {
   );
 }
 
-export function EditorLayout() {
+interface EditorLayoutProps {
+  githubRepo?: string;
+}
+
+export function EditorLayout({ githubRepo }: EditorLayoutProps = {}) {
   return (
     <PanelProvider
       workspace={{
@@ -118,6 +128,7 @@ export function EditorLayout() {
         name: 'web-ade',
         path: '/workspace/web-ade',
       }}
+      githubRepo={githubRepo}
     >
       <EditorLayoutContent />
     </PanelProvider>
