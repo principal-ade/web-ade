@@ -20,12 +20,14 @@
     "@principal-ade/industry-themed-markdown-panels": "^0.2.0",
     "@principal-ade/panel-framework-core": "^0.1.1",
     "@principal-ade/panel-layouts": "^0.1.4",
+    "@tailwindcss/postcss": "^4",
     "ai": "^4.3.19",
     "iron-session": "^8.0.4",
     "lucide-react": "^0.553.0",
     "next": "15.5.6",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "tailwindcss": "^4"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^4.1.2",
@@ -33,7 +35,6 @@
     "@storybook/addon-docs": "^10.0.7",
     "@storybook/addon-vitest": "^10.0.7",
     "@storybook/nextjs-vite": "^10.0.7",
-    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -44,7 +45,6 @@
     "eslint-plugin-storybook": "^10.0.7",
     "playwright": "^1.56.1",
     "storybook": "^10.0.7",
-    "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.8"
   }
