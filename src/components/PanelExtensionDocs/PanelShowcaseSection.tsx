@@ -60,9 +60,9 @@ export function PanelShowcaseSection() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Available':
-        return theme.colors.success || '#22c55e';
+        return theme.colors.success;
       case 'In Development':
-        return theme.colors.warning || '#f59e0b';
+        return theme.colors.warning;
       default:
         return theme.colors.textMuted;
     }
@@ -120,7 +120,7 @@ export function PanelShowcaseSection() {
                       style={{
                         background: theme.colors.background,
                         color: theme.colors.primary,
-                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                        fontFamily: theme.fonts.monospace,
                       }}
                     >
                       {panel.packageName}

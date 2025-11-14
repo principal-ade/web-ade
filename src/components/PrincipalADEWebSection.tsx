@@ -1,12 +1,6 @@
 'use client';
 
-import {
-  terminalTheme,
-  regalTheme,
-  matrixTheme,
-  matrixMinimalTheme,
-  slateTheme,
-} from '@a24z/industry-theme';
+import { useTheme } from '@a24z/industry-theme';
 import { FolderTree, MessageSquare, Terminal } from 'lucide-react';
 import Link from 'next/link';
 import { EditableConfigurablePanelLayout, PanelLayout } from '@principal-ade/panel-layouts';
@@ -15,17 +9,8 @@ import { PanelControls } from './PanelControls';
 import { useState, useCallback, useMemo } from 'react';
 import '@principal-ade/panel-layouts/styles.css';
 
-const themes = [
-  { name: 'Terminal', theme: terminalTheme },
-  { name: 'Regal', theme: regalTheme },
-  { name: 'Matrix', theme: matrixTheme },
-  { name: 'Matrix Minimal', theme: matrixMinimalTheme },
-  { name: 'Slate', theme: slateTheme },
-];
-
 export function PrincipalADEWebSection() {
-  const [themeIndex, setThemeIndex] = useState(0);
-  const theme = themes[themeIndex]!.theme;
+  const { theme } = useTheme();
   const [isEditMode, setIsEditMode] = useState(false);
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'file-explorer',
@@ -62,10 +47,6 @@ export function PrincipalADEWebSection() {
 
   const handleConfigurePanels = useCallback(() => {
     setIsEditMode((prev) => !prev);
-  }, []);
-
-  const handleCycleTheme = useCallback(() => {
-    setThemeIndex((prev) => (prev + 1) % themes.length);
   }, []);
 
   const panels = useMemo(() => [
@@ -201,21 +182,6 @@ export function PrincipalADEWebSection() {
               }}
               showCollapseButtons={false}
             />
-          </div>
-
-          {/* Theme Cycling Button */}
-          <div className="flex justify-center mt-6">
-            <button
-              onClick={handleCycleTheme}
-              className="px-6 py-3 rounded-lg font-medium transition-all hover:scale-105"
-              style={{
-                background: theme.colors.backgroundTertiary,
-                color: theme.colors.text,
-                border: `1px solid ${theme.colors.border}`,
-              }}
-            >
-              Theme: {themes[themeIndex]!.name}
-            </button>
           </div>
         </div>
       </div>

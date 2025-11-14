@@ -11,7 +11,7 @@ import '@principal-ade/industry-themed-ai-sdk/styles.css';
 
 // Dynamically import the MarkdownPanel with SSR disabled
 const MarkdownPanelLoader = dynamic(
-  () => import('@principal-ade/industry-themed-markdown-panels').then((mod) => {
+  () => import('@industry-theme/markdown-panels').then((mod) => {
     const Component = mod.panels[0]!.component;
     return { default: Component };
   }),
@@ -78,7 +78,7 @@ function EditorLayoutContent() {
         <div className="flex h-full w-full items-center justify-center p-4 text-sm">
           <div className="text-center">
             <h3 className="text-lg font-semibold mb-2">Right Panel</h3>
-            <p className="text-gray-400">Output / Terminal</p>
+            <p style={{ color: theme.colors.textMuted }}>Output / Terminal</p>
           </div>
         </div>
       ),
@@ -105,6 +105,10 @@ function EditorLayoutContent() {
         }}
         collapsiblePanels={{
           left: true,
+          right: true,
+        }}
+        collapsed={{
+          left: false,
           right: true,
         }}
         showCollapseButtons={false}

@@ -3,9 +3,11 @@
 import { EditorHeader } from "@/components/EditorHeader";
 import { RepoSelectionModal } from "@/components/RepoSelectionModal";
 import { useState, useEffect } from "react";
+import { useTheme } from "@a24z/industry-theme";
 
 export default function EditorPage() {
   const [showModal, setShowModal] = useState(false);
+  const { theme } = useTheme();
 
   useEffect(() => {
     // Show modal when landing on /editor without a repo
@@ -13,12 +15,19 @@ export default function EditorPage() {
   }, []);
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-black flex flex-col">
+    <div
+      className="h-screen w-screen overflow-hidden flex flex-col"
+      style={{ background: theme.colors.background }}
+    >
       <EditorHeader />
       <div className="flex-1 overflow-hidden flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl text-white mb-4">Select a GitHub Repository</h2>
-          <p className="text-gray-400">Choose a repository to view its documentation</p>
+          <h2 className="text-2xl mb-4" style={{ color: theme.colors.text }}>
+            Select a GitHub Repository
+          </h2>
+          <p style={{ color: theme.colors.textMuted }}>
+            Choose a repository to view its documentation
+          </p>
         </div>
       </div>
       <RepoSelectionModal isOpen={showModal} onClose={() => setShowModal(false)} />

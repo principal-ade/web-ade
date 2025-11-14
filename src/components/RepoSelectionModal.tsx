@@ -69,7 +69,7 @@ export function RepoSelectionModal({ isOpen, onClose }: RepoSelectionModalProps)
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+      style={{ backgroundColor: `${theme.colors.background}cc` }}
     >
       <div
         className="rounded-lg shadow-xl max-w-md w-full mx-4 p-6"
@@ -115,7 +115,7 @@ export function RepoSelectionModal({ isOpen, onClose }: RepoSelectionModalProps)
               }}
             />
             {error && (
-              <p className="mt-2 text-sm" style={{ color: '#ef4444' }}>
+              <p className="mt-2 text-sm" style={{ color: theme.colors.error }}>
                 {error}
               </p>
             )}
