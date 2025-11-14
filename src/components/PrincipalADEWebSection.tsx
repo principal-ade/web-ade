@@ -1,23 +1,74 @@
 'use client';
 
-import { useTheme } from '@a24z/industry-theme';
+import {
+  terminalTheme,
+  regalTheme,
+  matrixTheme,
+  matrixMinimalTheme,
+  slateTheme,
+} from '@a24z/industry-theme';
 import { FolderTree, MessageSquare, Terminal } from 'lucide-react';
 import Link from 'next/link';
 import { EditableConfigurablePanelLayout, PanelLayout } from '@principal-ade/panel-layouts';
 import { EmptyStatePanel } from './EmptyStatePanel';
-import { useState } from 'react';
+import { PanelControls } from './PanelControls';
+import { useState, useCallback, useMemo } from 'react';
 import '@principal-ade/panel-layouts/styles.css';
 
+const themes = [
+  { name: 'Terminal', theme: terminalTheme },
+  { name: 'Regal', theme: regalTheme },
+  { name: 'Matrix', theme: matrixTheme },
+  { name: 'Matrix Minimal', theme: matrixMinimalTheme },
+  { name: 'Slate', theme: slateTheme },
+];
+
 export function PrincipalADEWebSection() {
-  const { theme } = useTheme();
+  const [themeIndex, setThemeIndex] = useState(0);
+  const theme = themes[themeIndex]!.theme;
   const [isEditMode, setIsEditMode] = useState(false);
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'file-explorer',
     middle: 'ai-chat',
     right: 'terminal',
   });
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
+  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
 
-  const panels = [
+  // Handler functions for panel controls
+  const handleToggleLeftSidebar = useCallback(() => {
+    setLeftSidebarCollapsed((prev) => !prev);
+  }, []);
+
+  const handleToggleRightSidebar = useCallback(() => {
+    setRightSidebarCollapsed((prev) => !prev);
+  }, []);
+
+  const handleSwitchLeftMiddlePanels = useCallback(() => {
+    setLayout((prev) => ({
+      left: prev.middle,
+      middle: prev.left,
+      right: prev.right,
+    }));
+  }, []);
+
+  const handleSwitchRightMiddlePanels = useCallback(() => {
+    setLayout((prev) => ({
+      left: prev.left,
+      middle: prev.right,
+      right: prev.middle,
+    }));
+  }, []);
+
+  const handleConfigurePanels = useCallback(() => {
+    setIsEditMode((prev) => !prev);
+  }, []);
+
+  const handleCycleTheme = useCallback(() => {
+    setThemeIndex((prev) => (prev + 1) % themes.length);
+  }, []);
+
+  const panels = useMemo(() => [
     {
       id: 'file-explorer',
       label: 'File Explorer',
@@ -26,6 +77,7 @@ export function PrincipalADEWebSection() {
           title="File Explorer"
           description="Browse your project files"
           Icon={FolderTree}
+          theme={theme}
         />
       ),
     },
@@ -37,6 +89,7 @@ export function PrincipalADEWebSection() {
           title="AI Chat"
           description="Chat with your AI assistant"
           Icon={MessageSquare}
+          theme={theme}
         />
       ),
     },
@@ -48,10 +101,11 @@ export function PrincipalADEWebSection() {
           title="Terminal"
           description="Run commands and see output"
           Icon={Terminal}
+          theme={theme}
         />
       ),
     },
-  ];
+  ], [theme]);
 
   return (
     <section
@@ -62,18 +116,8 @@ export function PrincipalADEWebSection() {
     >
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12">
-          <div
-            className="inline-block mb-4 px-4 py-2 rounded-full text-sm font-medium"
-            style={{
-              background: theme.colors.primary,
-              color: theme.colors.background,
-            }}
-          >
-            Principal ADE Web
-          </div>
-
           <h1 className="text-5xl font-bold mb-6" style={{ color: theme.colors.text }}>
-            Your Git-Based Agentic Workspace
+            Git-Based Agentic Workspace
           </h1>
 
           <p className="text-xl mb-8 max-w-3xl mx-auto" style={{ color: theme.colors.textMuted }}>
@@ -81,37 +125,54 @@ export function PrincipalADEWebSection() {
             powered by advanced AI, and designed for modern workflows.
           </p>
 
-          <div className="flex gap-4 justify-center">
+          {/* Try Editor Button */}
+          <div className="flex justify-center">
             <Link
               href="/editor"
-              className="px-6 py-3 rounded-lg font-medium transition-all hover:scale-105"
+              className="px-8 py-4 rounded-lg font-medium transition-all hover:scale-105 text-lg"
               style={{
                 background: theme.colors.primary,
                 color: theme.colors.background,
               }}
             >
-              Try Editor →
+              Try Principal AI
             </Link>
-            <button
-              onClick={() => setIsEditMode(!isEditMode)}
-              className="px-6 py-3 rounded-lg font-medium transition-all hover:scale-105"
-              style={{
-                background: isEditMode ? theme.colors.primary : theme.colors.secondary,
-                color: isEditMode ? theme.colors.background : theme.colors.text,
-              }}
-            >
-              {isEditMode ? 'Done Editing' : 'Customize Layout'}
-            </button>
           </div>
         </div>
 
         {/* Visual representation */}
-        <div className="mt-16 relative">
+        <div className="mt-8 relative">
+          {/* Panel Controls */}
           <div
-            className="rounded-lg shadow-2xl overflow-hidden"
+            className="flex justify-center p-3 rounded-t-lg"
             style={{
               background: theme.colors.surface,
-              border: `1px solid ${theme.colors.border}`,
+              borderLeft: `1px solid ${theme.colors.border}`,
+              borderRight: `1px solid ${theme.colors.border}`,
+              borderTop: `1px solid ${theme.colors.border}`,
+              borderBottom: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <PanelControls
+              leftSidebarCollapsed={leftSidebarCollapsed}
+              rightSidebarCollapsed={rightSidebarCollapsed}
+              onToggleLeftSidebar={handleToggleLeftSidebar}
+              onToggleRightSidebar={handleToggleRightSidebar}
+              onSwitchLeftMiddlePanels={handleSwitchLeftMiddlePanels}
+              onSwitchRightMiddlePanels={handleSwitchRightMiddlePanels}
+              onConfigurePanels={handleConfigurePanels}
+              isEditMode={isEditMode}
+              theme={theme}
+            />
+          </div>
+
+          <div
+            className="rounded-b-lg shadow-2xl overflow-hidden"
+            style={{
+              background: theme.colors.surface,
+              borderLeft: `1px solid ${theme.colors.border}`,
+              borderRight: `1px solid ${theme.colors.border}`,
+              borderBottom: `1px solid ${theme.colors.border}`,
               height: '500px',
             }}
           >
@@ -121,10 +182,14 @@ export function PrincipalADEWebSection() {
               layout={layout}
               isEditMode={isEditMode}
               onLayoutChange={setLayout}
+              collapsed={{
+                left: leftSidebarCollapsed,
+                right: rightSidebarCollapsed,
+              }}
               defaultSizes={{
-                left: 25,
-                middle: 50,
-                right: 25,
+                left: 33,
+                middle: 34,
+                right: 33,
               }}
               minSizes={{
                 left: 15,
@@ -137,6 +202,21 @@ export function PrincipalADEWebSection() {
               }}
               showCollapseButtons={false}
             />
+          </div>
+
+          {/* Theme Cycling Button */}
+          <div className="flex justify-center mt-6">
+            <button
+              onClick={handleCycleTheme}
+              className="px-6 py-3 rounded-lg font-medium transition-all hover:scale-105"
+              style={{
+                background: theme.colors.backgroundTertiary,
+                color: theme.colors.text,
+                border: `1px solid ${theme.colors.border}`,
+              }}
+            >
+              Theme: {themes[themeIndex]!.name}
+            </button>
           </div>
         </div>
       </div>

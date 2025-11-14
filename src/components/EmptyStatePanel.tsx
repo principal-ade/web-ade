@@ -1,16 +1,18 @@
 'use client';
 
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme, Theme } from '@a24z/industry-theme';
 import { LucideIcon } from 'lucide-react';
 
 interface EmptyStatePanelProps {
   title: string;
   description?: string;
   Icon?: LucideIcon;
+  theme?: Theme;
 }
 
-export function EmptyStatePanel({ title, description, Icon }: EmptyStatePanelProps) {
-  const { theme } = useTheme();
+export function EmptyStatePanel({ title, description, Icon, theme: propTheme }: EmptyStatePanelProps) {
+  const { theme: contextTheme } = useTheme();
+  const theme = propTheme || contextTheme;
 
   return (
     <div className="flex h-full w-full items-center justify-center p-4">
