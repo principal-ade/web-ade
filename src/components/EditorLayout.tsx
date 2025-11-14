@@ -5,8 +5,18 @@ import { useTheme } from '@a24z/industry-theme';
 import { ThemedAIChatPanel } from '@principal-ade/industry-themed-ai-sdk/components';
 import { PanelProvider, usePanelProvider } from '@/contexts/PanelContext';
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import '@principal-ade/panel-layouts/styles.css';
 import '@principal-ade/industry-themed-ai-sdk/styles.css';
+
+// Dynamically import the MarkdownPanel with SSR disabled
+const MarkdownPanelLoader = dynamic(
+  () => import('@principal-ade/industry-themed-markdown-panels').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
 
 function EditorLayoutContent() {
   const { theme } = useTheme();
@@ -14,7 +24,7 @@ function EditorLayoutContent() {
   const [isEditMode] = useState(false);
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'file-tree',
-    middle: 'ai-chat',
+    middle: 'markdown-viewer',
     right: 'terminal',
   });
 
@@ -43,6 +53,15 @@ function EditorLayoutContent() {
             api="/api/chat"
             placeholder="Ask me anything about your code..."
           />
+        </div>
+      ),
+    },
+    {
+      id: 'markdown-viewer',
+      label: 'Markdown',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <MarkdownPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },
