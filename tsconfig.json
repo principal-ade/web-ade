@@ -47,6 +47,7 @@
     "node_modules",
     "stories",
     ".storybook",
+    "vitest.config.ts",
     "**/*.stories.ts",
     "**/*.stories.tsx",
     "**/*.test.ts",
