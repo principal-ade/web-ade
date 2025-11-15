@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@principal-ade/industry-theme": "^0.1.2",
-    "@a24z/panels": "^1.0.37",
     "@industry-theme/markdown-panels": "^0.2.4",
     "@industry-theme/alexandria-docs-panel": "^0.1.2",
     "@principal-ade/industry-themed-ai-sdk": "^0.2.0",
