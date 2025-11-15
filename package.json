@@ -15,10 +15,10 @@
   },
   "dependencies": {
     "@principal-ade/industry-theme": "^0.1.2",
-    "@industry-theme/markdown-panels": "^0.2.4",
+    "@industry-theme/markdown-panels": "^0.2.5",
     "@industry-theme/alexandria-docs-panel": "^0.1.2",
     "@principal-ade/industry-themed-ai-sdk": "^0.2.0",
-    "@principal-ade/panel-framework-core": "^0.1.1",
+    "@principal-ade/panel-framework-core": "^0.1.2",
     "@principal-ade/panel-layouts": "^0.1.5",
     "@tailwindcss/postcss": "^4",
     "ai": "^4.3.19",
