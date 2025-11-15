@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { Providers } from '../components/Providers';
+import { Providers } from '../src/components/Providers';
 import {
   HeroSection,
   HowItWorksSection,
@@ -7,7 +7,7 @@ import {
   FeaturesSection,
   PanelShowcaseSection,
   PanelExtensionLanding,
-} from '../components/PanelExtensionDocs';
+} from '../src/components/PanelExtensionDocs';
 
 /**
  * Panel Extension System Documentation

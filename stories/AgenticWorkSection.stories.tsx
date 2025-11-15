@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { Providers } from '../components/Providers';
-import { AgenticWorkSection } from '../components/AgenticWorkSection';
+import { Providers } from '../src/components/Providers';
+import { AgenticWorkSection } from '../src/components/AgenticWorkSection';
 
 /**
  * Agentic Work Section

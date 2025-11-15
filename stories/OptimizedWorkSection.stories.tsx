@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { Providers } from '../components/Providers';
-import { OptimizedWorkSection } from '../components/OptimizedWorkSection';
+import { Providers } from '../src/components/Providers';
+import { OptimizedWorkSection } from '../src/components/OptimizedWorkSection';
 
 /**
  * Optimized Work Section

@@ -3,10 +3,10 @@
 import { useTheme } from '@principal-ade/industry-theme';
 import { FolderTree, MessageSquare, Terminal } from 'lucide-react';
 import Link from 'next/link';
-import { EditableConfigurablePanelLayout, PanelLayout } from '@principal-ade/panel-layouts';
+import { EditableConfigurablePanelLayout, ResponsiveConfigurablePanelLayout, PanelLayout } from '@principal-ade/panel-layouts';
 import { EmptyStatePanel } from './EmptyStatePanel';
 import { PanelControls } from './PanelControls';
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import '@principal-ade/panel-layouts/styles.css';
 
 export function PrincipalADEWebSection() {
@@ -19,6 +19,18 @@ export function PrincipalADEWebSection() {
   });
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Handler functions for panel controls
   const handleToggleLeftSidebar = useCallback(() => {
@@ -90,18 +102,18 @@ export function PrincipalADEWebSection() {
 
   return (
     <section
-      className="relative overflow-hidden min-h-screen flex items-center px-6"
+      className="relative overflow-hidden min-h-screen flex items-center px-4 md:px-6 py-8 md:py-0"
       style={{
         background: `linear-gradient(135deg, ${theme.colors.background} 0%, ${theme.colors.muted} 100%)`,
       }}
     >
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-6" style={{ color: theme.colors.text }}>
+      <div className="w-full max-w-6xl mx-auto">
+        <div className="text-center mb-8 md:mb-12">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6" style={{ color: theme.colors.text }}>
             Git-Based Agentic Workspace
           </h1>
 
-          <p className="text-xl mb-8 max-w-3xl mx-auto" style={{ color: theme.colors.textMuted }}>
+          <p className="text-base md:text-lg lg:text-xl mb-6 md:mb-8 max-w-3xl mx-auto px-4" style={{ color: theme.colors.textMuted }}>
             Experience the next generation of AI-Powered Work!
           </p>
 
@@ -109,7 +121,7 @@ export function PrincipalADEWebSection() {
           <div className="flex justify-center">
             <Link
               href="/editor"
-              className="px-8 py-4 rounded-lg font-medium transition-all hover:scale-105 text-lg"
+              className="px-6 md:px-8 py-3 md:py-4 rounded-lg font-medium transition-all hover:scale-105 text-base md:text-lg"
               style={{
                 background: theme.colors.primary,
                 color: theme.colors.background,
@@ -121,10 +133,10 @@ export function PrincipalADEWebSection() {
         </div>
 
         {/* Visual representation */}
-        <div className="mt-8 relative">
-          {/* Panel Controls */}
+        <div className="mt-6 md:mt-8 relative">
+          {/* Panel Controls - Hidden on mobile */}
           <div
-            className="flex justify-center p-3 rounded-t-lg"
+            className="hidden md:flex justify-center p-3 rounded-t-lg md:rounded-t-lg"
             style={{
               background: theme.colors.surface,
               borderLeft: `1px solid ${theme.colors.border}`,
@@ -147,41 +159,69 @@ export function PrincipalADEWebSection() {
           </div>
 
           <div
-            className="rounded-b-lg shadow-2xl overflow-hidden"
+            className="rounded-lg md:rounded-t-none md:rounded-b-lg shadow-2xl overflow-hidden h-[400px] md:h-[500px] lg:h-[600px]"
             style={{
               background: theme.colors.surface,
               borderLeft: `1px solid ${theme.colors.border}`,
               borderRight: `1px solid ${theme.colors.border}`,
               borderBottom: `1px solid ${theme.colors.border}`,
-              height: '500px',
+              borderTop: `1px solid ${theme.colors.border}`,
             }}
           >
-            <EditableConfigurablePanelLayout
-              theme={theme}
-              panels={panels}
-              layout={layout}
-              isEditMode={isEditMode}
-              onLayoutChange={setLayout}
-              collapsed={{
-                left: leftSidebarCollapsed,
-                right: rightSidebarCollapsed,
-              }}
-              defaultSizes={{
-                left: 33,
-                middle: 34,
-                right: 33,
-              }}
-              minSizes={{
-                left: 15,
-                middle: 30,
-                right: 20,
-              }}
-              collapsiblePanels={{
-                left: true,
-                right: true,
-              }}
-              showCollapseButtons={false}
-            />
+            {isMobile ? (
+              <ResponsiveConfigurablePanelLayout
+                theme={theme}
+                panels={panels}
+                layout={layout}
+                collapsed={{
+                  left: leftSidebarCollapsed,
+                  right: rightSidebarCollapsed,
+                }}
+                defaultSizes={{
+                  left: 33,
+                  middle: 34,
+                  right: 33,
+                }}
+                minSizes={{
+                  left: 15,
+                  middle: 30,
+                  right: 20,
+                }}
+                collapsiblePanels={{
+                  left: true,
+                  right: true,
+                }}
+                showCollapseButtons={false}
+                mobileBreakpoint="(max-width: 768px)"
+              />
+            ) : (
+              <EditableConfigurablePanelLayout
+                theme={theme}
+                panels={panels}
+                layout={layout}
+                isEditMode={isEditMode}
+                onLayoutChange={setLayout}
+                collapsed={{
+                  left: leftSidebarCollapsed,
+                  right: rightSidebarCollapsed,
+                }}
+                defaultSizes={{
+                  left: 33,
+                  middle: 34,
+                  right: 33,
+                }}
+                minSizes={{
+                  left: 15,
+                  middle: 30,
+                  right: 20,
+                }}
+                collapsiblePanels={{
+                  left: true,
+                  right: true,
+                }}
+                showCollapseButtons={false}
+              />
+            )}
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { Providers } from '../components/Providers';
-import { LivingDocumentationSection } from '../components/LivingDocumentationSection';
+import { Providers } from '../src/components/Providers';
+import { LivingDocumentationSection } from '../src/components/LivingDocumentationSection';
 
 /**
  * Living Documentation Section
