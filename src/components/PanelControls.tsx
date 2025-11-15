@@ -10,7 +10,7 @@ import {
   ArrowRightLeft,
   Layout,
 } from 'lucide-react';
-import { useTheme, Theme } from '@a24z/industry-theme';
+import { useTheme, Theme } from '@principal-ade/industry-theme';
 
 interface PanelControlsProps {
   /** Whether the left sidebar is collapsed */

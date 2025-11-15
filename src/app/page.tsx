@@ -5,7 +5,7 @@ import { AgenticWorkSection } from "@/components/AgenticWorkSection";
 import { OptimizedWorkSection } from "@/components/OptimizedWorkSection";
 import { LivingDocumentationSection } from "@/components/LivingDocumentationSection";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useTheme } from "@a24z/industry-theme";
+import { useTheme } from "@principal-ade/industry-theme";
 
 export default function Home() {
   const { theme } = useTheme();

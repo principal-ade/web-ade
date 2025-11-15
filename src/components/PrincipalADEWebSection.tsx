@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { FolderTree, MessageSquare, Terminal } from 'lucide-react';
 import Link from 'next/link';
 import { EditableConfigurablePanelLayout, PanelLayout } from '@principal-ade/panel-layouts';

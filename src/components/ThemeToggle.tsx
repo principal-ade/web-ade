@@ -1,7 +1,7 @@
 'use client';
 
 import { useGlobalTheme, availableThemes } from '@/contexts/ThemeContext';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 
 export function ThemeToggle() {
   const { currentThemeName, setTheme, cycleTheme } = useGlobalTheme();

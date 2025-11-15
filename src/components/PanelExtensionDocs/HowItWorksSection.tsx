@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { Package, Search, Zap, ArrowRight } from 'lucide-react';
 
 export function HowItWorksSection() {

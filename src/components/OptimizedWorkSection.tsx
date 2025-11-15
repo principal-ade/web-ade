@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { Users, Eye, GitBranch, Compass } from 'lucide-react';
 
 export function OptimizedWorkSection() {

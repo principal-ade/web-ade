@@ -1,8 +1,9 @@
 'use client';
 
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogIn, LogOut } from 'lucide-react';
+import Link from 'next/link';
 
 export function EditorHeader() {
   const { theme } = useTheme();
@@ -17,9 +18,9 @@ export function EditorHeader() {
       }}
     >
       <div className="flex items-center gap-2">
-        <h1 className="text-lg font-semibold" style={{ color: theme.colors.text }}>
+        <Link href="/" className="text-lg font-semibold transition-opacity hover:opacity-80 cursor-pointer" style={{ color: theme.colors.text }}>
           Principal ADE Web
-        </h1>
+        </Link>
       </div>
 
       <div className="flex items-center gap-3">

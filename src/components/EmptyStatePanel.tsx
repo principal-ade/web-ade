@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme, Theme } from '@a24z/industry-theme';
+import { useTheme, Theme } from '@principal-ade/industry-theme';
 import { LucideIcon } from 'lucide-react';
 
 interface EmptyStatePanelProps {

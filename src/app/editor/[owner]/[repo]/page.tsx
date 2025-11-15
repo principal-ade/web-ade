@@ -3,7 +3,7 @@
 import { EditorLayout } from "@/components/EditorLayout";
 import { EditorHeader } from "@/components/EditorHeader";
 import { useParams } from "next/navigation";
-import { useTheme } from "@a24z/industry-theme";
+import { useTheme } from "@principal-ade/industry-theme";
 
 export default function EditorRepoPage() {
   const params = useParams();

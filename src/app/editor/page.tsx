@@ -3,7 +3,7 @@
 import { EditorHeader } from "@/components/EditorHeader";
 import { RepoSelectionModal } from "@/components/RepoSelectionModal";
 import { useState, useEffect } from "react";
-import { useTheme } from "@a24z/industry-theme";
+import { useTheme } from "@principal-ade/industry-theme";
 
 export default function EditorPage() {
   const [showModal, setShowModal] = useState(false);

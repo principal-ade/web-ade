@@ -1,6 +1,6 @@
 'use client';
 
-import { ThemeProvider } from '@a24z/industry-theme';
+import { ThemeProvider } from '@principal-ade/industry-theme';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { GlobalThemeProvider, useGlobalTheme } from '@/contexts/ThemeContext';
 import { MermaidInitializer } from './MermaidInitializer';

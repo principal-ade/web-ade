@@ -1,7 +1,7 @@
 'use client';
 
-import { EditableConfigurablePanelLayout, PanelLayout } from '@principal-ade/panel-layouts';
-import { useTheme } from '@a24z/industry-theme';
+import { ResponsiveConfigurablePanelLayout, PanelLayout } from '@principal-ade/panel-layouts';
+import { useTheme } from '@principal-ade/industry-theme';
 import { ThemedAIChatPanel } from '@principal-ade/industry-themed-ai-sdk/components';
 import { PanelProvider, usePanelProvider } from '@/contexts/PanelContext';
 import { useState } from 'react';
@@ -20,7 +20,7 @@ const MarkdownPanelLoader = dynamic(
 
 // Dynamically import the AlexandriaDocsPanel with SSR disabled
 const AlexandriaDocsPanelLoader = dynamic(
-  () => import('@principal-ade/alexandria-docs-panel').then((mod) => {
+  () => import('@industry-theme/alexandria-docs-panel').then((mod) => {
     const Component = mod.panels[0]!.component;
     return { default: Component };
   }),
@@ -30,8 +30,7 @@ const AlexandriaDocsPanelLoader = dynamic(
 function EditorLayoutContent() {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
-  const [isEditMode] = useState(false);
-  const [layout, setLayout] = useState<PanelLayout>({
+  const [layout] = useState<PanelLayout>({
     left: 'docs',
     middle: 'markdown-viewer',
     right: 'terminal',
@@ -87,12 +86,10 @@ function EditorLayoutContent() {
 
   return (
     <div className="h-full w-full">
-      <EditableConfigurablePanelLayout
+      <ResponsiveConfigurablePanelLayout
         theme={theme}
         panels={panels}
         layout={layout}
-        isEditMode={isEditMode}
-        onLayoutChange={setLayout}
         defaultSizes={{
           left: 25,
           middle: 50,
@@ -112,6 +109,7 @@ function EditorLayoutContent() {
           right: true,
         }}
         showCollapseButtons={false}
+        mobileBreakpoint="(max-width: 768px)"
       />
     </div>
   );

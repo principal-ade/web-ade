@@ -14,13 +14,13 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
-    "@a24z/industry-theme": "^0.1.2",
+    "@principal-ade/industry-theme": "^0.1.2",
     "@a24z/panels": "^1.0.37",
     "@industry-theme/markdown-panels": "^0.2.4",
-    "@principal-ade/alexandria-docs-panel": "^0.1.0",
+    "@industry-theme/alexandria-docs-panel": "^0.1.2",
     "@principal-ade/industry-themed-ai-sdk": "^0.2.0",
     "@principal-ade/panel-framework-core": "^0.1.1",
-    "@principal-ade/panel-layouts": "^0.1.4",
+    "@principal-ade/panel-layouts": "^0.1.5",
     "@tailwindcss/postcss": "^4",
     "ai": "^4.3.19",
     "iron-session": "^8.0.4",

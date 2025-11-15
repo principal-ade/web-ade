@@ -8,7 +8,7 @@ import {
   matrixMinimalTheme,
   slateTheme,
   type Theme,
-} from '@a24z/industry-theme';
+} from '@principal-ade/industry-theme';
 
 export const availableThemes = [
   { name: 'Terminal', theme: terminalTheme },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { FileText, Link2, CheckCircle, GitBranch, Eye, RefreshCw } from 'lucide-react';
 
 export function LivingDocumentationSection() {
