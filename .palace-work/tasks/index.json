@@ -1,0 +1,36 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": 1763149139695,
+  "tasks": {
+    "task-1763149139693-r7a56nzlv": {
+      "id": "task-1763149139693-r7a56nzlv",
+      "status": "pending",
+      "priority": "normal",
+      "directoryPath": "src/components",
+      "senderId": "web-ade",
+      "tags": [
+        "enhancement",
+        "markdown-panel",
+        "ui-customization"
+      ],
+      "receivedAt": 1763149139693,
+      "updatedAt": 1763149139693,
+      "filePath": "active/task-1763149139693-r7a56nzlv.task.md"
+    }
+  },
+  "byStatus": {
+    "pending": [
+      "task-1763149139693-r7a56nzlv"
+    ],
+    "acknowledged": [],
+    "in_progress": [],
+    "completed": [],
+    "failed": []
+  },
+  "bySender": {
+    "web-ade": [
+      "task-1763149139693-r7a56nzlv"
+    ]
+  },
+  "byADE": {}
+}
