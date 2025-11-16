@@ -48,6 +48,7 @@
     "stories",
     ".storybook",
     "vitest.config.ts",
+    "vitest.setup.ts",
     "**/*.stories.ts",
     "**/*.stories.tsx",
     "**/*.test.ts",

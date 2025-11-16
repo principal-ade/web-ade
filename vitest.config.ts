@@ -14,6 +14,18 @@ const dirname =
 export default defineConfig({
   test: {
     projects: [
+      // Unit tests project (new)
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          include: ['src/**/__tests__/**/*.test.{ts,tsx}'],
+          environment: 'jsdom',
+          globals: true,
+          setupFiles: ['./vitest.setup.ts'],
+        },
+      },
+      // Storybook tests project (existing)
       {
         extends: true,
         plugins: [
