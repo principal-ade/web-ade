@@ -3,14 +3,17 @@
  *
  * Generates a JWT token for WebSocket authentication with the traffic controller.
  * This endpoint exchanges the GitHub token (from HTTP-only cookie) for a room token.
+ *
+ * Uses the landing page's browser-specific room-token endpoint which handles
+ * browser session authentication without requiring a persistent device ID.
  */
 
 import { NextResponse } from 'next/server';
 import { getGitHubToken } from '@/lib/auth/cookies';
 
-const MESSAGING_SERVER_URL =
-  process.env.MESSAGING_SERVER_URL ||
-  'https://repository-traffic-controller-production.rj36caac972nm.us-east-1.cs.amazonlightsail.com';
+// Landing page auth server URL (handles browser auth)
+const AUTH_SERVER_URL =
+  process.env.LANDING_PAGE_URL || 'https://principal-ade.com';
 
 export async function POST(request: Request) {
   try {
@@ -35,8 +38,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Call the messaging server's room-token endpoint
-    const response = await fetch(`${MESSAGING_SERVER_URL}/api/auth/room-token`, {
+    // Call the landing page's browser room-token endpoint
+    const response = await fetch(`${AUTH_SERVER_URL}/api/auth/browser/room-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
