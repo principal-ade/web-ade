@@ -3,15 +3,17 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@principal-ade/industry-theme';
+import { X } from 'lucide-react';
 
 interface RepoSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
+  currentRepo?: { owner: string; repo: string } | null;
 }
 
 const DEFAULT_REPO = 'principal-ai/alexandria-core-library';
 
-export function RepoSelectionModal({ isOpen, onClose }: RepoSelectionModalProps) {
+export function RepoSelectionModal({ isOpen, onClose, currentRepo }: RepoSelectionModalProps) {
   const router = useRouter();
   const { theme } = useTheme();
   const [repoUrl, setRepoUrl] = useState('');
@@ -78,12 +80,27 @@ export function RepoSelectionModal({ isOpen, onClose }: RepoSelectionModalProps)
           border: `1px solid ${theme.colors.border}`,
         }}
       >
-        <h2
-          className="text-xl font-semibold mb-4"
-          style={{ color: theme.colors.text }}
-        >
-          Select Documentation Repository
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2
+            className="text-xl font-semibold"
+            style={{ color: theme.colors.text }}
+          >
+            Select Documentation Repository
+          </h2>
+          {currentRepo && (
+            <button
+              onClick={onClose}
+              className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+              style={{
+                background: theme.colors.secondary,
+                color: theme.colors.text,
+              }}
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
 
         <p
           className="text-sm mb-6"

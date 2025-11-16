@@ -2,38 +2,46 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, LogOut, Wifi, WifiOff } from 'lucide-react';
+import { LogIn, LogOut, Wifi, WifiOff, Home, ArrowLeftRight } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useControlTowerClient } from '@/lib/control-tower';
 import { getTrafficControllerUrl, getWebSocketToken } from '@/lib/control-tower/config';
 import { useEffect, useState } from 'react';
+import { RepoSelectionModal } from './RepoSelectionModal';
 
 export function EditorHeader() {
   const { theme } = useTheme();
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
+  const pathname = usePathname();
   const [wsToken, setWsToken] = useState<string | null>(null);
-  const [repositoryName, setRepositoryName] = useState<string | null>(null);
+  const [repositoryName, setRepositoryName] = useState<{ owner: string; repo: string } | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Extract repository name from URL
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const pathParts = window.location.pathname.split('/');
+    if (pathname) {
+      const pathParts = pathname.split('/');
+      console.log('[EditorHeader] URL pathname:', pathname);
+      console.log('[EditorHeader] Path parts:', pathParts);
       // Path format: /editor/owner/repo or /editor
       if (pathParts.length >= 4 && pathParts[1] === 'editor') {
         const owner = pathParts[2];
         const repo = pathParts[3];
-        const repoName = `${owner}/${repo}`;
-        setRepositoryName(repoName);
+        console.log('[EditorHeader] Setting repository:', { owner, repo });
+        setRepositoryName({ owner, repo });
       } else {
+        console.log('[EditorHeader] No repository found in path');
         setRepositoryName(null);
       }
     }
-  }, []);
+  }, [pathname]);
 
   // Fetch WebSocket token when user authenticates and has a repository
   useEffect(() => {
     if (isAuthenticated && repositoryName) {
-      getWebSocketToken(repositoryName, 'main')
+      const fullRepoName = `${repositoryName.owner}/${repositoryName.repo}`;
+      getWebSocketToken(fullRepoName, 'main')
         .then(setWsToken)
         .catch(error => {
           console.error('[EditorHeader] Failed to fetch WebSocket token:', error);
@@ -57,10 +65,56 @@ export function EditorHeader() {
         borderColor: theme.colors.border,
       }}
     >
-      <div className="flex items-center gap-2">
-        <Link href="/" className="text-lg font-semibold transition-opacity hover:opacity-80 cursor-pointer" style={{ color: theme.colors.text }}>
-          Principal ADE Web
+      <div className="flex items-center gap-3">
+        <Link
+          href="/"
+          className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+          style={{
+            background: theme.colors.secondary,
+            color: theme.colors.text
+          }}
+          title="Home"
+        >
+          <Home className="w-4 h-4" />
         </Link>
+        {repositoryName && (
+          <div
+            className="flex flex-col"
+            style={{
+              fontFamily: theme.fonts.body,
+              lineHeight: theme.lineHeights.tight,
+            }}
+          >
+            <a
+              href={`https://github.com/${repositoryName.owner}/${repositoryName.repo}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-opacity hover:opacity-80"
+              style={{
+                fontSize: theme.fontSizes[2],
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.text,
+                textDecoration: 'none',
+              }}
+            >
+              {repositoryName.repo}
+            </a>
+            <a
+              href={`https://github.com/${repositoryName.owner}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-opacity hover:opacity-80"
+              style={{
+                fontSize: theme.fontSizes[1],
+                fontWeight: theme.fontWeights.body,
+                color: theme.colors.textMuted,
+                textDecoration: 'none',
+              }}
+            >
+              {repositoryName.owner}
+            </a>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-3">
@@ -125,7 +179,24 @@ export function EditorHeader() {
             Login
           </button>
         )}
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+          style={{
+            background: theme.colors.secondary,
+            color: theme.colors.text,
+          }}
+          title="Switch repository"
+        >
+          <ArrowLeftRight className="w-4 h-4" />
+        </button>
       </div>
+
+      <RepoSelectionModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        currentRepo={repositoryName}
+      />
     </header>
   );
 }
