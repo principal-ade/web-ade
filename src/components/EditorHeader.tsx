@@ -25,7 +25,7 @@ export function EditorHeader() {
       console.log('[EditorHeader] URL pathname:', pathname);
       console.log('[EditorHeader] Path parts:', pathParts);
       // Path format: /editor/owner/repo or /editor
-      if (pathParts.length >= 4 && pathParts[1] === 'editor') {
+      if (pathParts.length >= 4 && pathParts[1] === 'editor' && pathParts[2] && pathParts[3]) {
         const owner = pathParts[2];
         const repo = pathParts[3];
         console.log('[EditorHeader] Setting repository:', { owner, repo });
