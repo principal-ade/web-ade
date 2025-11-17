@@ -2,13 +2,14 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, LogOut, Wifi, WifiOff, Home, ArrowLeftRight } from 'lucide-react';
+import { LogIn, LogOut, Wifi, WifiOff, ArrowLeftRight } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useControlTowerClient } from '@/lib/control-tower';
 import { getTrafficControllerUrl, getWebSocketToken } from '@/lib/control-tower/config';
 import { useEffect, useState } from 'react';
 import { RepoSelectionModal } from './RepoSelectionModal';
+import { Logo } from '@principal-ai/logo-component';
 
 export function EditorHeader() {
   const { theme } = useTheme();
@@ -68,14 +69,10 @@ export function EditorHeader() {
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <Link
           href="/"
-          className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80 flex-shrink-0"
-          style={{
-            background: theme.colors.secondary,
-            color: theme.colors.text
-          }}
+          className="flex items-center justify-center w-8 h-8 transition-all hover:opacity-80 flex-shrink-0"
           title="Home"
         >
-          <Home className="w-4 h-4" />
+          <Logo width={32} height={32} color={theme.colors.primary} />
         </Link>
         {repositoryName && (
           <div
