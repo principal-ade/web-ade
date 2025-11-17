@@ -4,7 +4,6 @@ import { PrincipalADEWebSection } from "@/components/PrincipalADEWebSection";
 import { AgenticWorkSection } from "@/components/AgenticWorkSection";
 import { OptimizedWorkSection } from "@/components/OptimizedWorkSection";
 import { LivingDocumentationSection } from "@/components/LivingDocumentationSection";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "@principal-ade/industry-theme";
 
 export default function Home() {
@@ -12,7 +11,6 @@ export default function Home() {
 
   return (
     <div className="w-screen" style={{ background: theme.colors.background }}>
-      <ThemeToggle />
       <PrincipalADEWebSection />
 
       {/* Divider */}

@@ -7,10 +7,14 @@ import {
   matrixTheme,
   matrixMinimalTheme,
   slateTheme,
+  landingPageTheme,
+  landingPageLightTheme,
   type Theme,
 } from '@principal-ade/industry-theme';
 
 export const availableThemes = [
+  { name: 'Landing Page', theme: landingPageTheme },
+  { name: 'Landing Page Light', theme: landingPageLightTheme },
   { name: 'Terminal', theme: terminalTheme },
   { name: 'Regal', theme: regalTheme },
   { name: 'Matrix', theme: matrixTheme },

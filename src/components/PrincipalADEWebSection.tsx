@@ -3,6 +3,8 @@
 import { useTheme } from '@principal-ade/industry-theme';
 import { FolderTree, MessageSquare, Terminal } from 'lucide-react';
 import Link from 'next/link';
+import { Logo } from '@principal-ai/logo-component';
+import { ThemeToggle } from './ThemeToggle';
 import { EditableConfigurablePanelLayout, ResponsiveConfigurablePanelLayout, PanelLayout } from '@principal-ade/panel-layouts';
 import { EmptyStatePanel } from './EmptyStatePanel';
 import { PanelControls } from './PanelControls';
@@ -102,12 +104,38 @@ export function PrincipalADEWebSection() {
 
   return (
     <section
-      className="relative overflow-hidden min-h-screen flex items-center px-4 md:px-6 py-8 md:py-0"
+      className="relative overflow-hidden min-h-screen px-4 md:px-6 pt-4 pb-8 md:py-0"
       style={{
         background: `linear-gradient(135deg, ${theme.colors.background} 0%, ${theme.colors.muted} 100%)`,
       }}
     >
-      <div className="w-full max-w-6xl mx-auto">
+      {/* Principal AI Logo and Theme Toggle - Top Row (Full Width) */}
+      <div className="w-full flex justify-between items-center mb-4 md:mb-6">
+        <Link
+          href="https://principal-ade.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center transition-opacity hover:opacity-80"
+        >
+          <Logo
+            width={isMobile ? 48 : 64}
+            height={isMobile ? 48 : 64}
+            color={theme.colors.primary}
+            particleColor={theme.colors.accent}
+            opacity={0.9}
+          />
+          <div className="text-xl md:text-2xl" style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
+            <span style={{ fontWeight: '600', color: theme.colors.text }}>Principal</span>
+            <span style={{ fontWeight: '300', color: theme.colors.secondary }}>
+              AI
+            </span>
+          </div>
+        </Link>
+        <ThemeToggle />
+      </div>
+
+      <div className="w-full max-w-6xl mx-auto flex items-center min-h-[calc(100vh-8rem)]">
+        <div className="w-full">
         <div className="text-center mb-8 md:mb-12">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6" style={{ color: theme.colors.text }}>
             Git-Based Agentic Workspace
@@ -223,6 +251,7 @@ export function PrincipalADEWebSection() {
               />
             )}
           </div>
+        </div>
         </div>
       </div>
     </section>
