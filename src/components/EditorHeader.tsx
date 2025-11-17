@@ -65,10 +65,10 @@ export function EditorHeader() {
         borderColor: theme.colors.border,
       }}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         <Link
           href="/"
-          className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+          className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80 flex-shrink-0"
           style={{
             background: theme.colors.secondary,
             color: theme.colors.text
@@ -79,7 +79,7 @@ export function EditorHeader() {
         </Link>
         {repositoryName && (
           <div
-            className="flex flex-col"
+            className="flex flex-col min-w-0"
             style={{
               fontFamily: theme.fonts.body,
               lineHeight: theme.lineHeights.tight,
@@ -89,7 +89,7 @@ export function EditorHeader() {
               href={`https://github.com/${repositoryName.owner}/${repositoryName.repo}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="transition-opacity hover:opacity-80"
+              className="transition-opacity hover:opacity-80 truncate"
               style={{
                 fontSize: theme.fontSizes[2],
                 fontWeight: theme.fontWeights.semibold,
@@ -103,7 +103,7 @@ export function EditorHeader() {
               href={`https://github.com/${repositoryName.owner}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="transition-opacity hover:opacity-80"
+              className="transition-opacity hover:opacity-80 truncate"
               style={{
                 fontSize: theme.fontSizes[1],
                 fontWeight: theme.fontWeights.body,
@@ -117,7 +117,7 @@ export function EditorHeader() {
         )}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-shrink-0">
         {isLoading ? (
           <div className="text-sm" style={{ color: theme.colors.textMuted }}>
             Loading...
@@ -126,7 +126,7 @@ export function EditorHeader() {
           <>
             {/* WebSocket Connection Indicator */}
             <div
-              className="flex items-center gap-1.5 px-2 py-1 rounded text-xs"
+              className="flex items-center justify-center w-8 h-8 rounded-md"
               style={{
                 background: connected ? theme.colors.success + '20' : theme.colors.error + '20',
                 color: connected ? theme.colors.success : theme.colors.error,
@@ -138,32 +138,27 @@ export function EditorHeader() {
               ) : (
                 <WifiOff className="w-3 h-3" />
               )}
-              <span>{connected ? 'Connected' : 'Offline'}</span>
             </div>
 
-            <div className="flex items-center gap-2">
-              {user.avatar_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={user.avatar_url}
-                  alt={user.name}
-                  className="w-6 h-6 rounded-full"
-                />
-              )}
-              <span className="text-sm" style={{ color: theme.colors.text }}>
-                {user.name || user.login}
-              </span>
-            </div>
+            {user.avatar_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.avatar_url}
+                alt={user.name || user.login}
+                className="w-8 h-8 rounded-full"
+                title={user.name || user.login}
+              />
+            )}
             <button
               onClick={logout}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
+              className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
               style={{
                 background: theme.colors.secondary,
                 color: theme.colors.text,
               }}
+              title="Logout"
             >
               <LogOut className="w-4 h-4" />
-              Logout
             </button>
           </>
         ) : (
@@ -176,7 +171,7 @@ export function EditorHeader() {
             }}
           >
             <LogIn className="w-4 h-4" />
-            Login
+            <span className="hidden sm:inline">Login</span>
           </button>
         )}
         <button
