@@ -69,6 +69,7 @@ export class BrowserWebSocketTransportAdapter implements ITransportAdapter {
     this.authToken = token;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async connect(url: string, _options?: ConnectionOptions): Promise<void> {
     if (this.state === 'connected' || this.state === 'connecting') {
       throw new Error('Already connected or connecting');
@@ -127,6 +128,7 @@ export class BrowserWebSocketTransportAdapter implements ITransportAdapter {
         };
 
         // Handle errors
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         this.ws.onerror = (_event: Event) => {
           const error = new Error('WebSocket error occurred');
           this.errorHandlers.forEach(handler => handler(error));

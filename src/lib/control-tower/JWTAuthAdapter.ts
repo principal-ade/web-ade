@@ -18,6 +18,7 @@ export class JWTAuthAdapter implements IAuthAdapter {
     this.token = token;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async authenticate(_credentials: Credentials): Promise<AuthResult> {
     // For JWT auth, we don't use credentials parameter
     // The token is already provided in the constructor
