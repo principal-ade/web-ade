@@ -15,6 +15,8 @@ import type {
   WorkspaceMetadata,
   RepositoryMetadata,
 } from '@principal-ade/panel-framework-core';
+import type { ExtendedMarkdownFile } from '@industry-theme/alexandria-docs-panel/dist/types';
+import type { CodebaseView } from '@principal-ai/alexandria-core-library/types';
 
 interface GitHubTreeItem {
   path: string;
@@ -56,10 +58,15 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
   const [markdownLoading, setMarkdownLoading] = useState(false);
   const [markdownError, setMarkdownError] = useState<Error | null>(null);
 
-  // State for markdown files list
-  const [markdownFiles, setMarkdownFiles] = useState<Array<{ path: string; title?: string; lastModified?: number }>>([]);
+  // State for markdown files list with associated files
+  const [markdownFiles, setMarkdownFiles] = useState<ExtendedMarkdownFile[]>([]);
   const [markdownFilesLoading, setMarkdownFilesLoading] = useState(false);
   const [markdownFilesError, setMarkdownFilesError] = useState<Error | null>(null);
+
+  // State for codebase views
+  const [codebaseViews, setCodebaseViews] = useState<CodebaseView[]>([]);
+  const [codebaseViewsLoading, setCodebaseViewsLoading] = useState(false);
+  const [codebaseViewsError, setCodebaseViewsError] = useState<Error | null>(null);
 
   // State for file tree
   const [fileTree, setFileTree] = useState<{ root: string; files: Array<{ path: string; size: number; lines: number }> } | null>(null);
@@ -108,8 +115,42 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     }
   }, []);
 
-  // Fetch markdown files list from GitHub
-  const fetchMarkdownFiles = useCallback(async (repo: string) => {
+  // Fetch codebase views from server-side API
+  const fetchCodebaseViews = useCallback(async (repo: string) => {
+    setCodebaseViewsLoading(true);
+    setCodebaseViewsError(null);
+    console.log('[PanelContext] Fetching codebase views for:', repo);
+
+    try {
+      const [owner, name] = repo.split('/');
+
+      // Fetch from API route that uses alexandria-core-library server-side
+      const response = await fetch(`/api/github/repo/${owner}/${name}/codebase-views`);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log('[PanelContext] No .alexandria directory found');
+          setCodebaseViews([]);
+          return;
+        }
+        throw new Error(`Failed to fetch codebase views: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const views = data.views || [];
+
+      setCodebaseViews(views);
+      console.log('[PanelContext] Loaded codebase views from API:', views.length);
+    } catch (err) {
+      console.error('[PanelContext] Failed to fetch codebase views:', err);
+      setCodebaseViewsError(err instanceof Error ? err : new Error('Failed to load codebase views'));
+    } finally {
+      setCodebaseViewsLoading(false);
+    }
+  }, []);
+
+  // Fetch markdown files list from GitHub and enrich with associated files
+  const fetchMarkdownFiles = useCallback(async (repo: string, views: CodebaseView[]) => {
     setMarkdownFilesLoading(true);
     setMarkdownFilesError(null);
     console.log('[PanelContext] Fetching markdown files for:', repo);
@@ -126,8 +167,18 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
 
       const tree: GitHubTreeResponse = await response.json();
 
-      // Filter for markdown files
-      const mdFiles = tree.tree
+      // Create a map of overviewPath -> CodebaseView for quick lookup
+      const viewsByOverviewPath = new Map<string, CodebaseView>();
+      views.forEach(view => {
+        // Normalize paths for comparison
+        const normalizedPath = view.overviewPath.startsWith('/')
+          ? view.overviewPath
+          : `/${view.overviewPath}`;
+        viewsByOverviewPath.set(normalizedPath, view);
+      });
+
+      // Filter for markdown files and enrich with associated files
+      const mdFiles: ExtendedMarkdownFile[] = tree.tree
         .filter((item) => item.type === 'blob' && /\.md$/i.test(item.path))
         .map((item) => {
           const filename = item.path.split('/').pop() || item.path;
@@ -136,10 +187,18 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
             .replace(/[-_]/g, ' ')
             .replace(/\b\w/g, (char: string) => char.toUpperCase());
 
+          const filePath = `/${item.path}`;
+
+          // Check if this markdown file is associated with a CodebaseView
+          const view = viewsByOverviewPath.get(filePath);
+          const associatedFiles = view ? extractAssociatedFiles(view) : undefined;
+
           return {
-            path: `/${item.path}`,
+            path: filePath,
             title,
             lastModified: Date.now(), // GitHub tree doesn't provide this
+            associatedFiles,
+            codebaseViewId: view?.id,
           };
         })
         .sort((a, b) => a.path.localeCompare(b.path)); // Sort alphabetically by path
@@ -153,6 +212,20 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       setMarkdownFilesLoading(false);
     }
   }, []);
+
+  // Helper function to extract all files from a CodebaseView
+  const extractAssociatedFiles = (view: CodebaseView): string[] => {
+    const files = new Set<string>();
+
+    Object.values(view.referenceGroups).forEach(group => {
+      group.files.forEach(file => {
+        // Ensure files have leading slash for consistency
+        files.add(file.startsWith('/') ? file : `/${file}`);
+      });
+    });
+
+    return Array.from(files).sort();
+  };
 
   // Fetch README function
   const fetchReadme = useCallback(async (repo: string) => {
@@ -283,7 +356,23 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
           error: markdownFilesError,
           refresh: async () => {
             if (githubRepo) {
-              await fetchMarkdownFiles(githubRepo);
+              await fetchCodebaseViews(githubRepo);
+              await fetchMarkdownFiles(githubRepo, codebaseViews);
+            }
+          },
+        },
+      ],
+      [
+        'codebaseViews',
+        {
+          scope: 'repository',
+          name: 'codebaseViews',
+          data: codebaseViews,
+          loading: codebaseViewsLoading,
+          error: codebaseViewsError,
+          refresh: async () => {
+            if (githubRepo) {
+              await fetchCodebaseViews(githubRepo);
             }
           },
         },
@@ -354,6 +443,20 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       return newMap;
     });
   }, [fileTree, fileTreeLoading, fileTreeError]);
+
+  // Update codebase views slice when data changes
+  useEffect(() => {
+    setSlices((prev) => {
+      const newMap = new Map(prev);
+      const codebaseViewsSlice = newMap.get('codebaseViews');
+      if (codebaseViewsSlice) {
+        codebaseViewsSlice.data = codebaseViews;
+        codebaseViewsSlice.loading = codebaseViewsLoading;
+        codebaseViewsSlice.error = codebaseViewsError;
+      }
+      return newMap;
+    });
+  }, [codebaseViews, codebaseViewsLoading, codebaseViewsError]);
 
   // Refresh function
   const refresh = useCallback(
@@ -525,14 +628,25 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     [context, actions, events]
   );
 
-  // Auto-fetch README, markdown files, and file tree when githubRepo changes
+  // Auto-fetch README, codebase views, markdown files, and file tree when githubRepo changes
   useEffect(() => {
     if (githubRepo) {
+      // Fetch codebase views first, then markdown files (which need the views)
+      (async () => {
+        await fetchCodebaseViews(githubRepo);
+      })();
+
       fetchReadme(githubRepo);
-      fetchMarkdownFiles(githubRepo);
       fetchFileTree(githubRepo);
     }
-  }, [githubRepo, fetchReadme, fetchMarkdownFiles, fetchFileTree]);
+  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree]);
+
+  // Fetch markdown files when codebase views are loaded
+  useEffect(() => {
+    if (githubRepo && !codebaseViewsLoading && !codebaseViewsError) {
+      fetchMarkdownFiles(githubRepo, codebaseViews);
+    }
+  }, [githubRepo, codebaseViews, codebaseViewsLoading, codebaseViewsError, fetchMarkdownFiles]);
 
   return <PanelContext.Provider value={value}>{children}</PanelContext.Provider>;
 }
