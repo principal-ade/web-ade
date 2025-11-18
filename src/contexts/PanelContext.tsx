@@ -16,6 +16,22 @@ import type {
   RepositoryMetadata,
 } from '@principal-ade/panel-framework-core';
 
+interface GitHubTreeItem {
+  path: string;
+  mode: string;
+  type: 'blob' | 'tree';
+  sha: string;
+  size?: number;
+  url?: string;
+}
+
+interface GitHubTreeResponse {
+  sha: string;
+  url: string;
+  tree: GitHubTreeItem[];
+  truncated: boolean;
+}
+
 interface PanelProviderProps {
   children: ReactNode;
   workspace?: WorkspaceMetadata;
@@ -45,6 +61,53 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
   const [markdownFilesLoading, setMarkdownFilesLoading] = useState(false);
   const [markdownFilesError, setMarkdownFilesError] = useState<Error | null>(null);
 
+  // State for file tree
+  const [fileTree, setFileTree] = useState<{ root: string; files: Array<{ path: string; size: number; lines: number }> } | null>(null);
+  const [fileTreeLoading, setFileTreeLoading] = useState(false);
+  const [fileTreeError, setFileTreeError] = useState<Error | null>(null);
+
+  // Fetch file tree from GitHub
+  const fetchFileTree = useCallback(async (repo: string) => {
+    setFileTreeLoading(true);
+    setFileTreeError(null);
+    console.log('[PanelContext] Fetching file tree for:', repo);
+
+    try {
+      const [owner, name] = repo.split('/');
+
+      // Fetch file tree from GitHub API
+      const response = await fetch(`/api/github/repo/${owner}/${name}?action=tree`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file tree: ${response.statusText}`);
+      }
+
+      const tree: GitHubTreeResponse = await response.json();
+
+      // Convert to the format expected by Code City panel
+      const files = tree.tree
+        .filter((item) => item.type === 'blob')
+        .map((item) => ({
+          path: item.path,
+          size: item.size || 1000, // Default size if not provided
+          lines: Math.ceil((item.size || 1000) / 50), // Estimate lines
+        }));
+
+      const fileTreeData = {
+        root: `${owner}/${name}`,
+        files,
+      };
+
+      setFileTree(fileTreeData);
+      console.log('[PanelContext] File tree loaded with', files.length, 'files');
+    } catch (err) {
+      console.error('[PanelContext] Failed to fetch file tree:', err);
+      setFileTreeError(err instanceof Error ? err : new Error('Failed to load file tree'));
+    } finally {
+      setFileTreeLoading(false);
+    }
+  }, []);
+
   // Fetch markdown files list from GitHub
   const fetchMarkdownFiles = useCallback(async (repo: string) => {
     setMarkdownFilesLoading(true);
@@ -61,14 +124,12 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
         throw new Error(`Failed to fetch file tree: ${response.statusText}`);
       }
 
-      const tree = await response.json();
+      const tree: GitHubTreeResponse = await response.json();
 
       // Filter for markdown files
       const mdFiles = tree.tree
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .filter((item: any) => item.type === 'blob' && /\.md$/i.test(item.path))
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .map((item: any) => {
+        .filter((item) => item.type === 'blob' && /\.md$/i.test(item.path))
+        .map((item) => {
           const filename = item.path.split('/').pop() || item.path;
           const title = filename
             .replace(/\.md$/i, '')
@@ -81,7 +142,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
             lastModified: Date.now(), // GitHub tree doesn't provide this
           };
         })
-        .sort((a: { path: string }, b: { path: string }) => a.path.localeCompare(b.path)); // Sort alphabetically by path
+        .sort((a, b) => a.path.localeCompare(b.path)); // Sort alphabetically by path
 
       setMarkdownFiles(mdFiles);
       console.log('[PanelContext] Found markdown files:', mdFiles.length);
@@ -202,12 +263,13 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
         {
           scope: 'repository',
           name: 'fileTree',
-          data: null,
-          loading: false,
-          error: null,
+          data: fileTree,
+          loading: fileTreeLoading,
+          error: fileTreeError,
           refresh: async () => {
-            // TODO: Implement file tree fetching
-            console.log('Refreshing fileTree slice');
+            if (githubRepo) {
+              await fetchFileTree(githubRepo);
+            }
           },
         },
       ],
@@ -278,6 +340,20 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       return newMap;
     });
   }, [markdownFiles, markdownFilesLoading, markdownFilesError]);
+
+  // Update file tree slice when data changes
+  useEffect(() => {
+    setSlices((prev) => {
+      const newMap = new Map(prev);
+      const fileTreeSlice = newMap.get('fileTree');
+      if (fileTreeSlice) {
+        fileTreeSlice.data = fileTree;
+        fileTreeSlice.loading = fileTreeLoading;
+        fileTreeSlice.error = fileTreeError;
+      }
+      return newMap;
+    });
+  }, [fileTree, fileTreeLoading, fileTreeError]);
 
   // Refresh function
   const refresh = useCallback(
@@ -449,13 +525,14 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     [context, actions, events]
   );
 
-  // Auto-fetch README and markdown files when githubRepo changes
+  // Auto-fetch README, markdown files, and file tree when githubRepo changes
   useEffect(() => {
     if (githubRepo) {
       fetchReadme(githubRepo);
       fetchMarkdownFiles(githubRepo);
+      fetchFileTree(githubRepo);
     }
-  }, [githubRepo, fetchReadme, fetchMarkdownFiles]);
+  }, [githubRepo, fetchReadme, fetchMarkdownFiles, fetchFileTree]);
 
   return <PanelContext.Provider value={value}>{children}</PanelContext.Provider>;
 }

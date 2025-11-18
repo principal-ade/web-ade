@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@industry-theme/alexandria-docs-panel": "^0.1.3",
+    "@industry-theme/code-city-panel": "file:../../Tour Workspace/industry-themed-code-city-panel",
     "@industry-theme/markdown-panels": "^0.2.9",
     "@principal-ade/industry-theme": "^0.1.3",
     "@principal-ade/industry-themed-ai-sdk": "^0.2.0",

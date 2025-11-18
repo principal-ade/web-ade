@@ -10,8 +10,29 @@ import { getTrafficControllerUrl, getWebSocketToken } from '@/lib/control-tower/
 import { useEffect, useState } from 'react';
 import { RepoSelectionModal } from './RepoSelectionModal';
 import { Logo } from '@principal-ai/logo-component';
+import { PanelControls } from './PanelControls';
 
-export function EditorHeader() {
+interface EditorHeaderProps {
+  leftSidebarCollapsed?: boolean;
+  rightSidebarCollapsed?: boolean;
+  onToggleLeftSidebar?: () => void;
+  onToggleRightSidebar?: () => void;
+  onSwitchLeftMiddlePanels?: () => void;
+  onSwitchRightMiddlePanels?: () => void;
+  onConfigurePanels?: () => void;
+  isEditMode?: boolean;
+}
+
+export function EditorHeader({
+  leftSidebarCollapsed,
+  rightSidebarCollapsed,
+  onToggleLeftSidebar,
+  onToggleRightSidebar,
+  onSwitchLeftMiddlePanels,
+  onSwitchRightMiddlePanels,
+  onConfigurePanels,
+  isEditMode,
+}: EditorHeaderProps = {}) {
   const { theme } = useTheme();
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
   const pathname = usePathname();
@@ -60,7 +81,7 @@ export function EditorHeader() {
 
   return (
     <header
-      className="h-12 flex items-center justify-between px-4 border-b"
+      className="h-12 flex items-center justify-between px-4 border-b relative"
       style={{
         background: theme.colors.surface,
         borderColor: theme.colors.border,
@@ -114,7 +135,22 @@ export function EditorHeader() {
         )}
       </div>
 
-      <div className="flex items-center gap-3 flex-shrink-0">
+      {/* Panel Controls - Centered, hidden on mobile */}
+      <div className="hidden md:flex items-center justify-center flex-shrink-0 absolute left-1/2 transform -translate-x-1/2">
+        <PanelControls
+          leftSidebarCollapsed={leftSidebarCollapsed}
+          rightSidebarCollapsed={rightSidebarCollapsed}
+          onToggleLeftSidebar={onToggleLeftSidebar}
+          onToggleRightSidebar={onToggleRightSidebar}
+          onSwitchLeftMiddlePanels={onSwitchLeftMiddlePanels}
+          onSwitchRightMiddlePanels={onSwitchRightMiddlePanels}
+          onConfigurePanels={onConfigurePanels}
+          isEditMode={isEditMode}
+          theme={theme}
+        />
+      </div>
+
+      <div className="flex items-center gap-3 flex-shrink-0 flex-1 justify-end">
         {isLoading ? (
           <div className="text-sm" style={{ color: theme.colors.textMuted }}>
             Loading...
