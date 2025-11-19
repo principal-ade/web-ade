@@ -6,7 +6,7 @@ frontend:
         - nvm install 20
         - nvm use 20
         - rm -rf node_modules .next
-        - npm ci
+        - npm install
         - npm list @tailwindcss/postcss tailwindcss
     build:
       commands:
