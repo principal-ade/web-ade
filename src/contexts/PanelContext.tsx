@@ -596,6 +596,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
           });
         } catch (error) {
           console.error('Error opening file:', error);
+          throw error;
         }
       },
       openGitDiff: (filePath: string, status?: string) => {
