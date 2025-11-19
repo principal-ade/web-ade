@@ -7,6 +7,7 @@ import { PanelProvider, usePanelProvider } from '@/contexts/PanelContext';
 import { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { EditorHeader } from './EditorHeader';
+import { SessionsPanel } from './SessionsPanel';
 import '@principal-ade/panel-layouts/styles.css';
 import '@principal-ade/industry-themed-ai-sdk/styles.css';
 
@@ -55,7 +56,7 @@ function EditorLayoutContent() {
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'docs',
     middle: 'kanban',
-    right: 'code-city',
+    right: 'sessions',
   });
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(true);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(true);
@@ -107,16 +108,16 @@ function EditorLayoutContent() {
       const newMode = prev === 'editor' ? 'kanban' : 'editor';
 
       if (newMode === 'kanban') {
-        // Kanban mode: kanban in middle, sidebars collapsed
+        // Kanban mode: kanban in middle, sessions on right, sidebars collapsed
         setLayout({
           left: 'docs',
           middle: 'kanban',
-          right: 'code-city',
+          right: 'sessions',
         });
         setLeftSidebarCollapsed(true);
         setRightSidebarCollapsed(true);
       } else {
-        // Editor mode: original layout with markdown in middle
+        // Editor mode: original layout with markdown in middle, code-city on right
         setLayout({
           left: 'docs',
           middle: 'markdown-viewer',
@@ -191,6 +192,15 @@ function EditorLayoutContent() {
             <h3 className="text-lg font-semibold mb-2">Right Panel</h3>
             <p style={{ color: theme.colors.textMuted }}>Output / Terminal</p>
           </div>
+        </div>
+      ),
+    },
+    {
+      id: 'sessions',
+      label: 'Sessions',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <SessionsPanel />
         </div>
       ),
     },
