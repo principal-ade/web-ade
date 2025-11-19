@@ -37,16 +37,28 @@ const CodeCityPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the KanbanPanel with SSR disabled
+const KanbanPanelLoader = dynamic(
+  () => import('@industry-theme/backlogmd-kanban-panel').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
+type ViewMode = 'editor' | 'kanban';
+
 function EditorLayoutContent() {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
+  const [viewMode, setViewMode] = useState<ViewMode>('kanban');
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'docs',
-    middle: 'markdown-viewer',
+    middle: 'kanban',
     right: 'code-city',
   });
-  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
-  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(true);
+  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -88,6 +100,34 @@ function EditorLayoutContent() {
 
   const handleConfigurePanels = useCallback(() => {
     setIsEditMode((prev) => !prev);
+  }, []);
+
+  const handleToggleViewMode = useCallback(() => {
+    setViewMode((prev) => {
+      const newMode = prev === 'editor' ? 'kanban' : 'editor';
+
+      if (newMode === 'kanban') {
+        // Kanban mode: kanban in middle, sidebars collapsed
+        setLayout({
+          left: 'docs',
+          middle: 'kanban',
+          right: 'code-city',
+        });
+        setLeftSidebarCollapsed(true);
+        setRightSidebarCollapsed(true);
+      } else {
+        // Editor mode: original layout with markdown in middle
+        setLayout({
+          left: 'docs',
+          middle: 'markdown-viewer',
+          right: 'code-city',
+        });
+        setLeftSidebarCollapsed(false);
+        setRightSidebarCollapsed(false);
+      }
+
+      return newMode;
+    });
   }, []);
 
   const panels = [
@@ -134,6 +174,15 @@ function EditorLayoutContent() {
       ),
     },
     {
+      id: 'kanban',
+      label: 'Kanban',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <KanbanPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
       id: 'terminal',
       label: 'Terminal',
       content: (
@@ -158,6 +207,8 @@ function EditorLayoutContent() {
         onSwitchRightMiddlePanels={handleSwitchRightMiddlePanels}
         onConfigurePanels={handleConfigurePanels}
         isEditMode={isEditMode}
+        viewMode={viewMode}
+        onToggleViewMode={handleToggleViewMode}
       />
       <div className="flex-1 overflow-hidden">
         {isMobile ? (

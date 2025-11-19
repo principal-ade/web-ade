@@ -12,6 +12,8 @@ import { RepoSelectionModal } from './RepoSelectionModal';
 import { Logo } from '@principal-ai/logo-component';
 import { PanelControls } from './PanelControls';
 
+type ViewMode = 'editor' | 'kanban';
+
 interface EditorHeaderProps {
   leftSidebarCollapsed?: boolean;
   rightSidebarCollapsed?: boolean;
@@ -21,6 +23,8 @@ interface EditorHeaderProps {
   onSwitchRightMiddlePanels?: () => void;
   onConfigurePanels?: () => void;
   isEditMode?: boolean;
+  viewMode?: ViewMode;
+  onToggleViewMode?: () => void;
 }
 
 export function EditorHeader({
@@ -32,6 +36,8 @@ export function EditorHeader({
   onSwitchRightMiddlePanels,
   onConfigurePanels,
   isEditMode,
+  viewMode,
+  onToggleViewMode,
 }: EditorHeaderProps = {}) {
   const { theme } = useTheme();
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
@@ -146,6 +152,8 @@ export function EditorHeader({
           onSwitchRightMiddlePanels={onSwitchRightMiddlePanels}
           onConfigurePanels={onConfigurePanels}
           isEditMode={isEditMode}
+          viewMode={viewMode}
+          onToggleViewMode={onToggleViewMode}
           theme={theme}
         />
       </div>
