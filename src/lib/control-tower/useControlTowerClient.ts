@@ -96,6 +96,7 @@ export function useControlTowerClient(options: UseControlTowerClientOptions) {
 
     client.on('room_joined', ({ roomId, state: roomState }) => {
       console.log('[ControlTower] Joined room:', roomId);
+      // The library now properly deserializes Maps, so we can use roomState directly
       setState(prev => ({ ...prev, roomId, roomState }));
     });
 
