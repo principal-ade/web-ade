@@ -556,44 +556,10 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
             content = decoder.decode(bytes);
           }
 
-          // Create ActiveFileSlice structure
-          const activeFileData = {
-            path: cleanPath,
-            content: content,
-            type: 'markdown',
-            size: content.length,
-            lastModified: new Date(),
-            encoding: 'utf-8',
-            source: {
-              type: 'remote' as const,
-              provider: 'github',
-              owner,
-              name,
-              branch: 'main',
-              location: cleanPath,
-              url: `https://github.com/${githubRepo}/blob/main/${cleanPath}`,
-            },
-          };
-
-          // Update active-file slice
-          setSlices((prev) => {
-            const newMap = new Map(prev);
-            const activeFileSlice = newMap.get('active-file');
-            if (activeFileSlice) {
-              activeFileSlice.data = activeFileData;
-              activeFileSlice.loading = false;
-              activeFileSlice.error = null;
-            }
-            return newMap;
-          });
-
-          // Emit file:opened event
-          events.emit({
-            type: 'file:opened',
-            source: 'web-ade',
-            timestamp: Date.now(),
-            payload: activeFileData,
-          });
+          // Return content directly for programmatic access (e.g., kanban panel)
+          // This prevents re-render cycles when panels fetch multiple files
+          // The panel checks for string return (useKanbanData.ts:71)
+          return content;
         } catch (error) {
           console.error('Error opening file:', error);
           throw error;
