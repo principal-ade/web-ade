@@ -5,7 +5,7 @@
  * Implements panel-framework-core v0.1.1 context and event system
  */
 
-import { createContext, useContext, useState, useCallback, useMemo, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef, ReactNode } from 'react';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import type {
   PanelContextValue,
@@ -299,9 +299,10 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     }
   }, [events]);
 
-  // State for data slices
-  const [slices, setSlices] = useState<Map<string, DataSlice>>(() => {
-    return new Map([
+  // Use ref for slices to avoid triggering context recreation on every slice update
+  // This prevents the panel from re-rendering when slice data changes
+  const slicesRef = useRef<Map<string, DataSlice>>(
+    new Map([
       [
         'git',
         {
@@ -377,8 +378,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
           },
         },
       ],
-    ]);
-  });
+    ])
+  );
 
   // Update active-file slice when README is fetched
   useEffect(() => {
@@ -403,81 +404,74 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
         },
       };
 
-      setSlices((prev) => {
-        const newMap = new Map(prev);
-        const activeFileSlice = newMap.get('active-file');
-        if (activeFileSlice) {
-          activeFileSlice.data = activeFileData;
-          activeFileSlice.loading = markdownLoading;
-          activeFileSlice.error = markdownError;
-        }
-        return newMap;
-      });
+      const newMap = new Map(slicesRef.current);
+      const activeFileSlice = newMap.get('active-file');
+      if (activeFileSlice) {
+        activeFileSlice.data = activeFileData;
+        activeFileSlice.loading = markdownLoading;
+        activeFileSlice.error = markdownError;
+      }
+      slicesRef.current = newMap;
+      // Don't call setSlices - we don't need to trigger re-renders for slice updates
     }
   }, [markdownContent, markdownLoading, markdownError, githubRepo]);
 
   // Update markdown files slice when files list changes
   useEffect(() => {
-    setSlices((prev) => {
-      const newMap = new Map(prev);
-      const markdownSlice = newMap.get('markdown');
-      if (markdownSlice) {
-        markdownSlice.data = markdownFiles;
-        markdownSlice.loading = markdownFilesLoading;
-        markdownSlice.error = markdownFilesError;
-      }
-      return newMap;
-    });
+    const newMap = new Map(slicesRef.current);
+    const markdownSlice = newMap.get('markdown');
+    if (markdownSlice) {
+      markdownSlice.data = markdownFiles;
+      markdownSlice.loading = markdownFilesLoading;
+      markdownSlice.error = markdownFilesError;
+    }
+    slicesRef.current = newMap;
   }, [markdownFiles, markdownFilesLoading, markdownFilesError]);
 
   // Update file tree slice when data changes
   useEffect(() => {
-    setSlices((prev) => {
-      const newMap = new Map(prev);
-      const fileTreeSlice = newMap.get('fileTree');
-      if (fileTreeSlice) {
-        fileTreeSlice.data = fileTree;
-        fileTreeSlice.loading = fileTreeLoading;
-        fileTreeSlice.error = fileTreeError;
-      }
-      return newMap;
-    });
+    const newMap = new Map(slicesRef.current);
+    const fileTreeSlice = newMap.get('fileTree');
+    if (fileTreeSlice) {
+      fileTreeSlice.data = fileTree;
+      fileTreeSlice.loading = fileTreeLoading;
+      fileTreeSlice.error = fileTreeError;
+    }
+    slicesRef.current = newMap;
   }, [fileTree, fileTreeLoading, fileTreeError]);
 
   // Update codebase views slice when data changes
   useEffect(() => {
-    setSlices((prev) => {
-      const newMap = new Map(prev);
-      const codebaseViewsSlice = newMap.get('codebaseViews');
-      if (codebaseViewsSlice) {
-        codebaseViewsSlice.data = codebaseViews;
-        codebaseViewsSlice.loading = codebaseViewsLoading;
-        codebaseViewsSlice.error = codebaseViewsError;
-      }
-      return newMap;
-    });
+    const newMap = new Map(slicesRef.current);
+    const codebaseViewsSlice = newMap.get('codebaseViews');
+    if (codebaseViewsSlice) {
+      codebaseViewsSlice.data = codebaseViews;
+      codebaseViewsSlice.loading = codebaseViewsLoading;
+      codebaseViewsSlice.error = codebaseViewsError;
+    }
+    slicesRef.current = newMap;
   }, [codebaseViews, codebaseViewsLoading, codebaseViewsError]);
 
-  // Refresh function
+  // Refresh function - use slicesRef instead of slices state
   const refresh = useCallback(
     async (scope?: 'workspace' | 'repository', sliceName?: string) => {
       if (sliceName) {
-        const slice = slices.get(sliceName);
+        const slice = slicesRef.current.get(sliceName);
         if (slice) {
           await slice.refresh();
         }
       } else {
         // Refresh all slices in the specified scope
-        const promises = Array.from(slices.values())
+        const promises = Array.from(slicesRef.current.values())
           .filter((s) => !scope || s.scope === scope)
           .map((s) => s.refresh());
         await Promise.all(promises);
       }
     },
-    [slices]
+    []  // No dependencies - uses ref
   );
 
-  // Context value
+  // Context value - use slicesRef to avoid recreation on every slice update
   const context: PanelContextValue = useMemo(
     () => ({
       currentScope: {
@@ -490,30 +484,30 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
           githubRepo, // Add the full owner/repo string
         } : repository,
       },
-      slices,
-      getSlice: <T,>(name: string) => slices.get(name) as DataSlice<T> | undefined,
+      slices: slicesRef.current,
+      getSlice: <T,>(name: string) => slicesRef.current.get(name) as DataSlice<T> | undefined,
       getWorkspaceSlice: <T,>(name: string) => {
-        const slice = slices.get(name);
+        const slice = slicesRef.current.get(name);
         return slice?.scope === 'workspace' ? (slice as DataSlice<T>) : undefined;
       },
       getRepositorySlice: <T,>(name: string) => {
-        const slice = slices.get(name);
+        const slice = slicesRef.current.get(name);
         return slice?.scope === 'repository' ? (slice as DataSlice<T>) : undefined;
       },
       hasSlice: (name: string, scope?: 'workspace' | 'repository') => {
-        const slice = slices.get(name);
+        const slice = slicesRef.current.get(name);
         if (!slice) return false;
         return scope ? slice.scope === scope : true;
       },
       isSliceLoading: (name: string, scope?: 'workspace' | 'repository') => {
-        const slice = slices.get(name);
+        const slice = slicesRef.current.get(name);
         if (!slice) return false;
         if (scope && slice.scope !== scope) return false;
         return slice.loading;
       },
       refresh,
     }),
-    [slices, workspace, repository, refresh, githubRepo]
+    [workspace, repository, refresh, githubRepo]  // Removed 'slices' dependency
   );
 
   // Actions
