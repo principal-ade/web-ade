@@ -620,6 +620,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
 
   // Update markdown files when codebaseViews data changes (e.g., after a refresh)
   const previousCodebaseViewsRef = useRef<CodebaseView[]>([]);
+  const initialFetchDoneRef = useRef(false);
   useEffect(() => {
     // Only fetch if we have a repo and views have actually changed
     if (!githubRepo || codebaseViewsLoading) return;
@@ -628,8 +629,21 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     const viewsChanged = codebaseViews.length !== previousCodebaseViewsRef.current.length ||
       codebaseViews.some((view, idx) => view.id !== previousCodebaseViewsRef.current[idx]?.id);
 
+    // On first load, just mark as done and update ref without fetching (primary effect handles fetch)
+    if (!initialFetchDoneRef.current) {
+      if (viewsChanged) {
+        console.log('[PanelContext] Initial codebase views loaded, marking secondary effect as initialized');
+        previousCodebaseViewsRef.current = codebaseViews;
+        initialFetchDoneRef.current = true;
+        // Fetch markdown files only once on initial load
+        fetchMarkdownFiles(githubRepo, codebaseViews);
+      }
+      return;
+    }
+
+    // After initial load, handle subsequent changes (e.g., from refresh)
     if (viewsChanged && codebaseViews.length > 0) {
-      console.log('[PanelContext] Codebase views changed, fetching markdown files');
+      console.log('[PanelContext] Codebase views changed after init, fetching markdown files');
       previousCodebaseViewsRef.current = codebaseViews;
       fetchMarkdownFiles(githubRepo, codebaseViews);
     } else if (codebaseViews.length === 0 && previousCodebaseViewsRef.current.length === 0) {
