@@ -589,6 +589,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
   useEffect(() => {
     if (!githubRepo) return;
 
+    console.log('[PanelContext] Initializing data fetch for:', githubRepo);
+
     // Fetch independent data in parallel
     fetchReadme(githubRepo);
     fetchFileTree(githubRepo);
@@ -598,10 +600,13 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     (async () => {
       try {
         await fetchCodebaseViews(githubRepo);
-        // Only fetch markdown files after codebase views complete successfully
-        // This prevents the race condition where the second effect might not trigger
-        if (!cancelled && !codebaseViewsError) {
-          await fetchMarkdownFiles(githubRepo, codebaseViews);
+        // Wait a tick to ensure state has updated
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        // Fetch markdown files after codebase views complete
+        // Note: This will use the updated codebaseViews from the second effect
+        if (!cancelled) {
+          console.log('[PanelContext] Codebase views fetch complete, markdown files will be fetched by secondary effect');
         }
       } catch (error) {
         console.error('[PanelContext] Error in sequential data fetch:', error);
@@ -611,16 +616,30 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     return () => {
       cancelled = true;
     };
-  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchMarkdownFiles, codebaseViewsError, codebaseViews]);
+  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree]); // Removed codebaseViews and error from deps
 
   // Update markdown files when codebaseViews data changes (e.g., after a refresh)
+  const previousCodebaseViewsRef = useRef<CodebaseView[]>([]);
   useEffect(() => {
-    if (githubRepo && !codebaseViewsLoading && !codebaseViewsError && codebaseViews.length > 0) {
-      // Only refetch if we have views and they've actually changed
+    // Only fetch if we have a repo and views have actually changed
+    if (!githubRepo || codebaseViewsLoading) return;
+
+    // Check if codebaseViews actually changed (not just a re-render)
+    const viewsChanged = codebaseViews.length !== previousCodebaseViewsRef.current.length ||
+      codebaseViews.some((view, idx) => view.id !== previousCodebaseViewsRef.current[idx]?.id);
+
+    if (viewsChanged && codebaseViews.length > 0) {
+      console.log('[PanelContext] Codebase views changed, fetching markdown files');
+      previousCodebaseViewsRef.current = codebaseViews;
+      fetchMarkdownFiles(githubRepo, codebaseViews);
+    } else if (codebaseViews.length === 0 && previousCodebaseViewsRef.current.length === 0) {
+      // First load with no views - still need to fetch markdown files
+      console.log('[PanelContext] No codebase views found, fetching markdown files anyway');
+      previousCodebaseViewsRef.current = codebaseViews;
       fetchMarkdownFiles(githubRepo, codebaseViews);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [codebaseViews]); // Intentionally limited dependencies to prevent loops
+  }, [codebaseViews, codebaseViewsLoading, githubRepo]); // Keep minimal dependencies
 
   return <PanelContext.Provider value={value}>{children}</PanelContext.Provider>;
 }
