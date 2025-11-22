@@ -503,7 +503,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       },
       refresh,
     }),
-    [workspace, repository, refresh, githubRepo]  // Removed 'slices' dependency
+    [workspace, repository, refresh, githubRepo, markdownFilesLoading, fileTreeLoading, codebaseViewsLoading, markdownLoading]
   );
 
   // Actions
