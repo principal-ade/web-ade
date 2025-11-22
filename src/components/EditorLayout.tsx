@@ -52,14 +52,14 @@ type ViewMode = 'editor' | 'kanban';
 function EditorLayoutContent() {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
-  const [viewMode, setViewMode] = useState<ViewMode>('kanban');
+  const [viewMode, setViewMode] = useState<ViewMode>('editor');
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'docs',
-    middle: 'kanban',
-    right: 'sessions',
+    middle: 'markdown-viewer',
+    right: 'code-city',
   });
-  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(true);
-  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(true);
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
+  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -106,30 +106,32 @@ function EditorLayoutContent() {
   const handleToggleViewMode = useCallback(() => {
     setViewMode((prev) => {
       const newMode = prev === 'editor' ? 'kanban' : 'editor';
-
-      if (newMode === 'kanban') {
-        // Kanban mode: kanban in middle, sessions on right, sidebars collapsed
-        setLayout({
-          left: 'docs',
-          middle: 'kanban',
-          right: 'sessions',
-        });
-        setLeftSidebarCollapsed(true);
-        setRightSidebarCollapsed(true);
-      } else {
-        // Editor mode: original layout with markdown in middle, code-city on right
-        setLayout({
-          left: 'docs',
-          middle: 'markdown-viewer',
-          right: 'code-city',
-        });
-        setLeftSidebarCollapsed(false);
-        setRightSidebarCollapsed(false);
-      }
-
       return newMode;
     });
   }, []);
+
+  // Sync layout and collapsed state when view mode changes
+  useEffect(() => {
+    if (viewMode === 'kanban') {
+      // Kanban mode: kanban in middle, sessions on right, sidebars collapsed
+      setLayout({
+        left: 'docs',
+        middle: 'kanban',
+        right: 'sessions',
+      });
+      setLeftSidebarCollapsed(true);
+      setRightSidebarCollapsed(true);
+    } else {
+      // Editor mode: original layout with markdown in middle, code-city on right
+      setLayout({
+        left: 'docs',
+        middle: 'markdown-viewer',
+        right: 'code-city',
+      });
+      setLeftSidebarCollapsed(false);
+      setRightSidebarCollapsed(false);
+    }
+  }, [viewMode]);
 
   const panels = [
     {

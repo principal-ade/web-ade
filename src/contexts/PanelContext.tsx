@@ -381,6 +381,15 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     ])
   );
 
+  // Centralized slice update function to prevent concurrent modification issues
+  const updateSliceRef = useCallback((sliceName: string, updates: Partial<DataSlice>) => {
+    const slice = slicesRef.current.get(sliceName);
+    if (slice) {
+      // Mutate in place instead of creating new Map to avoid race conditions
+      Object.assign(slice, updates);
+    }
+  }, []);
+
   // Update active-file slice when README is fetched
   useEffect(() => {
     if (markdownContent && githubRepo) {
@@ -404,53 +413,40 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
         },
       };
 
-      const newMap = new Map(slicesRef.current);
-      const activeFileSlice = newMap.get('active-file');
-      if (activeFileSlice) {
-        activeFileSlice.data = activeFileData;
-        activeFileSlice.loading = markdownLoading;
-        activeFileSlice.error = markdownError;
-      }
-      slicesRef.current = newMap;
-      // Don't call setSlices - we don't need to trigger re-renders for slice updates
+      updateSliceRef('active-file', {
+        data: activeFileData,
+        loading: markdownLoading,
+        error: markdownError,
+      });
     }
-  }, [markdownContent, markdownLoading, markdownError, githubRepo]);
+  }, [markdownContent, markdownLoading, markdownError, githubRepo, updateSliceRef]);
 
   // Update markdown files slice when files list changes
   useEffect(() => {
-    const newMap = new Map(slicesRef.current);
-    const markdownSlice = newMap.get('markdown');
-    if (markdownSlice) {
-      markdownSlice.data = markdownFiles;
-      markdownSlice.loading = markdownFilesLoading;
-      markdownSlice.error = markdownFilesError;
-    }
-    slicesRef.current = newMap;
-  }, [markdownFiles, markdownFilesLoading, markdownFilesError]);
+    updateSliceRef('markdown', {
+      data: markdownFiles,
+      loading: markdownFilesLoading,
+      error: markdownFilesError,
+    });
+  }, [markdownFiles, markdownFilesLoading, markdownFilesError, updateSliceRef]);
 
   // Update file tree slice when data changes
   useEffect(() => {
-    const newMap = new Map(slicesRef.current);
-    const fileTreeSlice = newMap.get('fileTree');
-    if (fileTreeSlice) {
-      fileTreeSlice.data = fileTree;
-      fileTreeSlice.loading = fileTreeLoading;
-      fileTreeSlice.error = fileTreeError;
-    }
-    slicesRef.current = newMap;
-  }, [fileTree, fileTreeLoading, fileTreeError]);
+    updateSliceRef('fileTree', {
+      data: fileTree,
+      loading: fileTreeLoading,
+      error: fileTreeError,
+    });
+  }, [fileTree, fileTreeLoading, fileTreeError, updateSliceRef]);
 
   // Update codebase views slice when data changes
   useEffect(() => {
-    const newMap = new Map(slicesRef.current);
-    const codebaseViewsSlice = newMap.get('codebaseViews');
-    if (codebaseViewsSlice) {
-      codebaseViewsSlice.data = codebaseViews;
-      codebaseViewsSlice.loading = codebaseViewsLoading;
-      codebaseViewsSlice.error = codebaseViewsError;
-    }
-    slicesRef.current = newMap;
-  }, [codebaseViews, codebaseViewsLoading, codebaseViewsError]);
+    updateSliceRef('codebaseViews', {
+      data: codebaseViews,
+      loading: codebaseViewsLoading,
+      error: codebaseViewsError,
+    });
+  }, [codebaseViews, codebaseViewsLoading, codebaseViewsError, updateSliceRef]);
 
   // Refresh function - use slicesRef instead of slices state
   const refresh = useCallback(
@@ -591,23 +587,40 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
 
   // Auto-fetch README, codebase views, markdown files, and file tree when githubRepo changes
   useEffect(() => {
-    if (githubRepo) {
-      // Fetch codebase views first, then markdown files (which need the views)
-      (async () => {
+    if (!githubRepo) return;
+
+    // Fetch independent data in parallel
+    fetchReadme(githubRepo);
+    fetchFileTree(githubRepo);
+
+    // Fetch codebase views, then markdown files sequentially
+    let cancelled = false;
+    (async () => {
+      try {
         await fetchCodebaseViews(githubRepo);
-      })();
+        // Only fetch markdown files after codebase views complete successfully
+        // This prevents the race condition where the second effect might not trigger
+        if (!cancelled && !codebaseViewsError) {
+          await fetchMarkdownFiles(githubRepo, codebaseViews);
+        }
+      } catch (error) {
+        console.error('[PanelContext] Error in sequential data fetch:', error);
+      }
+    })();
 
-      fetchReadme(githubRepo);
-      fetchFileTree(githubRepo);
-    }
-  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree]);
+    return () => {
+      cancelled = true;
+    };
+  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchMarkdownFiles, codebaseViewsError, codebaseViews]);
 
-  // Fetch markdown files when codebase views are loaded
+  // Update markdown files when codebaseViews data changes (e.g., after a refresh)
   useEffect(() => {
-    if (githubRepo && !codebaseViewsLoading && !codebaseViewsError) {
+    if (githubRepo && !codebaseViewsLoading && !codebaseViewsError && codebaseViews.length > 0) {
+      // Only refetch if we have views and they've actually changed
       fetchMarkdownFiles(githubRepo, codebaseViews);
     }
-  }, [githubRepo, codebaseViews, codebaseViewsLoading, codebaseViewsError, fetchMarkdownFiles]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [codebaseViews]); // Intentionally limited dependencies to prevent loops
 
   return <PanelContext.Provider value={value}>{children}</PanelContext.Provider>;
 }

@@ -93,9 +93,13 @@ export function usePresenceData(repository?: string): UsePresenceDataResult {
 
   // Fetch access token when user authenticates
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchToken() {
       if (!isAuthenticated || !user) {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
         return;
       }
 
@@ -103,6 +107,8 @@ export function usePresenceData(repository?: string): UsePresenceDataResult {
         // Use a default repository to get a room token for global presence
         const repoForToken = repository || 'principal-ai/repository-traffic-controller';
         const token = await getWebSocketToken(repoForToken);
+
+        if (cancelled) return; // Don't update state if component unmounted
 
         if (!token) {
           throw new Error('Failed to get room token');
@@ -114,12 +120,18 @@ export function usePresenceData(repository?: string): UsePresenceDataResult {
         setAccessToken(token);
         setError(undefined);
       } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to fetch presence token'));
-        setLoading(false);
+        if (!cancelled) {
+          setError(err instanceof Error ? err : new Error('Failed to fetch presence token'));
+          setLoading(false);
+        }
       }
     }
 
     void fetchToken();
+
+    return () => {
+      cancelled = true;
+    };
   }, [isAuthenticated, user, repository]);
 
   // Connect to Control Tower WebSocket (only if we have a token)
@@ -142,26 +154,38 @@ export function usePresenceData(repository?: string): UsePresenceDataResult {
 
   // Extract sessions from presence data
   useEffect(() => {
+    // Guard against accessing data before connection is established
+    if (!accessToken) {
+      setLoading(true);
+      return;
+    }
+
     if (!controlTower.connected || !controlTower.roomState || !user) {
       setLoading(!controlTower.connected && accessToken !== null);
       return;
     }
 
-    // Find current user in the room state
-    const currentUser = Array.from(controlTower.roomState.users.values()).find(
-      (u) => u.id === user.login || u.id === user.id.toString()
-    );
+    try {
+      // Find current user in the room state
+      const currentUser = Array.from(controlTower.roomState.users.values()).find(
+        (u) => u.id === user.login || u.id === user.id.toString()
+      );
 
-    // Extract openRepositories from user metadata if available
-    const presenceData = currentUser?.metadata as PresenceData | undefined;
-    if (presenceData?.openRepositories) {
-      setSessions(presenceData.openRepositories);
-    } else {
-      setSessions([]);
+      // Extract openRepositories from user metadata if available
+      const presenceData = currentUser?.metadata as PresenceData | undefined;
+      if (presenceData?.openRepositories) {
+        setSessions(presenceData.openRepositories);
+      } else {
+        setSessions([]);
+      }
+
+      setLoading(false);
+      setError(undefined);
+    } catch (err) {
+      console.error('[usePresenceData] Error extracting sessions:', err);
+      setError(err instanceof Error ? err : new Error('Failed to extract session data'));
+      setLoading(false);
     }
-
-    setLoading(false);
-    setError(undefined);
   }, [controlTower.connected, controlTower.roomState, user, accessToken]);
 
   // Handle connection errors
