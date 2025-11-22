@@ -152,13 +152,26 @@ export function EditorHeader({
           onSwitchRightMiddlePanels={onSwitchRightMiddlePanels}
           onConfigurePanels={onConfigurePanels}
           isEditMode={isEditMode}
-          viewMode={viewMode}
-          onToggleViewMode={onToggleViewMode}
           theme={theme}
         />
       </div>
 
       <div className="flex items-center gap-3 flex-shrink-0 flex-1 justify-end">
+        {/* View Mode Toggle */}
+        {viewMode && onToggleViewMode && (
+          <button
+            onClick={onToggleViewMode}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
+            style={{
+              background: theme.colors.secondary,
+              color: theme.colors.text,
+            }}
+            title={viewMode === 'kanban' ? 'Switch to Editor' : 'Switch to Kanban'}
+          >
+            <span>{viewMode === 'kanban' ? 'Editor' : 'Kanban'}</span>
+          </button>
+        )}
+
         {isLoading ? (
           <div className="text-sm" style={{ color: theme.colors.textMuted }}>
             Loading...

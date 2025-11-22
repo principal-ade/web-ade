@@ -9,12 +9,8 @@ import {
   ArrowLeftRight,
   ArrowRightLeft,
   Layout,
-  Kanban,
-  FileText,
 } from 'lucide-react';
 import { useTheme, Theme } from '@principal-ade/industry-theme';
-
-type ViewMode = 'editor' | 'kanban';
 
 interface PanelControlsProps {
   /** Whether the left sidebar is collapsed */
@@ -35,10 +31,6 @@ interface PanelControlsProps {
   showSidebarControls?: boolean;
   /** Whether edit/configure mode is currently active */
   isEditMode?: boolean;
-  /** Current view mode */
-  viewMode?: ViewMode;
-  /** Callback when view mode toggle is clicked */
-  onToggleViewMode?: () => void;
   /** Optional class name for the container */
   className?: string;
   /** Optional inline styles for the container */
@@ -67,8 +59,6 @@ export function PanelControls({
   onConfigurePanels,
   showSidebarControls = true,
   isEditMode = false,
-  viewMode,
-  onToggleViewMode,
   className = '',
   style,
   theme: propTheme,
@@ -117,26 +107,6 @@ export function PanelControls({
         ...style,
       }}
     >
-      {/* View mode toggle */}
-      {onToggleViewMode && viewMode && (
-        <button
-          onClick={onToggleViewMode}
-          title={viewMode === 'kanban' ? 'Switch to Editor' : 'Switch to Kanban'}
-          style={{
-            ...buttonBaseStyle,
-            color: theme.colors.primary,
-          }}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={(e) => handleMouseLeave(e)}
-        >
-          {viewMode === 'kanban' ? (
-            <FileText size={18} />
-          ) : (
-            <Kanban size={18} />
-          )}
-        </button>
-      )}
-
       {/* Left sidebar toggle */}
       {showSidebarControls && onToggleLeftSidebar && (
         <button
