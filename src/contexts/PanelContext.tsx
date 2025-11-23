@@ -385,8 +385,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
   const updateSliceRef = useCallback((sliceName: string, updates: Partial<DataSlice>) => {
     const slice = slicesRef.current.get(sliceName);
     if (slice) {
-      // Mutate in place instead of creating new Map to avoid race conditions
-      Object.assign(slice, updates);
+      // Create a new slice object to ensure React detects changes
+      slicesRef.current.set(sliceName, { ...slice, ...updates });
     }
   }, []);
 
@@ -428,6 +428,11 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       loading: markdownFilesLoading,
       error: markdownFilesError,
     });
+    console.log('[PanelContext] Markdown files slice updated:', {
+      hasData: markdownFiles.length > 0,
+      fileCount: markdownFiles.length,
+      loading: markdownFilesLoading
+    });
   }, [markdownFiles, markdownFilesLoading, markdownFilesError, updateSliceRef]);
 
   // Update file tree slice when data changes
@@ -436,6 +441,11 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       data: fileTree,
       loading: fileTreeLoading,
       error: fileTreeError,
+    });
+    console.log('[PanelContext] File tree slice updated:', {
+      hasData: !!fileTree,
+      fileCount: fileTree?.files?.length,
+      loading: fileTreeLoading
     });
   }, [fileTree, fileTreeLoading, fileTreeError, updateSliceRef]);
 
