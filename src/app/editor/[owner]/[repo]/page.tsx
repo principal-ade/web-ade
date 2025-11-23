@@ -3,10 +3,12 @@
 import { EditorLayout } from "@/components/EditorLayout";
 import { useParams } from "next/navigation";
 import { useTheme } from "@principal-ade/industry-theme";
+import { useMemo } from "react";
 
 export default function EditorRepoPage() {
   const params = useParams();
-  const githubRepo = `${params.owner}/${params.repo}`;
+  // Memoize githubRepo to prevent unnecessary re-renders of PanelProvider
+  const githubRepo = useMemo(() => `${params.owner}/${params.repo}`, [params.owner, params.repo]);
   const { theme } = useTheme();
 
   return (

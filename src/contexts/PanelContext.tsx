@@ -467,7 +467,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     []  // No dependencies - uses ref
   );
 
-  // Context value - use slicesRef to avoid recreation on every slice update
+  // Context value - include all data states to ensure proper re-renders
+  // We include data states (markdownContent, markdownFiles, etc.) as dependencies to force
+  // context updates when data loads, since slicesRef uses mutation and won't trigger updates
   const context: PanelContextValue = useMemo(
     () => ({
       currentScope: {
@@ -503,7 +505,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       },
       refresh,
     }),
-    [workspace, repository, refresh, githubRepo, markdownFilesLoading, fileTreeLoading, codebaseViewsLoading, markdownLoading]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [workspace, repository, refresh, githubRepo, markdownFilesLoading, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, markdownFiles, fileTree, codebaseViews]
   );
 
   // Actions
@@ -585,75 +588,49 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     [context, actions, events]
   );
 
+  // Track previous loading state to detect transitions
+  const prevCodebaseViewsLoadingRef = useRef<boolean>(true);
+  const currentRepoRef = useRef<string>('');
+  const markdownFilesFetchedRef = useRef<boolean>(false);
+
   // Auto-fetch README, codebase views, markdown files, and file tree when githubRepo changes
   useEffect(() => {
     if (!githubRepo) return;
 
     console.log('[PanelContext] Initializing data fetch for:', githubRepo);
 
+    // Reset tracking refs when repo changes
+    prevCodebaseViewsLoadingRef.current = true;
+    currentRepoRef.current = githubRepo;
+    markdownFilesFetchedRef.current = false;
+
     // Fetch independent data in parallel
     fetchReadme(githubRepo);
     fetchFileTree(githubRepo);
 
-    // Fetch codebase views, then markdown files sequentially
-    let cancelled = false;
-    (async () => {
-      try {
-        await fetchCodebaseViews(githubRepo);
-        // Wait a tick to ensure state has updated
-        await new Promise(resolve => setTimeout(resolve, 0));
+    // Fetch codebase views - markdown files will be fetched by the secondary effect
+    fetchCodebaseViews(githubRepo);
+  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree]);
 
-        // Fetch markdown files after codebase views complete
-        // Note: This will use the updated codebaseViews from the second effect
-        if (!cancelled) {
-          console.log('[PanelContext] Codebase views fetch complete, markdown files will be fetched by secondary effect');
-        }
-      } catch (error) {
-        console.error('[PanelContext] Error in sequential data fetch:', error);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree]); // Removed codebaseViews and error from deps
-
-  // Update markdown files when codebaseViews data changes (e.g., after a refresh)
-  const previousCodebaseViewsRef = useRef<CodebaseView[]>([]);
-  const initialFetchDoneRef = useRef(false);
+  // Fetch markdown files when codebaseViews finishes loading (transition from loading → not loading)
   useEffect(() => {
-    // Only fetch if we have a repo and views have actually changed
-    if (!githubRepo || codebaseViewsLoading) return;
+    // Detect transition from loading to not loading
+    const wasLoading = prevCodebaseViewsLoadingRef.current;
+    const isLoading = codebaseViewsLoading;
 
-    // Check if codebaseViews actually changed (not just a re-render)
-    const viewsChanged = codebaseViews.length !== previousCodebaseViewsRef.current.length ||
-      codebaseViews.some((view, idx) => view.id !== previousCodebaseViewsRef.current[idx]?.id);
+    // Update ref for next render
+    prevCodebaseViewsLoadingRef.current = isLoading;
 
-    // On first load, just mark as done and update ref without fetching (primary effect handles fetch)
-    if (!initialFetchDoneRef.current) {
-      if (viewsChanged) {
-        console.log('[PanelContext] Initial codebase views loaded, marking secondary effect as initialized');
-        previousCodebaseViewsRef.current = codebaseViews;
-        initialFetchDoneRef.current = true;
-        // Fetch markdown files only once on initial load
-        fetchMarkdownFiles(githubRepo, codebaseViews);
-      }
+    // Only fetch when we transition from loading to not loading for the current repo
+    // AND we haven't already fetched markdown files for this repo
+    if (!githubRepo || isLoading || !wasLoading || currentRepoRef.current !== githubRepo || markdownFilesFetchedRef.current) {
       return;
     }
 
-    // After initial load, handle subsequent changes (e.g., from refresh)
-    if (viewsChanged && codebaseViews.length > 0) {
-      console.log('[PanelContext] Codebase views changed after init, fetching markdown files');
-      previousCodebaseViewsRef.current = codebaseViews;
-      fetchMarkdownFiles(githubRepo, codebaseViews);
-    } else if (codebaseViews.length === 0 && previousCodebaseViewsRef.current.length === 0) {
-      // First load with no views - still need to fetch markdown files
-      console.log('[PanelContext] No codebase views found, fetching markdown files anyway');
-      previousCodebaseViewsRef.current = codebaseViews;
-      fetchMarkdownFiles(githubRepo, codebaseViews);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [codebaseViews, codebaseViewsLoading, githubRepo]); // Keep minimal dependencies
+    console.log('[PanelContext] Codebase views finished loading, fetching markdown files with', codebaseViews.length, 'views');
+    markdownFilesFetchedRef.current = true;
+    fetchMarkdownFiles(githubRepo, codebaseViews);
+  }, [githubRepo, codebaseViewsLoading, codebaseViews, fetchMarkdownFiles]);
 
   return <PanelContext.Provider value={value}>{children}</PanelContext.Provider>;
 }
