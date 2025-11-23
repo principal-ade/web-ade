@@ -55,22 +55,22 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
 
   // State for active file (README) content
   const [markdownContent, setMarkdownContent] = useState<string | null>(null);
-  const [markdownLoading, setMarkdownLoading] = useState(false);
+  const [markdownLoading, setMarkdownLoading] = useState(true);
   const [markdownError, setMarkdownError] = useState<Error | null>(null);
 
   // State for markdown files list with associated files
   const [markdownFiles, setMarkdownFiles] = useState<ExtendedMarkdownFile[]>([]);
-  const [markdownFilesLoading, setMarkdownFilesLoading] = useState(false);
+  const [markdownFilesLoading, setMarkdownFilesLoading] = useState(true);
   const [markdownFilesError, setMarkdownFilesError] = useState<Error | null>(null);
 
   // State for codebase views
   const [codebaseViews, setCodebaseViews] = useState<CodebaseView[]>([]);
-  const [codebaseViewsLoading, setCodebaseViewsLoading] = useState(false);
+  const [codebaseViewsLoading, setCodebaseViewsLoading] = useState(true);
   const [codebaseViewsError, setCodebaseViewsError] = useState<Error | null>(null);
 
   // State for file tree
   const [fileTree, setFileTree] = useState<{ root: string; files: Array<{ path: string; size: number; lines: number }> } | null>(null);
-  const [fileTreeLoading, setFileTreeLoading] = useState(false);
+  const [fileTreeLoading, setFileTreeLoading] = useState(true);
   const [fileTreeError, setFileTreeError] = useState<Error | null>(null);
 
   // Fetch file tree from GitHub
