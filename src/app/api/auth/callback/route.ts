@@ -54,9 +54,23 @@ export async function GET(request: NextRequest) {
 
         await setAuthCookies(tokenData);
 
-        // Clear the landing page cookie
+        // Determine where to send the user after landing-page auth
         const appUrl = 'https://app.principal-ade.com';
-        const response = NextResponse.redirect(new URL('/editor', appUrl));
+        const redirectPathFromQuery =
+          request.nextUrl.searchParams.get('redirect') ||
+          request.nextUrl.searchParams.get('redirect_path');
+        const redirectPathFromSession =
+          sessionData.redirect_path ||
+          sessionData.redirectPath ||
+          sessionData.redirect_to ||
+          sessionData.redirectTo;
+        const redirectPath = redirectPathFromQuery || redirectPathFromSession || '/dashboard';
+        const normalizedRedirectPath = redirectPath.startsWith('/')
+          ? redirectPath
+          : `/${redirectPath}`;
+
+        // Clear the landing page cookie and redirect to intended destination
+        const response = NextResponse.redirect(new URL(normalizedRedirectPath, appUrl));
         response.cookies.delete('workos_session');
 
         console.log('Successfully authenticated via workos_session cookie');
