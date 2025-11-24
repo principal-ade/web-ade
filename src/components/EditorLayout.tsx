@@ -8,8 +8,10 @@ import { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { EditorHeader } from './EditorHeader';
 import { SessionsPanel } from './SessionsPanel';
+import { AccessNotice, AccessStatus } from './AccessNotice';
 import '@principal-ade/panel-layouts/styles.css';
 import '@principal-ade/industry-themed-ai-sdk/styles.css';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Dynamically import the MarkdownPanel with SSR disabled
 const MarkdownPanelLoader = dynamic(
@@ -48,7 +50,6 @@ const KanbanPanelLoader = dynamic(
 );
 
 type ViewMode = 'editor' | 'kanban';
-
 function EditorLayoutContent() {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
@@ -287,19 +288,110 @@ interface EditorLayoutProps {
 }
 
 export function EditorLayout({ githubRepo }: EditorLayoutProps = {}) {
+  const { theme } = useTheme();
+  const { isAuthenticated, isLoading: authLoading, login } = useAuth();
+  const [accessStatus, setAccessStatus] = useState<AccessStatus>('loading');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [checkAttempt, setCheckAttempt] = useState(0);
+
+  useEffect(() => {
+    if (!githubRepo) {
+      setAccessStatus('granted');
+      setErrorMessage(null);
+      return;
+    }
+
+    if (authLoading) {
+      setAccessStatus('loading');
+      return;
+    }
+
+    const controller = new AbortController();
+    const [owner, name] = githubRepo.split('/');
+
+    setAccessStatus('loading');
+    setErrorMessage(null);
+
+    fetch(`/api/github/repo/${owner}/${name}?action=info`, {
+      signal: controller.signal,
+      credentials: 'include',
+    })
+      .then(async (response) => {
+        if (controller.signal.aborted) return;
+
+        if (response.ok) {
+          setAccessStatus('granted');
+          return;
+        }
+
+        if (response.status === 401 && !isAuthenticated) {
+          setAccessStatus('login-required');
+          return;
+        }
+
+        if (response.status === 401 || response.status === 403) {
+          setAccessStatus('unauthorized');
+          return;
+        }
+
+        if (response.status === 404) {
+          setAccessStatus('not-found');
+          return;
+        }
+
+        const data = await response.json().catch(() => null);
+        setErrorMessage(data?.error ?? null);
+        setAccessStatus('error');
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        setErrorMessage(error instanceof Error ? error.message : 'Unknown error');
+        setAccessStatus('error');
+      });
+
+    return () => controller.abort();
+  }, [githubRepo, isAuthenticated, authLoading, checkAttempt]);
+
+  const retryCheck = () => setCheckAttempt((attempt) => attempt + 1);
+
+  if (accessStatus !== 'granted') {
+    return (
+      <div
+        className="h-full w-full flex flex-col"
+        style={{ background: theme.colors.background }}
+      >
+        <EditorHeader />
+        <div className="flex-1 overflow-hidden">
+          <AccessNotice
+            status={accessStatus}
+            onRetry={retryCheck}
+            onLogin={login}
+            repository={githubRepo}
+            errorMessage={errorMessage}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <PanelProvider
-      workspace={{
-        name: 'web-ade',
-        path: '/workspace',
-      }}
-      repository={{
-        name: 'web-ade',
-        path: '/workspace/web-ade',
-      }}
-      githubRepo={githubRepo}
+    <div
+      className="h-full w-full"
+      style={{ background: theme.colors.background }}
     >
-      <EditorLayoutContent />
-    </PanelProvider>
+      <PanelProvider
+        workspace={{
+          name: 'web-ade',
+          path: '/workspace',
+        }}
+        repository={{
+          name: 'web-ade',
+          path: '/workspace/web-ade',
+        }}
+        githubRepo={githubRepo}
+      >
+        <EditorLayoutContent />
+      </PanelProvider>
+    </div>
   );
 }

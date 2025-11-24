@@ -33,6 +33,16 @@ const CACHE_DURATIONS = {
   "file-count": 600, // 10 minutes - stable data
 } as const;
 
+class GitHubApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "GitHubApiError";
+  }
+}
+
 async function makeGitHubRequest(endpoint: string, userToken?: string | null) {
   // Use user's token if provided, otherwise fall back to server token
   const token = userToken || process.env.GITHUB_TOKEN || null;
@@ -67,7 +77,7 @@ async function makeGitHubRequest(endpoint: string, userToken?: string | null) {
       }
     }
 
-    throw new Error(errorMessage);
+    throw new GitHubApiError(errorMessage, response.status);
   }
 
   return response.json();
@@ -193,6 +203,14 @@ export async function GET(
     return response;
   } catch (error) {
     console.error("GitHub API proxy error:", error);
+
+    if (error instanceof GitHubApiError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status },
+      );
+    }
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 },
