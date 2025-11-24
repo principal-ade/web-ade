@@ -381,82 +381,80 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     ])
   );
 
-  // Centralized slice update function to prevent concurrent modification issues
-  const updateSliceRef = useCallback((sliceName: string, updates: Partial<DataSlice>) => {
-    const slice = slicesRef.current.get(sliceName);
-    if (slice) {
-      // Create a new slice object to ensure React detects changes
-      slicesRef.current.set(sliceName, { ...slice, ...updates });
-    }
-  }, []);
+  // Update slice refs synchronously during render to ensure they're up-to-date before context memo runs
+  // This prevents the race condition where panels read stale loading states from the ref
 
-  // Update active-file slice when README is fetched
-  useEffect(() => {
-    if (markdownContent && githubRepo) {
-      const [owner, name] = githubRepo.split('/');
+  // Update active-file slice
+  if (markdownContent && githubRepo) {
+    const [owner, name] = githubRepo.split('/');
+    const activeFileData = {
+      path: 'README.md',
+      content: markdownContent,
+      type: 'markdown',
+      size: markdownContent.length,
+      lastModified: new Date(),
+      encoding: 'utf-8',
+      source: {
+        type: 'remote' as const,
+        provider: 'github',
+        owner,
+        name,
+        branch: 'main',
+        location: 'README.md',
+        url: `https://github.com/${githubRepo}/blob/main/README.md`,
+      },
+    };
 
-      const activeFileData = {
-        path: 'README.md',
-        content: markdownContent,
-        type: 'markdown',
-        size: markdownContent.length,
-        lastModified: new Date(),
-        encoding: 'utf-8',
-        source: {
-          type: 'remote' as const,
-          provider: 'github',
-          owner,
-          name,
-          branch: 'main',
-          location: 'README.md',
-          url: `https://github.com/${githubRepo}/blob/main/README.md`,
-        },
-      };
-
-      updateSliceRef('active-file', {
+    const activeFileSlice = slicesRef.current.get('active-file');
+    if (activeFileSlice) {
+      slicesRef.current.set('active-file', {
+        ...activeFileSlice,
         data: activeFileData,
         loading: markdownLoading,
         error: markdownError,
       });
     }
-  }, [markdownContent, markdownLoading, markdownError, githubRepo, updateSliceRef]);
+  }
 
-  // Update markdown files slice when files list changes
-  useEffect(() => {
-    updateSliceRef('markdown', {
+  // Update markdown files slice
+  const markdownSlice = slicesRef.current.get('markdown');
+  if (markdownSlice && (markdownSlice.loading !== markdownFilesLoading || markdownSlice.data !== markdownFiles)) {
+    const updatedSlice = {
+      ...markdownSlice,
       data: markdownFiles,
       loading: markdownFilesLoading,
       error: markdownFilesError,
-    });
-    console.log('[PanelContext] Markdown files slice updated:', {
+    };
+    slicesRef.current.set('markdown', updatedSlice);
+    console.log('[PanelContext] Markdown slice updated during render:', {
       hasData: markdownFiles.length > 0,
       fileCount: markdownFiles.length,
-      loading: markdownFilesLoading
+      loading: markdownFilesLoading,
+      sliceLoading: updatedSlice.loading
     });
-  }, [markdownFiles, markdownFilesLoading, markdownFilesError, updateSliceRef]);
+  }
 
-  // Update file tree slice when data changes
-  useEffect(() => {
-    updateSliceRef('fileTree', {
+  // Update file tree slice
+  const fileTreeSlice = slicesRef.current.get('fileTree');
+  if (fileTreeSlice) {
+    slicesRef.current.set('fileTree', {
+      ...fileTreeSlice,
       data: fileTree,
       loading: fileTreeLoading,
       error: fileTreeError,
     });
-    console.log('[PanelContext] File tree slice updated:', {
-      hasData: !!fileTree,
-      fileCount: fileTree?.files?.length,
-      loading: fileTreeLoading
-    });
-  }, [fileTree, fileTreeLoading, fileTreeError, updateSliceRef]);
+  }
 
-  // Update codebase views slice when data changes
-  useEffect(() => {
-    updateSliceRef('codebaseViews', {
+  // Update codebase views slice
+  const codebaseViewsSlice = slicesRef.current.get('codebaseViews');
+  if (codebaseViewsSlice) {
+    slicesRef.current.set('codebaseViews', {
+      ...codebaseViewsSlice,
       data: codebaseViews,
       loading: codebaseViewsLoading,
       error: codebaseViewsError,
     });
-  }, [codebaseViews, codebaseViewsLoading, codebaseViewsError, updateSliceRef]);
+  }
 
   // Refresh function - use slicesRef instead of slices state
   const refresh = useCallback(
@@ -628,12 +626,28 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     const wasLoading = prevCodebaseViewsLoadingRef.current;
     const isLoading = codebaseViewsLoading;
 
+    console.log('[PanelContext] Markdown fetch effect triggered:', {
+      githubRepo,
+      wasLoading,
+      isLoading,
+      currentRepo: currentRepoRef.current,
+      alreadyFetched: markdownFilesFetchedRef.current,
+      codebaseViewsCount: codebaseViews.length
+    });
+
     // Update ref for next render
     prevCodebaseViewsLoadingRef.current = isLoading;
 
     // Only fetch when we transition from loading to not loading for the current repo
     // AND we haven't already fetched markdown files for this repo
     if (!githubRepo || isLoading || !wasLoading || currentRepoRef.current !== githubRepo || markdownFilesFetchedRef.current) {
+      console.log('[PanelContext] Skipping markdown fetch:', {
+        noRepo: !githubRepo,
+        isLoading,
+        wasNotLoading: !wasLoading,
+        repoDifferent: currentRepoRef.current !== githubRepo,
+        alreadyFetched: markdownFilesFetchedRef.current
+      });
       return;
     }
 
