@@ -11,6 +11,8 @@ import { PanelControls } from './PanelControls';
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import '@principal-ade/panel-layouts/styles.css';
 
+const DEFAULT_REPO = 'principal-ai/alexandria-core-library';
+
 export function PrincipalADEWebSection() {
   const { theme } = useTheme();
   const [isEditMode, setIsEditMode] = useState(false);
@@ -148,7 +150,7 @@ export function PrincipalADEWebSection() {
           {/* Try Editor Button */}
           <div className="flex justify-center">
             <Link
-              href="/editor"
+              href={`/editor/${DEFAULT_REPO}`}
               className="px-6 md:px-8 py-3 md:py-4 rounded-lg font-medium transition-all hover:scale-105 text-base md:text-lg"
               style={{
                 background: theme.colors.primary,
