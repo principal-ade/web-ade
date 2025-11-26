@@ -20,6 +20,7 @@ import { AccessNotice, AccessStatus } from './AccessNotice';
 import { RepoSelectionModal } from './RepoSelectionModal';
 import '@principal-ade/panel-layouts/styles.css';
 import '@principal-ade/industry-themed-ai-sdk/styles.css';
+import '@industry-theme/visual-validation-panel/dist/panels.bundle.css';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Dynamically import the MarkdownPanel with SSR disabled
