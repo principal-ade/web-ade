@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { gitTreeCache } from "@/lib/git-tree-cache";
+import { getGitHubToken } from "@/lib/auth/cookies";
 
 function addCorsHeaders(response: NextResponse) {
   response.headers.set("Access-Control-Allow-Origin", "*");
@@ -111,9 +112,8 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const action = searchParams.get("action") || "info";
 
-    // Get user's GitHub token from Authorization header
-    const authHeader = request.headers.get('authorization');
-    const userToken = authHeader?.replace('Bearer ', '').replace('token ', '') || null;
+    // Get user's GitHub token from HTTP-only cookie
+    const userToken = await getGitHubToken();
 
     let data;
 
