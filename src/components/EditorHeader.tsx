@@ -79,13 +79,14 @@ export function EditorHeader({
 
   return (
     <header
-      className="h-12 flex items-center justify-between px-4 border-b relative"
+      className="h-14 flex items-center justify-between px-4 border-b relative"
       style={{
         background: theme.colors.surface,
         borderColor: theme.colors.border,
       }}
     >
-      <div className="flex items-center gap-3 min-w-0 flex-1">
+      {/* Left section: Logo and Panel Controls */}
+      <div className="flex items-center gap-3 flex-shrink-0 flex-1">
         <Link
           href="/"
           className="flex items-center justify-center w-8 h-8 transition-all hover:opacity-80 flex-shrink-0"
@@ -93,60 +94,60 @@ export function EditorHeader({
         >
           <Logo width={32} height={32} color={theme.colors.primary} />
         </Link>
-        {repositoryName && (
-          <div
-            className="flex flex-col min-w-0"
-            style={{
-              fontFamily: theme.fonts.body,
-              lineHeight: theme.lineHeights.tight,
-            }}
-          >
-            <a
-              href={`https://github.com/${repositoryName.owner}/${repositoryName.repo}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition-opacity hover:opacity-80 truncate"
-              style={{
-                fontSize: theme.fontSizes[2],
-                fontWeight: theme.fontWeights.semibold,
-                color: theme.colors.text,
-                textDecoration: 'none',
-              }}
-            >
-              {repositoryName.repo}
-            </a>
-            <a
-              href={`https://github.com/${repositoryName.owner}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition-opacity hover:opacity-80 truncate"
-              style={{
-                fontSize: theme.fontSizes[1],
-                fontWeight: theme.fontWeights.body,
-                color: theme.colors.textMuted,
-                textDecoration: 'none',
-              }}
-            >
-              {repositoryName.owner}
-            </a>
-          </div>
-        )}
+        {/* Panel Controls - hidden on mobile */}
+        <div className="hidden md:flex">
+          <PanelControls
+            leftSidebarCollapsed={leftSidebarCollapsed}
+            rightSidebarCollapsed={rightSidebarCollapsed}
+            onToggleLeftSidebar={onToggleLeftSidebar}
+            onToggleRightSidebar={onToggleRightSidebar}
+            onSwitchLeftMiddlePanels={onSwitchLeftMiddlePanels}
+            onSwitchRightMiddlePanels={onSwitchRightMiddlePanels}
+            onConfigurePanels={onConfigurePanels}
+            isEditMode={isEditMode}
+            theme={theme}
+          />
+        </div>
       </div>
 
-      {/* Panel Controls - Centered, hidden on mobile */}
-      <div className="hidden md:flex items-center justify-center flex-shrink-0 absolute left-1/2 transform -translate-x-1/2">
-        <PanelControls
-          leftSidebarCollapsed={leftSidebarCollapsed}
-          rightSidebarCollapsed={rightSidebarCollapsed}
-          onToggleLeftSidebar={onToggleLeftSidebar}
-          onToggleRightSidebar={onToggleRightSidebar}
-          onSwitchLeftMiddlePanels={onSwitchLeftMiddlePanels}
-          onSwitchRightMiddlePanels={onSwitchRightMiddlePanels}
-          onConfigurePanels={onConfigurePanels}
-          isEditMode={isEditMode}
-          theme={theme}
-        />
-      </div>
+      {/* Center section: Repository name and owner */}
+      {repositoryName && (
+        <div
+          className="flex flex-col items-center gap-px absolute left-1/2 transform -translate-x-1/2"
+          style={{
+            fontFamily: theme.fonts.body,
+          }}
+        >
+          <a
+            href={`https://github.com/${repositoryName.owner}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-opacity hover:opacity-80"
+            style={{
+              fontSize: theme.fontSizes[2],
+              fontWeight: theme.fontWeights.body,
+              color: theme.colors.textMuted,
+              textDecoration: 'none',
+            }}
+          >
+            {repositoryName.owner}
+          </a>
+          <a
+            href={`https://github.com/${repositoryName.owner}/${repositoryName.repo}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-opacity hover:opacity-80"
+            style={{
+              fontSize: theme.fontSizes[3],
+              fontWeight: theme.fontWeights.semibold,
+              color: theme.colors.text,
+              textDecoration: 'none',
+            }}
+          >
+            {repositoryName.repo}
+          </a>
+        </div>
+      )}
 
       <div className="flex items-center gap-3 flex-shrink-0 flex-1 justify-end">
         {isLoading ? (

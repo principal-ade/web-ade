@@ -138,11 +138,22 @@ function EditorLayoutContent() {
     [viewMode]
   );
 
-  // Initialize command palette with panel commands and custom commands
+  // Initialize command palette with panel commands
   const commandPalette = useCommandPalette({
     context: commandContext,
-    commands: [...getPanelCommands(), ...customCommands],
+    commands: getPanelCommands(),
   });
+
+  // Register custom commands (and update when they change)
+  const { registerCommands, unregisterCommands } = commandPalette;
+  useEffect(() => {
+    const commandIds = customCommands.map((c) => c.id);
+    registerCommands(customCommands);
+
+    return () => {
+      unregisterCommands(commandIds);
+    };
+  }, [customCommands, registerCommands, unregisterCommands]);
 
   // Detect mobile viewport
   useEffect(() => {
