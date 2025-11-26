@@ -8,7 +8,7 @@ import {
   useCommandPalette,
   getPanelCommands,
 } from '@principal-ade/panel-layouts';
-import type { CommandContext, PanelSlotId } from '@principal-ade/panel-layouts';
+import type { Command, CommandContext, PanelSlotId } from '@principal-ade/panel-layouts';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ThemedAIChatPanel } from '@principal-ade/industry-themed-ai-sdk/components';
 import { PanelProvider, usePanelProvider } from '@/contexts/PanelContext';
@@ -17,6 +17,7 @@ import dynamic from 'next/dynamic';
 import { EditorHeader } from './EditorHeader';
 import { SessionsPanel } from './SessionsPanel';
 import { AccessNotice, AccessStatus } from './AccessNotice';
+import { RepoSelectionModal } from './RepoSelectionModal';
 import '@principal-ade/panel-layouts/styles.css';
 import '@principal-ade/industry-themed-ai-sdk/styles.css';
 import { useAuth } from '@/contexts/AuthContext';
@@ -72,6 +73,7 @@ function EditorLayoutContent() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [focusedPanel, setFocusedPanel] = useState<PanelSlotId | null>('middle');
+  const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
 
   // Create command context for the command palette
   const commandContext = useMemo<CommandContext>(
@@ -86,10 +88,60 @@ function EditorLayoutContent() {
     [context, actions, events, focusedPanel]
   );
 
-  // Initialize command palette with panel commands
+  // Custom commands for view mode and repository switching
+  const customCommands = useMemo<Command[]>(
+    () => [
+      {
+        id: 'view.switch-to-kanban',
+        label: 'Switch to Kanban View',
+        description: 'Open the Kanban board for task management',
+        icon: '📋',
+        category: 'View',
+        keywords: ['kanban', 'board', 'tasks', 'view', 'switch'],
+        priority: 90,
+        execute: () => {
+          setViewMode('kanban');
+        },
+        isAvailable: () => viewMode !== 'kanban',
+      },
+      {
+        id: 'view.switch-to-editor',
+        label: 'Switch to Editor View',
+        description: 'Open the documentation editor',
+        icon: '📝',
+        category: 'View',
+        keywords: ['editor', 'docs', 'markdown', 'view', 'switch'],
+        priority: 90,
+        execute: () => {
+          setViewMode('editor');
+        },
+        isAvailable: () => viewMode !== 'editor',
+      },
+      {
+        id: 'repository.switch',
+        label: 'Switch Repository',
+        description: 'Open a different GitHub repository',
+        icon: '🔀',
+        category: 'Repository',
+        keywords: ['repository', 'repo', 'switch', 'change', 'github', 'project'],
+        priority: 85,
+        execute: (ctx) => {
+          ctx.events?.emit({
+            type: 'repository:open-switcher',
+            source: 'command-palette',
+            timestamp: Date.now(),
+            payload: {},
+          });
+        },
+      },
+    ],
+    [viewMode]
+  );
+
+  // Initialize command palette with panel commands and custom commands
   const commandPalette = useCommandPalette({
     context: commandContext,
-    commands: getPanelCommands(),
+    commands: [...getPanelCommands(), ...customCommands],
   });
 
   // Detect mobile viewport
@@ -133,6 +185,9 @@ function EditorLayoutContent() {
         setLeftSidebarCollapsed(false);
         setRightSidebarCollapsed(false);
       }),
+      events.on('repository:open-switcher', () => {
+        setIsRepoModalOpen(true);
+      }),
     ];
 
     return () => {
@@ -167,13 +222,6 @@ function EditorLayoutContent() {
 
   const handleConfigurePanels = useCallback(() => {
     setIsEditMode((prev) => !prev);
-  }, []);
-
-  const handleToggleViewMode = useCallback(() => {
-    setViewMode((prev) => {
-      const newMode = prev === 'editor' ? 'kanban' : 'editor';
-      return newMode;
-    });
   }, []);
 
   // Sync layout and collapsed state when view mode changes
@@ -285,8 +333,6 @@ function EditorLayoutContent() {
         onSwitchRightMiddlePanels={handleSwitchRightMiddlePanels}
         onConfigurePanels={handleConfigurePanels}
         isEditMode={isEditMode}
-        viewMode={viewMode}
-        onToggleViewMode={handleToggleViewMode}
       />
       <div className="flex-1 overflow-hidden">
         {isMobile ? (
@@ -349,6 +395,12 @@ function EditorLayoutContent() {
       <CommandPalette
         commandPalette={commandPalette}
         context={commandContext}
+      />
+
+      {/* Repository Selection Modal */}
+      <RepoSelectionModal
+        isOpen={isRepoModalOpen}
+        onClose={() => setIsRepoModalOpen(false)}
       />
     </div>
   );

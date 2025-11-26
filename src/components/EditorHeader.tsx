@@ -2,17 +2,14 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, LogOut, Wifi, WifiOff, ArrowLeftRight } from 'lucide-react';
+import { LogIn, LogOut, Wifi, WifiOff } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useControlTowerClient } from '@/lib/control-tower';
 import { getTrafficControllerUrl, getWebSocketToken } from '@/lib/control-tower/config';
 import { useEffect, useState } from 'react';
-import { RepoSelectionModal } from './RepoSelectionModal';
 import { Logo } from '@principal-ai/logo-component';
 import { PanelControls } from './PanelControls';
-
-type ViewMode = 'editor' | 'kanban';
 
 interface EditorHeaderProps {
   leftSidebarCollapsed?: boolean;
@@ -23,8 +20,6 @@ interface EditorHeaderProps {
   onSwitchRightMiddlePanels?: () => void;
   onConfigurePanels?: () => void;
   isEditMode?: boolean;
-  viewMode?: ViewMode;
-  onToggleViewMode?: () => void;
 }
 
 export function EditorHeader({
@@ -36,15 +31,12 @@ export function EditorHeader({
   onSwitchRightMiddlePanels,
   onConfigurePanels,
   isEditMode,
-  viewMode,
-  onToggleViewMode,
 }: EditorHeaderProps = {}) {
   const { theme } = useTheme();
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
   const pathname = usePathname();
   const [wsToken, setWsToken] = useState<string | null>(null);
   const [repositoryName, setRepositoryName] = useState<{ owner: string; repo: string } | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Extract repository name from URL
   useEffect(() => {
@@ -157,21 +149,6 @@ export function EditorHeader({
       </div>
 
       <div className="flex items-center gap-3 flex-shrink-0 flex-1 justify-end">
-        {/* View Mode Toggle */}
-        {viewMode && onToggleViewMode && (
-          <button
-            onClick={onToggleViewMode}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
-            style={{
-              background: theme.colors.secondary,
-              color: theme.colors.text,
-            }}
-            title={viewMode === 'kanban' ? 'Switch to Editor' : 'Switch to Kanban'}
-          >
-            <span>{viewMode === 'kanban' ? 'Editor' : 'Kanban'}</span>
-          </button>
-        )}
-
         {isLoading ? (
           <div className="text-sm" style={{ color: theme.colors.textMuted }}>
             Loading...
@@ -228,24 +205,7 @@ export function EditorHeader({
             <span className="hidden sm:inline">Login</span>
           </button>
         )}
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
-          style={{
-            background: theme.colors.secondary,
-            color: theme.colors.text,
-          }}
-          title="Switch repository"
-        >
-          <ArrowLeftRight className="w-4 h-4" />
-        </button>
       </div>
-
-      <RepoSelectionModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        currentRepo={repositoryName}
-      />
     </header>
   );
 }
