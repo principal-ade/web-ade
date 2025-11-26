@@ -502,8 +502,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
         } : repository,
       },
       // repositoryPath is used by Visual Validation panel to construct file paths
-      // For web-ade, this is empty string since readFile already handles the full path
-      repositoryPath: '',
+      // Set to empty string - readFile handles paths relative to repo root
+      repositoryPath: githubRepo || '',
       slices: slicesRef.current,
       getSlice: <T,>(name: string) => slicesRef.current.get(name) as DataSlice<T> | undefined,
       getWorkspaceSlice: <T,>(name: string) => {
@@ -580,7 +580,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
           throw error;
         }
       },
-      readFile: async (filePath: string): Promise<string> => {
+      readFile: async (filePath: string): Promise<{ content: string }> => {
         console.log('[PanelContext] Reading file:', filePath);
 
         if (!githubRepo) {
@@ -590,8 +590,15 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
         try {
           const [owner, name] = githubRepo.split('/');
 
-          // Remove leading slash from path
-          const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+          // Path comes as `${repositoryPath}/${configPath}` e.g. "owner/repo/.vgc/example.yaml"
+          // Strip the owner/repo prefix to get the relative path
+          let cleanPath = filePath;
+          const repoPrefix = `${githubRepo}/`;
+          if (cleanPath.startsWith(repoPrefix)) {
+            cleanPath = cleanPath.slice(repoPrefix.length);
+          } else if (cleanPath.startsWith('/')) {
+            cleanPath = cleanPath.slice(1);
+          }
 
           // Fetch file content from GitHub API
           const response = await fetch(
@@ -616,7 +623,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
             content = decoder.decode(bytes);
           }
 
-          return content;
+          // Return object with content property as expected by Visual Validation panel
+          return { content };
         } catch (error) {
           console.error('[PanelContext] Error reading file:', error);
           throw error;
