@@ -577,6 +577,48 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
           throw error;
         }
       },
+      readFile: async (filePath: string): Promise<string> => {
+        console.log('[PanelContext] Reading file:', filePath);
+
+        if (!githubRepo) {
+          throw new Error('No GitHub repo specified');
+        }
+
+        try {
+          const [owner, name] = githubRepo.split('/');
+
+          // Remove leading slash from path
+          const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+
+          // Fetch file content from GitHub API
+          const response = await fetch(
+            `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(cleanPath)}`
+          );
+
+          if (!response.ok) {
+            throw new Error(`Failed to read file: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+
+          // Decode base64 content
+          let content = '';
+          if (data.content && data.encoding === 'base64') {
+            const binaryString = atob(data.content.replace(/\n/g, ''));
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            const decoder = new TextDecoder('utf-8');
+            content = decoder.decode(bytes);
+          }
+
+          return content;
+        } catch (error) {
+          console.error('[PanelContext] Error reading file:', error);
+          throw error;
+        }
+      },
       openGitDiff: (filePath: string, status?: string) => {
         // TODO: Implement git diff opening
         console.log('Opening git diff:', filePath, status);
