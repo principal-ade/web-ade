@@ -501,6 +501,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
           githubRepo, // Add the full owner/repo string
         } : repository,
       },
+      // repositoryPath is used by Visual Validation panel to construct file paths
+      // For web-ade, this is empty string since readFile already handles the full path
+      repositoryPath: '',
       slices: slicesRef.current,
       getSlice: <T,>(name: string) => slicesRef.current.get(name) as DataSlice<T> | undefined,
       getWorkspaceSlice: <T,>(name: string) => {
