@@ -58,7 +58,16 @@ const KanbanPanelLoader = dynamic(
   { ssr: false }
 );
 
-type ViewMode = 'editor' | 'kanban';
+// Dynamically import the VisualValidationPanel with SSR disabled
+const VisualValidationPanelLoader = dynamic(
+  () => import('@industry-theme/visual-validation-panel').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
+type ViewMode = 'editor' | 'kanban' | 'visual-validation';
 function EditorLayoutContent() {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
@@ -116,6 +125,19 @@ function EditorLayoutContent() {
           setViewMode('editor');
         },
         isAvailable: () => viewMode !== 'editor',
+      },
+      {
+        id: 'view.switch-to-visual-validation',
+        label: 'Switch to Visual Validation View',
+        description: 'Open the visual validation graph viewer',
+        icon: '🕸️',
+        category: 'View',
+        keywords: ['visual', 'validation', 'graph', 'vvf', 'config', 'view', 'switch'],
+        priority: 90,
+        execute: () => {
+          setViewMode('visual-validation');
+        },
+        isAvailable: () => viewMode !== 'visual-validation',
       },
       {
         id: 'repository.switch',
@@ -246,6 +268,15 @@ function EditorLayoutContent() {
       });
       setLeftSidebarCollapsed(true);
       setRightSidebarCollapsed(true);
+    } else if (viewMode === 'visual-validation') {
+      // Visual Validation mode: visual-validation graph in middle, sidebars collapsed
+      setLayout({
+        left: 'docs',
+        middle: 'visual-validation',
+        right: 'sessions',
+      });
+      setLeftSidebarCollapsed(true);
+      setRightSidebarCollapsed(true);
     } else {
       // Editor mode: original layout with markdown in middle, code-city on right
       setLayout({
@@ -328,6 +359,15 @@ function EditorLayoutContent() {
       content: (
         <div className="h-full w-full overflow-hidden">
           <SessionsPanel />
+        </div>
+      ),
+    },
+    {
+      id: 'visual-validation',
+      label: 'Visual Validation',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <VisualValidationPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },
