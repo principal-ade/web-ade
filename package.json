@@ -26,7 +26,7 @@
     "@principal-ade/industry-theme": "^0.1.3",
     "@principal-ade/industry-themed-ai-sdk": "^0.2.0",
     "@principal-ade/panel-framework-core": "^0.1.2",
-    "@principal-ade/panel-layouts": "^0.1.5",
+    "@principal-ade/panel-layouts": "^0.2.1",
     "@principal-ai/alexandria-core-library": "^0.1.36",
     "@principal-ai/control-tower-core": "^0.1.18",
     "@principal-ai/logo-component": "^0.1.3",

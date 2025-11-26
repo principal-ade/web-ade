@@ -1,10 +1,18 @@
 'use client';
 
-import { ResponsiveConfigurablePanelLayout, PanelLayout, EditableConfigurablePanelLayout } from '@principal-ade/panel-layouts';
+import {
+  ResponsiveConfigurablePanelLayout,
+  PanelLayout,
+  EditableConfigurablePanelLayout,
+  CommandPalette,
+  useCommandPalette,
+  getPanelCommands,
+} from '@principal-ade/panel-layouts';
+import type { CommandContext, PanelSlotId } from '@principal-ade/panel-layouts';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ThemedAIChatPanel } from '@principal-ade/industry-themed-ai-sdk/components';
 import { PanelProvider, usePanelProvider } from '@/contexts/PanelContext';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { EditorHeader } from './EditorHeader';
 import { SessionsPanel } from './SessionsPanel';
@@ -63,6 +71,26 @@ function EditorLayoutContent() {
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [focusedPanel, setFocusedPanel] = useState<PanelSlotId | null>('middle');
+
+  // Create command context for the command palette
+  const commandContext = useMemo<CommandContext>(
+    () => ({
+      panelContext: context,
+      actions,
+      events,
+      focusedPanel,
+      setFocus: setFocusedPanel,
+      closeCommandPalette: () => {}, // Will be set by useCommandPalette
+    }),
+    [context, actions, events, focusedPanel]
+  );
+
+  // Initialize command palette with panel commands
+  const commandPalette = useCommandPalette({
+    context: commandContext,
+    commands: getPanelCommands(),
+  });
 
   // Detect mobile viewport
   useEffect(() => {
@@ -74,6 +102,43 @@ function EditorLayoutContent() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Listen for command palette events
+  useEffect(() => {
+    if (!events) return;
+
+    const unsubscribers = [
+      events.on('panel:toggle', (event) => {
+        const payload = event.payload as { panelId?: string };
+        if (payload.panelId === 'left') {
+          setLeftSidebarCollapsed((prev) => !prev);
+        } else if (payload.panelId === 'right') {
+          setRightSidebarCollapsed((prev) => !prev);
+        }
+      }),
+      events.on('panel:collapse-all', () => {
+        setLeftSidebarCollapsed(true);
+        setRightSidebarCollapsed(true);
+      }),
+      events.on('panel:expand-all', () => {
+        setLeftSidebarCollapsed(false);
+        setRightSidebarCollapsed(false);
+      }),
+      events.on('panel:reset-layout', () => {
+        setLayout({
+          left: 'docs',
+          middle: 'markdown-viewer',
+          right: 'code-city',
+        });
+        setLeftSidebarCollapsed(false);
+        setRightSidebarCollapsed(false);
+      }),
+    ];
+
+    return () => {
+      unsubscribers.forEach((unsub) => unsub());
+    };
+  }, [events]);
 
   // Handler functions for panel controls
   const handleToggleLeftSidebar = useCallback(() => {
@@ -279,6 +344,12 @@ function EditorLayoutContent() {
           />
         )}
       </div>
+
+      {/* Command Palette */}
+      <CommandPalette
+        commandPalette={commandPalette}
+        context={commandContext}
+      />
     </div>
   );
 }
