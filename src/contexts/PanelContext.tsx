@@ -91,7 +91,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
 
       const tree: GitHubTreeResponse = await response.json();
 
-      // Convert to the format expected by Code City panel
+      // Convert to the format expected by panels
+      // Visual Validation panel expects allFiles with path, relativePath, name
+      // Code City panel expects files with path, size, lines
       const files = tree.tree
         .filter((item) => item.type === 'blob')
         .map((item) => ({
@@ -100,9 +102,18 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
           lines: Math.ceil((item.size || 1000) / 50), // Estimate lines
         }));
 
+      const allFiles = tree.tree
+        .filter((item) => item.type === 'blob')
+        .map((item) => ({
+          path: item.path,
+          relativePath: item.path,
+          name: item.path.split('/').pop() || item.path,
+        }));
+
       const fileTreeData = {
         root: `${owner}/${name}`,
         files,
+        allFiles,
       };
 
       setFileTree(fileTreeData);
