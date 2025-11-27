@@ -68,7 +68,16 @@ const VisualValidationPanelLoader = dynamic(
   { ssr: false }
 );
 
-type ViewMode = 'editor' | 'kanban' | 'visual-validation';
+// Dynamically import the GitHubProjectsPanel with SSR disabled
+const GitHubProjectsPanelLoader = dynamic(
+  () => import('@industry-theme/github-panels').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
+type ViewMode = 'editor' | 'kanban' | 'visual-validation' | 'github-projects';
 function EditorLayoutContent() {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
@@ -139,6 +148,19 @@ function EditorLayoutContent() {
           setViewMode('visual-validation');
         },
         isAvailable: () => viewMode !== 'visual-validation',
+      },
+      {
+        id: 'view.switch-to-github-projects',
+        label: 'Switch to GitHub Projects View',
+        description: 'Browse and select GitHub repositories',
+        icon: '🐙',
+        category: 'View',
+        keywords: ['github', 'projects', 'repositories', 'repos', 'view', 'switch'],
+        priority: 90,
+        execute: () => {
+          setViewMode('github-projects');
+        },
+        isAvailable: () => viewMode !== 'github-projects',
       },
       {
         id: 'repository.switch',
@@ -222,6 +244,13 @@ function EditorLayoutContent() {
       events.on('repository:open-switcher', () => {
         setIsRepoModalOpen(true);
       }),
+      events.on('repository:selected', (event) => {
+        const payload = event.payload as { repository: { full_name: string } };
+        if (payload?.repository?.full_name) {
+          // Navigate to the selected repository's editor
+          window.location.href = `/editor/${payload.repository.full_name}`;
+        }
+      }),
     ];
 
     return () => {
@@ -274,6 +303,15 @@ function EditorLayoutContent() {
       setLayout({
         left: 'docs',
         middle: 'visual-validation',
+        right: 'sessions',
+      });
+      setLeftSidebarCollapsed(true);
+      setRightSidebarCollapsed(true);
+    } else if (viewMode === 'github-projects') {
+      // GitHub Projects mode: github-projects in middle, sidebars collapsed
+      setLayout({
+        left: 'docs',
+        middle: 'github-projects',
         right: 'sessions',
       });
       setLeftSidebarCollapsed(true);
@@ -369,6 +407,15 @@ function EditorLayoutContent() {
       content: (
         <div className="h-full w-full overflow-hidden">
           <VisualValidationPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'github-projects',
+      label: 'GitHub Projects',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <GitHubProjectsPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },
