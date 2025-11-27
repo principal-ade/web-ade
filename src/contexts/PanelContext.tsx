@@ -82,8 +82,10 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     try {
       const [owner, name] = repo.split('/');
 
-      // Fetch file tree from GitHub API
-      const response = await fetch(`/api/github/repo/${owner}/${name}?action=tree`);
+      // Fetch file tree from GitHub API with cache-busting
+      const response = await fetch(`/api/github/repo/${owner}/${name}?action=tree`, {
+        cache: 'no-store',
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to fetch file tree: ${response.statusText}`);
@@ -169,8 +171,10 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     try {
       const [owner, name] = repo.split('/');
 
-      // Fetch file tree from GitHub API
-      const response = await fetch(`/api/github/repo/${owner}/${name}?action=tree`);
+      // Fetch file tree from GitHub API with cache-busting
+      const response = await fetch(`/api/github/repo/${owner}/${name}?action=tree`, {
+        cache: 'no-store',
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to fetch file tree: ${response.statusText}`);

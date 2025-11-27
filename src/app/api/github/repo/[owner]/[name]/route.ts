@@ -127,30 +127,47 @@ export async function GET(
         );
         break;
 
-      case "tree":
+      case "tree": {
         // Fetch tree with in-memory caching by SHA
-        const ref = searchParams.get("ref") || "HEAD";
-        const cacheKey = `${owner}/${name}/${ref}`;
+        // First resolve the ref to actual commit SHA to ensure cache freshness
+        const requestedRef = searchParams.get("ref") || "HEAD";
 
-        // Check in-memory cache first
+        // Get the latest commit SHA for the ref to use as cache key
+        // This ensures we don't serve stale trees when new commits are pushed
+        let resolvedSha: string;
+        try {
+          const refData = await makeGitHubRequest(
+            `/repos/${owner}/${name}/commits/${requestedRef}`,
+            userToken
+          );
+          resolvedSha = refData.sha;
+        } catch {
+          // If we can't resolve the ref, fall back to using the ref directly
+          resolvedSha = requestedRef;
+        }
+
+        const cacheKey = `${owner}/${name}/${resolvedSha}`;
+
+        // Check in-memory cache first using the resolved SHA
         const cachedTree = gitTreeCache.get(cacheKey);
         if (cachedTree) {
           data = cachedTree;
           break;
         }
 
-        // Not in cache, fetch from GitHub
+        // Not in cache, fetch from GitHub using the resolved SHA
         data = await makeGitHubRequest(
-          `/repos/${owner}/${name}/git/trees/${ref}?recursive=1`,
+          `/repos/${owner}/${name}/git/trees/${resolvedSha}?recursive=1`,
           userToken
         );
 
-        // Cache by both the requested ref AND the returned SHA
+        // Cache by SHA
         if (data && data.sha) {
           gitTreeCache.set(cacheKey, data);
-          gitTreeCache.set(data.sha, data); // Also cache by SHA for direct lookups
+          gitTreeCache.set(data.sha, data); // Also cache by tree SHA for direct lookups
         }
         break;
+      }
 
       case "readme":
         data = await makeCachedGitHubRequest(
