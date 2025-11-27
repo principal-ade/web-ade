@@ -21,7 +21,7 @@
     "@industry-theme/alexandria-docs-panel": "^0.2.3",
     "@industry-theme/backlogmd-kanban-panel": "^0.2.2",
     "@industry-theme/code-city-panel": "^0.1.4",
-    "@industry-theme/github-panels": "0.1.2",
+    "@industry-theme/github-panels": "0.1.3",
     "@industry-theme/markdown-panels": "^0.2.11",
     "@industry-theme/visual-validation-panel": "^0.3.1",
     "@octokit/rest": "^22.0.1",

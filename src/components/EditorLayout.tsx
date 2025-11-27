@@ -81,6 +81,7 @@ type ViewMode = 'editor' | 'kanban' | 'visual-validation' | 'github-projects';
 function EditorLayoutContent() {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
+  const { login } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('editor');
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'docs',
@@ -251,12 +252,15 @@ function EditorLayoutContent() {
           window.location.href = `/editor/${payload.repository.full_name}`;
         }
       }),
+      events.on('github:login-requested', () => {
+        login();
+      }),
     ];
 
     return () => {
       unsubscribers.forEach((unsub) => unsub());
     };
-  }, [events]);
+  }, [events, login]);
 
   // Handler functions for panel controls
   const handleToggleLeftSidebar = useCallback(() => {

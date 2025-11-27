@@ -17,6 +17,7 @@ import type {
 } from '@principal-ade/panel-framework-core';
 import type { ExtendedMarkdownFile } from '@industry-theme/alexandria-docs-panel/dist/types';
 import type { CodebaseView } from '@principal-ai/alexandria-core-library/types';
+import { useAuth } from './AuthContext';
 
 interface GitHubTreeItem {
   path: string;
@@ -52,6 +53,9 @@ const PanelContext = createContext<PanelProviderValue | null>(null);
 export function PanelProvider({ children, workspace, repository, githubRepo }: PanelProviderProps) {
   // Initialize event bus once
   const events = useMemo(() => new PanelEventBus(), []);
+
+  // Get auth state for github-repositories slice
+  const { isAuthenticated } = useAuth();
 
   // State for active file content and path
   const [markdownContent, setMarkdownContent] = useState<string | null>(null);
@@ -394,6 +398,25 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
           },
         },
       ],
+      [
+        'github-repositories',
+        {
+          scope: 'global',
+          name: 'github-repositories',
+          data: {
+            owned: [],
+            starred: [],
+            organizations: [],
+            isAuthenticated,
+          },
+          loading: false,
+          error: null,
+          refresh: async () => {
+            // TODO: Fetch user's repositories from GitHub API
+            console.log('Refreshing github-repositories slice');
+          },
+        },
+      ],
     ])
   );
 
@@ -472,6 +495,23 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     });
   }
 
+  // Update github-repositories slice with auth state
+  const githubReposSlice = slicesRef.current.get('github-repositories');
+  if (githubReposSlice) {
+    const currentData = githubReposSlice.data as { isAuthenticated: boolean } | null;
+    if (!currentData || currentData.isAuthenticated !== isAuthenticated) {
+      slicesRef.current.set('github-repositories', {
+        ...githubReposSlice,
+        data: {
+          owned: [],
+          starred: [],
+          organizations: [],
+          isAuthenticated,
+        },
+      });
+    }
+  }
+
   // Refresh function - use slicesRef instead of slices state
   const refresh = useCallback(
     async (scope?: 'workspace' | 'repository', sliceName?: string) => {
@@ -533,7 +573,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, markdownFilesLoading, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, markdownFiles, fileTree, codebaseViews]
+    [workspace, repository, refresh, githubRepo, markdownFilesLoading, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, markdownFiles, fileTree, codebaseViews, isAuthenticated]
   );
 
   // Actions
