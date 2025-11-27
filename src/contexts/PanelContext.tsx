@@ -53,8 +53,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
   // Initialize event bus once
   const events = useMemo(() => new PanelEventBus(), []);
 
-  // State for active file (README) content
+  // State for active file content and path
   const [markdownContent, setMarkdownContent] = useState<string | null>(null);
+  const [activeFilePath, setActiveFilePath] = useState<string>('README.md');
   const [markdownLoading, setMarkdownLoading] = useState(true);
   const [markdownError, setMarkdownError] = useState<Error | null>(null);
 
@@ -403,7 +404,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
   if (markdownContent && githubRepo) {
     const [owner, name] = githubRepo.split('/');
     const activeFileData = {
-      path: 'README.md',
+      path: activeFilePath,
       content: markdownContent,
       type: 'markdown',
       size: markdownContent.length,
@@ -415,8 +416,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
         owner,
         name,
         branch: 'main',
-        location: 'README.md',
-        url: `https://github.com/${githubRepo}/blob/main/README.md`,
+        location: activeFilePath,
+        url: `https://github.com/${githubRepo}/blob/main/${activeFilePath}`,
       },
     };
 
@@ -532,14 +533,16 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, markdownFilesLoading, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, markdownFiles, fileTree, codebaseViews]
+    [workspace, repository, refresh, githubRepo, markdownFilesLoading, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, markdownFiles, fileTree, codebaseViews]
   );
 
   // Actions
   const actions: PanelActions = useMemo(
     () => ({
       openFile: async (filePath: string) => {
-        console.log('Opening file:', filePath);
+        // Remove leading slash from path
+        const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+        console.log('Opening file:', cleanPath);
 
         if (!githubRepo) {
           console.error('No GitHub repo specified');
@@ -548,9 +551,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
 
         try {
           const [owner, name] = githubRepo.split('/');
-
-          // Remove leading slash from path
-          const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
 
           // Fetch file content from GitHub API
           const response = await fetch(
@@ -573,6 +573,51 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
             }
             const decoder = new TextDecoder('utf-8');
             content = decoder.decode(bytes);
+          }
+
+          // If this is a markdown file, update the active-file slice and markdownContent
+          // so the markdown panel displays the new file
+          if (cleanPath.endsWith('.md')) {
+            const activeFileData = {
+              path: cleanPath,
+              content: content,
+              type: 'markdown',
+              size: content.length,
+              lastModified: new Date(),
+              encoding: 'utf-8',
+              source: {
+                type: 'remote' as const,
+                provider: 'github',
+                owner,
+                name,
+                branch: 'main',
+                location: cleanPath,
+                url: `https://github.com/${githubRepo}/blob/main/${cleanPath}`,
+              },
+            };
+
+            // Update the active-file slice
+            const activeFileSlice = slicesRef.current.get('active-file');
+            if (activeFileSlice) {
+              slicesRef.current.set('active-file', {
+                ...activeFileSlice,
+                data: activeFileData,
+                loading: false,
+                error: null,
+              });
+            }
+
+            // Update state to trigger re-render with new file
+            setActiveFilePath(cleanPath);
+            setMarkdownContent(content);
+
+            // Emit file:opened event
+            events.emit({
+              type: 'file:opened',
+              source: 'web-ade',
+              timestamp: Date.now(),
+              payload: activeFileData,
+            });
           }
 
           // Return content directly for programmatic access (e.g., kanban panel)
