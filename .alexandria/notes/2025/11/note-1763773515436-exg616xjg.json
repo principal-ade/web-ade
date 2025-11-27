@@ -1,0 +1,16 @@
+{
+  "id": "note-1763773515436-exg616xjg",
+  "note": "Fixed 3 panel loading race conditions: (1) Sequential data fetch now properly awaits codebaseViews before markdown files (2) Centralized slice updates via updateSliceRef to prevent concurrent Map modifications (3) Added WebSocket cleanup and guards against unmounted state updates",
+  "anchors": [
+    "src/contexts/PanelContext.tsx",
+    "src/hooks/usePresenceData.ts"
+  ],
+  "tags": [
+    "race-conditions",
+    "panel-loading",
+    "bug-fix"
+  ],
+  "metadata": {},
+  "timestamp": 1763773515436,
+  "codebaseViewId": "default"
+}

@@ -195,7 +195,7 @@ export function EditorHeader({
           </>
         ) : (
           <button
-            onClick={login}
+            onClick={() => login()}
             className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
             style={{
               background: theme.colors.primary,

@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { codeVerifier } = sessionData;
+    const { codeVerifier, redirectTo } = sessionData;
 
     // Exchange PKCE verifier for tokens
     const landingPageUrl = process.env.LANDING_PAGE_URL;
@@ -150,9 +150,10 @@ export async function GET(request: NextRequest) {
     // Clear temporary session
     await clearAuthSession();
 
-    // Redirect to home
+    // Redirect to original page or home
     const appUrl = 'https://app.principal-ade.com';
-    return NextResponse.redirect(new URL('/', appUrl));
+    const finalRedirect = redirectTo || '/';
+    return NextResponse.redirect(new URL(finalRedirect, appUrl));
   } catch (error) {
     console.error('Callback error:', {
       error: error instanceof Error ? error.message : error,

@@ -34,7 +34,7 @@ interface AuthState {
  * Auth context methods
  */
 interface AuthContextType extends AuthState {
-  login: () => void;
+  login: (redirectTo?: string) => void;
   logout: () => Promise<void>;
   fetchUser: () => Promise<void>;
 }
@@ -86,9 +86,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * Initiates login by redirecting to /api/auth/login
+   * @param redirectTo - Optional URL to redirect to after login (defaults to current page)
    */
-  const login = useCallback(() => {
-    window.location.href = '/api/auth/login';
+  const login = useCallback((redirectTo?: string) => {
+    const redirect = redirectTo ?? window.location.pathname + window.location.search;
+    const loginUrl = `/api/auth/login?redirect=${encodeURIComponent(redirect)}`;
+    window.location.href = loginUrl;
   }, []);
 
   /**

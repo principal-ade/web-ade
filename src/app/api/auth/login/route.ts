@@ -8,18 +8,21 @@
  * 4. Redirecting user to OAuth provider
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { generatePKCE, generateState } from '@/lib/auth/pkce';
 import { setAuthSession } from '@/lib/auth/session';
 
-async function handleLogin() {
+async function handleLogin(request: NextRequest) {
   try {
+    // Get redirect URL from query params
+    const redirectTo = request.nextUrl.searchParams.get('redirect') || undefined;
+
     // Generate PKCE challenge and state
     const { codeVerifier, codeChallenge } = await generatePKCE();
     const state = generateState();
 
-    // Store verifier and state in server session (5 min TTL)
-    await setAuthSession(codeVerifier, state);
+    // Store verifier, state, and redirect URL in server session (5 min TTL)
+    await setAuthSession(codeVerifier, state, redirectTo);
 
     // Call landing-page to initiate OAuth
     const landingPageUrl = process.env.LANDING_PAGE_URL;
@@ -78,10 +81,10 @@ async function handleLogin() {
   }
 }
 
-export async function GET() {
-  return handleLogin();
+export async function GET(request: NextRequest) {
+  return handleLogin(request);
 }
 
-export async function POST() {
-  return handleLogin();
+export async function POST(request: NextRequest) {
+  return handleLogin(request);
 }

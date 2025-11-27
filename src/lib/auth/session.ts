@@ -15,6 +15,7 @@ export interface AuthSessionData {
   codeVerifier?: string;
   state?: string;
   createdAt?: number;
+  redirectTo?: string;
 }
 
 /**
@@ -59,15 +60,18 @@ export async function getAuthSession(): Promise<
  * Stores PKCE verifier and state in session
  * @param verifier - PKCE code verifier
  * @param state - OAuth state parameter
+ * @param redirectTo - URL to redirect to after login
  */
 export async function setAuthSession(
   verifier: string,
-  state: string
+  state: string,
+  redirectTo?: string
 ): Promise<void> {
   const session = await getAuthSession();
   session.codeVerifier = verifier;
   session.state = state;
   session.createdAt = Date.now();
+  session.redirectTo = redirectTo;
   await session.save();
 }
 
@@ -78,7 +82,7 @@ export async function setAuthSession(
  */
 export async function getAndValidateSession(
   expectedState: string
-): Promise<{ codeVerifier: string } | null> {
+): Promise<{ codeVerifier: string; redirectTo?: string } | null> {
   const session = await getAuthSession();
 
   // Check if session exists
@@ -99,7 +103,7 @@ export async function getAndValidateSession(
     return null;
   }
 
-  return { codeVerifier: session.codeVerifier };
+  return { codeVerifier: session.codeVerifier, redirectTo: session.redirectTo };
 }
 
 /**

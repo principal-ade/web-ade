@@ -1,0 +1,15 @@
+{
+  "id": "note-1763773705788-bqtflu89l",
+  "note": "Fixed right panel expansion bug when switching to editor mode. Issue was state updates (layout, leftSidebarCollapsed, rightSidebarCollapsed) inside setViewMode updater causing React batching issues. Moved state sync to dedicated useEffect that runs when viewMode changes.",
+  "anchors": [
+    "src/components/EditorLayout.tsx"
+  ],
+  "tags": [
+    "bug-fix",
+    "panel-layout",
+    "state-sync"
+  ],
+  "metadata": {},
+  "timestamp": 1763773705788,
+  "codebaseViewId": "default"
+}
