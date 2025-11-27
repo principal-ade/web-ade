@@ -28,6 +28,46 @@ interface GitHubTreeItem {
   url?: string;
 }
 
+// GitHub repository types for the github-repositories slice
+interface GitHubOwner {
+  login: string;
+  avatar_url?: string;
+  type?: 'User' | 'Organization';
+}
+
+interface GitHubRepository {
+  id: number;
+  name: string;
+  full_name: string;
+  owner: GitHubOwner;
+  private: boolean;
+  html_url: string;
+  description: string | null;
+  fork: boolean;
+  clone_url: string;
+  language: string | null;
+  default_branch: string;
+  stargazers_count?: number;
+  forks_count?: number;
+  updated_at?: string;
+  topics?: string[];
+}
+
+interface GitHubOrganization {
+  id: number;
+  login: string;
+  avatar_url?: string;
+  description?: string | null;
+  repositories: GitHubRepository[];
+}
+
+interface GitHubRepositoriesData {
+  owned: GitHubRepository[];
+  starred: GitHubRepository[];
+  organizations: GitHubOrganization[];
+  isAuthenticated: boolean;
+}
+
 interface GitHubTreeResponse {
   sha: string;
   url: string;
@@ -77,6 +117,73 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
   const [fileTree, setFileTree] = useState<{ root: string; files: Array<{ path: string; size: number; lines: number }> } | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(true);
   const [fileTreeError, setFileTreeError] = useState<Error | null>(null);
+
+  // State for GitHub repositories (user's repos)
+  const [githubRepos, setGithubRepos] = useState<GitHubRepositoriesData>({
+    owned: [],
+    starred: [],
+    organizations: [],
+    isAuthenticated: false,
+  });
+  const [githubReposLoading, setGithubReposLoading] = useState(false);
+
+  // Fetch user's GitHub repositories
+  const fetchGithubRepos = useCallback(async () => {
+    if (!isAuthenticated) {
+      setGithubRepos({
+        owned: [],
+        starred: [],
+        organizations: [],
+        isAuthenticated: false,
+      });
+      return;
+    }
+
+    setGithubReposLoading(true);
+    console.log('[PanelContext] Fetching GitHub repositories');
+
+    try {
+      const response = await fetch('/api/github/user/repos', {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setGithubRepos({
+            owned: [],
+            starred: [],
+            organizations: [],
+            isAuthenticated: false,
+          });
+          return;
+        }
+        throw new Error(`Failed to fetch repos: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setGithubRepos({
+        owned: data.owned || [],
+        starred: data.starred || [],
+        organizations: data.organizations || [],
+        isAuthenticated: true,
+      });
+      console.log('[PanelContext] GitHub repos loaded:', {
+        owned: data.owned?.length || 0,
+        starred: data.starred?.length || 0,
+        orgs: data.organizations?.length || 0,
+      });
+    } catch (err) {
+      console.error('[PanelContext] Failed to fetch GitHub repos:', err);
+      setGithubRepos({
+        owned: [],
+        starred: [],
+        organizations: [],
+        isAuthenticated,
+      });
+    } finally {
+      setGithubReposLoading(false);
+    }
+  }, [isAuthenticated]);
 
   // Fetch file tree from GitHub
   const fetchFileTree = useCallback(async (repo: string) => {
@@ -403,18 +510,10 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
         {
           scope: 'global',
           name: 'github-repositories',
-          data: {
-            owned: [],
-            starred: [],
-            organizations: [],
-            isAuthenticated,
-          },
-          loading: false,
+          data: githubRepos,
+          loading: githubReposLoading,
           error: null,
-          refresh: async () => {
-            // TODO: Fetch user's repositories from GitHub API
-            console.log('Refreshing github-repositories slice');
-          },
+          refresh: fetchGithubRepos,
         },
       ],
     ])
@@ -495,21 +594,14 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     });
   }
 
-  // Update github-repositories slice with auth state
+  // Update github-repositories slice with fetched data
   const githubReposSlice = slicesRef.current.get('github-repositories');
   if (githubReposSlice) {
-    const currentData = githubReposSlice.data as { isAuthenticated: boolean } | null;
-    if (!currentData || currentData.isAuthenticated !== isAuthenticated) {
-      slicesRef.current.set('github-repositories', {
-        ...githubReposSlice,
-        data: {
-          owned: [],
-          starred: [],
-          organizations: [],
-          isAuthenticated,
-        },
-      });
-    }
+    slicesRef.current.set('github-repositories', {
+      ...githubReposSlice,
+      data: githubRepos,
+      loading: githubReposLoading,
+    });
   }
 
   // Refresh function - use slicesRef instead of slices state
@@ -573,7 +665,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, markdownFilesLoading, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, markdownFiles, fileTree, codebaseViews, isAuthenticated]
+    [workspace, repository, refresh, githubRepo, markdownFilesLoading, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, markdownFiles, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading]
   );
 
   // Actions
@@ -753,6 +845,11 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
   const prevCodebaseViewsLoadingRef = useRef<boolean>(true);
   const currentRepoRef = useRef<string>('');
   const markdownFilesFetchedRef = useRef<boolean>(false);
+
+  // Fetch GitHub repositories when authentication state changes
+  useEffect(() => {
+    fetchGithubRepos();
+  }, [fetchGithubRepos]);
 
   // Auto-fetch README, codebase views, markdown files, and file tree when githubRepo changes
   useEffect(() => {
