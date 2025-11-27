@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
           sessionData.redirectPath ||
           sessionData.redirect_to ||
           sessionData.redirectTo;
-        const redirectPath = redirectPathFromQuery || redirectPathFromSession || '/dashboard';
+        const redirectPath = redirectPathFromQuery || redirectPathFromSession || '/';
         const normalizedRedirectPath = redirectPath.startsWith('/')
           ? redirectPath
           : `/${redirectPath}`;
@@ -150,9 +150,9 @@ export async function GET(request: NextRequest) {
     // Clear temporary session
     await clearAuthSession();
 
-    // Redirect to dashboard
+    // Redirect to home
     const appUrl = 'https://app.principal-ade.com';
-    return NextResponse.redirect(new URL('/dashboard', appUrl));
+    return NextResponse.redirect(new URL('/', appUrl));
   } catch (error) {
     console.error('Callback error:', {
       error: error instanceof Error ? error.message : error,
