@@ -2,7 +2,7 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, LogOut, Wifi, WifiOff } from 'lucide-react';
+import { LogIn, LogOut, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useControlTowerClient } from '@/lib/control-tower';
@@ -10,6 +10,7 @@ import { getTrafficControllerUrl, getWebSocketToken } from '@/lib/control-tower/
 import { useEffect, useState } from 'react';
 import { Logo } from '@principal-ai/logo-component';
 import { PanelControls } from './PanelControls';
+import { RepoSelectionModal } from './RepoSelectionModal';
 
 interface EditorHeaderProps {
   leftSidebarCollapsed?: boolean;
@@ -37,6 +38,7 @@ export function EditorHeader({
   const pathname = usePathname();
   const [wsToken, setWsToken] = useState<string | null>(null);
   const [repositoryName, setRepositoryName] = useState<{ owner: string; repo: string } | null>(null);
+  const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
 
   // Extract repository name from URL
   useEffect(() => {
@@ -110,42 +112,70 @@ export function EditorHeader({
         </div>
       </div>
 
-      {/* Center section: Repository name and owner */}
+      {/* Center section: Repository avatar, name/owner, and switch button */}
       {repositoryName && (
         <div
-          className="flex flex-col items-center gap-px absolute left-1/2 transform -translate-x-1/2"
+          className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2"
           style={{
             fontFamily: theme.fonts.body,
           }}
         >
-          <a
-            href={`https://github.com/${repositoryName.owner}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="transition-opacity hover:opacity-80"
+          {/* Repo Avatar */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`https://github.com/${repositoryName.owner}.png?size=64`}
+            alt={repositoryName.owner}
+            className="w-9 h-9 flex-shrink-0"
             style={{
-              fontSize: theme.fontSizes[2],
-              fontWeight: theme.fontWeights.body,
-              color: theme.colors.textMuted,
-              textDecoration: 'none',
+              borderRadius: '6px',
             }}
-          >
-            {repositoryName.owner}
-          </a>
-          <a
-            href={`https://github.com/${repositoryName.owner}/${repositoryName.repo}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="transition-opacity hover:opacity-80"
+          />
+
+          {/* Name/Owner */}
+          <div className="flex flex-col items-center gap-px">
+            <a
+              href={`https://github.com/${repositoryName.owner}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-opacity hover:opacity-80"
+              style={{
+                fontSize: theme.fontSizes[2],
+                fontWeight: theme.fontWeights.body,
+                color: theme.colors.textMuted,
+                textDecoration: 'none',
+              }}
+            >
+              {repositoryName.owner}
+            </a>
+            <a
+              href={`https://github.com/${repositoryName.owner}/${repositoryName.repo}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-opacity hover:opacity-80"
+              style={{
+                fontSize: theme.fontSizes[3],
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.text,
+                textDecoration: 'none',
+              }}
+            >
+              {repositoryName.repo}
+            </a>
+          </div>
+
+          {/* Switch Repo Button */}
+          <button
+            onClick={() => setIsRepoModalOpen(true)}
+            className="w-9 h-9 flex items-center justify-center flex-shrink-0 transition-all hover:opacity-80"
             style={{
-              fontSize: theme.fontSizes[3],
-              fontWeight: theme.fontWeights.semibold,
+              borderRadius: '6px',
+              background: theme.colors.secondary,
               color: theme.colors.text,
-              textDecoration: 'none',
             }}
+            title="Switch repository"
           >
-            {repositoryName.repo}
-          </a>
+            <RefreshCw className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -207,6 +237,13 @@ export function EditorHeader({
           </button>
         )}
       </div>
+
+      {/* Repo Selection Modal */}
+      <RepoSelectionModal
+        isOpen={isRepoModalOpen}
+        onClose={() => setIsRepoModalOpen(false)}
+        currentRepo={repositoryName}
+      />
     </header>
   );
 }
