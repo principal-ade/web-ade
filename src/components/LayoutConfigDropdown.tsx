@@ -81,6 +81,19 @@ export const layoutConfigs: LayoutConfig[] = [
       right: true,
     },
   },
+  {
+    id: 'github-search',
+    name: 'GitHub Search',
+    layout: {
+      left: 'github-projects',
+      middle: 'github-search',
+      right: 'sessions',
+    },
+    collapsed: {
+      left: false,
+      right: true,
+    },
+  },
 ];
 
 interface LayoutConfigDropdownProps {

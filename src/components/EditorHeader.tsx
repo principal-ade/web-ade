@@ -2,31 +2,37 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, LogOut, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { LogIn, LogOut, Wifi, WifiOff, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useControlTowerClient } from '@/lib/control-tower';
 import { getTrafficControllerUrl, getWebSocketToken } from '@/lib/control-tower/config';
 import { useEffect, useState } from 'react';
 import { Logo } from '@principal-ai/logo-component';
-import { LayoutConfigDropdown, LayoutConfig } from './LayoutConfigDropdown';
-import { RepoSelectionModal } from './RepoSelectionModal';
+import { LayoutConfigDropdown, LayoutConfig, layoutConfigs } from './LayoutConfigDropdown';
 
 interface EditorHeaderProps {
   currentLayoutConfigId?: string;
   onLayoutConfigChange?: (config: LayoutConfig) => void;
+  leftCollapsed?: boolean;
+  rightCollapsed?: boolean;
+  onToggleLeft?: () => void;
+  onToggleRight?: () => void;
 }
 
 export function EditorHeader({
   currentLayoutConfigId = 'default',
   onLayoutConfigChange,
+  leftCollapsed = false,
+  rightCollapsed = false,
+  onToggleLeft,
+  onToggleRight,
 }: EditorHeaderProps = {}) {
   const { theme } = useTheme();
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
   const pathname = usePathname();
   const [wsToken, setWsToken] = useState<string | null>(null);
   const [repositoryName, setRepositoryName] = useState<{ owner: string; repo: string } | null>(null);
-  const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
 
   // Extract repository name from URL
   useEffect(() => {
@@ -147,23 +153,66 @@ export function EditorHeader({
             </a>
           </div>
 
-          {/* Switch Repo Button */}
+          {/* Search GitHub Button */}
           <button
-            onClick={() => setIsRepoModalOpen(true)}
+            onClick={() => {
+              const githubSearchConfig = layoutConfigs.find(c => c.id === 'github-search');
+              if (githubSearchConfig && onLayoutConfigChange) {
+                onLayoutConfigChange(githubSearchConfig);
+              }
+            }}
             className="w-9 h-9 flex items-center justify-center flex-shrink-0 transition-all hover:opacity-80"
             style={{
               borderRadius: '6px',
               background: theme.colors.secondary,
               color: theme.colors.text,
             }}
-            title="Switch repository"
+            title="Search GitHub repositories"
           >
-            <RefreshCw className="w-4 h-4" />
+            <Search className="w-4 h-4" />
           </button>
         </div>
       )}
 
       <div className="flex items-center gap-3 flex-shrink-0 flex-1 justify-end">
+        {/* Panel collapse toggles */}
+        <div className="hidden md:flex items-center gap-1">
+          {onToggleLeft && (
+            <button
+              onClick={onToggleLeft}
+              className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+              style={{
+                background: theme.colors.secondary,
+                color: theme.colors.text,
+              }}
+              title={leftCollapsed ? 'Expand left panel' : 'Collapse left panel'}
+            >
+              {leftCollapsed ? (
+                <PanelLeftOpen className="w-4 h-4" />
+              ) : (
+                <PanelLeftClose className="w-4 h-4" />
+              )}
+            </button>
+          )}
+          {onToggleRight && (
+            <button
+              onClick={onToggleRight}
+              className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+              style={{
+                background: theme.colors.secondary,
+                color: theme.colors.text,
+              }}
+              title={rightCollapsed ? 'Expand right panel' : 'Collapse right panel'}
+            >
+              {rightCollapsed ? (
+                <PanelRightOpen className="w-4 h-4" />
+              ) : (
+                <PanelRightClose className="w-4 h-4" />
+              )}
+            </button>
+          )}
+        </div>
+
         {isLoading ? (
           <div className="text-sm" style={{ color: theme.colors.textMuted }}>
             Loading...
@@ -221,13 +270,6 @@ export function EditorHeader({
           </button>
         )}
       </div>
-
-      {/* Repo Selection Modal */}
-      <RepoSelectionModal
-        isOpen={isRepoModalOpen}
-        onClose={() => setIsRepoModalOpen(false)}
-        currentRepo={repositoryName}
-      />
     </header>
   );
 }

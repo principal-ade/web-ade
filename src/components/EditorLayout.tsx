@@ -80,6 +80,15 @@ const GitHubProjectsPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the GitHubSearchPanel with SSR disabled
+const GitHubSearchPanelLoader = dynamic(
+  () => import('@industry-theme/github-panels').then((mod) => {
+    const Component = mod.panels[1]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 type ViewMode = 'editor' | 'kanban' | 'visual-validation' | 'github-projects';
 function EditorLayoutContent() {
   const { theme } = useTheme();
@@ -411,6 +420,15 @@ function EditorLayoutContent() {
         </div>
       ),
     },
+    {
+      id: 'github-search',
+      label: 'GitHub Search',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <GitHubSearchPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -418,6 +436,10 @@ function EditorLayoutContent() {
       <EditorHeader
         currentLayoutConfigId={currentLayoutConfigId}
         onLayoutConfigChange={handleLayoutConfigChange}
+        leftCollapsed={leftSidebarCollapsed}
+        rightCollapsed={rightSidebarCollapsed}
+        onToggleLeft={() => setLeftSidebarCollapsed(prev => !prev)}
+        onToggleRight={() => setRightSidebarCollapsed(prev => !prev)}
       />
       <div className="flex-1 overflow-hidden">
         {isMobile ? (
