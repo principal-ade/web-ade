@@ -13,10 +13,13 @@ import { ThemedAIChat } from '@principal-ade/industry-themed-ai-sdk/components';
 import type { PanelComponentProps, CustomChatHandler } from '@principal-ade/industry-themed-ai-sdk';
 import { useWebLLM, AVAILABLE_MODELS, ModelId } from '@/contexts/WebLLMContext';
 import { useGemini } from '@/contexts/GeminiContext';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Cpu, Cloud, ChevronLeft } from 'lucide-react';
 
 export type AIProvider = 'local' | 'gemini';
+
+const STORAGE_KEY_PROVIDER = 'ai-chat-provider';
+const STORAGE_KEY_MODEL = 'ai-chat-local-model';
 
 interface AIChatPanelProps extends PanelComponentProps {
   placeholder?: string;
@@ -32,6 +35,48 @@ export function AIChatPanel({
 
   const [selectedProvider, setSelectedProvider] = useState<AIProvider | null>(null);
   const [selectedModelId, setSelectedModelId] = useState<ModelId | null>(null);
+  const [initialized, setInitialized] = useState(false);
+
+  // Load saved preferences from localStorage on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const savedProvider = localStorage.getItem(STORAGE_KEY_PROVIDER) as AIProvider | null;
+    const savedModel = localStorage.getItem(STORAGE_KEY_MODEL);
+
+    if (savedProvider === 'gemini') {
+      setSelectedProvider('gemini');
+    } else if (savedProvider === 'local' && savedModel) {
+      setSelectedProvider('local');
+      setSelectedModelId(savedModel);
+      // Auto-load the saved model
+      webllm.loadModel(savedModel);
+    }
+
+    setInitialized(true);
+  }, []);
+
+  // Save provider preference when it changes
+  useEffect(() => {
+    if (!initialized || typeof window === 'undefined') return;
+
+    if (selectedProvider) {
+      localStorage.setItem(STORAGE_KEY_PROVIDER, selectedProvider);
+    } else {
+      localStorage.removeItem(STORAGE_KEY_PROVIDER);
+    }
+  }, [selectedProvider, initialized]);
+
+  // Save model preference when it changes
+  useEffect(() => {
+    if (!initialized || typeof window === 'undefined') return;
+
+    if (selectedModelId) {
+      localStorage.setItem(STORAGE_KEY_MODEL, selectedModelId);
+    } else {
+      localStorage.removeItem(STORAGE_KEY_MODEL);
+    }
+  }, [selectedModelId, initialized]);
 
   // Create custom handler based on selected provider
   const customHandler: CustomChatHandler | null = useMemo(() => {
@@ -109,6 +154,21 @@ export function AIChatPanel({
       setSelectedModelId(null);
     }
   };
+
+  // Show loading while initializing from localStorage
+  if (!initialized) {
+    return (
+      <div
+        className="h-full w-full flex items-center justify-center"
+        style={{
+          background: theme.colors.background,
+          color: theme.colors.textMuted,
+        }}
+      >
+        Loading...
+      </div>
+    );
+  }
 
   // Provider selection screen
   if (!selectedProvider) {

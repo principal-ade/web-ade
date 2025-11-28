@@ -1,14 +1,13 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Layout, MessageSquare, FileText, Building2, Columns3 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { useTheme, Theme } from '@principal-ade/industry-theme';
 import type { PanelLayout } from '@principal-ade/panel-layouts';
 
 export interface LayoutConfig {
   id: string;
   name: string;
-  icon: React.ReactNode;
   layout: PanelLayout;
   collapsed: {
     left: boolean;
@@ -19,8 +18,7 @@ export interface LayoutConfig {
 export const layoutConfigs: LayoutConfig[] = [
   {
     id: 'default',
-    name: 'AI Assistant',
-    icon: <MessageSquare size={14} />,
+    name: 'Principal AI',
     layout: {
       left: 'docs',
       middle: 'ai-chat',
@@ -34,7 +32,6 @@ export const layoutConfigs: LayoutConfig[] = [
   {
     id: 'documentation',
     name: 'Documentation',
-    icon: <FileText size={14} />,
     layout: {
       left: 'docs',
       middle: 'markdown-viewer',
@@ -48,7 +45,6 @@ export const layoutConfigs: LayoutConfig[] = [
   {
     id: 'code-focus',
     name: 'Code Focus',
-    icon: <Building2 size={14} />,
     layout: {
       left: 'docs',
       middle: 'code-city',
@@ -62,7 +58,6 @@ export const layoutConfigs: LayoutConfig[] = [
   {
     id: 'three-panel',
     name: 'Three Panel',
-    icon: <Columns3 size={14} />,
     layout: {
       left: 'ai-chat',
       middle: 'markdown-viewer',
@@ -71,6 +66,19 @@ export const layoutConfigs: LayoutConfig[] = [
     collapsed: {
       left: false,
       right: false,
+    },
+  },
+  {
+    id: 'github-projects',
+    name: 'GitHub Projects',
+    layout: {
+      left: 'docs',
+      middle: 'github-projects',
+      right: 'sessions',
+    },
+    collapsed: {
+      left: true,
+      right: true,
     },
   },
 ];
@@ -133,12 +141,11 @@ export function LayoutConfigDropdown({
         }}
         title="Change layout configuration"
       >
-        <Layout size={14} style={{ color: theme.colors.textMuted }} />
         <span className="hidden sm:inline">{currentConfig.name}</span>
         <ChevronDown
           size={14}
           style={{
-            color: theme.colors.textMuted,
+            color: theme.colors.text,
             transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
             transition: 'transform 0.2s',
           }}
@@ -160,7 +167,7 @@ export function LayoutConfigDropdown({
                 onConfigChange(config);
                 setIsOpen(false);
               }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-left transition-all"
+              className="w-full px-3 py-2 text-left transition-all"
               style={{
                 background: config.id === currentConfigId ? theme.colors.backgroundTertiary : 'transparent',
                 color: config.id === currentConfigId ? theme.colors.primary : theme.colors.text,
@@ -178,8 +185,7 @@ export function LayoutConfigDropdown({
                 }
               }}
             >
-              <span style={{ color: theme.colors.textMuted }}>{config.icon}</span>
-              <span>{config.name}</span>
+              {config.name}
             </button>
           ))}
         </div>

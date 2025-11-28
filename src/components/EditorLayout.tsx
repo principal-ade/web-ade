@@ -664,6 +664,26 @@ function WebLLMWrapper() {
     }
   }, [githubRepo]);
 
+  // Function to get GitHub repositories from context
+  const getRepositories = useCallback(() => {
+    const reposSlice = context.getSlice<{
+      owned: Array<{ full_name: string; description: string | null; language: string | null; private: boolean }>;
+      starred: Array<{ full_name: string; description: string | null; language: string | null; private: boolean }>;
+      organizations: Array<{
+        login: string;
+        repositories: Array<{ full_name: string; description: string | null; language: string | null; private: boolean }>;
+      }>;
+    }>('github-repositories');
+
+    if (!reposSlice?.data) return null;
+
+    return {
+      owned: reposSlice.data.owned || [],
+      starred: reposSlice.data.starred || [],
+      organizations: reposSlice.data.organizations || [],
+    };
+  }, [context]);
+
   return (
     <WebLLMProvider
       events={events}
@@ -676,6 +696,7 @@ function WebLLMWrapper() {
         actions={actions}
         markdownFiles={markdownFiles}
         fetchFileContent={fetchFileContent}
+        getRepositories={getRepositories}
       >
         <EditorLayoutContent />
       </GeminiProvider>

@@ -37,6 +37,27 @@ export interface MarkdownFileInfo {
 /** Function to fetch file content */
 export type FetchFileContent = (filePath: string) => Promise<string | null>;
 
+/** GitHub repository info */
+export interface GitHubRepoInfo {
+  full_name: string;
+  description?: string | null;
+  language?: string | null;
+  private?: boolean;
+}
+
+/** GitHub repositories data */
+export interface GitHubReposData {
+  owned: GitHubRepoInfo[];
+  starred: GitHubRepoInfo[];
+  organizations: Array<{
+    login: string;
+    repositories: GitHubRepoInfo[];
+  }>;
+}
+
+/** Function to get repositories */
+export type GetRepositories = () => GitHubReposData | null;
+
 interface GeminiContextValue {
   // Status
   status: GeminiStatus;
@@ -62,6 +83,8 @@ interface GeminiProviderProps {
   markdownFiles?: MarkdownFileInfo[];
   /** Function to fetch file content for read_file function */
   fetchFileContent?: FetchFileContent;
+  /** Function to get available repositories */
+  getRepositories?: GetRepositories;
 }
 
 export function GeminiProvider({
@@ -70,6 +93,7 @@ export function GeminiProvider({
   actions,
   markdownFiles,
   fetchFileContent,
+  getRepositories,
 }: GeminiProviderProps) {
   const [status, setStatus] = useState<GeminiStatus>('ready');
   const [error, setError] = useState<Error | null>(null);
@@ -230,6 +254,73 @@ export function GeminiProvider({
         return {
           result: JSON.stringify({ success: true, slot, panel }),
           displayText: `> **Switched ${slot} panel to ${panel}**\n\n`,
+        };
+      }
+
+      case 'list_repositories': {
+        if (!getRepositories) {
+          return {
+            result: JSON.stringify({ error: 'Repository listing not available' }),
+            displayText: `> **List repositories error:** Not available\n\n`,
+          };
+        }
+
+        const repos = getRepositories();
+        if (!repos) {
+          return {
+            result: JSON.stringify({ error: 'No repositories data available. User may need to log in.' }),
+            displayText: `> **List repositories:** No data available\n\n`,
+          };
+        }
+
+        // Format repos for the AI
+        const formatRepo = (r: GitHubRepoInfo) => ({
+          name: r.full_name,
+          description: r.description,
+          language: r.language,
+          private: r.private,
+        });
+
+        const result = {
+          owned: repos.owned.map(formatRepo),
+          starred: repos.starred.slice(0, 10).map(formatRepo), // Limit starred to 10
+          organizations: repos.organizations.map(org => ({
+            name: org.login,
+            repositories: org.repositories.map(formatRepo),
+          })),
+        };
+
+        const totalCount = repos.owned.length + repos.starred.length +
+          repos.organizations.reduce((sum, org) => sum + org.repositories.length, 0);
+
+        return {
+          result: JSON.stringify(result),
+          displayText: `> **Found ${totalCount} repositories**\n\n`,
+        };
+      }
+
+      case 'switch_repository': {
+        const repository = args.repository as string;
+
+        if (!repository || !repository.includes('/')) {
+          return {
+            result: JSON.stringify({ error: 'Invalid repository format. Use "owner/repo"' }),
+            displayText: `> **Switch repository error:** Invalid format\n\n`,
+          };
+        }
+
+        // Navigate to the repository
+        // This will cause a page navigation
+        events?.emit({
+          type: 'repository:selected',
+          source: 'gemini-assistant',
+          timestamp: Date.now(),
+          payload: { repository: { full_name: repository } },
+        });
+
+        return {
+          result: JSON.stringify({ success: true, repository }),
+          displayText: `> **Switching to repository:** \`${repository}\`\n\n`,
         };
       }
 

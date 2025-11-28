@@ -673,13 +673,20 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     () => ({
       openFile: async (filePath: string) => {
         // Remove leading slash from path
-        const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
-        console.log('Opening file:', cleanPath);
+        let cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
 
         if (!githubRepo) {
           console.error('No GitHub repo specified');
           return;
         }
+
+        // Strip the repo prefix if present (e.g., "owner/repo/src/file.ts" -> "src/file.ts")
+        const repoPrefix = `${githubRepo}/`;
+        if (cleanPath.startsWith(repoPrefix)) {
+          cleanPath = cleanPath.slice(repoPrefix.length);
+        }
+
+        console.log('Opening file:', cleanPath);
 
         try {
           const [owner, name] = githubRepo.split('/');

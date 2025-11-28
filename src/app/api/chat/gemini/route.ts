@@ -125,6 +125,29 @@ const GEMINI_TOOLS: GeminiTool = {
         required: ['slot', 'panel'],
       },
     },
+    {
+      name: 'list_repositories',
+      description: 'Get a list of GitHub repositories the user has access to, including owned repos, starred repos, and organization repos.',
+      parameters: {
+        type: 'object',
+        properties: {},
+        required: [],
+      },
+    },
+    {
+      name: 'switch_repository',
+      description: 'Switch to a different GitHub repository to view its documentation and files.',
+      parameters: {
+        type: 'object',
+        properties: {
+          repository: {
+            type: 'string',
+            description: 'The full repository name in "owner/repo" format (e.g., "principal-ai/alexandria-core-library")',
+          },
+        },
+        required: ['repository'],
+      },
+    },
   ],
 };
 
@@ -139,6 +162,8 @@ You have access to tools that let you interact with the application:
 - collapse_all_panels: Collapse both panels to maximize the main content
 - expand_all_panels: Expand both panels to show all content
 - switch_panel: Change what's displayed in a panel slot (left/middle/right)
+- list_repositories: Get user's GitHub repositories (owned, starred, organizations)
+- switch_repository: Navigate to a different repository
 
 Available panels you can switch to: docs, ai-chat, markdown-viewer, code-city, kanban, sessions, visual-validation, github-projects.
 
@@ -146,6 +171,7 @@ When a user asks about file contents, use read_file to get the content and then 
 When a user wants to view a file, use open_file to display it.
 When a user wants more space or to hide/show panels, use the panel tools.
 When a user wants to see different content in a panel slot, use switch_panel.
+When a user asks about their repositories or wants to switch repos, use list_repositories and switch_repository.
 
 Be helpful and concise. Use your tools proactively when needed.`;
 
