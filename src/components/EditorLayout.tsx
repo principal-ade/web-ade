@@ -25,6 +25,7 @@ import '@principal-ade/panel-layouts/styles.css';
 import '@principal-ade/industry-themed-ai-sdk/styles.css';
 import '@industry-theme/visual-validation-panel/dist/panels.bundle.css';
 import { useAuth } from '@/contexts/AuthContext';
+import { ExternalLink } from 'lucide-react';
 
 // Dynamically import the MarkdownPanel with SSR disabled
 const MarkdownPanelLoader = dynamic(
@@ -93,7 +94,7 @@ type ViewMode = 'editor' | 'kanban' | 'visual-validation' | 'github-projects';
 function EditorLayoutContent() {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('editor');
   const [currentLayoutConfigId, setCurrentLayoutConfigId] = useState('default');
   const currentLayoutConfig = layoutConfigs.find((c) => c.id === currentLayoutConfigId) || layoutConfigs[0]!;
@@ -103,16 +104,25 @@ function EditorLayoutContent() {
   const [isMobile, setIsMobile] = useState(false);
   const [focusedPanel, setFocusedPanel] = useState<PanelSlotId | null>('middle');
   const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
+  const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
 
   // Handle layout configuration change
   const handleLayoutConfigChange = useCallback((config: LayoutConfig) => {
     setCurrentLayoutConfigId(config.id);
     setLayout(config.layout);
-    setLeftSidebarCollapsed(config.collapsed.left);
-    setRightSidebarCollapsed(config.collapsed.right);
+
+    // Special handling for github-search config when user is not authenticated
+    // Collapse left sidebar (github-projects needs auth) for 50/50 split of middle (search) and right (preview)
+    if (config.id === 'github-search' && !isAuthenticated) {
+      setLeftSidebarCollapsed(true);
+      setRightSidebarCollapsed(false);
+    } else {
+      setLeftSidebarCollapsed(config.collapsed.left);
+      setRightSidebarCollapsed(config.collapsed.right);
+    }
     // Reset to editor view when changing layout config
     setViewMode('editor');
-  }, []);
+  }, [isAuthenticated]);
 
   // Create command context for the command palette
   const commandContext = useMemo<CommandContext>(
@@ -271,6 +281,26 @@ function EditorLayoutContent() {
           window.location.href = `/editor/${payload.repository.full_name}`;
         }
       }),
+      events.on('repository:preview', (event) => {
+        const payload = event.payload as { repository: { full_name: string; owner: { login: string }; name: string } };
+        if (payload?.repository?.full_name) {
+          const parts = payload.repository.full_name.split('/');
+          const owner = parts[0];
+          const repo = parts[1];
+          if (owner && repo) {
+            // Store the previewed repo for the "Open" button
+            setPreviewedRepo(payload.repository.full_name);
+            // Call the previewReadme action
+            (actions as { previewReadme?: (owner: string, repo: string) => Promise<string> }).previewReadme?.(owner, repo);
+            // Switch the right panel to markdown-viewer to show the preview
+            setLayout((prev) => ({
+              ...prev,
+              right: 'markdown-viewer',
+            }));
+            setRightSidebarCollapsed(false);
+          }
+        }
+      }),
       events.on('github:login-requested', () => {
         login();
       }),
@@ -294,7 +324,7 @@ function EditorLayoutContent() {
     return () => {
       unsubscribers.forEach((unsub) => unsub());
     };
-  }, [events, login]);
+  }, [events, login, actions]);
 
   // Sync layout and collapsed state when view mode changes (for special views)
   useEffect(() => {
@@ -497,6 +527,26 @@ function EditorLayoutContent() {
           />
         )}
       </div>
+
+      {/* Open Repository Button - shows when previewing a repo */}
+      {previewedRepo && (
+        <button
+          onClick={() => {
+            window.location.href = `/editor/${previewedRepo}`;
+          }}
+          className="fixed bottom-6 right-6 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg transition-all hover:scale-105 z-50"
+          style={{
+            background: theme.colors.primary,
+            color: theme.colors.background,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[2],
+            fontWeight: theme.fontWeights.semibold,
+          }}
+        >
+          <ExternalLink size={18} />
+          Open {previewedRepo.split('/')[1]}
+        </button>
+      )}
 
       {/* Command Palette */}
       <CommandPalette

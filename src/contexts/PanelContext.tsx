@@ -835,6 +835,90 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       notifyPanels: (event) => {
         events.emit(event);
       },
+      previewReadme: async (owner: string, repo: string) => {
+        console.log('[PanelContext] Previewing README for:', `${owner}/${repo}`);
+        setMarkdownLoading(true);
+        setMarkdownError(null);
+
+        try {
+          // Fetch README from GitHub API
+          const response = await fetch(
+            `/api/github/repo/${owner}/${repo}?action=file&path=README.md`
+          );
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch README: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+
+          // Decode base64 content
+          let content = '';
+          if (data.content && data.encoding === 'base64') {
+            const binaryString = atob(data.content.replace(/\n/g, ''));
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            const decoder = new TextDecoder('utf-8');
+            content = decoder.decode(bytes);
+          }
+
+          // Update active-file slice with the preview content
+          const activeFileData = {
+            path: 'README.md',
+            content: content,
+            type: 'markdown',
+            size: content.length,
+            lastModified: new Date(),
+            encoding: 'utf-8',
+            source: {
+              type: 'remote' as const,
+              provider: 'github',
+              owner,
+              name: repo,
+              branch: 'main',
+              location: 'README.md',
+              url: `https://github.com/${owner}/${repo}/blob/main/README.md`,
+            },
+            preview: {
+              isPreview: true,
+              repository: `${owner}/${repo}`,
+            },
+          };
+
+          // Update the active-file slice
+          const activeFileSlice = slicesRef.current.get('active-file');
+          if (activeFileSlice) {
+            slicesRef.current.set('active-file', {
+              ...activeFileSlice,
+              data: activeFileData,
+              loading: false,
+              error: null,
+            });
+          }
+
+          // Update state to trigger re-render
+          setActiveFilePath('README.md');
+          setMarkdownContent(content);
+          setMarkdownLoading(false);
+
+          // Emit preview event
+          events.emit({
+            type: 'file:previewed',
+            source: 'web-ade',
+            timestamp: Date.now(),
+            payload: activeFileData,
+          });
+
+          return content;
+        } catch (error) {
+          console.error('[PanelContext] Error previewing README:', error);
+          setMarkdownError(error instanceof Error ? error : new Error('Failed to load README'));
+          setMarkdownLoading(false);
+          throw error;
+        }
+      },
     }),
     [events, githubRepo]
   );

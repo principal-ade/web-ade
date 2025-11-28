@@ -87,11 +87,11 @@ export const layoutConfigs: LayoutConfig[] = [
     layout: {
       left: 'github-projects',
       middle: 'github-search',
-      right: 'sessions',
+      right: 'markdown-viewer',
     },
     collapsed: {
       left: false,
-      right: true,
+      right: false,
     },
   },
 ];
