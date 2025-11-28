@@ -10,14 +10,16 @@ import {
 } from '@principal-ade/panel-layouts';
 import type { Command, CommandContext, PanelSlotId } from '@principal-ade/panel-layouts';
 import { useTheme } from '@principal-ade/industry-theme';
-import { ThemedAIChatPanel } from '@principal-ade/industry-themed-ai-sdk/components';
 import { PanelProvider, usePanelProvider } from '@/contexts/PanelContext';
+import { WebLLMProvider } from '@/contexts/WebLLMContext';
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { EditorHeader } from './EditorHeader';
 import { SessionsPanel } from './SessionsPanel';
 import { AccessNotice, AccessStatus } from './AccessNotice';
 import { RepoSelectionModal } from './RepoSelectionModal';
+import { layoutConfigs, LayoutConfig } from './LayoutConfigDropdown';
+import { WebLLMChatPanel } from './WebLLMChatPanel';
 import '@principal-ade/panel-layouts/styles.css';
 import '@principal-ade/industry-themed-ai-sdk/styles.css';
 import '@industry-theme/visual-validation-panel/dist/panels.bundle.css';
@@ -83,17 +85,24 @@ function EditorLayoutContent() {
   const { context, actions, events } = usePanelProvider();
   const { login } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('editor');
-  const [layout, setLayout] = useState<PanelLayout>({
-    left: 'docs',
-    middle: 'markdown-viewer',
-    right: 'code-city',
-  });
-  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
-  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [currentLayoutConfigId, setCurrentLayoutConfigId] = useState('default');
+  const currentLayoutConfig = layoutConfigs.find((c) => c.id === currentLayoutConfigId) || layoutConfigs[0]!;
+  const [layout, setLayout] = useState<PanelLayout>(currentLayoutConfig.layout);
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(currentLayoutConfig.collapsed.left);
+  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(currentLayoutConfig.collapsed.right);
   const [isMobile, setIsMobile] = useState(false);
   const [focusedPanel, setFocusedPanel] = useState<PanelSlotId | null>('middle');
   const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
+
+  // Handle layout configuration change
+  const handleLayoutConfigChange = useCallback((config: LayoutConfig) => {
+    setCurrentLayoutConfigId(config.id);
+    setLayout(config.layout);
+    setLeftSidebarCollapsed(config.collapsed.left);
+    setRightSidebarCollapsed(config.collapsed.right);
+    // Reset to editor view when changing layout config
+    setViewMode('editor');
+  }, []);
 
   // Create command context for the command palette
   const commandContext = useMemo<CommandContext>(
@@ -262,39 +271,9 @@ function EditorLayoutContent() {
     };
   }, [events, login]);
 
-  // Handler functions for panel controls
-  const handleToggleLeftSidebar = useCallback(() => {
-    setLeftSidebarCollapsed((prev) => !prev);
-  }, []);
-
-  const handleToggleRightSidebar = useCallback(() => {
-    setRightSidebarCollapsed((prev) => !prev);
-  }, []);
-
-  const handleSwitchLeftMiddlePanels = useCallback(() => {
-    setLayout((prev) => ({
-      left: prev.middle,
-      middle: prev.left,
-      right: prev.right,
-    }));
-  }, []);
-
-  const handleSwitchRightMiddlePanels = useCallback(() => {
-    setLayout((prev) => ({
-      left: prev.left,
-      middle: prev.right,
-      right: prev.middle,
-    }));
-  }, []);
-
-  const handleConfigurePanels = useCallback(() => {
-    setIsEditMode((prev) => !prev);
-  }, []);
-
-  // Sync layout and collapsed state when view mode changes
+  // Sync layout and collapsed state when view mode changes (for special views)
   useEffect(() => {
     if (viewMode === 'kanban') {
-      // Kanban mode: kanban in middle, sessions on right, sidebars collapsed
       setLayout({
         left: 'docs',
         middle: 'kanban',
@@ -303,7 +282,6 @@ function EditorLayoutContent() {
       setLeftSidebarCollapsed(true);
       setRightSidebarCollapsed(true);
     } else if (viewMode === 'visual-validation') {
-      // Visual Validation mode: visual-validation graph in middle, sidebars collapsed
       setLayout({
         left: 'docs',
         middle: 'visual-validation',
@@ -312,7 +290,6 @@ function EditorLayoutContent() {
       setLeftSidebarCollapsed(true);
       setRightSidebarCollapsed(true);
     } else if (viewMode === 'github-projects') {
-      // GitHub Projects mode: github-projects in middle, sidebars collapsed
       setLayout({
         left: 'docs',
         middle: 'github-projects',
@@ -320,17 +297,13 @@ function EditorLayoutContent() {
       });
       setLeftSidebarCollapsed(true);
       setRightSidebarCollapsed(true);
-    } else {
-      // Editor mode: original layout with markdown in middle, code-city on right
-      setLayout({
-        left: 'docs',
-        middle: 'markdown-viewer',
-        right: 'code-city',
-      });
-      setLeftSidebarCollapsed(false);
-      setRightSidebarCollapsed(false);
+    } else if (viewMode === 'editor') {
+      // Editor mode: restore layout from current config
+      setLayout(currentLayoutConfig.layout);
+      setLeftSidebarCollapsed(currentLayoutConfig.collapsed.left);
+      setRightSidebarCollapsed(currentLayoutConfig.collapsed.right);
     }
-  }, [viewMode]);
+  }, [viewMode, currentLayoutConfig]);
 
   const panels = [
     {
@@ -347,11 +320,10 @@ function EditorLayoutContent() {
       label: 'AI Chat',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <ThemedAIChatPanel
+          <WebLLMChatPanel
             context={context}
             actions={actions}
             events={events}
-            api="/api/chat"
             placeholder="Ask me anything about your code..."
           />
         </div>
@@ -428,14 +400,8 @@ function EditorLayoutContent() {
   return (
     <div className="h-full w-full flex flex-col">
       <EditorHeader
-        leftSidebarCollapsed={leftSidebarCollapsed}
-        rightSidebarCollapsed={rightSidebarCollapsed}
-        onToggleLeftSidebar={handleToggleLeftSidebar}
-        onToggleRightSidebar={handleToggleRightSidebar}
-        onSwitchLeftMiddlePanels={handleSwitchLeftMiddlePanels}
-        onSwitchRightMiddlePanels={handleSwitchRightMiddlePanels}
-        onConfigurePanels={handleConfigurePanels}
-        isEditMode={isEditMode}
+        currentLayoutConfigId={currentLayoutConfigId}
+        onLayoutConfigChange={handleLayoutConfigChange}
       />
       <div className="flex-1 overflow-hidden">
         {isMobile ? (
@@ -469,7 +435,7 @@ function EditorLayoutContent() {
             theme={theme}
             panels={panels}
             layout={layout}
-            isEditMode={isEditMode}
+            isEditMode={false}
             onLayoutChange={setLayout}
             defaultSizes={{
               left: 25,
@@ -616,8 +582,21 @@ export function EditorLayout({ githubRepo }: EditorLayoutProps = {}) {
         }}
         githubRepo={githubRepo}
       >
-        <EditorLayoutContent />
+        <WebLLMWrapper />
       </PanelProvider>
     </div>
+  );
+}
+
+/**
+ * Wrapper component that provides WebLLM context with access to panel events/actions
+ */
+function WebLLMWrapper() {
+  const { events, actions } = usePanelProvider();
+
+  return (
+    <WebLLMProvider events={events} actions={actions}>
+      <EditorLayoutContent />
+    </WebLLMProvider>
   );
 }

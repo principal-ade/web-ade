@@ -9,29 +9,17 @@ import { useControlTowerClient } from '@/lib/control-tower';
 import { getTrafficControllerUrl, getWebSocketToken } from '@/lib/control-tower/config';
 import { useEffect, useState } from 'react';
 import { Logo } from '@principal-ai/logo-component';
-import { PanelControls } from './PanelControls';
+import { LayoutConfigDropdown, LayoutConfig } from './LayoutConfigDropdown';
 import { RepoSelectionModal } from './RepoSelectionModal';
 
 interface EditorHeaderProps {
-  leftSidebarCollapsed?: boolean;
-  rightSidebarCollapsed?: boolean;
-  onToggleLeftSidebar?: () => void;
-  onToggleRightSidebar?: () => void;
-  onSwitchLeftMiddlePanels?: () => void;
-  onSwitchRightMiddlePanels?: () => void;
-  onConfigurePanels?: () => void;
-  isEditMode?: boolean;
+  currentLayoutConfigId?: string;
+  onLayoutConfigChange?: (config: LayoutConfig) => void;
 }
 
 export function EditorHeader({
-  leftSidebarCollapsed,
-  rightSidebarCollapsed,
-  onToggleLeftSidebar,
-  onToggleRightSidebar,
-  onSwitchLeftMiddlePanels,
-  onSwitchRightMiddlePanels,
-  onConfigurePanels,
-  isEditMode,
+  currentLayoutConfigId = 'default',
+  onLayoutConfigChange,
 }: EditorHeaderProps = {}) {
   const { theme } = useTheme();
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
@@ -87,7 +75,7 @@ export function EditorHeader({
         borderColor: theme.colors.border,
       }}
     >
-      {/* Left section: Logo and Panel Controls */}
+      {/* Left section: Logo and Layout Config Dropdown */}
       <div className="flex items-center gap-3 flex-shrink-0 flex-1">
         <Link
           href="/"
@@ -96,20 +84,16 @@ export function EditorHeader({
         >
           <Logo width={32} height={32} color={theme.colors.primary} />
         </Link>
-        {/* Panel Controls - hidden on mobile */}
-        <div className="hidden md:flex">
-          <PanelControls
-            leftSidebarCollapsed={leftSidebarCollapsed}
-            rightSidebarCollapsed={rightSidebarCollapsed}
-            onToggleLeftSidebar={onToggleLeftSidebar}
-            onToggleRightSidebar={onToggleRightSidebar}
-            onSwitchLeftMiddlePanels={onSwitchLeftMiddlePanels}
-            onSwitchRightMiddlePanels={onSwitchRightMiddlePanels}
-            onConfigurePanels={onConfigurePanels}
-            isEditMode={isEditMode}
-            theme={theme}
-          />
-        </div>
+        {/* Layout Config Dropdown - hidden on mobile */}
+        {onLayoutConfigChange && (
+          <div className="hidden md:flex">
+            <LayoutConfigDropdown
+              currentConfigId={currentLayoutConfigId}
+              onConfigChange={onLayoutConfigChange}
+              theme={theme}
+            />
+          </div>
+        )}
       </div>
 
       {/* Center section: Repository avatar, name/owner, and switch button */}
