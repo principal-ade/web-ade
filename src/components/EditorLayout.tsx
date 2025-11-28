@@ -12,6 +12,7 @@ import type { Command, CommandContext, PanelSlotId } from '@principal-ade/panel-
 import { useTheme } from '@principal-ade/industry-theme';
 import { PanelProvider, usePanelProvider } from '@/contexts/PanelContext';
 import { WebLLMProvider } from '@/contexts/WebLLMContext';
+import { GeminiProvider } from '@/contexts/GeminiContext';
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { EditorHeader } from './EditorHeader';
@@ -19,7 +20,7 @@ import { SessionsPanel } from './SessionsPanel';
 import { AccessNotice, AccessStatus } from './AccessNotice';
 import { RepoSelectionModal } from './RepoSelectionModal';
 import { layoutConfigs, LayoutConfig } from './LayoutConfigDropdown';
-import { WebLLMChatPanel } from './WebLLMChatPanel';
+import { AIChatPanel } from './AIChatPanel';
 import '@principal-ade/panel-layouts/styles.css';
 import '@principal-ade/industry-themed-ai-sdk/styles.css';
 import '@industry-theme/visual-validation-panel/dist/panels.bundle.css';
@@ -264,6 +265,21 @@ function EditorLayoutContent() {
       events.on('github:login-requested', () => {
         login();
       }),
+      events.on('panel:switch', (event) => {
+        const payload = event.payload as { slot?: string; panel?: string };
+        if (payload.slot && payload.panel) {
+          setLayout((prev) => ({
+            ...prev,
+            [payload.slot as 'left' | 'middle' | 'right']: payload.panel,
+          }));
+          // Also expand the panel if it's collapsed
+          if (payload.slot === 'left') {
+            setLeftSidebarCollapsed(false);
+          } else if (payload.slot === 'right') {
+            setRightSidebarCollapsed(false);
+          }
+        }
+      }),
     ];
 
     return () => {
@@ -320,7 +336,7 @@ function EditorLayoutContent() {
       label: 'AI Chat',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <WebLLMChatPanel
+          <AIChatPanel
             context={context}
             actions={actions}
             events={events}
@@ -590,13 +606,79 @@ export function EditorLayout({ githubRepo }: EditorLayoutProps = {}) {
 
 /**
  * Wrapper component that provides WebLLM context with access to panel events/actions
+ * and injects markdown file context for the AI assistant.
  */
 function WebLLMWrapper() {
-  const { events, actions } = usePanelProvider();
+  const { events, actions, context } = usePanelProvider();
+
+  // Get markdown files from context to provide to the AI
+  const markdownSlice = context.getSlice<Array<{ path: string; title?: string }>>('markdown');
+  const markdownFiles = markdownSlice?.data?.map((f) => ({
+    path: f.path,
+    title: f.title,
+  }));
+
+  // Get repository info for file fetching - use the full owner/repo path
+  const githubRepo = (context.currentScope.repository as { githubRepo?: string })?.githubRepo
+    || context.currentScope.repository?.path;
+
+  // Function to fetch file content for READ_FILE action
+  const fetchFileContent = useCallback(async (filePath: string): Promise<string | null> => {
+    if (!githubRepo || !githubRepo.includes('/')) {
+      console.warn('[WebLLMWrapper] No valid repository available for file fetch:', githubRepo);
+      return null;
+    }
+
+    try {
+      const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+      const [owner, name] = githubRepo.split('/');
+
+      console.log('[WebLLMWrapper] Fetching file content:', cleanPath, 'from', githubRepo);
+
+      const response = await fetch(
+        `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(cleanPath)}`
+      );
+
+      if (!response.ok) {
+        console.error('[WebLLMWrapper] Failed to fetch file:', response.statusText);
+        return null;
+      }
+
+      const data = await response.json();
+
+      // Decode base64 content
+      if (data.content && data.encoding === 'base64') {
+        const binaryString = atob(data.content.replace(/\n/g, ''));
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const decoder = new TextDecoder('utf-8');
+        return decoder.decode(bytes);
+      }
+
+      return data.content || null;
+    } catch (err) {
+      console.error('[WebLLMWrapper] Error fetching file:', err);
+      return null;
+    }
+  }, [githubRepo]);
 
   return (
-    <WebLLMProvider events={events} actions={actions}>
-      <EditorLayoutContent />
+    <WebLLMProvider
+      events={events}
+      actions={actions}
+      markdownFiles={markdownFiles}
+      fetchFileContent={fetchFileContent}
+    >
+      <GeminiProvider
+        events={events}
+        actions={actions}
+        markdownFiles={markdownFiles}
+        fetchFileContent={fetchFileContent}
+      >
+        <EditorLayoutContent />
+      </GeminiProvider>
     </WebLLMProvider>
   );
 }

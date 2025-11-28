@@ -19,12 +19,12 @@ export interface LayoutConfig {
 export const layoutConfigs: LayoutConfig[] = [
   {
     id: 'default',
-    name: 'Documentation',
-    icon: <FileText size={14} />,
+    name: 'AI Assistant',
+    icon: <MessageSquare size={14} />,
     layout: {
       left: 'docs',
-      middle: 'markdown-viewer',
-      right: 'code-city',
+      middle: 'ai-chat',
+      right: 'markdown-viewer',
     },
     collapsed: {
       left: false,
@@ -32,13 +32,13 @@ export const layoutConfigs: LayoutConfig[] = [
     },
   },
   {
-    id: 'ai-chat',
-    name: 'AI Assistant',
-    icon: <MessageSquare size={14} />,
+    id: 'documentation',
+    name: 'Documentation',
+    icon: <FileText size={14} />,
     layout: {
-      left: 'ai-chat',
+      left: 'docs',
       middle: 'markdown-viewer',
-      right: 'docs',
+      right: 'code-city',
     },
     collapsed: {
       left: false,

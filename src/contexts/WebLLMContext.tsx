@@ -18,17 +18,43 @@ import {
 } from 'react';
 import type { PanelEventEmitter, PanelActions } from '@principal-ade/panel-framework-core';
 
-// Types for web-llm (we'll import these properly once web-llm is installed)
+// Types for web-llm
 interface InitProgressReport {
   progress: number;
   timeElapsed: number;
   text: string;
 }
 
-interface ChatCompletionMessageParam {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+// Tool/Function calling types
+interface ChatCompletionTool {
+  type: 'function';
+  function: {
+    name: string;
+    description?: string;
+    parameters?: Record<string, unknown>;
+  };
 }
+
+interface ChatCompletionMessageToolCall {
+  id: string;
+  type: 'function';
+  function: {
+    name: string;
+    arguments: string;
+  };
+}
+
+interface ChatCompletionToolMessageParam {
+  role: 'tool';
+  content: string;
+  tool_call_id: string;
+}
+
+type ChatCompletionMessageParam =
+  | { role: 'system'; content: string }
+  | { role: 'user'; content: string }
+  | { role: 'assistant'; content?: string; tool_calls?: ChatCompletionMessageToolCall[] }
+  | ChatCompletionToolMessageParam;
 
 interface MLCEngineInterface {
   chat: {
@@ -38,6 +64,8 @@ interface MLCEngineInterface {
         stream?: boolean;
         temperature?: number;
         max_tokens?: number;
+        tools?: ChatCompletionTool[];
+        tool_choice?: 'none' | 'auto';
       }) => Promise<AsyncIterable<ChatCompletionChunk> | ChatCompletion>;
     };
   };
@@ -49,8 +77,9 @@ interface ChatCompletionChunk {
   choices: Array<{
     delta: {
       content?: string;
+      tool_calls?: ChatCompletionMessageToolCall[];
     };
-    finish_reason?: string;
+    finish_reason?: string | null;
   }>;
   usage?: {
     prompt_tokens: number;
@@ -61,8 +90,9 @@ interface ChatCompletionChunk {
 interface ChatCompletion {
   choices: Array<{
     message: {
-      content: string;
+      content?: string | null;
       role: string;
+      tool_calls?: ChatCompletionMessageToolCall[];
     };
     finish_reason: string;
   }>;
@@ -83,16 +113,125 @@ export interface ChatMessage {
 // Engine status
 export type EngineStatus = 'idle' | 'loading' | 'ready' | 'error' | 'generating';
 
-// Available models (subset of web-llm prebuilt models)
-export const AVAILABLE_MODELS = [
-  { id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC', name: 'Llama 3.2 1B', size: '1B' },
-  { id: 'Llama-3.2-3B-Instruct-q4f16_1-MLC', name: 'Llama 3.2 3B', size: '3B' },
-  { id: 'Phi-3.5-mini-instruct-q4f16_1-MLC', name: 'Phi 3.5 Mini', size: '3.8B' },
-  { id: 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC', name: 'Qwen 2.5 1.5B', size: '1.5B' },
-  { id: 'SmolLM2-1.7B-Instruct-q4f16_1-MLC', name: 'SmolLM2 1.7B', size: '1.7B' },
-] as const;
+// Model info with function calling support flag
+interface ModelInfo {
+  id: string;
+  name: string;
+  size: string;
+  supportsFunctionCalling: boolean;
+}
 
-export type ModelId = typeof AVAILABLE_MODELS[number]['id'];
+// Available models (subset of web-llm prebuilt models)
+// NOTE: Native function calling in web-llm is experimental and may not work reliably.
+// Setting supportsFunctionCalling to false for all models to use text-based actions.
+// When web-llm function calling stabilizes, we can re-enable for Hermes models.
+export const AVAILABLE_MODELS: ModelInfo[] = [
+  // Larger models (Hermes - designed for function calling, but using text-based for now)
+  { id: 'Hermes-3-Llama-3.1-8B-q4f16_1-MLC', name: 'Hermes 3 (Llama 3.1 8B)', size: '8B', supportsFunctionCalling: false },
+  { id: 'Hermes-2-Pro-Llama-3-8B-q4f16_1-MLC', name: 'Hermes 2 Pro (Llama 3 8B)', size: '8B', supportsFunctionCalling: false },
+  // Smaller models (text-based tool calling)
+  { id: 'Llama-3.2-3B-Instruct-q4f16_1-MLC', name: 'Llama 3.2 3B', size: '3B', supportsFunctionCalling: false },
+  { id: 'Phi-3.5-mini-instruct-q4f16_1-MLC', name: 'Phi 3.5 Mini', size: '3.8B', supportsFunctionCalling: false },
+  { id: 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC', name: 'Qwen 2.5 1.5B', size: '1.5B', supportsFunctionCalling: false },
+  { id: 'SmolLM2-1.7B-Instruct-q4f16_1-MLC', name: 'SmolLM2 1.7B', size: '1.7B', supportsFunctionCalling: false },
+];
+
+export type ModelId = string;
+
+// Tool definitions for native function calling
+const TOOL_DEFINITIONS: ChatCompletionTool[] = [
+  {
+    type: 'function',
+    function: {
+      name: 'read_file',
+      description: 'Read the contents of a file from the repository. Use this to analyze file contents and answer questions about them.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: {
+            type: 'string',
+            description: 'The path to the file to read (e.g., "README.md" or "docs/getting-started.md")',
+          },
+        },
+        required: ['path'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'open_file',
+      description: 'Open a file in the documentation viewer panel for the user to see.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: {
+            type: 'string',
+            description: 'The path to the file to open in the viewer',
+          },
+        },
+        required: ['path'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'navigate_panel',
+      description: 'Navigate to a different panel in the application.',
+      parameters: {
+        type: 'object',
+        properties: {
+          panel_id: {
+            type: 'string',
+            description: 'The ID of the panel to navigate to',
+          },
+        },
+        required: ['panel_id'],
+      },
+    },
+  },
+];
+
+// System prompt for function-calling models (simpler, no action syntax)
+const FUNCTION_CALLING_SYSTEM_PROMPT = `You are a helpful AI assistant integrated into a code documentation viewer.
+
+You have access to tools that let you interact with the application:
+- read_file: Read file contents to analyze and answer questions
+- open_file: Open a file in the viewer for the user to see
+- navigate_panel: Switch to a different panel
+
+When a user asks about file contents, use read_file to get the content and then answer based on it.
+When a user wants to view a file, use open_file to display it.
+
+Be helpful and concise. Use your tools proactively when needed.`;
+
+/** Build the system prompt for function-calling models with file context */
+function buildFunctionCallingSystemPrompt(markdownFiles?: MarkdownFileInfo[]): string {
+  let prompt = FUNCTION_CALLING_SYSTEM_PROMPT;
+
+  if (markdownFiles && markdownFiles.length > 0) {
+    const fileList = markdownFiles
+      .map((f) => `- ${f.path}${f.title ? ` (${f.title})` : ''}`)
+      .join('\n');
+
+    prompt += `
+
+## Available Documentation Files
+
+The following markdown files are available in this repository:
+${fileList}
+
+You can use read_file and open_file on any of these files.`;
+  }
+
+  return prompt;
+}
+
+/** Get model info by ID */
+function getModelInfo(modelId: string): ModelInfo | undefined {
+  return AVAILABLE_MODELS.find(m => m.id === modelId);
+}
 
 interface WebLLMContextValue {
   // Engine state
@@ -119,28 +258,91 @@ interface WebLLMContextValue {
 
 const WebLLMContext = createContext<WebLLMContextValue | null>(null);
 
+/** Markdown file info that can be provided to the AI */
+export interface MarkdownFileInfo {
+  path: string;
+  title?: string;
+}
+
+/** Function to fetch file content */
+export type FetchFileContent = (filePath: string) => Promise<string | null>;
+
 interface WebLLMProviderProps {
   children: ReactNode;
   events?: PanelEventEmitter;
   actions?: PanelActions;
   defaultModelId?: ModelId;
-  systemPrompt?: string;
+  /** Markdown files available in the repository */
+  markdownFiles?: MarkdownFileInfo[];
+  /** Function to fetch file content for READ_FILE action */
+  fetchFileContent?: FetchFileContent;
+  /** Base system prompt (markdown files will be appended) */
+  baseSystemPrompt?: string;
 }
+
+/** Build the full system prompt with markdown file context */
+function buildSystemPrompt(basePrompt: string, markdownFiles?: MarkdownFileInfo[]): string {
+  let prompt = basePrompt;
+
+  if (markdownFiles && markdownFiles.length > 0) {
+    const fileList = markdownFiles
+      .map((f) => `- ${f.path}${f.title ? ` (${f.title})` : ''}`)
+      .join('\n');
+
+    prompt += `
+
+## Available Documentation Files
+
+The following markdown files are available in this repository:
+${fileList}
+
+You can use your READ_FILE and OPEN_FILE actions on any of these files.`;
+  }
+
+  return prompt;
+}
+
+const DEFAULT_BASE_PROMPT = `You are a helpful AI assistant integrated into a code documentation viewer. You have direct access to tools that let you interact with the application.
+
+## Your Capabilities
+
+You have REAL tools that execute immediately when you include them in your response. These are NOT hypothetical - they actually work:
+
+### READ_FILE - Read file contents
+Use this to read and analyze file contents. The content will be returned to you so you can answer questions about it.
+Format: [ACTION:READ_FILE:/path/to/file.md]
+Example: [ACTION:READ_FILE:README.md]
+
+### OPEN_FILE - Open file in the viewer panel
+Use this to open a file in the documentation viewer for the user to see.
+Format: [ACTION:OPEN_FILE:/path/to/file.md]
+Example: [ACTION:OPEN_FILE:docs/getting-started.md]
+
+### NAVIGATE_PANEL - Switch to a different panel
+Use this to change which panel is displayed.
+Format: [ACTION:NAVIGATE_PANEL:panel-id]
+
+## Important Notes
+
+- When a user asks about file contents (e.g., "what's in the README?"), use READ_FILE to get the content, then summarize or quote from it.
+- When a user wants to view a file themselves, use OPEN_FILE to display it in the viewer.
+- You can use multiple actions in one response.
+- Actions are executed automatically - do not tell users to run commands manually.
+- Do not say "I cannot access files" - you CAN access files using READ_FILE.
+
+Be helpful, concise, and use your tools proactively.`;
 
 export function WebLLMProvider({
   children,
   events,
   actions,
   defaultModelId,
-  systemPrompt = `You are a helpful AI assistant integrated into a code documentation viewer. You can help users understand code, answer questions about their repository, and assist with development tasks.
-
-When you want to perform actions, you can include special commands in your response:
-- To open a file: [ACTION:OPEN_FILE:/path/to/file.md]
-- To navigate to a panel: [ACTION:NAVIGATE_PANEL:panel-id]
-- To emit a custom event: [ACTION:EMIT_EVENT:event-type:payload-json]
-
-Always be helpful, concise, and accurate.`,
+  markdownFiles,
+  fetchFileContent,
+  baseSystemPrompt = DEFAULT_BASE_PROMPT,
 }: WebLLMProviderProps) {
+  // Build the full system prompt with markdown context
+  const systemPrompt = buildSystemPrompt(baseSystemPrompt, markdownFiles);
   // Engine state
   const [status, setStatus] = useState<EngineStatus>('idle');
   const [loadProgress, setLoadProgress] = useState(0);
@@ -166,11 +368,141 @@ Always be helpful, concise, and accurate.`,
     setLoadProgressText(report.text);
   }, []);
 
+  /** Result of parsing actions - includes files that need to be read */
+  interface ActionParseResult {
+    /** Content with actions converted to inline display format */
+    displayContent: string;
+    /** Files that need to be read */
+    filesToRead: string[];
+  }
+
+  // Convert action tag to inline display format
+  const formatActionForDisplay = (actionType: string, actionPayload: string): string => {
+    switch (actionType) {
+      case 'READ_FILE':
+        return `\n\n> 📄 **Reading file:** \`${actionPayload}\`\n\n`;
+      case 'OPEN_FILE':
+        return `\n\n> 📂 **Opened file:** \`${actionPayload}\`\n\n`;
+      case 'NAVIGATE_PANEL':
+        return `\n\n> 🔀 **Navigated to:** \`${actionPayload}\`\n\n`;
+      case 'EMIT_EVENT':
+        return `\n\n> ⚡ **Event emitted:** \`${actionPayload}\`\n\n`;
+      default:
+        return `\n\n> 🔧 **Action:** \`${actionType}: ${actionPayload}\`\n\n`;
+    }
+  };
+
+  // Execute a single tool call and return the result
+  const executeToolCall = useCallback(async (
+    toolCall: ChatCompletionMessageToolCall
+  ): Promise<{ result: string; displayText: string }> => {
+    const { name, arguments: argsStr } = toolCall.function;
+    let args: Record<string, string>;
+
+    try {
+      args = JSON.parse(argsStr);
+    } catch {
+      return {
+        result: 'Error: Invalid arguments',
+        displayText: `> ❌ **Tool error:** Invalid arguments for ${name}\n\n`,
+      };
+    }
+
+    console.log('[WebLLM] Executing tool:', name, args);
+
+    switch (name) {
+      case 'read_file': {
+        const path = args.path?.startsWith('/') ? args.path.slice(1) : args.path;
+        if (!path) {
+          return {
+            result: 'Error: No path provided',
+            displayText: `> ❌ **Read file error:** No path provided\n\n`,
+          };
+        }
+
+        if (!fetchFileContent) {
+          return {
+            result: 'Error: File reading not available',
+            displayText: `> ❌ **Read file error:** File reading not configured\n\n`,
+          };
+        }
+
+        try {
+          const content = await fetchFileContent(path);
+          if (content) {
+            return {
+              result: `File contents of ${path}:\n\n${content}`,
+              displayText: `> 📄 **Reading file:** \`${path}\`\n\n`,
+            };
+          } else {
+            return {
+              result: `Error: File not found: ${path}`,
+              displayText: `> ❌ **File not found:** \`${path}\`\n\n`,
+            };
+          }
+        } catch (err) {
+          return {
+            result: `Error reading file: ${err instanceof Error ? err.message : 'Unknown error'}`,
+            displayText: `> ❌ **Read error:** \`${path}\` - ${err instanceof Error ? err.message : 'Unknown error'}\n\n`,
+          };
+        }
+      }
+
+      case 'open_file': {
+        const path = args.path;
+        if (!path) {
+          return {
+            result: 'Error: No path provided',
+            displayText: `> ❌ **Open file error:** No path provided\n\n`,
+          };
+        }
+
+        if (actions?.openFile) {
+          actions.openFile(path);
+        }
+
+        return {
+          result: `Opened file: ${path}`,
+          displayText: `> 📂 **Opened file:** \`${path}\`\n\n`,
+        };
+      }
+
+      case 'navigate_panel': {
+        const panelId = args.panel_id;
+        if (!panelId) {
+          return {
+            result: 'Error: No panel_id provided',
+            displayText: `> ❌ **Navigate error:** No panel_id provided\n\n`,
+          };
+        }
+
+        if (actions?.navigateToPanel) {
+          actions.navigateToPanel(panelId);
+        }
+
+        return {
+          result: `Navigated to panel: ${panelId}`,
+          displayText: `> 🔀 **Navigated to:** \`${panelId}\`\n\n`,
+        };
+      }
+
+      default:
+        return {
+          result: `Unknown tool: ${name}`,
+          displayText: `> ❓ **Unknown tool:** ${name}\n\n`,
+        };
+    }
+  }, [actions, fetchFileContent]);
+
   // Parse and execute actions from model response
-  const parseAndExecuteActions = useCallback((content: string) => {
+  // Returns files that need to be read for follow-up
+  const parseAndExecuteActions = useCallback((content: string): ActionParseResult => {
     const actionRegex = /\[ACTION:(\w+):([^\]]+)\]/g;
     let match;
+    const filesToRead: string[] = [];
+    let displayContent = content;
 
+    // First pass: collect files to read and execute other actions
     while ((match = actionRegex.exec(content)) !== null) {
       const [, actionType, actionPayload] = match;
 
@@ -179,6 +511,11 @@ Always be helpful, concise, and accurate.`,
       console.log('[WebLLM] Executing action:', actionType, actionPayload);
 
       switch (actionType) {
+        case 'READ_FILE':
+          // Collect files to read - we'll fetch them and continue the conversation
+          filesToRead.push(actionPayload.startsWith('/') ? actionPayload.slice(1) : actionPayload);
+          break;
+
         case 'OPEN_FILE':
           if (actions?.openFile) {
             actions.openFile(actionPayload);
@@ -218,8 +555,18 @@ Always be helpful, concise, and accurate.`,
       }
     }
 
-    // Return content with actions stripped for display
-    return content.replace(actionRegex, '').trim();
+    // Second pass: replace action tags with inline display format
+    displayContent = content.replace(actionRegex, (_, actionType, actionPayload) => {
+      return formatActionForDisplay(actionType, actionPayload);
+    });
+
+    // Clean up extra whitespace
+    displayContent = displayContent.replace(/\n{3,}/g, '\n\n').trim();
+
+    return {
+      displayContent,
+      filesToRead,
+    };
   }, [actions, events]);
 
   // Load model
@@ -290,12 +637,149 @@ Always be helpful, concise, and accurate.`,
     }
   }, [engine, events]);
 
+  // Helper to generate a streaming text response (for text-based tool calling)
+  const generateTextResponse = useCallback(async (
+    chatMessages: ChatCompletionMessageParam[],
+    assistantMessageId: string,
+  ): Promise<{ fullResponse: string; parseResult: ActionParseResult }> => {
+    const chunks = await engine!.chat.completions.create({
+      messages: chatMessages,
+      stream: true,
+      temperature: 0.7,
+    });
+
+    let fullResponse = '';
+
+    // Handle streaming response
+    for await (const chunk of chunks as AsyncIterable<ChatCompletionChunk>) {
+      // Check for abort
+      if (abortControllerRef.current?.signal.aborted) {
+        console.log('[WebLLM] Generation aborted');
+        break;
+      }
+
+      const delta = chunk.choices[0]?.delta?.content || '';
+      fullResponse += delta;
+
+      // Update message with accumulated content
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === assistantMessageId
+            ? { ...m, content: fullResponse }
+            : m
+        )
+      );
+    }
+
+    // Parse and execute any actions in the response
+    const parseResult = parseAndExecuteActions(fullResponse);
+
+    return { fullResponse, parseResult };
+  }, [engine, parseAndExecuteActions]);
+
+  // Helper to generate a response with native function calling
+  // Returns { success: true, content } on success, or { success: false } to indicate fallback needed
+  const generateWithFunctionCalling = useCallback(async (
+    chatMessages: ChatCompletionMessageParam[],
+    assistantMessageId: string,
+  ): Promise<{ success: boolean; content: string }> => {
+    let displayContent = '';
+    let iterations = 0;
+    const MAX_TOOL_ITERATIONS = 5;
+
+    try {
+      while (iterations < MAX_TOOL_ITERATIONS) {
+        iterations++;
+
+        // Make non-streaming request to get tool calls
+        const response = await engine!.chat.completions.create({
+          messages: chatMessages,
+          stream: false,
+          temperature: 0.7,
+          tools: TOOL_DEFINITIONS,
+          tool_choice: 'auto',
+        }) as ChatCompletion;
+
+        const choice = response.choices[0];
+        if (!choice) break;
+
+        const assistantMessage = choice.message;
+        const textContent = assistantMessage.content || '';
+        const toolCalls = assistantMessage.tool_calls;
+
+        // Add any text content to display
+        if (textContent) {
+          displayContent += textContent;
+          setMessages(prev =>
+            prev.map(m =>
+              m.id === assistantMessageId
+                ? { ...m, content: displayContent }
+                : m
+            )
+          );
+        }
+
+        // If no tool calls, we're done
+        if (!toolCalls || toolCalls.length === 0) {
+          break;
+        }
+
+        // Add assistant message with tool calls to conversation
+        chatMessages = [
+          ...chatMessages,
+          { role: 'assistant', content: textContent || undefined, tool_calls: toolCalls },
+        ];
+
+        // Execute each tool call and collect results
+        for (const toolCall of toolCalls) {
+          console.log('[WebLLM] Tool call:', toolCall.function.name, toolCall.function.arguments);
+
+          const { result, displayText } = await executeToolCall(toolCall);
+
+          // Add display text to output
+          displayContent += displayText;
+          setMessages(prev =>
+            prev.map(m =>
+              m.id === assistantMessageId
+                ? { ...m, content: displayContent }
+                : m
+            )
+          );
+
+          // Add tool result to conversation
+          chatMessages = [
+            ...chatMessages,
+            { role: 'tool', content: result, tool_call_id: toolCall.id },
+          ];
+        }
+
+        // Check for abort
+        if (abortControllerRef.current?.signal.aborted) {
+          console.log('[WebLLM] Generation aborted');
+          break;
+        }
+      }
+
+      return { success: true, content: displayContent };
+    } catch (err) {
+      // Function calling failed - log error and signal fallback
+      console.warn('[WebLLM] Function calling failed, will fall back to text-based:', err);
+      return { success: false, content: displayContent };
+    }
+  }, [engine, executeToolCall]);
+
   // Send message
   const sendMessage = useCallback(async (content: string) => {
-    if (!engine || status !== 'ready') {
+    if (!engine || status !== 'ready' || !currentModelId) {
       console.warn('[WebLLM] Cannot send message - engine not ready');
       return;
     }
+
+    // Check if current model supports function calling
+    const modelInfo = getModelInfo(currentModelId);
+    const useNativeFunctionCalling = modelInfo?.supportsFunctionCalling ?? false;
+
+    console.log('[WebLLM] Sending message with', useNativeFunctionCalling ? 'native function calling' : 'text-based actions');
 
     // Add user message
     const userMessage: ChatMessage = {
@@ -313,13 +797,6 @@ Always be helpful, concise, and accurate.`,
     abortControllerRef.current = new AbortController();
 
     try {
-      // Build messages array with system prompt
-      const chatMessages: ChatCompletionMessageParam[] = [
-        { role: 'system', content: systemPrompt },
-        ...messages.map(m => ({ role: m.role, content: m.content })),
-        { role: 'user', content },
-      ];
-
       // Create assistant message placeholder
       const assistantMessage: ChatMessage = {
         id: generateId(),
@@ -330,47 +807,107 @@ Always be helpful, concise, and accurate.`,
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Stream the response
-      const chunks = await engine.chat.completions.create({
-        messages: chatMessages,
-        stream: true,
-        temperature: 0.7,
-      });
+      let usedFunctionCalling = false;
 
-      let fullResponse = '';
+      if (useNativeFunctionCalling) {
+        // Try native function calling (Hermes models)
+        const functionCallingSystemPrompt = buildFunctionCallingSystemPrompt(markdownFiles);
 
-      // Handle streaming response
-      for await (const chunk of chunks as AsyncIterable<ChatCompletionChunk>) {
-        // Check for abort
-        if (abortControllerRef.current?.signal.aborted) {
-          console.log('[WebLLM] Generation aborted');
-          break;
+        const chatMessages: ChatCompletionMessageParam[] = [
+          { role: 'system', content: functionCallingSystemPrompt },
+          ...messages.map(m => ({ role: m.role, content: m.content })),
+          { role: 'user', content },
+        ];
+
+        const result = await generateWithFunctionCalling(chatMessages, assistantMessage.id);
+
+        if (result.success) {
+          usedFunctionCalling = true;
+        } else {
+          // Function calling failed, clear the partial content and fall back
+          console.log('[WebLLM] Falling back to text-based actions');
+          setMessages(prev =>
+            prev.map(m =>
+              m.id === assistantMessage.id
+                ? { ...m, content: '' }
+                : m
+            )
+          );
+        }
+      }
+
+      if (!usedFunctionCalling) {
+        // Use text-based action parsing (smaller models)
+        let chatMessages: ChatCompletionMessageParam[] = [
+          { role: 'system', content: systemPrompt },
+          ...messages.map(m => ({ role: m.role, content: m.content })),
+          { role: 'user', content },
+        ];
+
+        // Generate initial response
+        let { fullResponse, parseResult } = await generateTextResponse(chatMessages, assistantMessage.id);
+
+        // Handle READ_FILE actions - fetch files and continue conversation
+        // Limit iterations to prevent infinite loops
+        let iterations = 0;
+        const MAX_READ_ITERATIONS = 3;
+
+        while (parseResult.filesToRead.length > 0 && iterations < MAX_READ_ITERATIONS && fetchFileContent) {
+          iterations++;
+          console.log('[WebLLM] READ_FILE requested for:', parseResult.filesToRead);
+
+          // Fetch all requested files
+          const fileContents: string[] = [];
+          for (const filePath of parseResult.filesToRead) {
+            try {
+              const fileContent = await fetchFileContent(filePath);
+              if (fileContent) {
+                fileContents.push(`## File: ${filePath}\n\n${fileContent}`);
+              } else {
+                fileContents.push(`## File: ${filePath}\n\n[Error: File not found or could not be read]`);
+              }
+            } catch (err) {
+              console.error('[WebLLM] Failed to fetch file:', filePath, err);
+              fileContents.push(`## File: ${filePath}\n\n[Error: ${err instanceof Error ? err.message : 'Failed to read file'}]`);
+            }
+          }
+
+          // Add the file contents as a system message to the conversation
+          const fileContentMessage = `Here are the contents of the requested file(s):\n\n${fileContents.join('\n\n---\n\n')}\n\nNow please continue your response based on this content.`;
+
+          // Update chat messages with the assistant's response and file content
+          chatMessages = [
+            ...chatMessages,
+            { role: 'assistant', content: fullResponse },
+            { role: 'system', content: fileContentMessage },
+          ];
+
+          // Append to the existing assistant message (add a newline to separate)
+          const continuationResponse = await generateTextResponse(chatMessages, assistantMessage.id);
+
+          // Combine responses
+          fullResponse = fullResponse + '\n\n' + continuationResponse.fullResponse;
+          parseResult = continuationResponse.parseResult;
+
+          // Update the message with combined content
+          setMessages(prev =>
+            prev.map(m =>
+              m.id === assistantMessage.id
+                ? { ...m, content: fullResponse }
+                : m
+            )
+          );
         }
 
-        const delta = chunk.choices[0]?.delta?.content || '';
-        fullResponse += delta;
-
-        // Update message with accumulated content
+        // Update with display content (actions converted to inline format)
         setMessages(prev =>
           prev.map(m =>
             m.id === assistantMessage.id
-              ? { ...m, content: fullResponse }
+              ? { ...m, content: parseResult.displayContent }
               : m
           )
         );
       }
-
-      // Parse and execute any actions in the response
-      const cleanedContent = parseAndExecuteActions(fullResponse);
-
-      // Update with cleaned content (actions stripped)
-      setMessages(prev =>
-        prev.map(m =>
-          m.id === assistantMessage.id
-            ? { ...m, content: cleanedContent }
-            : m
-        )
-      );
 
       events?.emit({
         type: 'webllm:message-complete',
@@ -405,7 +942,7 @@ Always be helpful, concise, and accurate.`,
       setStatus('ready');
       abortControllerRef.current = null;
     }
-  }, [engine, status, messages, systemPrompt, parseAndExecuteActions, events]);
+  }, [engine, status, currentModelId, messages, markdownFiles, systemPrompt, generateTextResponse, generateWithFunctionCalling, fetchFileContent, events]);
 
   // Clear messages
   const clearMessages = useCallback(() => {

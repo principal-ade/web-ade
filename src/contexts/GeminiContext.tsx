@@ -1,0 +1,468 @@
+'use client';
+
+/**
+ * Gemini Context Provider
+ *
+ * Manages chat state for Gemini API with function calling support.
+ * Functions are executed client-side, with results sent back to continue the conversation.
+ */
+
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useRef,
+  ReactNode,
+} from 'react';
+import type { PanelEventEmitter, PanelActions } from '@principal-ade/panel-framework-core';
+
+// Message type for our chat interface
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: number;
+}
+
+// Status type
+export type GeminiStatus = 'idle' | 'ready' | 'generating' | 'error';
+
+/** Markdown file info that can be provided to the AI */
+export interface MarkdownFileInfo {
+  path: string;
+  title?: string;
+}
+
+/** Function to fetch file content */
+export type FetchFileContent = (filePath: string) => Promise<string | null>;
+
+interface GeminiContextValue {
+  // Status
+  status: GeminiStatus;
+  error: Error | null;
+
+  // Chat state
+  messages: ChatMessage[];
+  isGenerating: boolean;
+
+  // Actions
+  sendMessage: (content: string) => Promise<void>;
+  clearMessages: () => void;
+  stopGeneration: () => void;
+}
+
+const GeminiContext = createContext<GeminiContextValue | null>(null);
+
+interface GeminiProviderProps {
+  children: ReactNode;
+  events?: PanelEventEmitter;
+  actions?: PanelActions;
+  /** Markdown files available in the repository */
+  markdownFiles?: MarkdownFileInfo[];
+  /** Function to fetch file content for read_file function */
+  fetchFileContent?: FetchFileContent;
+}
+
+export function GeminiProvider({
+  children,
+  events,
+  actions,
+  markdownFiles,
+  fetchFileContent,
+}: GeminiProviderProps) {
+  const [status, setStatus] = useState<GeminiStatus>('ready');
+  const [error, setError] = useState<Error | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Refs for cancellation
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Generate unique message ID
+  const generateId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // Execute a function call from Gemini
+  const executeFunctionCall = useCallback(async (
+    name: string,
+    args: Record<string, unknown>,
+  ): Promise<{ result: string; displayText: string }> => {
+    console.log('[Gemini] Executing function:', name, args);
+
+    switch (name) {
+      case 'read_file': {
+        const path = (args.path as string)?.startsWith('/')
+          ? (args.path as string).slice(1)
+          : args.path as string;
+
+        if (!path) {
+          return {
+            result: JSON.stringify({ error: 'No path provided' }),
+            displayText: `> **Read file error:** No path provided\n\n`,
+          };
+        }
+
+        if (!fetchFileContent) {
+          return {
+            result: JSON.stringify({ error: 'File reading not available' }),
+            displayText: `> **Read file error:** File reading not configured\n\n`,
+          };
+        }
+
+        try {
+          const content = await fetchFileContent(path);
+          if (content) {
+            return {
+              result: JSON.stringify({ success: true, content }),
+              displayText: `> **Reading file:** \`${path}\`\n\n`,
+            };
+          } else {
+            return {
+              result: JSON.stringify({ error: 'File not found' }),
+              displayText: `> **File not found:** \`${path}\`\n\n`,
+            };
+          }
+        } catch (err) {
+          return {
+            result: JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to read' }),
+            displayText: `> **Read error:** \`${path}\`\n\n`,
+          };
+        }
+      }
+
+      case 'open_file': {
+        const path = args.path as string;
+        if (!path) {
+          return {
+            result: JSON.stringify({ error: 'No path provided' }),
+            displayText: `> **Open file error:** No path provided\n\n`,
+          };
+        }
+
+        if (actions?.openFile) {
+          actions.openFile(path);
+        }
+
+        return {
+          result: JSON.stringify({ success: true, opened: path }),
+          displayText: `> **Opened file:** \`${path}\`\n\n`,
+        };
+      }
+
+      case 'toggle_panel': {
+        const panel = args.panel as string;
+        if (!panel || (panel !== 'left' && panel !== 'right')) {
+          return {
+            result: JSON.stringify({ error: 'Invalid panel. Use "left" or "right"' }),
+            displayText: `> **Toggle panel error:** Invalid panel\n\n`,
+          };
+        }
+
+        events?.emit({
+          type: 'panel:toggle',
+          source: 'gemini-assistant',
+          timestamp: Date.now(),
+          payload: { panelId: panel },
+        });
+
+        return {
+          result: JSON.stringify({ success: true, toggled: panel }),
+          displayText: `> **Toggled ${panel} panel**\n\n`,
+        };
+      }
+
+      case 'collapse_all_panels': {
+        events?.emit({
+          type: 'panel:collapse-all',
+          source: 'gemini-assistant',
+          timestamp: Date.now(),
+          payload: {},
+        });
+
+        return {
+          result: JSON.stringify({ success: true, action: 'collapsed all panels' }),
+          displayText: `> **Collapsed all panels**\n\n`,
+        };
+      }
+
+      case 'expand_all_panels': {
+        events?.emit({
+          type: 'panel:expand-all',
+          source: 'gemini-assistant',
+          timestamp: Date.now(),
+          payload: {},
+        });
+
+        return {
+          result: JSON.stringify({ success: true, action: 'expanded all panels' }),
+          displayText: `> **Expanded all panels**\n\n`,
+        };
+      }
+
+      case 'switch_panel': {
+        const slot = args.slot as string;
+        const panel = args.panel as string;
+
+        const validSlots = ['left', 'middle', 'right'];
+        const validPanels = ['docs', 'ai-chat', 'markdown-viewer', 'code-city', 'kanban', 'sessions', 'visual-validation', 'github-projects'];
+
+        if (!slot || !validSlots.includes(slot)) {
+          return {
+            result: JSON.stringify({ error: 'Invalid slot. Use "left", "middle", or "right"' }),
+            displayText: `> **Switch panel error:** Invalid slot\n\n`,
+          };
+        }
+
+        if (!panel || !validPanels.includes(panel)) {
+          return {
+            result: JSON.stringify({ error: `Invalid panel. Available: ${validPanels.join(', ')}` }),
+            displayText: `> **Switch panel error:** Invalid panel\n\n`,
+          };
+        }
+
+        events?.emit({
+          type: 'panel:switch',
+          source: 'gemini-assistant',
+          timestamp: Date.now(),
+          payload: { slot, panel },
+        });
+
+        return {
+          result: JSON.stringify({ success: true, slot, panel }),
+          displayText: `> **Switched ${slot} panel to ${panel}**\n\n`,
+        };
+      }
+
+      default:
+        return {
+          result: JSON.stringify({ error: `Unknown function: ${name}` }),
+          displayText: `> **Unknown function:** ${name}\n\n`,
+        };
+    }
+  }, [actions, fetchFileContent]);
+
+  // Send a message to Gemini with function calling loop
+  const sendMessage = useCallback(async (content: string) => {
+    // Add user message
+    const userMessage: ChatMessage = {
+      id: generateId(),
+      role: 'user',
+      content,
+      timestamp: Date.now(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setIsGenerating(true);
+    setStatus('generating');
+    setError(null);
+
+    // Create abort controller
+    abortControllerRef.current = new AbortController();
+
+    // Create assistant message placeholder
+    const assistantMessage: ChatMessage = {
+      id: generateId(),
+      role: 'assistant',
+      content: '',
+      timestamp: Date.now(),
+    };
+
+    setMessages(prev => [...prev, assistantMessage]);
+
+    let displayContent = '';
+    let conversationMessages = [
+      ...messages.map(m => ({ role: m.role, content: m.content })),
+      { role: 'user' as const, content },
+    ];
+
+    const MAX_FUNCTION_ITERATIONS = 5;
+    let iterations = 0;
+
+    try {
+      while (iterations < MAX_FUNCTION_ITERATIONS) {
+        iterations++;
+
+        const response = await fetch('/api/chat/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: conversationMessages,
+            markdownFiles,
+          }),
+          signal: abortControllerRef.current.signal,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'API request failed');
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('No response body');
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let pendingFunctionCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
+        let gotDone = false;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Process SSE events
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+
+                if (data.type === 'text') {
+                  displayContent += data.content;
+                  setMessages(prev =>
+                    prev.map(m =>
+                      m.id === assistantMessage.id
+                        ? { ...m, content: displayContent }
+                        : m
+                    )
+                  );
+                } else if (data.type === 'function_call') {
+                  pendingFunctionCalls.push({
+                    name: data.name,
+                    args: data.args,
+                  });
+                } else if (data.type === 'done') {
+                  gotDone = true;
+                }
+              } catch {
+                // Skip malformed JSON
+              }
+            }
+          }
+        }
+
+        reader.releaseLock();
+
+        // If there are function calls, execute them and continue
+        if (pendingFunctionCalls.length > 0) {
+          // Add assistant's response to conversation
+          conversationMessages = [
+            ...conversationMessages,
+            { role: 'assistant' as const, content: displayContent || '(calling functions...)' },
+          ];
+
+          // Execute each function call
+          for (const fc of pendingFunctionCalls) {
+            const { result, displayText } = await executeFunctionCall(fc.name, fc.args);
+
+            displayContent += displayText;
+            setMessages(prev =>
+              prev.map(m =>
+                m.id === assistantMessage.id
+                  ? { ...m, content: displayContent }
+                  : m
+              )
+            );
+
+            // Add function result to conversation as a user message (Gemini format)
+            conversationMessages = [
+              ...conversationMessages,
+              { role: 'user' as const, content: `Function ${fc.name} returned: ${result}` },
+            ];
+          }
+
+          // Clear pending calls and continue loop
+          pendingFunctionCalls = [];
+          continue;
+        }
+
+        // No function calls and got done - we're finished
+        if (gotDone) {
+          break;
+        }
+      }
+
+      events?.emit({
+        type: 'gemini:message-complete',
+        source: 'gemini-provider',
+        timestamp: Date.now(),
+        payload: { messageId: assistantMessage.id },
+      });
+
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('[Gemini] Request aborted');
+      } else {
+        console.error('[Gemini] Error:', err);
+        setError(err instanceof Error ? err : new Error('Unknown error'));
+
+        // Update message with error
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === assistantMessage.id
+              ? { ...m, content: displayContent || `Error: ${err instanceof Error ? err.message : 'Request failed'}` }
+              : m
+          )
+        );
+
+        events?.emit({
+          type: 'gemini:error',
+          source: 'gemini-provider',
+          timestamp: Date.now(),
+          payload: { error: err instanceof Error ? err.message : 'Unknown error' },
+        });
+      }
+    } finally {
+      setIsGenerating(false);
+      setStatus('ready');
+      abortControllerRef.current = null;
+    }
+  }, [messages, markdownFiles, executeFunctionCall, events]);
+
+  // Clear messages
+  const clearMessages = useCallback(() => {
+    setMessages([]);
+    setError(null);
+
+    events?.emit({
+      type: 'gemini:chat-cleared',
+      source: 'gemini-provider',
+      timestamp: Date.now(),
+      payload: {},
+    });
+  }, [events]);
+
+  // Stop generation
+  const stopGeneration = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+  }, []);
+
+  const value: GeminiContextValue = {
+    status,
+    error,
+    messages,
+    isGenerating,
+    sendMessage,
+    clearMessages,
+    stopGeneration,
+  };
+
+  return (
+    <GeminiContext.Provider value={value}>
+      {children}
+    </GeminiContext.Provider>
+  );
+}
+
+export function useGemini() {
+  const context = useContext(GeminiContext);
+  if (!context) {
+    throw new Error('useGemini must be used within GeminiProvider');
+  }
+  return context;
+}
