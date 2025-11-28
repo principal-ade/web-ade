@@ -3,9 +3,17 @@
  *
  * Proxies chat requests to Google's Gemini API with function calling support.
  * Uses streaming for responsive UI.
+ *
+ * Layout tools are imported from @principal-ade/panel-layouts and converted
+ * to Gemini format. App-specific tools are defined inline.
  */
 
 import { NextRequest } from 'next/server';
+import {
+  layoutTools,
+  toolsToGeminiFormat,
+  generateToolsSystemPrompt,
+} from '@principal-ade/utcp-panel-event';
 
 // Types for Gemini API
 interface GeminiMessage {
@@ -29,7 +37,7 @@ interface GeminiTool {
     description: string;
     parameters: {
       type: string;
-      properties: Record<string, { type: string; description: string }>;
+      properties: Record<string, unknown>;
       required: string[];
     };
   }>;
@@ -44,126 +52,89 @@ interface ChatRequest {
   markdownFiles?: Array<{ path: string; title?: string }>;
 }
 
-// Tool definitions for Gemini
+// App-specific tools (not layout-related)
+const APP_SPECIFIC_TOOLS: GeminiTool['functionDeclarations'] = [
+  {
+    name: 'read_file',
+    description: 'Read the contents of a file from the repository. Use this to analyze file contents and answer questions about them.',
+    parameters: {
+      type: 'object',
+      properties: {
+        path: {
+          type: 'string',
+          description: 'The path to the file to read (e.g., "README.md" or "docs/getting-started.md")',
+        },
+      },
+      required: ['path'],
+    },
+  },
+  {
+    name: 'open_file',
+    description: 'Open a file in the documentation viewer panel for the user to see.',
+    parameters: {
+      type: 'object',
+      properties: {
+        path: {
+          type: 'string',
+          description: 'The path to the file to open in the viewer',
+        },
+      },
+      required: ['path'],
+    },
+  },
+  {
+    name: 'list_repositories',
+    description: 'Get a list of GitHub repositories the user has access to, including owned repos, starred repos, and organization repos.',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: 'switch_repository',
+    description: 'Switch to a different GitHub repository to view its documentation and files.',
+    parameters: {
+      type: 'object',
+      properties: {
+        repository: {
+          type: 'string',
+          description: 'The full repository name in "owner/repo" format (e.g., "principal-ai/alexandria-core-library")',
+        },
+      },
+      required: ['repository'],
+    },
+  },
+];
+
+// Convert layout tools from panel-layouts to Gemini format and merge with app-specific tools
+const geminiLayoutTools = toolsToGeminiFormat(layoutTools);
 const GEMINI_TOOLS: GeminiTool = {
   functionDeclarations: [
-    {
-      name: 'read_file',
-      description: 'Read the contents of a file from the repository. Use this to analyze file contents and answer questions about them.',
-      parameters: {
-        type: 'object',
-        properties: {
-          path: {
-            type: 'string',
-            description: 'The path to the file to read (e.g., "README.md" or "docs/getting-started.md")',
-          },
-        },
-        required: ['path'],
-      },
-    },
-    {
-      name: 'open_file',
-      description: 'Open a file in the documentation viewer panel for the user to see.',
-      parameters: {
-        type: 'object',
-        properties: {
-          path: {
-            type: 'string',
-            description: 'The path to the file to open in the viewer',
-          },
-        },
-        required: ['path'],
-      },
-    },
-    {
-      name: 'toggle_panel',
-      description: 'Collapse or expand a side panel to give more space to the main content area.',
-      parameters: {
-        type: 'object',
-        properties: {
-          panel: {
-            type: 'string',
-            description: 'Which panel to toggle: "left" or "right"',
-          },
-        },
-        required: ['panel'],
-      },
-    },
-    {
-      name: 'collapse_all_panels',
-      description: 'Collapse both left and right panels to maximize the main content area.',
-      parameters: {
-        type: 'object',
-        properties: {},
-        required: [],
-      },
-    },
-    {
-      name: 'expand_all_panels',
-      description: 'Expand both left and right panels to show all content.',
-      parameters: {
-        type: 'object',
-        properties: {},
-        required: [],
-      },
-    },
-    {
-      name: 'switch_panel',
-      description: 'Change which content is displayed in a panel slot. Available panels: docs, ai-chat, markdown-viewer, code-city, kanban, sessions, visual-validation, github-projects.',
-      parameters: {
-        type: 'object',
-        properties: {
-          slot: {
-            type: 'string',
-            description: 'Which slot to change: "left", "middle", or "right"',
-          },
-          panel: {
-            type: 'string',
-            description: 'Which panel to show: docs, ai-chat, markdown-viewer, code-city, kanban, sessions, visual-validation, or github-projects',
-          },
-        },
-        required: ['slot', 'panel'],
-      },
-    },
-    {
-      name: 'list_repositories',
-      description: 'Get a list of GitHub repositories the user has access to, including owned repos, starred repos, and organization repos.',
-      parameters: {
-        type: 'object',
-        properties: {},
-        required: [],
-      },
-    },
-    {
-      name: 'switch_repository',
-      description: 'Switch to a different GitHub repository to view its documentation and files.',
-      parameters: {
-        type: 'object',
-        properties: {
-          repository: {
-            type: 'string',
-            description: 'The full repository name in "owner/repo" format (e.g., "principal-ai/alexandria-core-library")',
-          },
-        },
-        required: ['repository'],
-      },
-    },
+    ...APP_SPECIFIC_TOOLS,
+    ...geminiLayoutTools.functionDeclarations,
   ],
 };
+
+// Generate layout tools system prompt from panel-layouts
+const layoutToolsPrompt = generateToolsSystemPrompt(layoutTools, {
+  header: '', // No header - we provide our own section header
+});
 
 // Build system instruction with file context
 function buildSystemInstruction(markdownFiles?: Array<{ path: string; title?: string }>): string {
   let instruction = `You are a helpful AI assistant integrated into a code documentation viewer.
 
 You have access to tools that let you interact with the application:
+
+## App-Specific Tools
 - read_file: Read file contents to analyze and answer questions
 - open_file: Open a file in the viewer for the user to see
-- toggle_panel: Collapse or expand the left or right panel
-- collapse_all_panels: Collapse both panels to maximize the main content
-- expand_all_panels: Expand both panels to show all content
-- switch_panel: Change what's displayed in a panel slot (left/middle/right)
 - list_repositories: Get user's GitHub repositories (owned, starred, organizations)
 - switch_repository: Navigate to a different repository
+
+## Layout Tools
+${layoutToolsPrompt}
 
 Available panels you can switch to: docs, ai-chat, markdown-viewer, code-city, kanban, sessions, visual-validation, github-projects.
 

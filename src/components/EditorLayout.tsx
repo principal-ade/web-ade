@@ -247,10 +247,12 @@ function EditorLayoutContent() {
 
     const unsubscribers = [
       events.on('panel:toggle', (event) => {
-        const payload = event.payload as { panelId?: string };
-        if (payload.panelId === 'left') {
+        // Support both 'panel' (UTCP standard) and 'panelId' (legacy) payload formats
+        const payload = event.payload as { panel?: string; panelId?: string };
+        const panelId = payload.panel || payload.panelId;
+        if (panelId === 'left') {
           setLeftSidebarCollapsed((prev) => !prev);
-        } else if (payload.panelId === 'right') {
+        } else if (panelId === 'right') {
           setRightSidebarCollapsed((prev) => !prev);
         }
       }),

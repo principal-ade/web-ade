@@ -5,6 +5,9 @@
  *
  * Manages the web-llm engine lifecycle and provides chat functionality
  * that can interact with the panel system via events.
+ *
+ * Layout tools are imported from @principal-ade/panel-layouts and converted
+ * to OpenAI function calling format. App-specific tools are defined inline.
  */
 
 import {
@@ -17,6 +20,11 @@ import {
   ReactNode,
 } from 'react';
 import type { PanelEventEmitter, PanelActions } from '@principal-ade/panel-framework-core';
+import {
+  layoutTools,
+  toolsToOpenAIFormat,
+  generateToolsSystemPrompt,
+} from '@principal-ade/utcp-panel-event';
 
 // Types for web-llm
 interface InitProgressReport {
@@ -138,8 +146,8 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
 
 export type ModelId = string;
 
-// Tool definitions for native function calling
-const TOOL_DEFINITIONS: ChatCompletionTool[] = [
+// App-specific tool definitions (not layout-related)
+const APP_SPECIFIC_TOOLS: ChatCompletionTool[] = [
   {
     type: 'function',
     function: {
@@ -174,35 +182,44 @@ const TOOL_DEFINITIONS: ChatCompletionTool[] = [
       },
     },
   },
-  {
-    type: 'function',
-    function: {
-      name: 'navigate_panel',
-      description: 'Navigate to a different panel in the application.',
-      parameters: {
-        type: 'object',
-        properties: {
-          panel_id: {
-            type: 'string',
-            description: 'The ID of the panel to navigate to',
-          },
-        },
-        required: ['panel_id'],
-      },
-    },
-  },
 ];
+
+// Convert layout tools from panel-layouts to OpenAI format and merge with app-specific tools
+const openAILayoutTools = toolsToOpenAIFormat(layoutTools);
+const TOOL_DEFINITIONS: ChatCompletionTool[] = [
+  ...APP_SPECIFIC_TOOLS,
+  ...openAILayoutTools.map(tool => ({
+    type: 'function' as const,
+    function: {
+      name: tool.function.name,
+      description: tool.function.description,
+      parameters: tool.function.parameters as Record<string, unknown>,
+    },
+  })),
+];
+
+// Generate layout tools system prompt from panel-layouts
+const layoutToolsPrompt = generateToolsSystemPrompt(layoutTools, {
+  header: '', // No header - we provide our own section header
+});
 
 // System prompt for function-calling models (simpler, no action syntax)
 const FUNCTION_CALLING_SYSTEM_PROMPT = `You are a helpful AI assistant integrated into a code documentation viewer.
 
 You have access to tools that let you interact with the application:
+
+## App-Specific Tools
 - read_file: Read file contents to analyze and answer questions
 - open_file: Open a file in the viewer for the user to see
-- navigate_panel: Switch to a different panel
+
+## Layout Tools
+${layoutToolsPrompt}
+
+Available panels you can switch to: docs, ai-chat, markdown-viewer, code-city, kanban, sessions, visual-validation, github-projects.
 
 When a user asks about file contents, use read_file to get the content and then answer based on it.
 When a user wants to view a file, use open_file to display it.
+When a user wants more space or to hide/show panels, use the panel tools.
 
 Be helpful and concise. Use your tools proactively when needed.`;
 
@@ -467,22 +484,112 @@ export function WebLLMProvider({
         };
       }
 
-      case 'navigate_panel': {
-        const panelId = args.panel_id;
-        if (!panelId) {
+      // Layout tools from panel-layouts (emit events)
+      case 'toggle_panel': {
+        const panel = args.panel;
+        if (!panel || (panel !== 'left' && panel !== 'right')) {
           return {
-            result: 'Error: No panel_id provided',
-            displayText: `> ❌ **Navigate error:** No panel_id provided\n\n`,
+            result: 'Error: Invalid panel. Use "left" or "right"',
+            displayText: `> ❌ **Toggle panel error:** Invalid panel\n\n`,
           };
         }
 
-        if (actions?.navigateToPanel) {
-          actions.navigateToPanel(panelId);
-        }
+        events?.emit({
+          type: 'panel:toggle',
+          source: 'webllm-assistant',
+          timestamp: Date.now(),
+          payload: { panel },
+        });
 
         return {
-          result: `Navigated to panel: ${panelId}`,
-          displayText: `> 🔀 **Navigated to:** \`${panelId}\`\n\n`,
+          result: `Toggled ${panel} panel`,
+          displayText: `> 🔀 **Toggled ${panel} panel**\n\n`,
+        };
+      }
+
+      case 'collapse_all_panels': {
+        events?.emit({
+          type: 'panel:collapse-all',
+          source: 'webllm-assistant',
+          timestamp: Date.now(),
+          payload: {},
+        });
+
+        return {
+          result: 'Collapsed all panels',
+          displayText: `> 🔀 **Collapsed all panels**\n\n`,
+        };
+      }
+
+      case 'expand_all_panels': {
+        events?.emit({
+          type: 'panel:expand-all',
+          source: 'webllm-assistant',
+          timestamp: Date.now(),
+          payload: {},
+        });
+
+        return {
+          result: 'Expanded all panels',
+          displayText: `> 🔀 **Expanded all panels**\n\n`,
+        };
+      }
+
+      case 'switch_panel': {
+        const { slot, panel } = args;
+        if (!slot || !['left', 'middle', 'right'].includes(slot)) {
+          return {
+            result: 'Error: Invalid slot. Use "left", "middle", or "right"',
+            displayText: `> ❌ **Switch panel error:** Invalid slot\n\n`,
+          };
+        }
+
+        events?.emit({
+          type: 'panel:switch',
+          source: 'webllm-assistant',
+          timestamp: Date.now(),
+          payload: { slot, panel },
+        });
+
+        return {
+          result: `Switched ${slot} panel to ${panel}`,
+          displayText: `> 🔀 **Switched ${slot} panel to ${panel}**\n\n`,
+        };
+      }
+
+      case 'focus_panel': {
+        const { slot } = args;
+        if (!slot || !['left', 'middle', 'right'].includes(slot)) {
+          return {
+            result: 'Error: Invalid slot. Use "left", "middle", or "right"',
+            displayText: `> ❌ **Focus panel error:** Invalid slot\n\n`,
+          };
+        }
+
+        events?.emit({
+          type: 'panel:focus',
+          source: 'webllm-assistant',
+          timestamp: Date.now(),
+          payload: { slot },
+        });
+
+        return {
+          result: `Focused ${slot} panel`,
+          displayText: `> 🎯 **Focused ${slot} panel**\n\n`,
+        };
+      }
+
+      case 'reset_layout': {
+        events?.emit({
+          type: 'panel:reset-layout',
+          source: 'webllm-assistant',
+          timestamp: Date.now(),
+          payload: {},
+        });
+
+        return {
+          result: 'Reset layout to default',
+          displayText: `> 🔄 **Reset layout to default**\n\n`,
         };
       }
 
@@ -492,7 +599,7 @@ export function WebLLMProvider({
           displayText: `> ❓ **Unknown tool:** ${name}\n\n`,
         };
     }
-  }, [actions, fetchFileContent]);
+  }, [actions, events, fetchFileContent]);
 
   // Parse and execute actions from model response
   // Returns files that need to be read for follow-up

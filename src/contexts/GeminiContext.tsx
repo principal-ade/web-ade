@@ -182,11 +182,12 @@ export function GeminiProvider({
           };
         }
 
+        // Use 'panel' in payload to match UTCP layout tool schema
         events?.emit({
           type: 'panel:toggle',
           source: 'gemini-assistant',
           timestamp: Date.now(),
-          payload: { panelId: panel },
+          payload: { panel },
         });
 
         return {
