@@ -9,7 +9,7 @@ import {
   getPanelCommands,
 } from '@principal-ade/panel-layouts';
 import type { Command, CommandContext, PanelSlotId } from '@principal-ade/panel-layouts';
-import { getGlobalToolRegistry } from '@principal-ade/panel-framework-core';
+import { getGlobalToolRegistry, globalPanelRegistry } from '@principal-ade/panel-framework-core';
 import { useTheme } from '@principal-ade/industry-theme';
 import { PanelProvider, usePanelProvider } from '@/contexts/PanelContext';
 import { WebLLMProvider } from '@/contexts/WebLLMContext';
@@ -347,12 +347,95 @@ function EditorLayoutContent() {
           }
         }
       }),
+      // State query tools - respond with current layout visibility
+      events.on('panel:get-visibility', (event) => {
+        const payload = event.payload as { respond?: (state: unknown) => void };
+        const visibilityState = {
+          left: {
+            panelId: layout.left,
+            collapsed: leftSidebarCollapsed,
+          },
+          middle: {
+            panelId: layout.middle,
+          },
+          right: {
+            panelId: layout.right,
+            collapsed: rightSidebarCollapsed,
+          },
+          workspaceId: null, // No workspace system in web-ade yet
+        };
+        // If there's a respond callback, call it
+        if (payload?.respond) {
+          payload.respond(visibilityState);
+        }
+        // Also emit a response event for async listeners
+        events.emit({
+          type: 'panel:visibility-response',
+          source: 'editor-layout',
+          timestamp: Date.now(),
+          payload: visibilityState,
+        });
+      }),
+      // Get state from a specific panel
+      events.on('panel:get-state', (event) => {
+        const payload = event.payload as { panelId?: string; respond?: (state: unknown) => void };
+        const panelId = payload.panelId;
+
+        if (!panelId) {
+          const errorResponse = { panelId: null, hasState: false, error: 'No panelId provided' };
+          if (payload.respond) payload.respond(errorResponse);
+          events.emit({
+            type: 'panel:state-response',
+            source: 'editor-layout',
+            timestamp: Date.now(),
+            payload: errorResponse,
+          });
+          return;
+        }
+
+        const state = globalPanelRegistry.getPanelState(panelId);
+        const response = {
+          panelId,
+          hasState: state !== null,
+          state: state ?? undefined,
+        };
+
+        if (payload.respond) payload.respond(response);
+        events.emit({
+          type: 'panel:state-response',
+          source: 'editor-layout',
+          timestamp: Date.now(),
+          payload: response,
+        });
+      }),
+      // List all panels that support state queries
+      events.on('panel:list-state-panels', (event) => {
+        const payload = event.payload as { respond?: (state: unknown) => void };
+        const panelIds = globalPanelRegistry.getPanelsWithState();
+        const panels = panelIds.map((id) => {
+          const entry = globalPanelRegistry.getAllLoaded().find((p) => p.id === id);
+          return {
+            panelId: id,
+            name: entry?.metadata.name ?? id,
+            description: entry?.stateSchema?.description,
+          };
+        });
+
+        const response = { panels };
+        if (payload.respond) payload.respond(response);
+        events.emit({
+          type: 'panel:state-panels-response',
+          source: 'editor-layout',
+          timestamp: Date.now(),
+          payload: response,
+        });
+      }),
     ];
 
     return () => {
       unsubscribers.forEach((unsub) => unsub());
     };
-  }, [events, login, actions]);
+  }, [events, login, actions, layout, leftSidebarCollapsed, rightSidebarCollapsed]);
 
   // Sync layout and collapsed state when view mode changes (for special views)
   useEffect(() => {
