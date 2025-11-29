@@ -9,6 +9,7 @@ import {
   getPanelCommands,
 } from '@principal-ade/panel-layouts';
 import type { Command, CommandContext, PanelSlotId } from '@principal-ade/panel-layouts';
+import { getGlobalToolRegistry } from '@principal-ade/panel-framework-core';
 import { useTheme } from '@principal-ade/industry-theme';
 import { PanelProvider, usePanelProvider } from '@/contexts/PanelContext';
 import { WebLLMProvider } from '@/contexts/WebLLMContext';
@@ -105,6 +106,31 @@ function EditorLayoutContent() {
   const [focusedPanel, setFocusedPanel] = useState<PanelSlotId | null>('middle');
   const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
   const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
+
+  // Register panel tools from external panel packages
+  useEffect(() => {
+    const registry = getGlobalToolRegistry();
+
+    // Dynamically import github-panels metadata and register tools
+    import('@industry-theme/github-panels').then((mod) => {
+      // GitHub Projects panel has tools defined
+      const githubProjectsPanel = mod.panels[0];
+      if (githubProjectsPanel?.metadata?.tools) {
+        registry.registerPanelTools(githubProjectsPanel.metadata);
+        console.log(
+          '[EditorLayout] Registered GitHub panel tools:',
+          githubProjectsPanel.metadata.tools.length
+        );
+      }
+    });
+
+    // Layout tools are registered via utcp-panel-event in PanelContext
+
+    return () => {
+      // Cleanup on unmount
+      registry.unregisterPanelTools('github-projects');
+    };
+  }, []);
 
   // Handle layout configuration change
   const handleLayoutConfigChange = useCallback((config: LayoutConfig) => {

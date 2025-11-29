@@ -6,7 +6,11 @@
  */
 
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef, ReactNode } from 'react';
-import { PanelEventBus } from '@principal-ade/panel-framework-core';
+import {
+  PanelEventBus,
+  getGlobalToolRegistry,
+  setGlobalToolRegistryEventEmitter,
+} from '@principal-ade/panel-framework-core';
 import type {
   PanelContextValue,
   PanelActions,
@@ -14,7 +18,9 @@ import type {
   DataSlice,
   WorkspaceMetadata,
   RepositoryMetadata,
+  PanelTool,
 } from '@principal-ade/panel-framework-core';
+import { layoutTools } from '@principal-ade/utcp-panel-event';
 import type { ExtendedMarkdownFile } from '@industry-theme/alexandria-docs-panel/dist/types';
 import type { CodebaseView } from '@principal-ai/alexandria-core-library/types';
 import { useAuth } from './AuthContext';
@@ -90,9 +96,156 @@ interface PanelProviderValue {
 
 const PanelContext = createContext<PanelProviderValue | null>(null);
 
+/**
+ * Host-provided tools that web-ade makes available to AI agents.
+ * These tools emit events that the host handles directly.
+ */
+const hostTools: PanelTool[] = [
+  {
+    name: 'read_file',
+    description: 'Read the contents of a file from the current repository',
+    inputs: {
+      type: 'object',
+      properties: {
+        path: {
+          type: 'string',
+          description: 'The path to the file within the repository',
+        },
+      },
+      required: ['path'],
+    },
+    outputs: {
+      type: 'object',
+      properties: {
+        content: {
+          type: 'string',
+          description: 'The file content',
+        },
+      },
+    },
+    tags: ['file', 'read', 'content'],
+    tool_call_template: {
+      call_template_type: 'panel_event',
+      event_type: 'host:read-file',
+      source: 'ai-agent',
+    },
+  },
+  {
+    name: 'open_file',
+    description: 'Open a file in the viewer panel',
+    inputs: {
+      type: 'object',
+      properties: {
+        path: {
+          type: 'string',
+          description: 'The path to the file to open',
+        },
+      },
+      required: ['path'],
+    },
+    outputs: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+      },
+    },
+    tags: ['file', 'open', 'view'],
+    tool_call_template: {
+      call_template_type: 'panel_event',
+      event_type: 'host:open-file',
+      source: 'ai-agent',
+    },
+  },
+  {
+    name: 'list_repositories',
+    description: 'List GitHub repositories available to the user (owned, starred, and organization repos)',
+    inputs: {
+      type: 'object',
+      properties: {
+        filter: {
+          type: 'string',
+          enum: ['owned', 'starred', 'organizations', 'all'],
+          description: 'Filter repositories by type (default: all)',
+        },
+      },
+    },
+    outputs: {
+      type: 'object',
+      properties: {
+        repositories: {
+          type: 'array',
+          description: 'List of repository names',
+        },
+      },
+    },
+    tags: ['github', 'repository', 'list'],
+    tool_call_template: {
+      call_template_type: 'panel_event',
+      event_type: 'host:list-repositories',
+      source: 'ai-agent',
+    },
+  },
+  {
+    name: 'switch_repository',
+    description: 'Navigate to a different GitHub repository',
+    inputs: {
+      type: 'object',
+      properties: {
+        repository: {
+          type: 'string',
+          description: 'The repository in "owner/name" format',
+        },
+      },
+      required: ['repository'],
+    },
+    outputs: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+      },
+    },
+    tags: ['github', 'repository', 'navigate'],
+    tool_call_template: {
+      call_template_type: 'panel_event',
+      event_type: 'repository:selected',
+      source: 'ai-agent',
+    },
+  },
+];
+
 export function PanelProvider({ children, workspace, repository, githubRepo }: PanelProviderProps) {
   // Initialize event bus once
   const events = useMemo(() => new PanelEventBus(), []);
+
+  // Initialize tool registry and connect to event bus
+  useEffect(() => {
+    const registry = getGlobalToolRegistry();
+
+    // Connect event bus to registry for tool invocations
+    setGlobalToolRegistryEventEmitter(events);
+
+    // Register host-provided tools
+    registry.registerPanelTools({
+      id: 'web-ade.host',
+      name: 'Web ADE Host',
+      tools: hostTools,
+    });
+
+    // Register layout tools from utcp-panel-event
+    registry.registerPanelTools({
+      id: 'panel-layouts',
+      name: 'Panel Layouts',
+      tools: layoutTools,
+    });
+
+    console.log('[PanelContext] Tool registry initialized with', registry.size, 'tools');
+
+    return () => {
+      // Cleanup: unregister tools on unmount
+      registry.unregisterPanelTools('web-ade.host');
+      registry.unregisterPanelTools('panel-layouts');
+    };
+  }, [events]);
 
   // Get auth state for github-repositories slice
   const { isAuthenticated } = useAuth();

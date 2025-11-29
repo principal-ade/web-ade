@@ -229,7 +229,7 @@ export function GeminiProvider({
         const panel = args.panel as string;
 
         const validSlots = ['left', 'middle', 'right'];
-        const validPanels = ['docs', 'ai-chat', 'markdown-viewer', 'code-city', 'kanban', 'sessions', 'visual-validation', 'github-projects'];
+        const validPanels = ['docs', 'ai-chat', 'markdown-viewer', 'code-city', 'kanban', 'terminal', 'sessions', 'visual-validation', 'github-projects', 'github-search'];
 
         if (!slot || !validSlots.includes(slot)) {
           return {
@@ -258,6 +258,7 @@ export function GeminiProvider({
         };
       }
 
+      // GitHub tools - these emit events that panels/host handle
       case 'list_repositories': {
         if (!getRepositories) {
           return {
@@ -300,18 +301,17 @@ export function GeminiProvider({
         };
       }
 
-      case 'switch_repository': {
+      case 'select_repository': {
         const repository = args.repository as string;
 
         if (!repository || !repository.includes('/')) {
           return {
             result: JSON.stringify({ error: 'Invalid repository format. Use "owner/repo"' }),
-            displayText: `> **Switch repository error:** Invalid format\n\n`,
+            displayText: `> **Select repository error:** Invalid format\n\n`,
           };
         }
 
         // Navigate to the repository
-        // This will cause a page navigation
         events?.emit({
           type: 'repository:selected',
           source: 'gemini-assistant',
@@ -321,7 +321,82 @@ export function GeminiProvider({
 
         return {
           result: JSON.stringify({ success: true, repository }),
-          displayText: `> **Switching to repository:** \`${repository}\`\n\n`,
+          displayText: `> **Selecting repository:** \`${repository}\`\n\n`,
+        };
+      }
+
+      case 'preview_repository': {
+        const repository = args.repository as string;
+
+        if (!repository || !repository.includes('/')) {
+          return {
+            result: JSON.stringify({ error: 'Invalid repository format. Use "owner/repo"' }),
+            displayText: `> **Preview repository error:** Invalid format\n\n`,
+          };
+        }
+
+        const [owner, repo] = repository.split('/');
+        events?.emit({
+          type: 'repository:preview',
+          source: 'gemini-assistant',
+          timestamp: Date.now(),
+          payload: { owner, repo },
+        });
+
+        return {
+          result: JSON.stringify({ success: true, repository }),
+          displayText: `> **Previewing repository:** \`${repository}\`\n\n`,
+        };
+      }
+
+      case 'search_repositories': {
+        const query = args.query as string;
+
+        if (!query) {
+          return {
+            result: JSON.stringify({ error: 'No search query provided' }),
+            displayText: `> **Search repositories error:** No query\n\n`,
+          };
+        }
+
+        events?.emit({
+          type: 'github:search-repositories',
+          source: 'gemini-assistant',
+          timestamp: Date.now(),
+          payload: { query },
+        });
+
+        return {
+          result: JSON.stringify({ success: true, query }),
+          displayText: `> **Searching repositories for:** \`${query}\`\n\n`,
+        };
+      }
+
+      case 'open_repository_switcher': {
+        events?.emit({
+          type: 'repository:open-switcher',
+          source: 'gemini-assistant',
+          timestamp: Date.now(),
+          payload: {},
+        });
+
+        return {
+          result: JSON.stringify({ success: true }),
+          displayText: `> **Opening repository switcher**\n\n`,
+        };
+      }
+
+      case 'request_github_login': {
+        events?.emit({
+          type: 'github:login-requested',
+          source: 'gemini-assistant',
+          timestamp: Date.now(),
+          payload: {},
+        });
+
+        return {
+          result: JSON.stringify({ success: true }),
+          displayText: `> **Requesting GitHub login**\n\n`,
         };
       }
 

@@ -4,8 +4,10 @@
  * Proxies chat requests to Google's Gemini API with function calling support.
  * Uses streaming for responsive UI.
  *
- * Layout tools are imported from @principal-ade/panel-layouts and converted
- * to Gemini format. App-specific tools are defined inline.
+ * Tools are imported from panel packages and converted to Gemini format.
+ * - Layout tools from @principal-ade/utcp-panel-event
+ * - GitHub tools from @industry-theme/github-panels
+ * - App-specific tools defined inline
  */
 
 import { NextRequest } from 'next/server';
@@ -14,6 +16,8 @@ import {
   toolsToGeminiFormat,
   generateToolsSystemPrompt,
 } from '@principal-ade/utcp-panel-event';
+// Import from /tools subpath to avoid pulling in React components
+import { githubTools } from '@industry-theme/github-panels/tools';
 
 // Types for Gemini API
 interface GeminiMessage {
@@ -52,7 +56,7 @@ interface ChatRequest {
   markdownFiles?: Array<{ path: string; title?: string }>;
 }
 
-// App-specific tools (not layout-related)
+// App-specific tools (host-provided, not from panel packages)
 const APP_SPECIFIC_TOOLS: GeminiTool['functionDeclarations'] = [
   {
     name: 'read_file',
@@ -82,42 +86,26 @@ const APP_SPECIFIC_TOOLS: GeminiTool['functionDeclarations'] = [
       required: ['path'],
     },
   },
-  {
-    name: 'list_repositories',
-    description: 'Get a list of GitHub repositories the user has access to, including owned repos, starred repos, and organization repos.',
-    parameters: {
-      type: 'object',
-      properties: {},
-      required: [],
-    },
-  },
-  {
-    name: 'switch_repository',
-    description: 'Switch to a different GitHub repository to view its documentation and files.',
-    parameters: {
-      type: 'object',
-      properties: {
-        repository: {
-          type: 'string',
-          description: 'The full repository name in "owner/repo" format (e.g., "principal-ai/alexandria-core-library")',
-        },
-      },
-      required: ['repository'],
-    },
-  },
 ];
 
-// Convert layout tools from panel-layouts to Gemini format and merge with app-specific tools
+// Convert tools from panel packages to Gemini format
 const geminiLayoutTools = toolsToGeminiFormat(layoutTools);
+const geminiGitHubTools = toolsToGeminiFormat(githubTools);
+
+// Merge all tools into a single declaration
 const GEMINI_TOOLS: GeminiTool = {
   functionDeclarations: [
     ...APP_SPECIFIC_TOOLS,
     ...geminiLayoutTools.functionDeclarations,
+    ...geminiGitHubTools.functionDeclarations,
   ],
 };
 
-// Generate layout tools system prompt from panel-layouts
+// Generate system prompts for tool documentation
 const layoutToolsPrompt = generateToolsSystemPrompt(layoutTools, {
+  header: '', // No header - we provide our own section header
+});
+const githubToolsPrompt = generateToolsSystemPrompt(githubTools, {
   header: '', // No header - we provide our own section header
 });
 
@@ -130,19 +118,20 @@ You have access to tools that let you interact with the application:
 ## App-Specific Tools
 - read_file: Read file contents to analyze and answer questions
 - open_file: Open a file in the viewer for the user to see
-- list_repositories: Get user's GitHub repositories (owned, starred, organizations)
-- switch_repository: Navigate to a different repository
 
 ## Layout Tools
 ${layoutToolsPrompt}
 
-Available panels you can switch to: docs, ai-chat, markdown-viewer, code-city, kanban, sessions, visual-validation, github-projects.
+## GitHub Tools
+${githubToolsPrompt}
+
+Available panels you can switch to: docs, ai-chat, markdown-viewer, code-city, kanban, terminal, sessions, visual-validation, github-projects, github-search.
 
 When a user asks about file contents, use read_file to get the content and then answer based on it.
 When a user wants to view a file, use open_file to display it.
-When a user wants more space or to hide/show panels, use the panel tools.
+When a user wants more space or to hide/show panels, use the layout tools.
 When a user wants to see different content in a panel slot, use switch_panel.
-When a user asks about their repositories or wants to switch repos, use list_repositories and switch_repository.
+When a user asks about their repositories or wants to switch repos, use the GitHub tools.
 
 Be helpful and concise. Use your tools proactively when needed.`;
 
