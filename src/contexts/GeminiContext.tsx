@@ -58,6 +58,19 @@ export interface GitHubReposData {
 /** Function to get repositories */
 export type GetRepositories = () => GitHubReposData | null;
 
+/** Current layout state for panel visibility queries */
+export interface LayoutState {
+  layout: {
+    left: string;
+    middle: string;
+    right: string;
+  };
+  collapsed: {
+    left: boolean;
+    right: boolean;
+  };
+}
+
 interface GeminiContextValue {
   // Status
   status: GeminiStatus;
@@ -85,6 +98,8 @@ interface GeminiProviderProps {
   fetchFileContent?: FetchFileContent;
   /** Function to get available repositories */
   getRepositories?: GetRepositories;
+  /** Current layout state for panel visibility queries */
+  layoutState?: LayoutState;
 }
 
 export function GeminiProvider({
@@ -94,6 +109,7 @@ export function GeminiProvider({
   markdownFiles,
   fetchFileContent,
   getRepositories,
+  layoutState,
 }: GeminiProviderProps) {
   const [status, setStatus] = useState<GeminiStatus>('ready');
   const [error, setError] = useState<Error | null>(null);
@@ -400,13 +416,42 @@ export function GeminiProvider({
         };
       }
 
+      // Layout state query tools
+      case 'get_visible_panels': {
+        if (!layoutState) {
+          return {
+            result: JSON.stringify({ error: 'Layout state not available' }),
+            displayText: `> **Get visible panels error:** Layout state not available\n\n`,
+          };
+        }
+
+        const visibilityState = {
+          left: {
+            panelId: layoutState.layout.left,
+            collapsed: layoutState.collapsed.left,
+          },
+          middle: {
+            panelId: layoutState.layout.middle,
+          },
+          right: {
+            panelId: layoutState.layout.right,
+            collapsed: layoutState.collapsed.right,
+          },
+        };
+
+        return {
+          result: JSON.stringify(visibilityState),
+          displayText: `> **Current panel layout:**\n> - Left: ${layoutState.layout.left}${layoutState.collapsed.left ? ' (collapsed)' : ''}\n> - Middle: ${layoutState.layout.middle}\n> - Right: ${layoutState.layout.right}${layoutState.collapsed.right ? ' (collapsed)' : ''}\n\n`,
+        };
+      }
+
       default:
         return {
           result: JSON.stringify({ error: `Unknown function: ${name}` }),
           displayText: `> **Unknown function:** ${name}\n\n`,
         };
     }
-  }, [actions, fetchFileContent]);
+  }, [actions, fetchFileContent, layoutState]);
 
   // Send a message to Gemini with function calling loop
   const sendMessage = useCallback(async (content: string) => {

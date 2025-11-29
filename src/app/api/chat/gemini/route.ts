@@ -5,9 +5,9 @@
  * Uses streaming for responsive UI.
  *
  * Tools are imported from panel packages and converted to Gemini format.
- * - Layout tools from @principal-ade/utcp-panel-event
+ * - Layout tools from @principal-ade/utcp-panel-event (server-safe)
  * - GitHub tools from @industry-theme/github-panels
- * - App-specific tools defined inline
+ * - App-specific tools defined inline (including state query tools)
  */
 
 import { NextRequest } from 'next/server';
@@ -86,6 +86,15 @@ const APP_SPECIFIC_TOOLS: GeminiTool['functionDeclarations'] = [
       required: ['path'],
     },
   },
+  {
+    name: 'get_visible_panels',
+    description: 'Get the current visibility state of all panel slots (left, middle, right). Returns which panels are active in each slot and whether side panels are collapsed. Use this to understand the current layout before making changes.',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
 ];
 
 // Convert tools from panel packages to Gemini format
@@ -118,6 +127,7 @@ You have access to tools that let you interact with the application:
 ## App-Specific Tools
 - read_file: Read file contents to analyze and answer questions
 - open_file: Open a file in the viewer for the user to see
+- get_visible_panels: Query current panel layout to see which panels are visible and their collapsed state
 
 ## Layout Tools
 ${layoutToolsPrompt}
@@ -132,6 +142,7 @@ When a user wants to view a file, use open_file to display it.
 When a user wants more space or to hide/show panels, use the layout tools.
 When a user wants to see different content in a panel slot, use switch_panel.
 When a user asks about their repositories or wants to switch repos, use the GitHub tools.
+When a user asks which panels are visible or what the current layout is, use get_visible_panels.
 
 Be helpful and concise. Use your tools proactively when needed.`;
 

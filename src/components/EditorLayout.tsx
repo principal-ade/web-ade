@@ -92,16 +92,32 @@ const GitHubSearchPanelLoader = dynamic(
 );
 
 type ViewMode = 'editor' | 'kanban' | 'visual-validation' | 'github-projects';
-function EditorLayoutContent() {
+interface EditorLayoutContentProps {
+  layout: PanelLayout;
+  setLayout: React.Dispatch<React.SetStateAction<PanelLayout>>;
+  leftSidebarCollapsed: boolean;
+  setLeftSidebarCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  rightSidebarCollapsed: boolean;
+  setRightSidebarCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  currentLayoutConfigId: string;
+  setCurrentLayoutConfigId: React.Dispatch<React.SetStateAction<string>>;
+}
+
+function EditorLayoutContent({
+  layout,
+  setLayout,
+  leftSidebarCollapsed,
+  setLeftSidebarCollapsed,
+  rightSidebarCollapsed,
+  setRightSidebarCollapsed,
+  currentLayoutConfigId,
+  setCurrentLayoutConfigId,
+}: EditorLayoutContentProps) {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
   const { login, isAuthenticated } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('editor');
-  const [currentLayoutConfigId, setCurrentLayoutConfigId] = useState('default');
   const currentLayoutConfig = layoutConfigs.find((c) => c.id === currentLayoutConfigId) || layoutConfigs[0]!;
-  const [layout, setLayout] = useState<PanelLayout>(currentLayoutConfig.layout);
-  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(currentLayoutConfig.collapsed.left);
-  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(currentLayoutConfig.collapsed.right);
   const [isMobile, setIsMobile] = useState(false);
   const [focusedPanel, setFocusedPanel] = useState<PanelSlotId | null>('middle');
   const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
@@ -781,18 +797,25 @@ export function EditorLayout({ githubRepo }: EditorLayoutProps = {}) {
         }}
         githubRepo={githubRepo}
       >
-        <WebLLMWrapper />
+        <EditorContextWrapper />
       </PanelProvider>
     </div>
   );
 }
 
 /**
- * Wrapper component that provides WebLLM context with access to panel events/actions
- * and injects markdown file context for the AI assistant.
+ * Wrapper component that provides AI contexts (WebLLM, Gemini) and manages
+ * editor-level state including layout configuration.
  */
-function WebLLMWrapper() {
+function EditorContextWrapper() {
   const { events, actions, context } = usePanelProvider();
+
+  // Layout state - lifted here so GeminiProvider can access it
+  const [currentLayoutConfigId, setCurrentLayoutConfigId] = useState('default');
+  const currentLayoutConfig = layoutConfigs.find((c) => c.id === currentLayoutConfigId) || layoutConfigs[0]!;
+  const [layout, setLayout] = useState<PanelLayout>(currentLayoutConfig.layout);
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(currentLayoutConfig.collapsed.left);
+  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(currentLayoutConfig.collapsed.right);
 
   // Get markdown files from context to provide to the AI
   const markdownSlice = context.getSlice<Array<{ path: string; title?: string }>>('markdown');
@@ -808,7 +831,7 @@ function WebLLMWrapper() {
   // Function to fetch file content for READ_FILE action
   const fetchFileContent = useCallback(async (filePath: string): Promise<string | null> => {
     if (!githubRepo || !githubRepo.includes('/')) {
-      console.warn('[WebLLMWrapper] No valid repository available for file fetch:', githubRepo);
+      console.warn('[EditorContextWrapper] No valid repository available for file fetch:', githubRepo);
       return null;
     }
 
@@ -816,14 +839,14 @@ function WebLLMWrapper() {
       const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
       const [owner, name] = githubRepo.split('/');
 
-      console.log('[WebLLMWrapper] Fetching file content:', cleanPath, 'from', githubRepo);
+      console.log('[EditorContextWrapper] Fetching file content:', cleanPath, 'from', githubRepo);
 
       const response = await fetch(
         `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(cleanPath)}`
       );
 
       if (!response.ok) {
-        console.error('[WebLLMWrapper] Failed to fetch file:', response.statusText);
+        console.error('[EditorContextWrapper] Failed to fetch file:', response.statusText);
         return null;
       }
 
@@ -842,7 +865,7 @@ function WebLLMWrapper() {
 
       return data.content || null;
     } catch (err) {
-      console.error('[WebLLMWrapper] Error fetching file:', err);
+      console.error('[EditorContextWrapper] Error fetching file:', err);
       return null;
     }
   }, [githubRepo]);
@@ -867,6 +890,19 @@ function WebLLMWrapper() {
     };
   }, [context]);
 
+  // Layout state for AI providers
+  const layoutState = useMemo(() => ({
+    layout: {
+      left: layout.left as string,
+      middle: layout.middle as string,
+      right: layout.right as string,
+    },
+    collapsed: {
+      left: leftSidebarCollapsed,
+      right: rightSidebarCollapsed,
+    },
+  }), [layout, leftSidebarCollapsed, rightSidebarCollapsed]);
+
   return (
     <WebLLMProvider
       events={events}
@@ -880,8 +916,18 @@ function WebLLMWrapper() {
         markdownFiles={markdownFiles}
         fetchFileContent={fetchFileContent}
         getRepositories={getRepositories}
+        layoutState={layoutState}
       >
-        <EditorLayoutContent />
+        <EditorLayoutContent
+          layout={layout}
+          setLayout={setLayout}
+          leftSidebarCollapsed={leftSidebarCollapsed}
+          setLeftSidebarCollapsed={setLeftSidebarCollapsed}
+          rightSidebarCollapsed={rightSidebarCollapsed}
+          setRightSidebarCollapsed={setRightSidebarCollapsed}
+          currentLayoutConfigId={currentLayoutConfigId}
+          setCurrentLayoutConfigId={setCurrentLayoutConfigId}
+        />
       </GeminiProvider>
     </WebLLMProvider>
   );
