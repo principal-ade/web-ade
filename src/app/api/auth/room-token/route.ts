@@ -11,9 +11,9 @@
 import { NextResponse } from 'next/server';
 import { getGitHubToken } from '@/lib/auth/cookies';
 
-// Landing page auth server URL (handles browser auth)
+// Auth server URL (handles browser auth)
 const AUTH_SERVER_URL =
-  process.env.LANDING_PAGE_URL || 'https://principal-ade.com';
+  process.env.AUTH_SERVER_URL || 'https://auth.principal-ade.com';
 
 export async function POST(request: Request) {
   try {

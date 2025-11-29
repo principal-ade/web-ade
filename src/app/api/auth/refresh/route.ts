@@ -20,13 +20,13 @@ export async function POST() {
       );
     }
 
-    // Call landing-page to refresh tokens
-    const landingPageUrl = process.env.LANDING_PAGE_URL;
-    if (!landingPageUrl) {
-      throw new Error('LANDING_PAGE_URL not configured');
+    // Call auth server to refresh tokens
+    const authServerUrl = process.env.AUTH_SERVER_URL;
+    if (!authServerUrl) {
+      throw new Error('AUTH_SERVER_URL not configured');
     }
 
-    const response = await fetch(`${landingPageUrl}/api/auth/workos/refresh`, {
+    const response = await fetch(`${authServerUrl}/api/auth/workos/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -24,22 +24,22 @@ async function handleLogin(request: NextRequest) {
     // Store verifier, state, and redirect URL in server session (5 min TTL)
     await setAuthSession(codeVerifier, state, redirectTo);
 
-    // Call landing-page to initiate OAuth
-    const landingPageUrl = process.env.LANDING_PAGE_URL;
-    if (!landingPageUrl) {
-      throw new Error('LANDING_PAGE_URL not configured');
+    // Call auth server to initiate OAuth
+    const authServerUrl = process.env.AUTH_SERVER_URL;
+    if (!authServerUrl) {
+      throw new Error('AUTH_SERVER_URL not configured');
     }
 
     const appUrl = 'https://app.principal-ade.com';
     const returnUrl = `${appUrl}/api/auth/callback`;
 
-    console.log('Calling landing page:', {
-      url: `${landingPageUrl}/api/auth/workos/start`,
+    console.log('Calling auth server:', {
+      url: `${authServerUrl}/api/auth/workos/start`,
       state,
       returnUrl,
     });
 
-    const response = await fetch(`${landingPageUrl}/api/auth/workos/start`, {
+    const response = await fetch(`${authServerUrl}/api/auth/workos/start`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
