@@ -2,7 +2,7 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, LogOut, Wifi, WifiOff, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { LogIn, LogOut, Wifi, WifiOff, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useControlTowerClient } from '@/lib/control-tower';
@@ -175,6 +175,27 @@ export function EditorHeader({
       )}
 
       <div className="flex items-center gap-3 flex-shrink-0 flex-1 justify-end">
+        {/* Open in Desktop App button */}
+        {repositoryName && (
+          <button
+            onClick={() => {
+              // Construct deep link URL for the desktop app
+              const deepLinkUrl = `principal-ade://open-workspace?owner=${encodeURIComponent(repositoryName.owner)}&repo=${encodeURIComponent(repositoryName.repo)}`;
+              window.location.href = deepLinkUrl;
+            }}
+            className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
+            style={{
+              background: theme.colors.secondary,
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+            }}
+            title="Open in Principal ADE desktop app"
+          >
+            <Monitor className="w-4 h-4" />
+            <span>Desktop</span>
+          </button>
+        )}
+
         {/* Panel collapse toggles */}
         <div className="hidden md:flex items-center gap-1">
           {onToggleLeft && (
