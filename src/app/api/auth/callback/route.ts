@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAndValidateSession, clearAuthSession } from '@/lib/auth/session';
+import { getAndValidateSession, clearAuthSession, getAuthSession } from '@/lib/auth/session';
 import { setAuthCookies, TokenData } from '@/lib/auth/cookies';
 
 export async function GET(request: NextRequest) {
@@ -59,21 +59,38 @@ export async function GET(request: NextRequest) {
         const redirectPathFromQuery =
           request.nextUrl.searchParams.get('redirect') ||
           request.nextUrl.searchParams.get('redirect_path');
-        const redirectPathFromSession =
+        const redirectPathFromWorkosSession =
           sessionData.redirect_path ||
           sessionData.redirectPath ||
           sessionData.redirect_to ||
           sessionData.redirectTo;
-        const redirectPath = redirectPathFromQuery || redirectPathFromSession || '/';
+
+        // Also check our iron-session for the redirect (where login route stores it)
+        let redirectPathFromIronSession: string | undefined;
+        try {
+          const ironSession = await getAuthSession();
+          redirectPathFromIronSession = ironSession.redirectTo;
+        } catch (e) {
+          console.error('Failed to get iron session for redirect:', e);
+        }
+
+        const redirectPath = redirectPathFromQuery || redirectPathFromIronSession || redirectPathFromWorkosSession || '/';
         const normalizedRedirectPath = redirectPath.startsWith('/')
           ? redirectPath
           : `/${redirectPath}`;
+
+        console.log('Redirect resolution:', {
+          fromQuery: redirectPathFromQuery,
+          fromIronSession: redirectPathFromIronSession,
+          fromWorkosSession: redirectPathFromWorkosSession,
+          final: normalizedRedirectPath,
+        });
 
         // Clear the landing page cookie and redirect to intended destination
         const response = NextResponse.redirect(new URL(normalizedRedirectPath, appUrl));
         response.cookies.delete('workos_session');
 
-        console.log('Successfully authenticated via workos_session cookie');
+        console.log('Successfully authenticated via workos_session cookie, redirecting to:', normalizedRedirectPath);
         return response;
       } catch (e) {
         console.error('Failed to parse workos_session cookie:', e);
