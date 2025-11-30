@@ -7,6 +7,8 @@ import {
   CommandPalette,
   useCommandPalette,
   getPanelCommands,
+  AgentCommandPalette,
+  useAgentCommandPalette,
 } from '@principal-ade/panel-layouts';
 import type { Command, CommandContext, PanelSlotId } from '@principal-ade/panel-layouts';
 import { getGlobalToolRegistry, globalPanelRegistry } from '@principal-ade/panel-framework-core';
@@ -26,6 +28,7 @@ import '@principal-ade/panel-layouts/styles.css';
 import '@principal-ade/industry-themed-ai-sdk/styles.css';
 import '@industry-theme/visual-validation-panel/dist/panels.bundle.css';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGemini } from '@/contexts/GeminiContext';
 import { ExternalLink } from 'lucide-react';
 
 // Dynamically import the MarkdownPanel with SSR disabled
@@ -260,6 +263,59 @@ function EditorLayoutContent({
     context: commandContext,
     commands: getPanelCommands(),
   });
+
+  // Initialize Agent Command Palette (AI-driven, Alt+P to open)
+  const { sendMessage } = useGemini();
+  const agentPalette = useAgentCommandPalette({
+    events,
+    keyboard: { key: 'p', altKey: true },
+    config: {
+      placeholder: 'What would you like to do?',
+      autoCloseDelay: 2000,
+    },
+    initialSuggestions: [
+      'hide the sidebars',
+      'show the AI chat panel',
+      'switch to kanban view',
+    ],
+  });
+
+  // Wire Agent Command Palette to Gemini for natural language processing
+  useEffect(() => {
+    if (!events) return;
+
+    const unsubscribers = [
+      // Handle submit - send to Gemini
+      events.on('agent-command-palette:submit', (event) => {
+        const payload = event.payload as { query: string; mode: string };
+
+        // Only handle natural language mode - quick commands are handled internally
+        if (payload.mode === 'natural' && payload.query) {
+          // Send to Gemini - it will execute tools via the existing executeFunctionCall
+          sendMessage(payload.query);
+        }
+      }),
+
+      // Handle Gemini completion - update palette status
+      events.on('gemini:message-complete', () => {
+        if (agentPalette.isOpen) {
+          agentPalette.setStatus('complete');
+          agentPalette.setAgentResponse('Done');
+        }
+      }),
+
+      // Handle Gemini error - update palette status
+      events.on('gemini:error', (event) => {
+        if (agentPalette.isOpen) {
+          const payload = event.payload as { error?: string };
+          agentPalette.setStatus('error');
+          agentPalette.setAgentResponse(payload.error || 'An error occurred');
+        }
+      }),
+    ];
+
+    return () => unsubscribers.forEach((unsub) => unsub());
+  }, [events, sendMessage, agentPalette]);
 
   // Register custom commands (and update when they change)
   const { registerCommands, unregisterCommands } = commandPalette;
@@ -675,10 +731,18 @@ function EditorLayoutContent({
         </button>
       )}
 
-      {/* Command Palette */}
+      {/* Command Palette (Cmd+K) */}
       <CommandPalette
         commandPalette={commandPalette}
         context={commandContext}
+      />
+
+      {/* Agent Command Palette (Alt+P) - AI-driven natural language commands */}
+      <AgentCommandPalette
+        palette={agentPalette}
+        config={{
+          placeholder: 'What would you like to do?',
+        }}
       />
 
       {/* Repository Selection Modal */}
