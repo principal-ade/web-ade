@@ -979,14 +979,15 @@ export function WebLLMProvider({
             }
           }
 
-          // Add the file contents as a system message to the conversation
+          // Add the file contents as a user message to the conversation
+          // Note: WebLLM requires system messages to be first, so we use 'user' role here
           const fileContentMessage = `Here are the contents of the requested file(s):\n\n${fileContents.join('\n\n---\n\n')}\n\nNow please continue your response based on this content.`;
 
           // Update chat messages with the assistant's response and file content
           chatMessages = [
             ...chatMessages,
             { role: 'assistant', content: fullResponse },
-            { role: 'system', content: fileContentMessage },
+            { role: 'user', content: fileContentMessage },
           ];
 
           // Append to the existing assistant message (add a newline to separate)

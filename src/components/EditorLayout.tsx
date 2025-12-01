@@ -21,7 +21,7 @@ import { RepoSelectionModal } from './RepoSelectionModal';
 import { layoutConfigs, LayoutConfig } from './LayoutConfigDropdown';
 import { AIChatPanel } from './AIChatPanel';
 import '@principal-ade/panel-layouts/styles.css';
-import '@principal-ade/industry-themed-ai-sdk/styles.css';
+import '@principal-ade/industry-themed-ai-sdk-panel/styles.css';
 import '@industry-theme/visual-validation-panel/dist/panels.bundle.css';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGemini } from '@/contexts/GeminiContext';

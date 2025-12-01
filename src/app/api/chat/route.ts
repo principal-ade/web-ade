@@ -1,11 +1,14 @@
-import { type Message } from 'ai';
-
 /**
  * Mock AI Chat API Endpoint
  *
  * This endpoint simulates AI responses for the chat panel.
  * Replace with real AI SDK integration when ready.
  */
+
+interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
 
 const mockResponses = [
   "I'm a mock AI assistant. I can help you with code-related questions!",
@@ -22,7 +25,7 @@ function getRandomResponse(): string {
 
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json() as { messages: Message[] };
+    const { messages } = await req.json() as { messages: ChatMessage[] };
 
     // Log the incoming messages (for debugging)
     console.log('Received messages:', messages.length);

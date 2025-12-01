@@ -9,8 +9,8 @@
  */
 
 import { useTheme } from '@principal-ade/industry-theme';
-import { ThemedAIChat } from '@principal-ade/industry-themed-ai-sdk/components';
-import type { PanelComponentProps, CustomChatHandler } from '@principal-ade/industry-themed-ai-sdk';
+import { ThemedAIChat } from '@principal-ade/industry-themed-ai-sdk-panel';
+import type { PanelComponentProps, CustomChatHandler } from '@principal-ade/industry-themed-ai-sdk-panel';
 import { useWebLLM, AVAILABLE_MODELS, ModelId } from '@/contexts/WebLLMContext';
 import { useGemini } from '@/contexts/GeminiContext';
 import { useMemo, useState, useEffect } from 'react';
