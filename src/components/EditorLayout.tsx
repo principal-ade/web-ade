@@ -4,13 +4,9 @@ import {
   ResponsiveConfigurablePanelLayout,
   PanelLayout,
   EditableConfigurablePanelLayout,
-  CommandPalette,
-  useCommandPalette,
-  getPanelCommands,
   AgentCommandPalette,
   useAgentCommandPalette,
 } from '@principal-ade/panel-layouts';
-import type { Command, CommandContext, PanelSlotId } from '@principal-ade/panel-layouts';
 import { getGlobalToolRegistry, globalPanelRegistry } from '@principal-ade/panel-framework-core';
 import { useTheme } from '@principal-ade/industry-theme';
 import { PanelProvider, usePanelProvider } from '@/contexts/PanelContext';
@@ -122,7 +118,6 @@ function EditorLayoutContent({
   const [viewMode, setViewMode] = useState<ViewMode>('editor');
   const currentLayoutConfig = layoutConfigs.find((c) => c.id === currentLayoutConfigId) || layoutConfigs[0]!;
   const [isMobile, setIsMobile] = useState(false);
-  const [focusedPanel, setFocusedPanel] = useState<PanelSlotId | null>('middle');
   const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
   const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
 
@@ -168,101 +163,6 @@ function EditorLayoutContent({
     // Reset to editor view when changing layout config
     setViewMode('editor');
   }, [isAuthenticated]);
-
-  // Create command context for the command palette
-  const commandContext = useMemo<CommandContext>(
-    () => ({
-      panelContext: context,
-      actions,
-      events,
-      focusedPanel,
-      setFocus: setFocusedPanel,
-      closeCommandPalette: () => {}, // Will be set by useCommandPalette
-    }),
-    [context, actions, events, focusedPanel]
-  );
-
-  // Custom commands for view mode and repository switching
-  const customCommands = useMemo<Command[]>(
-    () => [
-      {
-        id: 'view.switch-to-kanban',
-        label: 'Switch to Kanban View',
-        description: 'Open the Kanban board for task management',
-        icon: '📋',
-        category: 'View',
-        keywords: ['kanban', 'board', 'tasks', 'view', 'switch'],
-        priority: 90,
-        execute: () => {
-          setViewMode('kanban');
-        },
-        isAvailable: () => viewMode !== 'kanban',
-      },
-      {
-        id: 'view.switch-to-editor',
-        label: 'Switch to Editor View',
-        description: 'Open the documentation editor',
-        icon: '📝',
-        category: 'View',
-        keywords: ['editor', 'docs', 'markdown', 'view', 'switch'],
-        priority: 90,
-        execute: () => {
-          setViewMode('editor');
-        },
-        isAvailable: () => viewMode !== 'editor',
-      },
-      {
-        id: 'view.switch-to-visual-validation',
-        label: 'Switch to Visual Validation View',
-        description: 'Open the visual validation graph viewer',
-        icon: '🕸️',
-        category: 'View',
-        keywords: ['visual', 'validation', 'graph', 'vvf', 'config', 'view', 'switch'],
-        priority: 90,
-        execute: () => {
-          setViewMode('visual-validation');
-        },
-        isAvailable: () => viewMode !== 'visual-validation',
-      },
-      {
-        id: 'view.switch-to-github-projects',
-        label: 'Switch to GitHub Projects View',
-        description: 'Browse and select GitHub repositories',
-        icon: '🐙',
-        category: 'View',
-        keywords: ['github', 'projects', 'repositories', 'repos', 'view', 'switch'],
-        priority: 90,
-        execute: () => {
-          setViewMode('github-projects');
-        },
-        isAvailable: () => viewMode !== 'github-projects',
-      },
-      {
-        id: 'repository.switch',
-        label: 'Switch Repository',
-        description: 'Open a different GitHub repository',
-        icon: '🔀',
-        category: 'Repository',
-        keywords: ['repository', 'repo', 'switch', 'change', 'github', 'project'],
-        priority: 85,
-        execute: (ctx) => {
-          ctx.events?.emit({
-            type: 'repository:open-switcher',
-            source: 'command-palette',
-            timestamp: Date.now(),
-            payload: {},
-          });
-        },
-      },
-    ],
-    [viewMode]
-  );
-
-  // Initialize command palette with panel commands
-  const commandPalette = useCommandPalette({
-    context: commandContext,
-    commands: getPanelCommands(),
-  });
 
   // Initialize Agent Command Palette (AI-driven, Alt+P to open)
   const { sendMessage } = useGemini();
@@ -316,17 +216,6 @@ function EditorLayoutContent({
 
     return () => unsubscribers.forEach((unsub) => unsub());
   }, [events, sendMessage, agentPalette]);
-
-  // Register custom commands (and update when they change)
-  const { registerCommands, unregisterCommands } = commandPalette;
-  useEffect(() => {
-    const commandIds = customCommands.map((c) => c.id);
-    registerCommands(customCommands);
-
-    return () => {
-      unregisterCommands(commandIds);
-    };
-  }, [customCommands, registerCommands, unregisterCommands]);
 
   // Detect mobile viewport
   useEffect(() => {
@@ -730,12 +619,6 @@ function EditorLayoutContent({
           Open {previewedRepo.split('/')[1]}
         </button>
       )}
-
-      {/* Command Palette (Cmd+K) */}
-      <CommandPalette
-        commandPalette={commandPalette}
-        context={commandContext}
-      />
 
       {/* Agent Command Palette (Alt+P) - AI-driven natural language commands */}
       <AgentCommandPalette
