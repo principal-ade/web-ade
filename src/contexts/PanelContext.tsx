@@ -23,6 +23,7 @@ import type {
 import { layoutTools } from '@principal-ade/utcp-panel-event';
 import type { ExtendedMarkdownFile } from '@industry-theme/alexandria-docs-panel/dist/types';
 import type { CodebaseView } from '@principal-ai/alexandria-core-library/types';
+import type { FileTree, FileInfo, DirectoryInfo } from '@principal-ai/repository-abstraction';
 import { useAuth } from './AuthContext';
 
 interface GitHubTreeItem {
@@ -289,8 +290,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
   const [codebaseViewsLoading, setCodebaseViewsLoading] = useState(true);
   const [codebaseViewsError, setCodebaseViewsError] = useState<Error | null>(null);
 
-  // State for file tree
-  const [fileTree, setFileTree] = useState<{ root: string; files: Array<{ path: string; size: number; lines: number }> } | null>(null);
+  // State for file tree - uses FileTree from @principal-ai/repository-abstraction
+  const [fileTree, setFileTree] = useState<FileTree | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(true);
   const [fileTreeError, setFileTreeError] = useState<Error | null>(null);
 
@@ -366,7 +367,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     }
   }, [isAuthenticated]);
 
-  // Fetch file tree from GitHub
+  // Fetch file tree from GitHub and build FileTree structure from @principal-ai/repository-abstraction
   const fetchFileTree = useCallback(async (repo: string) => {
     setFileTreeLoading(true);
     setFileTreeError(null);
@@ -386,33 +387,159 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
 
       const tree: GitHubTreeResponse = await response.json();
 
-      // Convert to the format expected by panels
-      // Visual Validation panel expects allFiles with path, relativePath, name
-      // Code City panel expects files with path, size, lines
-      const files = tree.tree
+      // Build FileTree structure from @principal-ai/repository-abstraction
+      // Extract all files (blobs) and directories (trees)
+      const allFiles: FileInfo[] = tree.tree
         .filter((item) => item.type === 'blob')
-        .map((item) => ({
-          path: item.path,
-          size: item.size || 1000, // Default size if not provided
-          lines: Math.ceil((item.size || 1000) / 50), // Estimate lines
-        }));
+        .map((item) => {
+          const pathParts = item.path.split('/');
+          const fileName = pathParts[pathParts.length - 1] ?? item.path;
+          const extension = fileName.includes('.') ? (fileName.split('.').pop() ?? '') : '';
 
-      const allFiles = tree.tree
-        .filter((item) => item.type === 'blob')
-        .map((item) => ({
-          path: item.path,
-          relativePath: item.path,
-          name: item.path.split('/').pop() || item.path,
-        }));
+          return {
+            path: `/${item.path}`,
+            name: fileName,
+            extension,
+            size: item.size || 0,
+            lastModified: new Date(),
+            isDirectory: false,
+            relativePath: item.path,
+          };
+        });
 
-      const fileTreeData = {
-        root: `${owner}/${name}`,
-        files,
+      // Build directory structure from tree items
+      const dirMap = new Map<string, DirectoryInfo>();
+
+      // First pass: create all directories from tree items
+      tree.tree
+        .filter((item) => item.type === 'tree')
+        .forEach((item) => {
+          const pathParts = item.path.split('/');
+          const dirName = pathParts[pathParts.length - 1] ?? item.path;
+
+          dirMap.set(item.path, {
+            path: `/${item.path}`,
+            name: dirName,
+            children: [],
+            fileCount: 0,
+            totalSize: 0,
+            depth: pathParts.length,
+            relativePath: item.path,
+          });
+        });
+
+      // Also create implicit parent directories for files
+      allFiles.forEach((file) => {
+        const pathParts = file.relativePath.split('/');
+        let currentPath = '';
+
+        for (let i = 0; i < pathParts.length - 1; i++) {
+          const part = pathParts[i];
+          if (!part) continue;
+          currentPath = currentPath ? `${currentPath}/${part}` : part;
+
+          if (!dirMap.has(currentPath)) {
+            dirMap.set(currentPath, {
+              path: `/${currentPath}`,
+              name: part,
+              children: [],
+              fileCount: 0,
+              totalSize: 0,
+              depth: i + 1,
+              relativePath: currentPath,
+            });
+          }
+        }
+      });
+
+      // Build directory tree relationships and calculate stats
+      const allDirectories = Array.from(dirMap.values());
+      let maxDepth = 0;
+      let totalSize = 0;
+
+      // Assign files to their parent directories and calculate stats
+      allFiles.forEach((file) => {
+        const pathParts = file.relativePath.split('/');
+        if (pathParts.length > 1) {
+          const parentPath = pathParts.slice(0, -1).join('/');
+          const parentDir = dirMap.get(parentPath);
+          if (parentDir) {
+            parentDir.children.push(file);
+            parentDir.fileCount++;
+            parentDir.totalSize += file.size;
+          }
+        }
+        totalSize += file.size;
+      });
+
+      // Assign subdirectories to parent directories
+      allDirectories.forEach((dir) => {
+        const pathParts = dir.relativePath.split('/');
+        maxDepth = Math.max(maxDepth, dir.depth);
+
+        if (pathParts.length > 1) {
+          const parentPath = pathParts.slice(0, -1).join('/');
+          const parentDir = dirMap.get(parentPath);
+          if (parentDir) {
+            parentDir.children.push(dir);
+          }
+        }
+      });
+
+      // Create root directory
+      const rootChildren: (FileInfo | DirectoryInfo)[] = [];
+
+      // Add top-level files
+      allFiles.forEach((file) => {
+        if (!file.relativePath.includes('/')) {
+          rootChildren.push(file);
+        }
+      });
+
+      // Add top-level directories
+      allDirectories.forEach((dir) => {
+        if (!dir.relativePath.includes('/')) {
+          rootChildren.push(dir);
+        }
+      });
+
+      const rootDir: DirectoryInfo = {
+        path: `/${owner}/${name}`,
+        name: name ?? repo,
+        children: rootChildren,
+        fileCount: allFiles.length,
+        totalSize,
+        depth: 0,
+        relativePath: '',
+      };
+
+      // Build the complete FileTree
+      const fileTreeData: FileTree = {
+        sha: tree.sha,
+        root: rootDir,
         allFiles,
+        allDirectories,
+        stats: {
+          totalFiles: allFiles.length,
+          totalDirectories: allDirectories.length,
+          totalSize,
+          maxDepth,
+        },
+        metadata: {
+          id: `github:${owner}/${name}:${tree.sha}`,
+          timestamp: new Date(),
+          sourceType: 'github',
+          sourceSha: tree.sha,
+          sourceInfo: {
+            owner,
+            name,
+            provider: 'github',
+          },
+        },
       };
 
       setFileTree(fileTreeData);
-      console.log('[PanelContext] File tree loaded with', files.length, 'files');
+      console.log('[PanelContext] File tree loaded with', allFiles.length, 'files and', allDirectories.length, 'directories');
     } catch (err) {
       console.error('[PanelContext] Failed to fetch file tree:', err);
       setFileTreeError(err instanceof Error ? err : new Error('Failed to load file tree'));
