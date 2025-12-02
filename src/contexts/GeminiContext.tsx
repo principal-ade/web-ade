@@ -451,7 +451,7 @@ export function GeminiProvider({
           displayText: `> **Unknown function:** ${name}\n\n`,
         };
     }
-  }, [actions, fetchFileContent, layoutState]);
+  }, [actions, fetchFileContent, layoutState, events, getRepositories]);
 
   // Send a message to Gemini with function calling loop
   const sendMessage = useCallback(async (content: string) => {

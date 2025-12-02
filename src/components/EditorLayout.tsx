@@ -90,6 +90,15 @@ const GitHubSearchPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the QualityHexagonPanel with SSR disabled
+const QualityHexagonPanelLoader = dynamic(
+  () => import('@principal-ade/code-quality-panels').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 type ViewMode = 'editor' | 'kanban' | 'visual-validation' | 'github-projects';
 interface EditorLayoutContentProps {
   layout: PanelLayout;
@@ -162,7 +171,7 @@ function EditorLayoutContent({
     }
     // Reset to editor view when changing layout config
     setViewMode('editor');
-  }, [isAuthenticated]);
+  }, [isAuthenticated, setCurrentLayoutConfigId, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed]);
 
   // Initialize Agent Command Palette (AI-driven, Alt+P to open)
   const { sendMessage } = useGemini();
@@ -396,7 +405,7 @@ function EditorLayoutContent({
     return () => {
       unsubscribers.forEach((unsub) => unsub());
     };
-  }, [events, login, actions, layout, leftSidebarCollapsed, rightSidebarCollapsed]);
+  }, [events, login, actions, layout, leftSidebarCollapsed, rightSidebarCollapsed, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed]);
 
   // Sync layout and collapsed state when view mode changes (for special views)
   useEffect(() => {
@@ -430,7 +439,7 @@ function EditorLayoutContent({
       setLeftSidebarCollapsed(currentLayoutConfig.collapsed.left);
       setRightSidebarCollapsed(currentLayoutConfig.collapsed.right);
     }
-  }, [viewMode, currentLayoutConfig]);
+  }, [viewMode, currentLayoutConfig, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed]);
 
   const panels = [
     {
@@ -528,6 +537,15 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitHubSearchPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'quality-hexagon',
+      label: 'Code Quality',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <QualityHexagonPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },

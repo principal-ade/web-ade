@@ -81,6 +81,29 @@ interface GitHubTreeResponse {
   truncated: boolean;
 }
 
+// Quality metrics data from GitHub Actions artifacts
+interface QualityMetrics {
+  tests: number;
+  deadCode: number;
+  formatting: number;
+  linting: number;
+  types: number;
+  documentation: number;
+}
+
+interface PackageQuality {
+  name: string;
+  version?: string;
+  metrics: QualityMetrics;
+}
+
+interface QualitySliceData {
+  packages: PackageQuality[];
+  lastUpdated: string;
+  commitSha?: string;
+  branch?: string;
+}
+
 interface PanelProviderProps {
   children: ReactNode;
   workspace?: WorkspaceMetadata;
@@ -280,6 +303,11 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
   });
   const [githubReposLoading, setGithubReposLoading] = useState(false);
 
+  // State for quality metrics from GitHub Actions artifacts
+  const [qualityData, setQualityData] = useState<QualitySliceData | null>(null);
+  const [qualityLoading, setQualityLoading] = useState(false);
+  const [qualityError, setQualityError] = useState<Error | null>(null);
+
   // Fetch user's GitHub repositories
   const fetchGithubRepos = useCallback(async () => {
     if (!isAuthenticated) {
@@ -392,6 +420,64 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       setFileTreeLoading(false);
     }
   }, []);
+
+  // Fetch quality metrics from GitHub Actions artifacts
+  const fetchQualityMetrics = useCallback(async (repo: string) => {
+    if (!isAuthenticated) {
+      setQualityData(null);
+      return;
+    }
+
+    setQualityLoading(true);
+    setQualityError(null);
+    console.log('[PanelContext] Fetching quality metrics for:', repo);
+
+    try {
+      const [owner, name] = repo.split('/');
+
+      const response = await fetch(
+        `/api/github/repo/${owner}/${name}/quality-artifacts?action=latest`,
+        { credentials: 'include' }
+      );
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log('[PanelContext] No quality artifacts found for repository');
+          setQualityData(null);
+          return;
+        }
+        if (response.status === 401) {
+          console.log('[PanelContext] Not authenticated for quality artifacts');
+          setQualityData(null);
+          return;
+        }
+        throw new Error(`Failed to fetch quality metrics: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Transform API response to QualitySliceData format
+      const qualitySliceData: QualitySliceData = {
+        packages: [
+          {
+            name: repo,
+            metrics: data.qualityMetrics.hexagon,
+          },
+        ],
+        lastUpdated: data.timestamp,
+        commitSha: data.commitSha,
+        branch: data.branch,
+      };
+
+      setQualityData(qualitySliceData);
+      console.log('[PanelContext] Quality metrics loaded:', qualitySliceData);
+    } catch (err) {
+      console.error('[PanelContext] Failed to fetch quality metrics:', err);
+      setQualityError(err instanceof Error ? err : new Error('Failed to load quality metrics'));
+    } finally {
+      setQualityLoading(false);
+    }
+  }, [isAuthenticated]);
 
   // Fetch codebase views from server-side API
   const fetchCodebaseViews = useCallback(async (repo: string) => {
@@ -669,6 +755,21 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
           refresh: fetchGithubRepos,
         },
       ],
+      [
+        'quality',
+        {
+          scope: 'repository',
+          name: 'quality',
+          data: qualityData,
+          loading: qualityLoading,
+          error: qualityError,
+          refresh: async () => {
+            if (githubRepo) {
+              await fetchQualityMetrics(githubRepo);
+            }
+          },
+        },
+      ],
     ])
   );
 
@@ -757,6 +858,17 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     });
   }
 
+  // Update quality slice with fetched data
+  const qualitySlice = slicesRef.current.get('quality');
+  if (qualitySlice) {
+    slicesRef.current.set('quality', {
+      ...qualitySlice,
+      data: qualityData,
+      loading: qualityLoading,
+      error: qualityError,
+    });
+  }
+
   // Refresh function - use slicesRef instead of slices state
   const refresh = useCallback(
     async (scope?: 'workspace' | 'repository', sliceName?: string) => {
@@ -818,7 +930,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, markdownFilesLoading, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, markdownFiles, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading]
+    [workspace, repository, refresh, githubRepo, markdownFilesLoading, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, markdownFiles, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError]
   );
 
   // Actions
@@ -1109,10 +1221,11 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     // Fetch independent data in parallel
     fetchReadme(githubRepo);
     fetchFileTree(githubRepo);
+    fetchQualityMetrics(githubRepo);
 
     // Fetch codebase views - markdown files will be fetched by the secondary effect
     fetchCodebaseViews(githubRepo);
-  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree]);
+  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics]);
 
   // Fetch markdown files when codebaseViews finishes loading (transition from loading → not loading)
   useEffect(() => {

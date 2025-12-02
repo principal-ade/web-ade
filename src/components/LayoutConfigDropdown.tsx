@@ -94,6 +94,19 @@ export const layoutConfigs: LayoutConfig[] = [
       right: false,
     },
   },
+  {
+    id: 'quality',
+    name: 'Code Quality',
+    layout: {
+      left: 'code-city',
+      middle: 'ai-chat',
+      right: 'quality-hexagon',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
 ];
 
 interface LayoutConfigDropdownProps {
