@@ -782,12 +782,9 @@ function EditorContextWrapper() {
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(currentLayoutConfig.collapsed.left);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(currentLayoutConfig.collapsed.right);
 
-  // Get markdown files from context to provide to the AI
-  const markdownSlice = context.getSlice<Array<{ path: string; title?: string }>>('markdown');
-  const markdownFiles = markdownSlice?.data?.map((f) => ({
-    path: f.path,
-    title: f.title,
-  }));
+  // TODO: Get markdown files from Alexandria panel state when available
+  // For now, AI providers won't have access to the document list
+  const markdownFiles = undefined;
 
   // Get repository info for file fetching - use the full owner/repo path
   const githubRepo = (context.currentScope.repository as { githubRepo?: string })?.githubRepo

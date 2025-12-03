@@ -19,10 +19,11 @@ import type {
   WorkspaceMetadata,
   RepositoryMetadata,
   PanelTool,
+  PanelAdapters,
 } from '@principal-ade/panel-framework-core';
 import { layoutTools } from '@principal-ade/utcp-panel-event';
-import type { ExtendedMarkdownFile } from '@industry-theme/alexandria-docs-panel/dist/types';
 import type { CodebaseView } from '@principal-ai/alexandria-core-library/types';
+import { minimatch } from 'minimatch';
 import type { FileTree, FileInfo, DirectoryInfo } from '@principal-ai/repository-abstraction';
 import { useAuth } from './AuthContext';
 
@@ -280,10 +281,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
   const [markdownLoading, setMarkdownLoading] = useState(true);
   const [markdownError, setMarkdownError] = useState<Error | null>(null);
 
-  // State for markdown files list with associated files
-  const [markdownFiles, setMarkdownFiles] = useState<ExtendedMarkdownFile[]>([]);
-  const [markdownFilesLoading, setMarkdownFilesLoading] = useState(true);
-  const [markdownFilesError, setMarkdownFilesError] = useState<Error | null>(null);
 
   // State for codebase views
   const [codebaseViews, setCodebaseViews] = useState<CodebaseView[]>([]);
@@ -640,86 +637,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     }
   }, []);
 
-  // Fetch markdown files list from GitHub and enrich with associated files
-  const fetchMarkdownFiles = useCallback(async (repo: string, views: CodebaseView[]) => {
-    setMarkdownFilesLoading(true);
-    setMarkdownFilesError(null);
-    console.log('[PanelContext] Fetching markdown files for:', repo);
-
-    try {
-      const [owner, name] = repo.split('/');
-
-      // Fetch file tree from GitHub API with cache-busting
-      const response = await fetch(`/api/github/repo/${owner}/${name}?action=tree`, {
-        cache: 'no-store',
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch file tree: ${response.statusText}`);
-      }
-
-      const tree: GitHubTreeResponse = await response.json();
-
-      // Create a map of overviewPath -> CodebaseView for quick lookup
-      const viewsByOverviewPath = new Map<string, CodebaseView>();
-      views.forEach(view => {
-        // Normalize paths for comparison
-        const normalizedPath = view.overviewPath.startsWith('/')
-          ? view.overviewPath
-          : `/${view.overviewPath}`;
-        viewsByOverviewPath.set(normalizedPath, view);
-      });
-
-      // Filter for markdown files and enrich with associated files
-      const mdFiles: ExtendedMarkdownFile[] = tree.tree
-        .filter((item) => item.type === 'blob' && /\.md$/i.test(item.path))
-        .map((item) => {
-          const filename = item.path.split('/').pop() || item.path;
-          const title = filename
-            .replace(/\.md$/i, '')
-            .replace(/[-_]/g, ' ')
-            .replace(/\b\w/g, (char: string) => char.toUpperCase());
-
-          const filePath = `/${item.path}`;
-
-          // Check if this markdown file is associated with a CodebaseView
-          const view = viewsByOverviewPath.get(filePath);
-          const associatedFiles = view ? extractAssociatedFiles(view) : undefined;
-
-          return {
-            path: filePath,
-            title,
-            lastModified: Date.now(), // GitHub tree doesn't provide this
-            associatedFiles,
-            codebaseViewId: view?.id,
-          };
-        })
-        .sort((a, b) => a.path.localeCompare(b.path)); // Sort alphabetically by path
-
-      setMarkdownFiles(mdFiles);
-      console.log('[PanelContext] Found markdown files:', mdFiles.length);
-    } catch (err) {
-      console.error('[PanelContext] Failed to fetch markdown files:', err);
-      setMarkdownFilesError(err instanceof Error ? err : new Error('Failed to load markdown files'));
-    } finally {
-      setMarkdownFilesLoading(false);
-    }
-  }, []);
-
-  // Helper function to extract all files from a CodebaseView
-  const extractAssociatedFiles = (view: CodebaseView): string[] => {
-    const files = new Set<string>();
-
-    Object.values(view.referenceGroups).forEach(group => {
-      group.files.forEach(file => {
-        // Ensure files have leading slash for consistency
-        files.add(file.startsWith('/') ? file : `/${file}`);
-      });
-    });
-
-    return Array.from(files).sort();
-  };
-
   // Fetch README function
   const fetchReadme = useCallback(async (repo: string) => {
     setMarkdownLoading(true);
@@ -841,22 +758,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
         },
       ],
       [
-        'markdown',
-        {
-          scope: 'repository',
-          name: 'markdown',
-          data: markdownFiles,
-          loading: markdownFilesLoading,
-          error: markdownFilesError,
-          refresh: async () => {
-            if (githubRepo) {
-              await fetchCodebaseViews(githubRepo);
-              await fetchMarkdownFiles(githubRepo, codebaseViews);
-            }
-          },
-        },
-      ],
-      [
         'codebaseViews',
         {
           scope: 'repository',
@@ -935,24 +836,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     }
   }
 
-  // Update markdown files slice
-  const markdownSlice = slicesRef.current.get('markdown');
-  if (markdownSlice && (markdownSlice.loading !== markdownFilesLoading || markdownSlice.data !== markdownFiles)) {
-    const updatedSlice = {
-      ...markdownSlice,
-      data: markdownFiles,
-      loading: markdownFilesLoading,
-      error: markdownFilesError,
-    };
-    slicesRef.current.set('markdown', updatedSlice);
-    console.log('[PanelContext] Markdown slice updated during render:', {
-      hasData: markdownFiles.length > 0,
-      fileCount: markdownFiles.length,
-      loading: markdownFilesLoading,
-      sliceLoading: updatedSlice.loading
-    });
-  }
-
   // Update file tree slice
   const fileTreeSlice = slicesRef.current.get('fileTree');
   if (fileTreeSlice) {
@@ -1015,6 +898,52 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     []  // No dependencies - uses ref
   );
 
+  // Create adapters for panels (e.g., Alexandria docs panel uses these for file reading)
+  const adapters: PanelAdapters = useMemo(() => ({
+    // readFile fetches file content from GitHub API
+    readFile: async (relativePath: string): Promise<string> => {
+      if (!githubRepo) {
+        throw new Error('No GitHub repo specified');
+      }
+
+      const [owner, name] = githubRepo.split('/');
+      // Clean path - remove leading slash and /GitHub/owner/repo prefix if present
+      let cleanPath = relativePath.startsWith('/') ? relativePath.slice(1) : relativePath;
+      // Strip the GitHub/owner/repo prefix that we add for MemoryPalace validation
+      const githubPrefix = `GitHub/${githubRepo}/`;
+      if (cleanPath.startsWith(githubPrefix)) {
+        cleanPath = cleanPath.slice(githubPrefix.length);
+      }
+
+      const response = await fetch(
+        `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(cleanPath)}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to read file: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Decode base64 content
+      if (data.content && data.encoding === 'base64') {
+        const binaryString = atob(data.content.replace(/\n/g, ''));
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const decoder = new TextDecoder('utf-8');
+        return decoder.decode(bytes);
+      }
+
+      return data.content || '';
+    },
+    // matchesPath uses minimatch for glob pattern matching
+    matchesPath: (pattern: string, filePath: string): boolean => {
+      return minimatch(filePath, pattern);
+    },
+  }), [githubRepo]);
+
   // Context value - include all data states to ensure proper re-renders
   // We include data states (markdownContent, markdownFiles, etc.) as dependencies to force
   // context updates when data loads, since slicesRef uses mutation and won't trigger updates
@@ -1026,14 +955,14 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
         repository: githubRepo ? {
           ...repository,
           name: githubRepo.split('/')[1] || repository?.name || 'unknown',
-          path: githubRepo,
+          // path needs to look like an absolute path for MemoryPalace validation
+          path: `/GitHub/${githubRepo}`,
           githubRepo, // Add the full owner/repo string
         } : repository,
       },
-      // repositoryPath is used by Visual Validation panel to construct file paths
-      // Set to empty string - readFile handles paths relative to repo root
-      repositoryPath: githubRepo || '',
+      repositoryPath: githubRepo ? `/GitHub/${githubRepo}` : '',
       slices: slicesRef.current,
+      adapters,
       getSlice: <T,>(name: string) => slicesRef.current.get(name) as DataSlice<T> | undefined,
       getWorkspaceSlice: <T,>(name: string) => {
         const slice = slicesRef.current.get(name);
@@ -1057,7 +986,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, markdownFilesLoading, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, markdownFiles, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError]
+    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError]
   );
 
   // Actions
@@ -1324,71 +1253,23 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     [context, actions, events]
   );
 
-  // Track previous loading state to detect transitions
-  const prevCodebaseViewsLoadingRef = useRef<boolean>(true);
-  const currentRepoRef = useRef<string>('');
-  const markdownFilesFetchedRef = useRef<boolean>(false);
-
   // Fetch GitHub repositories when authentication state changes
   useEffect(() => {
     fetchGithubRepos();
   }, [fetchGithubRepos]);
 
-  // Auto-fetch README, codebase views, markdown files, and file tree when githubRepo changes
+  // Auto-fetch README, codebase views, and file tree when githubRepo changes
   useEffect(() => {
     if (!githubRepo) return;
 
     console.log('[PanelContext] Initializing data fetch for:', githubRepo);
 
-    // Reset tracking refs when repo changes
-    prevCodebaseViewsLoadingRef.current = true;
-    currentRepoRef.current = githubRepo;
-    markdownFilesFetchedRef.current = false;
-
     // Fetch independent data in parallel
     fetchReadme(githubRepo);
     fetchFileTree(githubRepo);
     fetchQualityMetrics(githubRepo);
-
-    // Fetch codebase views - markdown files will be fetched by the secondary effect
     fetchCodebaseViews(githubRepo);
   }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics]);
-
-  // Fetch markdown files when codebaseViews finishes loading (transition from loading → not loading)
-  useEffect(() => {
-    // Detect transition from loading to not loading
-    const wasLoading = prevCodebaseViewsLoadingRef.current;
-    const isLoading = codebaseViewsLoading;
-
-    console.log('[PanelContext] Markdown fetch effect triggered:', {
-      githubRepo,
-      wasLoading,
-      isLoading,
-      currentRepo: currentRepoRef.current,
-      alreadyFetched: markdownFilesFetchedRef.current,
-      codebaseViewsCount: codebaseViews.length
-    });
-
-    // Update ref for next render
-    prevCodebaseViewsLoadingRef.current = isLoading;
-
-    // Only fetch when we transition from loading to not loading for the current repo
-    // AND we haven't already fetched markdown files for this repo
-    if (!githubRepo || isLoading || !wasLoading || currentRepoRef.current !== githubRepo || markdownFilesFetchedRef.current) {
-      console.log('[PanelContext] Skipping markdown fetch:', {
-        noRepo: !githubRepo,
-        isLoading,
-        wasNotLoading: !wasLoading,
-        repoDifferent: currentRepoRef.current !== githubRepo,
-        alreadyFetched: markdownFilesFetchedRef.current
-      });
-      return;
-    }
-
-    console.log('[PanelContext] Codebase views finished loading, fetching markdown files with', codebaseViews.length, 'views');
-    markdownFilesFetchedRef.current = true;
-    fetchMarkdownFiles(githubRepo, codebaseViews);
-  }, [githubRepo, codebaseViewsLoading, codebaseViews, fetchMarkdownFiles]);
 
   return <PanelContext.Provider value={value}>{children}</PanelContext.Provider>;
 }

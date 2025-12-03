@@ -123,6 +123,18 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
     return parts.join('/') || '/';
   }
 
+  basename(path: string): string {
+    const parts = path.split('/').filter(p => p);
+    return parts[parts.length - 1] || '';
+  }
+
+  extname(path: string): string {
+    const base = this.basename(path);
+    const lastDot = base.lastIndexOf('.');
+    if (lastDot <= 0) return '';
+    return base.slice(lastDot);
+  }
+
   isAbsolute(path: string): boolean {
     return path.startsWith('/');
   }
