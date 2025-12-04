@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useMemo } from 'react';
 import {
   terminalTheme,
   regalTheme,
@@ -9,6 +9,7 @@ import {
   slateTheme,
   landingPageTheme,
   landingPageLightTheme,
+  overrideColors,
   type Theme,
 } from '@principal-ade/industry-theme';
 
@@ -24,19 +25,29 @@ export const availableThemes = [
 
 export type ThemeName = typeof availableThemes[number]['name'];
 
+type ColorOverrides = Partial<Theme['colors']>;
+
 interface GlobalThemeContextValue {
   currentTheme: Theme;
+  baseTheme: Theme;
   currentThemeName: ThemeName;
+  colorOverrides: ColorOverrides;
   setTheme: (name: ThemeName) => void;
   cycleTheme: () => void;
+  setColor: (colorKey: keyof Theme['colors'], value: string) => void;
+  resetColor: (colorKey: keyof Theme['colors']) => void;
+  resetAllColors: () => void;
 }
 
 const GlobalThemeContext = createContext<GlobalThemeContextValue | undefined>(undefined);
 
+const COLOR_OVERRIDES_KEY = 'themeColorOverrides';
+
 export function GlobalThemeProvider({ children }: { children: ReactNode }) {
   const [themeIndex, setThemeIndex] = useState(0);
+  const [colorOverrides, setColorOverrides] = useState<ColorOverrides>({});
 
-  // Load theme preference from localStorage on mount
+  // Load theme preference and color overrides from localStorage on mount
   useEffect(() => {
     const savedThemeName = localStorage.getItem('selectedTheme');
     if (savedThemeName) {
@@ -45,9 +56,26 @@ export function GlobalThemeProvider({ children }: { children: ReactNode }) {
         setThemeIndex(index);
       }
     }
+
+    const savedOverrides = localStorage.getItem(COLOR_OVERRIDES_KEY);
+    if (savedOverrides) {
+      try {
+        setColorOverrides(JSON.parse(savedOverrides));
+      } catch {
+        // Invalid JSON, ignore
+      }
+    }
   }, []);
 
-  const currentTheme = availableThemes[themeIndex]!;
+  const baseTheme = availableThemes[themeIndex]!.theme;
+
+  // Compute the final theme with color overrides applied
+  const currentTheme = useMemo(() => {
+    if (Object.keys(colorOverrides).length === 0) {
+      return baseTheme;
+    }
+    return overrideColors(baseTheme, colorOverrides);
+  }, [baseTheme, colorOverrides]);
 
   const setTheme = useCallback((name: ThemeName) => {
     const index = availableThemes.findIndex(t => t.name === name);
@@ -63,18 +91,45 @@ export function GlobalThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('selectedTheme', availableThemes[nextIndex]!.name);
   }, [themeIndex]);
 
+  const setColor = useCallback((colorKey: keyof Theme['colors'], value: string) => {
+    setColorOverrides(prev => {
+      const newOverrides = { ...prev, [colorKey]: value };
+      localStorage.setItem(COLOR_OVERRIDES_KEY, JSON.stringify(newOverrides));
+      return newOverrides;
+    });
+  }, []);
+
+  const resetColor = useCallback((colorKey: keyof Theme['colors']) => {
+    setColorOverrides(prev => {
+      const newOverrides = { ...prev };
+      delete newOverrides[colorKey];
+      localStorage.setItem(COLOR_OVERRIDES_KEY, JSON.stringify(newOverrides));
+      return newOverrides;
+    });
+  }, []);
+
+  const resetAllColors = useCallback(() => {
+    setColorOverrides({});
+    localStorage.removeItem(COLOR_OVERRIDES_KEY);
+  }, []);
+
   // Save theme preference whenever it changes
   useEffect(() => {
-    localStorage.setItem('selectedTheme', currentTheme.name);
-  }, [currentTheme.name]);
+    localStorage.setItem('selectedTheme', availableThemes[themeIndex]!.name);
+  }, [themeIndex]);
 
   return (
     <GlobalThemeContext.Provider
       value={{
-        currentTheme: currentTheme.theme,
-        currentThemeName: currentTheme.name,
+        currentTheme,
+        baseTheme,
+        currentThemeName: availableThemes[themeIndex]!.name,
+        colorOverrides,
         setTheme,
         cycleTheme,
+        setColor,
+        resetColor,
+        resetAllColors,
       }}
     >
       {children}

@@ -107,6 +107,19 @@ export const layoutConfigs: LayoutConfig[] = [
       right: false,
     },
   },
+  {
+    id: 'theme-editor',
+    name: 'Theme Editor',
+    layout: {
+      left: 'theme-editor',
+      middle: 'ai-chat',
+      right: 'markdown-viewer',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
 ];
 
 interface LayoutConfigDropdownProps {

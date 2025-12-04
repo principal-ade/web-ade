@@ -25,7 +25,9 @@ import '@principal-ade/industry-themed-ai-sdk-panel/styles.css';
 import '@industry-theme/visual-validation-panel/dist/panels.bundle.css';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGemini } from '@/contexts/GeminiContext';
+import { useGlobalTheme } from '@/contexts/ThemeContext';
 import { ExternalLink } from 'lucide-react';
+import type { Theme } from '@principal-ade/industry-theme';
 
 // Dynamically import the MarkdownPanel with SSR disabled
 const MarkdownPanelLoader = dynamic(
@@ -99,14 +101,8 @@ const QualityHexagonPanelLoader = dynamic(
   { ssr: false }
 );
 
-// Dynamically import the ThemeEditorPanel with SSR disabled
-const ThemeEditorPanelLoader = dynamic(
-  () => import('@industry-theme/theme-editor-panel').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
+// Use custom ThemeEditorPanel with live theme editing support
+import { ThemeEditorPanel } from './ThemeEditorPanel';
 
 type ViewMode = 'editor' | 'kanban' | 'visual-validation' | 'github-projects';
 interface EditorLayoutContentProps {
@@ -133,6 +129,7 @@ function EditorLayoutContent({
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
   const { login, isAuthenticated } = useAuth();
+  const { setColor, resetColor, resetAllColors } = useGlobalTheme();
   const [viewMode, setViewMode] = useState<ViewMode>('editor');
   const currentLayoutConfig = layoutConfigs.find((c) => c.id === currentLayoutConfigId) || layoutConfigs[0]!;
   const [isMobile, setIsMobile] = useState(false);
@@ -409,12 +406,28 @@ function EditorLayoutContent({
           payload: response,
         });
       }),
+      // Theme editor events - live theme color updates
+      events.on('theme:set-color', (event) => {
+        const payload = event.payload as { colorKey: keyof Theme['colors']; value: string };
+        if (payload.colorKey && payload.value) {
+          setColor(payload.colorKey, payload.value);
+        }
+      }),
+      events.on('theme:reset-color', (event) => {
+        const payload = event.payload as { colorKey: keyof Theme['colors'] };
+        if (payload.colorKey) {
+          resetColor(payload.colorKey);
+        }
+      }),
+      events.on('theme:reset-all-colors', () => {
+        resetAllColors();
+      }),
     ];
 
     return () => {
       unsubscribers.forEach((unsub) => unsub());
     };
-  }, [events, login, actions, layout, leftSidebarCollapsed, rightSidebarCollapsed, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed]);
+  }, [events, login, actions, layout, leftSidebarCollapsed, rightSidebarCollapsed, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed, setColor, resetColor, resetAllColors]);
 
   // Sync layout and collapsed state when view mode changes (for special views)
   useEffect(() => {
@@ -563,7 +576,7 @@ function EditorLayoutContent({
       label: 'Theme Editor',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <ThemeEditorPanelLoader context={context} actions={actions} events={events} />
+          <ThemeEditorPanel />
         </div>
       ),
     },
