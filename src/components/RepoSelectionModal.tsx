@@ -58,13 +58,13 @@ export function RepoSelectionModal({ isOpen, onClose, currentRepo }: RepoSelecti
       return;
     }
 
-    // Navigate to GitHub-style path: /editor/owner/repo
-    router.push(`/editor/${repo}`);
+    // Navigate to GitHub-style path: /owner/repo
+    router.push(`/${repo}`);
     onClose();
   };
 
   const handleUseDefault = () => {
-    router.push(`/editor/${DEFAULT_REPO}`);
+    router.push(`/${DEFAULT_REPO}`);
     onClose();
   };
 

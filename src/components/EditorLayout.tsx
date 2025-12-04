@@ -285,7 +285,7 @@ function EditorLayoutContent({
         const payload = event.payload as { repository: { full_name: string } };
         if (payload?.repository?.full_name) {
           // Navigate to the selected repository's editor
-          window.location.href = `/editor/${payload.repository.full_name}`;
+          window.location.href = `/${payload.repository.full_name}`;
         }
       }),
       events.on('repository:preview', (event) => {
@@ -640,7 +640,7 @@ function EditorLayoutContent({
       {previewedRepo && (
         <button
           onClick={() => {
-            window.location.href = `/editor/${previewedRepo}`;
+            window.location.href = `/${previewedRepo}`;
           }}
           className="fixed bottom-6 right-6 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg transition-all hover:scale-105 z-50"
           style={{

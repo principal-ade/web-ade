@@ -2,7 +2,7 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogIn, LogOut, Wifi, WifiOff, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor } from 'lucide-react';
+import { LogOut, Wifi, WifiOff, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useControlTowerClient } from '@/lib/control-tower';
@@ -40,10 +40,10 @@ export function EditorHeader({
       const pathParts = pathname.split('/');
       console.log('[EditorHeader] URL pathname:', pathname);
       console.log('[EditorHeader] Path parts:', pathParts);
-      // Path format: /editor/owner/repo or /editor
-      if (pathParts.length >= 4 && pathParts[1] === 'editor' && pathParts[2] && pathParts[3]) {
-        const owner = pathParts[2];
-        const repo = pathParts[3];
+      // Path format: /owner/repo
+      if (pathParts.length >= 3 && pathParts[1] && pathParts[2]) {
+        const owner = pathParts[1];
+        const repo = pathParts[2];
         console.log('[EditorHeader] Setting repository:', { owner, repo });
         setRepositoryName({ owner, repo });
       } else {
@@ -183,7 +183,7 @@ export function EditorHeader({
               const deepLinkUrl = `principal-ade://open-workspace?owner=${encodeURIComponent(repositoryName.owner)}&repo=${encodeURIComponent(repositoryName.repo)}`;
               window.location.href = deepLinkUrl;
             }}
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
+            className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
             style={{
               background: theme.colors.secondary,
               color: theme.colors.text,
@@ -203,8 +203,8 @@ export function EditorHeader({
               onClick={onToggleLeft}
               className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
               style={{
-                background: theme.colors.secondary,
-                color: theme.colors.text,
+                background: leftCollapsed ? theme.colors.primary : theme.colors.secondary,
+                color: leftCollapsed ? theme.colors.background : theme.colors.text,
               }}
               title={leftCollapsed ? 'Expand left panel' : 'Collapse left panel'}
             >
@@ -220,8 +220,8 @@ export function EditorHeader({
               onClick={onToggleRight}
               className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
               style={{
-                background: theme.colors.secondary,
-                color: theme.colors.text,
+                background: rightCollapsed ? theme.colors.primary : theme.colors.secondary,
+                color: rightCollapsed ? theme.colors.background : theme.colors.text,
               }}
               title={rightCollapsed ? 'Expand right panel' : 'Collapse right panel'}
             >
@@ -280,14 +280,14 @@ export function EditorHeader({
         ) : (
           <button
             onClick={() => login()}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
+            className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
             style={{
               background: theme.colors.primary,
               color: theme.colors.background,
             }}
+            title="Login"
           >
-            <LogIn className="w-4 h-4" />
-            <span className="hidden sm:inline">Login</span>
+            <User className="w-4 h-4" />
           </button>
         )}
       </div>
