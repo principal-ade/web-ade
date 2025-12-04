@@ -99,6 +99,15 @@ const QualityHexagonPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the ThemeEditorPanel with SSR disabled
+const ThemeEditorPanelLoader = dynamic(
+  () => import('@industry-theme/theme-editor-panel').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 type ViewMode = 'editor' | 'kanban' | 'visual-validation' | 'github-projects';
 interface EditorLayoutContentProps {
   layout: PanelLayout;
@@ -546,6 +555,15 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <QualityHexagonPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'theme-editor',
+      label: 'Theme Editor',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <ThemeEditorPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },
