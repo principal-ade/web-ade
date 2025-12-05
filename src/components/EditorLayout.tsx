@@ -22,7 +22,7 @@ import { layoutConfigs, LayoutConfig } from './LayoutConfigDropdown';
 import { AIChatPanel } from './AIChatPanel';
 import '@principal-ade/panel-layouts/styles.css';
 import '@principal-ade/industry-themed-ai-sdk-panel/styles.css';
-import '@industry-theme/visual-validation-panel/dist/panels.bundle.css';
+// CSS removed from visual-validation-panel exports in 0.3.3 - styles now bundled in JS
 import { useAuth } from '@/contexts/AuthContext';
 import { useGemini } from '@/contexts/GeminiContext';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
