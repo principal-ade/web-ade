@@ -101,6 +101,24 @@ const QualityHexagonPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the EventBusPanel with SSR disabled
+const EventBusPanelLoader = dynamic(
+  () => import('@industry-theme/agent-driven-ui-panels').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
+// Dynamically import the AgentToolsPanel with SSR disabled
+const AgentToolsPanelLoader = dynamic(
+  () => import('@industry-theme/agent-driven-ui-panels').then((mod) => {
+    const Component = mod.panels[1]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 // Use custom ThemeEditorPanel with live theme editing support
 import { ThemeEditorPanel } from './ThemeEditorPanel';
 
@@ -577,6 +595,24 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <ThemeEditorPanel />
+        </div>
+      ),
+    },
+    {
+      id: 'event-bus',
+      label: 'Event Bus',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <EventBusPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'agent-tools',
+      label: 'Agent Tools',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <AgentToolsPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },

@@ -120,6 +120,19 @@ export const layoutConfigs: LayoutConfig[] = [
       right: false,
     },
   },
+  {
+    id: 'agent-debug',
+    name: 'Agent Debug',
+    layout: {
+      left: 'agent-tools',
+      middle: 'ai-chat',
+      right: 'event-bus',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
 ];
 
 interface LayoutConfigDropdownProps {
