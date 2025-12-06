@@ -14,10 +14,13 @@ import {
 import '@principal-ade/panel-layouts/styles.css';
 import { ExternalLink } from 'lucide-react';
 
-// Dynamically import the GitHubSearchPanel with SSR disabled
-const GitHubSearchPanelLoader = dynamic(
+// Dynamically import the OwnerRepositoriesPanel with SSR disabled
+const OwnerRepositoriesPanelLoader = dynamic(
   () => import('@industry-theme/github-panels').then((mod) => {
-    const Component = mod.panels[1]!.component;
+    const Component = mod.panels[2]!.component as React.ComponentType<
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      any
+    >;
     return { default: Component };
   }),
   { ssr: false }
@@ -38,7 +41,7 @@ function OwnerPageContent({ owner }: { owner: string }) {
   const [isMobile, setIsMobile] = useState(false);
   const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
   const [layout] = useState<PanelLayout>({
-    left: 'github-search',
+    left: 'owner-repositories',
     middle: 'markdown-viewer',
     right: 'empty',
   });
@@ -52,22 +55,6 @@ function OwnerPageContent({ owner }: { owner: string }) {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
-  // Emit initial search query for the owner
-  useEffect(() => {
-    if (!events || !owner) return;
-
-    // Give the panel time to mount, then emit search event
-    const timer = setTimeout(() => {
-      events.emit({
-        type: 'github:search',
-        source: 'owner-page',
-        timestamp: Date.now(),
-        payload: { query: `user:${owner}` },
-      });
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [events, owner]);
 
   // Listen for repository preview events
   useEffect(() => {
@@ -99,11 +86,16 @@ function OwnerPageContent({ owner }: { owner: string }) {
 
   const panels = [
     {
-      id: 'github-search',
+      id: 'owner-repositories',
       label: 'Repositories',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <GitHubSearchPanelLoader context={context} actions={actions} events={events} />
+          <OwnerRepositoriesPanelLoader
+            context={context}
+            actions={actions}
+            events={events}
+            owner={owner}
+          />
         </div>
       ),
     },
