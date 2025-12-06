@@ -119,6 +119,15 @@ const AgentToolsPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the GitChangesPanel with SSR disabled
+const GitChangesPanelLoader = dynamic(
+  () => import('@industry-theme/repository-composition-panels').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 // Use custom ThemeEditorPanel with live theme editing support
 import { ThemeEditorPanel } from './ThemeEditorPanel';
 
@@ -613,6 +622,15 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <AgentToolsPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'git-changes',
+      label: 'Git Changes',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <GitChangesPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },

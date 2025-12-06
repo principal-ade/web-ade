@@ -24,6 +24,7 @@
     "@industry-theme/code-city-panel": "^0.1.7",
     "@industry-theme/github-panels": "^0.1.8",
     "@industry-theme/markdown-panels": "^0.2.12",
+    "@industry-theme/repository-composition-panels": "0.2.0",
     "@industry-theme/theme-editor-panel": "^0.1.1",
     "@industry-theme/visual-validation-panel": "^0.3.3",
     "@mlc-ai/web-llm": "^0.2.80",
