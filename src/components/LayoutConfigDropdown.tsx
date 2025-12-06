@@ -18,6 +18,19 @@ export interface LayoutConfig {
 export const layoutConfigs: LayoutConfig[] = [
   {
     id: 'default',
+    name: 'Visual Validation',
+    layout: {
+      left: 'config-browser',
+      middle: 'visual-validation',
+      right: 'ai-chat',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
+  {
+    id: 'principal-ai',
     name: 'Principal AI',
     layout: {
       left: 'docs',

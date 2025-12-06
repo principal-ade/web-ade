@@ -1001,6 +1001,11 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
           return;
         }
 
+        // Strip "GitHub/" prefix if present
+        if (cleanPath.startsWith('GitHub/')) {
+          cleanPath = cleanPath.slice('GitHub/'.length);
+        }
+
         // Strip the repo prefix if present (e.g., "owner/repo/src/file.ts" -> "src/file.ts")
         const repoPrefix = `${githubRepo}/`;
         if (cleanPath.startsWith(repoPrefix)) {
@@ -1099,14 +1104,24 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
         try {
           const [owner, name] = githubRepo.split('/');
 
-          // Path comes as `${repositoryPath}/${configPath}` e.g. "owner/repo/.vgc/example.yaml"
-          // Strip the owner/repo prefix to get the relative path
+          // Path comes as `${repositoryPath}/${configPath}` e.g. "/GitHub/owner/repo/.vgc/example.yaml"
+          // Strip all prefixes to get the relative path within the repo
           let cleanPath = filePath;
+
+          // Strip leading slash
+          if (cleanPath.startsWith('/')) {
+            cleanPath = cleanPath.slice(1);
+          }
+
+          // Strip "GitHub/" prefix if present
+          if (cleanPath.startsWith('GitHub/')) {
+            cleanPath = cleanPath.slice('GitHub/'.length);
+          }
+
+          // Strip the owner/repo prefix to get the relative path
           const repoPrefix = `${githubRepo}/`;
           if (cleanPath.startsWith(repoPrefix)) {
             cleanPath = cleanPath.slice(repoPrefix.length);
-          } else if (cleanPath.startsWith('/')) {
-            cleanPath = cleanPath.slice(1);
           }
 
           // Fetch file content from GitHub API

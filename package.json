@@ -26,7 +26,7 @@
     "@industry-theme/markdown-panels": "^0.2.12",
     "@industry-theme/repository-composition-panels": "0.2.0",
     "@industry-theme/theme-editor-panel": "^0.1.1",
-    "@industry-theme/visual-validation-panel": "^0.3.3",
+    "@industry-theme/visual-validation-panel": "file:../../documentation-cli/industry-themed-visual-validation-panel",
     "@mlc-ai/web-llm": "^0.2.80",
     "@octokit/rest": "^22.0.1",
     "@principal-ade/code-quality-panels": "^0.1.0",
