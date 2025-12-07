@@ -2,7 +2,7 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, Wifi, WifiOff, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github } from 'lucide-react';
+import { LogOut, Wifi, WifiOff, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github, Download } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { usePresenceData } from '@/hooks/usePresenceData';
@@ -83,6 +83,21 @@ export function EditorHeader({
         >
           <Logo width={32} height={32} color={theme.colors.primary} />
         </Link>
+        {/* Download App link - only show on home page */}
+        {!repositoryName && (
+          <a
+            href="https://principal-ade.com/download"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-2 py-1 text-sm rounded-md transition-all hover:opacity-80"
+            style={{
+              color: theme.colors.textMuted,
+            }}
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Download App</span>
+          </a>
+        )}
         {/* Layout Config Dropdown - hidden on mobile */}
         {onLayoutConfigChange && (
           <div className="hidden md:flex">
