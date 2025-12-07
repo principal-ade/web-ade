@@ -74,15 +74,17 @@ export function EditorHeader({
         borderColor: theme.colors.border,
       }}
     >
-      {/* Left section: Logo and Layout Config Dropdown */}
+      {/* Left section: Logo and Layout Config Dropdown - hide logo on home page */}
       <div className="flex items-center gap-3 flex-shrink-0 flex-1">
-        <Link
-          href="/"
-          className="flex items-center justify-center w-8 h-8 transition-all hover:opacity-80 flex-shrink-0"
-          title="Home"
-        >
-          <Logo width={32} height={32} color={theme.colors.primary} />
-        </Link>
+        {repositoryName && (
+          <Link
+            href="/"
+            className="flex items-center justify-center w-8 h-8 transition-all hover:opacity-80 flex-shrink-0"
+            title="Home"
+          >
+            <Logo width={32} height={32} color={theme.colors.primary} />
+          </Link>
+        )}
         {/* Download App link - only show on home page */}
         {!repositoryName && (
           <a
@@ -110,8 +112,26 @@ export function EditorHeader({
         )}
       </div>
 
-      {/* Center section: Repository avatar, name/owner, and switch button */}
-      {repositoryName && (
+      {/* Center section: Principal AI branding on home, or Repository info */}
+      {!repositoryName ? (
+        <div
+          className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2"
+          style={{
+            fontFamily: theme.fonts.body,
+          }}
+        >
+          <Logo width={32} height={32} color={theme.colors.primary} />
+          <span
+            className="text-xl font-bold"
+            style={{ fontFamily: theme.fonts.body }}
+          >
+            <span style={{ color: theme.colors.text }}>Principal</span>
+            {' '}
+            <span style={{ color: theme.colors.primary }}>AI</span>
+          </span>
+          <Logo width={32} height={32} color={theme.colors.primary} />
+        </div>
+      ) : (
         <div
           className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2"
           style={{
