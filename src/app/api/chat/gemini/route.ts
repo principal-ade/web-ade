@@ -190,8 +190,8 @@ export async function POST(req: NextRequest) {
     const systemInstruction = buildSystemInstruction(markdownFiles);
     const geminiMessages = convertToGeminiMessages(messages);
 
-    // Use gemini-2.0-flash - fast and cheap with good function calling
-    const model = 'gemini-2.0-flash';
+    // Use gemini-2.5-flash - fast with thinking capabilities and good function calling
+    const model = 'gemini-2.5-flash';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${apiKey}&alt=sse`;
 
     const response = await fetch(url, {
