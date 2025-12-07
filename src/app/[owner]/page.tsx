@@ -14,6 +14,39 @@ import {
 import '@principal-ade/panel-layouts/styles.css';
 import { ExternalLink } from 'lucide-react';
 
+const RECENT_OWNERS_KEY = 'recent-owners';
+const MAX_RECENT_ITEMS = 10;
+
+interface RecentOwner {
+  owner: string;
+  visitedAt: string;
+}
+
+function saveRecentOwner(owner: string) {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const stored = localStorage.getItem(RECENT_OWNERS_KEY);
+    const owners: RecentOwner[] = stored ? JSON.parse(stored) : [];
+
+    // Remove existing entry for this owner if present
+    const filtered = owners.filter(o => o.owner !== owner);
+
+    // Add to front with current timestamp
+    filtered.unshift({
+      owner,
+      visitedAt: new Date().toISOString(),
+    });
+
+    // Keep only the most recent items
+    const trimmed = filtered.slice(0, MAX_RECENT_ITEMS);
+
+    localStorage.setItem(RECENT_OWNERS_KEY, JSON.stringify(trimmed));
+  } catch (err) {
+    console.error('Failed to save recent owner:', err);
+  }
+}
+
 // Dynamically import the OwnerRepositoriesPanel with SSR disabled
 const OwnerRepositoriesPanelLoader = dynamic(
   () => import('@industry-theme/github-panels').then((mod) => {
@@ -45,6 +78,11 @@ function OwnerPageContent({ owner }: { owner: string }) {
     middle: 'markdown-viewer',
     right: 'empty',
   });
+
+  // Save owner to recent history
+  useEffect(() => {
+    saveRecentOwner(owner);
+  }, [owner]);
 
   // Detect mobile viewport
   useEffect(() => {
