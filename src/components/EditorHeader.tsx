@@ -2,11 +2,11 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, Wifi, WifiOff, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User } from 'lucide-react';
+import { LogOut, Wifi, WifiOff, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { usePresenceData } from '@/hooks/usePresenceData';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Logo } from '@principal-ai/logo-component';
 import { LayoutConfigDropdown, LayoutConfig, layoutConfigs } from './LayoutConfigDropdown';
 
@@ -31,6 +31,8 @@ export function EditorHeader({
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
   const pathname = usePathname();
   const [repositoryName, setRepositoryName] = useState<{ owner: string; repo: string } | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Extract repository name from URL
   useEffect(() => {
@@ -46,6 +48,20 @@ export function EditorHeader({
       }
     }
   }, [pathname]);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    if (!userMenuOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [userMenuOpen]);
 
   // Global presence connection status (connects to __global_presence__ room)
   const { connected } = usePresenceData();
@@ -231,26 +247,70 @@ export function EditorHeader({
               )}
             </div>
 
-            {user.avatar_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={user.avatar_url}
-                alt={user.name || user.login}
-                className="w-8 h-8 rounded-full"
-                title={user.name || user.login}
-              />
-            )}
-            <button
-              onClick={logout}
-              className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
-              style={{
-                background: theme.colors.secondary,
-                color: theme.colors.text,
-              }}
-              title="Logout"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            {/* User Menu Dropdown */}
+            <div className="relative" ref={userMenuRef}>
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center gap-1 rounded-md transition-all hover:opacity-80 p-1"
+                style={{
+                  background: userMenuOpen ? theme.colors.secondary : 'transparent',
+                }}
+              >
+                {user.avatar_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={user.avatar_url}
+                    alt={user.name || user.login}
+                    className="w-8 h-8 rounded-full"
+                  />
+                )}
+                <ChevronDown
+                  className="w-3 h-3 transition-transform"
+                  style={{
+                    color: theme.colors.textMuted,
+                    transform: userMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  }}
+                />
+              </button>
+
+              {/* Dropdown Menu */}
+              {userMenuOpen && (
+                <div
+                  className="absolute right-0 top-full mt-1 py-1 rounded-md shadow-lg border min-w-[160px] z-50"
+                  style={{
+                    background: theme.colors.surface,
+                    borderColor: theme.colors.border,
+                  }}
+                >
+                  <a
+                    href={`https://github.com/${user.login}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
+                    style={{ color: theme.colors.text }}
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    <Github className="w-4 h-4" />
+                    Open in GitHub
+                  </a>
+                  <div
+                    className="my-1 h-px"
+                    style={{ background: theme.colors.border }}
+                  />
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      logout();
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 text-sm w-full transition-colors hover:opacity-80"
+                    style={{ color: theme.colors.error }}
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           </>
         ) : (
           <button
