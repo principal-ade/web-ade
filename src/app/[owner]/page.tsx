@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useTheme } from "@principal-ade/industry-theme";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { PanelProvider, usePanelProvider } from "@/contexts/PanelContext";
 import { EditorHeader } from "@/components/EditorHeader";
 import dynamic from "next/dynamic";
@@ -68,21 +68,112 @@ const MarkdownPanelLoader = dynamic(
   { ssr: false }
 );
 
-function OwnerPageContent({ owner }: { owner: string }) {
+// Dynamically import the VisualValidationGraphPanel with SSR disabled
+const VisualValidationPanelLoader = dynamic(
+  () => import('@industry-theme/visual-validation-panel').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
+interface OwnerPageContentProps {
+  owner: string;
+  onPreviewChange?: (repo: string | null) => void;
+}
+
+function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
   const [isMobile, setIsMobile] = useState(false);
   const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
-  const [layout] = useState<PanelLayout>({
+  const [canvasExists, setCanvasExists] = useState(false);
+  const [canvasLoading, setCanvasLoading] = useState(true);
+  const canvasLoadedRef = useRef(false);
+
+  // Layout changes based on whether canvas exists
+  const [layout, setLayout] = useState<PanelLayout>({
     left: 'owner-repositories',
     middle: 'markdown-viewer',
     right: 'empty',
   });
 
+  // Notify parent when previewed repo changes
+  const handlePreviewChange = useCallback((repo: string | null) => {
+    setPreviewedRepo(repo);
+    onPreviewChange?.(repo);
+  }, [onPreviewChange]);
+
   // Save owner to recent history
   useEffect(() => {
     saveRecentOwner(owner);
   }, [owner]);
+
+  // Check if .vgc/architecture.canvas exists when a repo is previewed
+  const checkForCanvas = useCallback(async (repoOwner: string, repoName: string) => {
+    setCanvasLoading(true);
+    canvasLoadedRef.current = false;
+
+    try {
+      const canvasResponse = await fetch(
+        `/api/github/repo/${repoOwner}/${repoName}?action=file&path=${encodeURIComponent('.vgc/architecture.canvas')}`
+      );
+      if (canvasResponse.ok) {
+        setCanvasExists(true);
+        // Update layout to show visual validation panel in middle (replacing README)
+        setLayout({
+          left: 'owner-repositories',
+          middle: 'visual-validation',
+          right: 'empty',
+        });
+      } else {
+        setCanvasExists(false);
+        // Reset to default layout with README
+        setLayout({
+          left: 'owner-repositories',
+          middle: 'markdown-viewer',
+          right: 'empty',
+        });
+      }
+    } catch (err) {
+      console.error('[OwnerPage] Failed to check for architecture.canvas:', err);
+      setCanvasExists(false);
+    } finally {
+      setCanvasLoading(false);
+    }
+  }, []);
+
+  // Auto-load architecture.canvas when panel is ready and canvas exists
+  // Wait for fileTree to be loaded before emitting the config selection event
+  const fileTreeSlice = context.getSlice('fileTree');
+  const fileTreeLoading = fileTreeSlice?.loading ?? true;
+
+  useEffect(() => {
+    if (!canvasExists || canvasLoading || canvasLoadedRef.current || !previewedRepo || fileTreeLoading) return;
+
+    const [repoOwner, repoName] = previewedRepo.split('/');
+    if (!repoOwner || !repoName) return;
+
+    const configPath = `.vgc/architecture.canvas`;
+
+    // Small delay to ensure the visual validation panel is mounted and ready
+    const timer = setTimeout(() => {
+      console.log('[OwnerPage] Emitting vv:config:selected for:', configPath);
+      events.emit({
+        type: 'vv:config:selected',
+        source: 'owner-page',
+        timestamp: Date.now(),
+        payload: {
+          configId: 'architecture',
+          configPath: `/GitHub/${repoOwner}/${repoName}/${configPath}`,
+          configName: 'Architecture'
+        }
+      });
+      canvasLoadedRef.current = true;
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [canvasExists, canvasLoading, events, previewedRepo, fileTreeLoading]);
 
   // Detect mobile viewport
   useEffect(() => {
@@ -106,8 +197,10 @@ function OwnerPageContent({ owner }: { owner: string }) {
           const repoOwner = parts[0];
           const repo = parts[1];
           if (repoOwner && repo) {
-            setPreviewedRepo(payload.repository.full_name);
+            handlePreviewChange(payload.repository.full_name);
             (actions as { previewReadme?: (owner: string, repo: string) => Promise<string> }).previewReadme?.(repoOwner, repo);
+            // Check if this repo has an architecture.canvas file
+            checkForCanvas(repoOwner, repo);
           }
         }
       }),
@@ -120,7 +213,7 @@ function OwnerPageContent({ owner }: { owner: string }) {
     ];
 
     return () => unsubscribers.forEach((unsub) => unsub());
-  }, [events, actions]);
+  }, [events, actions, checkForCanvas, handlePreviewChange]);
 
   const panels = [
     {
@@ -134,6 +227,15 @@ function OwnerPageContent({ owner }: { owner: string }) {
             events={events}
             owner={owner}
           />
+        </div>
+      ),
+    },
+    {
+      id: 'visual-validation',
+      label: 'Architecture',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <VisualValidationPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },
@@ -235,10 +337,9 @@ function OwnerPageContent({ owner }: { owner: string }) {
   );
 }
 
-export default function OwnerPage() {
-  const params = useParams();
-  const owner = params.owner as string;
+function OwnerPageWrapper({ owner }: { owner: string }) {
   const { theme } = useTheme();
+  const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
 
   return (
     <div
@@ -251,12 +352,20 @@ export default function OwnerPage() {
           path: '/workspace',
         }}
         repository={{
-          name: owner,
-          path: `/workspace/${owner}`,
+          name: previewedRepo ? previewedRepo.split('/')[1] || owner : owner,
+          path: previewedRepo ? `/GitHub/${previewedRepo}` : `/workspace/${owner}`,
         }}
+        githubRepo={previewedRepo || undefined}
       >
-        <OwnerPageContent owner={owner} />
+        <OwnerPageContent owner={owner} onPreviewChange={setPreviewedRepo} />
       </PanelProvider>
     </div>
   );
+}
+
+export default function OwnerPage() {
+  const params = useParams();
+  const owner = params.owner as string;
+
+  return <OwnerPageWrapper owner={owner} />;
 }
