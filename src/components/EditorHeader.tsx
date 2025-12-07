@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LogOut, Wifi, WifiOff, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github, Download } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { usePresenceData } from '@/hooks/usePresenceData';
+import { usePresenceData, RepositorySession } from '@/hooks/usePresenceData';
 import { useEffect, useState, useRef } from 'react';
 import { Logo } from '@principal-ai/logo-component';
 import { LayoutConfigDropdown, LayoutConfig, layoutConfigs } from './LayoutConfigDropdown';
@@ -64,7 +64,10 @@ export function EditorHeader({
   }, [userMenuOpen]);
 
   // Global presence connection status (connects to __global_presence__ room)
-  const { connected } = usePresenceData();
+  const { connected, sessions } = usePresenceData();
+
+  // Check if user has a desktop app connected
+  const hasDesktopApp = sessions.some((s: RepositorySession) => s.clientType === 'desktop');
 
   return (
     <header
@@ -85,20 +88,36 @@ export function EditorHeader({
             <Logo width={32} height={32} color={theme.colors.primary} />
           </Link>
         )}
-        {/* Download App link - only show on home page */}
+        {/* Download App or Open in Desktop - only show on home page */}
         {!repositoryName && (
-          <a
-            href="https://principal-ade.com/download"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-2 py-1 text-sm rounded-md transition-all hover:opacity-80"
-            style={{
-              color: theme.colors.primary,
-            }}
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Download App</span>
-          </a>
+          hasDesktopApp ? (
+            <button
+              onClick={() => {
+                window.location.href = 'principal-ade://open';
+              }}
+              className="flex items-center gap-1.5 px-2 py-1 text-sm rounded-md transition-all hover:opacity-80"
+              style={{
+                color: theme.colors.primary,
+              }}
+              title="Open Principal ADE desktop app"
+            >
+              <Monitor className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Open Desktop</span>
+            </button>
+          ) : (
+            <a
+              href="https://principal-ade.com/download"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-2 py-1 text-sm rounded-md transition-all hover:opacity-80"
+              style={{
+                color: theme.colors.primary,
+              }}
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Download App</span>
+            </a>
+          )
         )}
         {/* Layout Config Dropdown - hidden on mobile */}
         {onLayoutConfigChange && (
