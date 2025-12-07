@@ -93,7 +93,7 @@ export function EditorHeader({
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 px-2 py-1 text-sm rounded-md transition-all hover:opacity-80"
             style={{
-              color: theme.colors.textMuted,
+              color: theme.colors.primary,
             }}
           >
             <Download className="w-3.5 h-3.5" />
