@@ -65,9 +65,11 @@ function HomePageContent() {
           actions={stubActions}
           context={{} as never}
           onNavigate={handleNavigate}
-          highlightedProjects={[
-            { owner: 'TheKicker25', repo: 'aider' },
-            { owner: 'TheKicker25', repo: 'dexter' },
+          highlightedProjects={[]}
+          featuredOrganizations={[
+            { login: 'principal-ai', description: 'AI-powered development tools' },
+            { login: 'principal-ade', description: 'Application Development Environment' },
+            { login: 'principal-forks', description: 'Curated forks of popular projects' },
           ]}
         />
       </div>
