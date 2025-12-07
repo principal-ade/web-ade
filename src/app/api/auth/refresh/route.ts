@@ -3,10 +3,13 @@
  *
  * Refreshes expired access tokens using the refresh token.
  * Reads refresh_token from HTTP-only cookie and exchanges for new tokens.
+ *
+ * Note: The auth server only returns WorkOS tokens on refresh - the GitHub
+ * token is preserved locally as it doesn't change during refresh.
  */
 
 import { NextResponse } from 'next/server';
-import { getRefreshToken, setAuthCookies, TokenData } from '@/lib/auth/cookies';
+import { getRefreshToken, refreshAuthCookies, RefreshTokenData } from '@/lib/auth/cookies';
 
 export async function POST() {
   try {
@@ -54,16 +57,15 @@ export async function POST() {
     const data = await response.json();
 
     // Validate response data
-    if (
-      !data.github_access_token ||
-      !data.workos_access_token ||
-      !data.refresh_token
-    ) {
-      throw new Error('Invalid token response from landing-page');
+    // Note: github_access_token is NOT returned on refresh - the client
+    // already has the GitHub token stored locally and it doesn't change
+    if (!data.workos_access_token || !data.refresh_token) {
+      throw new Error('Invalid token response from auth server');
     }
 
-    // Update HTTP-only cookies with new tokens
-    await setAuthCookies(data as TokenData);
+    // Update HTTP-only cookies with new WorkOS tokens
+    // GitHub token is preserved (its expiry is extended but value unchanged)
+    await refreshAuthCookies(data as RefreshTokenData);
 
     return NextResponse.json({
       success: true,
