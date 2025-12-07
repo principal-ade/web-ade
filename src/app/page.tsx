@@ -1,36 +1,80 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { EditorHeader } from "@/components/EditorHeader";
-import { RepoSelectionModal } from "@/components/RepoSelectionModal";
-import { useState, useEffect } from "react";
 import { useTheme } from "@principal-ade/industry-theme";
+import { useRouter } from "next/navigation";
+import { useCallback, useState, useEffect } from "react";
 
-export default function HomePage() {
-  const [showModal, setShowModal] = useState(false);
+// Dynamically import WelcomePanel to avoid SSR issues
+const WelcomePanel = dynamic(
+  () => import('@industry-theme/github-panels').then(mod => mod.WelcomePanel),
+  { ssr: false }
+);
+
+// Stub props for the panel
+const stubEvents = {
+  emit: () => {},
+  on: () => () => {},
+  off: () => {},
+};
+
+const stubActions = {
+  openFile: () => {},
+  closeFile: () => {},
+  saveFile: () => Promise.resolve(),
+  runCommand: () => Promise.resolve(),
+};
+
+// Check if user has any stored recent items
+function hasStoredHistory(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const repos = localStorage.getItem('recent-repositories');
+    const owners = localStorage.getItem('recent-owners');
+    const hasRepos = repos ? JSON.parse(repos).length > 0 : false;
+    const hasOwners = owners ? JSON.parse(owners).length > 0 : false;
+    return hasRepos || hasOwners;
+  } catch {
+    return false;
+  }
+}
+
+function HomePageContent() {
   const { theme } = useTheme();
+  const router = useRouter();
+  const [showHeader, setShowHeader] = useState(false);
 
   useEffect(() => {
-    // Show modal when landing on / without a repo
-    setShowModal(true);
+    setShowHeader(hasStoredHistory());
   }, []);
+
+  const handleNavigate = useCallback((owner: string, repo: string) => {
+    router.push(`/${owner}/${repo}`);
+  }, [router]);
 
   return (
     <div
       className="h-screen w-screen overflow-hidden flex flex-col"
       style={{ background: theme.colors.background }}
     >
-      <EditorHeader />
-      <div className="flex-1 overflow-hidden flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl mb-4" style={{ color: theme.colors.text }}>
-            Select a GitHub Repository
-          </h2>
-          <p style={{ color: theme.colors.textMuted }}>
-            Choose a repository to view its documentation
-          </p>
-        </div>
+      {showHeader && <EditorHeader />}
+      <div className="flex-1 overflow-hidden">
+        <WelcomePanel
+          events={stubEvents}
+          actions={stubActions}
+          context={{} as never}
+          onNavigate={handleNavigate}
+          highlightedProjects={[
+            { owner: 'TheKicker25', repo: 'aider' },
+            { owner: 'TheKicker25', repo: 'dexter' },
+          ]}
+        />
       </div>
-      <RepoSelectionModal isOpen={showModal} onClose={() => setShowModal(false)} />
     </div>
   );
+}
+
+export default function HomePage() {
+  return <HomePageContent />;
 }
