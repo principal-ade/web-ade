@@ -2,7 +2,7 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, Wifi, WifiOff, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github, ChevronDown } from 'lucide-react';
+import { LogOut, Wifi, WifiOff, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { usePresenceData } from '@/hooks/usePresenceData';
@@ -251,10 +251,7 @@ export function EditorHeader({
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-1 rounded-md transition-all hover:opacity-80 p-1"
-                style={{
-                  background: userMenuOpen ? theme.colors.secondary : 'transparent',
-                }}
+                className="flex items-center rounded-full transition-all hover:opacity-80"
               >
                 {user.avatar_url && (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -264,13 +261,6 @@ export function EditorHeader({
                     className="w-8 h-8 rounded-full"
                   />
                 )}
-                <ChevronDown
-                  className="w-3 h-3 transition-transform"
-                  style={{
-                    color: theme.colors.textMuted,
-                    transform: userMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                  }}
-                />
               </button>
 
               {/* Dropdown Menu */}
