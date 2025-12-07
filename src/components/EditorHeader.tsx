@@ -123,10 +123,8 @@ export function EditorHeader({
 
           {/* Name/Owner */}
           <div className="flex flex-col items-center gap-px">
-            <a
-              href={`https://github.com/${repositoryName.owner}`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href={`/${repositoryName.owner}`}
               className="transition-opacity hover:opacity-80"
               style={{
                 fontSize: theme.fontSizes[2],
@@ -136,7 +134,7 @@ export function EditorHeader({
               }}
             >
               {repositoryName.owner}
-            </a>
+            </Link>
             <a
               href={`https://github.com/${repositoryName.owner}/${repositoryName.repo}`}
               target="_blank"
