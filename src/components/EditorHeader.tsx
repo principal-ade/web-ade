@@ -5,8 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LogOut, Wifi, WifiOff, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useControlTowerClient } from '@/lib/control-tower';
-import { getTrafficControllerUrl, getWebSocketToken } from '@/lib/control-tower/config';
+import { usePresenceData } from '@/hooks/usePresenceData';
 import { useEffect, useState } from 'react';
 import { Logo } from '@principal-ai/logo-component';
 import { LayoutConfigDropdown, LayoutConfig, layoutConfigs } from './LayoutConfigDropdown';
@@ -31,47 +30,25 @@ export function EditorHeader({
   const { theme } = useTheme();
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
   const pathname = usePathname();
-  const [wsToken, setWsToken] = useState<string | null>(null);
   const [repositoryName, setRepositoryName] = useState<{ owner: string; repo: string } | null>(null);
 
   // Extract repository name from URL
   useEffect(() => {
     if (pathname) {
       const pathParts = pathname.split('/');
-      console.log('[EditorHeader] URL pathname:', pathname);
-      console.log('[EditorHeader] Path parts:', pathParts);
       // Path format: /owner/repo
       if (pathParts.length >= 3 && pathParts[1] && pathParts[2]) {
         const owner = pathParts[1];
         const repo = pathParts[2];
-        console.log('[EditorHeader] Setting repository:', { owner, repo });
         setRepositoryName({ owner, repo });
       } else {
-        console.log('[EditorHeader] No repository found in path');
         setRepositoryName(null);
       }
     }
   }, [pathname]);
 
-  // Fetch WebSocket token when user authenticates and has a repository
-  useEffect(() => {
-    if (isAuthenticated && repositoryName) {
-      const fullRepoName = `${repositoryName.owner}/${repositoryName.repo}`;
-      getWebSocketToken(fullRepoName, 'main')
-        .then(setWsToken)
-        .catch(error => {
-          console.error('[EditorHeader] Failed to fetch WebSocket token:', error);
-        });
-    }
-  }, [isAuthenticated, repositoryName]);
-
-  // WebSocket connection status
-  const { connected } = useControlTowerClient({
-    serverUrl: getTrafficControllerUrl(),
-    accessToken: wsToken || 'temp-token',
-    autoConnect: isAuthenticated && !!wsToken && !!repositoryName,
-    enableReconnection: true,
-  });
+  // Global presence connection status (connects to __global_presence__ room)
+  const { connected } = usePresenceData();
 
   return (
     <header
@@ -238,23 +215,21 @@ export function EditorHeader({
           </div>
         ) : isAuthenticated && user ? (
           <>
-            {/* WebSocket Connection Indicator - only show when in a repository context */}
-            {repositoryName && (
-              <div
-                className="flex items-center justify-center w-8 h-8 rounded-md"
-                style={{
-                  background: connected ? theme.colors.success + '20' : theme.colors.error + '20',
-                  color: connected ? theme.colors.success : theme.colors.error,
-                }}
-                title={connected ? 'Connected to server' : 'Disconnected from server'}
-              >
-                {connected ? (
-                  <Wifi className="w-3 h-3" />
-                ) : (
-                  <WifiOff className="w-3 h-3" />
-                )}
-              </div>
-            )}
+            {/* Global Presence Connection Indicator */}
+            <div
+              className="flex items-center justify-center w-8 h-8 rounded-md"
+              style={{
+                background: connected ? theme.colors.success + '20' : theme.colors.error + '20',
+                color: connected ? theme.colors.success : theme.colors.error,
+              }}
+              title={connected ? 'Connected to server' : 'Disconnected from server'}
+            >
+              {connected ? (
+                <Wifi className="w-3 h-3" />
+              ) : (
+                <WifiOff className="w-3 h-3" />
+              )}
+            </div>
 
             {user.avatar_url && (
               // eslint-disable-next-line @next/next/no-img-element
