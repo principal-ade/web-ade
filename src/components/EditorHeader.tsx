@@ -238,21 +238,23 @@ export function EditorHeader({
           </div>
         ) : isAuthenticated && user ? (
           <>
-            {/* WebSocket Connection Indicator */}
-            <div
-              className="flex items-center justify-center w-8 h-8 rounded-md"
-              style={{
-                background: connected ? theme.colors.success + '20' : theme.colors.error + '20',
-                color: connected ? theme.colors.success : theme.colors.error,
-              }}
-              title={connected ? 'Connected to server' : 'Disconnected from server'}
-            >
-              {connected ? (
-                <Wifi className="w-3 h-3" />
-              ) : (
-                <WifiOff className="w-3 h-3" />
-              )}
-            </div>
+            {/* WebSocket Connection Indicator - only show when in a repository context */}
+            {repositoryName && (
+              <div
+                className="flex items-center justify-center w-8 h-8 rounded-md"
+                style={{
+                  background: connected ? theme.colors.success + '20' : theme.colors.error + '20',
+                  color: connected ? theme.colors.success : theme.colors.error,
+                }}
+                title={connected ? 'Connected to server' : 'Disconnected from server'}
+              >
+                {connected ? (
+                  <Wifi className="w-3 h-3" />
+                ) : (
+                  <WifiOff className="w-3 h-3" />
+                )}
+              </div>
+            )}
 
             {user.avatar_url && (
               // eslint-disable-next-line @next/next/no-img-element
