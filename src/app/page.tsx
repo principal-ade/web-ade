@@ -53,6 +53,10 @@ function HomePageContent() {
     router.push(`/${owner}/${repo}`);
   }, [router]);
 
+  const handleOrganizationClick = useCallback((org: string) => {
+    router.push(`/${org}`);
+  }, [router]);
+
   return (
     <div
       className="h-screen w-screen overflow-hidden flex flex-col"
@@ -65,6 +69,7 @@ function HomePageContent() {
           actions={stubActions}
           context={{} as never}
           onNavigate={handleNavigate}
+          onOrganizationClick={handleOrganizationClick}
           highlightedProjects={[]}
           featuredOrganizations={[
             { login: 'principal-ai', description: 'AI-powered development tools' },
