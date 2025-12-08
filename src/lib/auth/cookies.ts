@@ -80,6 +80,14 @@ export async function setAuthCookies(tokens: TokenData): Promise<void> {
     ...COOKIE_OPTIONS,
     maxAge,
   });
+
+  // Store GitHub user ID for token sync (used when local token becomes invalid)
+  if (tokens.user?.id) {
+    cookieStore.set('github_user_id', String(tokens.user.id), {
+      ...COOKIE_OPTIONS,
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+    });
+  }
 }
 
 /**
@@ -119,6 +127,16 @@ export async function isAuthenticated(): Promise<boolean> {
 }
 
 /**
+ * Gets GitHub user ID from HTTP-only cookie
+ * @returns GitHub user ID or null
+ */
+export async function getGitHubUserId(): Promise<number | null> {
+  const cookieStore = await cookies();
+  const id = cookieStore.get('github_user_id')?.value;
+  return id ? parseInt(id, 10) : null;
+}
+
+/**
  * Clears all authentication cookies
  */
 export async function clearAuthCookies(): Promise<void> {
@@ -128,6 +146,7 @@ export async function clearAuthCookies(): Promise<void> {
   cookieStore.set('workos_token', '', { ...COOKIE_OPTIONS, maxAge: 0 });
   cookieStore.set('refresh_token', '', { ...COOKIE_OPTIONS, maxAge: 0 });
   cookieStore.set('token_expires_at', '', { ...COOKIE_OPTIONS, maxAge: 0 });
+  cookieStore.set('github_user_id', '', { ...COOKIE_OPTIONS, maxAge: 0 });
 }
 
 /**
