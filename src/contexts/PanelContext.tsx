@@ -26,6 +26,22 @@ import type { CodebaseView } from '@principal-ai/alexandria-core-library/types';
 import { minimatch } from 'minimatch';
 import type { FileTree, FileInfo, DirectoryInfo } from '@principal-ai/repository-abstraction';
 import { useAuth } from './AuthContext';
+import { usePresenceData, type RepositorySession } from '@/hooks/usePresenceData';
+
+// Current activity type for presence
+interface CurrentActivity {
+  type: 'editing' | 'reviewing' | 'debugging' | 'idle';
+  details?: string;
+}
+
+// Current projects slice data structure
+interface CurrentProjectsSliceData {
+  projects: RepositorySession[];
+  activeProject?: string;
+  currentActivity?: CurrentActivity;
+  isLoading: boolean;
+  error: string | null;
+}
 
 interface GitHubTreeItem {
   path: string;
@@ -117,6 +133,8 @@ interface PanelProviderValue {
   context: PanelContextValue;
   actions: PanelActions;
   events: PanelEventEmitter;
+  /** Whether connected to presence server (for showing current projects panel) */
+  presenceConnected: boolean;
 }
 
 const PanelContext = createContext<PanelProviderValue | null>(null);
@@ -274,6 +292,14 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
 
   // Get auth state for github-repositories slice
   const { isAuthenticated } = useAuth();
+
+  // Get presence data for current-projects slice
+  const {
+    sessions: presenceSessions,
+    connected: presenceConnected,
+    loading: presenceLoading,
+    error: presenceError,
+  } = usePresenceData(githubRepo);
 
   // State for active file content and path
   const [markdownContent, setMarkdownContent] = useState<string | null>(null);
@@ -798,6 +824,26 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
           },
         },
       ],
+      [
+        'current-projects',
+        {
+          scope: 'global',
+          name: 'current-projects',
+          data: {
+            projects: presenceSessions,
+            activeProject: githubRepo,
+            currentActivity: undefined,
+            isLoading: presenceLoading,
+            error: presenceError?.message ?? null,
+          } as CurrentProjectsSliceData,
+          loading: presenceLoading,
+          error: presenceError ?? null,
+          refresh: async () => {
+            // Presence data refreshes automatically via WebSocket
+            console.log('[PanelContext] Current projects slice refresh triggered');
+          },
+        },
+      ],
     ])
   );
 
@@ -876,6 +922,23 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       data: qualityData,
       loading: qualityLoading,
       error: qualityError,
+    });
+  }
+
+  // Update current-projects slice with presence data
+  const currentProjectsSlice = slicesRef.current.get('current-projects');
+  if (currentProjectsSlice) {
+    slicesRef.current.set('current-projects', {
+      ...currentProjectsSlice,
+      data: {
+        projects: presenceSessions,
+        activeProject: githubRepo,
+        currentActivity: undefined, // TODO: Get from presence metadata
+        isLoading: presenceLoading,
+        error: presenceError?.message ?? null,
+      } as CurrentProjectsSliceData,
+      loading: presenceLoading,
+      error: presenceError ?? null,
     });
   }
 
@@ -986,7 +1049,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError]
+    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError, presenceSessions, presenceLoading, presenceConnected]
   );
 
   // Actions
@@ -1264,8 +1327,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       context,
       actions,
       events,
+      presenceConnected,
     }),
-    [context, actions, events]
+    [context, actions, events, presenceConnected]
   );
 
   // Fetch GitHub repositories when authentication state changes

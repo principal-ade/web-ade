@@ -83,14 +83,7 @@ const ConfigLibraryBrowserPanelLoader = dynamic(
   { ssr: false }
 );
 
-// Dynamically import the GitHubProjectsPanel with SSR disabled
-const GitHubProjectsPanelLoader = dynamic(
-  () => import('@industry-theme/github-panels').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
+// GitHubProjectsPanel is now loaded conditionally via ProjectsPanel component
 
 // Dynamically import the GitHubSearchPanel with SSR disabled
 const GitHubSearchPanelLoader = dynamic(
@@ -137,8 +130,11 @@ const GitChangesPanelLoader = dynamic(
   { ssr: false }
 );
 
+// CurrentProjectsPanel is loaded conditionally via ProjectsPanel component
+
 // Use custom ThemeEditorPanel with live theme editing support
 import { ThemeEditorPanel } from './ThemeEditorPanel';
+import { ProjectsPanel } from './ProjectsPanel';
 
 type ViewMode = 'editor' | 'kanban' | 'visual-validation' | 'github-projects';
 interface EditorLayoutContentProps {
@@ -163,7 +159,7 @@ function EditorLayoutContent({
   setCurrentLayoutConfigId,
 }: EditorLayoutContentProps) {
   const { theme } = useTheme();
-  const { context, actions, events } = usePanelProvider();
+  const { context, actions, events, presenceConnected } = usePanelProvider();
   const { login, isAuthenticated } = useAuth();
   const { setColor, resetColor, resetAllColors } = useGlobalTheme();
   const [viewMode, setViewMode] = useState<ViewMode>('editor');
@@ -591,10 +587,10 @@ function EditorLayoutContent({
     },
     {
       id: 'github-projects',
-      label: 'GitHub Projects',
+      label: presenceConnected ? 'Current Projects' : 'GitHub Projects',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <GitHubProjectsPanelLoader context={context} actions={actions} events={events} />
+          <ProjectsPanel context={context} actions={actions} events={events} />
         </div>
       ),
     },
