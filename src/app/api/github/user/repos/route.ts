@@ -28,6 +28,11 @@ interface GitHubRepo {
   forks_count: number;
   updated_at: string;
   topics?: string[];
+  license?: {
+    key: string;
+    name: string;
+    spdx_id: string;
+  } | null;
 }
 
 interface GitHubOrg {
@@ -102,6 +107,7 @@ export async function GET() {
           forks_count: repo.forks_count,
           updated_at: repo.updated_at,
           topics: repo.topics,
+          license: repo.license?.spdx_id || null,
         })),
       };
     });
@@ -129,6 +135,7 @@ export async function GET() {
         forks_count: repo.forks_count,
         updated_at: repo.updated_at,
         topics: repo.topics,
+        license: repo.license?.spdx_id || null,
       })),
       starred: starredRepos.map((repo) => ({
         id: repo.id,
@@ -146,6 +153,7 @@ export async function GET() {
         forks_count: repo.forks_count,
         updated_at: repo.updated_at,
         topics: repo.topics,
+        license: repo.license?.spdx_id || null,
       })),
       organizations,
     });
