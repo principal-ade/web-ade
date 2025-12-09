@@ -77,13 +77,19 @@ const VisualValidationPanelLoader = dynamic(
   { ssr: false }
 );
 
-// Dynamically import the PackageCompositionPanel with SSR disabled
-const PackageCompositionPanelLoader = dynamic(
-  () => import('@industry-theme/repository-composition-panels').then((mod) => {
-    const Component = mod.panels[1]!.component as React.ComponentType<
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      any
-    >;
+// Dynamically import the AlexandriaDocsPanel with SSR disabled
+const AlexandriaDocsPanelLoader = dynamic(
+  () => import('@industry-theme/alexandria-docs-panel').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
+// Dynamically import the ConfigLibraryBrowserPanel with SSR disabled
+const ConfigLibraryBrowserPanelLoader = dynamic(
+  () => import('@industry-theme/visual-validation-panel').then((mod) => {
+    const Component = mod.panels[1]!.component;
     return { default: Component };
   }),
   { ssr: false }
@@ -105,12 +111,19 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(true);
 
-  // Layout changes based on whether canvas exists
-  const [layout, setLayout] = useState<PanelLayout>({
+  // Layout with tabbed middle panel for Preview and Architecture
+  // and tabbed right panel for Docs and Configs
+  const layout: PanelLayout = {
     left: 'owner-repositories',
-    middle: 'markdown-viewer',
-    right: 'package-composition',
-  });
+    middle: {
+      type: 'tabs',
+      panels: ['markdown-viewer', 'visual-validation'],
+    },
+    right: {
+      type: 'tabs',
+      panels: ['alexandria-docs', 'config-library'],
+    },
+  };
 
   // Notify parent when previewed repo changes
   const handlePreviewChange = useCallback((repo: string | null) => {
@@ -132,23 +145,7 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
       const canvasResponse = await fetch(
         `/api/github/repo/${repoOwner}/${repoName}?action=file&path=${encodeURIComponent('.vgc/architecture.canvas')}`
       );
-      if (canvasResponse.ok) {
-        setCanvasExists(true);
-        // Update layout to show visual validation panel in middle (replacing README)
-        setLayout({
-          left: 'owner-repositories',
-          middle: 'visual-validation',
-          right: 'package-composition',
-        });
-      } else {
-        setCanvasExists(false);
-        // Reset to default layout with README
-        setLayout({
-          left: 'owner-repositories',
-          middle: 'markdown-viewer',
-          right: 'package-composition',
-        });
-      }
+      setCanvasExists(canvasResponse.ok);
     } catch (err) {
       console.error('[OwnerPage] Failed to check for architecture.canvas:', err);
       setCanvasExists(false);
@@ -263,11 +260,20 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
       ),
     },
     {
-      id: 'package-composition',
-      label: 'Packages',
+      id: 'alexandria-docs',
+      label: 'Docs',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <PackageCompositionPanelLoader context={context} actions={actions} events={events} />
+          <AlexandriaDocsPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'config-library',
+      label: 'Configs',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <ConfigLibraryBrowserPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },
