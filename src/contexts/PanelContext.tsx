@@ -92,6 +92,25 @@ interface GitHubRepositoriesData {
   isAuthenticated: boolean;
 }
 
+// Owner repositories slice data (for OwnerRepositoriesPanel)
+interface OwnerInfo {
+  login: string;
+  avatar_url: string;
+  name?: string;
+  bio?: string;
+  type: 'User' | 'Organization';
+  public_repos: number;
+  followers?: number;
+  following?: number;
+}
+
+interface OwnerRepositoriesData {
+  owner: OwnerInfo | null;
+  repositories: GitHubRepository[];
+  isAuthenticated: boolean;
+  error?: string;
+}
+
 interface GitHubTreeResponse {
   sha: string;
   url: string;
@@ -377,6 +396,62 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
   const [packages, setPackages] = useState<PackageLayer[]>([]);
   const [packagesLoading, setPackagesLoading] = useState(false);
   const [packagesError, setPackagesError] = useState<Error | null>(null);
+
+  // State for owner repositories (for OwnerRepositoriesPanel)
+  const [ownerRepos, setOwnerRepos] = useState<OwnerRepositoriesData>({
+    owner: null,
+    repositories: [],
+    isAuthenticated: false,
+  });
+  const [ownerReposLoading, setOwnerReposLoading] = useState(false);
+  const [currentOwner, setCurrentOwner] = useState<string | null>(null);
+
+  // Fetch repositories for a specific owner (user or org)
+  const fetchOwnerRepos = useCallback(async (owner: string) => {
+    setOwnerReposLoading(true);
+    setCurrentOwner(owner);
+    console.log('[PanelContext] Fetching owner repositories for:', owner);
+
+    try {
+      const response = await fetch(`/api/github/owner/${owner}/repos`, {
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setOwnerRepos({
+          owner: null,
+          repositories: [],
+          isAuthenticated: data.isAuthenticated ?? false,
+          error: data.error || `Failed to fetch repos: ${response.statusText}`,
+        });
+        return;
+      }
+
+      setOwnerRepos({
+        owner: data.owner,
+        repositories: data.repositories || [],
+        isAuthenticated: data.isAuthenticated ?? false,
+      });
+
+      console.log('[PanelContext] Owner repos loaded:', {
+        owner: data.owner?.login,
+        repoCount: data.repositories?.length || 0,
+        isAuthenticated: data.isAuthenticated,
+      });
+    } catch (err) {
+      console.error('[PanelContext] Failed to fetch owner repos:', err);
+      setOwnerRepos({
+        owner: null,
+        repositories: [],
+        isAuthenticated: false,
+        error: err instanceof Error ? err.message : 'Failed to fetch repositories',
+      });
+    } finally {
+      setOwnerReposLoading(false);
+    }
+  }, []);
 
   // Fetch user's GitHub repositories
   const fetchGithubRepos = useCallback(async () => {
@@ -1033,6 +1108,21 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
           },
         },
       ],
+      [
+        'owner-repositories',
+        {
+          scope: 'global',
+          name: 'owner-repositories',
+          data: ownerRepos,
+          loading: ownerReposLoading,
+          error: ownerRepos.error ? new Error(ownerRepos.error) : null,
+          refresh: async () => {
+            if (currentOwner) {
+              await fetchOwnerRepos(currentOwner);
+            }
+          },
+        },
+      ],
     ])
   );
 
@@ -1139,6 +1229,17 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       data: packages,
       loading: packagesLoading,
       error: packagesError,
+    });
+  }
+
+  // Update owner-repositories slice with fetched data
+  const ownerReposSlice = slicesRef.current.get('owner-repositories');
+  if (ownerReposSlice) {
+    slicesRef.current.set('owner-repositories', {
+      ...ownerReposSlice,
+      data: ownerRepos,
+      loading: ownerReposLoading,
+      error: ownerRepos.error ? new Error(ownerRepos.error) : null,
     });
   }
 
@@ -1249,7 +1350,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError, presenceSessions, presenceLoading, presenceConnected, packages, packagesLoading, packagesError]
+    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError, presenceSessions, presenceLoading, presenceConnected, packages, packagesLoading, packagesError, ownerRepos, ownerReposLoading]
   );
 
   // Actions
@@ -1550,6 +1651,32 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     fetchCodebaseViews(githubRepo);
     fetchPackages(githubRepo);
   }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics, fetchPackages]);
+
+  // Listen for owner-repositories events from panels
+  useEffect(() => {
+    // Handle request to fetch owner repositories
+    const unsubRequest = events.on<{ owner: string }>('owner-repositories:request', (event) => {
+      const { owner } = event.payload;
+      if (owner) {
+        console.log('[PanelContext] Received owner-repositories:request for:', owner);
+        fetchOwnerRepos(owner);
+      }
+    });
+
+    // Handle refresh request
+    const unsubRefresh = events.on<{ owner: string }>('owner-repositories:refresh', (event) => {
+      const { owner } = event.payload;
+      if (owner) {
+        console.log('[PanelContext] Received owner-repositories:refresh for:', owner);
+        fetchOwnerRepos(owner);
+      }
+    });
+
+    return () => {
+      unsubRequest();
+      unsubRefresh();
+    };
+  }, [events, fetchOwnerRepos]);
 
   return <PanelContext.Provider value={value}>{children}</PanelContext.Provider>;
 }
