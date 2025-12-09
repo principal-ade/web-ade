@@ -2,7 +2,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { describe, it, expect } from 'vitest';
 import { JWTAuthAdapter } from '../JWTAuthAdapter';
-import type { TokenPayload } from '@principal-ai/control-tower-core';
 
 describe('JWTAuthAdapter', () => {
   const validToken =
@@ -13,25 +12,6 @@ describe('JWTAuthAdapter', () => {
       const adapter = new JWTAuthAdapter(validToken);
       expect(adapter).toBeDefined();
       expect(adapter.getCurrentToken()).toBe(validToken);
-    });
-  });
-
-  describe('authenticate', () => {
-    it('should return success with token', async () => {
-      const adapter = new JWTAuthAdapter(validToken);
-      const result = await adapter.authenticate({ type: 'jwt', token: 'ignored' });
-
-      expect(result.success).toBe(true);
-      expect(result.token).toBe(validToken);
-    });
-
-    it('should ignore credentials parameter', async () => {
-      const adapter = new JWTAuthAdapter(validToken);
-      const result = await adapter.authenticate({ type: 'oauth', provider: 'github' } as any);
-
-      // Should still return the constructor token
-      expect(result.success).toBe(true);
-      expect(result.token).toBe(validToken);
     });
   });
 
@@ -86,15 +66,6 @@ describe('JWTAuthAdapter', () => {
     it('should return true', () => {
       const adapter = new JWTAuthAdapter(validToken);
       expect(adapter.isAuthRequired()).toBe(true);
-    });
-  });
-
-  describe('getSupportedCredentialTypes', () => {
-    it('should return jwt type', () => {
-      const adapter = new JWTAuthAdapter(validToken);
-      const types = adapter.getSupportedCredentialTypes();
-
-      expect(types).toEqual(['jwt']);
     });
   });
 });

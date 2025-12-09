@@ -1,31 +1,17 @@
 import type { IAuthAdapter } from '@principal-ai/control-tower-core/abstractions';
-import type {
-  AuthResult,
-  TokenPayload,
-  Credentials,
-} from '@principal-ai/control-tower-core/types';
+import type { TokenPayload } from '@principal-ai/control-tower-core/types';
 
 /**
  * Simple JWT Auth Adapter for browser environments
  *
  * This adapter handles JWT token-based authentication for Control Tower Core.
- * The token is provided in the constructor and returned during authentication.
+ * The token is provided in the constructor and used for authentication.
  */
 export class JWTAuthAdapter implements IAuthAdapter {
   private token: string;
 
   constructor(token: string) {
     this.token = token;
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async authenticate(_credentials: Credentials): Promise<AuthResult> {
-    // For JWT auth, we don't use credentials parameter
-    // The token is already provided in the constructor
-    return {
-      success: true,
-      token: this.token,
-    };
   }
 
   getCurrentToken(): string {
@@ -61,9 +47,5 @@ export class JWTAuthAdapter implements IAuthAdapter {
 
   isAuthRequired(): boolean {
     return true;
-  }
-
-  getSupportedCredentialTypes() {
-    return ['jwt' as const];
   }
 }
