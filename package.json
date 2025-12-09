@@ -21,7 +21,7 @@
     "@industry-theme/agent-driven-ui-panels": "^0.1.0",
     "@industry-theme/alexandria-docs-panel": "^0.4.16",
     "@industry-theme/backlogmd-kanban-panel": "^0.2.3",
-    "@industry-theme/code-city-panel": "^0.1.14",
+    "@industry-theme/code-city-panel": "^0.1.15",
     "@industry-theme/git-sync-panels": "^0.1.3",
     "@industry-theme/github-panels": "^0.1.26",
     "@industry-theme/markdown-panels": "^0.2.12",
