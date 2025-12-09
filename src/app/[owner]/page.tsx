@@ -77,6 +77,18 @@ const VisualValidationPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the PackageCompositionPanel with SSR disabled
+const PackageCompositionPanelLoader = dynamic(
+  () => import('@industry-theme/repository-composition-panels').then((mod) => {
+    const Component = mod.panels[1]!.component as React.ComponentType<
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      any
+    >;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 interface OwnerPageContentProps {
   owner: string;
   onPreviewChange?: (repo: string | null) => void;
@@ -90,12 +102,14 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
   const [canvasExists, setCanvasExists] = useState(false);
   const [canvasLoading, setCanvasLoading] = useState(true);
   const canvasLoadedRef = useRef(false);
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(true);
 
   // Layout changes based on whether canvas exists
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'owner-repositories',
     middle: 'markdown-viewer',
-    right: 'empty',
+    right: 'package-composition',
   });
 
   // Notify parent when previewed repo changes
@@ -124,7 +138,7 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
         setLayout({
           left: 'owner-repositories',
           middle: 'visual-validation',
-          right: 'empty',
+          right: 'package-composition',
         });
       } else {
         setCanvasExists(false);
@@ -132,7 +146,7 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
         setLayout({
           left: 'owner-repositories',
           middle: 'markdown-viewer',
-          right: 'empty',
+          right: 'package-composition',
         });
       }
     } catch (err) {
@@ -249,6 +263,15 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
       ),
     },
     {
+      id: 'package-composition',
+      label: 'Packages',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <PackageCompositionPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
       id: 'empty',
       label: '',
       content: <div />,
@@ -257,7 +280,12 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
 
   return (
     <div className="h-full w-full flex flex-col">
-      <EditorHeader />
+      <EditorHeader
+        leftCollapsed={leftCollapsed}
+        rightCollapsed={rightCollapsed}
+        onToggleLeft={() => setLeftCollapsed(!leftCollapsed)}
+        onToggleRight={() => setRightCollapsed(!rightCollapsed)}
+      />
       <div className="flex-1 overflow-hidden">
         {isMobile ? (
           <ResponsiveConfigurablePanelLayout
@@ -265,22 +293,22 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
             panels={panels}
             layout={layout}
             defaultSizes={{
-              left: 35,
-              middle: 65,
-              right: 0,
+              left: 25,
+              middle: 50,
+              right: 25,
             }}
             minSizes={{
-              left: 25,
-              middle: 40,
-              right: 0,
+              left: 15,
+              middle: 30,
+              right: 15,
             }}
             collapsiblePanels={{
               left: true,
-              right: false,
+              right: true,
             }}
             collapsed={{
-              left: false,
-              right: true,
+              left: leftCollapsed,
+              right: rightCollapsed,
             }}
             showCollapseButtons={false}
             mobileBreakpoint="(max-width: 768px)"
@@ -292,22 +320,22 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
             layout={layout}
             isEditMode={false}
             defaultSizes={{
-              left: 35,
-              middle: 65,
-              right: 0,
+              left: 25,
+              middle: 50,
+              right: 25,
             }}
             minSizes={{
-              left: 25,
-              middle: 40,
-              right: 0,
+              left: 15,
+              middle: 30,
+              right: 15,
             }}
             collapsiblePanels={{
               left: true,
-              right: false,
+              right: true,
             }}
             collapsed={{
-              left: false,
-              right: true,
+              left: leftCollapsed,
+              right: rightCollapsed,
             }}
             showCollapseButtons={false}
           />

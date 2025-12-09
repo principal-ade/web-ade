@@ -122,6 +122,47 @@ interface QualitySliceData {
   branch?: string;
 }
 
+// Package layer types for PackageCompositionPanel
+interface PackageCommand {
+  name: string;
+  command: string;
+  description?: string;
+  type?: 'script' | 'standard';
+}
+
+interface ConfigFile {
+  path: string;
+  exists: boolean;
+  type: 'json' | 'yaml' | 'toml' | 'js' | 'ts' | 'ini' | 'custom';
+  isInline?: boolean;
+}
+
+interface PackageLayer {
+  id: string;
+  name: string;
+  type: 'package' | 'node';
+  enabled: boolean;
+  derivedFrom: {
+    fileSets: { id: string; name: string; patterns: { type: string; pattern: string }[] }[];
+    derivationType: 'presence';
+    description: string;
+  };
+  packageData: {
+    name: string;
+    version?: string;
+    path: string;
+    manifestPath: string;
+    packageManager: 'npm' | 'yarn' | 'pnpm' | 'unknown';
+    dependencies: Record<string, string>;
+    devDependencies: Record<string, string>;
+    peerDependencies: Record<string, string>;
+    isMonorepoRoot: boolean;
+    isWorkspace: boolean;
+    availableCommands?: PackageCommand[];
+  };
+  configFiles?: Record<string, ConfigFile | undefined>;
+}
+
 interface PanelProviderProps {
   children: ReactNode;
   workspace?: WorkspaceMetadata;
@@ -331,6 +372,11 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
   const [qualityData, setQualityData] = useState<QualitySliceData | null>(null);
   const [qualityLoading, setQualityLoading] = useState(false);
   const [qualityError, setQualityError] = useState<Error | null>(null);
+
+  // State for packages (for PackageCompositionPanel)
+  const [packages, setPackages] = useState<PackageLayer[]>([]);
+  const [packagesLoading, setPackagesLoading] = useState(false);
+  const [packagesError, setPackagesError] = useState<Error | null>(null);
 
   // Fetch user's GitHub repositories
   const fetchGithubRepos = useCallback(async () => {
@@ -629,6 +675,134 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     }
   }, [isAuthenticated]);
 
+  // Fetch packages from repository (parse package.json)
+  // Note: Uses fileTreeRef to avoid dependency cycle
+  const fileTreeRef = useRef<FileTree | null>(null);
+  fileTreeRef.current = fileTree;
+
+  const fetchPackages = useCallback(async (repo: string) => {
+    setPackagesLoading(true);
+    setPackagesError(null);
+    console.log('[PanelContext] Fetching packages for:', repo);
+
+    try {
+      const [owner, name] = repo.split('/');
+
+      // Fetch package.json from the repository
+      const response = await fetch(
+        `/api/github/repo/${owner}/${name}?action=file&path=package.json`
+      );
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log('[PanelContext] No package.json found');
+          setPackages([]);
+          return;
+        }
+        throw new Error(`Failed to fetch package.json: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Decode base64 content
+      let content = '';
+      if (data.content && data.encoding === 'base64') {
+        const binaryString = atob(data.content.replace(/\n/g, ''));
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const decoder = new TextDecoder('utf-8');
+        content = decoder.decode(bytes);
+      }
+
+      // Parse package.json
+      const packageJson = JSON.parse(content);
+
+      // Build available commands from scripts
+      const availableCommands: PackageCommand[] = Object.entries(packageJson.scripts || {}).map(
+        ([scriptName, scriptCommand]) => ({
+          name: scriptName,
+          command: `npm run ${scriptName}`,
+          description: String(scriptCommand),
+          type: 'script' as const,
+        })
+      );
+
+      // Detect package manager from lock files (use ref to avoid dependency cycle)
+      let packageManager: 'npm' | 'yarn' | 'pnpm' | 'unknown' = 'npm';
+      const currentFileTree = fileTreeRef.current;
+      if (currentFileTree) {
+        const hasYarnLock = currentFileTree.allFiles.some(f => f.name === 'yarn.lock');
+        const hasPnpmLock = currentFileTree.allFiles.some(f => f.name === 'pnpm-lock.yaml');
+        if (hasPnpmLock) packageManager = 'pnpm';
+        else if (hasYarnLock) packageManager = 'yarn';
+      }
+
+      // Check for config files
+      const configFiles: Record<string, ConfigFile | undefined> = {};
+      const configPatterns = [
+        { key: 'typescript', files: ['tsconfig.json'] },
+        { key: 'eslint', files: ['eslint.config.js', 'eslint.config.mjs', '.eslintrc', '.eslintrc.js', '.eslintrc.json'] },
+        { key: 'prettier', files: ['.prettierrc', '.prettierrc.js', '.prettierrc.json', 'prettier.config.js'] },
+        { key: 'vitest', files: ['vitest.config.ts', 'vitest.config.js'] },
+        { key: 'jest', files: ['jest.config.js', 'jest.config.ts'] },
+        { key: 'vite', files: ['vite.config.ts', 'vite.config.js'] },
+      ];
+
+      if (currentFileTree) {
+        for (const { key, files } of configPatterns) {
+          const found = files.find(fileName =>
+            currentFileTree.allFiles.some(f => f.name === fileName)
+          );
+          if (found) {
+            configFiles[key] = {
+              path: found,
+              exists: true,
+              type: found.endsWith('.json') ? 'json' : found.endsWith('.ts') ? 'ts' : 'js',
+            };
+          }
+        }
+      }
+
+      // Create the PackageLayer
+      const packageLayer: PackageLayer = {
+        id: `${owner}/${name}`,
+        name: packageJson.name || name || 'unknown',
+        type: 'node',
+        enabled: true,
+        derivedFrom: {
+          fileSets: [{ id: 'package-json', name: 'package.json', patterns: [{ type: 'exact', pattern: 'package.json' }] }],
+          derivationType: 'presence',
+          description: 'Derived from package.json',
+        },
+        packageData: {
+          name: packageJson.name || name || 'unknown',
+          version: packageJson.version,
+          path: '/',
+          manifestPath: 'package.json',
+          packageManager,
+          dependencies: packageJson.dependencies || {},
+          devDependencies: packageJson.devDependencies || {},
+          peerDependencies: packageJson.peerDependencies || {},
+          isMonorepoRoot: !!packageJson.workspaces,
+          isWorkspace: false,
+          availableCommands,
+        },
+        configFiles,
+      };
+
+      setPackages([packageLayer]);
+      console.log('[PanelContext] Packages loaded:', packageLayer.packageData.name);
+    } catch (err) {
+      console.error('[PanelContext] Failed to fetch packages:', err);
+      setPackagesError(err instanceof Error ? err : new Error('Failed to load packages'));
+      setPackages([]);
+    } finally {
+      setPackagesLoading(false);
+    }
+  }, []);
+
   // Fetch codebase views from server-side API
   const fetchCodebaseViews = useCallback(async (repo: string) => {
     setCodebaseViewsLoading(true);
@@ -844,6 +1018,21 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
           },
         },
       ],
+      [
+        'packages',
+        {
+          scope: 'repository',
+          name: 'packages',
+          data: packages,
+          loading: packagesLoading,
+          error: packagesError,
+          refresh: async () => {
+            if (githubRepo) {
+              await fetchPackages(githubRepo);
+            }
+          },
+        },
+      ],
     ])
   );
 
@@ -939,6 +1128,17 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       } as CurrentProjectsSliceData,
       loading: presenceLoading,
       error: presenceError ?? null,
+    });
+  }
+
+  // Update packages slice with fetched data
+  const packagesSlice = slicesRef.current.get('packages');
+  if (packagesSlice) {
+    slicesRef.current.set('packages', {
+      ...packagesSlice,
+      data: packages,
+      loading: packagesLoading,
+      error: packagesError,
     });
   }
 
@@ -1049,7 +1249,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError, presenceSessions, presenceLoading, presenceConnected]
+    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError, presenceSessions, presenceLoading, presenceConnected, packages, packagesLoading, packagesError]
   );
 
   // Actions
@@ -1348,7 +1548,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     fetchFileTree(githubRepo);
     fetchQualityMetrics(githubRepo);
     fetchCodebaseViews(githubRepo);
-  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics]);
+    fetchPackages(githubRepo);
+  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics, fetchPackages]);
 
   return <PanelContext.Provider value={value}>{children}</PanelContext.Provider>;
 }
