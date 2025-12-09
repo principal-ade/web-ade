@@ -123,7 +123,16 @@ export function useControlTowerClient(options: UseControlTowerClientOptions) {
 
     // Auto-connect if enabled
     if (options.autoConnect !== false) {
-      client.connect(options.serverUrl).then(() => {
+      client.connect(options.serverUrl).then(async () => {
+        // Send authenticate message after connecting
+        // This is required for the server to set up clientUserMap for presence tracking
+        try {
+          await client.authenticate();
+          console.log('[ControlTower] Authenticated successfully');
+        } catch (authError) {
+          console.error('[ControlTower] Authentication failed:', authError);
+        }
+
         // Auto-join room if specified
         if (options.roomId) {
           client.joinRoom(options.roomId);

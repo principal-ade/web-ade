@@ -223,15 +223,15 @@ export class BrowserWebSocketTransportAdapter implements ITransportAdapter {
 
     this.heartbeatTimer = window.setInterval(() => {
       if (this.state === 'connected' && this.ws?.readyState === WebSocket.OPEN) {
-        // Send ping message
-        const pingMessage: Message = {
+        // Send heartbeat message to keep presence activity updated
+        const heartbeatMessage: Message = {
           id: this.generateId(),
-          type: 'ping',
-          payload: {},
+          type: 'heartbeat',
+          payload: { timestamp: Date.now() },
           timestamp: Date.now(),
         };
 
-        this.send(pingMessage).catch(error => {
+        this.send(heartbeatMessage).catch(error => {
           console.error('Failed to send heartbeat:', error);
         });
       }
