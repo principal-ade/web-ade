@@ -133,10 +133,12 @@ export function EditorHeader({
 
       {/* Center section: Principal AI branding on home, or Repository info */}
       {!repositoryName ? (
-        <div
-          className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2"
+        <Link
+          href="/"
+          className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2 transition-opacity hover:opacity-80"
           style={{
             fontFamily: theme.fonts.body,
+            textDecoration: 'none',
           }}
         >
           <Logo width={32} height={32} color={theme.colors.primary} />
@@ -149,7 +151,7 @@ export function EditorHeader({
             <span style={{ color: theme.colors.primary }}>AI</span>
           </span>
           <Logo width={32} height={32} color={theme.colors.primary} />
-        </div>
+        </Link>
       ) : (
         <div
           className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2"
