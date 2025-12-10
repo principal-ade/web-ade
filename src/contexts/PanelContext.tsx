@@ -187,6 +187,8 @@ interface PanelProviderProps {
   workspace?: WorkspaceMetadata;
   repository?: RepositoryMetadata;
   githubRepo?: string;
+  /** Owner to fetch repositories for (user or org) - used on owner pages */
+  initialOwner?: string;
 }
 
 interface PanelProviderValue {
@@ -316,7 +318,7 @@ const hostTools: PanelTool[] = [
   },
 ];
 
-export function PanelProvider({ children, workspace, repository, githubRepo }: PanelProviderProps) {
+export function PanelProvider({ children, workspace, repository, githubRepo, initialOwner }: PanelProviderProps) {
   // Initialize event bus once
   const events = useMemo(() => new PanelEventBus(), []);
 
@@ -1651,6 +1653,14 @@ export function PanelProvider({ children, workspace, repository, githubRepo }: P
     fetchCodebaseViews(githubRepo);
     fetchPackages(githubRepo);
   }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics, fetchPackages]);
+
+  // Fetch owner repositories when initialOwner prop is provided (handles client-side navigation)
+  useEffect(() => {
+    if (initialOwner) {
+      console.log('[PanelContext] Fetching repos for initialOwner:', initialOwner);
+      fetchOwnerRepos(initialOwner);
+    }
+  }, [initialOwner, fetchOwnerRepos]);
 
   // Listen for owner-repositories events from panels
   useEffect(() => {

@@ -408,6 +408,7 @@ function OwnerPageWrapper({ owner }: { owner: string }) {
           path: previewedRepo ? `/GitHub/${previewedRepo}` : `/workspace/${owner}`,
         }}
         githubRepo={previewedRepo || undefined}
+        initialOwner={owner}
       >
         <OwnerPageContent owner={owner} onPreviewChange={setPreviewedRepo} />
       </PanelProvider>

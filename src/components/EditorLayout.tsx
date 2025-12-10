@@ -7,7 +7,7 @@ import {
   AgentCommandPalette,
   useAgentCommandPalette,
 } from '@principal-ade/panel-layouts';
-import { getGlobalToolRegistry, globalPanelRegistry } from '@principal-ade/panel-framework-core';
+import { globalPanelRegistry } from '@principal-ade/panel-framework-core';
 import { useTheme } from '@principal-ade/industry-theme';
 import { PanelProvider, usePanelProvider } from '@/contexts/PanelContext';
 import { WebLLMProvider } from '@/contexts/WebLLMContext';
@@ -83,17 +83,6 @@ const ConfigLibraryBrowserPanelLoader = dynamic(
   { ssr: false }
 );
 
-// GitHubProjectsPanel is now loaded conditionally via ProjectsPanel component
-
-// Dynamically import the GitHubSearchPanel with SSR disabled
-const GitHubSearchPanelLoader = dynamic(
-  () => import('@industry-theme/github-panels').then((mod) => {
-    const Component = mod.panels[1]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
 // Dynamically import the QualityHexagonPanel with SSR disabled
 const QualityHexagonPanelLoader = dynamic(
   () => import('@principal-ade/code-quality-panels').then((mod) => {
@@ -130,13 +119,10 @@ const GitChangesPanelLoader = dynamic(
   { ssr: false }
 );
 
-// CurrentProjectsPanel is loaded conditionally via ProjectsPanel component
-
 // Use custom ThemeEditorPanel with live theme editing support
 import { ThemeEditorPanel } from './ThemeEditorPanel';
-import { ProjectsPanel } from './ProjectsPanel';
 
-type ViewMode = 'editor' | 'kanban' | 'visual-validation' | 'github-projects';
+type ViewMode = 'editor' | 'kanban' | 'visual-validation';
 interface EditorLayoutContentProps {
   layout: PanelLayout;
   setLayout: React.Dispatch<React.SetStateAction<PanelLayout>>;
@@ -159,8 +145,8 @@ function EditorLayoutContent({
   setCurrentLayoutConfigId,
 }: EditorLayoutContentProps) {
   const { theme } = useTheme();
-  const { context, actions, events, presenceConnected } = usePanelProvider();
-  const { login, isAuthenticated } = useAuth();
+  const { context, actions, events } = usePanelProvider();
+  const { login } = useAuth();
   const { setColor, resetColor, resetAllColors } = useGlobalTheme();
   const [viewMode, setViewMode] = useState<ViewMode>('editor');
   const currentLayoutConfig = layoutConfigs.find((c) => c.id === currentLayoutConfigId) || layoutConfigs[0]!;
@@ -168,48 +154,15 @@ function EditorLayoutContent({
   const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
   const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
 
-  // Register panel tools from external panel packages
-  useEffect(() => {
-    const registry = getGlobalToolRegistry();
-
-    // Dynamically import github-panels metadata and register tools
-    import('@industry-theme/github-panels').then((mod) => {
-      // GitHub Projects panel has tools defined
-      const githubProjectsPanel = mod.panels[0];
-      if (githubProjectsPanel?.metadata?.tools) {
-        registry.registerPanelTools(githubProjectsPanel.metadata);
-        console.log(
-          '[EditorLayout] Registered GitHub panel tools:',
-          githubProjectsPanel.metadata.tools.length
-        );
-      }
-    });
-
-    // Layout tools are registered via utcp-panel-event in PanelContext
-
-    return () => {
-      // Cleanup on unmount
-      registry.unregisterPanelTools('github-projects');
-    };
-  }, []);
-
   // Handle layout configuration change
   const handleLayoutConfigChange = useCallback((config: LayoutConfig) => {
     setCurrentLayoutConfigId(config.id);
     setLayout(config.layout);
-
-    // Special handling for github-search config when user is not authenticated
-    // Collapse left sidebar (github-projects needs auth) for 50/50 split of middle (search) and right (preview)
-    if (config.id === 'github-search' && !isAuthenticated) {
-      setLeftSidebarCollapsed(true);
-      setRightSidebarCollapsed(false);
-    } else {
-      setLeftSidebarCollapsed(config.collapsed.left);
-      setRightSidebarCollapsed(config.collapsed.right);
-    }
+    setLeftSidebarCollapsed(config.collapsed.left);
+    setRightSidebarCollapsed(config.collapsed.right);
     // Reset to editor view when changing layout config
     setViewMode('editor');
-  }, [isAuthenticated, setCurrentLayoutConfigId, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed]);
+  }, [setCurrentLayoutConfigId, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed]);
 
   // Initialize Agent Command Palette (AI-driven, Alt+P to open)
   const { sendMessage } = useGemini();
@@ -479,14 +432,6 @@ function EditorLayoutContent({
       });
       setLeftSidebarCollapsed(true);
       setRightSidebarCollapsed(true);
-    } else if (viewMode === 'github-projects') {
-      setLayout({
-        left: 'docs',
-        middle: 'github-projects',
-        right: 'sessions',
-      });
-      setLeftSidebarCollapsed(true);
-      setRightSidebarCollapsed(true);
     } else if (viewMode === 'editor') {
       // Editor mode: restore layout from current config
       setLayout(currentLayoutConfig.layout);
@@ -582,24 +527,6 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <ConfigLibraryBrowserPanelLoader context={context} actions={actions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'github-projects',
-      label: presenceConnected ? 'Current Projects' : 'GitHub Projects',
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <ProjectsPanel context={context} actions={actions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'github-search',
-      label: 'GitHub Search',
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <GitHubSearchPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },

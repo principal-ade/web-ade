@@ -20,26 +20,13 @@ export const layoutConfigs: LayoutConfig[] = [
     id: 'default',
     name: 'Code City',
     layout: {
-      left: 'docs',
+      left: 'quality-hexagon',
       middle: 'code-city',
       right: 'ai-chat',
     },
     collapsed: {
-      left: true,
-      right: false,
-    },
-  },
-  {
-    id: 'principal-ai',
-    name: 'Principal AI',
-    layout: {
-      left: 'docs',
-      middle: 'ai-chat',
-      right: 'markdown-viewer',
-    },
-    collapsed: {
       left: false,
-      right: false,
+      right: true,
     },
   },
   {
@@ -56,64 +43,12 @@ export const layoutConfigs: LayoutConfig[] = [
     },
   },
   {
-    id: 'code-focus',
-    name: 'Code Focus',
+    id: 'architecture',
+    name: 'Architecture',
     layout: {
-      left: 'docs',
-      middle: 'code-city',
-      right: 'sessions',
-    },
-    collapsed: {
-      left: true,
-      right: true,
-    },
-  },
-  {
-    id: 'three-panel',
-    name: 'Three Panel',
-    layout: {
-      left: 'ai-chat',
-      middle: 'markdown-viewer',
+      left: 'config-browser',
+      middle: 'visual-validation',
       right: 'code-city',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
-  },
-  {
-    id: 'github-projects',
-    name: 'GitHub Projects',
-    layout: {
-      left: 'docs',
-      middle: 'github-projects',
-      right: 'sessions',
-    },
-    collapsed: {
-      left: true,
-      right: true,
-    },
-  },
-  {
-    id: 'github-search',
-    name: 'GitHub Search',
-    layout: {
-      left: 'github-projects',
-      middle: 'github-search',
-      right: 'markdown-viewer',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
-  },
-  {
-    id: 'quality',
-    name: 'Code Quality',
-    layout: {
-      left: 'code-city',
-      middle: 'ai-chat',
-      right: 'quality-hexagon',
     },
     collapsed: {
       left: false,
@@ -125,8 +60,8 @@ export const layoutConfigs: LayoutConfig[] = [
     name: 'Theme Editor',
     layout: {
       left: 'theme-editor',
-      middle: 'ai-chat',
-      right: 'markdown-viewer',
+      middle: 'markdown-viewer',
+      right: 'ai-chat',
     },
     collapsed: {
       left: false,
