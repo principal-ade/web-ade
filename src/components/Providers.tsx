@@ -2,6 +2,7 @@
 
 import { ThemeProvider } from '@principal-ade/industry-theme';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ControlTowerProvider } from '@/contexts/ControlTowerContext';
 import { GlobalThemeProvider, useGlobalTheme } from '@/contexts/ThemeContext';
 import { MermaidInitializer } from './MermaidInitializer';
 import { ReactNode } from 'react';
@@ -12,7 +13,9 @@ function ThemeProviderWrapper({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider theme={currentTheme}>
       <MermaidInitializer />
-      <AuthProvider>{children}</AuthProvider>
+      <AuthProvider>
+        <ControlTowerProvider>{children}</ControlTowerProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

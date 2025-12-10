@@ -1,16 +1,15 @@
 /**
  * usePresenceData - Hook for fetching and subscribing to user's presence data
  *
- * This hook connects to the Control Tower server to fetch real-time
- * session information, including which devices/tabs the user has repositories open on.
+ * This hook uses the shared Control Tower connection from ControlTowerContext
+ * to fetch real-time session information.
  */
 
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getTrafficControllerUrl, getWebSocketToken } from '@/lib/control-tower/config';
-import { useControlTowerClient } from '@/lib/control-tower/useControlTowerClient';
+import { useControlTower } from '@/contexts/ControlTowerContext';
 
 /**
  * Repository session information from the server
@@ -55,119 +54,28 @@ interface UsePresenceDataResult {
 }
 
 /**
- * Parses JWT to extract agentId and other metadata
- */
-function parseJWT(token: string): { agentId?: string; userId?: string; clientType?: string } {
-  try {
-    const base64Url = token.split('.')[1];
-    if (!base64Url) return {};
-
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-
-    return JSON.parse(jsonPayload);
-  } catch (error) {
-    console.error('Error parsing JWT:', error);
-    return {};
-  }
-}
-
-/**
  * Hook to fetch and subscribe to presence data for the current user
  *
- * @param repository - Optional repository to scope the presence data to
+ * Uses the shared Control Tower connection from ControlTowerProvider.
+ *
+ * @param repository - Optional repository to scope the presence data to (unused, kept for API compat)
  * @returns Sessions, current agentId, loading state, connection status, and error
  */
 export function usePresenceData(repository?: string): UsePresenceDataResult {
-  const { isAuthenticated, user } = useAuth();
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [currentAgentId, setCurrentAgentId] = useState<string>();
+  const { user } = useAuth();
+  const { connected, roomState, error: connectionError, loading: contextLoading } = useControlTower();
   const [sessions, setSessions] = useState<RepositorySession[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error>();
-
-  // Fetch access token when user authenticates
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchToken() {
-      if (!isAuthenticated || !user) {
-        if (!cancelled) {
-          setLoading(false);
-        }
-        return;
-      }
-
-      try {
-        // Use a default repository to get a room token for global presence
-        const repoForToken = repository || 'principal-ai/repository-traffic-controller';
-        const token = await getWebSocketToken(repoForToken);
-
-        if (cancelled) return; // Don't update state if component unmounted
-
-        if (!token) {
-          throw new Error('Failed to get room token');
-        }
-
-        // Parse token to get agentId
-        const { agentId } = parseJWT(token);
-        setCurrentAgentId(agentId);
-        setAccessToken(token);
-        setError(undefined);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err : new Error('Failed to fetch presence token'));
-          setLoading(false);
-        }
-      }
-    }
-
-    void fetchToken();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated, user, repository]);
-
-  // Connect to Control Tower WebSocket (only if we have a token)
-  const shouldConnect = !!accessToken;
-  const controlTower = useControlTowerClient(
-    shouldConnect
-      ? {
-          serverUrl: getTrafficControllerUrl(),
-          accessToken: accessToken!,
-          roomId: '__global_presence__',
-          autoConnect: true,
-          enableReconnection: true,
-        }
-      : {
-          serverUrl: '',
-          accessToken: '',
-          autoConnect: false,
-        }
-  );
 
   // Extract sessions from presence data
   useEffect(() => {
-    // Guard against accessing data before connection is established
-    if (!accessToken) {
-      setLoading(true);
-      return;
-    }
-
-    if (!controlTower.connected || !controlTower.roomState || !user) {
-      setLoading(!controlTower.connected && accessToken !== null);
+    if (!connected || !roomState || !user) {
+      setSessions([]);
       return;
     }
 
     try {
       // Find current user in the room state
-      const currentUser = Array.from(controlTower.roomState.users.values()).find(
+      const currentUser = Array.from(roomState.users.values()).find(
         (u) => u.id === user.login || u.id === user.id.toString()
       );
 
@@ -178,41 +86,26 @@ export function usePresenceData(repository?: string): UsePresenceDataResult {
       } else {
         setSessions([]);
       }
-
-      setLoading(false);
-      setError(undefined);
     } catch (err) {
       console.error('[usePresenceData] Error extracting sessions:', err);
-      setError(err instanceof Error ? err : new Error('Failed to extract session data'));
-      setLoading(false);
+      setSessions([]);
     }
-  }, [controlTower.connected, controlTower.roomState, user, accessToken]);
+  }, [connected, roomState, user]);
 
-  // Handle connection errors
-  useEffect(() => {
-    if (controlTower.error) {
-      setError(controlTower.error);
-      setLoading(false);
-    }
-  }, [controlTower.error]);
-
-  // Refetch by reconnecting
+  // Refetch is a no-op now since we use a shared connection
   const refetch = useCallback(async () => {
-    setLoading(true);
-    setError(undefined);
-    // Trigger token refetch by resetting
-    const token = await getWebSocketToken(repository || 'principal-ai/repository-traffic-controller');
-    if (token) {
-      setAccessToken(token);
-    }
-  }, [repository]);
+    // The shared connection handles reconnection automatically
+  }, []);
+
+  // Suppress unused variable warning
+  void repository;
 
   return {
     sessions,
-    currentAgentId,
-    loading,
-    error,
-    connected: controlTower.connected,
+    currentAgentId: undefined, // Not available from context currently
+    loading: contextLoading,
+    error: connectionError || undefined,
+    connected,
     refetch,
   };
 }

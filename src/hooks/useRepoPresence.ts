@@ -1,16 +1,14 @@
 /**
  * useRepoPresence - Hook to register presence when viewing a repository
  *
- * This hook connects to the Control Tower server and joins the repository room,
- * enabling presence tracking for the current user on this repo.
+ * This hook uses the shared Control Tower connection from ControlTowerContext
+ * and joins the repository room, enabling presence tracking for the current user.
  */
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { getTrafficControllerUrl, getWebSocketToken } from '@/lib/control-tower/config';
-import { useControlTowerClient } from '@/lib/control-tower/useControlTowerClient';
+import { useEffect, useState } from 'react';
+import { useControlTower } from '@/contexts/ControlTowerContext';
 
 interface UseRepoPresenceOptions {
   /** Repository in owner/repo format */
@@ -33,6 +31,8 @@ interface UseRepoPresenceResult {
 /**
  * Hook to register presence when viewing a repository page
  *
+ * Uses the shared Control Tower connection from ControlTowerProvider.
+ *
  * @param options - Repository ID and optional branch
  * @returns Connection status and any errors
  *
@@ -50,87 +50,38 @@ interface UseRepoPresenceResult {
  */
 export function useRepoPresence(options: UseRepoPresenceOptions): UseRepoPresenceResult {
   const { repoId, branch = 'main' } = options;
-  const { isAuthenticated, user } = useAuth();
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [tokenError, setTokenError] = useState<Error>();
+  const { connected, roomId, error, loading: contextLoading, joinRoom } = useControlTower();
+  const [joining, setJoining] = useState(false);
 
-  // Fetch access token for this repository
+  // Join the repository room when connected
   useEffect(() => {
-    let cancelled = false;
-
-    async function fetchToken() {
-      if (!isAuthenticated || !user || !repoId) {
-        if (!cancelled) {
-          setLoading(false);
-        }
-        return;
-      }
-
-      try {
-        setLoading(true);
-        const token = await getWebSocketToken(repoId);
-
-        if (cancelled) return;
-
-        if (!token) {
-          throw new Error('Failed to get room token');
-        }
-
-        setAccessToken(token);
-        setTokenError(undefined);
-      } catch (err) {
-        if (!cancelled) {
-          console.error('[useRepoPresence] Failed to get token:', err);
-          setTokenError(err instanceof Error ? err : new Error('Failed to fetch presence token'));
-          setLoading(false);
-        }
-      }
+    if (!connected || !repoId || joining) {
+      return;
     }
 
-    void fetchToken();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated, user, repoId]);
-
-  // Connect to Control Tower and join the repository room
-  const shouldConnect = !!accessToken && !!repoId;
-  const { connected, roomId, error: connectionError } = useControlTowerClient(
-    shouldConnect
-      ? {
-          serverUrl: getTrafficControllerUrl(),
-          accessToken: accessToken!,
-          roomId: repoId, // Join the repository room directly
-          autoConnect: true,
-          enableReconnection: true,
-        }
-      : {
-          serverUrl: '',
-          accessToken: '',
-          autoConnect: false,
-        }
-  );
-
-  // Update loading state when connected
-  useEffect(() => {
-    if (connected && roomId === repoId) {
-      setLoading(false);
+    // Don't rejoin if already in the room
+    if (roomId === repoId) {
+      return;
     }
-  }, [connected, roomId, repoId]);
 
-  // Log connection status for debugging
-  useEffect(() => {
-    if (connected && roomId) {
-      console.log(`[useRepoPresence] Connected to ${roomId} (branch: ${branch})`);
-    }
-  }, [connected, roomId, branch]);
+    setJoining(true);
+
+    joinRoom(repoId)
+      .then(() => {
+        console.log(`[useRepoPresence] Joined room ${repoId} (branch: ${branch})`);
+      })
+      .catch((err) => {
+        console.error(`[useRepoPresence] Failed to join room ${repoId}:`, err);
+      })
+      .finally(() => {
+        setJoining(false);
+      });
+  }, [connected, repoId, roomId, branch, joinRoom, joining]);
 
   return {
     connected,
-    inRoom: connected && roomId === repoId,
-    error: tokenError || connectionError || undefined,
-    loading,
+    inRoom: roomId === repoId,
+    error: error || undefined,
+    loading: contextLoading || joining,
   };
 }
