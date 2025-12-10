@@ -4,6 +4,7 @@ import { EditorLayout } from "@/components/EditorLayout";
 import { useParams } from "next/navigation";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useMemo, useEffect } from "react";
+import { useRepoPresence } from "@/hooks/useRepoPresence";
 
 const RECENT_REPOSITORIES_KEY = 'recent-repositories';
 const MAX_RECENT_ITEMS = 10;
@@ -47,6 +48,9 @@ export default function RepoPage() {
   // Memoize githubRepo to prevent unnecessary re-renders of PanelProvider
   const githubRepo = useMemo(() => `${owner}/${repo}`, [owner, repo]);
   const { theme } = useTheme();
+
+  // Connect to presence system for this repository
+  useRepoPresence({ repoId: githubRepo });
 
   // Save repository to recent history
   useEffect(() => {
