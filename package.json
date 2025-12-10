@@ -23,7 +23,7 @@
     "@industry-theme/backlogmd-kanban-panel": "^0.2.3",
     "@industry-theme/code-city-panel": "^0.1.15",
     "@industry-theme/git-sync-panels": "^0.1.3",
-    "@industry-theme/github-panels": "^0.1.26",
+    "@industry-theme/github-panels": "^0.1.29",
     "@industry-theme/markdown-panels": "^0.2.12",
     "@industry-theme/repository-composition-panels": "^0.2.2",
     "@industry-theme/theme-editor-panel": "^0.1.1",
