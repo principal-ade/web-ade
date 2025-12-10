@@ -95,6 +95,15 @@ const ConfigLibraryBrowserPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the QualityHexagonPanel with SSR disabled
+const CodeQualityPanelLoader = dynamic(
+  () => import('@principal-ade/code-quality-panels').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 interface OwnerPageContentProps {
   owner: string;
   onPreviewChange?: (repo: string | null) => void;
@@ -112,7 +121,7 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
   const [rightCollapsed, setRightCollapsed] = useState(true);
 
   // Layout with tabbed middle panel for Preview and Architecture
-  // and tabbed right panel for Docs and Configs
+  // and tabbed right panel for Docs, Configs, and Quality
   const layout: PanelLayout = {
     left: 'owner-repositories',
     middle: {
@@ -121,7 +130,7 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
     },
     right: {
       type: 'tabs',
-      panels: ['alexandria-docs', 'config-library'],
+      panels: ['alexandria-docs', 'config-library', 'code-quality'],
     },
   };
 
@@ -274,6 +283,15 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
       content: (
         <div className="h-full w-full overflow-hidden">
           <ConfigLibraryBrowserPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'code-quality',
+      label: 'Quality',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <CodeQualityPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },
