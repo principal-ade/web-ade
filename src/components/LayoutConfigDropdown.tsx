@@ -18,14 +18,14 @@ export interface LayoutConfig {
 export const layoutConfigs: LayoutConfig[] = [
   {
     id: 'default',
-    name: 'Visual Validation',
+    name: 'Code City',
     layout: {
-      left: 'config-browser',
-      middle: 'visual-validation',
+      left: 'docs',
+      middle: 'code-city',
       right: 'ai-chat',
     },
     collapsed: {
-      left: false,
+      left: true,
       right: false,
     },
   },
