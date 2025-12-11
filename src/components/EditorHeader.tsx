@@ -31,20 +31,27 @@ export function EditorHeader({
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
   const pathname = usePathname();
   const [repositoryName, setRepositoryName] = useState<{ owner: string; repo: string } | null>(null);
+  const [ownerOnly, setOwnerOnly] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Extract repository name from URL
+  // Extract repository name or owner from URL
   useEffect(() => {
     if (pathname) {
-      const pathParts = pathname.split('/');
+      const pathParts = pathname.split('/').filter(Boolean);
       // Path format: /owner/repo
-      if (pathParts.length >= 3 && pathParts[1] && pathParts[2]) {
-        const owner = pathParts[1];
-        const repo = pathParts[2];
+      if (pathParts.length >= 2 && pathParts[0] && pathParts[1]) {
+        const owner = pathParts[0];
+        const repo = pathParts[1];
         setRepositoryName({ owner, repo });
+        setOwnerOnly(null);
+      } else if (pathParts.length === 1 && pathParts[0]) {
+        // Path format: /owner (owner page only)
+        setRepositoryName(null);
+        setOwnerOnly(pathParts[0]);
       } else {
         setRepositoryName(null);
+        setOwnerOnly(null);
       }
     }
   }, [pathname]);
@@ -77,19 +84,48 @@ export function EditorHeader({
         borderColor: theme.colors.border,
       }}
     >
-      {/* Left section: Logo and Layout Config Dropdown - hide logo on home page */}
+      {/* Left section: Logo and Layout Config Dropdown */}
       <div className="flex items-center gap-3 flex-shrink-0 flex-1">
+        {/* Show Logo on repo pages */}
         {repositoryName && (
           <Link
             href="/"
-            className="flex items-center justify-center w-8 h-8 transition-all hover:opacity-80 flex-shrink-0"
+            className="flex items-center gap-2 transition-all hover:opacity-80 flex-shrink-0"
             title="Home"
           >
             <Logo width={32} height={32} color={theme.colors.primary} />
           </Link>
         )}
-        {/* Download App or Open in Desktop - only show on home page */}
-        {!repositoryName && (
+        {/* Show owner avatar + name on owner pages */}
+        {ownerOnly && (
+          <a
+            href={`https://github.com/${ownerOnly}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 transition-all hover:opacity-80 flex-shrink-0"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`https://github.com/${ownerOnly}.png?size=64`}
+              alt={ownerOnly}
+              className="w-8 h-8 flex-shrink-0"
+              style={{
+                borderRadius: '6px',
+              }}
+            />
+            <span
+              className="text-base font-semibold hidden sm:inline"
+              style={{
+                fontFamily: theme.fonts.body,
+                color: theme.colors.text,
+              }}
+            >
+              {ownerOnly}
+            </span>
+          </a>
+        )}
+        {/* Download App or Open in Desktop - only show on home page (not owner pages) */}
+        {!repositoryName && !ownerOnly && (
           hasDesktopApp ? (
             <button
               onClick={() => {
@@ -131,7 +167,7 @@ export function EditorHeader({
         )}
       </div>
 
-      {/* Center section: Principal AI branding on home, or Repository info */}
+      {/* Center section: Principal AI branding on home and owner pages, or Repository info */}
       {!repositoryName ? (
         <Link
           href="/"

@@ -68,9 +68,9 @@ const MarkdownPanelLoader = dynamic(
   { ssr: false }
 );
 
-// Dynamically import the VisualValidationGraphPanel with SSR disabled
-const VisualValidationPanelLoader = dynamic(
-  () => import('@industry-theme/visual-validation-panel').then((mod) => {
+// Dynamically import the PrincipalViewGraphPanel with SSR disabled
+const PrincipalViewPanelLoader = dynamic(
+  () => import('@industry-theme/principal-view-panels').then((mod) => {
     const Component = mod.panels[0]!.component;
     return { default: Component };
   }),
@@ -88,7 +88,7 @@ const AlexandriaDocsPanelLoader = dynamic(
 
 // Dynamically import the ConfigLibraryBrowserPanel with SSR disabled
 const ConfigLibraryBrowserPanelLoader = dynamic(
-  () => import('@industry-theme/visual-validation-panel').then((mod) => {
+  () => import('@industry-theme/principal-view-panels').then((mod) => {
     const Component = mod.panels[1]!.component;
     return { default: Component };
   }),
@@ -255,7 +255,7 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
       label: 'Architecture',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <VisualValidationPanelLoader context={context} actions={actions} events={events} />
+          <PrincipalViewPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },

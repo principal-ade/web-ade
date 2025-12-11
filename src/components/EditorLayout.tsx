@@ -22,7 +22,7 @@ import { layoutConfigs, LayoutConfig } from './LayoutConfigDropdown';
 import { AIChatPanel } from './AIChatPanel';
 import '@principal-ade/panel-layouts/styles.css';
 import '@principal-ade/industry-themed-ai-sdk-panel/styles.css';
-// CSS removed from visual-validation-panel exports in 0.3.3 - styles now bundled in JS
+// CSS removed from principal-view-panels exports - styles now bundled in JS
 import { useAuth } from '@/contexts/AuthContext';
 import { useGemini } from '@/contexts/GeminiContext';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
@@ -65,9 +65,9 @@ const KanbanPanelLoader = dynamic(
   { ssr: false }
 );
 
-// Dynamically import the VisualValidationPanel (Graph) with SSR disabled
-const VisualValidationPanelLoader = dynamic(
-  () => import('@industry-theme/visual-validation-panel').then((mod) => {
+// Dynamically import the PrincipalViewPanel (Graph) with SSR disabled
+const PrincipalViewPanelLoader = dynamic(
+  () => import('@industry-theme/principal-view-panels').then((mod) => {
     const Component = mod.panels[0]!.component;
     return { default: Component };
   }),
@@ -76,7 +76,7 @@ const VisualValidationPanelLoader = dynamic(
 
 // Dynamically import the Config Library Browser Panel with SSR disabled
 const ConfigLibraryBrowserPanelLoader = dynamic(
-  () => import('@industry-theme/visual-validation-panel').then((mod) => {
+  () => import('@industry-theme/principal-view-panels').then((mod) => {
     const Component = mod.panels[1]!.component;
     return { default: Component };
   }),
@@ -514,10 +514,10 @@ function EditorLayoutContent({
     },
     {
       id: 'visual-validation',
-      label: 'Visual Validation',
+      label: 'Principal View',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <VisualValidationPanelLoader context={context} actions={actions} events={events} />
+          <PrincipalViewPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },
