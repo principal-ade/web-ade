@@ -134,11 +134,34 @@ interface PackageQuality {
   metrics: QualityMetrics;
 }
 
+/** Per-file quality metric from a lens */
+interface FileMetricData {
+  file: string;
+  score: number;
+  issueCount: number;
+  errorCount: number;
+  warningCount: number;
+  infoCount: number;
+  hintCount: number;
+  fixableCount?: number;
+  categories?: Record<string, number>;
+}
+
 interface QualitySliceData {
   packages: PackageQuality[];
   lastUpdated: string;
   commitSha?: string;
   branch?: string;
+  /** Per-file coverage percentages from Jest (path -> line coverage %) */
+  fileCoverage?: Record<string, number>;
+  /** Per-file quality metrics from all lenses, keyed by lens name */
+  fileMetrics?: {
+    eslint?: FileMetricData[];
+    typescript?: FileMetricData[];
+    prettier?: FileMetricData[];
+    knip?: FileMetricData[];
+    alexandria?: FileMetricData[];
+  };
 }
 
 // Package layer types for PackageCompositionPanel
@@ -740,10 +763,19 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         lastUpdated: data.timestamp,
         commitSha: data.commitSha,
         branch: data.branch,
+        fileCoverage: data.fileCoverage,
+        fileMetrics: data.fileMetrics,
       };
 
       setQualityData(qualitySliceData);
       console.log('[PanelContext] Quality metrics loaded:', qualitySliceData);
+      if (data.fileCoverage) {
+        console.log('[PanelContext] File coverage loaded for', Object.keys(data.fileCoverage).length, 'files');
+      }
+      if (data.fileMetrics) {
+        const lensCount = Object.keys(data.fileMetrics).length;
+        console.log('[PanelContext] File metrics loaded for', lensCount, 'lenses');
+      }
     } catch (err) {
       console.error('[PanelContext] Failed to fetch quality metrics:', err);
       setQualityError(err instanceof Error ? err : new Error('Failed to load quality metrics'));

@@ -29,6 +29,21 @@ export interface ArtifactInfo {
 }
 
 /**
+ * Per-file quality metric from a lens
+ */
+export interface FileMetricData {
+  file: string;
+  score: number;
+  issueCount: number;
+  errorCount: number;
+  warningCount: number;
+  infoCount: number;
+  hintCount: number;
+  fixableCount?: number;
+  categories?: Record<string, number>;
+}
+
+/**
  * Response shape for the API
  */
 export interface QualityArtifactResponse {
@@ -37,6 +52,16 @@ export interface QualityArtifactResponse {
   timestamp: string;
   qualityMetrics: {
     hexagon: QualityHexagonMetrics;
+  };
+  /** Per-file coverage percentages from Jest (path -> line coverage %) */
+  fileCoverage?: Record<string, number>;
+  /** Per-file quality metrics from all lenses, keyed by lens name */
+  fileMetrics?: {
+    eslint?: FileMetricData[];
+    typescript?: FileMetricData[];
+    prettier?: FileMetricData[];
+    knip?: FileMetricData[];
+    alexandria?: FileMetricData[];
   };
   artifactId: number;
   artifactName: string;
@@ -207,6 +232,48 @@ export class GitHubArtifactService {
     // Extract and parse results.json
     const results = await extractResultsFromZip(zipData as ArrayBuffer);
 
+    // Extract file coverage and file metrics from lens results
+    // Note: coverage and fileMetrics fields are added in newer versions of codebase-quality-lenses
+    const fileCoverage: Record<string, number> = {};
+    const fileMetrics: QualityArtifactResponse['fileMetrics'] = {};
+
+    for (const result of results.results) {
+      // Use type assertion since these fields may not be in the published npm types yet
+      const resultWithExtras = result as typeof result & {
+        coverage?: { files?: Array<{ file: string; lines: number }> };
+        fileMetrics?: FileMetricData[];
+      };
+
+      // Extract coverage data (Jest)
+      if (resultWithExtras.coverage?.files) {
+        for (const file of resultWithExtras.coverage.files) {
+          fileCoverage[file.file] = file.lines;
+        }
+      }
+
+      // Extract fileMetrics by lens type
+      if (resultWithExtras.fileMetrics && resultWithExtras.fileMetrics.length > 0) {
+        const lensId = result.lens.id.toLowerCase();
+        switch (lensId) {
+          case 'eslint':
+            fileMetrics.eslint = resultWithExtras.fileMetrics;
+            break;
+          case 'typescript':
+            fileMetrics.typescript = resultWithExtras.fileMetrics;
+            break;
+          case 'prettier':
+            fileMetrics.prettier = resultWithExtras.fileMetrics;
+            break;
+          case 'knip':
+            fileMetrics.knip = resultWithExtras.fileMetrics;
+            break;
+          case 'alexandria':
+            fileMetrics.alexandria = resultWithExtras.fileMetrics;
+            break;
+        }
+      }
+    }
+
     return {
       commitSha: results.metadata.git?.commit ?? extractCommitSha(artifactName) ?? 'unknown',
       branch: results.metadata.git?.branch ?? 'unknown',
@@ -221,6 +288,8 @@ export class GitHubArtifactService {
           documentation: 0,
         },
       },
+      fileCoverage: Object.keys(fileCoverage).length > 0 ? fileCoverage : undefined,
+      fileMetrics: Object.keys(fileMetrics).length > 0 ? fileMetrics : undefined,
       artifactId,
       artifactName,
     };
