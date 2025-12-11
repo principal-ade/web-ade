@@ -104,6 +104,15 @@ const CodeQualityPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the CodeCityPanel with SSR disabled
+const CodeCityPanelLoader = dynamic(
+  () => import('@industry-theme/code-city-panel').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 interface OwnerPageContentProps {
   owner: string;
   onPreviewChange?: (repo: string | null) => void;
@@ -120,17 +129,17 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(true);
 
-  // Layout with tabbed middle panel for Preview and Architecture
-  // and tabbed right panel for Docs, Configs, and Quality
+  // Layout with tabbed middle panel for Preview, Quality, and Architecture
+  // and tabbed right panel for Code City, Docs, and Configs
   const layout: PanelLayout = {
     left: 'owner-repositories',
     middle: {
       type: 'tabs',
-      panels: ['markdown-viewer', 'visual-validation'],
+      panels: ['markdown-viewer', 'code-quality', 'visual-validation'],
     },
     right: {
       type: 'tabs',
-      panels: ['alexandria-docs', 'config-library', 'code-quality'],
+      panels: ['code-city', 'alexandria-docs', 'config-library'],
     },
   };
 
@@ -292,6 +301,15 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
       content: (
         <div className="h-full w-full overflow-hidden">
           <CodeQualityPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'code-city',
+      label: 'Code City',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <CodeCityPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },

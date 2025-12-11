@@ -31,7 +31,7 @@
     "@industry-theme/theme-editor-panel": "^0.1.1",
     "@mlc-ai/web-llm": "^0.2.80",
     "@octokit/rest": "^22.0.1",
-    "@principal-ade/code-quality-panels": "^0.1.0",
+    "@principal-ade/code-quality-panels": "^0.1.4",
     "@principal-ade/industry-theme": "^0.1.4",
     "@principal-ade/industry-themed-ai-sdk-panel": "^0.1.4",
     "@principal-ade/panel-framework-core": "^0.1.10",
