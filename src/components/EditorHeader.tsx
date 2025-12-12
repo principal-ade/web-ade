@@ -32,26 +32,37 @@ export function EditorHeader({
   const pathname = usePathname();
   const [repositoryName, setRepositoryName] = useState<{ owner: string; repo: string } | null>(null);
   const [ownerOnly, setOwnerOnly] = useState<string | null>(null);
+  const [collectionId, setCollectionId] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Extract repository name or owner from URL
+  // Extract repository name, owner, or collection from URL
   useEffect(() => {
     if (pathname) {
       const pathParts = pathname.split('/').filter(Boolean);
+
+      // Check for collection path: /collections/[id]
+      if (pathParts[0] === 'collections' && pathParts[1]) {
+        setRepositoryName(null);
+        setOwnerOnly(null);
+        setCollectionId(pathParts[1]);
+      }
       // Path format: /owner/repo
-      if (pathParts.length >= 2 && pathParts[0] && pathParts[1]) {
+      else if (pathParts.length >= 2 && pathParts[0] && pathParts[1]) {
         const owner = pathParts[0];
         const repo = pathParts[1];
         setRepositoryName({ owner, repo });
         setOwnerOnly(null);
+        setCollectionId(null);
       } else if (pathParts.length === 1 && pathParts[0]) {
         // Path format: /owner (owner page only)
         setRepositoryName(null);
         setOwnerOnly(pathParts[0]);
+        setCollectionId(null);
       } else {
         setRepositoryName(null);
         setOwnerOnly(null);
+        setCollectionId(null);
       }
     }
   }, [pathname]);
@@ -124,8 +135,25 @@ export function EditorHeader({
             </span>
           </a>
         )}
+        {/* Collection name on left */}
+        {collectionId && (
+          <div
+            className="flex items-center gap-2 flex-shrink-0"
+            style={{
+              fontFamily: theme.fonts.body,
+            }}
+          >
+            <span
+              className="text-base font-semibold"
+              style={{ color: theme.colors.text }}
+            >
+              {/* Format collection ID as readable name */}
+              {collectionId.replace('ws-', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+            </span>
+          </div>
+        )}
         {/* Download App or Open in Desktop - only show on home page (not owner pages) */}
-        {!repositoryName && !ownerOnly && (
+        {!repositoryName && !ownerOnly && !collectionId && (
           hasDesktopApp ? (
             <button
               onClick={() => {
@@ -167,8 +195,27 @@ export function EditorHeader({
         )}
       </div>
 
-      {/* Center section: Principal AI branding on home and owner pages, or Repository info */}
-      {!repositoryName ? (
+      {/* Center section: Principal AI branding on home and owner pages, Collections link, or Repository info */}
+      {collectionId ? (
+        /* Collections link in center */
+        <Link
+          href="/"
+          className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2 transition-opacity hover:opacity-80"
+          style={{
+            fontFamily: theme.fonts.body,
+            textDecoration: 'none',
+          }}
+        >
+          <Logo width={32} height={32} color={theme.colors.primary} />
+          <span
+            className="text-xl font-bold"
+            style={{ fontFamily: theme.fonts.body, color: theme.colors.text }}
+          >
+            Collections
+          </span>
+          <Logo width={32} height={32} color={theme.colors.primary} />
+        </Link>
+      ) : !repositoryName ? (
         <Link
           href="/"
           className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2 transition-opacity hover:opacity-80"
@@ -185,6 +232,8 @@ export function EditorHeader({
             <span style={{ color: theme.colors.text }}>Principal</span>
             {' '}
             <span style={{ color: theme.colors.primary }}>AI</span>
+            {' '}
+            <span style={{ color: theme.colors.text }}>Gallery</span>
           </span>
           <Logo width={32} height={32} color={theme.colors.primary} />
         </Link>

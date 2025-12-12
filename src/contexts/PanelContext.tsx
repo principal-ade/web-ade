@@ -212,6 +212,10 @@ interface PanelProviderProps {
   githubRepo?: string;
   /** Owner to fetch repositories for (user or org) - used on owner pages */
   initialOwner?: string;
+  /** Collection ID for curated collections pages */
+  collectionId?: string;
+  /** Repository IDs in the collection (owner/repo format) */
+  collectionRepositories?: string[];
 }
 
 interface PanelProviderValue {
@@ -341,7 +345,7 @@ const hostTools: PanelTool[] = [
   },
 ];
 
-export function PanelProvider({ children, workspace, repository, githubRepo, initialOwner }: PanelProviderProps) {
+export function PanelProvider({ children, workspace, repository, githubRepo, initialOwner, collectionId, collectionRepositories }: PanelProviderProps) {
   // Initialize event bus once
   const events = useMemo(() => new PanelEventBus(), []);
 
@@ -431,6 +435,10 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const [ownerReposLoading, setOwnerReposLoading] = useState(false);
   const [currentOwner, setCurrentOwner] = useState<string | null>(null);
 
+  // State for collection/workspace repositories (for WorkspaceCollectionPanel)
+  const [collectionRepoDetails, setCollectionRepoDetails] = useState<GitHubRepository[]>([]);
+  const [collectionRepoDetailsLoading, setCollectionRepoDetailsLoading] = useState(false);
+
   // Fetch repositories for a specific owner (user or org)
   const fetchOwnerRepos = useCallback(async (owner: string) => {
     setOwnerReposLoading(true);
@@ -475,6 +483,40 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       });
     } finally {
       setOwnerReposLoading(false);
+    }
+  }, []);
+
+  // Fetch details for collection repositories
+  const fetchCollectionRepoDetails = useCallback(async (repoIds: string[]) => {
+    setCollectionRepoDetailsLoading(true);
+    console.log('[PanelContext] Fetching collection repository details for:', repoIds.length, 'repos');
+
+    try {
+      const details = await Promise.all(
+        repoIds.map(async (repoId) => {
+          const [owner, repo] = repoId.split('/');
+          try {
+            const response = await fetch(`/api/github/repo/${owner}/${repo}?action=info`);
+            if (!response.ok) {
+              console.warn(`[PanelContext] Failed to fetch repo info for ${repoId}`);
+              return null;
+            }
+            const data = await response.json();
+            return data as GitHubRepository;
+          } catch (err) {
+            console.warn(`[PanelContext] Error fetching repo info for ${repoId}:`, err);
+            return null;
+          }
+        })
+      );
+
+      const validDetails = details.filter((d): d is GitHubRepository => d !== null);
+      setCollectionRepoDetails(validDetails);
+      console.log('[PanelContext] Collection repo details loaded:', validDetails.length);
+    } catch (err) {
+      console.error('[PanelContext] Failed to fetch collection repo details:', err);
+    } finally {
+      setCollectionRepoDetailsLoading(false);
     }
   }, []);
 
@@ -1157,6 +1199,46 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           },
         },
       ],
+      [
+        'workspace',
+        {
+          scope: 'global',
+          name: 'workspace',
+          data: collectionId && workspace ? {
+            workspace: {
+              id: collectionId,
+              name: workspace.name,
+              description: '',
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            },
+            loading: false,
+            error: undefined,
+          } : null,
+          loading: false,
+          error: null,
+          refresh: async () => {},
+        },
+      ],
+      [
+        'workspaceRepositories',
+        {
+          scope: 'global',
+          name: 'workspaceRepositories',
+          data: {
+            repositories: collectionRepoDetails,
+            loading: collectionRepoDetailsLoading,
+            error: undefined,
+          },
+          loading: collectionRepoDetailsLoading,
+          error: null,
+          refresh: async () => {
+            if (collectionRepositories) {
+              await fetchCollectionRepoDetails(collectionRepositories);
+            }
+          },
+        },
+      ],
     ])
   );
 
@@ -1277,6 +1359,39 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     });
   }
 
+  // Update workspace slice for collections
+  const workspaceSlice = slicesRef.current.get('workspace');
+  if (workspaceSlice && collectionId && workspace) {
+    slicesRef.current.set('workspace', {
+      ...workspaceSlice,
+      data: {
+        workspace: {
+          id: collectionId,
+          name: workspace.name,
+          description: '',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+        loading: false,
+        error: undefined,
+      },
+    });
+  }
+
+  // Update workspaceRepositories slice with collection repo details
+  const workspaceReposSlice = slicesRef.current.get('workspaceRepositories');
+  if (workspaceReposSlice) {
+    slicesRef.current.set('workspaceRepositories', {
+      ...workspaceReposSlice,
+      data: {
+        repositories: collectionRepoDetails,
+        loading: collectionRepoDetailsLoading,
+        error: undefined,
+      },
+      loading: collectionRepoDetailsLoading,
+    });
+  }
+
   // Refresh function - use slicesRef instead of slices state
   const refresh = useCallback(
     async (scope?: 'workspace' | 'repository', sliceName?: string) => {
@@ -1384,7 +1499,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError, presenceSessions, presenceLoading, presenceConnected, packages, packagesLoading, packagesError, ownerRepos, ownerReposLoading]
+    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError, presenceSessions, presenceLoading, presenceConnected, packages, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading]
   );
 
   // Actions
@@ -1719,6 +1834,14 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       unsubRefresh();
     };
   }, [events, fetchOwnerRepos]);
+
+  // Fetch collection repository details when collectionRepositories prop is provided
+  useEffect(() => {
+    if (collectionRepositories && collectionRepositories.length > 0) {
+      console.log('[PanelContext] Fetching collection repo details for:', collectionRepositories.length, 'repos');
+      fetchCollectionRepoDetails(collectionRepositories);
+    }
+  }, [collectionRepositories, fetchCollectionRepoDetails]);
 
   return <PanelContext.Provider value={value}>{children}</PanelContext.Provider>;
 }

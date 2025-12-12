@@ -5,6 +5,7 @@ import { EditorHeader } from "@/components/EditorHeader";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, useEffect } from "react";
+import type { CuratedCollection } from '@industry-theme/github-panels';
 
 // Dynamically import WelcomePanel to avoid SSR issues
 const WelcomePanel = dynamic(
@@ -26,35 +27,43 @@ const stubActions = {
   runCommand: () => Promise.resolve(),
 };
 
-// Check if user has any stored recent items
-function hasStoredHistory(): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    const repos = localStorage.getItem('recent-repositories');
-    const owners = localStorage.getItem('recent-owners');
-    const hasRepos = repos ? JSON.parse(repos).length > 0 : false;
-    const hasOwners = owners ? JSON.parse(owners).length > 0 : false;
-    return hasRepos || hasOwners;
-  } catch {
-    return false;
-  }
+
+interface CollectionsResponse {
+  collections: Array<{
+    id: string;
+    name: string;
+    description: string;
+    icon?: string;
+    theme?: string;
+  }>;
+  memberships: Record<string, string[]>;
 }
 
 function HomePageContent() {
   const { theme } = useTheme();
   const router = useRouter();
-  const [showHeader, setShowHeader] = useState(false);
+  const [collections, setCollections] = useState<CuratedCollection[]>([]);
 
+  // Fetch curated collections
   useEffect(() => {
-    setShowHeader(hasStoredHistory());
+    fetch('/api/collections')
+      .then(res => res.json())
+      .then((data: CollectionsResponse) => {
+        const collectionsWithCount = data.collections.map(c => ({
+          ...c,
+          repositoryCount: data.memberships[c.id]?.length || 0,
+        }));
+        setCollections(collectionsWithCount);
+      })
+      .catch(err => console.error('Failed to fetch collections:', err));
   }, []);
 
   const handleNavigate = useCallback((owner: string, repo: string) => {
     router.push(`/${owner}/${repo}`);
   }, [router]);
 
-  const handleOrganizationClick = useCallback((org: string) => {
-    router.push(`/${org}`);
+  const handleCollectionClick = useCallback((collectionId: string) => {
+    router.push(`/collections/${collectionId}`);
   }, [router]);
 
   return (
@@ -62,20 +71,16 @@ function HomePageContent() {
       className="h-screen w-screen overflow-hidden flex flex-col"
       style={{ background: theme.colors.background }}
     >
-      {showHeader && <EditorHeader />}
+      <EditorHeader />
       <div className="flex-1 overflow-hidden">
         <WelcomePanel
           events={stubEvents}
           actions={stubActions}
           context={{} as never}
           onNavigate={handleNavigate}
-          onOrganizationClick={handleOrganizationClick}
           highlightedProjects={[]}
-          featuredOrganizations={[
-            { login: 'principal-ai', description: 'AI-powered development tools' },
-            { login: 'principal-ade', description: 'Application Development Environment' },
-            { login: 'principal-forks', description: 'Curated forks of popular projects' },
-          ]}
+          curatedCollections={collections}
+          onCollectionClick={handleCollectionClick}
         />
       </div>
     </div>
