@@ -49,15 +49,10 @@ function saveRecentOwner(owner: string) {
 
 // Dynamically import the OwnerRepositoriesPanel with SSR disabled
 const OwnerRepositoriesPanelLoader = dynamic(
-  () => import('@industry-theme/github-panels').then((mod) => {
-    const Component = mod.panels[2]!.component as React.ComponentType<
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      any
-    >;
-    return { default: Component };
-  }),
+  () => import('@industry-theme/github-panels').then((mod) => mod.OwnerRepositoriesPanel),
   { ssr: false }
-);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) as React.ComponentType<any>;
 
 // Dynamically import the MarkdownPanel with SSR disabled
 const MarkdownPanelLoader = dynamic(
