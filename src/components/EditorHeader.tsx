@@ -215,7 +215,8 @@ export function EditorHeader({
           </span>
           <Logo width={32} height={32} color={theme.colors.primary} />
         </Link>
-      ) : !repositoryName ? (
+      ) : !repositoryName && !ownerOnly ? (
+        /* Home page - show Principal AI Gallery */
         <Link
           href="/"
           className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2 transition-opacity hover:opacity-80"
@@ -237,7 +238,28 @@ export function EditorHeader({
           </span>
           <Logo width={32} height={32} color={theme.colors.primary} />
         </Link>
-      ) : (
+      ) : ownerOnly ? (
+        /* Owner page - show Principal AI */
+        <Link
+          href="/"
+          className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2 transition-opacity hover:opacity-80"
+          style={{
+            fontFamily: theme.fonts.body,
+            textDecoration: 'none',
+          }}
+        >
+          <Logo width={32} height={32} color={theme.colors.primary} />
+          <span
+            className="text-xl font-bold"
+            style={{ fontFamily: theme.fonts.body }}
+          >
+            <span style={{ color: theme.colors.text }}>Principal</span>
+            {' '}
+            <span style={{ color: theme.colors.primary }}>AI</span>
+          </span>
+          <Logo width={32} height={32} color={theme.colors.primary} />
+        </Link>
+      ) : repositoryName ? (
         <div
           className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2"
           style={{
@@ -304,7 +326,7 @@ export function EditorHeader({
             <Search className="w-4 h-4" />
           </button>
         </div>
-      )}
+      ) : null}
 
       <div className="flex items-center gap-3 flex-shrink-0 flex-1 justify-end">
         {/* Open in Desktop App button */}
