@@ -105,6 +105,27 @@ function CollectionPageContent({ collectionId: _collectionId, onPreviewChange }:
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Auto-select first repository when repositories are loaded
+  const workspaceReposSlice = context.getSlice('workspaceRepositories');
+  const workspaceReposData = workspaceReposSlice?.data as { repositories?: Array<{ full_name: string; owner: { login: string }; name: string }> } | undefined;
+  const workspaceReposLoading = workspaceReposSlice?.loading ?? true;
+
+  useEffect(() => {
+    if (!events || workspaceReposLoading || previewedRepo) return;
+
+    const repositories = workspaceReposData?.repositories;
+    if (repositories && repositories.length > 0) {
+      const firstRepo = repositories[0];
+      if (firstRepo?.full_name) {
+        handlePreviewChange(firstRepo.full_name);
+        (actions as { previewReadme?: (owner: string, repo: string) => Promise<string> }).previewReadme?.(
+          firstRepo.owner.login,
+          firstRepo.name
+        );
+      }
+    }
+  }, [events, workspaceReposLoading, workspaceReposData?.repositories, previewedRepo, handlePreviewChange, actions]);
+
   // Listen for repository events
   useEffect(() => {
     if (!events) return;

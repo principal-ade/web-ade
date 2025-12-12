@@ -209,6 +209,31 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Auto-select first repository when repositories are loaded
+  const ownerReposSlice = context.getSlice('owner-repositories');
+  const ownerReposData = ownerReposSlice?.data as { repositories?: Array<{ full_name: string }> } | undefined;
+  const ownerReposLoading = ownerReposSlice?.loading ?? true;
+
+  useEffect(() => {
+    if (!events || ownerReposLoading || previewedRepo) return;
+
+    const repositories = ownerReposData?.repositories;
+    if (repositories && repositories.length > 0) {
+      const firstRepo = repositories[0];
+      if (firstRepo?.full_name) {
+        // Emit repository:preview event for the first repository
+        events.emit({
+          type: 'repository:preview',
+          source: 'owner-page-auto-select',
+          timestamp: Date.now(),
+          payload: {
+            repository: firstRepo,
+          },
+        });
+      }
+    }
+  }, [events, ownerReposLoading, ownerReposData?.repositories, previewedRepo]);
+
   // Listen for repository preview events
   useEffect(() => {
     if (!events) return;
