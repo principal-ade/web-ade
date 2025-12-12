@@ -129,13 +129,13 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(true);
 
-  // Layout with tabbed middle panel for Preview, Quality, and Architecture
+  // Layout with tabbed middle panel for Architecture, Quality, and Preview
   // and tabbed right panel for Code City, Docs, and Configs
   const layout: PanelLayout = {
     left: 'owner-repositories',
     middle: {
       type: 'tabs',
-      panels: ['markdown-viewer', 'code-quality', 'visual-validation'],
+      panels: ['visual-validation', 'code-quality', 'markdown-viewer'],
     },
     right: {
       type: 'tabs',
