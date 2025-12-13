@@ -52,6 +52,13 @@ const CodeCityPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the PackageCompositionPanel with SSR disabled
+const PackageCompositionPanelLoader = dynamic(
+  () => import('@industry-theme/repository-composition-panels').then((mod) => mod.PackageCompositionPanel),
+  { ssr: false }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) as React.ComponentType<any>;
+
 interface Collection {
   id: string;
   name: string;
@@ -88,7 +95,7 @@ function CollectionPageContent({ collectionId: _collectionId, onPreviewChange }:
     },
     right: {
       type: 'tabs',
-      panels: ['code-city', 'alexandria-docs', 'config-library'],
+      panels: ['package-composition', 'code-city', 'alexandria-docs', 'config-library'],
     },
   };
 
@@ -221,6 +228,15 @@ function CollectionPageContent({ collectionId: _collectionId, onPreviewChange }:
       content: (
         <div className="h-full w-full overflow-hidden">
           <CodeQualityPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'package-composition',
+      label: 'Packages',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <PackageCompositionPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },

@@ -839,112 +839,31 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     try {
       const [owner, name] = repo.split('/');
 
-      // Fetch package.json from the repository
+      // Use the server-side packages endpoint for full monorepo detection
       const response = await fetch(
-        `/api/github/repo/${owner}/${name}?action=file&path=package.json`
+        `/api/github/repo/${owner}/${name}/packages`
       );
 
       if (!response.ok) {
         if (response.status === 404) {
-          console.log('[PanelContext] No package.json found');
+          console.log('[PanelContext] No packages found');
           setPackages([]);
           return;
         }
-        throw new Error(`Failed to fetch package.json: ${response.statusText}`);
+        throw new Error(`Failed to fetch packages: ${response.statusText}`);
       }
 
       const data = await response.json();
 
-      // Decode base64 content
-      let content = '';
-      if (data.content && data.encoding === 'base64') {
-        const binaryString = atob(data.content.replace(/\n/g, ''));
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+      if (data.packages && Array.isArray(data.packages)) {
+        setPackages(data.packages);
+        console.log('[PanelContext] Packages loaded:', data.packages.length, 'packages');
+        if (data.summary) {
+          console.log('[PanelContext] Package summary:', data.summary);
         }
-        const decoder = new TextDecoder('utf-8');
-        content = decoder.decode(bytes);
+      } else {
+        setPackages([]);
       }
-
-      // Parse package.json
-      const packageJson = JSON.parse(content);
-
-      // Build available commands from scripts
-      const availableCommands: PackageCommand[] = Object.entries(packageJson.scripts || {}).map(
-        ([scriptName, scriptCommand]) => ({
-          name: scriptName,
-          command: `npm run ${scriptName}`,
-          description: String(scriptCommand),
-          type: 'script' as const,
-        })
-      );
-
-      // Detect package manager from lock files (use ref to avoid dependency cycle)
-      let packageManager: 'npm' | 'yarn' | 'pnpm' | 'unknown' = 'npm';
-      const currentFileTree = fileTreeRef.current;
-      if (currentFileTree) {
-        const hasYarnLock = currentFileTree.allFiles.some(f => f.name === 'yarn.lock');
-        const hasPnpmLock = currentFileTree.allFiles.some(f => f.name === 'pnpm-lock.yaml');
-        if (hasPnpmLock) packageManager = 'pnpm';
-        else if (hasYarnLock) packageManager = 'yarn';
-      }
-
-      // Check for config files
-      const configFiles: Record<string, ConfigFile | undefined> = {};
-      const configPatterns = [
-        { key: 'typescript', files: ['tsconfig.json'] },
-        { key: 'eslint', files: ['eslint.config.js', 'eslint.config.mjs', '.eslintrc', '.eslintrc.js', '.eslintrc.json'] },
-        { key: 'prettier', files: ['.prettierrc', '.prettierrc.js', '.prettierrc.json', 'prettier.config.js'] },
-        { key: 'vitest', files: ['vitest.config.ts', 'vitest.config.js'] },
-        { key: 'jest', files: ['jest.config.js', 'jest.config.ts'] },
-        { key: 'vite', files: ['vite.config.ts', 'vite.config.js'] },
-      ];
-
-      if (currentFileTree) {
-        for (const { key, files } of configPatterns) {
-          const found = files.find(fileName =>
-            currentFileTree.allFiles.some(f => f.name === fileName)
-          );
-          if (found) {
-            configFiles[key] = {
-              path: found,
-              exists: true,
-              type: found.endsWith('.json') ? 'json' : found.endsWith('.ts') ? 'ts' : 'js',
-            };
-          }
-        }
-      }
-
-      // Create the PackageLayer
-      const packageLayer: PackageLayer = {
-        id: `${owner}/${name}`,
-        name: packageJson.name || name || 'unknown',
-        type: 'node',
-        enabled: true,
-        derivedFrom: {
-          fileSets: [{ id: 'package-json', name: 'package.json', patterns: [{ type: 'exact', pattern: 'package.json' }] }],
-          derivationType: 'presence',
-          description: 'Derived from package.json',
-        },
-        packageData: {
-          name: packageJson.name || name || 'unknown',
-          version: packageJson.version,
-          path: '/',
-          manifestPath: 'package.json',
-          packageManager,
-          dependencies: packageJson.dependencies || {},
-          devDependencies: packageJson.devDependencies || {},
-          peerDependencies: packageJson.peerDependencies || {},
-          isMonorepoRoot: !!packageJson.workspaces,
-          isWorkspace: false,
-          availableCommands,
-        },
-        configFiles,
-      };
-
-      setPackages([packageLayer]);
-      console.log('[PanelContext] Packages loaded:', packageLayer.packageData.name);
     } catch (err) {
       console.error('[PanelContext] Failed to fetch packages:', err);
       setPackagesError(err instanceof Error ? err : new Error('Failed to load packages'));

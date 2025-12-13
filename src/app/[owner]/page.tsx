@@ -108,6 +108,13 @@ const CodeCityPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the PackageCompositionPanel with SSR disabled
+const PackageCompositionPanelLoader = dynamic(
+  () => import('@industry-theme/repository-composition-panels').then((mod) => mod.PackageCompositionPanel),
+  { ssr: false }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) as React.ComponentType<any>;
+
 interface OwnerPageContentProps {
   owner: string;
   onPreviewChange?: (repo: string | null) => void;
@@ -125,7 +132,7 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
   const [rightCollapsed, setRightCollapsed] = useState(true);
 
   // Layout with tabbed middle panel for Architecture, Quality, and Preview
-  // and tabbed right panel for Code City, Docs, and Configs
+  // and tabbed right panel for Packages, Code City, Docs, and Configs
   const layout: PanelLayout = {
     left: 'owner-repositories',
     middle: {
@@ -134,7 +141,7 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
     },
     right: {
       type: 'tabs',
-      panels: ['code-city', 'alexandria-docs', 'config-library'],
+      panels: ['package-composition', 'code-city', 'alexandria-docs', 'config-library'],
     },
   };
 
@@ -321,6 +328,15 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
       content: (
         <div className="h-full w-full overflow-hidden">
           <CodeQualityPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'package-composition',
+      label: 'Packages',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <PackageCompositionPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },
