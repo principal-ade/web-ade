@@ -26,7 +26,6 @@ import '@principal-ade/industry-themed-ai-sdk-panel/styles.css';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGemini } from '@/contexts/GeminiContext';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
-import { ExternalLink } from 'lucide-react';
 import type { Theme } from '@principal-ade/industry-theme';
 
 // Dynamically import the MarkdownPanel with SSR disabled
@@ -152,7 +151,6 @@ function EditorLayoutContent({
   const currentLayoutConfig = layoutConfigs.find((c) => c.id === currentLayoutConfigId) || layoutConfigs[0]!;
   const [isMobile, setIsMobile] = useState(false);
   const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
-  const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
 
   // Handle layout configuration change
   const handleLayoutConfigChange = useCallback((config: LayoutConfig) => {
@@ -277,8 +275,6 @@ function EditorLayoutContent({
           const owner = parts[0];
           const repo = parts[1];
           if (owner && repo) {
-            // Store the previewed repo for the "Open" button
-            setPreviewedRepo(payload.repository.full_name);
             // Call the previewReadme action
             (actions as { previewReadme?: (owner: string, repo: string) => Promise<string> }).previewReadme?.(owner, repo);
             // Switch the right panel to markdown-viewer to show the preview
@@ -643,26 +639,6 @@ function EditorLayoutContent({
           />
         )}
       </div>
-
-      {/* Open Repository Button - shows when previewing a repo */}
-      {previewedRepo && (
-        <button
-          onClick={() => {
-            window.location.href = `/${previewedRepo}`;
-          }}
-          className="fixed bottom-6 right-6 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg transition-all hover:scale-105 z-50"
-          style={{
-            background: theme.colors.primary,
-            color: theme.colors.background,
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[2],
-            fontWeight: theme.fontWeights.semibold,
-          }}
-        >
-          <ExternalLink size={18} />
-          Open {previewedRepo.split('/')[1]}
-        </button>
-      )}
 
       {/* Agent Command Palette (Alt+P) - AI-driven natural language commands */}
       <AgentCommandPalette

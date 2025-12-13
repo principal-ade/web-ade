@@ -12,7 +12,6 @@ import {
   PanelLayout,
 } from "@principal-ade/panel-layouts";
 import '@principal-ade/panel-layouts/styles.css';
-import { ExternalLink } from 'lucide-react';
 
 const RECENT_OWNERS_KEY = 'recent-owners';
 const MAX_RECENT_ITEMS = 10;
@@ -420,25 +419,6 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
         )}
       </div>
 
-      {/* Open Repository Button - shows when previewing a repo */}
-      {previewedRepo && (
-        <button
-          onClick={() => {
-            window.location.href = `/${previewedRepo}`;
-          }}
-          className="fixed bottom-6 right-6 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg transition-all hover:scale-105 z-50"
-          style={{
-            background: theme.colors.primary,
-            color: theme.colors.background,
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[2],
-            fontWeight: theme.fontWeights.semibold,
-          }}
-        >
-          <ExternalLink size={18} />
-          Open {previewedRepo.split('/')[1]}
-        </button>
-      )}
     </div>
   );
 }

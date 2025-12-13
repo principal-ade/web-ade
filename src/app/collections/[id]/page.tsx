@@ -13,7 +13,6 @@ import {
   PanelLayout,
 } from "@principal-ade/panel-layouts";
 import '@principal-ade/panel-layouts/styles.css';
-import { ExternalLink } from 'lucide-react';
 
 // Dynamically import panels with SSR disabled
 const WorkspaceCollectionPanelLoader = dynamic(
@@ -292,23 +291,6 @@ function CollectionPageContent({ collectionId: _collectionId, onPreviewChange }:
         )}
       </div>
 
-      {/* Open Repository Button */}
-      {previewedRepo && (
-        <button
-          onClick={() => router.push(`/${previewedRepo}`)}
-          className="fixed bottom-6 right-6 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg transition-all hover:scale-105 z-50"
-          style={{
-            background: theme.colors.primary,
-            color: theme.colors.background,
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[2],
-            fontWeight: theme.fontWeights.semibold,
-          }}
-        >
-          <ExternalLink size={18} />
-          Open {previewedRepo.split('/')[1]}
-        </button>
-      )}
     </div>
   );
 }
