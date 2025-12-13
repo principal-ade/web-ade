@@ -28,7 +28,7 @@
     "@industry-theme/github-panels": "^0.1.31",
     "@industry-theme/markdown-panels": "^0.2.12",
     "@industry-theme/principal-view-panels": "^0.1.2",
-    "@industry-theme/repository-composition-panels": "^0.2.2",
+    "@industry-theme/repository-composition-panels": "^0.2.3",
     "@industry-theme/theme-editor-panel": "^0.1.1",
     "@mlc-ai/web-llm": "^0.2.80",
     "@octokit/rest": "^22.0.1",

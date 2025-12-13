@@ -44,6 +44,15 @@ export interface FileMetricData {
 }
 
 /**
+ * Per-package quality metrics (from CLI output)
+ */
+export interface PackageQualityMetrics {
+  name: string;
+  path?: string;
+  hexagon: QualityHexagonMetrics;
+}
+
+/**
  * Response shape for the API
  */
 export interface QualityArtifactResponse {
@@ -51,7 +60,8 @@ export interface QualityArtifactResponse {
   branch: string;
   timestamp: string;
   qualityMetrics: {
-    hexagon: QualityHexagonMetrics;
+    /** Per-package hexagons for monorepo support */
+    packages: PackageQualityMetrics[];
   };
   /** Per-file coverage percentages from Jest (path -> line coverage %) */
   fileCoverage?: Record<string, number>;
@@ -274,20 +284,14 @@ export class GitHubArtifactService {
       }
     }
 
+    // Get per-package hexagons from CLI output
+    const packages = (results.qualityMetrics as { packages?: PackageQualityMetrics[] })?.packages ?? [];
+
     return {
       commitSha: results.metadata.git?.commit ?? extractCommitSha(artifactName) ?? 'unknown',
       branch: results.metadata.git?.branch ?? 'unknown',
       timestamp: results.metadata.timestamp,
-      qualityMetrics: results.qualityMetrics ?? {
-        hexagon: {
-          tests: 0,
-          deadCode: 0,
-          formatting: 0,
-          linting: 0,
-          types: 0,
-          documentation: 0,
-        },
-      },
+      qualityMetrics: { packages },
       fileCoverage: Object.keys(fileCoverage).length > 0 ? fileCoverage : undefined,
       fileMetrics: Object.keys(fileMetrics).length > 0 ? fileMetrics : undefined,
       artifactId,

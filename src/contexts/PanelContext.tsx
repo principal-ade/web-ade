@@ -130,6 +130,7 @@ interface QualityMetrics {
 
 interface PackageQuality {
   name: string;
+  path?: string;
   version?: string;
   metrics: QualityMetrics;
 }
@@ -203,6 +204,21 @@ interface PackageLayer {
     availableCommands?: PackageCommand[];
   };
   configFiles?: Record<string, ConfigFile | undefined>;
+}
+
+interface PackageSummary {
+  isMonorepo: boolean;
+  rootPackageName?: string;
+  totalPackages: number;
+  workspacePackages: Array<{ name?: string; path: string }>;
+  totalDependencies: number;
+  totalDevDependencies: number;
+  availableScripts: string[];
+}
+
+interface PackagesSliceData {
+  packages: PackageLayer[];
+  summary: PackageSummary;
 }
 
 interface PanelProviderProps {
@@ -422,7 +438,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const [qualityError, setQualityError] = useState<Error | null>(null);
 
   // State for packages (for PackageCompositionPanel)
-  const [packages, setPackages] = useState<PackageLayer[]>([]);
+  const [packagesData, setPackagesData] = useState<PackagesSliceData | null>(null);
   const [packagesLoading, setPackagesLoading] = useState(false);
   const [packagesError, setPackagesError] = useState<Error | null>(null);
 
@@ -795,13 +811,13 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       const data = await response.json();
 
       // Transform API response to QualitySliceData format
+      // CLI now outputs per-package hexagons
       const qualitySliceData: QualitySliceData = {
-        packages: [
-          {
-            name: repo,
-            metrics: data.qualityMetrics.hexagon,
-          },
-        ],
+        packages: (data.qualityMetrics.packages ?? []).map((pkg: { name: string; path?: string; hexagon: QualityMetrics }) => ({
+          name: pkg.name,
+          path: pkg.path,
+          metrics: pkg.hexagon,
+        })),
         lastUpdated: data.timestamp,
         commitSha: data.commitSha,
         branch: data.branch,
@@ -847,7 +863,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       if (!response.ok) {
         if (response.status === 404) {
           console.log('[PanelContext] No packages found');
-          setPackages([]);
+          setPackagesData(null);
           return;
         }
         throw new Error(`Failed to fetch packages: ${response.statusText}`);
@@ -856,18 +872,30 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       const data = await response.json();
 
       if (data.packages && Array.isArray(data.packages)) {
-        setPackages(data.packages);
+        // Store both packages and summary for PackageCompositionPanel
+        const defaultSummary: PackageSummary = {
+          isMonorepo: false,
+          totalPackages: data.packages.length,
+          workspacePackages: [],
+          totalDependencies: 0,
+          totalDevDependencies: 0,
+          availableScripts: [],
+        };
+        setPackagesData({
+          packages: data.packages,
+          summary: data.summary || defaultSummary,
+        });
         console.log('[PanelContext] Packages loaded:', data.packages.length, 'packages');
         if (data.summary) {
           console.log('[PanelContext] Package summary:', data.summary);
         }
       } else {
-        setPackages([]);
+        setPackagesData(null);
       }
     } catch (err) {
       console.error('[PanelContext] Failed to fetch packages:', err);
       setPackagesError(err instanceof Error ? err : new Error('Failed to load packages'));
-      setPackages([]);
+      setPackagesData(null);
     } finally {
       setPackagesLoading(false);
     }
@@ -1093,7 +1121,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         {
           scope: 'repository',
           name: 'packages',
-          data: packages,
+          data: packagesData,
           loading: packagesLoading,
           error: packagesError,
           refresh: async () => {
@@ -1261,7 +1289,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   if (packagesSlice) {
     slicesRef.current.set('packages', {
       ...packagesSlice,
-      data: packages,
+      data: packagesData,
       loading: packagesLoading,
       error: packagesError,
     });
@@ -1418,7 +1446,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError, presenceSessions, presenceLoading, presenceConnected, packages, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading]
+    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading]
   );
 
   // Actions
