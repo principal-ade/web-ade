@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { PanelProvider, usePanelProvider } from "@/contexts/PanelContext";
@@ -99,13 +99,14 @@ const PackageCompositionPanelLoader = dynamic(
 interface OwnerPageContentProps {
   owner: string;
   onPreviewChange?: (repo: string | null) => void;
+  initialPreviewedRepo?: string | null;
 }
 
-function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
+function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: OwnerPageContentProps) {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
   const [isMobile, setIsMobile] = useState(false);
-  const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
+  const [previewedRepo, setPreviewedRepo] = useState<string | null>(initialPreviewedRepo ?? null);
   const [canvasExists, setCanvasExists] = useState(false);
   const [canvasLoading, setCanvasLoading] = useState(true);
   const canvasLoadedRef = useRef(false);
@@ -196,6 +197,19 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Load initial repo data if provided via URL
+  useEffect(() => {
+    if (!initialPreviewedRepo || !actions) return;
+
+    const parts = initialPreviewedRepo.split('/');
+    const repoOwner = parts[0];
+    const repo = parts[1];
+    if (repoOwner && repo) {
+      (actions as { previewReadme?: (owner: string, repo: string) => Promise<string> }).previewReadme?.(repoOwner, repo);
+      checkForCanvas(repoOwner, repo);
+    }
+  }, [initialPreviewedRepo, actions, checkForCanvas]);
 
   // Auto-select first repository when repositories are loaded
   const ownerReposSlice = context.getSlice('owner-repositories');
@@ -391,7 +405,24 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
 
 function OwnerPageWrapper({ owner }: { owner: string }) {
   const { theme } = useTheme();
-  const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [previewedRepo, setPreviewedRepo] = useState<string | null>(() => {
+    // Initialize from URL query param
+    return searchParams.get('project');
+  });
+
+  // Update URL when previewed repo changes
+  const handlePreviewChange = useCallback((repo: string | null) => {
+    setPreviewedRepo(repo);
+    const params = new URLSearchParams(searchParams.toString());
+    if (repo) {
+      params.set('project', repo);
+    } else {
+      params.delete('project');
+    }
+    router.replace(`/${owner}?${params.toString()}`, { scroll: false });
+  }, [owner, router, searchParams]);
 
   return (
     <div
@@ -410,7 +441,7 @@ function OwnerPageWrapper({ owner }: { owner: string }) {
         githubRepo={previewedRepo || undefined}
         initialOwner={owner}
       >
-        <OwnerPageContent owner={owner} onPreviewChange={setPreviewedRepo} />
+        <OwnerPageContent owner={owner} onPreviewChange={handlePreviewChange} initialPreviewedRepo={previewedRepo} />
       </PanelProvider>
     </div>
   );

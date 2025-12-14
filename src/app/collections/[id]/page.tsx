@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useCallback } from "react";
@@ -64,14 +64,15 @@ interface CollectionData {
 interface CollectionPageContentProps {
   collectionId: string;
   onPreviewChange?: (repo: string | null) => void;
+  initialPreviewedRepo?: string | null;
 }
 
-function CollectionPageContent({ collectionId: _collectionId, onPreviewChange }: CollectionPageContentProps) {
+function CollectionPageContent({ collectionId: _collectionId, onPreviewChange, initialPreviewedRepo }: CollectionPageContentProps) {
   const { theme } = useTheme();
   const router = useRouter();
   const { context, actions, events } = usePanelProvider();
   const [isMobile, setIsMobile] = useState(false);
-  const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
+  const [previewedRepo, setPreviewedRepo] = useState<string | null>(initialPreviewedRepo ?? null);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(true);
 
@@ -100,6 +101,16 @@ function CollectionPageContent({ collectionId: _collectionId, onPreviewChange }:
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Load initial repo data if provided via URL
+  useEffect(() => {
+    if (!initialPreviewedRepo || !actions) return;
+
+    const [owner, repo] = initialPreviewedRepo.split('/');
+    if (owner && repo) {
+      (actions as { previewReadme?: (owner: string, repo: string) => Promise<string> }).previewReadme?.(owner, repo);
+    }
+  }, [initialPreviewedRepo, actions]);
 
   // Auto-select first repository when repositories are loaded
   const workspaceReposSlice = context.getSlice('workspaceRepositories');
@@ -271,11 +282,28 @@ function CollectionPageContent({ collectionId: _collectionId, onPreviewChange }:
 
 function CollectionPageWrapper({ collectionId }: { collectionId: string }) {
   const { theme } = useTheme();
-  const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [previewedRepo, setPreviewedRepo] = useState<string | null>(() => {
+    // Initialize from URL query param
+    return searchParams.get('project');
+  });
   const [collection, setCollection] = useState<Collection | null>(null);
   const [repositories, setRepositories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Update URL when previewed repo changes
+  const handlePreviewChange = useCallback((repo: string | null) => {
+    setPreviewedRepo(repo);
+    const params = new URLSearchParams(searchParams.toString());
+    if (repo) {
+      params.set('project', repo);
+    } else {
+      params.delete('project');
+    }
+    router.replace(`/collections/${collectionId}?${params.toString()}`, { scroll: false });
+  }, [collectionId, router, searchParams]);
 
   // Fetch collection data
   useEffect(() => {
@@ -349,7 +377,8 @@ function CollectionPageWrapper({ collectionId }: { collectionId: string }) {
       >
         <CollectionPageContent
           collectionId={collectionId}
-          onPreviewChange={setPreviewedRepo}
+          onPreviewChange={handlePreviewChange}
+          initialPreviewedRepo={previewedRepo}
         />
       </PanelProvider>
     </div>
