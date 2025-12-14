@@ -70,7 +70,7 @@ function CollectionPageContent({ collectionId: _collectionId, onPreviewChange, i
   const [isMobile, setIsMobile] = useState(false);
   const [previewedRepo, setPreviewedRepo] = useState<string | null>(initialPreviewedRepo ?? null);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [rightCollapsed, setRightCollapsed] = useState(true);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
 
   // Layout matching owner page
   const layout: PanelLayout = {
