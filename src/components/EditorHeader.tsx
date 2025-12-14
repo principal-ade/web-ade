@@ -17,6 +17,7 @@ interface EditorHeaderProps {
   rightCollapsed?: boolean;
   onToggleLeft?: () => void;
   onToggleRight?: () => void;
+  selectedRepository?: string | null; // Format: "owner/repo"
 }
 
 export function EditorHeader({
@@ -26,6 +27,7 @@ export function EditorHeader({
   rightCollapsed = false,
   onToggleLeft,
   onToggleRight,
+  selectedRepository,
 }: EditorHeaderProps = {}) {
   const { theme } = useTheme();
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
@@ -137,52 +139,80 @@ export function EditorHeader({
             >
               <Logo width={32} height={32} color={theme.colors.primary} />
             </Link>
-            <a
-              href={`https://github.com/${ownerOnly}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 transition-all hover:opacity-80"
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`https://github.com/${ownerOnly}.png?size=64`}
+              alt={ownerOnly}
+              className="w-8 h-8 flex-shrink-0"
+              style={{
+                borderRadius: '6px',
+              }}
+            />
+            <div
+              className="flex items-center gap-1.5 text-base font-semibold hidden sm:flex"
+              style={{ fontFamily: theme.fonts.body }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`https://github.com/${ownerOnly}.png?size=64`}
-                alt={ownerOnly}
-                className="w-8 h-8 flex-shrink-0"
-                style={{
-                  borderRadius: '6px',
-                }}
-              />
-              <span
-                className="text-base font-semibold hidden sm:inline"
-                style={{
-                  fontFamily: theme.fonts.body,
-                  color: theme.colors.text,
-                }}
+              <Link
+                href={`/${ownerOnly}`}
+                className="transition-opacity hover:opacity-80"
+                style={{ color: theme.colors.textMuted, textDecoration: 'none' }}
               >
                 {ownerOnly}
-              </span>
-            </a>
+              </Link>
+              {selectedRepository && (
+                <>
+                  <span style={{ color: theme.colors.textMuted }}>/</span>
+                  <a
+                    href={`https://github.com/${selectedRepository}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="transition-opacity hover:opacity-80"
+                    style={{ color: theme.colors.text, textDecoration: 'none' }}
+                  >
+                    {selectedRepository.split('/')[1]}
+                  </a>
+                </>
+              )}
+            </div>
           </div>
         )}
         {/* Collection name on left with logo */}
         {collectionId && (
-          <Link
-            href="/"
-            className="flex items-center gap-2 flex-shrink-0 transition-all hover:opacity-80"
-            style={{
-              fontFamily: theme.fonts.body,
-              textDecoration: 'none',
-            }}
-          >
-            <Logo width={32} height={32} color={theme.colors.primary} />
-            <span
-              className="text-base font-semibold"
-              style={{ color: theme.colors.text }}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link
+              href="/"
+              className="flex items-center transition-all hover:opacity-80"
+              title="Home"
             >
-              {/* Format collection ID as readable name */}
-              {collectionId.replace('ws-', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-            </span>
-          </Link>
+              <Logo width={32} height={32} color={theme.colors.primary} />
+            </Link>
+            <div
+              className="flex items-center gap-1.5 text-base font-semibold"
+              style={{ fontFamily: theme.fonts.body }}
+            >
+              <Link
+                href={`/collections/${collectionId}`}
+                className="transition-opacity hover:opacity-80"
+                style={{ color: theme.colors.textMuted, textDecoration: 'none' }}
+              >
+                {collectionId.replace('ws-', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+              </Link>
+              {selectedRepository && (
+                <>
+                  <span style={{ color: theme.colors.textMuted }}>/</span>
+                  <a
+                    href={`https://github.com/${selectedRepository}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="transition-opacity hover:opacity-80"
+                    style={{ color: theme.colors.text, textDecoration: 'none' }}
+                  >
+                    {selectedRepository.split('/')[1]}
+                  </a>
+                </>
+              )}
+            </div>
+          </div>
         )}
         {/* Download App or Open in Desktop - only show on home page (not owner pages) */}
         {!repositoryName && !ownerOnly && !collectionId && (

@@ -362,6 +362,7 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
         rightCollapsed={rightCollapsed}
         onToggleLeft={() => setLeftCollapsed(!leftCollapsed)}
         onToggleRight={() => setRightCollapsed(!rightCollapsed)}
+        selectedRepository={previewedRepo}
       />
       <div className="flex-1 overflow-hidden">
         {isMobile ? (
