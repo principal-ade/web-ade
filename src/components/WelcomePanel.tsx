@@ -63,6 +63,7 @@ export interface WelcomePanelProps {
   curatedCollections?: CuratedCollection[];
   onCollectionClick?: (collectionId: string) => void;
   highlightedProjects?: HighlightedProject[];
+  loading?: boolean;
 }
 
 /**
@@ -85,6 +86,86 @@ function parseGitHubInput(input: string): { owner: string; repo: string } | null
 
   return null;
 }
+
+/**
+ * Skeleton card component for loading state
+ */
+const SkeletonCard: React.FC<{
+  theme: ReturnType<typeof useTheme>['theme'];
+}> = ({ theme }) => {
+  return (
+    <div
+      style={{
+        padding: '24px',
+        borderRadius: '12px',
+        backgroundColor: theme.colors.surface,
+        border: `1px solid ${theme.colors.border}`,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '16px',
+        width: '280px',
+      }}
+    >
+      {/* Icon skeleton */}
+      <div
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: '10px',
+          backgroundColor: theme.colors.border,
+          animation: 'pulse 1.5s ease-in-out infinite',
+        }}
+      />
+      {/* Text content skeleton */}
+      <div>
+        {/* Title */}
+        <div
+          style={{
+            width: 168,
+            height: 18,
+            borderRadius: '4px',
+            backgroundColor: theme.colors.border,
+            animation: 'pulse 1.5s ease-in-out infinite',
+            marginBottom: '8px',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+          }}
+        />
+        {/* Description lines */}
+        <div
+          style={{
+            width: 210,
+            height: 14,
+            borderRadius: '4px',
+            backgroundColor: theme.colors.border,
+            animation: 'pulse 1.5s ease-in-out infinite',
+            marginBottom: '6px',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+          }}
+        />
+        <div
+          style={{
+            width: 160,
+            height: 14,
+            borderRadius: '4px',
+            backgroundColor: theme.colors.border,
+            animation: 'pulse 1.5s ease-in-out infinite',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+          }}
+        />
+      </div>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+      `}</style>
+    </div>
+  );
+};
 
 /**
  * Collection card component
@@ -176,6 +257,7 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
   onNavigate,
   curatedCollections = [],
   onCollectionClick,
+  loading = false,
 }) => {
   const { theme } = useTheme();
   const [repoInput, setRepoInput] = useState('');
@@ -209,6 +291,7 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
     <div
       style={{
         height: '100%',
+        minHeight: '100%',
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: theme.colors.background,
@@ -218,7 +301,7 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
       }}
     >
       {/* Curated Collections Section */}
-      {curatedCollections.length > 0 && (
+      {(loading || curatedCollections.length > 0) && (
         <div
           style={{
             padding: '48px 32px',
@@ -249,14 +332,18 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
               maxWidth: '1200px',
             }}
           >
-            {curatedCollections.map((collection) => (
-              <CollectionCard
-                key={collection.id}
-                collection={collection}
-                theme={theme}
-                onClick={() => handleCollectionClick(collection)}
-              />
-            ))}
+            {loading
+              ? Array.from({ length: 6 }).map((_, i) => (
+                  <SkeletonCard key={i} theme={theme} />
+                ))
+              : curatedCollections.map((collection) => (
+                  <CollectionCard
+                    key={collection.id}
+                    collection={collection}
+                    theme={theme}
+                    onClick={() => handleCollectionClick(collection)}
+                  />
+                ))}
           </div>
         </div>
       )}
@@ -280,7 +367,7 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
             color: theme.colors.text,
           }}
         >
-          Explore your Projects
+          Try your Projects
         </h1>
 
         {/* Search Input */}

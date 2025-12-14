@@ -22,6 +22,7 @@ function HomePageContent() {
   const { theme } = useTheme();
   const router = useRouter();
   const [collections, setCollections] = useState<CuratedCollection[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Fetch curated collections
   useEffect(() => {
@@ -34,7 +35,8 @@ function HomePageContent() {
         }));
         setCollections(collectionsWithCount);
       })
-      .catch(err => console.error('Failed to fetch collections:', err));
+      .catch(err => console.error('Failed to fetch collections:', err))
+      .finally(() => setLoading(false));
   }, []);
 
   const handleNavigate = useCallback((owner: string, repo: string) => {
@@ -51,11 +53,12 @@ function HomePageContent() {
       style={{ background: theme.colors.background }}
     >
       <EditorHeader />
-      <div className="flex-1 overflow-hidden">
+      <div style={{ flex: 1, minHeight: 0, height: '100%' }}>
         <WelcomePanel
           onNavigate={handleNavigate}
           curatedCollections={collections}
           onCollectionClick={handleCollectionClick}
+          loading={loading}
         />
       </div>
     </div>
