@@ -53,27 +53,9 @@ const OwnerRepositoriesPanelLoader = dynamic(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as React.ComponentType<any>;
 
-// Dynamically import the MarkdownPanel with SSR disabled
-const MarkdownPanelLoader = dynamic(
-  () => import('@industry-theme/markdown-panels').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
 // Dynamically import the PrincipalViewGraphPanel with SSR disabled
 const PrincipalViewPanelLoader = dynamic(
   () => import('@industry-theme/principal-view-panels').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the AlexandriaDocsPanel with SSR disabled
-const AlexandriaDocsPanelLoader = dynamic(
-  () => import('@industry-theme/alexandria-docs-panel').then((mod) => {
     const Component = mod.panels[0]!.component;
     return { default: Component };
   }),
@@ -130,17 +112,17 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(true);
 
-  // Layout with tabbed middle panel for Architecture, Quality, and Preview
-  // and tabbed right panel for Packages, Code City, Docs, and Configs
+  // Layout with tabbed middle panel for Architecture and Quality
+  // and tabbed right panel for Packages, Code City, and Configs
   const layout: PanelLayout = {
     left: 'owner-repositories',
     middle: {
       type: 'tabs',
-      panels: ['visual-validation', 'code-quality', 'markdown-viewer'],
+      panels: ['visual-validation', 'code-quality'],
     },
     right: {
       type: 'tabs',
-      panels: ['package-composition', 'code-city', 'alexandria-docs', 'config-library'],
+      panels: ['package-composition', 'code-city', 'config-library'],
     },
   };
 
@@ -291,24 +273,6 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
       content: (
         <div className="h-full w-full overflow-hidden">
           <PrincipalViewPanelLoader context={context} actions={actions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'markdown-viewer',
-      label: 'Preview',
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <MarkdownPanelLoader context={context} actions={actions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'alexandria-docs',
-      label: 'Docs',
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <AlexandriaDocsPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },

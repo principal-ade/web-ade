@@ -21,18 +21,8 @@ const WorkspaceCollectionPanelLoader = dynamic(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as React.ComponentType<any>;
 
-const MarkdownPanelLoader = dynamic(
-  () => import('@industry-theme/markdown-panels').then((mod) => mod.panels[0]!.component),
-  { ssr: false }
-);
-
 const PrincipalViewPanelLoader = dynamic(
   () => import('@industry-theme/principal-view-panels').then((mod) => mod.panels[0]!.component),
-  { ssr: false }
-);
-
-const AlexandriaDocsPanelLoader = dynamic(
-  () => import('@industry-theme/alexandria-docs-panel').then((mod) => mod.panels[0]!.component),
   { ssr: false }
 );
 
@@ -90,11 +80,11 @@ function CollectionPageContent({ collectionId: _collectionId, onPreviewChange }:
     left: 'workspace-collection',
     middle: {
       type: 'tabs',
-      panels: ['visual-validation', 'code-quality', 'markdown-viewer'],
+      panels: ['visual-validation', 'code-quality'],
     },
     right: {
       type: 'tabs',
-      panels: ['package-composition', 'code-city', 'alexandria-docs', 'config-library'],
+      panels: ['package-composition', 'code-city', 'config-library'],
     },
   };
 
@@ -191,24 +181,6 @@ function CollectionPageContent({ collectionId: _collectionId, onPreviewChange }:
       content: (
         <div className="h-full w-full overflow-hidden">
           <PrincipalViewPanelLoader context={context} actions={actions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'markdown-viewer',
-      label: 'Preview',
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <MarkdownPanelLoader context={context} actions={actions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'alexandria-docs',
-      label: 'Docs',
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <AlexandriaDocsPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },
