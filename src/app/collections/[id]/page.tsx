@@ -171,6 +171,7 @@ function CollectionPageContent({ collectionId: _collectionId, onPreviewChange }:
               },
             }}
             events={events}
+            selectedRepository={previewedRepo}
           />
         </div>
       ),
