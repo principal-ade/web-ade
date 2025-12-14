@@ -262,53 +262,21 @@ export function EditorHeader({
         </Link>
       ) : collectionId && selectedRepository ? (
         /* Collection page with selected repository - show in center */
-        <div
-          className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2"
+        <a
+          href={`https://github.com/${selectedRepository}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute left-1/2 transform -translate-x-1/2 transition-opacity hover:opacity-80"
           style={{
+            fontSize: theme.fontSizes[4],
+            fontWeight: theme.fontWeights.semibold,
             fontFamily: theme.fonts.body,
+            color: theme.colors.text,
+            textDecoration: 'none',
           }}
         >
-          {/* Repo Avatar */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`https://github.com/${selectedRepository.split('/')[0]}.png?size=64`}
-            alt={selectedRepository.split('/')[0]}
-            className="w-9 h-9 flex-shrink-0"
-            style={{
-              borderRadius: '6px',
-            }}
-          />
-
-          {/* Name/Owner */}
-          <div className="flex flex-col items-center gap-px">
-            <Link
-              href={`/${selectedRepository.split('/')[0]}`}
-              className="transition-opacity hover:opacity-80"
-              style={{
-                fontSize: theme.fontSizes[2],
-                fontWeight: theme.fontWeights.body,
-                color: theme.colors.textMuted,
-                textDecoration: 'none',
-              }}
-            >
-              {selectedRepository.split('/')[0]}
-            </Link>
-            <a
-              href={`https://github.com/${selectedRepository}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition-opacity hover:opacity-80"
-              style={{
-                fontSize: theme.fontSizes[3],
-                fontWeight: theme.fontWeights.semibold,
-                color: theme.colors.text,
-                textDecoration: 'none',
-              }}
-            >
-              {selectedRepository.split('/')[1]}
-            </a>
-          </div>
-        </div>
+          {selectedRepository.split('/')[1]}
+        </a>
       ) : repositoryName ? (
         <div
           className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2"
