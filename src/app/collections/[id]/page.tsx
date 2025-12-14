@@ -77,11 +77,11 @@ function CollectionPageContent({ collectionId: _collectionId, onPreviewChange, i
     left: 'workspace-collection',
     middle: {
       type: 'tabs',
-      panels: ['visual-validation', 'code-city'],
+      panels: ['code-city', 'visual-validation'],
     },
     right: {
       type: 'tabs',
-      panels: ['package-composition', 'code-quality'],
+      panels: ['code-quality', 'package-composition'],
     },
   };
 
