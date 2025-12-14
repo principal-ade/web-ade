@@ -1,31 +1,10 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { EditorHeader } from "@/components/EditorHeader";
+import { WelcomePanel, type CuratedCollection } from "@/components/WelcomePanel";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, useEffect } from "react";
-import type { CuratedCollection } from '@industry-theme/github-panels';
-
-// Dynamically import WelcomePanel to avoid SSR issues
-const WelcomePanel = dynamic(
-  () => import('@industry-theme/github-panels').then(mod => mod.WelcomePanel),
-  { ssr: false }
-);
-
-// Stub props for the panel
-const stubEvents = {
-  emit: () => {},
-  on: () => () => {},
-  off: () => {},
-};
-
-const stubActions = {
-  openFile: () => {},
-  closeFile: () => {},
-  saveFile: () => Promise.resolve(),
-  runCommand: () => Promise.resolve(),
-};
 
 
 interface CollectionsResponse {
@@ -74,11 +53,7 @@ function HomePageContent() {
       <EditorHeader />
       <div className="flex-1 overflow-hidden">
         <WelcomePanel
-          events={stubEvents}
-          actions={stubActions}
-          context={{} as never}
           onNavigate={handleNavigate}
-          highlightedProjects={[]}
           curatedCollections={collections}
           onCollectionClick={handleCollectionClick}
         />
