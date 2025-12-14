@@ -595,7 +595,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   }, [isAuthenticated]);
 
   // Fetch file tree from GitHub and build FileTree structure from @principal-ai/repository-abstraction
-  const fetchFileTree = useCallback(async (repo: string) => {
+  // Returns the commit SHA for use by other fetches (e.g., quality metrics)
+  const fetchFileTree = useCallback(async (repo: string): Promise<string | null> => {
     setFileTreeLoading(true);
     setFileTreeError(null);
     console.log('[PanelContext] Fetching file tree for:', repo);
@@ -767,16 +768,20 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
 
       setFileTree(fileTreeData);
       console.log('[PanelContext] File tree loaded with', allFiles.length, 'files and', allDirectories.length, 'directories');
+      return tree.sha; // Return SHA for dependent fetches (e.g., quality metrics)
     } catch (err) {
       console.error('[PanelContext] Failed to fetch file tree:', err);
       setFileTreeError(err instanceof Error ? err : new Error('Failed to load file tree'));
+      return null;
     } finally {
       setFileTreeLoading(false);
     }
   }, []);
 
   // Fetch quality metrics from GitHub Actions artifacts
-  const fetchQualityMetrics = useCallback(async (repo: string) => {
+  // When commitSha is provided, uses action=commit for better caching (immutable per SHA)
+  // Otherwise falls back to action=latest (requires extra GitHub API call to resolve branch HEAD)
+  const fetchQualityMetrics = useCallback(async (repo: string, commitSha?: string) => {
     if (!isAuthenticated) {
       setQualityData(null);
       return;
@@ -784,13 +789,15 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
 
     setQualityLoading(true);
     setQualityError(null);
-    console.log('[PanelContext] Fetching quality metrics for:', repo);
+    console.log('[PanelContext] Fetching quality metrics for:', repo, commitSha ? `(commit: ${commitSha.slice(0, 7)})` : '(latest)');
 
     try {
       const [owner, name] = repo.split('/');
 
+      // Use commit-specific endpoint when SHA is available (better caching, fewer GitHub API calls)
+      const action = commitSha ? `action=commit&commit=${commitSha}` : 'action=latest';
       const response = await fetch(
-        `/api/github/repo/${owner}/${name}/quality-artifacts?action=latest`,
+        `/api/github/repo/${owner}/${name}/quality-artifacts?${action}`,
         { credentials: 'include' }
       );
 
@@ -1091,7 +1098,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           error: qualityError,
           refresh: async () => {
             if (githubRepo) {
-              await fetchQualityMetrics(githubRepo);
+              // Use current fileTree SHA if available for better caching
+              await fetchQualityMetrics(githubRepo, fileTree?.metadata?.sourceSha);
             }
           },
         },
@@ -1742,10 +1750,18 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
 
     // Fetch independent data in parallel
     fetchReadme(githubRepo);
-    fetchFileTree(githubRepo);
-    fetchQualityMetrics(githubRepo);
     fetchCodebaseViews(githubRepo);
     fetchPackages(githubRepo);
+
+    // Sequence tree → quality metrics to reuse SHA (saves GitHub API calls)
+    // Tree fetch resolves commit SHA, which is then used for quality metrics caching
+    const fetchTreeThenQuality = async () => {
+      const commitSha = await fetchFileTree(githubRepo);
+      // Pass SHA to quality metrics for better caching (action=commit vs action=latest)
+      // If tree fetch failed, quality metrics falls back to action=latest
+      fetchQualityMetrics(githubRepo, commitSha ?? undefined);
+    };
+    fetchTreeThenQuality();
   }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics, fetchPackages]);
 
   // Fetch owner repositories when initialOwner prop is provided (handles client-side navigation)
