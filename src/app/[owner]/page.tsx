@@ -320,7 +320,7 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
     },
     {
       id: 'code-city',
-      label: 'Code City',
+      label: 'File City',
       content: (
         <div className="h-full w-full overflow-hidden">
           <CodeCityPanelLoader context={context} actions={actions} events={events} />

@@ -18,7 +18,7 @@ export interface LayoutConfig {
 export const layoutConfigs: LayoutConfig[] = [
   {
     id: 'default',
-    name: 'Code City',
+    name: 'File City',
     layout: {
       left: 'quality-hexagon',
       middle: 'code-city',

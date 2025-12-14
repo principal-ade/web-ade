@@ -77,11 +77,11 @@ function CollectionPageContent({ collectionId: _collectionId, onPreviewChange, i
     left: 'workspace-collection',
     middle: {
       type: 'tabs',
-      panels: ['visual-validation', 'code-quality', 'code-city'],
+      panels: ['visual-validation', 'code-city'],
     },
     right: {
       type: 'tabs',
-      panels: ['package-composition'],
+      panels: ['package-composition', 'code-quality'],
     },
   };
 
@@ -212,7 +212,7 @@ function CollectionPageContent({ collectionId: _collectionId, onPreviewChange, i
     },
     {
       id: 'code-city',
-      label: 'Code City',
+      label: 'File City',
       content: (
         <div className="h-full w-full overflow-hidden">
           <CodeCityPanelLoader context={context} actions={actions} events={events} />
