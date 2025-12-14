@@ -1,0 +1,355 @@
+{
+  "pv": {
+    "name": "Quality Metrics Caching Architecture",
+    "version": "1.0.0"
+  },
+  "nodes": [
+    {
+      "id": "group-current",
+      "type": "group",
+      "x": 866,
+      "y": -9,
+      "width": 900,
+      "height": 500,
+      "label": "CURRENT: Parallel Fetches (Wasteful)"
+    },
+    {
+      "id": "panel-context-current",
+      "type": "text",
+      "x": 224,
+      "y": -62,
+      "width": 180,
+      "height": 60,
+      "color": "#3b82f6",
+      "pv": {
+        "nodeType": "client",
+        "shape": "rectangle"
+      },
+      "text": "PanelContext"
+    },
+    {
+      "id": "tree-route-current",
+      "type": "text",
+      "x": 103,
+      "y": 50,
+      "width": 200,
+      "height": 50,
+      "color": "#8b5cf6",
+      "pv": {
+        "nodeType": "api-route",
+        "shape": "rectangle"
+      },
+      "text": "/api/.../repo?action=tree"
+    },
+    {
+      "id": "quality-route-current",
+      "type": "text",
+      "x": 380,
+      "y": 51,
+      "width": 280,
+      "height": 50,
+      "color": "#8b5cf6",
+      "pv": {
+        "nodeType": "api-route",
+        "shape": "rectangle"
+      },
+      "text": "/api/.../quality-artifacts?action=latest"
+    },
+    {
+      "id": "github-api-1",
+      "type": "text",
+      "x": 121,
+      "y": 148,
+      "width": 250,
+      "height": 50,
+      "color": "#f97316",
+      "pv": {
+        "nodeType": "external",
+        "shape": "rectangle"
+      },
+      "text": "GitHub: commits/{ref} (resolve SHA)"
+    },
+    {
+      "id": "github-api-2",
+      "type": "text",
+      "x": 267,
+      "y": 152,
+      "width": 280,
+      "height": 50,
+      "color": "#ef4444",
+      "pv": {
+        "nodeType": "external",
+        "shape": "rectangle"
+      },
+      "text": "GitHub: git.getRef (DUPLICATE!)"
+    },
+    {
+      "id": "github-api-3",
+      "type": "text",
+      "x": 413,
+      "y": 152,
+      "width": 220,
+      "height": 50,
+      "color": "#f97316",
+      "pv": {
+        "nodeType": "external",
+        "shape": "rectangle"
+      },
+      "text": "GitHub: listArtifacts"
+    },
+    {
+      "id": "github-api-4",
+      "type": "text",
+      "x": 556,
+      "y": 154,
+      "width": 220,
+      "height": 50,
+      "color": "#f97316",
+      "pv": {
+        "nodeType": "external",
+        "shape": "rectangle"
+      },
+      "text": "GitHub: downloadArtifact"
+    },
+    {
+      "id": "current-note",
+      "type": "text",
+      "x": 931,
+      "y": 496,
+      "width": 800,
+      "height": 120,
+      "text": "PROBLEM:\n- Both routes resolve branch HEAD to SHA independently\n- 4-5 GitHub API calls per quality fetch\n- action=latest cache only 5 min (branch can change)\n- No SHA reuse between tree and quality fetches"
+    },
+    {
+      "id": "group-ideal",
+      "type": "group",
+      "x": 804,
+      "y": 625,
+      "width": 900,
+      "height": 550,
+      "label": "IDEAL: Sequenced Fetches with SHA Reuse"
+    },
+    {
+      "id": "panel-context-ideal",
+      "type": "text",
+      "x": 297,
+      "y": 488,
+      "width": 180,
+      "height": 60,
+      "color": "#3b82f6",
+      "pv": {
+        "nodeType": "client",
+        "shape": "rectangle"
+      },
+      "text": "PanelContext"
+    },
+    {
+      "id": "tree-route-ideal",
+      "type": "text",
+      "x": 300,
+      "y": 610,
+      "width": 200,
+      "height": 50,
+      "color": "#8b5cf6",
+      "pv": {
+        "nodeType": "api-route",
+        "shape": "rectangle"
+      },
+      "text": "/api/.../repo?action=tree"
+    },
+    {
+      "id": "github-resolve",
+      "type": "text",
+      "x": 424,
+      "y": 700,
+      "width": 250,
+      "height": 50,
+      "color": "#f97316",
+      "pv": {
+        "nodeType": "external",
+        "shape": "rectangle"
+      },
+      "text": "GitHub: commits/{ref} (resolve SHA)"
+    },
+    {
+      "id": "sha-cache",
+      "type": "text",
+      "x": 217,
+      "y": 705,
+      "width": 200,
+      "height": 50,
+      "color": "#22c55e",
+      "pv": {
+        "nodeType": "cache",
+        "shape": "rectangle"
+      },
+      "text": "commitSha from tree response"
+    },
+    {
+      "id": "quality-route-ideal",
+      "type": "text",
+      "x": 180,
+      "y": 814,
+      "width": 320,
+      "height": 50,
+      "color": "#8b5cf6",
+      "pv": {
+        "nodeType": "api-route",
+        "shape": "rectangle"
+      },
+      "text": "/api/.../quality-artifacts?action=commit&commit={sha}"
+    },
+    {
+      "id": "next-cache",
+      "type": "text",
+      "x": 213,
+      "y": 922,
+      "width": 200,
+      "height": 50,
+      "color": "#22c55e",
+      "pv": {
+        "nodeType": "cache",
+        "shape": "rectangle"
+      },
+      "text": "unstable_cache (10 min)"
+    },
+    {
+      "id": "github-artifacts",
+      "type": "text",
+      "x": 192,
+      "y": 1008,
+      "width": 200,
+      "height": 50,
+      "color": "#f97316",
+      "pv": {
+        "nodeType": "external",
+        "shape": "rectangle"
+      },
+      "text": "GitHub: listArtifacts"
+    },
+    {
+      "id": "github-download",
+      "type": "text",
+      "x": 197,
+      "y": 1100,
+      "width": 200,
+      "height": 50,
+      "color": "#f97316",
+      "pv": {
+        "nodeType": "external",
+        "shape": "rectangle"
+      },
+      "text": "GitHub: downloadArtifact"
+    },
+    {
+      "id": "ideal-note",
+      "type": "text",
+      "x": 227,
+      "y": 1197,
+      "width": 800,
+      "height": 80,
+      "text": "BENEFITS:\n- Only 1 SHA resolution (in tree fetch)\n- 2-3 GitHub API calls total (was 4-5)\n- action=commit cache 10 min (immutable per SHA)\n- Cache hit rate higher due to SHA-based keys"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "fromNode": "panel-context-current",
+      "toNode": "tree-route-current",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "parallel"
+    },
+    {
+      "id": "e2",
+      "fromNode": "panel-context-current",
+      "toNode": "quality-route-current",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "parallel"
+    },
+    {
+      "id": "e3",
+      "fromNode": "tree-route-current",
+      "toNode": "github-api-1",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "e4",
+      "fromNode": "quality-route-current",
+      "toNode": "github-api-2",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "REDUNDANT"
+    },
+    {
+      "id": "e5",
+      "fromNode": "quality-route-current",
+      "toNode": "github-api-3",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "e6",
+      "fromNode": "quality-route-current",
+      "toNode": "github-api-4",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "e10",
+      "fromNode": "panel-context-ideal",
+      "toNode": "tree-route-ideal",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "1. fetch tree"
+    },
+    {
+      "id": "e11",
+      "fromNode": "tree-route-ideal",
+      "toNode": "github-resolve",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "e12",
+      "fromNode": "tree-route-ideal",
+      "toNode": "sha-cache",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "returns sha"
+    },
+    {
+      "id": "e13",
+      "fromNode": "sha-cache",
+      "toNode": "quality-route-ideal",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "2. use sha"
+    },
+    {
+      "id": "e14",
+      "fromNode": "quality-route-ideal",
+      "toNode": "next-cache",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "check cache"
+    },
+    {
+      "id": "e15",
+      "fromNode": "next-cache",
+      "toNode": "github-artifacts",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "miss"
+    },
+    {
+      "id": "e16",
+      "fromNode": "github-artifacts",
+      "toNode": "github-download",
+      "fromSide": "bottom",
+      "toSide": "top"
+    }
+  ]
+}
