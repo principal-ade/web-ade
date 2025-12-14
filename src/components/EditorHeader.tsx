@@ -2,7 +2,7 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, Wifi, WifiOff, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github, Download, Building2 } from 'lucide-react';
+import { LogOut, Wifi, WifiOff, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github, Download, Building2, Home, FolderOpen } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { usePresenceData, RepositorySession } from '@/hooks/usePresenceData';
@@ -432,7 +432,31 @@ export function EditorHeader({
                     borderColor: theme.colors.border,
                   }}
                 >
-                  {/* Your Profile */}
+                  {/* Home */}
+                  <Link
+                    href="/"
+                    className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
+                    style={{ color: theme.colors.text }}
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    <Home className="w-4 h-4" />
+                    Home
+                  </Link>
+                  {/* Collections */}
+                  <Link
+                    href="/#collections"
+                    className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
+                    style={{ color: theme.colors.text }}
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    <FolderOpen className="w-4 h-4" />
+                    Collections
+                  </Link>
+                  <div
+                    className="my-1 h-px"
+                    style={{ background: theme.colors.border }}
+                  />
+                  {/* Your Repositories */}
                   <Link
                     href={`/${user.login}`}
                     className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
