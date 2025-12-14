@@ -2,13 +2,13 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, Wifi, WifiOff, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github, Download, Building2 } from 'lucide-react';
+import { LogOut, Wifi, WifiOff, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github, Download, Building2 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { usePresenceData, RepositorySession } from '@/hooks/usePresenceData';
 import { useEffect, useState, useRef } from 'react';
 import { Logo } from '@principal-ai/logo-component';
-import { LayoutConfigDropdown, LayoutConfig, layoutConfigs } from './LayoutConfigDropdown';
+import { LayoutConfigDropdown, LayoutConfig } from './LayoutConfigDropdown';
 
 interface EditorHeaderProps {
   currentLayoutConfigId?: string;
@@ -127,42 +127,54 @@ export function EditorHeader({
             <Logo width={32} height={32} color={theme.colors.primary} />
           </Link>
         )}
-        {/* Show owner avatar + name on owner pages */}
+        {/* Show logo + owner avatar + name on owner pages */}
         {ownerOnly && (
-          <a
-            href={`https://github.com/${ownerOnly}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 transition-all hover:opacity-80 flex-shrink-0"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`https://github.com/${ownerOnly}.png?size=64`}
-              alt={ownerOnly}
-              className="w-8 h-8 flex-shrink-0"
-              style={{
-                borderRadius: '6px',
-              }}
-            />
-            <span
-              className="text-base font-semibold hidden sm:inline"
-              style={{
-                fontFamily: theme.fonts.body,
-                color: theme.colors.text,
-              }}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link
+              href="/"
+              className="flex items-center transition-all hover:opacity-80"
+              title="Home"
             >
-              {ownerOnly}
-            </span>
-          </a>
+              <Logo width={32} height={32} color={theme.colors.primary} />
+            </Link>
+            <a
+              href={`https://github.com/${ownerOnly}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 transition-all hover:opacity-80"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`https://github.com/${ownerOnly}.png?size=64`}
+                alt={ownerOnly}
+                className="w-8 h-8 flex-shrink-0"
+                style={{
+                  borderRadius: '6px',
+                }}
+              />
+              <span
+                className="text-base font-semibold hidden sm:inline"
+                style={{
+                  fontFamily: theme.fonts.body,
+                  color: theme.colors.text,
+                }}
+              >
+                {ownerOnly}
+              </span>
+            </a>
+          </div>
         )}
-        {/* Collection name on left */}
+        {/* Collection name on left with logo */}
         {collectionId && (
-          <div
-            className="flex items-center gap-2 flex-shrink-0"
+          <Link
+            href="/"
+            className="flex items-center gap-2 flex-shrink-0 transition-all hover:opacity-80"
             style={{
               fontFamily: theme.fonts.body,
+              textDecoration: 'none',
             }}
           >
+            <Logo width={32} height={32} color={theme.colors.primary} />
             <span
               className="text-base font-semibold"
               style={{ color: theme.colors.text }}
@@ -170,7 +182,7 @@ export function EditorHeader({
               {/* Format collection ID as readable name */}
               {collectionId.replace('ws-', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
             </span>
-          </div>
+          </Link>
         )}
         {/* Download App or Open in Desktop - only show on home page (not owner pages) */}
         {!repositoryName && !ownerOnly && !collectionId && (
@@ -215,27 +227,8 @@ export function EditorHeader({
         )}
       </div>
 
-      {/* Center section: Principal AI branding on home and owner pages, Collections link, or Repository info */}
-      {collectionId ? (
-        /* Collections link in center */
-        <Link
-          href="/"
-          className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2 transition-opacity hover:opacity-80"
-          style={{
-            fontFamily: theme.fonts.body,
-            textDecoration: 'none',
-          }}
-        >
-          <Logo width={32} height={32} color={theme.colors.primary} />
-          <span
-            className="text-xl font-bold"
-            style={{ fontFamily: theme.fonts.body, color: theme.colors.text }}
-          >
-            Collections
-          </span>
-          <Logo width={32} height={32} color={theme.colors.primary} />
-        </Link>
-      ) : !repositoryName && !ownerOnly ? (
+      {/* Center section: Principal AI branding on home page, or Repository info */}
+      {!repositoryName && !ownerOnly && !collectionId ? (
         /* Home page - show Principal AI Gallery */
         <Link
           href="/"
@@ -255,27 +248,6 @@ export function EditorHeader({
             <span style={{ color: theme.colors.primary }}>AI</span>
             {' '}
             <span style={{ color: theme.colors.text }}>Gallery</span>
-          </span>
-          <Logo width={32} height={32} color={theme.colors.primary} />
-        </Link>
-      ) : ownerOnly ? (
-        /* Owner page - show Principal AI */
-        <Link
-          href="/"
-          className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2 transition-opacity hover:opacity-80"
-          style={{
-            fontFamily: theme.fonts.body,
-            textDecoration: 'none',
-          }}
-        >
-          <Logo width={32} height={32} color={theme.colors.primary} />
-          <span
-            className="text-xl font-bold"
-            style={{ fontFamily: theme.fonts.body }}
-          >
-            <span style={{ color: theme.colors.text }}>Principal</span>
-            {' '}
-            <span style={{ color: theme.colors.primary }}>AI</span>
           </span>
           <Logo width={32} height={32} color={theme.colors.primary} />
         </Link>
@@ -327,24 +299,6 @@ export function EditorHeader({
             </a>
           </div>
 
-          {/* Search GitHub Button */}
-          <button
-            onClick={() => {
-              const githubSearchConfig = layoutConfigs.find(c => c.id === 'github-search');
-              if (githubSearchConfig && onLayoutConfigChange) {
-                onLayoutConfigChange(githubSearchConfig);
-              }
-            }}
-            className="w-9 h-9 flex items-center justify-center flex-shrink-0 transition-all hover:opacity-80"
-            style={{
-              borderRadius: '6px',
-              background: theme.colors.secondary,
-              color: theme.colors.text,
-            }}
-            title="Search GitHub repositories"
-          >
-            <Search className="w-4 h-4" />
-          </button>
         </div>
       ) : null}
 
