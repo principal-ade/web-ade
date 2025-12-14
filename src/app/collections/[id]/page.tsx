@@ -26,10 +26,6 @@ const PrincipalViewPanelLoader = dynamic(
   { ssr: false }
 );
 
-const ConfigLibraryBrowserPanelLoader = dynamic(
-  () => import('@industry-theme/principal-view-panels').then((mod) => mod.panels[1]!.component),
-  { ssr: false }
-);
 
 const CodeQualityPanelLoader = dynamic(
   () => import('@principal-ade/code-quality-panels').then((mod) => mod.panels[0]!.component),
@@ -81,11 +77,11 @@ function CollectionPageContent({ collectionId: _collectionId, onPreviewChange, i
     left: 'workspace-collection',
     middle: {
       type: 'tabs',
-      panels: ['visual-validation', 'code-quality'],
+      panels: ['visual-validation', 'code-quality', 'code-city'],
     },
     right: {
       type: 'tabs',
-      panels: ['package-composition', 'code-city', 'config-library'],
+      panels: ['package-composition'],
     },
   };
 
@@ -193,15 +189,6 @@ function CollectionPageContent({ collectionId: _collectionId, onPreviewChange, i
       content: (
         <div className="h-full w-full overflow-hidden">
           <PrincipalViewPanelLoader context={context} actions={actions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'config-library',
-      label: 'Configs',
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <ConfigLibraryBrowserPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },
