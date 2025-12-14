@@ -129,16 +129,9 @@ export function EditorHeader({
             <Logo width={32} height={32} color={theme.colors.primary} />
           </Link>
         )}
-        {/* Show logo + owner avatar + name on owner pages */}
+        {/* Show owner avatar + name on owner pages */}
         {ownerOnly && (
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Link
-              href="/"
-              className="flex items-center transition-all hover:opacity-80"
-              title="Home"
-            >
-              <Logo width={32} height={32} color={theme.colors.primary} />
-            </Link>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`https://github.com/${ownerOnly}.png?size=64`}
