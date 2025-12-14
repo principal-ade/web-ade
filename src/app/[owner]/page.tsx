@@ -263,6 +263,7 @@ function OwnerPageContent({ owner, onPreviewChange }: OwnerPageContentProps) {
             actions={actions}
             events={events}
             owner={owner}
+            selectedRepository={previewedRepo}
           />
         </div>
       ),
