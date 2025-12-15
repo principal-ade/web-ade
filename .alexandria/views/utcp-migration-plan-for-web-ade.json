@@ -1,0 +1,29 @@
+{
+  "id": "utcp-migration-plan-for-web-ade",
+  "version": "1.0.0",
+  "name": "UTCP Migration Plan for web-ade",
+  "description": "Codebase view extracted from documentation",
+  "rows": 1,
+  "cols": 1,
+  "referenceGroups": {
+    "Context": {
+      "coordinates": [0, 0],
+      "files": ["src/contexts/GeminiContext.tsx"],
+      "priority": 0
+    }
+  },
+  "overviewPath": "docs/utcp-migration-plan.md",
+  "category": "docs",
+  "displayOrder": 0,
+  "timestamp": "2025-12-15T06:38:17.298Z",
+  "metadata": {
+    "generationType": "user",
+    "ui": {
+      "enabled": true,
+      "rows": 1,
+      "cols": 1,
+      "showCellLabels": true,
+      "cellLabelPosition": "top"
+    }
+  }
+}

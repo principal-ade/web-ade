@@ -1,0 +1,29 @@
+{
+  "id": "or",
+  "version": "1.0.0",
+  "name": "or",
+  "description": "yarn dev",
+  "rows": 1,
+  "cols": 1,
+  "referenceGroups": {
+    "Entry": {
+      "coordinates": [0, 0],
+      "files": ["src/app/page.tsx"],
+      "priority": 0
+    }
+  },
+  "overviewPath": "README.md",
+  "category": "docs",
+  "displayOrder": 0,
+  "timestamp": "2025-12-15T06:38:17.298Z",
+  "metadata": {
+    "generationType": "user",
+    "ui": {
+      "enabled": true,
+      "rows": 1,
+      "cols": 1,
+      "showCellLabels": true,
+      "cellLabelPosition": "top"
+    }
+  }
+}

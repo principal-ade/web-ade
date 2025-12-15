@@ -1,0 +1,29 @@
+{
+  "id": "browser-adapter-implementation-summary",
+  "version": "1.0.0",
+  "name": "Browser Adapter Implementation Summary",
+  "description": "Codebase view extracted from documentation",
+  "rows": 1,
+  "cols": 1,
+  "referenceGroups": {
+    "Implementation": {
+      "coordinates": [0, 0],
+      "files": ["src/lib/control-tower/BrowserWebSocketTransportAdapter.ts"],
+      "priority": 0
+    }
+  },
+  "overviewPath": "docs/browser-adapter-implementation.md",
+  "category": "docs",
+  "displayOrder": 0,
+  "timestamp": "2025-12-15T06:38:17.289Z",
+  "metadata": {
+    "generationType": "user",
+    "ui": {
+      "enabled": true,
+      "rows": 1,
+      "cols": 1,
+      "showCellLabels": true,
+      "cellLabelPosition": "top"
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "id": "principal-ade-alexandria-workspace-panel",
+  "version": "1.0.0",
+  "name": "@principal-ade/alexandria-workspace-panel",
+  "description": "Codebase view extracted from documentation",
+  "rows": 1,
+  "cols": 1,
+  "referenceGroups": {
+    "Documentation": {
+      "coordinates": [
+        0,
+        0
+      ],
+      "files": [
+        "./docs/design.md"
+      ],
+      "priority": 0
+    }
+  },
+  "overviewPath": "packages/alexandria-workspace-panel/README.md",
+  "category": "docs",
+  "displayOrder": 0,
+  "timestamp": "2025-12-15T06:38:17.303Z",
+  "metadata": {
+    "generationType": "user",
+    "ui": {
+      "enabled": true,
+      "rows": 1,
+      "cols": 1,
+      "showCellLabels": true,
+      "cellLabelPosition": "top"
+    }
+  }
+}

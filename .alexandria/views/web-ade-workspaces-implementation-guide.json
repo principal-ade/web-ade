@@ -1,0 +1,29 @@
+{
+  "id": "web-ade-workspaces-implementation-guide",
+  "version": "1.0.0",
+  "name": "web-ade Workspaces Implementation Guide",
+  "description": "Codebase view extracted from documentation",
+  "rows": 1,
+  "cols": 1,
+  "referenceGroups": {
+    "Context": {
+      "coordinates": [0, 0],
+      "files": ["src/contexts/PanelContext.tsx"],
+      "priority": 0
+    }
+  },
+  "overviewPath": "docs/workspaces-implementation.md",
+  "category": "docs",
+  "displayOrder": 0,
+  "timestamp": "2025-12-15T06:38:17.301Z",
+  "metadata": {
+    "generationType": "user",
+    "ui": {
+      "enabled": true,
+      "rows": 1,
+      "cols": 1,
+      "showCellLabels": true,
+      "cellLabelPosition": "top"
+    }
+  }
+}

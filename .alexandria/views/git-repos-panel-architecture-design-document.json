@@ -1,0 +1,29 @@
+{
+  "id": "git-repos-panel-architecture-design-document",
+  "version": "1.0.0",
+  "name": "Git Repos Panel - Architecture & Design Document",
+  "description": "Codebase view extracted from documentation",
+  "rows": 1,
+  "cols": 1,
+  "referenceGroups": {
+    "Package": {
+      "coordinates": [0, 0],
+      "files": ["packages/git-repos-panel/README.md"],
+      "priority": 0
+    }
+  },
+  "overviewPath": "packages/git-repos-panel/docs/design.md",
+  "category": "docs",
+  "displayOrder": 0,
+  "timestamp": "2025-12-15T06:38:17.304Z",
+  "metadata": {
+    "generationType": "user",
+    "ui": {
+      "enabled": true,
+      "rows": 1,
+      "cols": 1,
+      "showCellLabels": true,
+      "cellLabelPosition": "top"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "id": "agent-command-palette-integration-guide",
+  "version": "1.0.0",
+  "name": "Agent Command Palette Integration Guide",
+  "description": "Codebase view extracted from documentation",
+  "rows": 1,
+  "cols": 1,
+  "referenceGroups": {
+    "Layout": {
+      "coordinates": [0, 0],
+      "files": ["src/components/EditorLayout.tsx"],
+      "priority": 0
+    }
+  },
+  "overviewPath": "docs/agent-command-palette-integration.md",
+  "category": "docs",
+  "displayOrder": 0,
+  "timestamp": "2025-12-15T06:38:17.299Z",
+  "metadata": {
+    "generationType": "user",
+    "ui": {
+      "enabled": true,
+      "rows": 1,
+      "cols": 1,
+      "showCellLabels": true,
+      "cellLabelPosition": "top"
+    }
+  }
+}

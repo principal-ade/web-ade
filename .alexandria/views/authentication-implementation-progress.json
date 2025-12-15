@@ -1,0 +1,29 @@
+{
+  "id": "authentication-implementation-progress",
+  "version": "1.0.0",
+  "name": "Authentication Implementation Progress",
+  "description": "Codebase view extracted from documentation",
+  "rows": 1,
+  "cols": 1,
+  "referenceGroups": {
+    "API": {
+      "coordinates": [0, 0],
+      "files": ["src/app/api/auth/login/route.ts"],
+      "priority": 0
+    }
+  },
+  "overviewPath": "docs/auth-implementation-progress.md",
+  "category": "docs",
+  "displayOrder": 0,
+  "timestamp": "2025-12-15T06:38:17.301Z",
+  "metadata": {
+    "generationType": "user",
+    "ui": {
+      "enabled": true,
+      "rows": 1,
+      "cols": 1,
+      "showCellLabels": true,
+      "cellLabelPosition": "top"
+    }
+  }
+}

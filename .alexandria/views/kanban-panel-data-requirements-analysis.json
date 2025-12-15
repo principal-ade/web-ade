@@ -1,0 +1,29 @@
+{
+  "id": "kanban-panel-data-requirements-analysis",
+  "version": "1.0.0",
+  "name": "Kanban Panel Data Requirements Analysis",
+  "description": "Codebase view extracted from documentation",
+  "rows": 1,
+  "cols": 1,
+  "referenceGroups": {
+    "Context": {
+      "coordinates": [0, 0],
+      "files": ["src/contexts/PanelContext.tsx"],
+      "priority": 0
+    }
+  },
+  "overviewPath": "docs/kanban-data-requirements.md",
+  "category": "docs",
+  "displayOrder": 0,
+  "timestamp": "2025-12-15T06:38:17.297Z",
+  "metadata": {
+    "generationType": "user",
+    "ui": {
+      "enabled": true,
+      "rows": 1,
+      "cols": 1,
+      "showCellLabels": true,
+      "cellLabelPosition": "top"
+    }
+  }
+}

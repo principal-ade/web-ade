@@ -1,0 +1,29 @@
+{
+  "id": "test-coverage-summary-browser-adapter",
+  "version": "1.0.0",
+  "name": "Test Coverage Summary - Browser Adapter",
+  "description": "Codebase view extracted from documentation",
+  "rows": 1,
+  "cols": 1,
+  "referenceGroups": {
+    "Tests": {
+      "coordinates": [0, 0],
+      "files": ["src/lib/control-tower/__tests__/BrowserWebSocketTransportAdapter.test.ts"],
+      "priority": 0
+    }
+  },
+  "overviewPath": "docs/test-coverage-summary.md",
+  "category": "docs",
+  "displayOrder": 0,
+  "timestamp": "2025-12-15T06:38:17.298Z",
+  "metadata": {
+    "generationType": "user",
+    "ui": {
+      "enabled": true,
+      "rows": 1,
+      "cols": 1,
+      "showCellLabels": true,
+      "cellLabelPosition": "top"
+    }
+  }
+}
