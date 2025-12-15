@@ -62,15 +62,6 @@ const PrincipalViewPanelLoader = dynamic(
   { ssr: false }
 );
 
-// Dynamically import the ConfigLibraryBrowserPanel with SSR disabled
-const ConfigLibraryBrowserPanelLoader = dynamic(
-  () => import('@industry-theme/principal-view-panels').then((mod) => {
-    const Component = mod.panels[1]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
 // Dynamically import the QualityHexagonPanel with SSR disabled
 const CodeQualityPanelLoader = dynamic(
   () => import('@principal-ade/code-quality-panels').then((mod) => {
@@ -111,19 +102,18 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
   const [canvasLoading, setCanvasLoading] = useState(true);
   const canvasLoadedRef = useRef(false);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [rightCollapsed, setRightCollapsed] = useState(true);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
 
-  // Layout with tabbed middle panel for Architecture and Quality
-  // and tabbed right panel for Packages, Code City, and Configs
+  // Layout matching collection view
   const layout: PanelLayout = {
     left: 'owner-repositories',
     middle: {
       type: 'tabs',
-      panels: ['visual-validation', 'code-quality'],
+      panels: ['code-city', 'visual-validation'],
     },
     right: {
       type: 'tabs',
-      panels: ['package-composition', 'code-city', 'config-library'],
+      panels: ['code-quality', 'package-composition'],
     },
   };
 
@@ -288,15 +278,6 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
       content: (
         <div className="h-full w-full overflow-hidden">
           <PrincipalViewPanelLoader context={context} actions={actions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'config-library',
-      label: 'Configs',
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <ConfigLibraryBrowserPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },
