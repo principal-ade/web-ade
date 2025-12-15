@@ -162,11 +162,11 @@ function EditorLayoutContent({
     setViewMode('editor');
   }, [setCurrentLayoutConfigId, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed]);
 
-  // Initialize Agent Command Palette (AI-driven, Alt+P to open)
+  // Initialize Agent Command Palette (AI-driven, Cmd+Shift+P to open)
   const { sendMessage } = useGemini();
   const agentPalette = useAgentCommandPalette({
     events,
-    keyboard: { key: 'p', altKey: true },
+    keyboard: { key: 'p', metaKey: true, shiftKey: true },
     config: {
       placeholder: 'What would you like to do?',
       autoCloseDelay: 2000,
@@ -640,7 +640,7 @@ function EditorLayoutContent({
         )}
       </div>
 
-      {/* Agent Command Palette (Alt+P) - AI-driven natural language commands */}
+      {/* Agent Command Palette (Cmd+Shift+P) - AI-driven natural language commands */}
       <AgentCommandPalette
         palette={agentPalette}
         config={{
