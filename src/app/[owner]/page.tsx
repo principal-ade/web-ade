@@ -71,9 +71,9 @@ const CodeQualityPanelLoader = dynamic(
   { ssr: false }
 );
 
-// Dynamically import the CodeCityPanel with SSR disabled
-const CodeCityPanelLoader = dynamic(
-  () => import('@industry-theme/code-city-panel').then((mod) => {
+// Dynamically import the FileCityPanel with SSR disabled
+const FileCityPanelLoader = dynamic(
+  () => import('@industry-theme/file-city-panel').then((mod) => {
     const Component = mod.panels[0]!.component;
     return { default: Component };
   }),
@@ -109,7 +109,7 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
     left: 'owner-repositories',
     middle: {
       type: 'tabs',
-      panels: ['code-city', 'visual-validation'],
+      panels: ['file-city', 'visual-validation'],
     },
     right: {
       type: 'tabs',
@@ -300,11 +300,11 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
       ),
     },
     {
-      id: 'code-city',
+      id: 'file-city',
       label: 'File City',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <CodeCityPanelLoader context={context} actions={actions} events={events} />
+          <FileCityPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },

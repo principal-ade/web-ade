@@ -46,9 +46,9 @@ const AlexandriaDocsPanelLoader = dynamic(
   { ssr: false }
 );
 
-// Dynamically import the CodeCityPanel with SSR disabled
-const CodeCityPanelLoader = dynamic(
-  () => import('@industry-theme/code-city-panel').then((mod) => {
+// Dynamically import the FileCityPanel with SSR disabled
+const FileCityPanelLoader = dynamic(
+  () => import('@industry-theme/file-city-panel').then((mod) => {
     const Component = mod.panels[0]!.component;
     return { default: Component };
   }),
@@ -253,7 +253,7 @@ function EditorLayoutContent({
         setLayout({
           left: 'docs',
           middle: 'markdown-viewer',
-          right: 'code-city',
+          right: 'file-city',
         });
         setLeftSidebarCollapsed(false);
         setRightSidebarCollapsed(false);
@@ -470,11 +470,11 @@ function EditorLayoutContent({
       ),
     },
     {
-      id: 'code-city',
+      id: 'file-city',
       label: 'File City',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <CodeCityPanelLoader context={context} actions={actions} events={events} />
+          <FileCityPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },

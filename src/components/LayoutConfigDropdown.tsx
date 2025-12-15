@@ -21,7 +21,7 @@ export const layoutConfigs: LayoutConfig[] = [
     name: 'File City',
     layout: {
       left: 'quality-hexagon',
-      middle: 'code-city',
+      middle: 'file-city',
       right: 'ai-chat',
     },
     collapsed: {
@@ -35,7 +35,7 @@ export const layoutConfigs: LayoutConfig[] = [
     layout: {
       left: 'docs',
       middle: 'markdown-viewer',
-      right: 'code-city',
+      right: 'file-city',
     },
     collapsed: {
       left: false,
@@ -48,7 +48,7 @@ export const layoutConfigs: LayoutConfig[] = [
     layout: {
       left: 'config-browser',
       middle: 'visual-validation',
-      right: 'code-city',
+      right: 'file-city',
     },
     collapsed: {
       left: false,

@@ -215,7 +215,7 @@ You have access to tools that let you interact with the application:
 ## Layout Tools
 ${layoutToolsPrompt}
 
-Available panels you can switch to: docs, ai-chat, markdown-viewer, code-city, kanban, sessions, visual-validation, github-projects.
+Available panels you can switch to: docs, ai-chat, markdown-viewer, file-city, kanban, sessions, visual-validation, github-projects.
 
 When a user asks about file contents, use read_file to get the content and then answer based on it.
 When a user wants to view a file, use open_file to display it.

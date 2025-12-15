@@ -32,8 +32,8 @@ const CodeQualityPanelLoader = dynamic(
   { ssr: false }
 );
 
-const CodeCityPanelLoader = dynamic(
-  () => import('@industry-theme/code-city-panel').then((mod) => mod.panels[0]!.component),
+const FileCityPanelLoader = dynamic(
+  () => import('@industry-theme/file-city-panel').then((mod) => mod.panels[0]!.component),
   { ssr: false }
 );
 
@@ -77,7 +77,7 @@ function CollectionPageContent({ collectionId: _collectionId, onPreviewChange, i
     left: 'workspace-collection',
     middle: {
       type: 'tabs',
-      panels: ['code-city', 'visual-validation'],
+      panels: ['file-city', 'visual-validation'],
     },
     right: {
       type: 'tabs',
@@ -211,11 +211,11 @@ function CollectionPageContent({ collectionId: _collectionId, onPreviewChange, i
       ),
     },
     {
-      id: 'code-city',
+      id: 'file-city',
       label: 'File City',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <CodeCityPanelLoader context={context} actions={actions} events={events} />
+          <FileCityPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },
