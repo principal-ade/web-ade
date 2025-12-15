@@ -186,7 +186,7 @@ export function EditorHeader({
               <Link
                 href={`/collections/${collectionId}`}
                 className="transition-opacity hover:opacity-80"
-                style={{ color: theme.colors.textMuted, textDecoration: 'none' }}
+                style={{ color: theme.colors.text, textDecoration: 'none' }}
               >
                 {collectionId.replace('ws-', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
               </Link>
