@@ -166,7 +166,7 @@ function EditorLayoutContent({
   const { sendMessage } = useGemini();
   const agentPalette = useAgentCommandPalette({
     events,
-    keyboard: { key: 'p', metaKey: true, shiftKey: true },
+    keyboard: { key: 'p', metaKey: true, shiftKey: true, altKey: false },
     config: {
       placeholder: 'What would you like to do?',
       autoCloseDelay: 2000,
