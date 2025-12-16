@@ -29,11 +29,22 @@ async function fetchCollections() {
     return { collections: [], memberships: {} };
   }
 
-  // Get memberships for each workspace
-  const memberships: Record<string, string[]> = {};
+  // Get memberships for each workspace with full metadata
+  interface RepositoryInfo {
+    repositoryId: string;
+    sourceRepository?: {
+      owner: string;
+      name: string;
+    };
+  }
+
+  const memberships: Record<string, RepositoryInfo[]> = {};
   for (const workspace of workspaces) {
     const wsMemberships = await manager.getWorkspaceMemberships(workspace.id);
-    memberships[workspace.id] = wsMemberships.map((m) => m.repositoryId);
+    memberships[workspace.id] = wsMemberships.map((m) => ({
+      repositoryId: m.repositoryId,
+      sourceRepository: m.metadata?.sourceRepository as { owner: string; name: string } | undefined,
+    }));
   }
 
   return {

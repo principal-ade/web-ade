@@ -2,10 +2,11 @@
 
 import React, { useState, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Plus, Edit2, FolderOpen, type LucideIcon } from 'lucide-react';
+import { Plus, Edit2 } from 'lucide-react';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import { useUserCollections } from '@/contexts/UserCollectionsContext';
-import { CollectionModal, iconMap } from './CollectionModal';
+import { CollectionModal } from './CollectionModal';
+import { AvatarStack, type RepositoryInfo } from './AvatarStack';
 
 interface UserCollectionsPanelProps {
   onCollectionClick?: (workspaceId: string) => void;
@@ -80,15 +81,12 @@ const SkeletonCard: React.FC<{ theme: ReturnType<typeof useTheme>['theme'] }> = 
  */
 const CollectionCard: React.FC<{
   workspace: Workspace;
-  repositoryCount: number;
+  repositories: RepositoryInfo[];
   theme: ReturnType<typeof useTheme>['theme'];
   onClick: () => void;
   onEdit: () => void;
-}> = ({ workspace, repositoryCount, theme, onClick, onEdit }) => {
+}> = ({ workspace, repositories, theme, onClick, onEdit }) => {
   const [isHovered, setIsHovered] = useState(false);
-
-  const IconComponent: LucideIcon =
-    (workspace.icon && iconMap[workspace.icon]) || FolderOpen;
 
   return (
     <button
@@ -139,21 +137,8 @@ const CollectionCard: React.FC<{
         </button>
       )}
 
-      {/* Collection Icon */}
-      <div
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: '10px',
-          backgroundColor: `${theme.colors.primary}15`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: theme.colors.primary,
-        }}
-      >
-        <IconComponent size={24} />
-      </div>
+      {/* Avatar Stack */}
+      <AvatarStack repositories={repositories} size={36} maxAvatars={4} />
       <div>
         <div
           style={{
@@ -172,7 +157,7 @@ const CollectionCard: React.FC<{
             lineHeight: 1.5,
           }}
         >
-          {workspace.description || `${repositoryCount} repositories`}
+          {workspace.description || `${repositories.length} repositories`}
         </div>
       </div>
     </button>
@@ -258,7 +243,7 @@ export function UserCollectionsPanel({ onCollectionClick }: UserCollectionsPanel
     createWorkspace,
     updateWorkspace,
     deleteWorkspace,
-    getWorkspaceRepositories,
+    getWorkspaceRepositoryInfos,
   } = useUserCollections();
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -306,12 +291,11 @@ export function UserCollectionsPanel({ onCollectionClick }: UserCollectionsPanel
       <>
         <div
           style={{
-            padding: '48px 32px',
+            padding: '24px 32px 48px 32px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             gap: '24px',
-            borderBottom: `1px solid ${theme.colors.border}`,
           }}
         >
           <h2
@@ -352,7 +336,7 @@ export function UserCollectionsPanel({ onCollectionClick }: UserCollectionsPanel
     <>
       <div
         style={{
-          padding: '48px 32px',
+          padding: '24px 32px 48px 32px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -390,7 +374,7 @@ export function UserCollectionsPanel({ onCollectionClick }: UserCollectionsPanel
                 <CollectionCard
                   key={workspace.id}
                   workspace={workspace}
-                  repositoryCount={getWorkspaceRepositories(workspace.id).length}
+                  repositories={getWorkspaceRepositoryInfos(workspace.id)}
                   theme={theme}
                   onClick={() => handleCollectionClick(workspace.id)}
                   onEdit={() => handleEdit(workspace)}

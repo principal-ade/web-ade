@@ -8,6 +8,14 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 
 
+interface RepositoryInfo {
+  repositoryId: string;
+  sourceRepository?: {
+    owner: string;
+    name: string;
+  };
+}
+
 interface CollectionsResponse {
   collections: Array<{
     id: string;
@@ -16,7 +24,7 @@ interface CollectionsResponse {
     icon?: string;
     theme?: string;
   }>;
-  memberships: Record<string, string[]>;
+  memberships: Record<string, RepositoryInfo[]>;
 }
 
 function HomePageContent() {
@@ -30,11 +38,11 @@ function HomePageContent() {
     fetch('/api/collections')
       .then(res => res.json())
       .then((data: CollectionsResponse) => {
-        const collectionsWithCount = data.collections.map(c => ({
+        const collectionsWithRepos = data.collections.map(c => ({
           ...c,
-          repositoryCount: data.memberships[c.id]?.length || 0,
+          repositories: data.memberships[c.id] || [],
         }));
-        setCollections(collectionsWithCount);
+        setCollections(collectionsWithRepos);
       })
       .catch(err => console.error('Failed to fetch collections:', err))
       .finally(() => setLoading(false));

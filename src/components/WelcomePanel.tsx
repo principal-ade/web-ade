@@ -1,36 +1,6 @@
 import React, { useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import {
-  BookOpen,
-  Network,
-  Sparkles,
-  FolderOpen,
-  Wrench,
-  Atom,
-  Cog,
-  Cpu,
-  Zap,
-  Code,
-  Layers,
-  Box,
-  type LucideIcon,
-} from 'lucide-react';
-
-// Map icon names to components
-const iconMap: Record<string, LucideIcon> = {
-  Sparkles,
-  Wrench,
-  Atom,
-  Cog,
-  Cpu,
-  Zap,
-  Code,
-  Layers,
-  Box,
-  FolderOpen,
-  BookOpen,
-  Network,
-};
+import { AvatarStack, type RepositoryInfo } from './collections/AvatarStack';
 
 
 /**
@@ -42,7 +12,7 @@ export interface CuratedCollection {
   description: string;
   icon?: string;
   theme?: string;
-  repositoryCount?: number;
+  repositories?: RepositoryInfo[];
 }
 
 /**
@@ -143,9 +113,6 @@ const CollectionCard: React.FC<{
   theme: ReturnType<typeof useTheme>['theme'];
   onClick: () => void;
 }> = ({ collection, theme, onClick }) => {
-  // Get the icon component from the map, fallback to FolderOpen
-  const IconComponent = (collection.icon && iconMap[collection.icon]) || FolderOpen;
-
   return (
     <button
       onClick={onClick}
@@ -172,21 +139,8 @@ const CollectionCard: React.FC<{
         e.currentTarget.style.transform = 'translateY(0)';
       }}
     >
-      {/* Collection Icon */}
-      <div
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: '10px',
-          backgroundColor: `${theme.colors.primary}15`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: theme.colors.primary,
-        }}
-      >
-        <IconComponent size={24} />
-      </div>
+      {/* Avatar Stack */}
+      <AvatarStack repositories={collection.repositories || []} size={36} maxAvatars={4} />
       <div>
         <div
           style={{
@@ -242,7 +196,7 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
       {(loading || curatedCollections.length > 0) && (
         <div
           style={{
-            padding: '48px 32px',
+            padding: '24px 32px 48px 32px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',

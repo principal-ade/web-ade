@@ -19,6 +19,15 @@ import { WorkspaceManager } from '@principal-ai/alexandria-core-library/github';
 import type { Workspace, WorkspaceMembership } from '@principal-ai/alexandria-core-library/types';
 import { LocalStorageFileSystemAdapter } from '@/lib/storage/LocalStorageFileSystemAdapter';
 
+/** Repository info with optional source repository for forks */
+interface RepositoryInfo {
+  repositoryId: string;
+  sourceRepository?: {
+    owner: string;
+    name: string;
+  };
+}
+
 interface UserCollectionsContextValue {
   // State
   workspaces: Workspace[];
@@ -44,6 +53,7 @@ interface UserCollectionsContextValue {
 
   // Utility functions
   getWorkspaceRepositories: (workspaceId: string) => string[];
+  getWorkspaceRepositoryInfos: (workspaceId: string) => RepositoryInfo[];
   getWorkspace: (id: string) => Workspace | undefined;
   isUserWorkspace: (id: string) => boolean;
   refresh: () => Promise<void>;
@@ -152,13 +162,33 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
   const addRepository = useCallback(
     async (workspaceId: string, repositoryId: string): Promise<void> => {
       const wsManager = getManager();
-      await wsManager.addRepositoryToWorkspace(repositoryId, workspaceId);
+
+      // Fetch repository info to check if it's a fork
+      let metadata: Record<string, unknown> | undefined;
+      try {
+        const [owner, repo] = repositoryId.split('/');
+        const response = await fetch(`/api/github/repo/${owner}/${repo}`);
+        if (response.ok) {
+          const repoInfo = await response.json();
+          if (repoInfo.sourceRepository) {
+            metadata = {
+              sourceRepository: repoInfo.sourceRepository,
+            };
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch repository info:', err);
+        // Continue without metadata if fetch fails
+      }
+
+      await wsManager.addRepositoryToWorkspace(repositoryId, workspaceId, metadata);
 
       // Update local state
       const newMembership: WorkspaceMembership = {
         repositoryId,
         workspaceId,
         addedAt: Date.now(),
+        metadata,
       };
       setMemberships((prev) => [...prev, newMembership]);
     },
@@ -187,6 +217,19 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       return memberships
         .filter((m) => m.workspaceId === workspaceId)
         .map((m) => m.repositoryId);
+    },
+    [memberships]
+  );
+
+  // Get all repository infos with source repository metadata
+  const getWorkspaceRepositoryInfos = useCallback(
+    (workspaceId: string): RepositoryInfo[] => {
+      return memberships
+        .filter((m) => m.workspaceId === workspaceId)
+        .map((m) => ({
+          repositoryId: m.repositoryId,
+          sourceRepository: m.metadata?.sourceRepository as { owner: string; name: string } | undefined,
+        }));
     },
     [memberships]
   );
@@ -226,6 +269,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         addRepository,
         removeRepository,
         getWorkspaceRepositories,
+        getWorkspaceRepositoryInfos,
         getWorkspace,
         isUserWorkspace,
         refresh,
