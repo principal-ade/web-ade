@@ -167,12 +167,16 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       let metadata: Record<string, unknown> | undefined;
       try {
         const [owner, repo] = repositoryId.split('/');
-        const response = await fetch(`/api/github/repo/${owner}/${repo}`);
+        const response = await fetch(`/api/github/repo/${owner}/${repo}?action=info`);
         if (response.ok) {
           const repoInfo = await response.json();
-          if (repoInfo.sourceRepository) {
+          // GitHub API returns fork source as 'parent'
+          if (repoInfo.fork && repoInfo.parent) {
             metadata = {
-              sourceRepository: repoInfo.sourceRepository,
+              sourceRepository: {
+                owner: repoInfo.parent.owner.login,
+                name: repoInfo.parent.name,
+              },
             };
           }
         }
