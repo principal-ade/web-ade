@@ -118,8 +118,14 @@ const GitChangesPanelLoader = dynamic(
   { ssr: false }
 );
 
-// Use custom ThemeEditorPanel with live theme editing support
-import { ThemeEditorPanel } from './ThemeEditorPanel';
+// Dynamically import the ThemeEditorPanel with SSR disabled
+const ThemeEditorPanelLoader = dynamic(
+  () => import('@industry-theme/theme-editor-panel').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
 
 type ViewMode = 'editor' | 'kanban' | 'visual-validation';
 interface EditorLayoutContentProps {
@@ -146,7 +152,7 @@ function EditorLayoutContent({
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
   const { login } = useAuth();
-  const { setColor, resetColor, resetAllColors } = useGlobalTheme();
+  const { setTheme, setColor, resetColor, resetAllColors } = useGlobalTheme();
   const [viewMode, setViewMode] = useState<ViewMode>('editor');
   const currentLayoutConfig = layoutConfigs.find((c) => c.id === currentLayoutConfigId) || layoutConfigs[0]!;
   const [isMobile, setIsMobile] = useState(false);
@@ -403,12 +409,32 @@ function EditorLayoutContent({
       events.on('theme:reset-all-colors', () => {
         resetAllColors();
       }),
+      // Handle preset selection from theme editor panel
+      events.on('theme:set-preset', (event) => {
+        const payload = event.payload as { presetName?: string; presetLabel?: string };
+        if (payload.presetLabel) {
+          // Map preset labels to GlobalThemeContext theme names
+          const labelToThemeName: Record<string, string> = {
+            'Terminal': 'Terminal',
+            'Regal': 'Regal',
+            'Matrix': 'Matrix',
+            'Matrix Minimal': 'Matrix Minimal',
+            'Slate': 'Slate',
+            'Landing Page': 'Landing Page',
+            'Landing Light': 'Landing Page Light',
+          };
+          const themeName = labelToThemeName[payload.presetLabel];
+          if (themeName) {
+            setTheme(themeName as import('@/contexts/ThemeContext').ThemeName);
+          }
+        }
+      }),
     ];
 
     return () => {
       unsubscribers.forEach((unsub) => unsub());
     };
-  }, [events, login, actions, layout, leftSidebarCollapsed, rightSidebarCollapsed, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed, setColor, resetColor, resetAllColors]);
+  }, [events, login, actions, layout, leftSidebarCollapsed, rightSidebarCollapsed, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed, setTheme, setColor, resetColor, resetAllColors]);
 
   // Sync layout and collapsed state when view mode changes (for special views)
   useEffect(() => {
@@ -540,7 +566,7 @@ function EditorLayoutContent({
       label: 'Theme Editor',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <ThemeEditorPanel />
+          <ThemeEditorPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },

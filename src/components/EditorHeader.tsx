@@ -2,7 +2,8 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, Wifi, WifiOff, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github, Download, Building2, Home, FolderOpen, Plus, Edit2 } from 'lucide-react';
+import { LogOut, Wifi, WifiOff, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github, Download, Building2, Home, FolderOpen, Plus, Edit2, Palette } from 'lucide-react';
+import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { usePresenceData, RepositorySession } from '@/hooks/usePresenceData';
@@ -39,6 +40,7 @@ export function EditorHeader({
   onEditCollection,
 }: EditorHeaderProps = {}) {
   const { theme } = useTheme();
+  const { cycleTheme, currentThemeName } = useGlobalTheme();
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
   const pathname = usePathname();
   const [repositoryName, setRepositoryName] = useState<{ owner: string; repo: string } | null>(null);
@@ -431,6 +433,21 @@ export function EditorHeader({
             </button>
           )}
         </div>
+
+        {/* Theme Switcher - only on home page */}
+        {!repositoryName && !ownerOnly && !collectionId && (
+          <button
+            onClick={cycleTheme}
+            className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+            style={{
+              background: theme.colors.secondary,
+              color: theme.colors.text,
+            }}
+            title={`Theme: ${currentThemeName} (click to cycle)`}
+          >
+            <Palette className="w-4 h-4" />
+          </button>
+        )}
 
         {isLoading ? (
           <div className="text-sm" style={{ color: theme.colors.textMuted }}>
