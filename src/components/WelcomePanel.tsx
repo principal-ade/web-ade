@@ -213,7 +213,7 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
               textAlign: 'center',
             }}
           >
-            Explore Curated Collections
+            Curated Collections
           </h2>
           <div
             style={{
