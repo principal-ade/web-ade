@@ -2,9 +2,10 @@
 
 import { EditorHeader } from "@/components/EditorHeader";
 import { WelcomePanel, type CuratedCollection } from "@/components/WelcomePanel";
+import { UserCollectionsPanel } from "@/components/collections/UserCollectionsPanel";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useRouter } from "next/navigation";
-import { useCallback, useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 
 interface CollectionsResponse {
@@ -39,12 +40,12 @@ function HomePageContent() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleNavigate = useCallback((owner: string, repo: string) => {
-    router.push(`/${owner}/${repo}`);
-  }, [router]);
-
   const handleCollectionClick = useCallback((collectionId: string) => {
     router.push(`/collections/${collectionId}`);
+  }, [router]);
+
+  const handleUserCollectionClick = useCallback((workspaceId: string) => {
+    router.push(`/collections/${workspaceId}`);
   }, [router]);
 
   return (
@@ -53,13 +54,24 @@ function HomePageContent() {
       style={{ background: theme.colors.background }}
     >
       <EditorHeader />
-      <div style={{ flex: 1, minHeight: 0, height: '100%' }}>
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          height: '100%',
+          overflowY: 'auto',
+          backgroundColor: theme.colors.background,
+        }}
+      >
+        {/* Curated Collections */}
         <WelcomePanel
-          onNavigate={handleNavigate}
           curatedCollections={collections}
           onCollectionClick={handleCollectionClick}
           loading={loading}
         />
+
+        {/* User Collections Panel - shown after curated */}
+        <UserCollectionsPanel onCollectionClick={handleUserCollectionClick} />
       </div>
     </div>
   );

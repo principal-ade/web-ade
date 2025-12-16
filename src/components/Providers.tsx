@@ -3,6 +3,7 @@
 import { ThemeProvider } from '@principal-ade/industry-theme';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ControlTowerProvider } from '@/contexts/ControlTowerContext';
+import { UserCollectionsProvider } from '@/contexts/UserCollectionsContext';
 import { GlobalThemeProvider, useGlobalTheme } from '@/contexts/ThemeContext';
 import { MermaidInitializer } from './MermaidInitializer';
 import { ReactNode } from 'react';
@@ -14,7 +15,9 @@ function ThemeProviderWrapper({ children }: { children: ReactNode }) {
     <ThemeProvider theme={currentTheme}>
       <MermaidInitializer />
       <AuthProvider>
-        <ControlTowerProvider>{children}</ControlTowerProvider>
+        <ControlTowerProvider>
+          <UserCollectionsProvider>{children}</UserCollectionsProvider>
+        </ControlTowerProvider>
       </AuthProvider>
     </ThemeProvider>
   );

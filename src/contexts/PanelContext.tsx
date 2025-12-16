@@ -505,7 +505,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   // Fetch details for collection repositories
   const fetchCollectionRepoDetails = useCallback(async (repoIds: string[]) => {
     setCollectionRepoDetailsLoading(true);
-    console.log('[PanelContext] Fetching collection repository details for:', repoIds.length, 'repos');
 
     try {
       const details = await Promise.all(
@@ -514,21 +513,44 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           try {
             const response = await fetch(`/api/github/repo/${owner}/${repo}?action=info`);
             if (!response.ok) {
-              console.warn(`[PanelContext] Failed to fetch repo info for ${repoId}`);
-              return null;
+              // Return a minimal fallback entry so the repo still shows in the list
+              return {
+                id: 0,
+                name: repo || repoId,
+                full_name: repoId,
+                owner: { login: owner || 'unknown', avatar_url: '', type: 'User' as const },
+                private: false,
+                html_url: `https://github.com/${repoId}`,
+                description: null,
+                fork: false,
+                clone_url: `https://github.com/${repoId}.git`,
+                language: null,
+                default_branch: 'main',
+              } as GitHubRepository;
             }
             const data = await response.json();
             return data as GitHubRepository;
-          } catch (err) {
-            console.warn(`[PanelContext] Error fetching repo info for ${repoId}:`, err);
-            return null;
+          } catch {
+            // Return fallback on error too
+            return {
+              id: 0,
+              name: repo || repoId,
+              full_name: repoId,
+              owner: { login: owner || 'unknown', avatar_url: '', type: 'User' as const },
+              private: false,
+              html_url: `https://github.com/${repoId}`,
+              description: null,
+              fork: false,
+              clone_url: `https://github.com/${repoId}.git`,
+              language: null,
+              default_branch: 'main',
+            } as GitHubRepository;
           }
         })
       );
 
-      const validDetails = details.filter((d): d is GitHubRepository => d !== null);
-      setCollectionRepoDetails(validDetails);
-      console.log('[PanelContext] Collection repo details loaded:', validDetails.length);
+      // All entries should be valid now (either from API or fallback)
+      setCollectionRepoDetails(details);
     } catch (err) {
       console.error('[PanelContext] Failed to fetch collection repo details:', err);
     } finally {
@@ -1834,7 +1856,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   // Fetch collection repository details when collectionRepositories prop is provided
   useEffect(() => {
     if (collectionRepositories && collectionRepositories.length > 0) {
-      console.log('[PanelContext] Fetching collection repo details for:', collectionRepositories.length, 'repos');
       fetchCollectionRepoDetails(collectionRepositories);
     }
   }, [collectionRepositories, fetchCollectionRepoDetails]);

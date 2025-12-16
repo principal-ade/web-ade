@@ -5,7 +5,10 @@ import Link from "next/link";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useCallback } from "react";
 import { PanelProvider, usePanelProvider } from "@/contexts/PanelContext";
+import { useUserCollections } from "@/contexts/UserCollectionsContext";
 import { EditorHeader } from "@/components/EditorHeader";
+import { CollectionModal } from "@/components/collections/CollectionModal";
+import { AddRepositoryModal } from "@/components/collections/AddRepositoryModal";
 import dynamic from "next/dynamic";
 import {
   EditableConfigurablePanelLayout,
@@ -61,9 +64,22 @@ interface CollectionPageContentProps {
   collectionId: string;
   onPreviewChange?: (repo: string | null) => void;
   initialPreviewedRepo?: string | null;
+  // User collection props
+  isUserCollection?: boolean;
+  collectionName?: string;
+  onAddRepository?: () => void;
+  onEditCollection?: () => void;
 }
 
-function CollectionPageContent({ collectionId: _collectionId, onPreviewChange, initialPreviewedRepo }: CollectionPageContentProps) {
+function CollectionPageContent({
+  collectionId: _collectionId,
+  onPreviewChange,
+  initialPreviewedRepo,
+  isUserCollection = false,
+  collectionName,
+  onAddRepository,
+  onEditCollection,
+}: CollectionPageContentProps) {
   const { theme } = useTheme();
   const router = useRouter();
   const { context, actions, events } = usePanelProvider();
@@ -234,6 +250,10 @@ function CollectionPageContent({ collectionId: _collectionId, onPreviewChange, i
         onToggleLeft={() => setLeftCollapsed(!leftCollapsed)}
         onToggleRight={() => setRightCollapsed(!rightCollapsed)}
         selectedRepository={previewedRepo}
+        isUserCollection={isUserCollection}
+        collectionName={collectionName}
+        onAddRepository={onAddRepository}
+        onEditCollection={onEditCollection}
       />
       <div className="flex-1 overflow-hidden">
         {isMobile ? (
@@ -271,14 +291,23 @@ function CollectionPageWrapper({ collectionId }: { collectionId: string }) {
   const { theme } = useTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const userCollections = useUserCollections();
+
   const [previewedRepo, setPreviewedRepo] = useState<string | null>(() => {
-    // Initialize from URL query param
     return searchParams.get('project');
   });
   const [collection, setCollection] = useState<Collection | null>(null);
   const [repositories, setRepositories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Modal states for user collections
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [addRepoModalOpen, setAddRepoModalOpen] = useState(false);
+
+  // Check if this is a user collection
+  const isUserCollection = userCollections.isUserWorkspace(collectionId);
+  const userWorkspace = userCollections.getWorkspace(collectionId);
 
   // Update URL when previewed repo changes
   const handlePreviewChange = useCallback((repo: string | null) => {
@@ -292,25 +321,71 @@ function CollectionPageWrapper({ collectionId }: { collectionId: string }) {
     router.replace(`/collections/${collectionId}?${params.toString()}`, { scroll: false });
   }, [collectionId, router, searchParams]);
 
-  // Fetch collection data
+  // Load collection data - either from user collections or API
   useEffect(() => {
-    fetch(`/api/collections/${collectionId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error('Collection not found');
-        return res.json();
-      })
-      .then((data: CollectionData) => {
-        setCollection(data.collection);
-        setRepositories(data.repositories);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, [collectionId]);
+    // Wait for user collections to load before checking
+    if (userCollections.loading) return;
 
-  if (loading) {
+    if (isUserCollection && userWorkspace) {
+      // Load from user collections context
+      setCollection({
+        id: userWorkspace.id,
+        name: userWorkspace.name,
+        description: userWorkspace.description || '',
+        icon: userWorkspace.icon,
+        theme: userWorkspace.theme,
+      });
+      setRepositories(userCollections.getWorkspaceRepositories(collectionId));
+      setLoading(false);
+    } else {
+      // Fetch from API (curated collections)
+      fetch(`/api/collections/${collectionId}`)
+        .then((res) => {
+          if (!res.ok) throw new Error('Collection not found');
+          return res.json();
+        })
+        .then((data: CollectionData) => {
+          setCollection(data.collection);
+          setRepositories(data.repositories);
+          setLoading(false);
+        })
+        .catch((err) => {
+          setError(err.message);
+          setLoading(false);
+        });
+    }
+  }, [collectionId, isUserCollection, userWorkspace, userCollections]);
+
+  // Update repositories when user collection memberships change
+  useEffect(() => {
+    if (isUserCollection) {
+      setRepositories(userCollections.getWorkspaceRepositories(collectionId));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isUserCollection, collectionId, userCollections.memberships]);
+
+  // Handlers for user collection actions
+  const handleSaveCollection = useCallback(async (name: string, description: string, icon: string) => {
+    await userCollections.updateWorkspace(collectionId, { name, description, icon });
+    setCollection((prev) => prev ? { ...prev, name, description, icon } : null);
+  }, [collectionId, userCollections]);
+
+  const handleDeleteCollection = useCallback(async () => {
+    await userCollections.deleteWorkspace(collectionId);
+    router.push('/');
+  }, [collectionId, userCollections, router]);
+
+  const handleAddRepository = useCallback(async (repositoryId: string) => {
+    await userCollections.addRepository(collectionId, repositoryId);
+    // State will be updated by the useEffect that watches userCollections.memberships
+  }, [collectionId, userCollections]);
+
+  const handleRemoveRepository = useCallback(async (repositoryId: string) => {
+    await userCollections.removeRepository(collectionId, repositoryId);
+    // State will be updated by the useEffect that watches userCollections.memberships
+  }, [collectionId, userCollections]);
+
+  if (loading || userCollections.loading) {
     return (
       <div
         className="h-screen w-screen flex items-center justify-center"
@@ -350,6 +425,7 @@ function CollectionPageWrapper({ collectionId }: { collectionId: string }) {
       style={{ background: theme.colors.background }}
     >
       <PanelProvider
+        key={`${collectionId}-${repositories.length}-${repositories[repositories.length - 1] || 'empty'}`}
         workspace={{
           name: collection.name,
           path: `/collections/${collectionId}`,
@@ -366,8 +442,34 @@ function CollectionPageWrapper({ collectionId }: { collectionId: string }) {
           collectionId={collectionId}
           onPreviewChange={handlePreviewChange}
           initialPreviewedRepo={previewedRepo}
+          isUserCollection={isUserCollection}
+          collectionName={collection.name}
+          onAddRepository={() => setAddRepoModalOpen(true)}
+          onEditCollection={() => setEditModalOpen(true)}
         />
       </PanelProvider>
+
+      {/* Modals for user collections */}
+      {isUserCollection && userWorkspace && (
+        <>
+          <CollectionModal
+            isOpen={editModalOpen}
+            onClose={() => setEditModalOpen(false)}
+            onSave={handleSaveCollection}
+            onDelete={handleDeleteCollection}
+            initialData={userWorkspace}
+            mode="edit"
+          />
+          <AddRepositoryModal
+            isOpen={addRepoModalOpen}
+            onClose={() => setAddRepoModalOpen(false)}
+            onAdd={handleAddRepository}
+            onRemove={handleRemoveRepository}
+            existingRepositories={repositories}
+            collectionName={collection.name}
+          />
+        </>
+      )}
     </div>
   );
 }

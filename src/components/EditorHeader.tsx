@@ -2,7 +2,7 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, Wifi, WifiOff, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github, Download, Building2, Home, FolderOpen } from 'lucide-react';
+import { LogOut, Wifi, WifiOff, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github, Download, Building2, Home, FolderOpen, Plus, Edit2 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { usePresenceData, RepositorySession } from '@/hooks/usePresenceData';
@@ -18,6 +18,11 @@ interface EditorHeaderProps {
   onToggleLeft?: () => void;
   onToggleRight?: () => void;
   selectedRepository?: string | null; // Format: "owner/repo"
+  // User collection actions
+  isUserCollection?: boolean;
+  collectionName?: string;
+  onAddRepository?: () => void;
+  onEditCollection?: () => void;
 }
 
 export function EditorHeader({
@@ -28,6 +33,10 @@ export function EditorHeader({
   onToggleLeft,
   onToggleRight,
   selectedRepository,
+  isUserCollection = false,
+  collectionName,
+  onAddRepository,
+  onEditCollection,
 }: EditorHeaderProps = {}) {
   const { theme } = useTheme();
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
@@ -188,7 +197,7 @@ export function EditorHeader({
                 className="transition-opacity hover:opacity-80"
                 style={{ color: theme.colors.text, textDecoration: 'none' }}
               >
-                {collectionId.replace('ws-', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                {collectionName || collectionId.replace('ws-', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
               </Link>
             </div>
           </div>
@@ -329,6 +338,41 @@ export function EditorHeader({
       ) : null}
 
       <div className="flex items-center gap-3 flex-shrink-0 flex-1 justify-end">
+        {/* User collection action buttons */}
+        {isUserCollection && collectionId && (
+          <div className="flex items-center gap-2">
+            {onAddRepository && (
+              <button
+                onClick={onAddRepository}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
+                style={{
+                  background: theme.colors.primary,
+                  color: '#fff',
+                }}
+                title="Add repository to collection"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Add Repo</span>
+              </button>
+            )}
+            {onEditCollection && (
+              <button
+                onClick={onEditCollection}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
+                style={{
+                  background: theme.colors.secondary,
+                  color: theme.colors.text,
+                  border: `1px solid ${theme.colors.border}`,
+                }}
+                title="Edit collection"
+              >
+                <Edit2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Edit</span>
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Open in Desktop App button */}
         {repositoryName && (
           <button
