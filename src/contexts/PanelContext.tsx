@@ -1869,11 +1869,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       const { colorMode } = event.payload;
       if (colorMode) {
         console.log('[PanelContext] Received quality:colorMode:select for:', colorMode);
-        // Enable the mode if not already enabled
-        setEnabledColorModes(prev => {
-          if (prev.includes(colorMode)) return prev;
-          return [...prev, colorMode];
-        });
+        // Only enable the selected mode (replace, don't accumulate)
+        setEnabledColorModes([colorMode]);
         // Set as the currently selected mode (File City will read this from the slice)
         setSelectedColorMode(colorMode);
       }
