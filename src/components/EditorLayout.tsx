@@ -73,15 +73,6 @@ const PrincipalViewPanelLoader = dynamic(
   { ssr: false }
 );
 
-// Dynamically import the Config Library Browser Panel with SSR disabled
-const ConfigLibraryBrowserPanelLoader = dynamic(
-  () => import('@industry-theme/principal-view-panels').then((mod) => {
-    const Component = mod.panels[1]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
 // Dynamically import the QualityHexagonPanel with SSR disabled
 const QualityHexagonPanelLoader = dynamic(
   () => import('@principal-ade/code-quality-panels').then((mod) => {
@@ -540,15 +531,6 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <PrincipalViewPanelLoader context={context} actions={actions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'config-browser',
-      label: 'Config Browser',
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <ConfigLibraryBrowserPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },
