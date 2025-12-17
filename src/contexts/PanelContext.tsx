@@ -1127,12 +1127,12 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         },
       ],
       [
-        'codeCityColorModes',
+        'fileCityColorModes',
         {
           scope: 'repository',
-          name: 'codeCityColorModes',
-          // Only provide quality color modes for non-collection views
-          data: !collectionId && qualityData ? {
+          name: 'fileCityColorModes',
+          // Provide quality color modes when quality data is available
+          data: qualityData ? {
             enabledModes: ['coverage', 'eslint', 'typescript', 'prettier', 'knip', 'alexandria'],
             qualityData,
           } : null,
@@ -1316,12 +1316,12 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     });
   }
 
-  // Update codeCityColorModes slice - only for non-collection views
-  const codeCityColorModesSlice = slicesRef.current.get('codeCityColorModes');
-  if (codeCityColorModesSlice) {
-    slicesRef.current.set('codeCityColorModes', {
-      ...codeCityColorModesSlice,
-      data: !collectionId && qualityData ? {
+  // Update fileCityColorModes slice with quality data
+  const fileCityColorModesSlice = slicesRef.current.get('fileCityColorModes');
+  if (fileCityColorModesSlice) {
+    slicesRef.current.set('fileCityColorModes', {
+      ...fileCityColorModesSlice,
+      data: qualityData ? {
         enabledModes: ['coverage', 'eslint', 'typescript', 'prettier', 'knip', 'alexandria'],
         qualityData,
       } : null,
