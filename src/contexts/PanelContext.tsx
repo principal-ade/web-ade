@@ -438,6 +438,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const [qualityError, setQualityError] = useState<Error | null>(null);
   // State for explicitly enabled File City color modes (updated via events)
   const [enabledColorModes, setEnabledColorModes] = useState<string[]>([]);
+  // State for the currently selected color mode (updated via events, consumed by File City)
+  const [selectedColorMode, setSelectedColorMode] = useState<string | null>(null);
 
   // State for packages (for PackageCompositionPanel)
   const [packagesData, setPackagesData] = useState<PackagesSliceData | null>(null);
@@ -1133,9 +1135,10 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         {
           scope: 'repository',
           name: 'fileCityColorModes',
-          // Provide quality data with explicitly enabled modes (set via quality:colorMode:select events)
+          // Provide quality data with explicitly enabled/selected modes (set via quality:colorMode:select events)
           data: qualityData ? {
             enabledModes: enabledColorModes,
+            selectedColorMode,
             qualityData,
           } : null,
           loading: qualityLoading,
@@ -1325,6 +1328,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       ...fileCityColorModesSlice,
       data: qualityData ? {
         enabledModes: enabledColorModes,
+        selectedColorMode,
         qualityData,
       } : null,
       loading: qualityLoading,
@@ -1511,7 +1515,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError, enabledColorModes, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading]
+    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading]
   );
 
   // Actions
@@ -1805,8 +1809,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
 
     console.log('[PanelContext] Initializing data fetch for:', githubRepo);
 
-    // Reset enabled color modes when repo changes
+    // Reset color mode state when repo changes
     setEnabledColorModes([]);
+    setSelectedColorMode(null);
 
     // Fetch independent data in parallel
     fetchReadme(githubRepo);
@@ -1864,10 +1869,13 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       const { colorMode } = event.payload;
       if (colorMode) {
         console.log('[PanelContext] Received quality:colorMode:select for:', colorMode);
+        // Enable the mode if not already enabled
         setEnabledColorModes(prev => {
           if (prev.includes(colorMode)) return prev;
           return [...prev, colorMode];
         });
+        // Set as the currently selected mode (File City will read this from the slice)
+        setSelectedColorMode(colorMode);
       }
     });
 
