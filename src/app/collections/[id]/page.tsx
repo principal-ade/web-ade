@@ -134,7 +134,9 @@ function CollectionPageContent({
 
     const repositories = workspaceReposData?.repositories;
     if (repositories && repositories.length > 0) {
-      const firstRepo = repositories[0];
+      // Select first repository alphabetically by name
+      const sortedRepos = [...repositories].sort((a, b) => a.name.localeCompare(b.name));
+      const firstRepo = sortedRepos[0];
       if (firstRepo?.full_name) {
         handlePreviewChange(firstRepo.full_name);
         (actions as { previewReadme?: (owner: string, repo: string) => Promise<string> }).previewReadme?.(
