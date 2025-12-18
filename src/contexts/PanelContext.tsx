@@ -808,11 +808,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   // When commitSha is provided, uses action=commit for better caching (immutable per SHA)
   // Otherwise falls back to action=latest (requires extra GitHub API call to resolve branch HEAD)
   const fetchQualityMetrics = useCallback(async (repo: string, commitSha?: string) => {
-    if (!isAuthenticated) {
-      setQualityData(null);
-      return;
-    }
-
+    // Don't require authentication - server will use GITHUB_TOKEN fallback for public repos
     setQualityLoading(true);
     setQualityError(null);
     console.log('[PanelContext] Fetching quality metrics for:', repo, commitSha ? `(commit: ${commitSha.slice(0, 7)})` : '(latest)');
@@ -873,7 +869,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     } finally {
       setQualityLoading(false);
     }
-  }, [isAuthenticated]);
+  }, []);
 
   // Fetch packages from repository (parse package.json)
   // Note: Uses fileTreeRef to avoid dependency cycle

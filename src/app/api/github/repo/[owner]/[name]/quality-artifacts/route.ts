@@ -48,19 +48,20 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action') || 'latest';
 
-    // Get user's GitHub token from HTTP-only cookie
+    // Get user's GitHub token from HTTP-only cookie, fall back to server token for public repos
     const userToken = await getGitHubToken();
+    const token = userToken || process.env.GITHUB_TOKEN;
 
-    if (!userToken) {
+    if (!token) {
       return addCorsHeaders(
         NextResponse.json(
-          { error: 'Authentication required. Please log in with GitHub.' },
+          { error: 'No GitHub token available. Please log in or set GITHUB_TOKEN environment variable.' },
           { status: 401 }
         )
       );
     }
 
-    const service = new GitHubArtifactService(userToken);
+    const service = new GitHubArtifactService(token);
 
     let data: QualityArtifactResponse | ArtifactInfo[] | null;
 
