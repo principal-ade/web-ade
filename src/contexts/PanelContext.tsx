@@ -1132,11 +1132,12 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           scope: 'repository',
           name: 'fileCityColorModes',
           // Provide quality data with explicitly enabled/selected modes (set via quality:colorMode:select events)
-          data: qualityData ? {
+          // Always pass selectedColorMode so file-city doesn't fall back to fileTypes while data loads
+          data: {
             enabledModes: enabledColorModes,
             selectedColorMode,
-            qualityData,
-          } : null,
+            qualityData: qualityData ?? undefined,
+          },
           loading: qualityLoading,
           error: qualityError,
           refresh: async () => {
@@ -1322,11 +1323,12 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   if (fileCityColorModesSlice) {
     slicesRef.current.set('fileCityColorModes', {
       ...fileCityColorModesSlice,
-      data: qualityData ? {
+      // Always pass selectedColorMode so file-city doesn't fall back to fileTypes while data loads
+      data: {
         enabledModes: enabledColorModes,
         selectedColorMode,
-        qualityData,
-      } : null,
+        qualityData: qualityData ?? undefined,
+      },
       loading: qualityLoading,
       error: qualityError,
     });
