@@ -1619,7 +1619,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           throw error;
         }
       },
-      readFile: async (filePath: string): Promise<{ content: string }> => {
+      readFile: async (filePath: string): Promise<string> => {
         console.log('[PanelContext] Reading file:', filePath);
 
         if (!githubRepo) {
@@ -1672,8 +1672,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
             content = decoder.decode(bytes);
           }
 
-          // Return object with content property as expected by Visual Validation panel
-          return { content };
+          // Return content directly as expected by panels (framework signature)
+          return content;
         } catch (error) {
           console.error('[PanelContext] Error reading file:', error);
           throw error;
