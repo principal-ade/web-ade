@@ -118,6 +118,14 @@ const ThemeEditorPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the FileEditorPanel with SSR disabled
+const FileEditorPanelLoader = dynamic(
+  () => import('@industry-theme/file-editing-panels').then((mod) => ({
+    default: mod.FileEditorPanel,
+  })),
+  { ssr: false }
+);
+
 type ViewMode = 'editor' | 'kanban' | 'visual-validation';
 interface EditorLayoutContentProps {
   layout: PanelLayout;
@@ -148,6 +156,54 @@ function EditorLayoutContent({
   const currentLayoutConfig = layoutConfigs.find((c) => c.id === currentLayoutConfigId) || layoutConfigs[0]!;
   const [isMobile, setIsMobile] = useState(false);
   const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
+
+  // Get repository info for file fetching
+  const githubRepo = (context.currentScope.repository as { githubRepo?: string })?.githubRepo
+    || context.currentScope.repository?.path;
+
+  // Create a file content provider for the FileEditorPanel
+  const fileContentProvider = useMemo(() => ({
+    readFile: async (filePath: string): Promise<string | null> => {
+      if (!githubRepo || !githubRepo.includes('/')) {
+        console.warn('[FileEditorPanel] No valid repository available for file fetch:', githubRepo);
+        return null;
+      }
+
+      try {
+        const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+        const [owner, name] = githubRepo.split('/');
+
+        const response = await fetch(
+          `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(cleanPath)}`
+        );
+
+        if (!response.ok) {
+          console.error('[FileEditorPanel] Failed to fetch file:', response.statusText);
+          return null;
+        }
+
+        const data = await response.json();
+
+        // Decode base64 content
+        if (data.content && data.encoding === 'base64') {
+          const binaryString = atob(data.content.replace(/\n/g, ''));
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const decoder = new TextDecoder('utf-8');
+          return decoder.decode(bytes);
+        }
+
+        return data.content || null;
+      } catch (err) {
+        console.error('[FileEditorPanel] Error fetching file:', err);
+        return null;
+      }
+    },
+    // GitHub API is read-only for web-ade, so no writeFile
+  }), [githubRepo]);
 
   // Handle layout configuration change
   const handleLayoutConfigChange = useCallback((config: LayoutConfig) => {
@@ -420,12 +476,30 @@ function EditorLayoutContent({
           }
         }
       }),
+      // File editor events - open files in the editor panel
+      events.on('file:open', (event) => {
+        const payload = event.payload as { path?: string; filePath?: string };
+        const filePath = payload.path || payload.filePath;
+        if (filePath) {
+          setSelectedFilePath(filePath);
+          // If the file-editor panel is not currently visible, switch to it
+          if (layout.middle !== 'file-editor') {
+            setLayout((prev) => ({
+              ...prev,
+              middle: 'file-editor',
+            }));
+          }
+        }
+      }),
+      events.on('file:close', () => {
+        setSelectedFilePath(null);
+      }),
     ];
 
     return () => {
       unsubscribers.forEach((unsub) => unsub());
     };
-  }, [events, login, actions, layout, leftSidebarCollapsed, rightSidebarCollapsed, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed, setTheme, setColor, resetColor, resetAllColors]);
+  }, [events, login, actions, layout, leftSidebarCollapsed, rightSidebarCollapsed, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed, setTheme, setColor, resetColor, resetAllColors, setSelectedFilePath]);
 
   // Sync layout and collapsed state when view mode changes (for special views)
   useEffect(() => {
@@ -576,6 +650,21 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitChangesPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'file-editor',
+      label: 'File Editor',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <FileEditorPanelLoader
+            filePath={selectedFilePath}
+            contentProvider={fileContentProvider}
+            source={{ type: 'remote' }}
+            readOnly={true}
+            onClose={() => setSelectedFilePath(null)}
+          />
         </div>
       ),
     },

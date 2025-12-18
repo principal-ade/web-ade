@@ -81,6 +81,19 @@ export const layoutConfigs: LayoutConfig[] = [
       right: false,
     },
   },
+  {
+    id: 'claude-code',
+    name: 'Claude Code',
+    layout: {
+      left: 'git-changes',
+      middle: 'file-editor',
+      right: 'visual-validation',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
 ];
 
 interface LayoutConfigDropdownProps {
