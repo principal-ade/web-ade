@@ -2,7 +2,6 @@
 
 import { EditorHeader } from "@/components/EditorHeader";
 import { WelcomePanel, type CuratedCollection } from "@/components/WelcomePanel";
-import { UserCollectionsPanel } from "@/components/collections/UserCollectionsPanel";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
@@ -52,8 +51,8 @@ function HomePageContent() {
     router.push(`/collections/${collectionId}`);
   }, [router]);
 
-  const handleUserCollectionClick = useCallback((workspaceId: string) => {
-    router.push(`/collections/${workspaceId}`);
+  const handleRepositoryClick = useCallback((collectionId: string, repositoryId: string) => {
+    router.push(`/collections/${collectionId}?project=${encodeURIComponent(repositoryId)}`);
   }, [router]);
 
   return (
@@ -71,15 +70,12 @@ function HomePageContent() {
           backgroundColor: theme.colors.background,
         }}
       >
-        {/* Curated Collections */}
         <WelcomePanel
           curatedCollections={collections}
           onCollectionClick={handleCollectionClick}
+          onRepositoryClick={handleRepositoryClick}
           loading={loading}
         />
-
-        {/* User Collections Panel - shown after curated */}
-        <UserCollectionsPanel onCollectionClick={handleUserCollectionClick} />
       </div>
     </div>
   );

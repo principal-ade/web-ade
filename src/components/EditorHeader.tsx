@@ -204,7 +204,7 @@ export function EditorHeader({
             </div>
           </div>
         )}
-        {/* Download App or Open in Desktop - only show on home page (not owner pages) */}
+        {/* Download ADE or Open in Desktop - only show on home page (not owner pages) */}
         {!repositoryName && !ownerOnly && !collectionId && (
           hasDesktopApp ? (
             <button
@@ -231,7 +231,7 @@ export function EditorHeader({
               }}
             >
               <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Download App</span>
+              <span className="hidden sm:inline">Download ADE</span>
             </a>
           )
         )}

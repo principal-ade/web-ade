@@ -1,21 +1,16 @@
 import { NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
 import {
   GitHubFileSystemAdapter,
   WorkspaceManager,
 } from '@principal-ai/alexandria-core-library/github';
-
-// Cache collections for 5 minutes
-const CACHE_DURATION = 5 * 60 * 1000;
-let cachedCollections: {
-  data: Awaited<ReturnType<typeof fetchCollections>> | null;
-  timestamp: number;
-} = { data: null, timestamp: 0 };
 
 async function fetchCollections() {
   const adapter = new GitHubFileSystemAdapter({
     owner: 'principal-ai',
     repo: 'curated-collections',
     branch: 'main',
+    token: process.env.GITHUB_TOKEN,
   });
 
   // Preload the workspace files
@@ -53,22 +48,25 @@ async function fetchCollections() {
   };
 }
 
+// Use Next.js data cache - persists across serverless instances
+const getCachedCollections = unstable_cache(
+  async () => fetchCollections(),
+  ['curated-collections'],
+  {
+    revalidate: 300, // 5 minutes
+    tags: ['collections'],
+  }
+);
+
 export async function GET() {
   try {
-    const now = Date.now();
+    const data = await getCachedCollections();
 
-    // Check cache
-    if (cachedCollections.data && now - cachedCollections.timestamp < CACHE_DURATION) {
-      return NextResponse.json(cachedCollections.data);
-    }
-
-    // Fetch fresh data
-    const data = await fetchCollections();
-
-    // Update cache
-    cachedCollections = { data, timestamp: now };
-
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+      },
+    });
   } catch (error) {
     console.error('Error fetching collections:', error);
     return NextResponse.json(

@@ -1,6 +1,15 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { ArrowRight, Search, ExternalLink, Github } from 'lucide-react';
 import { AvatarStack, type RepositoryInfo } from './collections/AvatarStack';
+
+/**
+ * Repository with collection context for search results
+ */
+interface RepositorySearchResult {
+  repo: RepositoryInfo;
+  collection: CuratedCollection;
+}
 
 
 /**
@@ -21,6 +30,7 @@ export interface CuratedCollection {
 export interface WelcomePanelProps {
   curatedCollections?: CuratedCollection[];
   onCollectionClick?: (collectionId: string) => void;
+  onRepositoryClick?: (collectionId: string, repositoryId: string) => void;
   loading?: boolean;
 }
 
@@ -34,67 +44,56 @@ const SkeletonCard: React.FC<{
   return (
     <div
       style={{
-        padding: '24px',
+        padding: '20px 24px',
         borderRadius: '12px',
         backgroundColor: theme.colors.surface,
         border: `1px solid ${theme.colors.border}`,
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
         gap: '16px',
-        width: '280px',
       }}
     >
-      {/* Icon skeleton */}
+      {/* Header row skeleton */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          style={{
+            width: 140,
+            height: 20,
+            borderRadius: '4px',
+            backgroundColor: theme.colors.border,
+            animation: 'pulse 1.5s ease-in-out infinite',
+          }}
+        />
+        <div
+          style={{
+            width: 60,
+            height: 24,
+            borderRadius: '12px',
+            backgroundColor: theme.colors.border,
+            animation: 'pulse 1.5s ease-in-out infinite',
+          }}
+        />
+      </div>
+      {/* Description skeleton */}
       <div
         style={{
-          width: 48,
-          height: 48,
-          borderRadius: '10px',
+          width: '100%',
+          height: 16,
+          borderRadius: '4px',
           backgroundColor: theme.colors.border,
           animation: 'pulse 1.5s ease-in-out infinite',
         }}
       />
-      {/* Text content skeleton */}
-      <div>
-        {/* Title */}
-        <div
-          style={{
-            width: 168,
-            height: 18,
-            borderRadius: '4px',
-            backgroundColor: theme.colors.border,
-            animation: 'pulse 1.5s ease-in-out infinite',
-            marginBottom: '8px',
-            marginLeft: 'auto',
-            marginRight: 'auto',
-          }}
-        />
-        {/* Description lines */}
-        <div
-          style={{
-            width: 210,
-            height: 14,
-            borderRadius: '4px',
-            backgroundColor: theme.colors.border,
-            animation: 'pulse 1.5s ease-in-out infinite',
-            marginBottom: '6px',
-            marginLeft: 'auto',
-            marginRight: 'auto',
-          }}
-        />
-        <div
-          style={{
-            width: 160,
-            height: 14,
-            borderRadius: '4px',
-            backgroundColor: theme.colors.border,
-            animation: 'pulse 1.5s ease-in-out infinite',
-            marginLeft: 'auto',
-            marginRight: 'auto',
-          }}
-        />
-      </div>
+      {/* Button skeleton */}
+      <div
+        style={{
+          width: 120,
+          height: 32,
+          borderRadius: '6px',
+          backgroundColor: theme.colors.border,
+          animation: 'pulse 1.5s ease-in-out infinite',
+        }}
+      />
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; }
@@ -106,7 +105,7 @@ const SkeletonCard: React.FC<{
 };
 
 /**
- * Collection card component
+ * Collection card component - matches mockup with horizontal layout
  */
 const CollectionCard: React.FC<{
   collection: CuratedCollection;
@@ -114,73 +113,241 @@ const CollectionCard: React.FC<{
   onClick: () => void;
 }> = ({ collection, theme, onClick }) => {
   return (
-    <button
-      onClick={onClick}
+    <div
       style={{
-        padding: '24px',
+        padding: '20px 24px',
         borderRadius: '12px',
         backgroundColor: theme.colors.surface,
         border: `1px solid ${theme.colors.border}`,
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        gap: '16px',
+        gap: '12px',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
-        width: '280px',
-        textAlign: 'center',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = theme.colors.primary;
-        e.currentTarget.style.transform = 'translateY(-2px)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = theme.colors.border;
-        e.currentTarget.style.transform = 'translateY(0)';
       }}
+      onClick={onClick}
     >
-      {/* Avatar Stack */}
-      <AvatarStack repositories={collection.repositories || []} size={36} maxAvatars={4} />
-      <div>
+      {/* Header row: Name and avatar stack */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          style={{
+            fontSize: `${theme.fontSizes[3]}px`,
+            fontWeight: theme.fontWeights.semibold,
+            color: theme.colors.text,
+          }}
+        >
+          {collection.name}
+        </div>
+        <AvatarStack repositories={collection.repositories || []} size={28} maxAvatars={3} />
+      </div>
+
+      {/* Description */}
+      <div
+        style={{
+          fontSize: `${theme.fontSizes[1]}px`,
+          color: theme.colors.textSecondary,
+          lineHeight: 1.5,
+        }}
+      >
+        {collection.description}
+      </div>
+
+      {/* Open Collection button */}
+      <button
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontSize: `${theme.fontSizes[1]}px`,
+          fontWeight: theme.fontWeights.semibold,
+          color: theme.colors.text,
+          backgroundColor: 'transparent',
+          border: 'none',
+          padding: '8px 0',
+          cursor: 'pointer',
+          transition: 'color 0.2s ease',
+          width: 'fit-content',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = theme.colors.primary;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.color = theme.colors.text;
+        }}
+      >
+        Open Collection
+        <ArrowRight size={14} />
+      </button>
+    </div>
+  );
+};
+
+/**
+ * Repository card component for search results
+ */
+const RepositoryCard: React.FC<{
+  result: RepositorySearchResult;
+  theme: ReturnType<typeof useTheme>['theme'];
+  onClick: () => void;
+}> = ({ result, theme, onClick }) => {
+  const { repo, collection } = result;
+  // Use source repository (original) for display, fall back to fork info
+  const displayOwner = repo.sourceRepository?.owner || repo.repositoryId.split('/')[0];
+  const displayName = repo.sourceRepository?.name || repo.repositoryId.split('/')[1];
+
+  return (
+    <div
+      style={{
+        padding: '16px 20px',
+        borderRadius: '12px',
+        backgroundColor: theme.colors.surface,
+        border: `1px solid ${theme.colors.border}`,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = theme.colors.primary;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = theme.colors.border;
+      }}
+      onClick={onClick}
+    >
+      {/* Repository avatar - uses original owner */}
+      <img
+        src={`https://avatars.githubusercontent.com/${displayOwner}?size=64`}
+        alt={displayOwner}
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: '8px',
+          flexShrink: 0,
+        }}
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+        }}
+      />
+
+      {/* Repo info - shows original owner/name */}
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
             fontSize: `${theme.fontSizes[2]}px`,
             fontWeight: theme.fontWeights.semibold,
             color: theme.colors.text,
-            marginBottom: '8px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
           }}
         >
-          {collection.name}
+          {displayOwner}/{displayName}
         </div>
         <div
           style={{
-            fontSize: `${theme.fontSizes[1]}px`,
-            color: theme.colors.textSecondary,
-            lineHeight: 1.5,
+            fontSize: `${theme.fontSizes[0]}px`,
+            color: theme.colors.textMuted,
+            marginTop: '2px',
           }}
         >
-          {collection.description}
+          in {collection.name}
         </div>
       </div>
-    </button>
+
+      {/* Arrow */}
+      <ArrowRight size={16} style={{ color: theme.colors.textMuted, flexShrink: 0 }} />
+    </div>
   );
 };
 
 /**
- * WelcomePanel - Displays curated collections
+ * WelcomePanel - Displays curated collections and explore section
  */
+/**
+ * Parse a GitHub URL and extract owner/repo
+ */
+function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
+  const trimmed = url.trim();
+
+  // Handle owner/repo format directly
+  const simpleMatch = trimmed.match(/^([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)$/);
+  if (simpleMatch && simpleMatch[1] && simpleMatch[2]) {
+    return { owner: simpleMatch[1], repo: simpleMatch[2] };
+  }
+
+  // Handle full GitHub URLs
+  const urlMatch = trimmed.match(/github\.com\/([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)/);
+  if (urlMatch && urlMatch[1] && urlMatch[2]) {
+    return { owner: urlMatch[1], repo: urlMatch[2].replace(/\.git$/, '') };
+  }
+
+  return null;
+}
+
 export const WelcomePanel: React.FC<WelcomePanelProps> = ({
   curatedCollections = [],
   onCollectionClick,
+  onRepositoryClick,
   loading = false,
 }) => {
   const { theme } = useTheme();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [repoUrl, setRepoUrl] = useState('');
+
+  const handleExploreRepo = useCallback(() => {
+    const parsed = parseGitHubUrl(repoUrl);
+    if (parsed) {
+      window.open(`https://app.principal-ade.com/${parsed.owner}/${parsed.repo}`, '_blank');
+    }
+  }, [repoUrl]);
 
   const handleCollectionClick = useCallback((collection: CuratedCollection) => {
     if (onCollectionClick) {
       onCollectionClick(collection.id);
     }
   }, [onCollectionClick]);
+
+  const handleRepositoryClick = useCallback((result: RepositorySearchResult) => {
+    if (onRepositoryClick) {
+      onRepositoryClick(result.collection.id, result.repo.repositoryId);
+    } else if (onCollectionClick) {
+      // Fallback to collection click if no repo click handler
+      onCollectionClick(result.collection.id);
+    }
+  }, [onRepositoryClick, onCollectionClick]);
+
+  // Search repositories across all collections (searches original owner/name for forks)
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+
+    const query = searchQuery.toLowerCase();
+    const results: RepositorySearchResult[] = [];
+
+    for (const collection of curatedCollections) {
+      for (const repo of collection.repositories || []) {
+        // Search against original repo name for forks, or the repo ID
+        const searchOwner = repo.sourceRepository?.owner || repo.repositoryId.split('/')[0];
+        const searchName = repo.sourceRepository?.name || repo.repositoryId.split('/')[1];
+        const searchTarget = `${searchOwner}/${searchName}`.toLowerCase();
+
+        if (searchTarget.includes(query)) {
+          results.push({ repo, collection });
+        }
+      }
+    }
+
+    return results;
+  }, [searchQuery, curatedCollections]);
+
+  const isSearching = searchQuery.trim().length > 0;
 
   return (
     <div
@@ -196,47 +363,367 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
       {(loading || curatedCollections.length > 0) && (
         <div
           style={{
-            padding: '24px 32px 48px 32px',
+            padding: '32px 32px',
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             gap: '24px',
-            borderBottom: `1px solid ${theme.colors.border}`,
+            maxWidth: '1024px',
+            margin: '0 auto',
+            width: '100%',
           }}
         >
+          {/* Header */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: `${theme.fontSizes[6] || 32}px`,
+                fontWeight: theme.fontWeights.bold,
+                color: theme.colors.text,
+              }}
+            >
+              Curated Collections
+            </h2>
+            <p
+              style={{
+                margin: 0,
+                fontSize: `${theme.fontSizes[2]}px`,
+                color: theme.colors.textSecondary,
+                lineHeight: 1.5,
+              }}
+            >
+              Instantly explore architecture, File City, and code quality for popular open-source projects.
+            </p>
+            <p
+              style={{
+                margin: 0,
+                fontSize: `${theme.fontSizes[1]}px`,
+                color: theme.colors.textMuted,
+              }}
+            >
+              Curated collections analyze public open-source repositories only.
+            </p>
+          </div>
+
+          {/* Search bar */}
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: '560px',
+            }}
+          >
+            <Search
+              size={18}
+              style={{
+                position: 'absolute',
+                left: '14px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: theme.colors.textMuted,
+              }}
+            />
+            <input
+              type="text"
+              placeholder="Search repositories..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px 14px 12px 44px',
+                fontSize: `${theme.fontSizes[1]}px`,
+                backgroundColor: theme.colors.surface,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: '8px',
+                color: theme.colors.text,
+                outline: 'none',
+                fontFamily: theme.fonts.body,
+              }}
+            />
+          </div>
+
+          {/* Container that maintains height based on collection cards */}
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+            }}
+          >
+            {/* Collection cards - always rendered to maintain height */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: '16px',
+                width: '100%',
+                opacity: isSearching ? 0 : 1,
+                transition: 'opacity 0.15s ease',
+                pointerEvents: isSearching ? 'none' : 'auto',
+              }}
+            >
+              {loading
+                ? Array.from({ length: 6 }).map((_, i) => (
+                    <SkeletonCard key={i} theme={theme} />
+                  ))
+                : curatedCollections.map((collection) => (
+                    <CollectionCard
+                      key={collection.id}
+                      collection={collection}
+                      theme={theme}
+                      onClick={() => handleCollectionClick(collection)}
+                    />
+                  ))}
+            </div>
+
+            {/* Search results - overlaid on top when searching */}
+            {isSearching && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '12px',
+                }}
+              >
+                {searchResults.map((result) => (
+                  <RepositoryCard
+                    key={`${result.collection.id}-${result.repo.repositoryId}`}
+                    result={result}
+                    theme={theme}
+                    onClick={() => handleRepositoryClick(result)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+
+      {/* Explore your own projects Section - hidden when searching */}
+      {!isSearching && (
+        <div
+          style={{
+            padding: '32px 32px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-start',
+          gap: '24px',
+          maxWidth: '1024px',
+          margin: '0 auto',
+          width: '100%',
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <h2
             style={{
               margin: 0,
-              fontSize: `${theme.fontSizes[6] || 32}px`,
-              fontWeight: theme.fontWeights.semibold,
-              color: theme.colors.textSecondary,
-              textAlign: 'center',
+              fontSize: `${theme.fontSizes[5] || 24}px`,
+              fontWeight: theme.fontWeights.bold,
+              color: theme.colors.text,
             }}
           >
-            Curated Collections
+            Explore your own projects
           </h2>
+          <p
+            style={{
+              margin: 0,
+              fontSize: `${theme.fontSizes[1]}px`,
+              color: theme.colors.textSecondary,
+              lineHeight: 1.5,
+            }}
+          >
+            Analyze a repository or create a custom collection to organize work you care about.
+          </p>
+        </div>
+
+        {/* Two cards side by side */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '16px',
+            width: '100%',
+          }}
+        >
+          {/* Learn more about Principal ADE card */}
           <div
             style={{
+              padding: '24px',
+              borderRadius: '12px',
+              backgroundColor: theme.colors.surface,
+              border: `1px solid ${theme.colors.border}`,
               display: 'flex',
+              flexDirection: 'column',
               gap: '16px',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              maxWidth: '1200px',
             }}
           >
-            {loading
-              ? Array.from({ length: 6 }).map((_, i) => (
-                  <SkeletonCard key={i} theme={theme} />
-                ))
-              : curatedCollections.map((collection) => (
-                  <CollectionCard
-                    key={collection.id}
-                    collection={collection}
-                    theme={theme}
-                    onClick={() => handleCollectionClick(collection)}
-                  />
-                ))}
+            <h3
+              style={{
+                margin: 0,
+                fontSize: `${theme.fontSizes[3]}px`,
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.text,
+              }}
+            >
+              Learn more about Principal ADE
+            </h3>
+            <p
+              style={{
+                margin: 0,
+                fontSize: `${theme.fontSizes[1]}px`,
+                color: theme.colors.textSecondary,
+                lineHeight: 1.5,
+              }}
+            >
+              Discover how Principal ADE helps you explore and understand codebases.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <a
+                href="https://principal-ade.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 16px',
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  fontWeight: theme.fontWeights.semibold,
+                  color: theme.colors.background,
+                  backgroundColor: theme.colors.text,
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s ease',
+                  fontFamily: theme.fonts.body,
+                  textDecoration: 'none',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.8';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+              >
+                <ExternalLink size={16} />
+                Learn More
+              </a>
+            </div>
           </div>
+
+          {/* Explore a repository card */}
+          <div
+            style={{
+              padding: '24px',
+              borderRadius: '12px',
+              backgroundColor: theme.colors.surface,
+              border: `1px solid ${theme.colors.border}`,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+            }}
+          >
+            <h3
+              style={{
+                margin: 0,
+                fontSize: `${theme.fontSizes[3]}px`,
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.text,
+              }}
+            >
+              Explore a repository
+            </h3>
+            <p
+              style={{
+                margin: 0,
+                fontSize: `${theme.fontSizes[1]}px`,
+                color: theme.colors.textSecondary,
+                lineHeight: 1.5,
+              }}
+            >
+              Enter a GitHub URL or owner/repo to explore any public repository.
+            </p>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleExploreRepo();
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <div
+                style={{
+                  position: 'relative',
+                  flex: 1,
+                }}
+              >
+                <Github
+                  size={16}
+                  style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: theme.colors.textMuted,
+                  }}
+                />
+                <input
+                  type="text"
+                  placeholder="owner/repo or GitHub URL"
+                  value={repoUrl}
+                  onChange={(e) => setRepoUrl(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px 10px 38px',
+                    fontSize: `${theme.fontSizes[1]}px`,
+                    backgroundColor: theme.colors.background,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: '8px',
+                    color: theme.colors.text,
+                    outline: 'none',
+                    fontFamily: theme.fonts.body,
+                  }}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={!parseGitHubUrl(repoUrl)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '10px 16px',
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  fontWeight: theme.fontWeights.semibold,
+                  color: parseGitHubUrl(repoUrl) ? theme.colors.background : theme.colors.textMuted,
+                  backgroundColor: parseGitHubUrl(repoUrl) ? theme.colors.text : theme.colors.border,
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: parseGitHubUrl(repoUrl) ? 'pointer' : 'not-allowed',
+                  transition: 'opacity 0.2s ease',
+                  fontFamily: theme.fonts.body,
+                  flexShrink: 0,
+                }}
+                onMouseEnter={(e) => {
+                  if (parseGitHubUrl(repoUrl)) {
+                    e.currentTarget.style.opacity = '0.8';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+              >
+                Explore
+                <ArrowRight size={14} />
+              </button>
+            </form>
+          </div>
+        </div>
         </div>
       )}
     </div>
