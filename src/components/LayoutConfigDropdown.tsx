@@ -82,8 +82,8 @@ export const layoutConfigs: LayoutConfig[] = [
     },
   },
   {
-    id: 'claude-code',
-    name: 'Claude Code',
+    id: 'file-editor',
+    name: 'File Editor',
     layout: {
       left: 'git-changes',
       middle: 'file-editor',
