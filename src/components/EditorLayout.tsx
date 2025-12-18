@@ -527,7 +527,8 @@ function EditorLayoutContent({
     }
   }, [viewMode, currentLayoutConfig, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed]);
 
-  const panels = [
+  // Memoize panels that don't depend on selectedFilePath to prevent unnecessary re-renders
+  const stablePanels = useMemo(() => [
     {
       id: 'docs',
       label: 'Docs',
@@ -653,22 +654,27 @@ function EditorLayoutContent({
         </div>
       ),
     },
-    {
-      id: 'file-editor',
-      label: 'File Editor',
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <FileEditorPanelLoader
-            filePath={selectedFilePath}
-            contentProvider={fileContentProvider}
-            source={{ type: 'remote' }}
-            readOnly={true}
-            onClose={() => setSelectedFilePath(null)}
-          />
-        </div>
-      ),
-    },
-  ];
+  ], [context, actions, events, theme.colors.textMuted]);
+
+  // File editor panel needs selectedFilePath, so it's memoized separately
+  const fileEditorPanel = useMemo(() => ({
+    id: 'file-editor',
+    label: 'File Editor',
+    content: (
+      <div className="h-full w-full overflow-hidden">
+        <FileEditorPanelLoader
+          filePath={selectedFilePath}
+          contentProvider={fileContentProvider}
+          source={{ type: 'remote' }}
+          readOnly={true}
+          onClose={() => setSelectedFilePath(null)}
+        />
+      </div>
+    ),
+  }), [selectedFilePath, fileContentProvider, setSelectedFilePath]);
+
+  // Combine stable panels with file editor panel
+  const panels = useMemo(() => [...stablePanels, fileEditorPanel], [stablePanels, fileEditorPanel]);
 
   return (
     <div className="h-full w-full flex flex-col">
