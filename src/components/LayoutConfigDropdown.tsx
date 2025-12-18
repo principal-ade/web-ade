@@ -20,8 +20,8 @@ export const layoutConfigs: LayoutConfig[] = [
     id: 'default',
     name: 'File City',
     layout: {
-      left: 'quality-hexagon',
-      middle: 'file-city',
+      left: 'file-city',
+      middle: 'visual-validation',
       right: 'ai-chat',
     },
     collapsed: {
