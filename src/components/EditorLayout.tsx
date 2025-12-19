@@ -111,6 +111,15 @@ const GitChangesPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the GitCommitHistoryPanel with SSR disabled
+const GitCommitHistoryPanelLoader = dynamic(
+  () => import('@industry-theme/git-panels').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 // Dynamically import the ThemeEditorPanel with SSR disabled
 const ThemeEditorPanelLoader = dynamic(
   () => import('@industry-theme/theme-editor-panel').then((mod) => {
@@ -768,6 +777,15 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitChangesPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'commit-history',
+      label: 'Commit History',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <GitCommitHistoryPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },

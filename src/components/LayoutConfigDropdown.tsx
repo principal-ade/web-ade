@@ -20,7 +20,7 @@ export const layoutConfigs: LayoutConfig[] = [
     id: 'default',
     name: 'Architecture',
     layout: {
-      left: 'docs',
+      left: 'commit-history',
       middle: 'visual-validation',
       right: 'file-city',
     },

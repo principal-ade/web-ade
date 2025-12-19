@@ -470,6 +470,18 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const [collectionRepoDetails, setCollectionRepoDetails] = useState<GitHubRepository[]>([]);
   const [collectionRepoDetailsLoading, setCollectionRepoDetailsLoading] = useState(false);
 
+  // State for commits (for GitCommitHistoryPanel)
+  interface GitCommitInfo {
+    hash: string;
+    message: string;
+    author: string;
+    authorEmail?: string;
+    date: string;
+  }
+  const [commitsData, setCommitsData] = useState<GitCommitInfo[]>([]);
+  const [commitsLoading, setCommitsLoading] = useState(false);
+  const [commitsError, setCommitsError] = useState<Error | null>(null);
+
   // Fetch repositories for a specific owner (user or org)
   const fetchOwnerRepos = useCallback(async (owner: string) => {
     setOwnerReposLoading(true);
@@ -570,6 +582,54 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       console.error('[PanelContext] Failed to fetch collection repo details:', err);
     } finally {
       setCollectionRepoDetailsLoading(false);
+    }
+  }, []);
+
+  // Fetch commits from GitHub API
+  const fetchCommits = useCallback(async (repo: string, limit: number = 30) => {
+    setCommitsLoading(true);
+    setCommitsError(null);
+    console.log('[PanelContext] Fetching commits for:', repo);
+
+    try {
+      const [owner, name] = repo.split('/');
+      const response = await fetch(
+        `/api/github/repo/${owner}/${name}/commits?per_page=${limit}`,
+        { credentials: 'include' }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch commits: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Transform GitHub API response to GitCommitInfo format
+      const commits: GitCommitInfo[] = (data.commits || data).map((commit: {
+        sha: string;
+        commit: {
+          message: string;
+          author: {
+            name: string;
+            email: string;
+            date: string;
+          };
+        };
+      }) => ({
+        hash: commit.sha,
+        message: commit.commit.message,
+        author: commit.commit.author.name,
+        authorEmail: commit.commit.author.email,
+        date: commit.commit.author.date,
+      }));
+
+      setCommitsData(commits);
+      console.log('[PanelContext] Commits loaded:', commits.length);
+    } catch (err) {
+      console.error('[PanelContext] Failed to fetch commits:', err);
+      setCommitsError(err instanceof Error ? err : new Error('Failed to fetch commits'));
+    } finally {
+      setCommitsLoading(false);
     }
   }, []);
 
@@ -1127,6 +1187,21 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           },
         },
       ],
+      [
+        'commits',
+        {
+          scope: 'repository',
+          name: 'commits',
+          data: { commits: commitsData },
+          loading: commitsLoading,
+          error: commitsError,
+          refresh: async () => {
+            if (githubRepo) {
+              await fetchCommits(githubRepo);
+            }
+          },
+        },
+      ],
     ])
   );
 
@@ -1293,6 +1368,17 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         error: undefined,
       },
       loading: collectionRepoDetailsLoading,
+    });
+  }
+
+  // Update commits slice with fetched data
+  const commitsSlice = slicesRef.current.get('commits');
+  if (commitsSlice) {
+    slicesRef.current.set('commits', {
+      ...commitsSlice,
+      data: { commits: commitsData },
+      loading: commitsLoading,
+      error: commitsError,
     });
   }
 
@@ -1705,6 +1791,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     fetchReadme(githubRepo);
     fetchCodebaseViews(githubRepo);
     fetchPackages(githubRepo);
+    fetchCommits(githubRepo);
 
     // Sequence tree → quality metrics to reuse SHA (saves GitHub API calls)
     // Tree fetch resolves commit SHA, which is then used for quality metrics caching
@@ -1715,7 +1802,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       fetchQualityMetrics(githubRepo, commitSha ?? undefined);
     };
     fetchTreeThenQuality();
-  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics, fetchPackages]);
+  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics, fetchPackages, fetchCommits]);
 
   // Fetch owner repositories when initialOwner prop is provided (handles client-side navigation)
   useEffect(() => {
