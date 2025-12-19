@@ -157,10 +157,21 @@ interface QualitySliceData {
   fileCoverage?: Record<string, number>;
   /** Per-file quality metrics from all lenses, keyed by lens name */
   fileMetrics?: {
+    // Linting
     eslint?: FileMetricData[];
+    'biome-lint'?: FileMetricData[];
+    // Types
     typescript?: FileMetricData[];
+    // Formatting
     prettier?: FileMetricData[];
+    'biome-format'?: FileMetricData[];
+    // Dead code
     knip?: FileMetricData[];
+    // Tests
+    jest?: FileMetricData[];
+    vitest?: FileMetricData[];
+    'bun-test'?: FileMetricData[];
+    // Documentation
     alexandria?: FileMetricData[];
   };
 }

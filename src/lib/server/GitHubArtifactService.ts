@@ -67,10 +67,21 @@ export interface QualityArtifactResponse {
   fileCoverage?: Record<string, number>;
   /** Per-file quality metrics from all lenses, keyed by lens name */
   fileMetrics?: {
+    // Linting
     eslint?: FileMetricData[];
+    'biome-lint'?: FileMetricData[];
+    // Types
     typescript?: FileMetricData[];
+    // Formatting
     prettier?: FileMetricData[];
+    'biome-format'?: FileMetricData[];
+    // Dead code
     knip?: FileMetricData[];
+    // Tests
+    jest?: FileMetricData[];
+    vitest?: FileMetricData[];
+    'bun-test'?: FileMetricData[];
+    // Documentation
     alexandria?: FileMetricData[];
   };
   artifactId: number;
@@ -265,18 +276,43 @@ export class GitHubArtifactService {
       if (resultWithExtras.fileMetrics && resultWithExtras.fileMetrics.length > 0) {
         const lensId = result.lens.id.toLowerCase();
         switch (lensId) {
+          // Linting
           case 'eslint':
             fileMetrics.eslint = resultWithExtras.fileMetrics;
             break;
+          case 'biome-lint':
+          case 'biome':
+            fileMetrics['biome-lint'] = resultWithExtras.fileMetrics;
+            break;
+          // Types
           case 'typescript':
+          case 'typecheck':
+          case 'tsc':
             fileMetrics.typescript = resultWithExtras.fileMetrics;
             break;
+          // Formatting
           case 'prettier':
             fileMetrics.prettier = resultWithExtras.fileMetrics;
             break;
+          case 'biome-format':
+            fileMetrics['biome-format'] = resultWithExtras.fileMetrics;
+            break;
+          // Dead code
           case 'knip':
             fileMetrics.knip = resultWithExtras.fileMetrics;
             break;
+          // Tests
+          case 'jest':
+          case 'test':
+            fileMetrics.jest = resultWithExtras.fileMetrics;
+            break;
+          case 'vitest':
+            fileMetrics.vitest = resultWithExtras.fileMetrics;
+            break;
+          case 'bun-test':
+            fileMetrics['bun-test'] = resultWithExtras.fileMetrics;
+            break;
+          // Documentation
           case 'alexandria':
             fileMetrics.alexandria = resultWithExtras.fileMetrics;
             break;
