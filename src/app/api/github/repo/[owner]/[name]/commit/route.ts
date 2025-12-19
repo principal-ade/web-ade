@@ -31,6 +31,14 @@ function addCorsHeaders(response: NextResponse) {
   return response;
 }
 
+function cleanPath(path: string): string {
+  // Remove leading slash - GitHub API doesn't accept paths starting with /
+  let cleaned = path.startsWith('/') ? path.slice(1) : path;
+  // Remove any double slashes
+  cleaned = cleaned.replace(/\/+/g, '/');
+  return cleaned;
+}
+
 export async function OPTIONS() {
   const response = new NextResponse(null, { status: 200 });
   return addCorsHeaders(response);
@@ -76,18 +84,24 @@ export async function POST(
 
     const octokit = new Octokit({ auth: userToken });
 
+    // Clean file paths - GitHub API doesn't accept leading slashes
+    const cleanedFiles = files.map(file => ({
+      ...file,
+      path: cleanPath(file.path),
+    }));
+
     // Get the default branch if not specified
     const targetBranch = branch || (await getDefaultBranch(octokit, owner, name));
 
     // For single file, use the simpler createOrUpdateFileContents API
-    if (files.length === 1) {
-      const file = files[0]!;
+    if (cleanedFiles.length === 1) {
+      const file = cleanedFiles[0]!;
       const result = await commitSingleFile(octokit, owner, name, targetBranch, file, message);
       return addCorsHeaders(NextResponse.json(result));
     }
 
     // For multiple files, use the Git Data API for atomic commits
-    const result = await commitMultipleFiles(octokit, owner, name, targetBranch, files, message);
+    const result = await commitMultipleFiles(octokit, owner, name, targetBranch, cleanedFiles, message);
     return addCorsHeaders(NextResponse.json(result));
 
   } catch (error) {
