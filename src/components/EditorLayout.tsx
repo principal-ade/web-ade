@@ -18,8 +18,10 @@ import { EditorHeader } from './EditorHeader';
 import { SessionsPanel } from './SessionsPanel';
 import { AccessNotice, AccessStatus } from './AccessNotice';
 import { RepoSelectionModal } from './RepoSelectionModal';
+import { CommitModal } from './CommitModal';
 import { layoutConfigs, LayoutConfig } from './LayoutConfigDropdown';
 import { AIChatPanel } from './AIChatPanel';
+import { PendingChangesProvider, usePendingChanges } from '@/contexts/PendingChangesContext';
 import '@principal-ade/panel-layouts/styles.css';
 import '@principal-ade/industry-themed-ai-sdk-panel/styles.css';
 // CSS removed from principal-view-panels exports - styles now bundled in JS
@@ -157,6 +159,17 @@ function EditorLayoutContent({
   const [isMobile, setIsMobile] = useState(false);
   const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
+  const [isCommitModalOpen, setIsCommitModalOpen] = useState(false);
+
+  // Get pending changes for commit functionality
+  const {
+    pendingChanges,
+    pendingChangesCount,
+    removePendingChange,
+    getPendingChangesArray,
+    setFileMetadata,
+    addPendingChangeFromWrite,
+  } = usePendingChanges();
 
   // Get repository info for file fetching
   const githubRepo = (context.currentScope.repository as { githubRepo?: string })?.githubRepo
@@ -214,6 +227,51 @@ function EditorLayoutContent({
     // Reset to editor view when changing layout config
     setViewMode('editor');
   }, [setCurrentLayoutConfigId, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed]);
+
+  // Handle commit of pending changes
+  const handleCommit = useCallback(async (message: string, selectedPaths: string[]) => {
+    if (!githubRepo || !githubRepo.includes('/')) {
+      throw new Error('No valid repository available');
+    }
+
+    const [owner, name] = githubRepo.split('/');
+    const filesToCommit = selectedPaths
+      .map(path => pendingChanges.get(path))
+      .filter((change): change is NonNullable<typeof change> => change !== undefined);
+
+    if (filesToCommit.length === 0) {
+      throw new Error('No files selected for commit');
+    }
+
+    const response = await fetch(`/api/github/repo/${owner}/${name}/commit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        files: filesToCommit.map(f => ({
+          path: f.path,
+          content: f.newContent,
+          sha: f.sha,
+        })),
+        message,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.details || 'Failed to commit changes');
+    }
+
+    // Clear the committed files from pending changes
+    selectedPaths.forEach(path => removePendingChange(path));
+
+    // Emit commit:complete event for other panels to react
+    events.emit({
+      type: 'commit:complete',
+      source: 'web-ade',
+      timestamp: Date.now(),
+      payload: await response.json(),
+    });
+  }, [githubRepo, pendingChanges, removePendingChange, events]);
 
   // Initialize Agent Command Palette (AI-driven, Cmd+Shift+P to open)
   const { sendMessage } = useGemini();
@@ -527,6 +585,65 @@ function EditorLayoutContent({
     }
   }, [viewMode, currentLayoutConfig, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed]);
 
+  // Create enhanced actions that add writeFile and capture file metadata on read
+  const enhancedActions = useMemo(() => ({
+    ...actions,
+    // Enhanced readFile that captures SHA for later commits
+    readFile: async (filePath: string): Promise<string> => {
+      if (!githubRepo || !githubRepo.includes('/')) {
+        throw new Error('No valid repository available');
+      }
+
+      const [owner, name] = githubRepo.split('/');
+      let cleanPath = filePath;
+      if (cleanPath.startsWith('/')) cleanPath = cleanPath.slice(1);
+      if (cleanPath.startsWith('GitHub/')) cleanPath = cleanPath.slice('GitHub/'.length);
+      const repoPrefix = `${githubRepo}/`;
+      if (cleanPath.startsWith(repoPrefix)) cleanPath = cleanPath.slice(repoPrefix.length);
+
+      const response = await fetch(
+        `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(cleanPath)}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to read file: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Decode base64 content
+      let content = '';
+      if (data.content && data.encoding === 'base64') {
+        const binaryString = atob(data.content.replace(/\n/g, ''));
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        content = new TextDecoder('utf-8').decode(bytes);
+      }
+
+      // Store file metadata (SHA and original content) for later commits
+      if (data.sha) {
+        setFileMetadata(filePath, {
+          sha: data.sha,
+          originalContent: content,
+          loadedAt: new Date(),
+        });
+      }
+
+      return content;
+    },
+    // writeFile stores changes locally for later commit
+    writeFile: async (filePath: string, content: string): Promise<void> => {
+      const success = addPendingChangeFromWrite(filePath, content);
+      if (!success) {
+        console.warn('[EditorLayout] writeFile called but no metadata found for:', filePath);
+        // Still allow the write to "succeed" from the panel's perspective
+        // The user will see it's not in pending changes if they try to commit
+      }
+    },
+  }), [actions, githubRepo, setFileMetadata, addPendingChangeFromWrite]);
+
   // Memoize panels that don't depend on selectedFilePath to prevent unnecessary re-renders
   const stablePanels = useMemo(() => [
     {
@@ -534,7 +651,7 @@ function EditorLayoutContent({
       label: 'Docs',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <AlexandriaDocsPanelLoader context={context} actions={actions} events={events} />
+          <AlexandriaDocsPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
@@ -545,7 +662,7 @@ function EditorLayoutContent({
         <div className="h-full w-full overflow-hidden">
           <AIChatPanel
             context={context}
-            actions={actions}
+            actions={enhancedActions}
             events={events}
             placeholder="Ask me anything about your code..."
           />
@@ -557,7 +674,7 @@ function EditorLayoutContent({
       label: 'Markdown',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <MarkdownPanelLoader context={context} actions={actions} events={events} />
+          <MarkdownPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
@@ -566,7 +683,7 @@ function EditorLayoutContent({
       label: 'File City',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <FileCityPanelLoader context={context} actions={actions} events={events} />
+          <FileCityPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
@@ -575,7 +692,7 @@ function EditorLayoutContent({
       label: 'Kanban',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <KanbanPanelLoader context={context} actions={actions} events={events} />
+          <KanbanPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
@@ -605,7 +722,7 @@ function EditorLayoutContent({
       label: 'Principal View',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <PrincipalViewPanelLoader context={context} actions={actions} events={events} />
+          <PrincipalViewPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
@@ -614,7 +731,7 @@ function EditorLayoutContent({
       label: 'Code Quality',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <QualityHexagonPanelLoader context={context} actions={actions} events={events} />
+          <QualityHexagonPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
@@ -623,7 +740,7 @@ function EditorLayoutContent({
       label: 'Theme Editor',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <ThemeEditorPanelLoader context={context} actions={actions} events={events} />
+          <ThemeEditorPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
@@ -632,7 +749,7 @@ function EditorLayoutContent({
       label: 'Event Bus',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <EventBusPanelLoader context={context} actions={actions} events={events} />
+          <EventBusPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
@@ -641,7 +758,7 @@ function EditorLayoutContent({
       label: 'Agent Tools',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <AgentToolsPanelLoader context={context} actions={actions} events={events} />
+          <AgentToolsPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
@@ -650,11 +767,11 @@ function EditorLayoutContent({
       label: 'Git Changes',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <GitChangesPanelLoader context={context} actions={actions} events={events} />
+          <GitChangesPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
-  ], [context, actions, events, theme.colors.textMuted]);
+  ], [context, enhancedActions, events, theme.colors.textMuted]);
 
   // File editor panel needs selectedFilePath, so it's memoized separately
   const fileEditorPanel = useMemo(() => ({
@@ -676,6 +793,13 @@ function EditorLayoutContent({
   // Combine stable panels with file editor panel
   const panels = useMemo(() => [...stablePanels, fileEditorPanel], [stablePanels, fileEditorPanel]);
 
+  // Parse repository info for commit modal
+  const repositoryInfo = useMemo(() => {
+    if (!githubRepo || !githubRepo.includes('/')) return null;
+    const [owner, repo] = githubRepo.split('/');
+    return { owner: owner!, repo: repo! };
+  }, [githubRepo]);
+
   return (
     <div className="h-full w-full flex flex-col">
       <EditorHeader
@@ -685,7 +809,21 @@ function EditorLayoutContent({
         rightCollapsed={rightSidebarCollapsed}
         onToggleLeft={() => setLeftSidebarCollapsed(prev => !prev)}
         onToggleRight={() => setRightSidebarCollapsed(prev => !prev)}
+        pendingChangesCount={pendingChangesCount}
+        onCommitClick={() => setIsCommitModalOpen(true)}
       />
+
+      {/* Commit Modal */}
+      {repositoryInfo && (
+        <CommitModal
+          isOpen={isCommitModalOpen}
+          onClose={() => setIsCommitModalOpen(false)}
+          pendingChanges={getPendingChangesArray()}
+          repositoryName={repositoryInfo}
+          onCommit={handleCommit}
+        />
+      )}
+
       <div className="flex-1 overflow-hidden">
         {isMobile ? (
           <ResponsiveConfigurablePanelLayout
@@ -971,31 +1109,33 @@ function EditorContextWrapper() {
   }), [layout, leftSidebarCollapsed, rightSidebarCollapsed]);
 
   return (
-    <WebLLMProvider
-      events={events}
-      actions={actions}
-      markdownFiles={markdownFiles}
-      fetchFileContent={fetchFileContent}
-    >
-      <GeminiProvider
+    <PendingChangesProvider>
+      <WebLLMProvider
         events={events}
         actions={actions}
         markdownFiles={markdownFiles}
         fetchFileContent={fetchFileContent}
-        getRepositories={getRepositories}
-        layoutState={layoutState}
       >
-        <EditorLayoutContent
-          layout={layout}
-          setLayout={setLayout}
-          leftSidebarCollapsed={leftSidebarCollapsed}
-          setLeftSidebarCollapsed={setLeftSidebarCollapsed}
-          rightSidebarCollapsed={rightSidebarCollapsed}
-          setRightSidebarCollapsed={setRightSidebarCollapsed}
-          currentLayoutConfigId={currentLayoutConfigId}
-          setCurrentLayoutConfigId={setCurrentLayoutConfigId}
-        />
-      </GeminiProvider>
-    </WebLLMProvider>
+        <GeminiProvider
+          events={events}
+          actions={actions}
+          markdownFiles={markdownFiles}
+          fetchFileContent={fetchFileContent}
+          getRepositories={getRepositories}
+          layoutState={layoutState}
+        >
+          <EditorLayoutContent
+            layout={layout}
+            setLayout={setLayout}
+            leftSidebarCollapsed={leftSidebarCollapsed}
+            setLeftSidebarCollapsed={setLeftSidebarCollapsed}
+            rightSidebarCollapsed={rightSidebarCollapsed}
+            setRightSidebarCollapsed={setRightSidebarCollapsed}
+            currentLayoutConfigId={currentLayoutConfigId}
+            setCurrentLayoutConfigId={setCurrentLayoutConfigId}
+          />
+        </GeminiProvider>
+      </WebLLMProvider>
+    </PendingChangesProvider>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, Wifi, WifiOff, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github, Download, Building2, Home, FolderOpen, Plus, Edit2, Palette } from 'lucide-react';
+import { LogOut, Wifi, WifiOff, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github, Download, Building2, Home, FolderOpen, Plus, Edit2, Palette, GitCommit } from 'lucide-react';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -24,6 +24,9 @@ interface EditorHeaderProps {
   collectionName?: string;
   onAddRepository?: () => void;
   onEditCollection?: () => void;
+  // Commit actions
+  pendingChangesCount?: number;
+  onCommitClick?: () => void;
 }
 
 export function EditorHeader({
@@ -38,6 +41,8 @@ export function EditorHeader({
   collectionName,
   onAddRepository,
   onEditCollection,
+  pendingChangesCount = 0,
+  onCommitClick,
 }: EditorHeaderProps = {}) {
   const { theme } = useTheme();
   const { cycleTheme, currentThemeName } = useGlobalTheme();
@@ -393,6 +398,34 @@ export function EditorHeader({
           >
             <Monitor className="w-4 h-4" />
             <span>Desktop</span>
+          </button>
+        )}
+
+        {/* Commit changes button */}
+        {repositoryName && onCommitClick && (
+          <button
+            onClick={onCommitClick}
+            disabled={pendingChangesCount === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: pendingChangesCount > 0 ? theme.colors.primary : theme.colors.secondary,
+              color: pendingChangesCount > 0 ? '#fff' : theme.colors.text,
+              border: pendingChangesCount > 0 ? 'none' : `1px solid ${theme.colors.border}`,
+            }}
+            title={pendingChangesCount > 0 ? `Commit ${pendingChangesCount} pending change${pendingChangesCount !== 1 ? 's' : ''}` : 'No pending changes'}
+          >
+            <GitCommit className="w-4 h-4" />
+            <span className="hidden sm:inline">Commit</span>
+            {pendingChangesCount > 0 && (
+              <span
+                className="ml-1 px-1.5 py-0.5 text-xs rounded-full"
+                style={{
+                  background: 'rgba(255,255,255,0.2)',
+                }}
+              >
+                {pendingChangesCount}
+              </span>
+            )}
           </button>
         )}
 
