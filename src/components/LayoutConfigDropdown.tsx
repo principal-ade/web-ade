@@ -18,14 +18,14 @@ export interface LayoutConfig {
 export const layoutConfigs: LayoutConfig[] = [
   {
     id: 'default',
-    name: 'File City',
+    name: 'Architecture',
     layout: {
-      left: 'file-city',
+      left: 'docs',
       middle: 'visual-validation',
-      right: 'quality-hexagon',
+      right: 'file-city',
     },
     collapsed: {
-      left: false,
+      left: true,
       right: false,
     },
   },
@@ -43,38 +43,12 @@ export const layoutConfigs: LayoutConfig[] = [
     },
   },
   {
-    id: 'architecture',
-    name: 'Architecture',
+    id: 'file-city',
+    name: 'File City',
     layout: {
-      left: 'config-browser',
+      left: 'file-city',
       middle: 'visual-validation',
-      right: 'file-city',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
-  },
-  {
-    id: 'theme-editor',
-    name: 'Theme Editor',
-    layout: {
-      left: 'theme-editor',
-      middle: 'markdown-viewer',
-      right: 'ai-chat',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
-  },
-  {
-    id: 'agent-debug',
-    name: 'Agent Debug',
-    layout: {
-      left: 'agent-tools',
-      middle: 'ai-chat',
-      right: 'event-bus',
+      right: 'quality-hexagon',
     },
     collapsed: {
       left: false,
