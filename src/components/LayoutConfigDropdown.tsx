@@ -22,11 +22,11 @@ export const layoutConfigs: LayoutConfig[] = [
     layout: {
       left: 'file-city',
       middle: 'visual-validation',
-      right: 'ai-chat',
+      right: 'quality-hexagon',
     },
     collapsed: {
       left: false,
-      right: true,
+      right: false,
     },
   },
   {
