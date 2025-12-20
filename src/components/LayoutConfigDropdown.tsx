@@ -56,6 +56,19 @@ export const layoutConfigs: LayoutConfig[] = [
     },
   },
   {
+    id: 'quality-debug',
+    name: 'Quality Debug',
+    layout: {
+      left: 'file-city',
+      middle: 'quality-hexagon',
+      right: 'lens-debug',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
+  {
     id: 'file-editor',
     name: 'File Editor',
     layout: {

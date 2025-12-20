@@ -31,7 +31,10 @@ const PrincipalViewPanelLoader = dynamic(
 
 
 const CodeQualityPanelLoader = dynamic(
-  () => import('@principal-ade/code-quality-panels').then((mod) => mod.panels[0]!.component),
+  () => import('@principal-ade/code-quality-panels').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
   { ssr: false }
 );
 

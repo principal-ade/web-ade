@@ -84,6 +84,15 @@ const QualityHexagonPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the LensDataDebugPanel with SSR disabled
+const LensDataDebugPanelLoader = dynamic(
+  () => import('@principal-ade/code-quality-panels').then((mod) => {
+    const Component = mod.panels[2]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 // Dynamically import the EventBusPanel with SSR disabled
 const EventBusPanelLoader = dynamic(
   () => import('@industry-theme/agent-driven-ui-panels').then((mod) => {
@@ -741,6 +750,15 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <QualityHexagonPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'lens-debug',
+      label: 'Lens Debug',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <LensDataDebugPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
