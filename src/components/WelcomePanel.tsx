@@ -1,6 +1,7 @@
-import React, { useCallback, useState, useMemo } from 'react';
+import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { ArrowRight, Search, ExternalLink, Github } from 'lucide-react';
+import { ArrowRight, Search, ExternalLink, Github, User, Building2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { AvatarStack, type RepositoryInfo } from './collections/AvatarStack';
 
 /**
@@ -32,6 +33,46 @@ export interface WelcomePanelProps {
   onCollectionClick?: (collectionId: string) => void;
   onRepositoryClick?: (collectionId: string, repositoryId: string) => void;
   loading?: boolean;
+}
+
+/**
+ * GitHub repo from user repos API
+ */
+interface UserGitHubRepo {
+  id: number;
+  name: string;
+  full_name: string;
+  owner: {
+    login: string;
+    avatar_url: string;
+    type: string;
+  };
+  private: boolean;
+  description: string | null;
+  language: string | null;
+  stargazers_count: number;
+  updated_at: string;
+}
+
+/**
+ * Organization with repositories from user repos API
+ */
+interface UserOrganization {
+  id: number;
+  login: string;
+  avatar_url: string;
+  description: string | null;
+  repositories: UserGitHubRepo[];
+}
+
+/**
+ * Response from /api/github/user/repos
+ */
+interface UserReposResponse {
+  isAuthenticated: boolean;
+  owned: UserGitHubRepo[];
+  starred: UserGitHubRepo[];
+  organizations: UserOrganization[];
 }
 
 
@@ -201,6 +242,10 @@ const RepositoryCard: React.FC<{
   const displayOwner = repo.sourceRepository?.owner || repo.repositoryId.split('/')[0];
   const displayName = repo.sourceRepository?.name || repo.repositoryId.split('/')[1];
 
+  // Check if this is a user repo or org repo
+  const isUserRepo = collection.id === '__user_repos__';
+  const isOrgRepo = collection.id.startsWith('__org_');
+
   return (
     <div
       style={{
@@ -256,9 +301,14 @@ const RepositoryCard: React.FC<{
             fontSize: `${theme.fontSizes[0]}px`,
             color: theme.colors.textMuted,
             marginTop: '2px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
           }}
         >
-          in {collection.name}
+          {isUserRepo && <User size={12} />}
+          {isOrgRepo && <Building2 size={12} />}
+          {isUserRepo || isOrgRepo ? collection.name : `in ${collection.name}`}
         </div>
       </div>
 
@@ -299,8 +349,32 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
   loading = false,
 }) => {
   const { theme } = useTheme();
+  const { isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
+  const [userRepos, setUserRepos] = useState<UserReposResponse | null>(null);
+
+  // Fetch user repos when authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setUserRepos(null);
+      return;
+    }
+
+    const fetchUserRepos = async () => {
+      try {
+        const response = await fetch('/api/github/user/repos');
+        if (response.ok) {
+          const data: UserReposResponse = await response.json();
+          setUserRepos(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch user repos:', error);
+      }
+    };
+
+    fetchUserRepos();
+  }, [isAuthenticated]);
 
   const handleExploreRepo = useCallback(() => {
     const parsed = parseGitHubUrl(repoUrl);
@@ -316,7 +390,13 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
   }, [onCollectionClick]);
 
   const handleRepositoryClick = useCallback((result: RepositorySearchResult) => {
-    if (onRepositoryClick) {
+    const isUserOrOrgRepo = result.collection.id.startsWith('__');
+
+    if (isUserOrOrgRepo) {
+      // For user/org repos, navigate directly to the repo page
+      const [owner, repo] = result.repo.repositoryId.split('/');
+      window.open(`https://app.principal-ade.com/${owner}/${repo}`, '_blank');
+    } else if (onRepositoryClick) {
       onRepositoryClick(result.collection.id, result.repo.repositoryId);
     } else if (onCollectionClick) {
       // Fallback to collection click if no repo click handler
@@ -324,13 +404,60 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
     }
   }, [onRepositoryClick, onCollectionClick]);
 
-  // Search repositories across all collections (searches original owner/name for forks)
+  // Search repositories across all collections and user repos (searches original owner/name for forks)
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
 
     const query = searchQuery.toLowerCase();
     const results: RepositorySearchResult[] = [];
 
+    // Search user's owned repos first (if authenticated)
+    if (userRepos?.owned) {
+      const userCollection: CuratedCollection = {
+        id: '__user_repos__',
+        name: 'Your Repositories',
+        description: 'Your personal repositories',
+        icon: 'user',
+      };
+
+      for (const repo of userRepos.owned) {
+        const searchTarget = repo.full_name.toLowerCase();
+        if (searchTarget.includes(query)) {
+          results.push({
+            repo: {
+              repositoryId: repo.full_name,
+            },
+            collection: userCollection,
+          });
+        }
+      }
+    }
+
+    // Search user's organization repos (if authenticated)
+    if (userRepos?.organizations) {
+      for (const org of userRepos.organizations) {
+        const orgCollection: CuratedCollection = {
+          id: `__org_${org.login}__`,
+          name: org.login,
+          description: org.description || `${org.login} organization`,
+          icon: 'building',
+        };
+
+        for (const repo of org.repositories) {
+          const searchTarget = repo.full_name.toLowerCase();
+          if (searchTarget.includes(query)) {
+            results.push({
+              repo: {
+                repositoryId: repo.full_name,
+              },
+              collection: orgCollection,
+            });
+          }
+        }
+      }
+    }
+
+    // Search curated collections
     for (const collection of curatedCollections) {
       for (const repo of collection.repositories || []) {
         // Search against original repo name for forks, or the repo ID
@@ -345,7 +472,7 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
     }
 
     return results;
-  }, [searchQuery, curatedCollections]);
+  }, [searchQuery, curatedCollections, userRepos]);
 
   const isSearching = searchQuery.trim().length > 0;
 
@@ -426,7 +553,7 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
             />
             <input
               type="text"
-              placeholder="Search repositories..."
+              placeholder={isAuthenticated ? "Search your repos, orgs, and collections..." : "Search repositories..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
