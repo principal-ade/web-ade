@@ -442,8 +442,8 @@ const RecentActivitySidebar: React.FC<{
         gap: '24px',
         padding: '32px 24px',
         borderLeft: `1px solid ${theme.colors.border}`,
-        minWidth: '280px',
-        maxWidth: '320px',
+        width: '25%',
+        flexShrink: 0,
       }}
     >
       {/* Header */}
@@ -715,8 +715,6 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
         backgroundColor: theme.colors.background,
         color: theme.colors.text,
         fontFamily: theme.fonts.body,
-        maxWidth: '1400px',
-        margin: '0 auto',
         width: '100%',
       }}
     >
