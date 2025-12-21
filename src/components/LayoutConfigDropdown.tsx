@@ -87,11 +87,11 @@ export const layoutConfigs: LayoutConfig[] = [
     layout: {
       left: 'github-issues',
       middle: 'kanban',
-      right: 'commit-history',
+      right: 'task-detail',
     },
     collapsed: {
       left: true,
-      right: true,
+      right: false,
     },
   },
 ];
@@ -169,7 +169,7 @@ export function LayoutConfigDropdown({
         <div
           className="absolute top-full left-0 mt-1 py-1 rounded-md shadow-lg z-50 min-w-[180px]"
           style={{
-            background: theme.colors.surface,
+            background: theme.colors.backgroundSecondary,
             border: `1px solid ${theme.colors.border}`,
           }}
         >

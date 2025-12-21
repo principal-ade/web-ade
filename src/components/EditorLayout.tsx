@@ -66,6 +66,15 @@ const KanbanPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the TaskDetailPanel with SSR disabled
+const TaskDetailPanelLoader = dynamic(
+  () => import('@industry-theme/backlogmd-kanban-panel').then((mod) => {
+    const Component = mod.panels[1]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 // Dynamically import the PrincipalViewPanel (Graph) with SSR disabled
 const PrincipalViewPanelLoader = dynamic(
   () => import('@industry-theme/principal-view-panels').then((mod) => {
@@ -698,6 +707,15 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <KanbanPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'task-detail',
+      label: 'Task Detail',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <TaskDetailPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
