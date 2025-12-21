@@ -20,12 +20,12 @@ export const layoutConfigs: LayoutConfig[] = [
     id: 'default',
     name: 'Architecture',
     layout: {
-      left: 'commit-history',
+      left: 'packages',
       middle: 'visual-validation',
       right: 'file-city',
     },
     collapsed: {
-      left: true,
+      left: false,
       right: false,
     },
   },
@@ -87,7 +87,7 @@ export const layoutConfigs: LayoutConfig[] = [
     layout: {
       left: 'docs',
       middle: 'kanban',
-      right: 'file-city',
+      right: 'commit-history',
     },
     collapsed: {
       left: true,

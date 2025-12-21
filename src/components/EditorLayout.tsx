@@ -120,6 +120,15 @@ const GitChangesPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the PackageCompositionPanel with SSR disabled
+const PackageCompositionPanelLoader = dynamic(
+  () => import('@industry-theme/repository-composition-panels').then((mod) => {
+    const Component = mod.panels[1]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 // Dynamically import the GitCommitHistoryPanel with SSR disabled
 const GitCommitHistoryPanelLoader = dynamic(
   () => import('@industry-theme/git-panels').then((mod) => {
@@ -773,6 +782,15 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitCommitHistoryPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'packages',
+      label: 'Packages',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <PackageCompositionPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
