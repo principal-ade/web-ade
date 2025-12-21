@@ -1,8 +1,22 @@
 import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { ArrowRight, Search, ExternalLink, Github, User, Building2 } from 'lucide-react';
+import { ArrowRight, Search, ExternalLink, Github, User, Building2, Clock, GitFork } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AvatarStack, type RepositoryInfo } from './collections/AvatarStack';
+
+const RECENT_REPOSITORIES_KEY = 'recent-repositories';
+const RECENT_OWNERS_KEY = 'recent-owners';
+
+interface RecentRepository {
+  owner: string;
+  repo: string;
+  visitedAt: string;
+}
+
+interface RecentOwner {
+  owner: string;
+  visitedAt: string;
+}
 
 /**
  * Repository with collection context for search results
@@ -319,6 +333,200 @@ const RepositoryCard: React.FC<{
 };
 
 /**
+ * Recent item component for sidebar
+ */
+const RecentItem: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  sublabel?: string;
+  theme: ReturnType<typeof useTheme>['theme'];
+  onClick: () => void;
+}> = ({ icon, label, sublabel, theme, onClick }) => {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        padding: '8px 12px',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        transition: 'background-color 0.15s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = theme.colors.border;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'transparent';
+      }}
+      onClick={onClick}
+    >
+      <img
+        src={`https://avatars.githubusercontent.com/${label.split('/')[0]}?size=64`}
+        alt={label}
+        style={{
+          width: 28,
+          height: 28,
+          borderRadius: '6px',
+          flexShrink: 0,
+        }}
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+        }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: `${theme.fontSizes[1]}px`,
+            color: theme.colors.text,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {label}
+        </div>
+        {sublabel && (
+          <div
+            style={{
+              fontSize: `${theme.fontSizes[0]}px`,
+              color: theme.colors.textMuted,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            {icon}
+            {sublabel}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Recent Activity Sidebar component
+ */
+const RecentActivitySidebar: React.FC<{
+  recentRepos: RecentRepository[];
+  recentOwners: RecentOwner[];
+  theme: ReturnType<typeof useTheme>['theme'];
+}> = ({ recentRepos, recentOwners, theme }) => {
+  const hasRecent = recentRepos.length > 0 || recentOwners.length > 0;
+
+  if (!hasRecent) {
+    return null;
+  }
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '24px',
+        padding: '32px 24px',
+        borderLeft: `1px solid ${theme.colors.border}`,
+        minWidth: '280px',
+        maxWidth: '320px',
+      }}
+    >
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Clock size={16} style={{ color: theme.colors.textMuted }} />
+        <h3
+          style={{
+            margin: 0,
+            fontSize: `${theme.fontSizes[2]}px`,
+            fontWeight: theme.fontWeights.semibold,
+            color: theme.colors.text,
+          }}
+        >
+          Recent
+        </h3>
+      </div>
+
+      {/* Recent Repositories */}
+      {recentRepos.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div
+            style={{
+              fontSize: `${theme.fontSizes[0]}px`,
+              fontWeight: theme.fontWeights.medium,
+              color: theme.colors.textMuted,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              padding: '0 12px',
+              marginBottom: '4px',
+            }}
+          >
+            Repositories
+          </div>
+          {recentRepos.slice(0, 5).map((repo) => (
+            <RecentItem
+              key={`${repo.owner}/${repo.repo}`}
+              icon={<GitFork size={10} />}
+              label={`${repo.owner}/${repo.repo}`}
+              sublabel={formatTimeAgo(repo.visitedAt)}
+              theme={theme}
+              onClick={() => {
+                window.location.href = `/${repo.owner}/${repo.repo}`;
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Recent Owners */}
+      {recentOwners.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div
+            style={{
+              fontSize: `${theme.fontSizes[0]}px`,
+              fontWeight: theme.fontWeights.medium,
+              color: theme.colors.textMuted,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              padding: '0 12px',
+              marginBottom: '4px',
+            }}
+          >
+            Owners
+          </div>
+          {recentOwners.slice(0, 5).map((owner) => (
+            <RecentItem
+              key={owner.owner}
+              icon={<User size={10} />}
+              label={owner.owner}
+              sublabel={formatTimeAgo(owner.visitedAt)}
+              theme={theme}
+              onClick={() => {
+                window.location.href = `/${owner.owner}`;
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
  * WelcomePanel - Displays curated collections and explore section
  */
 /**
@@ -353,6 +561,8 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
   const [userRepos, setUserRepos] = useState<UserReposResponse | null>(null);
+  const [recentRepos, setRecentRepos] = useState<RecentRepository[]>([]);
+  const [recentOwners, setRecentOwners] = useState<RecentOwner[]>([]);
 
   // Fetch user repos when authenticated
   useEffect(() => {
@@ -375,6 +585,25 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
 
     fetchUserRepos();
   }, [isAuthenticated]);
+
+  // Load recent repositories and owners from localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const storedRepos = localStorage.getItem(RECENT_REPOSITORIES_KEY);
+      if (storedRepos) {
+        setRecentRepos(JSON.parse(storedRepos));
+      }
+
+      const storedOwners = localStorage.getItem(RECENT_OWNERS_KEY);
+      if (storedOwners) {
+        setRecentOwners(JSON.parse(storedOwners));
+      }
+    } catch (err) {
+      console.error('Failed to load recent items:', err);
+    }
+  }, []);
 
   const handleExploreRepo = useCallback(() => {
     const parsed = parseGitHubUrl(repoUrl);
@@ -476,16 +705,22 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
 
   const isSearching = searchQuery.trim().length > 0;
 
+  const hasRecentItems = recentRepos.length > 0 || recentOwners.length > 0;
+
   return (
     <div
       style={{
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'row',
         backgroundColor: theme.colors.background,
         color: theme.colors.text,
         fontFamily: theme.fonts.body,
+        maxWidth: hasRecentItems ? '1400px' : '1024px',
+        margin: '0 auto',
       }}
     >
+      {/* Main content */}
+      <div style={{ flex: 1, minWidth: 0 }}>
       {/* Curated Collections Section */}
       {(loading || curatedCollections.length > 0) && (
         <div
@@ -495,8 +730,6 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
             flexDirection: 'column',
             alignItems: 'flex-start',
             gap: '24px',
-            maxWidth: '1024px',
-            margin: '0 auto',
             width: '100%',
           }}
         >
@@ -640,8 +873,6 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
           flexDirection: 'column',
           alignItems: 'flex-start',
           gap: '24px',
-          maxWidth: '1024px',
-          margin: '0 auto',
           width: '100%',
         }}
       >
@@ -852,6 +1083,16 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
           </div>
         </div>
         </div>
+      )}
+      </div>
+
+      {/* Recent Activity Sidebar */}
+      {hasRecentItems && (
+        <RecentActivitySidebar
+          recentRepos={recentRepos}
+          recentOwners={recentOwners}
+          theme={theme}
+        />
       )}
     </div>
   );
