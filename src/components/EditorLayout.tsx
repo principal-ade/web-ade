@@ -154,7 +154,7 @@ interface EditorLayoutContentProps {
   rightSidebarCollapsed: boolean;
   setRightSidebarCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   currentLayoutConfigId: string;
-  setCurrentLayoutConfigId: React.Dispatch<React.SetStateAction<string>>;
+  onLayoutConfigIdChange: (configId: string) => void;
 }
 
 function EditorLayoutContent({
@@ -165,7 +165,7 @@ function EditorLayoutContent({
   rightSidebarCollapsed,
   setRightSidebarCollapsed,
   currentLayoutConfigId,
-  setCurrentLayoutConfigId,
+  onLayoutConfigIdChange,
 }: EditorLayoutContentProps) {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
@@ -235,11 +235,11 @@ function EditorLayoutContent({
 
   // Handle layout configuration change
   const handleLayoutConfigChange = useCallback((config: LayoutConfig) => {
-    setCurrentLayoutConfigId(config.id);
+    onLayoutConfigIdChange(config.id);
     setLayout(config.layout);
     setLeftSidebarCollapsed(config.collapsed.left);
     setRightSidebarCollapsed(config.collapsed.right);
-  }, [setCurrentLayoutConfigId, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed]);
+  }, [onLayoutConfigIdChange, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed]);
 
   // Handle commit of pending changes
   const handleCommit = useCallback(async (message: string, selectedPaths: string[]) => {
@@ -905,9 +905,11 @@ function EditorLayoutContent({
 
 interface EditorLayoutProps {
   githubRepo?: string;
+  initialConfigId?: string;
+  onConfigChange?: (configId: string) => void;
 }
 
-export function EditorLayout({ githubRepo }: EditorLayoutProps = {}) {
+export function EditorLayout({ githubRepo, initialConfigId, onConfigChange }: EditorLayoutProps = {}) {
   const { theme } = useTheme();
   const { isAuthenticated, isLoading: authLoading, login } = useAuth();
   const [accessStatus, setAccessStatus] = useState<AccessStatus>('loading');
@@ -1010,25 +1012,43 @@ export function EditorLayout({ githubRepo }: EditorLayoutProps = {}) {
         }}
         githubRepo={githubRepo}
       >
-        <EditorContextWrapper />
+        <EditorContextWrapper
+          initialConfigId={initialConfigId}
+          onConfigChange={onConfigChange}
+        />
       </PanelProvider>
     </div>
   );
+}
+
+interface EditorContextWrapperProps {
+  initialConfigId?: string;
+  onConfigChange?: (configId: string) => void;
 }
 
 /**
  * Wrapper component that provides AI contexts (WebLLM, Gemini) and manages
  * editor-level state including layout configuration.
  */
-function EditorContextWrapper() {
+function EditorContextWrapper({ initialConfigId, onConfigChange }: EditorContextWrapperProps) {
   const { events, actions, context } = usePanelProvider();
 
   // Layout state - lifted here so GeminiProvider can access it
-  const [currentLayoutConfigId, setCurrentLayoutConfigId] = useState('default');
+  // Initialize from initialConfigId prop (from URL/localStorage) or default
+  const [currentLayoutConfigId, setCurrentLayoutConfigId] = useState(() => {
+    const validConfig = layoutConfigs.find((c) => c.id === initialConfigId);
+    return validConfig ? initialConfigId! : 'default';
+  });
   const currentLayoutConfig = layoutConfigs.find((c) => c.id === currentLayoutConfigId) || layoutConfigs[0]!;
   const [layout, setLayout] = useState<PanelLayout>(currentLayoutConfig.layout);
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(currentLayoutConfig.collapsed.left);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(currentLayoutConfig.collapsed.right);
+
+  // Notify parent when config changes
+  const handleConfigIdChange = useCallback((configId: string) => {
+    setCurrentLayoutConfigId(configId);
+    onConfigChange?.(configId);
+  }, [onConfigChange]);
 
   // TODO: Get markdown files from Alexandria panel state when available
   // For now, AI providers won't have access to the document list
@@ -1137,7 +1157,7 @@ function EditorContextWrapper() {
             rightSidebarCollapsed={rightSidebarCollapsed}
             setRightSidebarCollapsed={setRightSidebarCollapsed}
             currentLayoutConfigId={currentLayoutConfigId}
-            setCurrentLayoutConfigId={setCurrentLayoutConfigId}
+            onLayoutConfigIdChange={handleConfigIdChange}
           />
         </GeminiProvider>
       </WebLLMProvider>

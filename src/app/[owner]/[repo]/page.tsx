@@ -1,9 +1,9 @@
 'use client';
 
 import { EditorLayout } from "@/components/EditorLayout";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "@principal-ade/industry-theme";
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useCallback, Suspense } from "react";
 import { useRepoPresence } from "@/hooks/useRepoPresence";
 
 const RECENT_REPOSITORIES_KEY = 'recent-repositories';
@@ -13,9 +13,10 @@ interface RecentRepository {
   owner: string;
   repo: string;
   visitedAt: string;
+  configId?: string;
 }
 
-function saveRecentRepository(owner: string, repo: string) {
+function saveRecentRepository(owner: string, repo: string, configId?: string) {
   if (typeof window === 'undefined') return;
 
   try {
@@ -25,11 +26,12 @@ function saveRecentRepository(owner: string, repo: string) {
     // Remove existing entry for this repo if present
     const filtered = repositories.filter(r => !(r.owner === owner && r.repo === repo));
 
-    // Add to front with current timestamp
+    // Add to front with current timestamp and configId
     filtered.unshift({
       owner,
       repo,
       visitedAt: new Date().toISOString(),
+      configId,
     });
 
     // Keep only the most recent items
@@ -41,28 +43,79 @@ function saveRecentRepository(owner: string, repo: string) {
   }
 }
 
-export default function RepoPage() {
+function getRecentRepositoryConfig(owner: string, repo: string): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+
+  try {
+    const stored = localStorage.getItem(RECENT_REPOSITORIES_KEY);
+    if (!stored) return undefined;
+
+    const repositories: RecentRepository[] = JSON.parse(stored);
+    const found = repositories.find(r => r.owner === owner && r.repo === repo);
+    return found?.configId;
+  } catch {
+    return undefined;
+  }
+}
+
+function RepoPageContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const owner = params.owner as string;
   const repo = params.repo as string;
   // Memoize githubRepo to prevent unnecessary re-renders of PanelProvider
   const githubRepo = useMemo(() => `${owner}/${repo}`, [owner, repo]);
   const { theme } = useTheme();
 
+  // Get initial config from URL, then fall back to localStorage
+  const initialConfigId = useMemo(() => {
+    const urlConfig = searchParams.get('config');
+    if (urlConfig) return urlConfig;
+    return getRecentRepositoryConfig(owner, repo) || 'default';
+  }, [searchParams, owner, repo]);
+
   // Connect to presence system for this repository
   useRepoPresence({ repoId: githubRepo });
 
-  // Save repository to recent history
+  // Handle config change - update URL and localStorage
+  const handleConfigChange = useCallback((configId: string) => {
+    // Update URL with new config
+    const url = new URL(window.location.href);
+    if (configId === 'default') {
+      url.searchParams.delete('config');
+    } else {
+      url.searchParams.set('config', configId);
+    }
+    router.replace(url.pathname + url.search, { scroll: false });
+
+    // Save to recent repositories
+    saveRecentRepository(owner, repo, configId);
+  }, [router, owner, repo]);
+
+  // Save repository to recent history on initial load
   useEffect(() => {
-    saveRecentRepository(owner, repo);
-  }, [owner, repo]);
+    saveRecentRepository(owner, repo, initialConfigId);
+  }, [owner, repo, initialConfigId]);
 
   return (
     <div
       className="h-screen w-screen overflow-hidden"
       style={{ background: theme.colors.background }}
     >
-      <EditorLayout githubRepo={githubRepo} />
+      <EditorLayout
+        githubRepo={githubRepo}
+        initialConfigId={initialConfigId}
+        onConfigChange={handleConfigChange}
+      />
     </div>
+  );
+}
+
+export default function RepoPage() {
+  return (
+    <Suspense fallback={<div className="h-screen w-screen" />}>
+      <RepoPageContent />
+    </Suspense>
   );
 }
