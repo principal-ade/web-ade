@@ -81,6 +81,19 @@ export const layoutConfigs: LayoutConfig[] = [
       right: false,
     },
   },
+  {
+    id: 'kanban',
+    name: 'Kanban',
+    layout: {
+      left: 'docs',
+      middle: 'kanban',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: true,
+      right: true,
+    },
+  },
 ];
 
 interface LayoutConfigDropdownProps {

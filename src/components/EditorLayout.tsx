@@ -146,7 +146,6 @@ const FileEditorPanelLoader = dynamic(
   { ssr: false }
 );
 
-type ViewMode = 'editor' | 'kanban' | 'visual-validation';
 interface EditorLayoutContentProps {
   layout: PanelLayout;
   setLayout: React.Dispatch<React.SetStateAction<PanelLayout>>;
@@ -172,8 +171,6 @@ function EditorLayoutContent({
   const { context, actions, events } = usePanelProvider();
   const { login } = useAuth();
   const { setTheme, setColor, resetColor, resetAllColors } = useGlobalTheme();
-  const [viewMode, setViewMode] = useState<ViewMode>('editor');
-  const currentLayoutConfig = layoutConfigs.find((c) => c.id === currentLayoutConfigId) || layoutConfigs[0]!;
   const [isMobile, setIsMobile] = useState(false);
   const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
@@ -242,8 +239,6 @@ function EditorLayoutContent({
     setLayout(config.layout);
     setLeftSidebarCollapsed(config.collapsed.left);
     setRightSidebarCollapsed(config.collapsed.right);
-    // Reset to editor view when changing layout config
-    setViewMode('editor');
   }, [setCurrentLayoutConfigId, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed]);
 
   // Handle commit of pending changes
@@ -576,32 +571,6 @@ function EditorLayoutContent({
       unsubscribers.forEach((unsub) => unsub());
     };
   }, [events, login, actions, layout, leftSidebarCollapsed, rightSidebarCollapsed, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed, setTheme, setColor, resetColor, resetAllColors, setSelectedFilePath]);
-
-  // Sync layout and collapsed state when view mode changes (for special views)
-  useEffect(() => {
-    if (viewMode === 'kanban') {
-      setLayout({
-        left: 'docs',
-        middle: 'kanban',
-        right: 'sessions',
-      });
-      setLeftSidebarCollapsed(true);
-      setRightSidebarCollapsed(true);
-    } else if (viewMode === 'visual-validation') {
-      setLayout({
-        left: 'docs',
-        middle: 'visual-validation',
-        right: 'sessions',
-      });
-      setLeftSidebarCollapsed(true);
-      setRightSidebarCollapsed(true);
-    } else if (viewMode === 'editor') {
-      // Editor mode: restore layout from current config
-      setLayout(currentLayoutConfig.layout);
-      setLeftSidebarCollapsed(currentLayoutConfig.collapsed.left);
-      setRightSidebarCollapsed(currentLayoutConfig.collapsed.right);
-    }
-  }, [viewMode, currentLayoutConfig, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed]);
 
   // Create enhanced actions that add writeFile and capture file metadata on read
   const enhancedActions = useMemo(() => ({
