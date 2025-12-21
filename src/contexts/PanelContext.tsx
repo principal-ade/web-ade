@@ -233,6 +233,41 @@ interface PackagesSliceData {
   summary: PackageSummary;
 }
 
+// GitHub Issues types for GitHubIssuesPanel
+interface GitHubIssueLabel {
+  id: number;
+  name: string;
+  color: string;
+}
+
+interface GitHubIssueUser {
+  login: string;
+  avatar_url: string;
+}
+
+interface GitHubIssue {
+  id: number;
+  number: number;
+  title: string;
+  state: 'open' | 'closed';
+  body: string | null;
+  html_url: string;
+  created_at: string;
+  updated_at: string;
+  labels: GitHubIssueLabel[];
+  comments: number;
+  user: GitHubIssueUser;
+  assignees: GitHubIssueUser[];
+}
+
+interface GitHubIssuesSliceData {
+  issues: GitHubIssue[];
+  owner: string;
+  repo: string;
+  isAuthenticated: boolean;
+  error?: string;
+}
+
 interface PanelProviderProps {
   children: ReactNode;
   workspace?: WorkspaceMetadata;
@@ -485,6 +520,11 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const [commitsLoading, setCommitsLoading] = useState(false);
   const [commitsError, setCommitsError] = useState<Error | null>(null);
 
+  // State for GitHub issues (for GitHubIssuesPanel)
+  const [issuesData, setIssuesData] = useState<GitHubIssuesSliceData | null>(null);
+  const [issuesLoading, setIssuesLoading] = useState(false);
+  const [issuesError, setIssuesError] = useState<Error | null>(null);
+
   // Fetch repositories for a specific owner (user or org)
   const fetchOwnerRepos = useCallback(async (owner: string) => {
     setOwnerReposLoading(true);
@@ -633,6 +673,48 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       setCommitsError(err instanceof Error ? err : new Error('Failed to fetch commits'));
     } finally {
       setCommitsLoading(false);
+    }
+  }, []);
+
+  // Fetch issues from GitHub API
+  const fetchIssues = useCallback(async (repo: string) => {
+    setIssuesLoading(true);
+    setIssuesError(null);
+    console.log('[PanelContext] Fetching issues for:', repo);
+
+    try {
+      const [owner, name] = repo.split('/');
+      const response = await fetch(
+        `/api/github/repo/${owner}/${name}/issues?per_page=50`,
+        { credentials: 'include' }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        setIssuesData({
+          issues: [],
+          owner: owner || '',
+          repo: name || '',
+          isAuthenticated: errorData.isAuthenticated ?? false,
+          error: errorData.error || `Failed to fetch issues: ${response.statusText}`,
+        });
+        return;
+      }
+
+      const data = await response.json();
+
+      setIssuesData({
+        issues: data.issues || [],
+        owner: data.owner || owner || '',
+        repo: data.repo || name || '',
+        isAuthenticated: data.isAuthenticated ?? false,
+      });
+      console.log('[PanelContext] Issues loaded:', data.issues?.length || 0);
+    } catch (err) {
+      console.error('[PanelContext] Failed to fetch issues:', err);
+      setIssuesError(err instanceof Error ? err : new Error('Failed to fetch issues'));
+    } finally {
+      setIssuesLoading(false);
     }
   }, []);
 
@@ -1225,6 +1307,21 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           },
         },
       ],
+      [
+        'github-issues',
+        {
+          scope: 'repository',
+          name: 'github-issues',
+          data: issuesData,
+          loading: issuesLoading,
+          error: issuesError,
+          refresh: async () => {
+            if (githubRepo) {
+              await fetchIssues(githubRepo);
+            }
+          },
+        },
+      ],
     ])
   );
 
@@ -1416,6 +1513,17 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     });
   }
 
+  // Update github-issues slice with fetched data
+  const issuesSlice = slicesRef.current.get('github-issues');
+  if (issuesSlice) {
+    slicesRef.current.set('github-issues', {
+      ...issuesSlice,
+      data: issuesData,
+      loading: issuesLoading,
+      error: issuesError,
+    });
+  }
+
   // Refresh function - use slicesRef instead of slices state
   const refresh = useCallback(
     async (scope?: 'workspace' | 'repository', sliceName?: string) => {
@@ -1523,7 +1631,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError, lensResults, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading]
+    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError, lensResults, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading, issuesData, issuesLoading, issuesError]
   );
 
   // Actions
@@ -1826,6 +1934,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     fetchCodebaseViews(githubRepo);
     fetchPackages(githubRepo);
     fetchCommits(githubRepo);
+    fetchIssues(githubRepo);
 
     // Sequence tree → quality metrics to reuse SHA (saves GitHub API calls)
     // Tree fetch resolves commit SHA, which is then used for quality metrics caching
@@ -1836,7 +1945,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       fetchQualityMetrics(githubRepo, commitSha ?? undefined);
     };
     fetchTreeThenQuality();
-  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics, fetchPackages, fetchCommits]);
+  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics, fetchPackages, fetchCommits, fetchIssues]);
 
   // Fetch owner repositories when initialOwner prop is provided (handles client-side navigation)
   useEffect(() => {
