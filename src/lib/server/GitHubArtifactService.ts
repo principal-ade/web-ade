@@ -86,6 +86,8 @@ export interface QualityArtifactResponse {
   };
   artifactId: number;
   artifactName: string;
+  /** Raw lens results for debug panel - includes full results array with issues */
+  rawResults?: FormattedResults;
 }
 
 /**
@@ -344,6 +346,7 @@ export class GitHubArtifactService {
       fileMetrics: Object.keys(fileMetrics).length > 0 ? fileMetrics : undefined,
       artifactId,
       artifactName,
+      rawResults: results,
     };
   }
 }

@@ -23,6 +23,7 @@ import type {
 } from '@principal-ade/panel-framework-core';
 import { layoutTools } from '@principal-ade/utcp-panel-event';
 import type { CodebaseView } from '@principal-ai/alexandria-core-library/types';
+import type { FormattedResults } from '@principal-ai/codebase-quality-lenses';
 import { minimatch } from 'minimatch';
 import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
 import { useAuth } from './AuthContext';
@@ -447,6 +448,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const [qualityData, setQualityData] = useState<QualitySliceData | null>(null);
   const [qualityLoading, setQualityLoading] = useState(false);
   const [qualityError, setQualityError] = useState<Error | null>(null);
+  // State for raw lens results (for LensDataDebugPanel)
+  const [lensResults, setLensResults] = useState<FormattedResults | null>(null);
   // State for explicitly enabled File City color modes (updated via events)
   const [enabledColorModes, setEnabledColorModes] = useState<string[]>([]);
   // State for the currently selected color mode (updated via events, consumed by File City)
@@ -812,6 +815,11 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       if (data.fileMetrics) {
         const lensCount = Object.keys(data.fileMetrics).length;
         console.log('[PanelContext] File metrics loaded for', lensCount, 'lenses');
+      }
+      // Store raw lens results for LensDataDebugPanel
+      if (data.rawResults) {
+        setLensResults(data.rawResults);
+        console.log('[PanelContext] Raw lens results loaded:', data.rawResults.results?.length || 0, 'results');
       }
     } catch (err) {
       console.error('[PanelContext] Failed to fetch quality metrics:', err);
@@ -1202,6 +1210,21 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           },
         },
       ],
+      [
+        'lensResults',
+        {
+          scope: 'repository',
+          name: 'lensResults',
+          data: lensResults,
+          loading: qualityLoading,
+          error: qualityError,
+          refresh: async () => {
+            if (githubRepo) {
+              await fetchQualityMetrics(githubRepo, fileTree?.metadata?.sourceSha);
+            }
+          },
+        },
+      ],
     ])
   );
 
@@ -1382,6 +1405,17 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     });
   }
 
+  // Update lensResults slice with fetched data
+  const lensResultsSlice = slicesRef.current.get('lensResults');
+  if (lensResultsSlice) {
+    slicesRef.current.set('lensResults', {
+      ...lensResultsSlice,
+      data: lensResults,
+      loading: qualityLoading,
+      error: qualityError,
+    });
+  }
+
   // Refresh function - use slicesRef instead of slices state
   const refresh = useCallback(
     async (scope?: 'workspace' | 'repository', sliceName?: string) => {
@@ -1489,7 +1523,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading]
+    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, qualityData, qualityLoading, qualityError, lensResults, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading]
   );
 
   // Actions
