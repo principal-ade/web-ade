@@ -715,8 +715,9 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
         backgroundColor: theme.colors.background,
         color: theme.colors.text,
         fontFamily: theme.fonts.body,
-        maxWidth: hasRecentItems ? '1400px' : '1024px',
+        maxWidth: '1400px',
         margin: '0 auto',
+        width: '100%',
       }}
     >
       {/* Main content */}
