@@ -301,16 +301,28 @@ export class GitHubArtifactService {
           case 'knip':
             fileMetrics.knip = resultWithExtras.fileMetrics;
             break;
-          // Tests
+          // Tests - also extract to fileCoverage for coverage visualization
           case 'jest':
           case 'test':
             fileMetrics.jest = resultWithExtras.fileMetrics;
+            // Convert to fileCoverage format (score = line coverage %)
+            for (const fm of resultWithExtras.fileMetrics) {
+              fileCoverage[fm.file] = fm.score;
+            }
             break;
           case 'vitest':
             fileMetrics.vitest = resultWithExtras.fileMetrics;
+            // Convert to fileCoverage format (score = line coverage %)
+            for (const fm of resultWithExtras.fileMetrics) {
+              fileCoverage[fm.file] = fm.score;
+            }
             break;
           case 'bun-test':
             fileMetrics['bun-test'] = resultWithExtras.fileMetrics;
+            // Convert to fileCoverage format (score = line coverage %)
+            for (const fm of resultWithExtras.fileMetrics) {
+              fileCoverage[fm.file] = fm.score;
+            }
             break;
           // Documentation
           case 'alexandria':
