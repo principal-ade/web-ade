@@ -138,6 +138,15 @@ const GitCommitHistoryPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the GitHubIssuesPanel with SSR disabled
+const GitHubIssuesPanelLoader = dynamic(
+  () => import('@industry-theme/github-panels').then((mod) => {
+    const Component = mod.panels[2]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 // Dynamically import the ThemeEditorPanel with SSR disabled
 const ThemeEditorPanelLoader = dynamic(
   () => import('@industry-theme/theme-editor-panel').then((mod) => {
@@ -791,6 +800,15 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <PackageCompositionPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'github-issues',
+      label: 'GitHub Issues',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <GitHubIssuesPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },

@@ -85,7 +85,7 @@ export const layoutConfigs: LayoutConfig[] = [
     id: 'kanban',
     name: 'Kanban',
     layout: {
-      left: 'docs',
+      left: 'github-issues',
       middle: 'kanban',
       right: 'commit-history',
     },
