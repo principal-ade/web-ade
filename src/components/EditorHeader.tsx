@@ -186,6 +186,17 @@ export function EditorHeader({
               >
                 {repositoryName.repo}
               </a>
+              {onLayoutConfigChange && (
+                <>
+                  <span style={{ color: theme.colors.textMuted }}>:</span>
+                  <LayoutConfigDropdown
+                    currentConfigId={currentLayoutConfigId}
+                    onConfigChange={onLayoutConfigChange}
+                    theme={theme}
+                    inline
+                  />
+                </>
+              )}
             </div>
           </div>
         )}
@@ -363,17 +374,8 @@ export function EditorHeader({
         )}
       </div>
 
-      {/* Center section: Layout config on repo pages, Principal AI branding on home page */}
-      {repositoryName && onLayoutConfigChange ? (
-        /* Repo page - show Layout Config Dropdown in center */
-        <div className="absolute left-1/2 transform -translate-x-1/2 hidden md:flex">
-          <LayoutConfigDropdown
-            currentConfigId={currentLayoutConfigId}
-            onConfigChange={onLayoutConfigChange}
-            theme={theme}
-          />
-        </div>
-      ) : !repositoryName && !ownerOnly && !collectionId ? (
+      {/* Center section: Principal AI branding on home page */}
+      {!repositoryName && !ownerOnly && !collectionId ? (
         /* Home page - show Principal AI Gallery */
         <Link
           href="/"

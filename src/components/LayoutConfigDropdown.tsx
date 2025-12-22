@@ -114,6 +114,7 @@ interface LayoutConfigDropdownProps {
   onConfigChange: (config: LayoutConfig) => void;
   className?: string;
   theme?: Theme;
+  inline?: boolean;
 }
 
 export function LayoutConfigDropdown({
@@ -121,6 +122,7 @@ export function LayoutConfigDropdown({
   onConfigChange,
   className = '',
   theme: propTheme,
+  inline = false,
 }: LayoutConfigDropdownProps) {
   const { theme: contextTheme } = useTheme();
   const theme = propTheme || contextTheme;
@@ -157,21 +159,22 @@ export function LayoutConfigDropdown({
     <div ref={dropdownRef} className={`relative ${className}`}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all hover:opacity-80"
+        className={`flex items-center gap-1 transition-all hover:opacity-80 ${inline ? '' : 'px-3 py-1.5 rounded-md'}`}
         style={{
-          background: theme.colors.secondary,
-          color: theme.colors.text,
-          border: `1px solid ${theme.colors.border}`,
-          fontSize: theme.fontSizes[2],
+          background: inline ? 'transparent' : theme.colors.secondary,
+          color: inline ? theme.colors.primary : theme.colors.text,
+          border: inline ? 'none' : `1px solid ${theme.colors.border}`,
+          fontSize: inline ? 'inherit' : theme.fontSizes[2],
           fontFamily: theme.fonts.body,
+          fontWeight: inline ? 'inherit' : undefined,
         }}
         title="Change layout configuration"
       >
-        <span className="hidden sm:inline">{currentConfig.name}</span>
+        <span className={inline ? '' : 'hidden sm:inline'}>{currentConfig.name}</span>
         <ChevronDown
-          size={14}
+          size={inline ? 12 : 14}
           style={{
-            color: theme.colors.text,
+            color: inline ? theme.colors.primary : theme.colors.text,
             transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
             transition: 'transform 0.2s',
           }}
