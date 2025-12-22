@@ -601,6 +601,43 @@ function EditorLayoutContent({
       events.on('file:close', () => {
         setSelectedFilePath(null);
       }),
+      // Listen for source click events from the architecture panel
+      events.on('custom', (event) => {
+        const payload = event.payload as { action?: string; nodeId?: string; source?: string };
+        if (payload?.action === 'sourceClick' && payload.source) {
+          const sourcePath = payload.source;
+          console.log('[EditorLayout] Source clicked:', sourcePath, 'on node:', payload.nodeId);
+
+          // If it's a direct file path (has extension, no glob), open it
+          if (/\.[a-z]+$/i.test(sourcePath) && !sourcePath.includes('*')) {
+            setSelectedFilePath(sourcePath);
+            // Switch to file-editor panel if not already there
+            if (layout.middle !== 'file-editor') {
+              setLayout((prev) => ({
+                ...prev,
+                middle: 'file-editor',
+              }));
+            }
+          } else {
+            // For glob patterns, try to find an index file or just log
+            const basePath = sourcePath
+              .replace(/\*\*\//g, '')
+              .replace(/\*\.[a-z]+$/i, '')
+              .replace(/\*$/g, '');
+            if (basePath) {
+              // Try common entry points
+              const indexPath = basePath.endsWith('/') ? basePath + 'index.ts' : basePath + '/index.ts';
+              setSelectedFilePath(indexPath);
+              if (layout.middle !== 'file-editor') {
+                setLayout((prev) => ({
+                  ...prev,
+                  middle: 'file-editor',
+                }));
+              }
+            }
+          }
+        }
+      }),
     ];
 
     return () => {
