@@ -82,15 +82,28 @@ export const layoutConfigs: LayoutConfig[] = [
     },
   },
   {
+    id: 'github-issues',
+    name: 'GitHub Issues',
+    layout: {
+      left: 'github-issues',
+      middle: 'github-issue-detail',
+      right: 'kanban',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
+  {
     id: 'kanban',
     name: 'Kanban',
     layout: {
-      left: 'github-issues',
-      middle: 'kanban',
-      right: 'task-detail',
+      left: 'kanban',
+      middle: 'task-detail',
+      right: 'commit-history',
     },
     collapsed: {
-      left: true,
+      left: false,
       right: false,
     },
   },

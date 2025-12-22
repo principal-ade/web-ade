@@ -156,6 +156,15 @@ const GitHubIssuesPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the GitHubIssueDetailPanel with SSR disabled
+const GitHubIssueDetailPanelLoader = dynamic(
+  () => import('@industry-theme/github-panels').then((mod) => {
+    const Component = mod.panels[3]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 // Dynamically import the ThemeEditorPanel with SSR disabled
 const ThemeEditorPanelLoader = dynamic(
   () => import('@industry-theme/theme-editor-panel').then((mod) => {
@@ -827,6 +836,15 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitHubIssuesPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'github-issue-detail',
+      label: 'Issue Detail',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <GitHubIssueDetailPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
