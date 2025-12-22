@@ -525,7 +525,7 @@ export function EditorHeader({
                 <div
                   className="absolute right-0 top-full mt-1 py-1 rounded-md shadow-lg border min-w-[160px] z-50"
                   style={{
-                    background: theme.colors.surface,
+                    background: theme.colors.background,
                     borderColor: theme.colors.border,
                   }}
                 >
