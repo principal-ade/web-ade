@@ -133,17 +133,43 @@ export function EditorHeader({
         borderColor: theme.colors.border,
       }}
     >
-      {/* Left section: Logo and Layout Config Dropdown */}
+      {/* Left section: Logo/Avatar and Repository info */}
       <div className="flex items-center gap-3 flex-shrink-0 flex-1">
-        {/* Show Logo on repo pages */}
+        {/* Show repo avatar + owner/repo on repo pages */}
         {repositoryName && (
-          <Link
-            href="/"
-            className="flex items-center gap-2 transition-all hover:opacity-80 flex-shrink-0"
-            title="Home"
-          >
-            <Logo width={32} height={32} color={theme.colors.primary} />
-          </Link>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`https://github.com/${repositoryName.owner}.png?size=64`}
+              alt={repositoryName.owner}
+              className="w-8 h-8 flex-shrink-0"
+              style={{
+                borderRadius: '6px',
+              }}
+            />
+            <div
+              className="flex items-center gap-1.5 text-base font-semibold hidden sm:flex"
+              style={{ fontFamily: theme.fonts.body }}
+            >
+              <Link
+                href={`/${repositoryName.owner}`}
+                className="transition-opacity hover:opacity-80"
+                style={{ color: theme.colors.textMuted, textDecoration: 'none' }}
+              >
+                {repositoryName.owner}
+              </Link>
+              <span style={{ color: theme.colors.textMuted }}>/</span>
+              <a
+                href={`https://github.com/${repositoryName.owner}/${repositoryName.repo}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-opacity hover:opacity-80"
+                style={{ color: theme.colors.text, textDecoration: 'none' }}
+              >
+                {repositoryName.repo}
+              </a>
+            </div>
+          </div>
         )}
         {/* Show owner avatar + name on owner pages */}
         {ownerOnly && (
@@ -240,20 +266,19 @@ export function EditorHeader({
             </a>
           )
         )}
-        {/* Layout Config Dropdown - hidden on mobile */}
-        {onLayoutConfigChange && (
-          <div className="hidden md:flex">
-            <LayoutConfigDropdown
-              currentConfigId={currentLayoutConfigId}
-              onConfigChange={onLayoutConfigChange}
-              theme={theme}
-            />
-          </div>
-        )}
       </div>
 
-      {/* Center section: Principal AI branding on home page, or Repository info */}
-      {!repositoryName && !ownerOnly && !collectionId ? (
+      {/* Center section: Layout config on repo pages, Principal AI branding on home page */}
+      {repositoryName && onLayoutConfigChange ? (
+        /* Repo page - show Layout Config Dropdown in center */
+        <div className="absolute left-1/2 transform -translate-x-1/2 hidden md:flex">
+          <LayoutConfigDropdown
+            currentConfigId={currentLayoutConfigId}
+            onConfigChange={onLayoutConfigChange}
+            theme={theme}
+          />
+        </div>
+      ) : !repositoryName && !ownerOnly && !collectionId ? (
         /* Home page - show Principal AI Gallery */
         <Link
           href="/"
@@ -293,55 +318,6 @@ export function EditorHeader({
         >
           {selectedRepository.split('/')[1]}
         </a>
-      ) : repositoryName ? (
-        <div
-          className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2"
-          style={{
-            fontFamily: theme.fonts.body,
-          }}
-        >
-          {/* Repo Avatar */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`https://github.com/${repositoryName.owner}.png?size=64`}
-            alt={repositoryName.owner}
-            className="w-9 h-9 flex-shrink-0"
-            style={{
-              borderRadius: '6px',
-            }}
-          />
-
-          {/* Name/Owner */}
-          <div className="flex flex-col items-center gap-px">
-            <Link
-              href={`/${repositoryName.owner}`}
-              className="transition-opacity hover:opacity-80"
-              style={{
-                fontSize: theme.fontSizes[2],
-                fontWeight: theme.fontWeights.body,
-                color: theme.colors.textMuted,
-                textDecoration: 'none',
-              }}
-            >
-              {repositoryName.owner}
-            </Link>
-            <a
-              href={`https://github.com/${repositoryName.owner}/${repositoryName.repo}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition-opacity hover:opacity-80"
-              style={{
-                fontSize: theme.fontSizes[3],
-                fontWeight: theme.fontWeights.semibold,
-                color: theme.colors.text,
-                textDecoration: 'none',
-              }}
-            >
-              {repositoryName.repo}
-            </a>
-          </div>
-
-        </div>
       ) : null}
 
       <div className="flex items-center gap-3 flex-shrink-0 flex-1 justify-end">
