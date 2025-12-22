@@ -103,9 +103,7 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
   const canvasLoadedRef = useRef(false);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
-
-  // Layout matching collection view
-  const layout: PanelLayout = {
+  const [layout, setLayout] = useState<PanelLayout>({
     left: 'owner-repositories',
     middle: {
       type: 'tabs',
@@ -115,7 +113,7 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
       type: 'tabs',
       panels: ['code-quality', 'package-composition'],
     },
-  };
+  });
 
   // Notify parent when previewed repo changes
   const handlePreviewChange = useCallback((repo: string | null) => {
@@ -322,6 +320,7 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
         rightCollapsed={rightCollapsed}
         onToggleLeft={() => setLeftCollapsed(!leftCollapsed)}
         onToggleRight={() => setRightCollapsed(!rightCollapsed)}
+        onSwapRightPanels={() => setLayout(prev => ({ ...prev, middle: prev.right, right: prev.middle }))}
         selectedRepository={previewedRepo}
       />
       <div className="flex-1 overflow-hidden">

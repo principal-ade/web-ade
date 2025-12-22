@@ -2,7 +2,7 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, Wifi, WifiOff, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github, Download, Building2, Home, FolderOpen, Plus, Edit2, Palette, GitCommit } from 'lucide-react';
+import { LogOut, Wifi, WifiOff, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github, Download, Building2, Home, FolderOpen, Plus, Edit2, Palette, GitCommit, ArrowLeftRight } from 'lucide-react';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -18,6 +18,7 @@ interface EditorHeaderProps {
   rightCollapsed?: boolean;
   onToggleLeft?: () => void;
   onToggleRight?: () => void;
+  onSwapRightPanels?: () => void;
   selectedRepository?: string | null; // Format: "owner/repo"
   // User collection actions
   isUserCollection?: boolean;
@@ -36,6 +37,7 @@ export function EditorHeader({
   rightCollapsed = false,
   onToggleLeft,
   onToggleRight,
+  onSwapRightPanels,
   selectedRepository,
   isUserCollection = false,
   collectionName,
@@ -513,6 +515,19 @@ export function EditorHeader({
               ) : (
                 <PanelLeftClose className="w-4 h-4" />
               )}
+            </button>
+          )}
+          {onSwapRightPanels && (
+            <button
+              onClick={onSwapRightPanels}
+              className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+              style={{
+                background: theme.colors.secondary,
+                color: theme.colors.text,
+              }}
+              title="Swap middle and right panels"
+            >
+              <ArrowLeftRight className="w-4 h-4" />
             </button>
           )}
           {onToggleRight && (

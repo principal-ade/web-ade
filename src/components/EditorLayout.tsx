@@ -923,6 +923,7 @@ function EditorLayoutContent({
         rightCollapsed={rightSidebarCollapsed}
         onToggleLeft={() => setLeftSidebarCollapsed(prev => !prev)}
         onToggleRight={() => setRightSidebarCollapsed(prev => !prev)}
+        onSwapRightPanels={() => setLayout(prev => ({ ...prev, middle: prev.right, right: prev.middle }))}
         pendingChangesCount={pendingChangesCount}
         onCommitClick={() => setIsCommitModalOpen(true)}
       />
