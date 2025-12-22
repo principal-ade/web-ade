@@ -2,7 +2,7 @@
 
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "@principal-ade/industry-theme";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { PanelProvider, usePanelProvider } from "@/contexts/PanelContext";
 import { EditorHeader } from "@/components/EditorHeader";
 import dynamic from "next/dynamic";
@@ -87,6 +87,14 @@ const PackageCompositionPanelLoader = dynamic(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as React.ComponentType<any>;
 
+// Dynamically import the FileEditorPanel with SSR disabled
+const FileEditorPanelLoader = dynamic(
+  () => import('@industry-theme/file-editing-panels').then((mod) => ({
+    default: mod.FileEditorPanel,
+  })),
+  { ssr: false }
+);
+
 interface OwnerPageContentProps {
   owner: string;
   onPreviewChange?: (repo: string | null) => void;
@@ -103,19 +111,60 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
   const canvasLoadedRef = useRef(false);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
 
-  // Layout matching collection view
+  // Layout with architecture on left, code viewer in middle
   const layout: PanelLayout = {
-    left: 'owner-repositories',
+    left: {
+      type: 'tabs',
+      panels: ['visual-validation', 'owner-repositories'],
+    },
     middle: {
       type: 'tabs',
-      panels: ['file-city', 'visual-validation'],
+      panels: ['file-editor', 'file-city'],
     },
     right: {
       type: 'tabs',
       panels: ['code-quality', 'package-composition'],
     },
   };
+
+  // Create a file content provider for the FileEditorPanel
+  const fileContentProvider = useMemo(() => ({
+    readFile: async (filePath: string): Promise<string | null> => {
+      if (!previewedRepo || !previewedRepo.includes('/')) {
+        console.warn('[OwnerPage] No valid repository available for file fetch:', previewedRepo);
+        return null;
+      }
+
+      const [repoOwner, repoName] = previewedRepo.split('/');
+      if (!repoOwner || !repoName) return null;
+
+      try {
+        const response = await fetch(
+          `/api/github/repo/${repoOwner}/${repoName}?action=file&path=${encodeURIComponent(filePath)}`
+        );
+
+        if (!response.ok) {
+          console.error('[OwnerPage] Failed to fetch file:', response.statusText);
+          return null;
+        }
+
+        const data = await response.json();
+
+        // Handle base64 encoded content from GitHub API
+        if (data.encoding === 'base64' && data.content) {
+          const decoded = atob(data.content.replace(/\n/g, ''));
+          return decoded;
+        }
+
+        return data.content || null;
+      } catch (err) {
+        console.error('[OwnerPage] Error fetching file:', err);
+        return null;
+      }
+    },
+  }), [previewedRepo]);
 
   // Notify parent when previewed repo changes
   const handlePreviewChange = useCallback((repo: string | null) => {
@@ -226,7 +275,7 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
     }
   }, [events, ownerReposLoading, ownerReposData?.repositories, previewedRepo]);
 
-  // Listen for repository preview events
+  // Listen for repository preview events and source click events
   useEffect(() => {
     if (!events) return;
 
@@ -249,6 +298,32 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
         const payload = event.payload as { repository: { full_name: string } };
         if (payload?.repository?.full_name) {
           window.location.href = `/${payload.repository.full_name}`;
+        }
+      }),
+      // Listen for source click events from the architecture panel
+      events.on('custom', (event) => {
+        const payload = event.payload as { action?: string; nodeId?: string; source?: string };
+        if (payload?.action === 'sourceClick' && payload.source) {
+          // The source is a glob pattern like "src/api/**/*.ts"
+          // For now, we'll try to open the directory or use as-is
+          const sourcePath = payload.source;
+          console.log('[OwnerPage] Source clicked:', sourcePath, 'on node:', payload.nodeId);
+
+          // Remove glob patterns to get a base path
+          const basePath = sourcePath
+            .replace(/\*\*\//g, '')
+            .replace(/\*\.[a-z]+$/i, '')
+            .replace(/\*$/g, '');
+
+          // If it looks like a file path (has extension), open it directly
+          if (/\.[a-z]+$/i.test(sourcePath) && !sourcePath.includes('*')) {
+            setSelectedFilePath(sourcePath);
+          } else if (basePath) {
+            // Otherwise, emit a file tree navigation event or just log for now
+            console.log('[OwnerPage] Opening directory/pattern:', basePath);
+            // Try to find an index file or just open the directory view
+            setSelectedFilePath(basePath + 'index.ts');
+          }
         }
       }),
     ];
@@ -278,6 +353,20 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
       content: (
         <div className="h-full w-full overflow-hidden">
           <PrincipalViewPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'file-editor',
+      label: 'Code',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <FileEditorPanelLoader
+            filePath={selectedFilePath}
+            contentProvider={fileContentProvider}
+            source={{ type: 'remote' }}
+            readOnly={true}
+          />
         </div>
       ),
     },
