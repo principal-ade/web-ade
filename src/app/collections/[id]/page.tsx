@@ -50,6 +50,13 @@ const PackageCompositionPanelLoader = dynamic(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as React.ComponentType<any>;
 
+// Dynamically import the DependencyGraphPanel with SSR disabled
+const DependencyGraphPanelLoader = dynamic(
+  () => import('@industry-theme/repository-composition-panels').then((mod) => mod.DependencyGraphPanel),
+  { ssr: false }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) as React.ComponentType<any>;
+
 interface Collection {
   id: string;
   name: string;
@@ -96,7 +103,7 @@ function CollectionPageContent({
     left: 'workspace-collection',
     middle: {
       type: 'tabs',
-      panels: ['file-city', 'visual-validation'],
+      panels: ['file-city', 'visual-validation', 'dependency-graph'],
     },
     right: {
       type: 'tabs',
@@ -228,6 +235,15 @@ function CollectionPageContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <PackageCompositionPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'dependency-graph',
+      label: 'Dependencies',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <DependencyGraphPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },
