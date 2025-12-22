@@ -53,6 +53,8 @@ export function EditorHeader({
   const [collectionId, setCollectionId] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const [orgSwitcherOpen, setOrgSwitcherOpen] = useState(false);
+  const orgSwitcherRef = useRef<HTMLDivElement>(null);
   const [organizations, setOrganizations] = useState<Array<{ id: number; login: string; avatar_url: string; description: string | null }>>([]);
 
   // Extract repository name, owner, or collection from URL
@@ -99,6 +101,20 @@ export function EditorHeader({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [userMenuOpen]);
+
+  // Close org switcher when clicking outside
+  useEffect(() => {
+    if (!orgSwitcherOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      if (orgSwitcherRef.current && !orgSwitcherRef.current.contains(event.target as Node)) {
+        setOrgSwitcherOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [orgSwitcherOpen]);
 
   // Fetch user's organizations when authenticated
   useEffect(() => {
@@ -171,18 +187,97 @@ export function EditorHeader({
             </div>
           </div>
         )}
-        {/* Show owner avatar + name on owner pages */}
+        {/* Show owner avatar + name on owner pages with org switcher dropdown */}
         {ownerOnly && (
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`https://github.com/${ownerOnly}.png?size=64`}
-              alt={ownerOnly}
-              className="w-8 h-8 flex-shrink-0"
-              style={{
-                borderRadius: '6px',
-              }}
-            />
+            {/* Org switcher dropdown */}
+            <div className="relative" ref={orgSwitcherRef}>
+              <button
+                onClick={() => setOrgSwitcherOpen(!orgSwitcherOpen)}
+                className="flex items-center transition-all hover:opacity-80"
+                title="Switch organization"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`https://github.com/${ownerOnly}.png?size=64`}
+                  alt={ownerOnly}
+                  className="w-8 h-8 flex-shrink-0"
+                  style={{
+                    borderRadius: '6px',
+                  }}
+                />
+              </button>
+
+              {/* Dropdown Menu */}
+              {orgSwitcherOpen && isAuthenticated && user && (
+                <div
+                  className="absolute left-0 top-full mt-1 py-1 rounded-md shadow-lg border min-w-[180px] z-50"
+                  style={{
+                    background: theme.colors.background,
+                    borderColor: theme.colors.border,
+                  }}
+                >
+                  {/* Current user */}
+                  <Link
+                    href={`/${user.login}`}
+                    className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
+                    style={{
+                      color: theme.colors.text,
+                      background: ownerOnly === user.login ? theme.colors.surface : 'transparent',
+                    }}
+                    onClick={() => setOrgSwitcherOpen(false)}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={user.avatar_url}
+                      alt={user.login}
+                      className="w-5 h-5 rounded"
+                    />
+                    {user.login}
+                  </Link>
+
+                  {/* Organizations */}
+                  {organizations.length > 0 && (
+                    <>
+                      <div
+                        className="my-1 h-px"
+                        style={{ background: theme.colors.border }}
+                      />
+                      <div
+                        className="px-3 py-1.5 text-xs font-medium"
+                        style={{ color: theme.colors.textMuted }}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <Building2 className="w-3 h-3" />
+                          Organizations
+                        </div>
+                      </div>
+                      {organizations.map((org) => (
+                        <Link
+                          key={org.id}
+                          href={`/${org.login}`}
+                          className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
+                          style={{
+                            color: theme.colors.text,
+                            background: ownerOnly === org.login ? theme.colors.surface : 'transparent',
+                          }}
+                          onClick={() => setOrgSwitcherOpen(false)}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={org.avatar_url}
+                            alt={org.login}
+                            className="w-5 h-5 rounded"
+                          />
+                          {org.login}
+                        </Link>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div
               className="flex items-center gap-1.5 text-base font-semibold hidden sm:flex"
               style={{ fontFamily: theme.fonts.body }}
