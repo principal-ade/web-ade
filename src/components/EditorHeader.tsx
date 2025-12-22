@@ -127,7 +127,7 @@ export function EditorHeader({
 
   return (
     <header
-      className="h-14 flex items-center justify-between px-4 border-b relative"
+      className="h-14 flex items-center justify-between px-4 border-b relative z-50"
       style={{
         background: theme.colors.surface,
         borderColor: theme.colors.border,
@@ -197,15 +197,13 @@ export function EditorHeader({
               {selectedRepository && (
                 <>
                   <span style={{ color: theme.colors.textMuted }}>/</span>
-                  <a
-                    href={`https://github.com/${selectedRepository}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <Link
+                    href={`/${selectedRepository}`}
                     className="transition-opacity hover:opacity-80"
                     style={{ color: theme.colors.text, textDecoration: 'none' }}
                   >
                     {selectedRepository.split('/')[1]}
-                  </a>
+                  </Link>
                 </>
               )}
             </div>
@@ -303,10 +301,8 @@ export function EditorHeader({
         </Link>
       ) : collectionId && selectedRepository ? (
         /* Collection page with selected repository - show in center */
-        <a
-          href={`https://github.com/${selectedRepository}`}
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          href={`/${selectedRepository}`}
           className="absolute left-1/2 transform -translate-x-1/2 transition-opacity hover:opacity-80"
           style={{
             fontSize: theme.fontSizes[4],
@@ -317,7 +313,7 @@ export function EditorHeader({
           }}
         >
           {selectedRepository.split('/')[1]}
-        </a>
+        </Link>
       ) : null}
 
       <div className="flex items-center gap-3 flex-shrink-0 flex-1 justify-end">
