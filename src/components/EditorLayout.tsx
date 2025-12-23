@@ -176,9 +176,28 @@ const ThemeEditorPanelLoader = dynamic(
 
 // Dynamically import the FileEditorPanel with SSR disabled
 const FileEditorPanelLoader = dynamic(
-  () => import('@industry-theme/file-editing-panels').then((mod) => ({
-    default: mod.FileEditorPanel,
-  })),
+  () => import('@industry-theme/file-editing-panels').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
+// Dynamically import the GitDiffPanel with SSR disabled
+const GitDiffPanelLoader = dynamic(
+  () => import('@industry-theme/file-editing-panels').then((mod) => {
+    const Component = mod.panels[1]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
+// Dynamically import the MDXEditorPanel with SSR disabled
+const MDXEditorPanelLoader = dynamic(
+  () => import('@industry-theme/file-editing-panels').then((mod) => {
+    const Component = mod.panels[2]!.component;
+    return { default: Component };
+  }),
   { ssr: false }
 );
 
@@ -209,7 +228,7 @@ function EditorLayoutContent({
   const { setTheme, setColor, resetColor, resetAllColors } = useGlobalTheme();
   const [isMobile, setIsMobile] = useState(false);
   const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
-  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
+  // Note: File selection state is managed internally by FileEditorPanel via events
   const [isCommitModalOpen, setIsCommitModalOpen] = useState(false);
 
   // Get pending changes for commit functionality
@@ -225,49 +244,6 @@ function EditorLayoutContent({
   // Get repository info for file fetching
   const githubRepo = (context.currentScope.repository as { githubRepo?: string })?.githubRepo
     || context.currentScope.repository?.path;
-
-  // Create a file content provider for the FileEditorPanel
-  const fileContentProvider = useMemo(() => ({
-    readFile: async (filePath: string): Promise<string | null> => {
-      if (!githubRepo || !githubRepo.includes('/')) {
-        console.warn('[FileEditorPanel] No valid repository available for file fetch:', githubRepo);
-        return null;
-      }
-
-      try {
-        const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
-        const [owner, name] = githubRepo.split('/');
-
-        const response = await fetch(
-          `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(cleanPath)}`
-        );
-
-        if (!response.ok) {
-          console.error('[FileEditorPanel] Failed to fetch file:', response.statusText);
-          return null;
-        }
-
-        const data = await response.json();
-
-        // Decode base64 content
-        if (data.content && data.encoding === 'base64') {
-          const binaryString = atob(data.content.replace(/\n/g, ''));
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          const decoder = new TextDecoder('utf-8');
-          return decoder.decode(bytes);
-        }
-
-        return data.content || null;
-      } catch (err) {
-        console.error('[FileEditorPanel] Error fetching file:', err);
-        return null;
-      }
-    },
-    // GitHub API is read-only for web-ade, so no writeFile
-  }), [githubRepo]);
 
   // Handle layout configuration change
   const handleLayoutConfigChange = useCallback((config: LayoutConfig) => {
@@ -583,12 +559,11 @@ function EditorLayoutContent({
           }
         }
       }),
-      // File editor events - open files in the editor panel
+      // File editor events - switch to file-editor panel when file is opened
       events.on('file:open', (event) => {
         const payload = event.payload as { path?: string; filePath?: string };
         const filePath = payload.path || payload.filePath;
         if (filePath) {
-          setSelectedFilePath(filePath);
           // If the file-editor panel is not currently visible, switch to it
           if (layout.middle !== 'file-editor') {
             setLayout((prev) => ({
@@ -598,9 +573,6 @@ function EditorLayoutContent({
           }
         }
       }),
-      events.on('file:close', () => {
-        setSelectedFilePath(null);
-      }),
       // Listen for source click events from the architecture panel
       events.on('custom', (event) => {
         const payload = event.payload as { action?: string; nodeId?: string; source?: string };
@@ -608,31 +580,19 @@ function EditorLayoutContent({
           const sourcePath = payload.source;
           console.log('[EditorLayout] Source clicked:', sourcePath, 'on node:', payload.nodeId);
 
-          // Helper to find which slot has the file-editor (respects swapped panels)
-          const getFileEditorSlot = (): 'left' | 'middle' | 'right' | null => {
-            if (layout.left === 'file-editor') return 'left';
-            if (layout.middle === 'file-editor') return 'middle';
-            if (layout.right === 'file-editor') return 'right';
-            return null;
-          };
-
-          // Helper to ensure file-editor is visible, defaulting to middle if not present
-          const ensureFileEditorVisible = () => {
-            const currentSlot = getFileEditorSlot();
-            if (!currentSlot) {
-              // File-editor not visible anywhere, add it to middle
-              setLayout((prev) => ({
-                ...prev,
-                middle: 'file-editor',
-              }));
-            }
-            // If file-editor is already visible (in any slot), no layout change needed
+          // Helper to emit file:open event
+          const emitFileOpen = (path: string) => {
+            events.emit({
+              type: 'file:open',
+              source: 'editor-layout',
+              timestamp: Date.now(),
+              payload: { path },
+            });
           };
 
           // If it's a direct file path (has extension, no glob), open it
           if (/\.[a-z]+$/i.test(sourcePath) && !sourcePath.includes('*')) {
-            setSelectedFilePath(sourcePath);
-            ensureFileEditorVisible();
+            emitFileOpen(sourcePath);
           } else {
             // For glob patterns, try to find an index file or just log
             const basePath = sourcePath
@@ -642,8 +602,7 @@ function EditorLayoutContent({
             if (basePath) {
               // Try common entry points
               const indexPath = basePath.endsWith('/') ? basePath + 'index.ts' : basePath + '/index.ts';
-              setSelectedFilePath(indexPath);
-              ensureFileEditorVisible();
+              emitFileOpen(indexPath);
             }
           }
         }
@@ -653,7 +612,7 @@ function EditorLayoutContent({
     return () => {
       unsubscribers.forEach((unsub) => unsub());
     };
-  }, [events, login, actions, layout, leftSidebarCollapsed, rightSidebarCollapsed, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed, setTheme, setColor, resetColor, resetAllColors, setSelectedFilePath]);
+  }, [events, login, actions, layout, leftSidebarCollapsed, rightSidebarCollapsed, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed, setTheme, setColor, resetColor, resetAllColors]);
 
   // Create enhanced actions that add writeFile and capture file metadata on read
   const enhancedActions = useMemo(() => ({
@@ -714,7 +673,7 @@ function EditorLayoutContent({
     },
   }), [actions, githubRepo, setFileMetadata, addPendingChangeFromWrite]);
 
-  // Memoize panels that don't depend on selectedFilePath to prevent unnecessary re-renders
+  // Memoize panels that use stable props to prevent unnecessary re-renders
   const stablePanels = useMemo(() => [
     {
       id: 'docs',
@@ -897,25 +856,39 @@ function EditorLayoutContent({
     },
   ], [context, enhancedActions, events, theme.colors.textMuted]);
 
-  // File editor panel needs selectedFilePath, so it's memoized separately
-  const fileEditorPanel = useMemo(() => ({
-    id: 'file-editor',
-    label: 'File Editor',
-    content: (
-      <div className="h-full w-full overflow-hidden">
-        <FileEditorPanelLoader
-          filePath={selectedFilePath}
-          contentProvider={fileContentProvider}
-          source={{ type: 'remote' }}
-          readOnly={true}
-          onClose={() => setSelectedFilePath(null)}
-        />
-      </div>
-    ),
-  }), [selectedFilePath, fileContentProvider, setSelectedFilePath]);
+  // File editing panels - now use the standard panel framework pattern
+  const fileEditingPanels = useMemo(() => [
+    {
+      id: 'file-editor',
+      label: 'File Editor',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <FileEditorPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'git-diff',
+      label: 'Git Diff',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <GitDiffPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'mdx-editor',
+      label: 'MDX Editor',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <MDXEditorPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+  ], [context, enhancedActions, events]);
 
-  // Combine stable panels with file editor panel
-  const panels = useMemo(() => [...stablePanels, fileEditorPanel], [stablePanels, fileEditorPanel]);
+  // Combine stable panels with file editing panels
+  const panels = useMemo(() => [...stablePanels, ...fileEditingPanels], [stablePanels, fileEditingPanels]);
 
   // Parse repository info for commit modal
   const repositoryInfo = useMemo(() => {

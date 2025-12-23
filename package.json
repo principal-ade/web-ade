@@ -25,7 +25,7 @@
     "@industry-theme/alexandria-panels": "0.1.22",
     "@industry-theme/backlogmd-kanban-panel": "^1.0.10",
     "@industry-theme/file-city-panel": "^0.2.14",
-    "@industry-theme/file-editing-panels": "^0.1.1",
+    "@industry-theme/file-editing-panels": "file:../industry-themed-file-editing-panels",
     "@industry-theme/git-panels": "^0.1.1",
     "@industry-theme/git-sync-panels": "^0.1.4",
     "@industry-theme/github-panels": "^0.1.38",

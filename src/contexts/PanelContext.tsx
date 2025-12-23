@@ -1543,51 +1543,74 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     []  // No dependencies - uses ref
   );
 
+  // Helper function to read file from GitHub API
+  const readFileFromGitHub = useCallback(async (relativePath: string): Promise<string> => {
+    if (!githubRepo) {
+      throw new Error('No GitHub repo specified');
+    }
+
+    const [owner, name] = githubRepo.split('/');
+    // Clean path - remove leading slash and /GitHub/owner/repo prefix if present
+    let cleanPath = relativePath.startsWith('/') ? relativePath.slice(1) : relativePath;
+    // Strip the GitHub/owner/repo prefix that we add for MemoryPalace validation
+    const githubPrefix = `GitHub/${githubRepo}/`;
+    if (cleanPath.startsWith(githubPrefix)) {
+      cleanPath = cleanPath.slice(githubPrefix.length);
+    }
+
+    const response = await fetch(
+      `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(cleanPath)}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to read file: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    // Decode base64 content
+    if (data.content && data.encoding === 'base64') {
+      const binaryString = atob(data.content.replace(/\n/g, ''));
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const decoder = new TextDecoder('utf-8');
+      return decoder.decode(bytes);
+    }
+
+    return data.content || '';
+  }, [githubRepo]);
+
   // Create adapters for panels (e.g., Alexandria docs panel uses these for file reading)
   const adapters: PanelAdapters = useMemo(() => ({
-    // readFile fetches file content from GitHub API
-    readFile: async (relativePath: string): Promise<string> => {
-      if (!githubRepo) {
-        throw new Error('No GitHub repo specified');
-      }
-
-      const [owner, name] = githubRepo.split('/');
-      // Clean path - remove leading slash and /GitHub/owner/repo prefix if present
-      let cleanPath = relativePath.startsWith('/') ? relativePath.slice(1) : relativePath;
-      // Strip the GitHub/owner/repo prefix that we add for MemoryPalace validation
-      const githubPrefix = `GitHub/${githubRepo}/`;
-      if (cleanPath.startsWith(githubPrefix)) {
-        cleanPath = cleanPath.slice(githubPrefix.length);
-      }
-
-      const response = await fetch(
-        `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(cleanPath)}`
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to read file: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-
-      // Decode base64 content
-      if (data.content && data.encoding === 'base64') {
-        const binaryString = atob(data.content.replace(/\n/g, ''));
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        const decoder = new TextDecoder('utf-8');
-        return decoder.decode(bytes);
-      }
-
-      return data.content || '';
-    },
+    // readFile fetches file content from GitHub API (legacy adapter)
+    readFile: readFileFromGitHub,
     // matchesPath uses minimatch for glob pattern matching
     matchesPath: (pattern: string, filePath: string): boolean => {
       return minimatch(filePath, pattern);
     },
-  }), [githubRepo]);
+    // fileSystem adapter for FileEditorPanel and other panels
+    fileSystem: {
+      exists: async (path: string): Promise<boolean> => {
+        try {
+          await readFileFromGitHub(path);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      readFile: readFileFromGitHub,
+      // writeFile and deleteFile not implemented - editor will be read-only
+      // To enable editing, these would need to integrate with the PendingChangesContext
+      writeFile: async (_path: string, _content: string): Promise<void> => {
+        throw new Error('Write operations not supported in web-ade viewer mode');
+      },
+      deleteFile: async (_path: string): Promise<void> => {
+        throw new Error('Delete operations not supported in web-ade viewer mode');
+      },
+    },
+  }), [readFileFromGitHub]);
 
   // Context value - include all data states to ensure proper re-renders
   // We include data states (markdownContent, markdownFiles, etc.) as dependencies to force
