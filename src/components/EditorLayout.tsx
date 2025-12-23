@@ -608,16 +608,31 @@ function EditorLayoutContent({
           const sourcePath = payload.source;
           console.log('[EditorLayout] Source clicked:', sourcePath, 'on node:', payload.nodeId);
 
-          // If it's a direct file path (has extension, no glob), open it
-          if (/\.[a-z]+$/i.test(sourcePath) && !sourcePath.includes('*')) {
-            setSelectedFilePath(sourcePath);
-            // Switch to file-editor panel if not already there
-            if (layout.middle !== 'file-editor') {
+          // Helper to find which slot has the file-editor (respects swapped panels)
+          const getFileEditorSlot = (): 'left' | 'middle' | 'right' | null => {
+            if (layout.left === 'file-editor') return 'left';
+            if (layout.middle === 'file-editor') return 'middle';
+            if (layout.right === 'file-editor') return 'right';
+            return null;
+          };
+
+          // Helper to ensure file-editor is visible, defaulting to middle if not present
+          const ensureFileEditorVisible = () => {
+            const currentSlot = getFileEditorSlot();
+            if (!currentSlot) {
+              // File-editor not visible anywhere, add it to middle
               setLayout((prev) => ({
                 ...prev,
                 middle: 'file-editor',
               }));
             }
+            // If file-editor is already visible (in any slot), no layout change needed
+          };
+
+          // If it's a direct file path (has extension, no glob), open it
+          if (/\.[a-z]+$/i.test(sourcePath) && !sourcePath.includes('*')) {
+            setSelectedFilePath(sourcePath);
+            ensureFileEditorVisible();
           } else {
             // For glob patterns, try to find an index file or just log
             const basePath = sourcePath
@@ -628,12 +643,7 @@ function EditorLayoutContent({
               // Try common entry points
               const indexPath = basePath.endsWith('/') ? basePath + 'index.ts' : basePath + '/index.ts';
               setSelectedFilePath(indexPath);
-              if (layout.middle !== 'file-editor') {
-                setLayout((prev) => ({
-                  ...prev,
-                  middle: 'file-editor',
-                }));
-              }
+              ensureFileEditorVisible();
             }
           }
         }
