@@ -305,12 +305,19 @@ export function EditorHeader({
               {selectedRepository && (
                 <>
                   <span style={{ color: theme.colors.textMuted }}>/</span>
+                  <span style={{ color: theme.colors.text }}>
+                    {selectedRepository.split('/')[1]}
+                  </span>
                   <Link
                     href={`/${selectedRepository}`}
-                    className="transition-opacity hover:opacity-80"
-                    style={{ color: theme.colors.text, textDecoration: 'none' }}
+                    className="ml-2 px-2 py-0.5 rounded text-xs transition-all hover:opacity-80"
+                    style={{
+                      background: theme.colors.primary,
+                      color: '#fff',
+                      textDecoration: 'none',
+                    }}
                   >
-                    {selectedRepository.split('/')[1]}
+                    Open
                   </Link>
                 </>
               )}
