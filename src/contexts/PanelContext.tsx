@@ -525,6 +525,79 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const [issuesLoading, setIssuesLoading] = useState(false);
   const [issuesError, setIssuesError] = useState<Error | null>(null);
 
+  // State for user GitHub data (for GitHubStarredPanel and GitHubProjectsPanel)
+  interface UserGitHubData {
+    starred: GitHubRepository[];
+    owned: GitHubRepository[];
+    organizations: Array<{
+      id: number;
+      login: string;
+      avatar_url: string;
+      description: string | null;
+      repositories: GitHubRepository[];
+    }>;
+    currentUser?: string;
+    isAuthenticated: boolean;
+  }
+  const [userGitHubData, setUserGitHubData] = useState<UserGitHubData>({
+    starred: [],
+    owned: [],
+    organizations: [],
+    isAuthenticated: false,
+  });
+  const [userGitHubLoading, setUserGitHubLoading] = useState(false);
+
+  // Fetch user's GitHub data (starred, owned, orgs)
+  const fetchUserGitHubData = useCallback(async () => {
+    setUserGitHubLoading(true);
+    console.log('[PanelContext] Fetching user GitHub data');
+
+    try {
+      const response = await fetch('/api/github/user/repos', {
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.isAuthenticated) {
+        setUserGitHubData({
+          starred: [],
+          owned: [],
+          organizations: [],
+          isAuthenticated: false,
+        });
+        return;
+      }
+
+      // Get current user from owned repos
+      const currentUser = data.owned?.[0]?.owner?.login;
+
+      setUserGitHubData({
+        starred: data.starred || [],
+        owned: data.owned || [],
+        organizations: data.organizations || [],
+        currentUser,
+        isAuthenticated: true,
+      });
+
+      console.log('[PanelContext] User GitHub data loaded:', {
+        starredCount: data.starred?.length || 0,
+        ownedCount: data.owned?.length || 0,
+        orgsCount: data.organizations?.length || 0,
+      });
+    } catch (err) {
+      console.error('[PanelContext] Failed to fetch user GitHub data:', err);
+      setUserGitHubData({
+        starred: [],
+        owned: [],
+        organizations: [],
+        isAuthenticated: false,
+      });
+    } finally {
+      setUserGitHubLoading(false);
+    }
+  }, []);
+
   // Fetch repositories for a specific owner (user or org)
   const fetchOwnerRepos = useCallback(async (owner: string) => {
     setOwnerReposLoading(true);
@@ -1322,6 +1395,47 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           },
         },
       ],
+      [
+        'githubStarred',
+        {
+          scope: 'global',
+          name: 'githubStarred',
+          data: {
+            repositories: userGitHubData.starred,
+            loading: userGitHubLoading,
+            error: undefined,
+          },
+          loading: userGitHubLoading,
+          error: null,
+          refresh: fetchUserGitHubData,
+        },
+      ],
+      [
+        'githubProjects',
+        {
+          scope: 'global',
+          name: 'githubProjects',
+          data: {
+            userRepositories: userGitHubData.owned,
+            organizations: userGitHubData.organizations.map(org => ({
+              id: org.id,
+              login: org.login,
+              avatar_url: org.avatar_url,
+              description: org.description,
+            })),
+            orgRepositories: userGitHubData.organizations.reduce((acc, org) => {
+              acc[org.login] = org.repositories;
+              return acc;
+            }, {} as Record<string, GitHubRepository[]>),
+            loading: userGitHubLoading,
+            error: undefined,
+            currentUser: userGitHubData.currentUser,
+          },
+          loading: userGitHubLoading,
+          error: null,
+          refresh: fetchUserGitHubData,
+        },
+      ],
     ])
   );
 
@@ -1521,6 +1635,45 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       data: issuesData,
       loading: issuesLoading,
       error: issuesError,
+    });
+  }
+
+  // Update githubStarred slice with fetched data
+  const starredSlice = slicesRef.current.get('githubStarred');
+  if (starredSlice) {
+    slicesRef.current.set('githubStarred', {
+      ...starredSlice,
+      data: {
+        repositories: userGitHubData.starred,
+        loading: userGitHubLoading,
+        error: undefined,
+      },
+      loading: userGitHubLoading,
+    });
+  }
+
+  // Update githubProjects slice with fetched data
+  const projectsSlice = slicesRef.current.get('githubProjects');
+  if (projectsSlice) {
+    slicesRef.current.set('githubProjects', {
+      ...projectsSlice,
+      data: {
+        userRepositories: userGitHubData.owned,
+        organizations: userGitHubData.organizations.map(org => ({
+          id: org.id,
+          login: org.login,
+          avatar_url: org.avatar_url,
+          description: org.description,
+        })),
+        orgRepositories: userGitHubData.organizations.reduce((acc, org) => {
+          acc[org.login] = org.repositories;
+          return acc;
+        }, {} as Record<string, GitHubRepository[]>),
+        loading: userGitHubLoading,
+        error: undefined,
+        currentUser: userGitHubData.currentUser,
+      },
+      loading: userGitHubLoading,
     });
   }
 
@@ -2028,6 +2181,13 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       fetchCollectionRepoDetails(collectionRepositories);
     }
   }, [collectionRepositories, fetchCollectionRepoDetails]);
+
+  // Fetch user GitHub data (starred, owned, orgs) when on collection/library pages
+  useEffect(() => {
+    if (collectionId) {
+      fetchUserGitHubData();
+    }
+  }, [collectionId, fetchUserGitHubData]);
 
   return <PanelContext.Provider value={value}>{children}</PanelContext.Provider>;
 }
