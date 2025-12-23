@@ -278,7 +278,7 @@ function CollectionDropdown({
               left: 0,
               marginTop: '4px',
               minWidth: '280px',
-              backgroundColor: theme.colors.surface,
+              backgroundColor: theme.colors.background,
               border: `1px solid ${theme.colors.border}`,
               borderRadius: '8px',
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
