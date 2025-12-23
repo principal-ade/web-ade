@@ -39,6 +39,12 @@ export const navigationQuickCommands: QuickCommand[] = [
     aliases: ['h'],
   },
   {
+    name: 'library',
+    description: 'Open the collection library',
+    category: 'Navigation',
+    aliases: ['lib', 'l'],
+  },
+  {
     name: 'repo',
     description: 'Navigate to a repository',
     category: 'Navigation',
@@ -170,6 +176,11 @@ export function useNavigationCommands(additionalOptions?: {
       switch (name) {
         case 'home':
           navigate('/');
+          return { success: true };
+
+        case 'library':
+        case 'lib':
+          navigate('/library');
           return { success: true };
 
         case 'repo':
