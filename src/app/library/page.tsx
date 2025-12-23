@@ -1,0 +1,669 @@
+'use client';
+
+import { useRouter, useSearchParams } from "next/navigation";
+import { useTheme } from "@principal-ade/industry-theme";
+import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
+import { PanelProvider, usePanelProvider } from "@/contexts/PanelContext";
+import { useUserCollections } from "@/contexts/UserCollectionsContext";
+import { EditorHeader } from "@/components/EditorHeader";
+import { CollectionModal } from "@/components/collections/CollectionModal";
+import { AddRepositoryModal } from "@/components/collections/AddRepositoryModal";
+import dynamic from "next/dynamic";
+import {
+  EditableConfigurablePanelLayout,
+  ResponsiveConfigurablePanelLayout,
+  PanelLayout,
+} from "@principal-ade/panel-layouts";
+import '@principal-ade/panel-layouts/styles.css';
+import { ChevronDown, Plus, FolderOpen, Layers } from 'lucide-react';
+import type { Collection } from '@principal-ai/alexandria-collections';
+
+// Dynamically import panels with SSR disabled
+const WorkspaceCollectionPanelLoader = dynamic(
+  () => import('@industry-theme/alexandria-panels').then((mod) => mod.WorkspaceCollectionPanel),
+  { ssr: false }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) as React.ComponentType<any>;
+
+const GitHubStarredPanelLoader = dynamic(
+  () => import('@industry-theme/alexandria-panels').then((mod) => mod.GitHubStarredPanel),
+  { ssr: false }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) as React.ComponentType<any>;
+
+const GitHubProjectsPanelLoader = dynamic(
+  () => import('@industry-theme/alexandria-panels').then((mod) => mod.GitHubProjectsPanel),
+  { ssr: false }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) as React.ComponentType<any>;
+
+interface CuratedCollection {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  theme?: string;
+}
+
+interface LibraryPageContentProps {
+  selectedCollection: Collection | CuratedCollection | null;
+  isUserCollection: boolean;
+  onAddRepository?: () => void;
+  onEditCollection?: () => void;
+}
+
+function LibraryPageContent({
+  selectedCollection,
+  isUserCollection,
+  onAddRepository,
+  onEditCollection,
+}: LibraryPageContentProps) {
+  const { theme } = useTheme();
+  const router = useRouter();
+  const { context, actions, events } = usePanelProvider();
+  const [isMobile, setIsMobile] = useState(false);
+  const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
+
+  // Layout: no left panel, middle is collection, right is starred/projects
+  const layout: PanelLayout = {
+    left: 'empty',
+    middle: 'workspace-collection',
+    right: {
+      type: 'tabs',
+      panels: ['github-starred', 'github-projects'],
+    },
+  };
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Listen for repository events from panels
+  useEffect(() => {
+    if (!events) return;
+
+    const unsubscribers = [
+      events.on('repository:selected', (event) => {
+        const payload = event.payload as { repository?: { full_name?: string } };
+        if (payload?.repository?.full_name) {
+          setPreviewedRepo(payload.repository.full_name);
+        }
+      }),
+      events.on('repository:navigate', (event) => {
+        const payload = event.payload as { owner?: string; repo?: string };
+        if (payload?.owner && payload?.repo) {
+          router.push(`/${payload.owner}/${payload.repo}`);
+        }
+      }),
+    ];
+
+    return () => unsubscribers.forEach((unsub) => unsub());
+  }, [events, router]);
+
+  const panels = [
+    {
+      id: 'empty',
+      label: '',
+      content: <div />,
+    },
+    {
+      id: 'workspace-collection',
+      label: 'Collection',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <WorkspaceCollectionPanelLoader
+            context={context}
+            actions={{
+              ...actions,
+              navigateToRepository: (owner: string, repo: string) => {
+                router.push(`/${owner}/${repo}`);
+              },
+              previewRepository: (repository: { full_name: string; owner: { login: string }; name: string }) => {
+                setPreviewedRepo(repository.full_name);
+                (actions as { previewReadme?: (owner: string, repo: string) => Promise<string> }).previewReadme?.(
+                  repository.owner.login,
+                  repository.name
+                );
+              },
+            }}
+            events={events}
+            selectedRepository={previewedRepo}
+          />
+        </div>
+      ),
+    },
+    {
+      id: 'github-starred',
+      label: 'Starred',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <GitHubStarredPanelLoader
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        </div>
+      ),
+    },
+    {
+      id: 'github-projects',
+      label: 'Your Repos',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <GitHubProjectsPanelLoader
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div className="h-full w-full flex flex-col">
+      <EditorHeader
+        leftCollapsed={true}
+        rightCollapsed={rightCollapsed}
+        onToggleLeft={() => {}}
+        onToggleRight={() => setRightCollapsed(!rightCollapsed)}
+        selectedRepository={previewedRepo}
+        isUserCollection={isUserCollection}
+        collectionName={selectedCollection?.name}
+        onAddRepository={onAddRepository}
+        onEditCollection={onEditCollection}
+        hideLeftToggle={true}
+      />
+      <div className="flex-1 overflow-hidden">
+        {isMobile ? (
+          <ResponsiveConfigurablePanelLayout
+            theme={theme}
+            panels={panels}
+            layout={layout}
+            defaultSizes={{ left: 0, middle: 60, right: 40 }}
+            minSizes={{ left: 0, middle: 40, right: 20 }}
+            collapsiblePanels={{ left: false, right: true }}
+            collapsed={{ left: true, right: rightCollapsed }}
+            showCollapseButtons={false}
+            mobileBreakpoint="(max-width: 768px)"
+          />
+        ) : (
+          <EditableConfigurablePanelLayout
+            theme={theme}
+            panels={panels}
+            layout={layout}
+            isEditMode={false}
+            defaultSizes={{ left: 0, middle: 60, right: 40 }}
+            minSizes={{ left: 0, middle: 40, right: 20 }}
+            collapsiblePanels={{ left: false, right: true }}
+            collapsed={{ left: true, right: rightCollapsed }}
+            showCollapseButtons={false}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface CollectionDropdownProps {
+  collections: (Collection | CuratedCollection)[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onCreateNew: () => void;
+  theme: ReturnType<typeof useTheme>['theme'];
+}
+
+function CollectionDropdown({
+  collections,
+  selectedId,
+  onSelect,
+  onCreateNew,
+  theme,
+}: CollectionDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selected = collections.find(c => c.id === selectedId);
+
+  // Separate user and curated collections
+  const userCollections = collections.filter(c => c.id.startsWith('col-'));
+  const curatedCollections = collections.filter(c => !c.id.startsWith('col-'));
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '8px 12px',
+          backgroundColor: theme.colors.surface,
+          border: `1px solid ${theme.colors.border}`,
+          borderRadius: '8px',
+          cursor: 'pointer',
+          color: theme.colors.text,
+          fontSize: `${theme.fontSizes[2]}px`,
+          fontWeight: theme.fontWeights.medium,
+          minWidth: '200px',
+        }}
+      >
+        <Layers size={18} style={{ color: theme.colors.primary }} />
+        <span style={{ flex: 1, textAlign: 'left' }}>
+          {selected?.name || 'Select Collection'}
+        </span>
+        <ChevronDown size={16} style={{ color: theme.colors.textSecondary }} />
+      </button>
+
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 40,
+            }}
+            onClick={() => setIsOpen(false)}
+          />
+
+          {/* Dropdown */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              marginTop: '4px',
+              minWidth: '280px',
+              backgroundColor: theme.colors.surface,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              zIndex: 50,
+              overflow: 'hidden',
+            }}
+          >
+            {/* Create New */}
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                onCreateNew();
+              }}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 12px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderBottom: `1px solid ${theme.colors.border}`,
+                cursor: 'pointer',
+                color: theme.colors.primary,
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontWeight: theme.fontWeights.medium,
+              }}
+            >
+              <Plus size={16} />
+              Create New Collection
+            </button>
+
+            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+              {/* User Collections */}
+              {userCollections.length > 0 && (
+                <div>
+                  <div
+                    style={{
+                      padding: '8px 12px',
+                      fontSize: `${theme.fontSizes[0]}px`,
+                      color: theme.colors.textSecondary,
+                      fontWeight: theme.fontWeights.semibold,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                    }}
+                  >
+                    Your Collections
+                  </div>
+                  {userCollections.map(collection => (
+                    <button
+                      key={collection.id}
+                      onClick={() => {
+                        onSelect(collection.id);
+                        setIsOpen(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 12px',
+                        backgroundColor: collection.id === selectedId ? theme.colors.backgroundTertiary : 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: theme.colors.text,
+                        fontSize: `${theme.fontSizes[1]}px`,
+                        textAlign: 'left',
+                      }}
+                    >
+                      <FolderOpen size={16} style={{ color: theme.colors.textSecondary }} />
+                      <span style={{ flex: 1 }}>{collection.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Curated Collections */}
+              {curatedCollections.length > 0 && (
+                <div>
+                  <div
+                    style={{
+                      padding: '8px 12px',
+                      fontSize: `${theme.fontSizes[0]}px`,
+                      color: theme.colors.textSecondary,
+                      fontWeight: theme.fontWeights.semibold,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      borderTop: userCollections.length > 0 ? `1px solid ${theme.colors.border}` : 'none',
+                    }}
+                  >
+                    Curated
+                  </div>
+                  {curatedCollections.map(collection => (
+                    <button
+                      key={collection.id}
+                      onClick={() => {
+                        onSelect(collection.id);
+                        setIsOpen(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 12px',
+                        backgroundColor: collection.id === selectedId ? theme.colors.backgroundTertiary : 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: theme.colors.text,
+                        fontSize: `${theme.fontSizes[1]}px`,
+                        textAlign: 'left',
+                      }}
+                    >
+                      <Layers size={16} style={{ color: theme.colors.primary }} />
+                      <span style={{ flex: 1 }}>{collection.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function LibraryPageWrapper() {
+  const { theme } = useTheme();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const userCollections = useUserCollections();
+
+  const [curatedCollections, setCuratedCollections] = useState<CuratedCollection[]>([]);
+  const [curatedMemberships, setCuratedMemberships] = useState<Record<string, string[]>>({});
+  const [loading, setLoading] = useState(true);
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(
+    searchParams.get('collection')
+  );
+
+  // Modal states
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [addRepoModalOpen, setAddRepoModalOpen] = useState(false);
+
+  // Fetch curated collections
+  useEffect(() => {
+    fetch('/api/collections')
+      .then(res => res.json())
+      .then(data => {
+        setCuratedCollections(data.collections || []);
+        // Convert memberships to simple string arrays
+        const memberships: Record<string, string[]> = {};
+        for (const [id, repos] of Object.entries(data.memberships || {})) {
+          memberships[id] = (repos as { repositoryId: string }[]).map(r => r.repositoryId);
+        }
+        setCuratedMemberships(memberships);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch curated collections:', err);
+        setLoading(false);
+      });
+  }, []);
+
+  // All collections combined
+  const allCollections = useMemo(() => {
+    return [...userCollections.collections, ...curatedCollections];
+  }, [userCollections.collections, curatedCollections]);
+
+  // Auto-select first collection if none selected
+  useEffect(() => {
+    if (!selectedCollectionId && allCollections.length > 0 && !loading && !userCollections.loading) {
+      const firstId = allCollections[0]?.id;
+      if (firstId) {
+        setSelectedCollectionId(firstId);
+        router.replace(`/library?collection=${firstId}`, { scroll: false });
+      }
+    }
+  }, [selectedCollectionId, allCollections, loading, userCollections.loading, router]);
+
+  // Get selected collection and its repos
+  const selectedCollection = useMemo(() => {
+    return allCollections.find(c => c.id === selectedCollectionId) || null;
+  }, [allCollections, selectedCollectionId]);
+
+  const isUserCollection = useMemo(() => {
+    return userCollections.isUserCollection(selectedCollectionId || '');
+  }, [userCollections, selectedCollectionId]);
+
+  const repositories = useMemo(() => {
+    if (!selectedCollectionId) return [];
+    if (isUserCollection) {
+      return userCollections.getCollectionRepositories(selectedCollectionId);
+    }
+    return curatedMemberships[selectedCollectionId] || [];
+  }, [selectedCollectionId, isUserCollection, userCollections, curatedMemberships]);
+
+  // Handlers
+  const handleSelectCollection = useCallback((id: string) => {
+    setSelectedCollectionId(id);
+    router.replace(`/library?collection=${id}`, { scroll: false });
+  }, [router]);
+
+  const handleCreateCollection = useCallback(async (name: string, description: string, icon: string) => {
+    const newCollection = await userCollections.createCollection(name, description, icon);
+    setSelectedCollectionId(newCollection.id);
+    router.replace(`/library?collection=${newCollection.id}`, { scroll: false });
+  }, [userCollections, router]);
+
+  const handleUpdateCollection = useCallback(async (name: string, description: string, icon: string) => {
+    if (selectedCollectionId) {
+      await userCollections.updateCollection(selectedCollectionId, { name, description, icon });
+    }
+  }, [userCollections, selectedCollectionId]);
+
+  const handleDeleteCollection = useCallback(async () => {
+    if (selectedCollectionId) {
+      await userCollections.deleteCollection(selectedCollectionId);
+      // Select first available collection
+      const remaining = allCollections.filter(c => c.id !== selectedCollectionId);
+      if (remaining.length > 0) {
+        handleSelectCollection(remaining[0]!.id);
+      } else {
+        setSelectedCollectionId(null);
+        router.replace('/library', { scroll: false });
+      }
+    }
+  }, [userCollections, selectedCollectionId, allCollections, handleSelectCollection, router]);
+
+  const handleAddRepository = useCallback(async (repositoryId: string) => {
+    if (selectedCollectionId) {
+      await userCollections.addRepository(selectedCollectionId, repositoryId);
+    }
+  }, [userCollections, selectedCollectionId]);
+
+  const handleRemoveRepository = useCallback(async (repositoryId: string) => {
+    if (selectedCollectionId) {
+      await userCollections.removeRepository(selectedCollectionId, repositoryId);
+    }
+  }, [userCollections, selectedCollectionId]);
+
+  if (loading || userCollections.loading) {
+    return (
+      <div
+        className="h-screen w-screen flex items-center justify-center"
+        style={{ background: theme.colors.background, color: theme.colors.text }}
+      >
+        Loading library...
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="h-screen w-screen overflow-hidden"
+      style={{ background: theme.colors.background }}
+    >
+      {/* Collection Dropdown Header */}
+      <div
+        style={{
+          padding: '12px 16px',
+          borderBottom: `1px solid ${theme.colors.border}`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+        }}
+      >
+        <CollectionDropdown
+          collections={allCollections}
+          selectedId={selectedCollectionId}
+          onSelect={handleSelectCollection}
+          onCreateNew={() => setCreateModalOpen(true)}
+          theme={theme}
+        />
+      </div>
+
+      {/* Main Content */}
+      {selectedCollection ? (
+        <div style={{ height: 'calc(100vh - 57px)' }}>
+          <PanelProvider
+            key={`${selectedCollectionId}-${repositories.length}`}
+            workspace={{
+              name: selectedCollection.name,
+              path: `/library`,
+            }}
+            repository={{
+              name: selectedCollection.name,
+              path: `/library`,
+            }}
+            collectionId={selectedCollectionId || undefined}
+            collectionRepositories={repositories}
+          >
+            <LibraryPageContent
+              selectedCollection={selectedCollection}
+              isUserCollection={isUserCollection}
+              onAddRepository={isUserCollection ? () => setAddRepoModalOpen(true) : undefined}
+              onEditCollection={isUserCollection ? () => setEditModalOpen(true) : undefined}
+            />
+          </PanelProvider>
+        </div>
+      ) : (
+        <div
+          style={{
+            height: 'calc(100vh - 57px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '16px',
+            color: theme.colors.textSecondary,
+          }}
+        >
+          <Layers size={48} style={{ opacity: 0.5 }} />
+          <p>No collections yet. Create one to get started!</p>
+          <button
+            onClick={() => setCreateModalOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 20px',
+              backgroundColor: theme.colors.primary,
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: `${theme.fontSizes[2]}px`,
+              fontWeight: theme.fontWeights.medium,
+            }}
+          >
+            <Plus size={18} />
+            Create Collection
+          </button>
+        </div>
+      )}
+
+      {/* Modals */}
+      <CollectionModal
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        onSave={handleCreateCollection}
+        mode="create"
+      />
+
+      {isUserCollection && selectedCollection && (
+        <>
+          <CollectionModal
+            isOpen={editModalOpen}
+            onClose={() => setEditModalOpen(false)}
+            onSave={handleUpdateCollection}
+            onDelete={handleDeleteCollection}
+            initialData={selectedCollection as Collection}
+            mode="edit"
+          />
+          <AddRepositoryModal
+            isOpen={addRepoModalOpen}
+            onClose={() => setAddRepoModalOpen(false)}
+            onAdd={handleAddRepository}
+            onRemove={handleRemoveRepository}
+            existingRepositories={repositories}
+            collectionName={selectedCollection.name}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+function LibraryPageLoading() {
+  const { theme } = useTheme();
+  return (
+    <div
+      className="h-screen w-screen flex items-center justify-center"
+      style={{ background: theme.colors.background, color: theme.colors.text }}
+    >
+      Loading library...
+    </div>
+  );
+}
+
+export default function LibraryPage() {
+  return (
+    <Suspense fallback={<LibraryPageLoading />}>
+      <LibraryPageWrapper />
+    </Suspense>
+  );
+}

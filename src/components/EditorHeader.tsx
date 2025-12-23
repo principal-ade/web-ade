@@ -28,6 +28,8 @@ interface EditorHeaderProps {
   // Commit actions
   pendingChangesCount?: number;
   onCommitClick?: () => void;
+  // Panel visibility
+  hideLeftToggle?: boolean;
 }
 
 export function EditorHeader({
@@ -45,6 +47,7 @@ export function EditorHeader({
   onEditCollection,
   pendingChangesCount = 0,
   onCommitClick,
+  hideLeftToggle = false,
 }: EditorHeaderProps = {}) {
   const { theme } = useTheme();
   const { cycleTheme, currentThemeName } = useGlobalTheme();
@@ -509,7 +512,7 @@ export function EditorHeader({
 
         {/* Panel collapse toggles */}
         <div className="hidden md:flex items-center gap-1">
-          {onToggleLeft && (
+          {onToggleLeft && !hideLeftToggle && (
             <button
               onClick={onToggleLeft}
               className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
