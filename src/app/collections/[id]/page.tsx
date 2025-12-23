@@ -327,8 +327,8 @@ function CollectionPageWrapper({ collectionId }: { collectionId: string }) {
   const [addRepoModalOpen, setAddRepoModalOpen] = useState(false);
 
   // Check if this is a user collection
-  const isUserCollection = userCollections.isUserWorkspace(collectionId);
-  const userWorkspace = userCollections.getWorkspace(collectionId);
+  const isUserCollection = userCollections.isUserCollection(collectionId);
+  const userCollection = userCollections.getCollection(collectionId);
 
   // Update URL when previewed repo changes
   const handlePreviewChange = useCallback((repo: string | null) => {
@@ -347,16 +347,16 @@ function CollectionPageWrapper({ collectionId }: { collectionId: string }) {
     // Wait for user collections to load before checking
     if (userCollections.loading) return;
 
-    if (isUserCollection && userWorkspace) {
+    if (isUserCollection && userCollection) {
       // Load from user collections context
       setCollection({
-        id: userWorkspace.id,
-        name: userWorkspace.name,
-        description: userWorkspace.description || '',
-        icon: userWorkspace.icon,
-        theme: userWorkspace.theme,
+        id: userCollection.id,
+        name: userCollection.name,
+        description: userCollection.description || '',
+        icon: userCollection.icon,
+        theme: userCollection.theme,
       });
-      setRepositories(userCollections.getWorkspaceRepositories(collectionId));
+      setRepositories(userCollections.getCollectionRepositories(collectionId));
       setLoading(false);
     } else {
       // Fetch from API (curated collections)
@@ -375,24 +375,24 @@ function CollectionPageWrapper({ collectionId }: { collectionId: string }) {
           setLoading(false);
         });
     }
-  }, [collectionId, isUserCollection, userWorkspace, userCollections]);
+  }, [collectionId, isUserCollection, userCollection, userCollections]);
 
   // Update repositories when user collection memberships change
   useEffect(() => {
     if (isUserCollection) {
-      setRepositories(userCollections.getWorkspaceRepositories(collectionId));
+      setRepositories(userCollections.getCollectionRepositories(collectionId));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isUserCollection, collectionId, userCollections.memberships]);
 
   // Handlers for user collection actions
   const handleSaveCollection = useCallback(async (name: string, description: string, icon: string) => {
-    await userCollections.updateWorkspace(collectionId, { name, description, icon });
+    await userCollections.updateCollection(collectionId, { name, description, icon });
     setCollection((prev) => prev ? { ...prev, name, description, icon } : null);
   }, [collectionId, userCollections]);
 
   const handleDeleteCollection = useCallback(async () => {
-    await userCollections.deleteWorkspace(collectionId);
+    await userCollections.deleteCollection(collectionId);
     router.push('/');
   }, [collectionId, userCollections, router]);
 
@@ -471,14 +471,14 @@ function CollectionPageWrapper({ collectionId }: { collectionId: string }) {
       </PanelProvider>
 
       {/* Modals for user collections */}
-      {isUserCollection && userWorkspace && (
+      {isUserCollection && userCollection && (
         <>
           <CollectionModal
             isOpen={editModalOpen}
             onClose={() => setEditModalOpen(false)}
             onSave={handleSaveCollection}
             onDelete={handleDeleteCollection}
-            initialData={userWorkspace}
+            initialData={userCollection}
             mode="edit"
           />
           <AddRepositoryModal

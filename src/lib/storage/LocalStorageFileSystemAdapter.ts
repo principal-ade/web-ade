@@ -1,24 +1,24 @@
 /**
  * LocalStorage implementation of FileSystemAdapter
  *
- * This adapter uses browser localStorage to store workspace data.
+ * This adapter uses browser localStorage to store collection data.
  * It enables using localStorage as a storage backend for user collections,
  * with the same interface as GitHubFileSystemAdapter for easy swapping.
  *
- * Key format: Path like `/workspaces.json` maps to localStorage key `user-workspaces`
+ * Key format: Path like `/collections.json` maps to localStorage key `user-collections`
  */
 import type { FileSystemAdapter } from '@principal-ai/alexandria-core-library/github';
 
 // Map file paths to localStorage keys
 const PATH_TO_KEY: Record<string, string> = {
-  '/workspaces.json': 'user-workspaces',
-  '/workspace-memberships.json': 'user-workspace-memberships',
+  '/collections.json': 'user-collections',
+  '/collection-memberships.json': 'user-collection-memberships',
 };
 
 // Default content for files that don't exist yet
 const DEFAULT_CONTENT: Record<string, string> = {
-  '/workspaces.json': JSON.stringify({ version: '1.0', workspaces: [] }),
-  '/workspace-memberships.json': JSON.stringify({ version: '1.0', memberships: [] }),
+  '/collections.json': JSON.stringify({ version: '1.0', collections: [] }),
+  '/collection-memberships.json': JSON.stringify({ version: '1.0', memberships: [] }),
 };
 
 /**
@@ -29,7 +29,7 @@ export class LocalStorageFileSystemAdapter implements FileSystemAdapter {
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
     const key = PATH_TO_KEY[normalizedPath];
     if (!key) {
-      throw new Error(`Unknown path: ${path}. Only /workspaces.json and /workspace-memberships.json are supported.`);
+      throw new Error(`Unknown path: ${path}. Only /collections.json and /collection-memberships.json are supported.`);
     }
     return key;
   }
@@ -87,7 +87,7 @@ export class LocalStorageFileSystemAdapter implements FileSystemAdapter {
 
   async readDirAsync(_path: string): Promise<string[]> {
     // Return the known files
-    return ['workspaces.json', 'workspace-memberships.json'];
+    return ['collections.json', 'collection-memberships.json'];
   }
 
   async isDirectoryAsync(path: string): Promise<boolean> {
@@ -162,7 +162,7 @@ export class LocalStorageFileSystemAdapter implements FileSystemAdapter {
   }
 
   readDir(_path: string): string[] {
-    return ['workspaces.json', 'workspace-memberships.json'];
+    return ['collections.json', 'collection-memberships.json'];
   }
 
   deleteDir(_path: string): void {

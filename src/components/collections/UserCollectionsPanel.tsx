@@ -3,13 +3,13 @@
 import React, { useState, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Plus, Edit2 } from 'lucide-react';
-import type { Workspace } from '@principal-ai/alexandria-core-library/types';
+import type { Collection } from '@principal-ai/alexandria-collections';
 import { useUserCollections } from '@/contexts/UserCollectionsContext';
 import { CollectionModal } from './CollectionModal';
 import { AvatarStack, type RepositoryInfo } from './AvatarStack';
 
 interface UserCollectionsPanelProps {
-  onCollectionClick?: (workspaceId: string) => void;
+  onCollectionClick?: (collectionId: string) => void;
 }
 
 /**
@@ -80,12 +80,12 @@ const SkeletonCard: React.FC<{ theme: ReturnType<typeof useTheme>['theme'] }> = 
  * Collection card component
  */
 const CollectionCard: React.FC<{
-  workspace: Workspace;
+  collection: Collection;
   repositories: RepositoryInfo[];
   theme: ReturnType<typeof useTheme>['theme'];
   onClick: () => void;
   onEdit: () => void;
-}> = ({ workspace, repositories, theme, onClick, onEdit }) => {
+}> = ({ collection, repositories, theme, onClick, onEdit }) => {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -148,7 +148,7 @@ const CollectionCard: React.FC<{
             marginBottom: '8px',
           }}
         >
-          {workspace.name}
+          {collection.name}
         </div>
         <div
           style={{
@@ -157,7 +157,7 @@ const CollectionCard: React.FC<{
             lineHeight: 1.5,
           }}
         >
-          {workspace.description || `${repositories.length} repositories`}
+          {collection.description || `${repositories.length} repositories`}
         </div>
       </div>
     </button>
@@ -238,55 +238,55 @@ const CreateCollectionCard: React.FC<{
 export function UserCollectionsPanel({ onCollectionClick }: UserCollectionsPanelProps) {
   const { theme } = useTheme();
   const {
-    workspaces,
+    collections,
     loading,
-    createWorkspace,
-    updateWorkspace,
-    deleteWorkspace,
-    getWorkspaceRepositoryInfos,
+    createCollection,
+    updateCollection,
+    deleteCollection,
+    getCollectionRepositoryInfos,
   } = useUserCollections();
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null);
+  const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
 
   const handleCreate = useCallback(() => {
-    setEditingWorkspace(null);
+    setEditingCollection(null);
     setModalOpen(true);
   }, []);
 
-  const handleEdit = useCallback((workspace: Workspace) => {
-    setEditingWorkspace(workspace);
+  const handleEdit = useCallback((collection: Collection) => {
+    setEditingCollection(collection);
     setModalOpen(true);
   }, []);
 
   const handleSave = useCallback(
     async (name: string, description: string, icon: string) => {
-      if (editingWorkspace) {
-        await updateWorkspace(editingWorkspace.id, { name, description, icon });
+      if (editingCollection) {
+        await updateCollection(editingCollection.id, { name, description, icon });
       } else {
-        await createWorkspace(name, description, icon);
+        await createCollection(name, description, icon);
       }
     },
-    [editingWorkspace, createWorkspace, updateWorkspace]
+    [editingCollection, createCollection, updateCollection]
   );
 
   const handleDelete = useCallback(async () => {
-    if (editingWorkspace) {
-      await deleteWorkspace(editingWorkspace.id);
+    if (editingCollection) {
+      await deleteCollection(editingCollection.id);
     }
-  }, [editingWorkspace, deleteWorkspace]);
+  }, [editingCollection, deleteCollection]);
 
   const handleCollectionClick = useCallback(
-    (workspaceId: string) => {
+    (collectionId: string) => {
       if (onCollectionClick) {
-        onCollectionClick(workspaceId);
+        onCollectionClick(collectionId);
       }
     },
     [onCollectionClick]
   );
 
-  // Don't show section if not loading and no workspaces
-  if (!loading && workspaces.length === 0) {
+  // Don't show section if not loading and no collections
+  if (!loading && collections.length === 0) {
     return (
       <>
         <div
@@ -370,14 +370,14 @@ export function UserCollectionsPanel({ onCollectionClick }: UserCollectionsPanel
             ))
           ) : (
             <>
-              {workspaces.map((workspace) => (
+              {collections.map((collection) => (
                 <CollectionCard
-                  key={workspace.id}
-                  workspace={workspace}
-                  repositories={getWorkspaceRepositoryInfos(workspace.id)}
+                  key={collection.id}
+                  collection={collection}
+                  repositories={getCollectionRepositoryInfos(collection.id)}
                   theme={theme}
-                  onClick={() => handleCollectionClick(workspace.id)}
-                  onEdit={() => handleEdit(workspace)}
+                  onClick={() => handleCollectionClick(collection.id)}
+                  onEdit={() => handleEdit(collection)}
                 />
               ))}
               <CreateCollectionCard theme={theme} onClick={handleCreate} />
@@ -390,9 +390,9 @@ export function UserCollectionsPanel({ onCollectionClick }: UserCollectionsPanel
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
-        onDelete={editingWorkspace ? handleDelete : undefined}
-        initialData={editingWorkspace || undefined}
-        mode={editingWorkspace ? 'edit' : 'create'}
+        onDelete={editingCollection ? handleDelete : undefined}
+        initialData={editingCollection || undefined}
+        mode={editingCollection ? 'edit' : 'create'}
       />
     </>
   );

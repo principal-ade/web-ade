@@ -1,30 +1,28 @@
 import { NextResponse } from 'next/server';
 import { unstable_cache } from 'next/cache';
-import {
-  GitHubFileSystemAdapter,
-  WorkspaceManager,
-} from '@principal-ai/alexandria-core-library/github';
+import { GitHubFileSystemAdapter } from '@principal-ai/alexandria-core-library/github';
+import { CollectionManager } from '@/lib/collections/CollectionManager';
 
 async function fetchCollections() {
   const adapter = new GitHubFileSystemAdapter({
     owner: 'principal-ai',
-    repo: 'curated-collections',
+    repo: 'collections',
     branch: 'main',
     token: process.env.GITHUB_TOKEN,
   });
 
-  // Preload the workspace files
-  await adapter.preload('/workspaces.json');
-  await adapter.preload('/workspace-memberships.json');
+  // Preload the collection files
+  await adapter.preload('/collections.json');
+  await adapter.preload('/collection-memberships.json');
 
-  const manager = new WorkspaceManager('/', adapter);
-  const workspaces = await manager.getWorkspaces();
+  const manager = new CollectionManager('/', adapter);
+  const collections = await manager.getCollections();
 
-  if (!workspaces) {
+  if (!collections) {
     return { collections: [], memberships: {} };
   }
 
-  // Get memberships for each workspace with full metadata
+  // Get memberships for each collection with full metadata
   interface RepositoryInfo {
     repositoryId: string;
     sourceRepository?: {
@@ -34,16 +32,16 @@ async function fetchCollections() {
   }
 
   const memberships: Record<string, RepositoryInfo[]> = {};
-  for (const workspace of workspaces) {
-    const wsMemberships = await manager.getWorkspaceMemberships(workspace.id);
-    memberships[workspace.id] = wsMemberships.map((m) => ({
+  for (const collection of collections) {
+    const colMemberships = await manager.getCollectionMemberships(collection.id);
+    memberships[collection.id] = colMemberships.map((m) => ({
       repositoryId: m.repositoryId,
       sourceRepository: m.metadata?.sourceRepository as { owner: string; name: string } | undefined,
     }));
   }
 
   return {
-    collections: workspaces,
+    collections,
     memberships,
   };
 }

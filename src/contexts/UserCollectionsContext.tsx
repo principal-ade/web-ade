@@ -3,8 +3,8 @@
 /**
  * UserCollectionsContext
  *
- * Provides state management for user-created collections (workspaces).
- * Uses WorkspaceManager from alexandria-core-library with a localStorage adapter.
+ * Provides state management for user-created collections.
+ * Uses CollectionManager with a localStorage adapter.
  */
 
 import {
@@ -15,8 +15,8 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
-import { WorkspaceManager } from '@principal-ai/alexandria-core-library/github';
-import type { Workspace, WorkspaceMembership } from '@principal-ai/alexandria-core-library/types';
+import type { Collection, CollectionMembership } from '@principal-ai/alexandria-collections';
+import { CollectionManager } from '@/lib/collections/CollectionManager';
 import { LocalStorageFileSystemAdapter } from '@/lib/storage/LocalStorageFileSystemAdapter';
 
 /** Repository info with optional source repository for forks */
@@ -30,32 +30,32 @@ interface RepositoryInfo {
 
 interface UserCollectionsContextValue {
   // State
-  workspaces: Workspace[];
-  memberships: WorkspaceMembership[];
+  collections: Collection[];
+  memberships: CollectionMembership[];
   loading: boolean;
   error: Error | null;
 
-  // Workspace CRUD
-  createWorkspace: (
+  // Collection CRUD
+  createCollection: (
     name: string,
     description?: string,
     icon?: string
-  ) => Promise<Workspace>;
-  updateWorkspace: (
+  ) => Promise<Collection>;
+  updateCollection: (
     id: string,
-    updates: Partial<Omit<Workspace, 'id' | 'createdAt'>>
+    updates: Partial<Omit<Collection, 'id' | 'createdAt'>>
   ) => Promise<void>;
-  deleteWorkspace: (id: string) => Promise<void>;
+  deleteCollection: (id: string) => Promise<void>;
 
   // Membership management
-  addRepository: (workspaceId: string, repositoryId: string) => Promise<void>;
-  removeRepository: (workspaceId: string, repositoryId: string) => Promise<void>;
+  addRepository: (collectionId: string, repositoryId: string) => Promise<void>;
+  removeRepository: (collectionId: string, repositoryId: string) => Promise<void>;
 
   // Utility functions
-  getWorkspaceRepositories: (workspaceId: string) => string[];
-  getWorkspaceRepositoryInfos: (workspaceId: string) => RepositoryInfo[];
-  getWorkspace: (id: string) => Workspace | undefined;
-  isUserWorkspace: (id: string) => boolean;
+  getCollectionRepositories: (collectionId: string) => string[];
+  getCollectionRepositoryInfos: (collectionId: string) => RepositoryInfo[];
+  getCollection: (id: string) => Collection | undefined;
+  isUserCollection: (id: string) => boolean;
   refresh: () => Promise<void>;
 }
 
@@ -63,25 +63,25 @@ const UserCollectionsContext = createContext<UserCollectionsContextValue | undef
 
 // Singleton adapter and manager instances
 let adapter: LocalStorageFileSystemAdapter | null = null;
-let manager: WorkspaceManager | null = null;
+let manager: CollectionManager | null = null;
 
-function getManager(): WorkspaceManager {
+function getManager(): CollectionManager {
   if (!adapter) {
     adapter = new LocalStorageFileSystemAdapter();
   }
   if (!manager) {
-    manager = new WorkspaceManager('/', adapter);
+    manager = new CollectionManager('/', adapter);
   }
   return manager;
 }
 
 export function UserCollectionsProvider({ children }: { children: ReactNode }) {
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [memberships, setMemberships] = useState<WorkspaceMembership[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [memberships, setMemberships] = useState<CollectionMembership[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // Load workspaces and memberships from localStorage
+  // Load collections and memberships from localStorage
   const loadData = useCallback(async () => {
     if (typeof window === 'undefined') {
       setLoading(false);
@@ -92,15 +92,15 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       setError(null);
 
-      const wsManager = getManager();
-      const loadedWorkspaces = await wsManager.getWorkspaces();
-      setWorkspaces(loadedWorkspaces || []);
+      const colManager = getManager();
+      const loadedCollections = await colManager.getCollections();
+      setCollections(loadedCollections || []);
 
-      // Load memberships for all workspaces
-      const allMemberships: WorkspaceMembership[] = [];
-      for (const ws of loadedWorkspaces || []) {
-        const wsMemberships = await wsManager.getWorkspaceMemberships(ws.id);
-        allMemberships.push(...wsMemberships);
+      // Load memberships for all collections
+      const allMemberships: CollectionMembership[] = [];
+      for (const col of loadedCollections || []) {
+        const colMemberships = await colManager.getCollectionMemberships(col.id);
+        allMemberships.push(...colMemberships);
       }
       setMemberships(allMemberships);
     } catch (err) {
@@ -116,52 +116,52 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
     loadData();
   }, [loadData]);
 
-  // Create a new workspace
-  const createWorkspace = useCallback(
-    async (name: string, description?: string, icon?: string): Promise<Workspace> => {
-      const wsManager = getManager();
-      const newWorkspace = await wsManager.createWorkspace({
+  // Create a new collection
+  const createCollection = useCallback(
+    async (name: string, description?: string, icon?: string): Promise<Collection> => {
+      const colManager = getManager();
+      const newCollection = await colManager.createCollection({
         name,
         description,
         icon,
       });
 
       // Update local state
-      setWorkspaces((prev) => [...prev, newWorkspace]);
+      setCollections((prev) => [...prev, newCollection]);
 
-      return newWorkspace;
+      return newCollection;
     },
     []
   );
 
-  // Update a workspace
-  const updateWorkspace = useCallback(
-    async (id: string, updates: Partial<Omit<Workspace, 'id' | 'createdAt'>>): Promise<void> => {
-      const wsManager = getManager();
-      const updatedWorkspace = await wsManager.updateWorkspace(id, updates);
+  // Update a collection
+  const updateCollection = useCallback(
+    async (id: string, updates: Partial<Omit<Collection, 'id' | 'createdAt'>>): Promise<void> => {
+      const colManager = getManager();
+      const updatedCollection = await colManager.updateCollection(id, updates);
 
       // Update local state
-      setWorkspaces((prev) =>
-        prev.map((ws) => (ws.id === id ? updatedWorkspace : ws))
+      setCollections((prev) =>
+        prev.map((col) => (col.id === id ? updatedCollection : col))
       );
     },
     []
   );
 
-  // Delete a workspace
-  const deleteWorkspace = useCallback(async (id: string): Promise<void> => {
-    const wsManager = getManager();
-    await wsManager.deleteWorkspace(id);
+  // Delete a collection
+  const deleteCollection = useCallback(async (id: string): Promise<void> => {
+    const colManager = getManager();
+    await colManager.deleteCollection(id);
 
     // Update local state
-    setWorkspaces((prev) => prev.filter((ws) => ws.id !== id));
-    setMemberships((prev) => prev.filter((m) => m.workspaceId !== id));
+    setCollections((prev) => prev.filter((col) => col.id !== id));
+    setMemberships((prev) => prev.filter((m) => m.collectionId !== id));
   }, []);
 
-  // Add a repository to a workspace
+  // Add a repository to a collection
   const addRepository = useCallback(
-    async (workspaceId: string, repositoryId: string): Promise<void> => {
-      const wsManager = getManager();
+    async (collectionId: string, repositoryId: string): Promise<void> => {
+      const colManager = getManager();
 
       // Fetch repository info to check if it's a fork
       let metadata: Record<string, unknown> | undefined;
@@ -185,12 +185,12 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         // Continue without metadata if fetch fails
       }
 
-      await wsManager.addRepositoryToWorkspace(repositoryId, workspaceId, metadata);
+      await colManager.addRepositoryToCollection(repositoryId, collectionId, metadata);
 
       // Update local state
-      const newMembership: WorkspaceMembership = {
+      const newMembership: CollectionMembership = {
         repositoryId,
-        workspaceId,
+        collectionId,
         addedAt: Date.now(),
         metadata,
       };
@@ -199,37 +199,37 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  // Remove a repository from a workspace
+  // Remove a repository from a collection
   const removeRepository = useCallback(
-    async (workspaceId: string, repositoryId: string): Promise<void> => {
-      const wsManager = getManager();
-      await wsManager.removeRepositoryFromWorkspace(repositoryId, workspaceId);
+    async (collectionId: string, repositoryId: string): Promise<void> => {
+      const colManager = getManager();
+      await colManager.removeRepositoryFromCollection(repositoryId, collectionId);
 
       // Update local state
       setMemberships((prev) =>
         prev.filter(
-          (m) => !(m.workspaceId === workspaceId && m.repositoryId === repositoryId)
+          (m) => !(m.collectionId === collectionId && m.repositoryId === repositoryId)
         )
       );
     },
     []
   );
 
-  // Get all repository IDs in a workspace
-  const getWorkspaceRepositories = useCallback(
-    (workspaceId: string): string[] => {
+  // Get all repository IDs in a collection
+  const getCollectionRepositories = useCallback(
+    (collectionId: string): string[] => {
       return memberships
-        .filter((m) => m.workspaceId === workspaceId)
+        .filter((m) => m.collectionId === collectionId)
         .map((m) => m.repositoryId);
     },
     [memberships]
   );
 
   // Get all repository infos with source repository metadata
-  const getWorkspaceRepositoryInfos = useCallback(
-    (workspaceId: string): RepositoryInfo[] => {
+  const getCollectionRepositoryInfos = useCallback(
+    (collectionId: string): RepositoryInfo[] => {
       return memberships
-        .filter((m) => m.workspaceId === workspaceId)
+        .filter((m) => m.collectionId === collectionId)
         .map((m) => ({
           repositoryId: m.repositoryId,
           sourceRepository: m.metadata?.sourceRepository as { owner: string; name: string } | undefined,
@@ -238,21 +238,21 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
     [memberships]
   );
 
-  // Get a workspace by ID
-  const getWorkspace = useCallback(
-    (id: string): Workspace | undefined => {
-      return workspaces.find((ws) => ws.id === id);
+  // Get a collection by ID
+  const getCollection = useCallback(
+    (id: string): Collection | undefined => {
+      return collections.find((col) => col.id === id);
     },
-    [workspaces]
+    [collections]
   );
 
-  // Check if a workspace ID belongs to user collections
-  // User workspace IDs are UUIDs generated by WorkspaceManager
-  const isUserWorkspace = useCallback(
+  // Check if a collection ID belongs to user collections
+  // User collection IDs are generated by CollectionManager
+  const isUserCollection = useCallback(
     (id: string): boolean => {
-      return workspaces.some((ws) => ws.id === id);
+      return collections.some((col) => col.id === id);
     },
-    [workspaces]
+    [collections]
   );
 
   // Refresh data from localStorage
@@ -263,19 +263,19 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
   return (
     <UserCollectionsContext.Provider
       value={{
-        workspaces,
+        collections,
         memberships,
         loading,
         error,
-        createWorkspace,
-        updateWorkspace,
-        deleteWorkspace,
+        createCollection,
+        updateCollection,
+        deleteCollection,
         addRepository,
         removeRepository,
-        getWorkspaceRepositories,
-        getWorkspaceRepositoryInfos,
-        getWorkspace,
-        isUserWorkspace,
+        getCollectionRepositories,
+        getCollectionRepositoryInfos,
+        getCollection,
+        isUserCollection,
         refresh,
       }}
     >

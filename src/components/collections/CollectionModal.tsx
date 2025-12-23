@@ -19,7 +19,7 @@ import {
   Trash2,
   type LucideIcon,
 } from 'lucide-react';
-import type { Workspace } from '@principal-ai/alexandria-core-library/types';
+import type { Collection } from '@principal-ai/alexandria-collections';
 
 // Available icons for collections
 export const iconOptions: Array<{ name: string; icon: LucideIcon }> = [
@@ -46,7 +46,7 @@ interface CollectionModalProps {
   onClose: () => void;
   onSave: (name: string, description: string, icon: string) => Promise<void>;
   onDelete?: () => Promise<void>;
-  initialData?: Workspace;
+  initialData?: Collection;
   mode: 'create' | 'edit';
 }
 

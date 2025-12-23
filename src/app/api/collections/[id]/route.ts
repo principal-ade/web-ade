@@ -1,34 +1,32 @@
 import { NextResponse } from 'next/server';
 import { unstable_cache } from 'next/cache';
-import {
-  GitHubFileSystemAdapter,
-  WorkspaceManager,
-} from '@principal-ai/alexandria-core-library/github';
+import { GitHubFileSystemAdapter } from '@principal-ai/alexandria-core-library/github';
+import { CollectionManager } from '@/lib/collections/CollectionManager';
 
 async function fetchCollection(id: string) {
   const adapter = new GitHubFileSystemAdapter({
     owner: 'principal-ai',
-    repo: 'curated-collections',
+    repo: 'collections',
     branch: 'main',
     token: process.env.GITHUB_TOKEN,
   });
 
-  await adapter.preload('/workspaces.json');
-  await adapter.preload('/workspace-memberships.json');
+  await adapter.preload('/collections.json');
+  await adapter.preload('/collection-memberships.json');
 
-  const manager = new WorkspaceManager('/', adapter);
-  const workspaces = await manager.getWorkspaces();
+  const manager = new CollectionManager('/', adapter);
+  const collections = await manager.getCollections();
 
-  if (!workspaces) {
+  if (!collections) {
     return { error: 'No collections found', status: 404 };
   }
 
-  const collection = workspaces.find((w) => w.id === id);
+  const collection = collections.find((c) => c.id === id);
   if (!collection) {
     return { error: 'Collection not found', status: 404 };
   }
 
-  const memberships = await manager.getWorkspaceMemberships(id);
+  const memberships = await manager.getCollectionMemberships(id);
   const repositories = memberships.map((m) => m.repositoryId);
 
   return { collection, repositories };
