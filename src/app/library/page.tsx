@@ -8,6 +8,7 @@ import { useUserCollections } from "@/contexts/UserCollectionsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { CollectionModal } from "@/components/collections/CollectionModal";
 import { AddRepositoryModal } from "@/components/collections/AddRepositoryModal";
+import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import dynamic from "next/dynamic";
 import {
   EditableConfigurablePanelLayout,
@@ -307,6 +308,9 @@ function LibraryPageContent({
           />
         )}
       </div>
+
+      {/* Global Command Palette (Cmd+Shift+P) */}
+      <GlobalCommandPalette events={events} />
     </div>
   );
 }
