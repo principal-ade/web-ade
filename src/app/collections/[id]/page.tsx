@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from "react";
 import { PanelProvider, usePanelProvider } from "@/contexts/PanelContext";
 import { useUserCollections } from "@/contexts/UserCollectionsContext";
 import { EditorHeader } from "@/components/EditorHeader";
+import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import { CollectionModal } from "@/components/collections/CollectionModal";
 import { AddRepositoryModal } from "@/components/collections/AddRepositoryModal";
 import dynamic from "next/dynamic";
@@ -304,6 +305,8 @@ function CollectionPageContent({
         )}
       </div>
 
+      {/* Global Command Palette (Cmd+Shift+P) */}
+      <GlobalCommandPalette events={events} />
     </div>
   );
 }

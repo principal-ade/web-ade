@@ -5,6 +5,7 @@ import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { PanelProvider, usePanelProvider } from "@/contexts/PanelContext";
 import { EditorHeader } from "@/components/EditorHeader";
+import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import dynamic from "next/dynamic";
 import {
   EditableConfigurablePanelLayout,
@@ -379,6 +380,8 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
         )}
       </div>
 
+      {/* Global Command Palette (Cmd+Shift+P) */}
+      <GlobalCommandPalette events={events} />
     </div>
   );
 }

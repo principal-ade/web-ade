@@ -1,11 +1,26 @@
 'use client';
 
 import { EditorHeader } from "@/components/EditorHeader";
+import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import { WelcomePanel, type CuratedCollection } from "@/components/WelcomePanel";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import type { CommandPaletteData } from "@/components/GlobalCommandPalette";
 
+// LocalStorage keys for recent items
+const RECENT_REPOS_KEY = 'recent-repos';
+const RECENT_OWNERS_KEY = 'recent-owners';
+
+function getRecentItems(key: string, max: number = 10): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored).slice(0, max) : [];
+  } catch {
+    return [];
+  }
+}
 
 interface RepositoryInfo {
   repositoryId: string;
@@ -31,6 +46,14 @@ function HomePageContent() {
   const router = useRouter();
   const [collections, setCollections] = useState<CuratedCollection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [recentRepos, setRecentRepos] = useState<string[]>([]);
+  const [recentOwners, setRecentOwners] = useState<string[]>([]);
+
+  // Load recent items from localStorage on mount
+  useEffect(() => {
+    setRecentRepos(getRecentItems(RECENT_REPOS_KEY));
+    setRecentOwners(getRecentItems(RECENT_OWNERS_KEY));
+  }, []);
 
   // Fetch curated collections
   useEffect(() => {
@@ -46,6 +69,33 @@ function HomePageContent() {
       .catch(err => console.error('Failed to fetch collections:', err))
       .finally(() => setLoading(false));
   }, []);
+
+  // Build autocomplete data for command palette
+  const autocompleteData: CommandPaletteData = useMemo(() => {
+    // Extract unique repositories from all collections
+    const allRepos = new Set<string>();
+    const allOwners = new Set<string>();
+
+    collections.forEach(collection => {
+      collection.repositories?.forEach(repo => {
+        if (repo.repositoryId) {
+          allRepos.add(repo.repositoryId);
+          const owner = repo.repositoryId.split('/')[0];
+          if (owner) allOwners.add(owner);
+        }
+      });
+    });
+
+    // Merge with recent items (recent first)
+    const repositories = [...new Set([...recentRepos, ...allRepos])];
+    const owners = [...new Set([...recentOwners, ...allOwners])];
+
+    return {
+      collections: collections.map(c => ({ id: c.id, name: c.name })),
+      repositories,
+      owners,
+    };
+  }, [collections, recentRepos, recentOwners]);
 
   const handleCollectionClick = useCallback((collectionId: string) => {
     router.push(`/collections/${collectionId}`);
@@ -77,6 +127,17 @@ function HomePageContent() {
           loading={loading}
         />
       </div>
+
+      {/* Global Command Palette (Cmd+Shift+P) */}
+      <GlobalCommandPalette
+        autocompleteData={autocompleteData}
+        initialSuggestions={[
+          '/repo',
+          '/collection',
+          '/github',
+          '/home',
+        ]}
+      />
     </div>
   );
 }

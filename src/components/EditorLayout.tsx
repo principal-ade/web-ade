@@ -28,6 +28,7 @@ import '@principal-ade/industry-themed-ai-sdk-panel/styles.css';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGemini } from '@/contexts/GeminiContext';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
+import { useNavigationCommands } from '@/hooks/useNavigationCommands';
 import type { Theme } from '@principal-ade/industry-theme';
 
 // Dynamically import the MarkdownPanel with SSR disabled
@@ -300,6 +301,10 @@ function EditorLayoutContent({
 
   // Initialize Agent Command Palette (AI-driven, Cmd+Shift+P to open)
   const { sendMessage } = useGemini();
+
+  // Get navigation commands from shared hook
+  const { quickCommands: navigationCommands, handleExecuteTool: handleNavigationCommand } = useNavigationCommands();
+
   const agentPalette = useAgentCommandPalette({
     events,
     keyboard: { key: 'p', metaKey: true, shiftKey: true, altKey: false },
@@ -311,7 +316,11 @@ function EditorLayoutContent({
       'hide the sidebars',
       'show the AI chat panel',
       'switch to kanban view',
+      '/repo',
+      '/login',
     ],
+    quickCommands: navigationCommands,
+    onExecuteTool: handleNavigationCommand,
   });
 
   // Wire Agent Command Palette to Gemini for natural language processing
