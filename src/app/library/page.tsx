@@ -5,7 +5,6 @@ import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { PanelProvider, usePanelProvider } from "@/contexts/PanelContext";
 import { useUserCollections } from "@/contexts/UserCollectionsContext";
-import { EditorHeader } from "@/components/EditorHeader";
 import { CollectionModal } from "@/components/collections/CollectionModal";
 import { AddRepositoryModal } from "@/components/collections/AddRepositoryModal";
 import dynamic from "next/dynamic";
@@ -15,7 +14,7 @@ import {
   PanelLayout,
 } from "@principal-ade/panel-layouts";
 import '@principal-ade/panel-layouts/styles.css';
-import { ChevronDown, Plus, FolderOpen, Layers } from 'lucide-react';
+import { ChevronDown, Plus, FolderOpen, Layers, Edit2, PanelRightOpen, PanelRightClose } from 'lucide-react';
 import type { Collection } from '@principal-ai/alexandria-collections';
 
 // Dynamically import panels with SSR disabled
@@ -46,17 +45,24 @@ interface CuratedCollection {
 }
 
 interface LibraryPageContentProps {
-  selectedCollection: Collection | CuratedCollection | null;
   isUserCollection: boolean;
   onAddRepository?: () => void;
   onEditCollection?: () => void;
+  // Collection dropdown props
+  allCollections: (Collection | CuratedCollection)[];
+  selectedCollectionId: string | null;
+  onSelectCollection: (id: string) => void;
+  onCreateNew: () => void;
 }
 
 function LibraryPageContent({
-  selectedCollection,
   isUserCollection,
   onAddRepository,
   onEditCollection,
+  allCollections,
+  selectedCollectionId,
+  onSelectCollection,
+  onCreateNew,
 }: LibraryPageContentProps) {
   const { theme } = useTheme();
   const router = useRouter();
@@ -167,18 +173,80 @@ function LibraryPageContent({
 
   return (
     <div className="h-full w-full flex flex-col">
-      <EditorHeader
-        leftCollapsed={true}
-        rightCollapsed={rightCollapsed}
-        onToggleLeft={() => {}}
-        onToggleRight={() => setRightCollapsed(!rightCollapsed)}
-        selectedRepository={previewedRepo}
-        isUserCollection={isUserCollection}
-        collectionName={selectedCollection?.name}
-        onAddRepository={onAddRepository}
-        onEditCollection={onEditCollection}
-        hideLeftToggle={true}
-      />
+      {/* Custom header with collection dropdown */}
+      <header
+        className="h-14 flex items-center justify-between px-4 border-b"
+        style={{
+          background: theme.colors.surface,
+          borderColor: theme.colors.border,
+        }}
+      >
+        {/* Left: Collection Dropdown */}
+        <div className="flex items-center gap-3">
+          <CollectionDropdown
+            collections={allCollections}
+            selectedId={selectedCollectionId}
+            onSelect={onSelectCollection}
+            onCreateNew={onCreateNew}
+            theme={theme}
+          />
+        </div>
+
+        {/* Right: Actions and toggles */}
+        <div className="flex items-center gap-3">
+          {/* User collection action buttons */}
+          {isUserCollection && (
+            <div className="flex items-center gap-2">
+              {onAddRepository && (
+                <button
+                  onClick={onAddRepository}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
+                  style={{
+                    background: theme.colors.primary,
+                    color: '#fff',
+                  }}
+                  title="Add repository to collection"
+                >
+                  <Plus size={16} />
+                  <span className="hidden sm:inline">Add Repo</span>
+                </button>
+              )}
+              {onEditCollection && (
+                <button
+                  onClick={onEditCollection}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
+                  style={{
+                    background: theme.colors.secondary,
+                    color: theme.colors.text,
+                    border: `1px solid ${theme.colors.border}`,
+                  }}
+                  title="Edit collection"
+                >
+                  <Edit2 size={16} />
+                  <span className="hidden sm:inline">Edit</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Right panel toggle */}
+          <button
+            onClick={() => setRightCollapsed(!rightCollapsed)}
+            className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+            style={{
+              background: rightCollapsed ? theme.colors.primary : theme.colors.secondary,
+              color: rightCollapsed ? theme.colors.background : theme.colors.text,
+            }}
+            title={rightCollapsed ? 'Expand right panel' : 'Collapse right panel'}
+          >
+            {rightCollapsed ? (
+              <PanelRightOpen size={16} />
+            ) : (
+              <PanelRightClose size={16} />
+            )}
+          </button>
+        </div>
+      </header>
       <div className="flex-1 overflow-hidden">
         {isMobile ? (
           <ResponsiveConfigurablePanelLayout
@@ -537,28 +605,9 @@ function LibraryPageWrapper() {
       className="h-screen w-screen overflow-hidden"
       style={{ background: theme.colors.background }}
     >
-      {/* Collection Dropdown Header */}
-      <div
-        style={{
-          padding: '12px 16px',
-          borderBottom: `1px solid ${theme.colors.border}`,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-        }}
-      >
-        <CollectionDropdown
-          collections={allCollections}
-          selectedId={selectedCollectionId}
-          onSelect={handleSelectCollection}
-          onCreateNew={() => setCreateModalOpen(true)}
-          theme={theme}
-        />
-      </div>
-
       {/* Main Content */}
       {selectedCollection ? (
-        <div style={{ height: 'calc(100vh - 57px)' }}>
+        <div style={{ height: '100vh' }}>
           <PanelProvider
             key={`${selectedCollectionId}-${repositories.length}`}
             workspace={{
@@ -573,17 +622,20 @@ function LibraryPageWrapper() {
             collectionRepositories={repositories}
           >
             <LibraryPageContent
-              selectedCollection={selectedCollection}
               isUserCollection={isUserCollection}
               onAddRepository={isUserCollection ? () => setAddRepoModalOpen(true) : undefined}
               onEditCollection={isUserCollection ? () => setEditModalOpen(true) : undefined}
+              allCollections={allCollections}
+              selectedCollectionId={selectedCollectionId}
+              onSelectCollection={handleSelectCollection}
+              onCreateNew={() => setCreateModalOpen(true)}
             />
           </PanelProvider>
         </div>
       ) : (
         <div
           style={{
-            height: 'calc(100vh - 57px)',
+            height: '100vh',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
