@@ -194,22 +194,9 @@ function SharedLibraryContent({
           borderColor: theme.colors.border,
         }}
       >
-        {/* Left: Back button + User info */}
+        {/* Left: Org/User info */}
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.push('/library')}
-            className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
-            style={{
-              background: theme.colors.secondary,
-              color: theme.colors.text,
-              border: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            <ArrowLeft size={16} />
-            <span className="hidden sm:inline">Library</span>
-          </button>
-
-          {/* User info */}
+          {/* Org/User info */}
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -357,6 +344,21 @@ function SharedLibraryContent({
               </Link>
               {' to import'}
             </div>
+          )}
+
+          {/* Signed-in user avatar */}
+          {isAuthenticated && user && (
+            <button
+              onClick={() => router.push(`/${user.login}`)}
+              className="flex items-center rounded-full transition-all hover:opacity-80"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={user.avatar_url}
+                alt={user.name || user.login}
+                className="w-8 h-8 rounded-full"
+              />
+            </button>
           )}
         </div>
       </header>

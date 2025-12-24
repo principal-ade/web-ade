@@ -12,6 +12,14 @@ import { getGitHubToken } from '@/lib/auth/cookies';
 
 const REPO_NAME = 'web-ade-collections';
 const COLLECTIONS_FILE = 'collections.json';
+const MEMBERSHIPS_FILE = 'collection-memberships.json';
+
+interface CollectionMembership {
+  repositoryId: string;
+  collectionId: string;
+  addedAt: number;
+  metadata?: Record<string, unknown>;
+}
 
 interface Collection {
   id: string;
@@ -51,8 +59,8 @@ export async function GET(
       );
     }
 
-    // Fetch user info and collections in parallel
-    const [userResponse, collectionsResponse] = await Promise.all([
+    // Fetch user info, collections, and memberships in parallel
+    const [userResponse, collectionsResponse, membershipsResponse] = await Promise.all([
       fetch(`https://api.github.com/users/${username}`, {
         headers: {
           Accept: 'application/vnd.github.v3+json',
@@ -64,6 +72,14 @@ export async function GET(
       }),
       fetch(
         `https://raw.githubusercontent.com/${username}/${REPO_NAME}/main/${COLLECTIONS_FILE}`,
+        {
+          headers: {
+            Accept: 'application/json',
+          },
+        }
+      ),
+      fetch(
+        `https://raw.githubusercontent.com/${username}/${REPO_NAME}/main/${MEMBERSHIPS_FILE}`,
         {
           headers: {
             Accept: 'application/json',
@@ -113,6 +129,41 @@ export async function GET(
         { error: 'Failed to parse collections data' },
         { status: 500 }
       );
+    }
+
+    // Parse memberships (optional - may not exist for new format)
+    let memberships: CollectionMembership[] = [];
+    if (membershipsResponse.ok) {
+      try {
+        memberships = await membershipsResponse.json();
+      } catch {
+        // Ignore parse errors for memberships
+      }
+    }
+
+    // Merge memberships into collections if collections don't have repositories
+    // This handles the old format (separate memberships file)
+    if (collectionsData.collections && memberships.length > 0) {
+      collectionsData.collections = collectionsData.collections.map(col => {
+        // If collection already has repositories array, keep it
+        if (col.repositories && col.repositories.length > 0) {
+          return col;
+        }
+        // Otherwise, merge from memberships
+        const colMemberships = memberships.filter(m => m.collectionId === col.id);
+        return {
+          ...col,
+          repositories: colMemberships.map(m => m.repositoryId),
+        };
+      });
+    }
+
+    // Ensure all collections have repositories array (even if empty)
+    if (collectionsData.collections) {
+      collectionsData.collections = collectionsData.collections.map(col => ({
+        ...col,
+        repositories: col.repositories || [],
+      }));
     }
 
     return NextResponse.json({
