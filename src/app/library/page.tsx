@@ -39,20 +39,12 @@ const GitHubProjectsPanelLoader = dynamic(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as React.ComponentType<any>;
 
-interface CuratedCollection {
-  id: string;
-  name: string;
-  description?: string;
-  icon?: string;
-  theme?: string;
-}
-
 interface LibraryPageContentProps {
   isUserCollection: boolean;
   onAddRepository?: () => void;
   onEditCollection?: () => void;
   // Collection dropdown props
-  allCollections: (Collection | CuratedCollection)[];
+  allCollections: Collection[];
   selectedCollectionId: string | null;
   onSelectCollection: (id: string) => void;
   onCreateNew: () => void;
@@ -407,7 +399,7 @@ function LibraryPageContent({
 }
 
 interface CollectionDropdownProps {
-  collections: (Collection | CuratedCollection)[];
+  collections: Collection[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onCreateNew: () => void;
@@ -423,10 +415,6 @@ function CollectionDropdown({
 }: CollectionDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const selected = collections.find(c => c.id === selectedId);
-
-  // Separate user and curated collections
-  const userCollections = collections.filter(c => c.id.startsWith('col-'));
-  const curatedCollections = collections.filter(c => !c.id.startsWith('col-'));
 
   return (
     <div style={{ position: 'relative' }}>
@@ -508,92 +496,31 @@ function CollectionDropdown({
             </button>
 
             <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-              {/* User Collections */}
-              {userCollections.length > 0 && (
-                <div>
-                  <div
-                    style={{
-                      padding: '8px 12px',
-                      fontSize: `${theme.fontSizes[0]}px`,
-                      color: theme.colors.textSecondary,
-                      fontWeight: theme.fontWeights.semibold,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                    }}
-                  >
-                    Your Collections
-                  </div>
-                  {userCollections.map(collection => (
-                    <button
-                      key={collection.id}
-                      onClick={() => {
-                        onSelect(collection.id);
-                        setIsOpen(false);
-                      }}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '10px 12px',
-                        backgroundColor: collection.id === selectedId ? theme.colors.backgroundTertiary : 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: theme.colors.text,
-                        fontSize: `${theme.fontSizes[1]}px`,
-                        textAlign: 'left',
-                      }}
-                    >
-                      <FolderOpen size={16} style={{ color: theme.colors.textSecondary }} />
-                      <span style={{ flex: 1 }}>{collection.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Curated Collections */}
-              {curatedCollections.length > 0 && (
-                <div>
-                  <div
-                    style={{
-                      padding: '8px 12px',
-                      fontSize: `${theme.fontSizes[0]}px`,
-                      color: theme.colors.textSecondary,
-                      fontWeight: theme.fontWeights.semibold,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      borderTop: userCollections.length > 0 ? `1px solid ${theme.colors.border}` : 'none',
-                    }}
-                  >
-                    Curated
-                  </div>
-                  {curatedCollections.map(collection => (
-                    <button
-                      key={collection.id}
-                      onClick={() => {
-                        onSelect(collection.id);
-                        setIsOpen(false);
-                      }}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '10px 12px',
-                        backgroundColor: collection.id === selectedId ? theme.colors.backgroundTertiary : 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: theme.colors.text,
-                        fontSize: `${theme.fontSizes[1]}px`,
-                        textAlign: 'left',
-                      }}
-                    >
-                      <Layers size={16} style={{ color: theme.colors.primary }} />
-                      <span style={{ flex: 1 }}>{collection.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+              {collections.map(collection => (
+                <button
+                  key={collection.id}
+                  onClick={() => {
+                    onSelect(collection.id);
+                    setIsOpen(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 12px',
+                    backgroundColor: collection.id === selectedId ? theme.colors.backgroundTertiary : 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: theme.colors.text,
+                    fontSize: `${theme.fontSizes[1]}px`,
+                    textAlign: 'left',
+                  }}
+                >
+                  <FolderOpen size={16} style={{ color: theme.colors.textSecondary }} />
+                  <span style={{ flex: 1 }}>{collection.name}</span>
+                </button>
+              ))}
             </div>
           </div>
         </>
@@ -609,9 +536,6 @@ function LibraryPageWrapper() {
   const userCollections = useUserCollections();
   const { user } = useAuth();
 
-  const [curatedCollections, setCuratedCollections] = useState<CuratedCollection[]>([]);
-  const [curatedMemberships, setCuratedMemberships] = useState<Record<string, string[]>>({});
-  const [loading, setLoading] = useState(true);
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(
     searchParams.get('collection')
   );
@@ -623,41 +547,21 @@ function LibraryPageWrapper() {
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
 
-  // Fetch curated collections
-  useEffect(() => {
-    fetch('/api/collections')
-      .then(res => res.json())
-      .then(data => {
-        setCuratedCollections(data.collections || []);
-        // Convert memberships to simple string arrays
-        const memberships: Record<string, string[]> = {};
-        for (const [id, repos] of Object.entries(data.memberships || {})) {
-          memberships[id] = (repos as { repositoryId: string }[]).map(r => r.repositoryId);
-        }
-        setCuratedMemberships(memberships);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Failed to fetch curated collections:', err);
-        setLoading(false);
-      });
-  }, []);
-
-  // All collections combined
+  // All collections (just user collections now)
   const allCollections = useMemo(() => {
-    return [...userCollections.collections, ...curatedCollections];
-  }, [userCollections.collections, curatedCollections]);
+    return userCollections.collections;
+  }, [userCollections.collections]);
 
   // Auto-select first collection if none selected
   useEffect(() => {
-    if (!selectedCollectionId && allCollections.length > 0 && !loading && !userCollections.loading) {
+    if (!selectedCollectionId && allCollections.length > 0 && !userCollections.loading) {
       const firstId = allCollections[0]?.id;
       if (firstId) {
         setSelectedCollectionId(firstId);
         router.replace(`/library?collection=${firstId}`, { scroll: false });
       }
     }
-  }, [selectedCollectionId, allCollections, loading, userCollections.loading, router]);
+  }, [selectedCollectionId, allCollections, userCollections.loading, router]);
 
   // Get selected collection and its repos
   const selectedCollection = useMemo(() => {
@@ -670,11 +574,8 @@ function LibraryPageWrapper() {
 
   const repositories = useMemo(() => {
     if (!selectedCollectionId) return [];
-    if (isUserCollection) {
-      return userCollections.getCollectionRepositories(selectedCollectionId);
-    }
-    return curatedMemberships[selectedCollectionId] || [];
-  }, [selectedCollectionId, isUserCollection, userCollections, curatedMemberships]);
+    return userCollections.getCollectionRepositories(selectedCollectionId);
+  }, [selectedCollectionId, userCollections]);
 
   // Handlers
   const handleSelectCollection = useCallback((id: string) => {
@@ -730,7 +631,7 @@ function LibraryPageWrapper() {
     });
   }, [user?.login]);
 
-  if (loading || userCollections.loading) {
+  if (userCollections.loading) {
     return (
       <div
         className="h-screen w-screen flex items-center justify-center"
