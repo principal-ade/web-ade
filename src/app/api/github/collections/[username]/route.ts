@@ -135,7 +135,11 @@ export async function GET(
     let memberships: CollectionMembership[] = [];
     if (membershipsResponse.ok) {
       try {
-        memberships = await membershipsResponse.json();
+        const membershipsData = await membershipsResponse.json();
+        // Handle both formats: direct array or { memberships: [...] }
+        memberships = Array.isArray(membershipsData)
+          ? membershipsData
+          : (membershipsData.memberships || []);
       } catch {
         // Ignore parse errors for memberships
       }
