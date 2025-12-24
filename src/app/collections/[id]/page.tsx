@@ -80,6 +80,8 @@ interface CollectionPageContentProps {
   collectionName?: string;
   onAddRepository?: () => void;
   onEditCollection?: () => void;
+  // Autocomplete data for command palette
+  allCollections?: Array<{ id: string; name: string }>;
 }
 
 function CollectionPageContent({
@@ -90,6 +92,7 @@ function CollectionPageContent({
   collectionName,
   onAddRepository,
   onEditCollection,
+  allCollections = [],
 }: CollectionPageContentProps) {
   const { theme } = useTheme();
   const router = useRouter();
@@ -306,7 +309,12 @@ function CollectionPageContent({
       </div>
 
       {/* Global Command Palette (Cmd+Shift+P) */}
-      <GlobalCommandPalette events={events} />
+      <GlobalCommandPalette
+        events={events}
+        autocompleteData={{
+          collections: allCollections,
+        }}
+      />
     </div>
   );
 }
@@ -470,6 +478,7 @@ function CollectionPageWrapper({ collectionId }: { collectionId: string }) {
           collectionName={collection.name}
           onAddRepository={() => setAddRepoModalOpen(true)}
           onEditCollection={() => setEditModalOpen(true)}
+          allCollections={userCollections.collections.map(c => ({ id: c.id, name: c.name }))}
         />
       </PanelProvider>
 

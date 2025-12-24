@@ -55,6 +55,8 @@ interface LibraryPageContentProps {
   selectedCollectionId: string | null;
   onSelectCollection: (id: string) => void;
   onCreateNew: () => void;
+  // Action to add a repo to the current collection
+  onAddToCollection?: (repositoryId: string) => Promise<void>;
 }
 
 function LibraryPageContent({
@@ -65,6 +67,7 @@ function LibraryPageContent({
   selectedCollectionId,
   onSelectCollection,
   onCreateNew,
+  onAddToCollection,
 }: LibraryPageContentProps) {
   const { theme } = useTheme();
   const router = useRouter();
@@ -91,6 +94,18 @@ function LibraryPageContent({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Extended actions for panels with addToCollection
+  const panelActions = useMemo(() => {
+    return {
+      ...actions,
+      addToCollection: onAddToCollection
+        ? async (repo: { full_name: string }) => {
+            await onAddToCollection(repo.full_name);
+          }
+        : undefined,
+    };
+  }, [actions, onAddToCollection]);
 
   // Listen for repository events from panels
   useEffect(() => {
@@ -153,7 +168,7 @@ function LibraryPageContent({
         <div className="h-full w-full overflow-hidden">
           <GitHubStarredPanelLoader
             context={context}
-            actions={actions}
+            actions={panelActions}
             events={events}
           />
         </div>
@@ -166,7 +181,7 @@ function LibraryPageContent({
         <div className="h-full w-full overflow-hidden">
           <GitHubProjectsPanelLoader
             context={context}
-            actions={actions}
+            actions={panelActions}
             events={events}
           />
         </div>
@@ -310,7 +325,12 @@ function LibraryPageContent({
       </div>
 
       {/* Global Command Palette (Cmd+Shift+P) */}
-      <GlobalCommandPalette events={events} />
+      <GlobalCommandPalette
+        events={events}
+        autocompleteData={{
+          collections: allCollections.map(c => ({ id: c.id, name: c.name })),
+        }}
+      />
     </div>
   );
 }
@@ -666,6 +686,7 @@ function LibraryPageWrapper() {
               selectedCollectionId={selectedCollectionId}
               onSelectCollection={handleSelectCollection}
               onCreateNew={() => setCreateModalOpen(true)}
+              onAddToCollection={isUserCollection ? handleAddRepository : undefined}
             />
           </PanelProvider>
         </div>
