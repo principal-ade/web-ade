@@ -131,15 +131,12 @@ export async function GET(
       );
     }
 
-    // Parse memberships (optional - may not exist for new format)
+    // Parse memberships (optional - only exists for curated format)
     let memberships: CollectionMembership[] = [];
     if (membershipsResponse.ok) {
       try {
         const membershipsData = await membershipsResponse.json();
-        // Handle both formats: direct array or { memberships: [...] }
-        memberships = Array.isArray(membershipsData)
-          ? membershipsData
-          : (membershipsData.memberships || []);
+        memberships = membershipsData.memberships || [];
       } catch {
         // Ignore parse errors for memberships
       }
