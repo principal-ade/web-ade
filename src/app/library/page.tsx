@@ -52,9 +52,9 @@ interface LibraryPageContentProps {
   onAddToCollection?: (repositoryId: string) => Promise<void>;
   // Action to remove a repo from the current collection
   onRemoveFromCollection?: (repositoryId: string) => Promise<void>;
-  // GitHub sync
-  gitHubSyncEnabled: boolean;
-  gitHubSyncLoading: boolean;
+  // GitHub state
+  gitHubRepoExists: boolean;
+  saving: boolean;
   gitHubRepoUrl: string | null;
   onOpenSyncModal: () => void;
   // Share
@@ -72,8 +72,8 @@ function LibraryPageContent({
   onCreateNew,
   onAddToCollection,
   onRemoveFromCollection,
-  gitHubSyncEnabled,
-  gitHubSyncLoading,
+  gitHubRepoExists,
+  saving,
   gitHubRepoUrl,
   onOpenSyncModal,
   onShare,
@@ -262,8 +262,8 @@ function LibraryPageContent({
             </div>
           )}
 
-          {/* Share Button (only show when sync is enabled) */}
-          {isAuthenticated && gitHubSyncEnabled && (
+          {/* Share Button (only show when repo exists) */}
+          {isAuthenticated && gitHubRepoExists && (
             <button
               onClick={onShare}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
@@ -289,23 +289,25 @@ function LibraryPageContent({
           {isAuthenticated && (
             <button
               onClick={onOpenSyncModal}
-              disabled={gitHubSyncLoading}
+              disabled={saving}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
               style={{
-                background: gitHubSyncEnabled ? '#10b98120' : theme.colors.secondary,
-                color: gitHubSyncEnabled ? '#10b981' : theme.colors.text,
-                border: `1px solid ${gitHubSyncEnabled ? '#10b981' : theme.colors.border}`,
-                opacity: gitHubSyncLoading ? 0.6 : 1,
+                background: gitHubRepoExists ? '#10b98120' : theme.colors.secondary,
+                color: gitHubRepoExists ? '#10b981' : theme.colors.text,
+                border: `1px solid ${gitHubRepoExists ? '#10b981' : theme.colors.border}`,
+                opacity: saving ? 0.6 : 1,
               }}
-              title={gitHubSyncEnabled ? `Synced to ${gitHubRepoUrl || 'GitHub'}` : 'Sync to GitHub'}
+              title={gitHubRepoExists ? `Synced to ${gitHubRepoUrl || 'GitHub'}` : 'Enable GitHub sync'}
             >
-              {gitHubSyncEnabled ? (
+              {saving ? (
+                <Cloud size={16} className="animate-pulse" />
+              ) : gitHubRepoExists ? (
                 <Cloud size={16} />
               ) : (
                 <CloudOff size={16} />
               )}
               <span className="hidden sm:inline">
-                {gitHubSyncLoading ? 'Syncing...' : gitHubSyncEnabled ? 'Synced' : 'Sync'}
+                {saving ? 'Saving...' : gitHubRepoExists ? 'Synced' : 'Sync'}
               </span>
             </button>
           )}
@@ -673,8 +675,8 @@ function LibraryPageWrapper() {
               onCreateNew={() => setCreateModalOpen(true)}
               onAddToCollection={isUserCollection ? handleAddRepository : undefined}
               onRemoveFromCollection={isUserCollection ? handleRemoveRepository : undefined}
-              gitHubSyncEnabled={userCollections.gitHubSyncEnabled}
-              gitHubSyncLoading={userCollections.gitHubSyncLoading}
+              gitHubRepoExists={userCollections.gitHubRepoExists}
+              saving={userCollections.saving}
               gitHubRepoUrl={userCollections.gitHubRepoUrl}
               onOpenSyncModal={() => setSyncModalOpen(true)}
               onShare={handleShare}
@@ -752,14 +754,12 @@ function LibraryPageWrapper() {
         isOpen={syncModalOpen}
         onClose={() => setSyncModalOpen(false)}
         onConfirm={async () => {
-          if (userCollections.gitHubSyncEnabled) {
-            await userCollections.syncToGitHub();
-          } else {
-            await userCollections.enableGitHubSync();
+          if (!userCollections.gitHubRepoExists) {
+            await userCollections.enableGitHub();
           }
         }}
         repoUrl={userCollections.gitHubRepoUrl}
-        isSynced={userCollections.gitHubSyncEnabled}
+        isSynced={userCollections.gitHubRepoExists}
       />
     </div>
   );

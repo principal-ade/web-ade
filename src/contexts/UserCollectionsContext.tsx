@@ -4,8 +4,8 @@
  * UserCollectionsContext
  *
  * Provides state management for user-created collections.
- * Uses CollectionManager with a localStorage adapter.
- * Optionally syncs to GitHub for persistence across devices.
+ * Uses GitHub as the single source of truth - no localStorage caching.
+ * Collections are fetched from GitHub on auth and written directly on changes.
  */
 
 import {
@@ -14,12 +14,9 @@ import {
   useState,
   useCallback,
   useEffect,
-  useRef,
   type ReactNode,
 } from 'react';
 import type { Collection, CollectionMembership } from '@principal-ai/alexandria-collections';
-import { CollectionManager } from '@/lib/collections/CollectionManager';
-import { LocalStorageFileSystemAdapter } from '@/lib/storage/LocalStorageFileSystemAdapter';
 import { useAuth } from './AuthContext';
 
 /** Repository info with optional source repository for forks */
@@ -37,10 +34,10 @@ interface UserCollectionsContextValue {
   memberships: CollectionMembership[];
   loading: boolean;
   error: Error | null;
+  saving: boolean;
 
-  // GitHub sync state
-  gitHubSyncEnabled: boolean;
-  gitHubSyncLoading: boolean;
+  // GitHub state
+  gitHubRepoExists: boolean;
   gitHubRepoUrl: string | null;
 
   // Collection CRUD
@@ -66,26 +63,15 @@ interface UserCollectionsContextValue {
   isUserCollection: (id: string) => boolean;
   refresh: () => Promise<void>;
 
-  // GitHub sync functions
-  checkGitHubSync: () => Promise<void>;
-  enableGitHubSync: () => Promise<void>;
-  syncToGitHub: () => Promise<void>;
+  // GitHub functions
+  enableGitHub: () => Promise<void>;
 }
 
 const UserCollectionsContext = createContext<UserCollectionsContextValue | undefined>(undefined);
 
-// Singleton adapter and manager instances
-let adapter: LocalStorageFileSystemAdapter | null = null;
-let manager: CollectionManager | null = null;
-
-function getManager(): CollectionManager {
-  if (!adapter) {
-    adapter = new LocalStorageFileSystemAdapter();
-  }
-  if (!manager) {
-    manager = new CollectionManager('/', adapter);
-  }
-  return manager;
+/** Generate a unique collection ID */
+function generateCollectionId(): string {
+  return `col-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
 
 export function UserCollectionsProvider({ children }: { children: ReactNode }) {
@@ -93,18 +79,43 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [memberships, setMemberships] = useState<CollectionMembership[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-
-  // GitHub sync state
-  const [gitHubSyncEnabled, setGitHubSyncEnabled] = useState(false);
-  const [gitHubSyncLoading, setGitHubSyncLoading] = useState(false);
+  const [gitHubRepoExists, setGitHubRepoExists] = useState(false);
   const [gitHubRepoUrl, setGitHubRepoUrl] = useState<string | null>(null);
-  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const initialSyncDoneRef = useRef(false);
 
-  // Load collections and memberships from localStorage
-  const loadData = useCallback(async () => {
-    if (typeof window === 'undefined') {
+  // Save collections and memberships to GitHub
+  const saveToGitHub = useCallback(async (
+    newCollections: Collection[],
+    newMemberships: CollectionMembership[]
+  ): Promise<void> => {
+    setSaving(true);
+    try {
+      const response = await fetch('/api/github/collections', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          collections: newCollections,
+          memberships: newMemberships
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save to GitHub');
+      }
+    } finally {
+      setSaving(false);
+    }
+  }, []);
+
+  // Load collections from GitHub
+  const loadFromGitHub = useCallback(async () => {
+    if (!isAuthenticated) {
+      setCollections([]);
+      setMemberships([]);
+      setGitHubRepoExists(false);
+      setGitHubRepoUrl(null);
       setLoading(false);
       return;
     }
@@ -113,77 +124,91 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       setError(null);
 
-      const colManager = getManager();
-      const loadedCollections = await colManager.getCollections();
-      setCollections(loadedCollections || []);
+      const response = await fetch('/api/github/collections');
 
-      // Load memberships for all collections
-      const allMemberships: CollectionMembership[] = [];
-      for (const col of loadedCollections || []) {
-        const colMemberships = await colManager.getCollectionMemberships(col.id);
-        allMemberships.push(...colMemberships);
+      if (!response.ok) {
+        if (response.status === 401) {
+          setCollections([]);
+          setMemberships([]);
+          setGitHubRepoExists(false);
+          setGitHubRepoUrl(null);
+          return;
+        }
+        throw new Error('Failed to load collections from GitHub');
       }
-      setMemberships(allMemberships);
+
+      const data = await response.json();
+      setGitHubRepoExists(data.exists);
+      setGitHubRepoUrl(data.repoUrl || null);
+      setCollections(data.collections || []);
+      setMemberships(data.memberships || []);
     } catch (err) {
-      console.error('Failed to load user collections:', err);
+      console.error('Failed to load collections from GitHub:', err);
       setError(err instanceof Error ? err : new Error('Failed to load collections'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAuthenticated]);
 
-  // Load on mount
+  // Load from GitHub when authenticated
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    loadFromGitHub();
+  }, [loadFromGitHub]);
 
   // Create a new collection
   const createCollection = useCallback(
     async (name: string, description?: string, icon?: string): Promise<Collection> => {
-      const colManager = getManager();
-      const newCollection = await colManager.createCollection({
+      const now = Date.now();
+      const newCollection: Collection = {
+        id: generateCollectionId(),
         name,
         description,
         icon,
-      });
+        createdAt: now,
+        updatedAt: now,
+      };
 
-      // Update local state
-      setCollections((prev) => [...prev, newCollection]);
+      const newCollections = [...collections, newCollection];
+
+      // Save to GitHub first, then update state
+      await saveToGitHub(newCollections, memberships);
+      setCollections(newCollections);
 
       return newCollection;
     },
-    []
+    [collections, memberships, saveToGitHub]
   );
 
   // Update a collection
   const updateCollection = useCallback(
     async (id: string, updates: Partial<Omit<Collection, 'id' | 'createdAt'>>): Promise<void> => {
-      const colManager = getManager();
-      const updatedCollection = await colManager.updateCollection(id, updates);
-
-      // Update local state
-      setCollections((prev) =>
-        prev.map((col) => (col.id === id ? updatedCollection : col))
+      const newCollections = collections.map((col) =>
+        col.id === id
+          ? { ...col, ...updates, updatedAt: Date.now() }
+          : col
       );
+
+      // Save to GitHub first, then update state
+      await saveToGitHub(newCollections, memberships);
+      setCollections(newCollections);
     },
-    []
+    [collections, memberships, saveToGitHub]
   );
 
   // Delete a collection
   const deleteCollection = useCallback(async (id: string): Promise<void> => {
-    const colManager = getManager();
-    await colManager.deleteCollection(id);
+    const newCollections = collections.filter((col) => col.id !== id);
+    const newMemberships = memberships.filter((m) => m.collectionId !== id);
 
-    // Update local state
-    setCollections((prev) => prev.filter((col) => col.id !== id));
-    setMemberships((prev) => prev.filter((m) => m.collectionId !== id));
-  }, []);
+    // Save to GitHub first, then update state
+    await saveToGitHub(newCollections, newMemberships);
+    setCollections(newCollections);
+    setMemberships(newMemberships);
+  }, [collections, memberships, saveToGitHub]);
 
   // Add a repository to a collection
   const addRepository = useCallback(
     async (collectionId: string, repositoryId: string): Promise<void> => {
-      const colManager = getManager();
-
       // Fetch repository info to check if it's a fork
       let metadata: Record<string, unknown> | undefined;
       try {
@@ -191,7 +216,6 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         const response = await fetch(`/api/github/repo/${owner}/${repo}?action=info`);
         if (response.ok) {
           const repoInfo = await response.json();
-          // GitHub API returns fork source as 'parent'
           if (repoInfo.fork && repoInfo.parent) {
             metadata = {
               sourceRepository: {
@@ -203,37 +227,35 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         }
       } catch (err) {
         console.warn('Failed to fetch repository info:', err);
-        // Continue without metadata if fetch fails
       }
 
-      await colManager.addRepositoryToCollection(repositoryId, collectionId, metadata);
-
-      // Update local state
       const newMembership: CollectionMembership = {
         repositoryId,
         collectionId,
         addedAt: Date.now(),
         metadata,
       };
-      setMemberships((prev) => [...prev, newMembership]);
+      const newMemberships = [...memberships, newMembership];
+
+      // Save to GitHub first, then update state
+      await saveToGitHub(collections, newMemberships);
+      setMemberships(newMemberships);
     },
-    []
+    [collections, memberships, saveToGitHub]
   );
 
   // Remove a repository from a collection
   const removeRepository = useCallback(
     async (collectionId: string, repositoryId: string): Promise<void> => {
-      const colManager = getManager();
-      await colManager.removeRepositoryFromCollection(repositoryId, collectionId);
-
-      // Update local state
-      setMemberships((prev) =>
-        prev.filter(
-          (m) => !(m.collectionId === collectionId && m.repositoryId === repositoryId)
-        )
+      const newMemberships = memberships.filter(
+        (m) => !(m.collectionId === collectionId && m.repositoryId === repositoryId)
       );
+
+      // Save to GitHub first, then update state
+      await saveToGitHub(collections, newMemberships);
+      setMemberships(newMemberships);
     },
-    []
+    [collections, memberships, saveToGitHub]
   );
 
   // Get all repository IDs in a collection
@@ -268,7 +290,6 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
   );
 
   // Check if a collection ID belongs to user collections
-  // User collection IDs are generated by CollectionManager
   const isUserCollection = useCallback(
     (id: string): boolean => {
       return collections.some((col) => col.id === id);
@@ -276,67 +297,19 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
     [collections]
   );
 
-  // Refresh data from localStorage
+  // Refresh data from GitHub
   const refresh = useCallback(async (): Promise<void> => {
-    await loadData();
-  }, [loadData]);
+    await loadFromGitHub();
+  }, [loadFromGitHub]);
 
-  // Check if GitHub sync is enabled (repo exists)
-  const checkGitHubSync = useCallback(async (): Promise<void> => {
+  // Enable GitHub (create repo if it doesn't exist)
+  const enableGitHub = useCallback(async (): Promise<void> => {
     if (!isAuthenticated) {
-      setGitHubSyncEnabled(false);
-      setGitHubRepoUrl(null);
-      return;
+      throw new Error('Must be authenticated to enable GitHub');
     }
 
+    setSaving(true);
     try {
-      setGitHubSyncLoading(true);
-      const response = await fetch('/api/github/collections');
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          setGitHubSyncEnabled(false);
-          setGitHubRepoUrl(null);
-          return;
-        }
-        throw new Error('Failed to check sync status');
-      }
-
-      const data = await response.json();
-      setGitHubSyncEnabled(data.exists);
-      setGitHubRepoUrl(data.repoUrl || null);
-
-      // If sync is enabled and we haven't done initial sync yet, load from GitHub
-      if (data.exists && !initialSyncDoneRef.current) {
-        initialSyncDoneRef.current = true;
-        const ghCollections: Collection[] = data.collections || [];
-        const ghMemberships: CollectionMembership[] = data.memberships || [];
-
-        if (ghCollections.length > 0) {
-          // Import collections from GitHub into local storage (preserving original IDs)
-          const colManager = getManager();
-          await colManager.importData(ghCollections, ghMemberships);
-
-          // Reload local data
-          await loadData();
-        }
-      }
-    } catch (err) {
-      console.error('Failed to check GitHub sync:', err);
-    } finally {
-      setGitHubSyncLoading(false);
-    }
-  }, [isAuthenticated, loadData]);
-
-  // Enable GitHub sync (create repo and save current collections)
-  const enableGitHubSync = useCallback(async (): Promise<void> => {
-    if (!isAuthenticated) {
-      throw new Error('Must be authenticated to enable GitHub sync');
-    }
-
-    try {
-      setGitHubSyncLoading(true);
-
       const response = await fetch('/api/github/collections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -345,73 +318,16 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to enable sync');
+        throw new Error(errorData.error || 'Failed to create GitHub repo');
       }
 
       const data = await response.json();
-      setGitHubSyncEnabled(true);
+      setGitHubRepoExists(true);
       setGitHubRepoUrl(data.repoUrl || null);
-      initialSyncDoneRef.current = true;
     } finally {
-      setGitHubSyncLoading(false);
+      setSaving(false);
     }
   }, [isAuthenticated, collections, memberships]);
-
-  // Sync current collections to GitHub
-  const syncToGitHub = useCallback(async (): Promise<void> => {
-    if (!gitHubSyncEnabled || !isAuthenticated) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/github/collections', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ collections, memberships }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Failed to sync to GitHub:', errorData.error);
-      }
-    } catch (err) {
-      console.error('Failed to sync to GitHub:', err);
-    }
-  }, [gitHubSyncEnabled, isAuthenticated, collections, memberships]);
-
-  // Auto-sync to GitHub when collections/memberships change (debounced)
-  useEffect(() => {
-    if (!gitHubSyncEnabled || !initialSyncDoneRef.current) {
-      return;
-    }
-
-    // Clear existing timeout
-    if (syncTimeoutRef.current) {
-      clearTimeout(syncTimeoutRef.current);
-    }
-
-    // Debounce sync by 2 seconds
-    syncTimeoutRef.current = setTimeout(() => {
-      syncToGitHub();
-    }, 2000);
-
-    return () => {
-      if (syncTimeoutRef.current) {
-        clearTimeout(syncTimeoutRef.current);
-      }
-    };
-  }, [gitHubSyncEnabled, collections, memberships, syncToGitHub]);
-
-  // Check GitHub sync status when authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      checkGitHubSync();
-    } else {
-      setGitHubSyncEnabled(false);
-      setGitHubRepoUrl(null);
-      initialSyncDoneRef.current = false;
-    }
-  }, [isAuthenticated, checkGitHubSync]);
 
   return (
     <UserCollectionsContext.Provider
@@ -420,8 +336,8 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         memberships,
         loading,
         error,
-        gitHubSyncEnabled,
-        gitHubSyncLoading,
+        saving,
+        gitHubRepoExists,
         gitHubRepoUrl,
         createCollection,
         updateCollection,
@@ -433,9 +349,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         getCollection,
         isUserCollection,
         refresh,
-        checkGitHubSync,
-        enableGitHubSync,
-        syncToGitHub,
+        enableGitHub,
       }}
     >
       {children}

@@ -28,6 +28,12 @@ export function GitHubSyncModal({
   if (!isOpen) return null;
 
   const handleConfirm = async () => {
+    // If already synced, nothing to do - just close
+    if (isSynced) {
+      onClose();
+      return;
+    }
+
     setSyncState('syncing');
     setError(null);
 
@@ -40,7 +46,7 @@ export function GitHubSyncModal({
         setSyncState('idle');
       }, 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sync collections');
+      setError(err instanceof Error ? err.message : 'Failed to enable GitHub sync');
       setSyncState('error');
     }
   };
@@ -244,7 +250,7 @@ export function GitHubSyncModal({
               </div>
             </div>
 
-            {/* What happens */}
+            {/* What happens - only show for non-synced users */}
             {!isSynced && (
               <div style={{ marginBottom: '20px' }}>
                 <p
@@ -267,10 +273,26 @@ export function GitHubSyncModal({
                   }}
                 >
                   <li>A <strong style={{ color: theme.colors.text }}>public</strong> repository will be created in your GitHub account</li>
-                  <li>Your collections will be saved as a JSON file</li>
-                  <li>Collections will sync automatically when you make changes</li>
+                  <li>Your collections will be saved as JSON files</li>
+                  <li>Changes are saved immediately to GitHub</li>
                   <li>Your collections will load automatically when you log in</li>
                 </ul>
+              </div>
+            )}
+
+            {/* Already synced info */}
+            {isSynced && (
+              <div style={{ marginBottom: '20px' }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: `${theme.fontSizes[1]}px`,
+                    color: theme.colors.textSecondary,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Your collections are automatically saved to GitHub whenever you make changes. No manual sync required.
+                </p>
               </div>
             )}
 
@@ -345,12 +367,12 @@ export function GitHubSyncModal({
                 {syncState === 'syncing' ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    Syncing...
+                    Enabling...
                   </>
                 ) : isSynced ? (
                   <>
                     <Check size={16} />
-                    Sync Now
+                    Done
                   </>
                 ) : (
                   <>
