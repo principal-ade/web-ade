@@ -2179,6 +2179,10 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   useEffect(() => {
     if (collectionRepositories && collectionRepositories.length > 0) {
       fetchCollectionRepoDetails(collectionRepositories);
+    } else if (collectionRepositories && collectionRepositories.length === 0) {
+      // Clear the slice when collection is empty
+      setCollectionRepoDetails([]);
+      setCollectionRepoDetailsLoading(false);
     }
   }, [collectionRepositories, fetchCollectionRepoDetails]);
 
