@@ -633,15 +633,15 @@ export function EditorHeader({
                     <Home className="w-4 h-4" />
                     Home
                   </Link>
-                  {/* Collections */}
+                  {/* Library */}
                   <Link
-                    href="/#collections"
+                    href="/library"
                     className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
                     style={{ color: theme.colors.text }}
                     onClick={() => setUserMenuOpen(false)}
                   >
                     <FolderOpen className="w-4 h-4" />
-                    Collections
+                    Library
                   </Link>
                   <div
                     className="my-1 h-px"
