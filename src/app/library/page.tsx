@@ -17,7 +17,8 @@ import {
   PanelLayout,
 } from "@principal-ade/panel-layouts";
 import '@principal-ade/panel-layouts/styles.css';
-import { ChevronDown, Plus, FolderOpen, Layers, Edit2, PanelRightOpen, PanelRightClose, User, Cloud, CloudOff, Share2, Check } from 'lucide-react';
+import { ChevronDown, Plus, FolderOpen, Layers, Edit2, PanelRightOpen, PanelRightClose, Cloud, CloudOff, Share2, Check } from 'lucide-react';
+import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import type { Collection } from '@principal-ai/alexandria-collections';
 
 // Dynamically import panels with SSR disabled
@@ -82,7 +83,7 @@ function LibraryPageContent({
   const { theme } = useTheme();
   const router = useRouter();
   const { context, actions, events } = usePanelProvider();
-  const { user, isAuthenticated, isLoading, login } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
   const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
   const [rightCollapsed, setRightCollapsed] = useState(false);
@@ -329,36 +330,8 @@ function LibraryPageContent({
             )}
           </button>
 
-          {/* Login / User */}
-          {isLoading ? (
-            <div className="text-sm" style={{ color: theme.colors.textMuted }}>
-              Loading...
-            </div>
-          ) : isAuthenticated && user ? (
-            <button
-              onClick={() => router.push(`/${user.login}`)}
-              className="flex items-center rounded-full transition-all hover:opacity-80"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={user.avatar_url}
-                alt={user.name || user.login}
-                className="w-8 h-8 rounded-full"
-              />
-            </button>
-          ) : (
-            <button
-              onClick={() => login()}
-              className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
-              style={{
-                background: theme.colors.primary,
-                color: theme.colors.background,
-              }}
-              title="Login"
-            >
-              <User size={16} />
-            </button>
-          )}
+          {/* User Avatar Menu */}
+          <UserAvatarMenu />
         </div>
       </header>
       <div className="flex-1 overflow-hidden">

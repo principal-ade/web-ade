@@ -2,7 +2,8 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, Wifi, WifiOff, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, User, Github, Download, Building2, Home, FolderOpen, Plus, Edit2, Palette, GitCommit, ArrowLeftRight } from 'lucide-react';
+import { Wifi, WifiOff, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, Download, Plus, Edit2, Palette, GitCommit, ArrowLeftRight, Building2 } from 'lucide-react';
+import { UserAvatarMenu } from './UserAvatarMenu';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -51,13 +52,11 @@ export function EditorHeader({
 }: EditorHeaderProps = {}) {
   const { theme } = useTheme();
   const { cycleTheme, currentThemeName } = useGlobalTheme();
-  const { user, isAuthenticated, isLoading, login, logout } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const pathname = usePathname();
   const [repositoryName, setRepositoryName] = useState<{ owner: string; repo: string } | null>(null);
   const [ownerOnly, setOwnerOnly] = useState<string | null>(null);
   const [collectionId, setCollectionId] = useState<string | null>(null);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
   const [orgSwitcherOpen, setOrgSwitcherOpen] = useState(false);
   const orgSwitcherRef = useRef<HTMLDivElement>(null);
   const [organizations, setOrganizations] = useState<Array<{ id: number; login: string; avatar_url: string; description: string | null }>>([]);
@@ -92,20 +91,6 @@ export function EditorHeader({
       }
     }
   }, [pathname]);
-
-  // Close user menu when clicking outside
-  useEffect(() => {
-    if (!userMenuOpen) return;
-
-    function handleClickOutside(event: MouseEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setUserMenuOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [userMenuOpen]);
 
   // Close org switcher when clicking outside
   useEffect(() => {
@@ -576,167 +561,26 @@ export function EditorHeader({
           </button>
         )}
 
-        {isLoading ? (
-          <div className="text-sm" style={{ color: theme.colors.textMuted }}>
-            Loading...
-          </div>
-        ) : isAuthenticated && user ? (
-          <>
-            {/* Global Presence Connection Indicator */}
-            <div
-              className="flex items-center justify-center w-8 h-8 rounded-md"
-              style={{
-                background: connected ? theme.colors.success + '20' : theme.colors.error + '20',
-                color: connected ? theme.colors.success : theme.colors.error,
-              }}
-              title={connected ? 'Connected to server' : 'Disconnected from server'}
-            >
-              {connected ? (
-                <Wifi className="w-3 h-3" />
-              ) : (
-                <WifiOff className="w-3 h-3" />
-              )}
-            </div>
-
-            {/* User Menu Dropdown */}
-            <div className="relative" ref={userMenuRef}>
-              <button
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center rounded-full transition-all hover:opacity-80"
-              >
-                {user.avatar_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={user.avatar_url}
-                    alt={user.name || user.login}
-                    className="w-8 h-8 rounded-full"
-                  />
-                )}
-              </button>
-
-              {/* Dropdown Menu */}
-              {userMenuOpen && (
-                <div
-                  className="absolute right-0 top-full mt-1 py-1 rounded-md shadow-lg border min-w-[160px] z-50"
-                  style={{
-                    background: theme.colors.background,
-                    borderColor: theme.colors.border,
-                  }}
-                >
-                  {/* Home */}
-                  <Link
-                    href="/"
-                    className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
-                    style={{ color: theme.colors.text }}
-                    onClick={() => setUserMenuOpen(false)}
-                  >
-                    <Home className="w-4 h-4" />
-                    Home
-                  </Link>
-                  {/* Library */}
-                  <Link
-                    href="/library"
-                    className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
-                    style={{ color: theme.colors.text }}
-                    onClick={() => setUserMenuOpen(false)}
-                  >
-                    <FolderOpen className="w-4 h-4" />
-                    Library
-                  </Link>
-                  <div
-                    className="my-1 h-px"
-                    style={{ background: theme.colors.border }}
-                  />
-                  {/* Your Repositories */}
-                  <Link
-                    href={`/${user.login}`}
-                    className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
-                    style={{ color: theme.colors.text }}
-                    onClick={() => setUserMenuOpen(false)}
-                  >
-                    <User className="w-4 h-4" />
-                    Your Repositories
-                  </Link>
-                  <a
-                    href={`https://github.com/${user.login}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
-                    style={{ color: theme.colors.text }}
-                    onClick={() => setUserMenuOpen(false)}
-                  >
-                    <Github className="w-4 h-4" />
-                    Open in GitHub
-                  </a>
-
-                  {/* Organizations Section */}
-                  {organizations.length > 0 && (
-                    <>
-                      <div
-                        className="my-1 h-px"
-                        style={{ background: theme.colors.border }}
-                      />
-                      <div
-                        className="px-3 py-1.5 text-xs font-medium"
-                        style={{ color: theme.colors.textMuted }}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <Building2 className="w-3 h-3" />
-                          Organizations
-                        </div>
-                      </div>
-                      {organizations.map((org) => (
-                        <Link
-                          key={org.id}
-                          href={`/${org.login}`}
-                          className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
-                          style={{ color: theme.colors.text }}
-                          onClick={() => setUserMenuOpen(false)}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={org.avatar_url}
-                            alt={org.login}
-                            className="w-4 h-4 rounded"
-                          />
-                          {org.login}
-                        </Link>
-                      ))}
-                    </>
-                  )}
-
-                  <div
-                    className="my-1 h-px"
-                    style={{ background: theme.colors.border }}
-                  />
-                  <button
-                    onClick={() => {
-                      setUserMenuOpen(false);
-                      logout();
-                    }}
-                    className="flex items-center gap-2 px-3 py-2 text-sm w-full transition-colors hover:opacity-80"
-                    style={{ color: theme.colors.error }}
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Logout
-                  </button>
-                </div>
-              )}
-            </div>
-          </>
-        ) : (
-          <button
-            onClick={() => login()}
-            className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+        {/* Global Presence Connection Indicator - only show when authenticated */}
+        {isAuthenticated && user && (
+          <div
+            className="flex items-center justify-center w-8 h-8 rounded-md"
             style={{
-              background: theme.colors.primary,
-              color: theme.colors.background,
+              background: connected ? theme.colors.success + '20' : theme.colors.error + '20',
+              color: connected ? theme.colors.success : theme.colors.error,
             }}
-            title="Login"
+            title={connected ? 'Connected to server' : 'Disconnected from server'}
           >
-            <User className="w-4 h-4" />
-          </button>
+            {connected ? (
+              <Wifi className="w-3 h-3" />
+            ) : (
+              <WifiOff className="w-3 h-3" />
+            )}
+          </div>
         )}
+
+        {/* User Avatar Menu */}
+        <UserAvatarMenu />
       </div>
     </header>
   );
