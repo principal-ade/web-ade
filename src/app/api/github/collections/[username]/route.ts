@@ -1,11 +1,14 @@
 /**
  * GET /api/github/collections/[username]
- *
  * Fetches a user's public collections from their web-ade-collections repo.
  * No authentication required since the repo is public.
+ *
+ * PUT /api/github/collections/[username]
+ * Updates a user/org's collections. Requires write access to the repo.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getGitHubToken } from '@/lib/auth/cookies';
 
 const REPO_NAME = 'web-ade-collections';
 const COLLECTIONS_FILE = 'collections.json';
@@ -128,6 +131,118 @@ export async function GET(
     console.error('GitHub collections fetch error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch collections' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PUT /api/github/collections/[username]
+ *
+ * Updates collections for a specific user/org.
+ * Requires the authenticated user to have write access to the repo.
+ */
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ username: string }> }
+) {
+  try {
+    const { username } = await params;
+    const token = await getGitHubToken();
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      );
+    }
+
+    if (!username) {
+      return NextResponse.json(
+        { error: 'Username is required' },
+        { status: 400 }
+      );
+    }
+
+    const body = await request.json();
+    const collections: Collection[] = body.collections || [];
+
+    // Get current file SHA (needed for update)
+    const fileResponse = await fetch(
+      `https://api.github.com/repos/${username}/${REPO_NAME}/contents/${COLLECTIONS_FILE}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github.v3+json',
+        },
+      }
+    );
+
+    let sha: string | undefined;
+    if (fileResponse.ok) {
+      const fileData = await fileResponse.json();
+      sha = fileData.sha;
+    } else if (fileResponse.status !== 404) {
+      return NextResponse.json(
+        { error: 'Failed to access collections file' },
+        { status: fileResponse.status }
+      );
+    }
+
+    // Prepare collections data
+    const collectionsData: CollectionsData = {
+      version: 1,
+      collections,
+      updatedAt: Date.now(),
+    };
+
+    const content = Buffer.from(JSON.stringify(collectionsData, null, 2)).toString('base64');
+
+    // Update/create the file
+    const updateBody: Record<string, unknown> = {
+      message: `Update collections - ${new Date().toISOString()}`,
+      content,
+    };
+
+    if (sha) {
+      updateBody.sha = sha;
+    }
+
+    const updateResponse = await fetch(
+      `https://api.github.com/repos/${username}/${REPO_NAME}/contents/${COLLECTIONS_FILE}`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateBody),
+      }
+    );
+
+    if (!updateResponse.ok) {
+      const errorData = await updateResponse.json();
+
+      // Check for permission error
+      if (updateResponse.status === 403 || updateResponse.status === 404) {
+        return NextResponse.json(
+          { error: 'You do not have permission to edit this collection' },
+          { status: 403 }
+        );
+      }
+
+      return NextResponse.json(
+        { error: errorData.message || 'Failed to update collections' },
+        { status: updateResponse.status }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('GitHub collections PUT error:', error);
+    return NextResponse.json(
+      { error: 'Failed to update collections' },
       { status: 500 }
     );
   }

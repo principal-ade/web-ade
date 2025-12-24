@@ -6,7 +6,7 @@ import { CollectionManager } from '@/lib/collections/CollectionManager';
 async function fetchCollections() {
   const adapter = new GitHubFileSystemAdapter({
     owner: 'principal-ai',
-    repo: 'collections',
+    repo: 'web-ade-collections',
     branch: 'main',
     token: process.env.GITHUB_TOKEN,
   });

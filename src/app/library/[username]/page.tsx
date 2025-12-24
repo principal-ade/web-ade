@@ -23,7 +23,12 @@ import {
   Check,
   Loader2,
   AlertCircle,
+  Plus,
+  Edit2,
+  FolderOpen,
 } from 'lucide-react';
+import { CollectionModal } from "@/components/collections/CollectionModal";
+import { AddRepositoryModal } from "@/components/collections/AddRepositoryModal";
 
 // Dynamically import panels with SSR disabled
 const WorkspaceCollectionPanelLoader = dynamic(
@@ -69,6 +74,12 @@ interface SharedLibraryContentProps {
   onImportCollection: (collection: SharedCollection) => Promise<void>;
   importingCollectionId: string | null;
   importedCollectionIds: Set<string>;
+  // Edit mode props
+  canEdit: boolean;
+  onAddRepository?: () => void;
+  onEditCollection?: () => void;
+  onCreateCollection?: () => void;
+  onRemoveRepository?: (repositoryId: string) => Promise<void>;
 }
 
 function SharedLibraryContent({
@@ -79,6 +90,11 @@ function SharedLibraryContent({
   onImportCollection,
   importingCollectionId,
   importedCollectionIds,
+  canEdit,
+  onAddRepository,
+  onEditCollection,
+  onCreateCollection,
+  onRemoveRepository,
 }: SharedLibraryContentProps) {
   const { theme } = useTheme();
   const router = useRouter();
@@ -153,6 +169,11 @@ function SharedLibraryContent({
                   repository.name
                 );
               },
+              removeRepositoryFromWorkspace: canEdit && onRemoveRepository
+                ? async (repoKey: string) => {
+                    await onRemoveRepository(repoKey);
+                  }
+                : undefined,
             }}
             events={events}
             selectedRepository={previewedRepo}
@@ -234,17 +255,53 @@ function SharedLibraryContent({
           </div>
         </div>
 
-        {/* Right: Collection dropdown + Import button */}
+        {/* Right: Edit buttons, Collection dropdown + Import button */}
         <div className="flex items-center gap-3">
+          {/* Edit buttons (only when canEdit) */}
+          {canEdit && (
+            <div className="flex items-center gap-2">
+              {onAddRepository && (
+                <button
+                  onClick={onAddRepository}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
+                  style={{
+                    background: theme.colors.primary,
+                    color: '#fff',
+                  }}
+                  title="Add repository to collection"
+                >
+                  <Plus size={16} />
+                  <span className="hidden sm:inline">Add Repo</span>
+                </button>
+              )}
+              {onEditCollection && (
+                <button
+                  onClick={onEditCollection}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
+                  style={{
+                    background: theme.colors.secondary,
+                    color: theme.colors.text,
+                    border: `1px solid ${theme.colors.border}`,
+                  }}
+                  title="Edit collection"
+                >
+                  <Edit2 size={16} />
+                  <span className="hidden sm:inline">Edit</span>
+                </button>
+              )}
+            </div>
+          )}
+
           <SharedCollectionDropdown
             collections={collections}
             selectedId={selectedCollectionId}
             onSelect={onSelectCollection}
+            onCreateNew={canEdit ? onCreateCollection : undefined}
             theme={theme}
           />
 
-          {/* Import button (only for authenticated users viewing someone else's collection) */}
-          {isAuthenticated && selectedCollection && user?.login !== userData.user.login && (
+          {/* Import button (only for authenticated users viewing someone else's collection without edit access) */}
+          {isAuthenticated && selectedCollection && user?.login !== userData.user.login && !canEdit && (
             <button
               onClick={() => onImportCollection(selectedCollection)}
               disabled={importingCollectionId === selectedCollection.id || importedCollectionIds.has(selectedCollection.id)}
@@ -347,6 +404,7 @@ interface SharedCollectionDropdownProps {
   collections: SharedCollection[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onCreateNew?: () => void;
   theme: ReturnType<typeof useTheme>['theme'];
 }
 
@@ -354,6 +412,7 @@ function SharedCollectionDropdown({
   collections,
   selectedId,
   onSelect,
+  onCreateNew,
   theme,
 }: SharedCollectionDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -413,6 +472,33 @@ function SharedCollectionDropdown({
               overflow: 'hidden',
             }}
           >
+            {/* Create New (only when onCreateNew is provided) */}
+            {onCreateNew && (
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  onCreateNew();
+                }}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 12px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  borderBottom: `1px solid ${theme.colors.border}`,
+                  cursor: 'pointer',
+                  color: theme.colors.primary,
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  fontWeight: theme.fontWeights.medium,
+                }}
+              >
+                <Plus size={16} />
+                Create New Collection
+              </button>
+            )}
+
             <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
               {collections.map(collection => (
                 <button
@@ -435,7 +521,7 @@ function SharedCollectionDropdown({
                     textAlign: 'left',
                   }}
                 >
-                  <Layers size={16} style={{ color: theme.colors.primary }} />
+                  <FolderOpen size={16} style={{ color: theme.colors.textSecondary }} />
                   <div style={{ flex: 1 }}>
                     <div>{collection.name}</div>
                     {collection.description && (
@@ -476,6 +562,7 @@ function SharedLibraryWrapper() {
   const params = useParams();
   const username = params.username as string;
   const userCollections = useUserCollections();
+  const { isAuthenticated } = useAuth();
 
   const [libraryData, setLibraryData] = useState<SharedLibraryData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -483,6 +570,12 @@ function SharedLibraryWrapper() {
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
   const [importingCollectionId, setImportingCollectionId] = useState<string | null>(null);
   const [importedCollectionIds, setImportedCollectionIds] = useState<Set<string>>(new Set());
+
+  // Edit mode state
+  const [canEdit, setCanEdit] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [addRepoModalOpen, setAddRepoModalOpen] = useState(false);
 
   // Fetch user's public collections
   useEffect(() => {
@@ -513,6 +606,23 @@ function SharedLibraryWrapper() {
         setLoading(false);
       });
   }, [username]);
+
+  // Check permissions when authenticated
+  useEffect(() => {
+    if (!username || !isAuthenticated) {
+      setCanEdit(false);
+      return;
+    }
+
+    fetch(`/api/github/collections/${username}/permissions`)
+      .then(res => res.json())
+      .then(data => {
+        setCanEdit(data.canEdit === true);
+      })
+      .catch(() => {
+        setCanEdit(false);
+      });
+  }, [username, isAuthenticated]);
 
   // Get collections array
   const collections = useMemo(() => {
@@ -558,6 +668,109 @@ function SharedLibraryWrapper() {
       setImportingCollectionId(null);
     }
   }, [username, userCollections]);
+
+  // Save collections to GitHub
+  const saveCollectionsToGitHub = useCallback(async (updatedCollections: SharedCollection[]) => {
+    const response = await fetch(`/api/github/collections/${username}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ collections: updatedCollections }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Failed to save collections');
+    }
+
+    // Update local state
+    setLibraryData(prev => prev ? {
+      ...prev,
+      collections: {
+        version: 1,
+        collections: updatedCollections,
+        updatedAt: Date.now(),
+      },
+    } : null);
+  }, [username]);
+
+  // Handle create collection
+  const handleCreateCollection = useCallback(async (name: string, description: string, icon: string) => {
+    const newCollection: SharedCollection = {
+      id: `col-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name,
+      description,
+      icon,
+      repositories: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    const updatedCollections = [...collections, newCollection];
+    await saveCollectionsToGitHub(updatedCollections);
+    setSelectedCollectionId(newCollection.id);
+  }, [collections, saveCollectionsToGitHub]);
+
+  // Handle update collection
+  const handleUpdateCollection = useCallback(async (name: string, description: string, icon: string) => {
+    if (!selectedCollectionId) return;
+
+    const updatedCollections = collections.map(col =>
+      col.id === selectedCollectionId
+        ? { ...col, name, description, icon, updatedAt: Date.now() }
+        : col
+    );
+
+    await saveCollectionsToGitHub(updatedCollections);
+  }, [collections, selectedCollectionId, saveCollectionsToGitHub]);
+
+  // Handle delete collection
+  const handleDeleteCollection = useCallback(async () => {
+    if (!selectedCollectionId) return;
+
+    const updatedCollections = collections.filter(col => col.id !== selectedCollectionId);
+    await saveCollectionsToGitHub(updatedCollections);
+
+    // Select first remaining collection
+    if (updatedCollections.length > 0) {
+      setSelectedCollectionId(updatedCollections[0]!.id);
+    } else {
+      setSelectedCollectionId(null);
+    }
+  }, [collections, selectedCollectionId, saveCollectionsToGitHub]);
+
+  // Handle add repository
+  const handleAddRepository = useCallback(async (repositoryId: string) => {
+    if (!selectedCollectionId) return;
+
+    const updatedCollections = collections.map(col =>
+      col.id === selectedCollectionId
+        ? {
+            ...col,
+            repositories: [...col.repositories, repositoryId],
+            updatedAt: Date.now(),
+          }
+        : col
+    );
+
+    await saveCollectionsToGitHub(updatedCollections);
+  }, [collections, selectedCollectionId, saveCollectionsToGitHub]);
+
+  // Handle remove repository
+  const handleRemoveRepository = useCallback(async (repositoryId: string) => {
+    if (!selectedCollectionId) return;
+
+    const updatedCollections = collections.map(col =>
+      col.id === selectedCollectionId
+        ? {
+            ...col,
+            repositories: col.repositories.filter(r => r !== repositoryId),
+            updatedAt: Date.now(),
+          }
+        : col
+    );
+
+    await saveCollectionsToGitHub(updatedCollections);
+  }, [collections, selectedCollectionId, saveCollectionsToGitHub]);
 
   // Loading state
   if (loading) {
@@ -752,9 +965,54 @@ function SharedLibraryWrapper() {
             onImportCollection={handleImportCollection}
             importingCollectionId={importingCollectionId}
             importedCollectionIds={importedCollectionIds}
+            canEdit={canEdit}
+            onAddRepository={canEdit ? () => setAddRepoModalOpen(true) : undefined}
+            onEditCollection={canEdit ? () => setEditModalOpen(true) : undefined}
+            onCreateCollection={canEdit ? () => setCreateModalOpen(true) : undefined}
+            onRemoveRepository={canEdit ? handleRemoveRepository : undefined}
           />
         </PanelProvider>
       </div>
+
+      {/* Modals (only when canEdit) */}
+      {canEdit && (
+        <>
+          <CollectionModal
+            isOpen={createModalOpen}
+            onClose={() => setCreateModalOpen(false)}
+            onSave={handleCreateCollection}
+            mode="create"
+          />
+
+          {selectedCollection && (
+            <>
+              <CollectionModal
+                isOpen={editModalOpen}
+                onClose={() => setEditModalOpen(false)}
+                onSave={handleUpdateCollection}
+                onDelete={handleDeleteCollection}
+                initialData={{
+                  id: selectedCollection.id,
+                  name: selectedCollection.name,
+                  description: selectedCollection.description,
+                  icon: selectedCollection.icon,
+                  createdAt: selectedCollection.createdAt,
+                  updatedAt: selectedCollection.updatedAt,
+                }}
+                mode="edit"
+              />
+              <AddRepositoryModal
+                isOpen={addRepoModalOpen}
+                onClose={() => setAddRepoModalOpen(false)}
+                onAdd={handleAddRepository}
+                onRemove={handleRemoveRepository}
+                existingRepositories={repositories}
+                collectionName={selectedCollection.name}
+              />
+            </>
+          )}
+        </>
+      )}
     </div>
   );
 }
