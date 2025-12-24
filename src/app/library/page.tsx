@@ -8,6 +8,7 @@ import { useUserCollections } from "@/contexts/UserCollectionsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { CollectionModal } from "@/components/collections/CollectionModal";
 import { AddRepositoryModal } from "@/components/collections/AddRepositoryModal";
+import { GitHubSyncModal } from "@/components/collections/GitHubSyncModal";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import dynamic from "next/dynamic";
 import {
@@ -16,7 +17,7 @@ import {
   PanelLayout,
 } from "@principal-ade/panel-layouts";
 import '@principal-ade/panel-layouts/styles.css';
-import { ChevronDown, Plus, FolderOpen, Layers, Edit2, PanelRightOpen, PanelRightClose, User } from 'lucide-react';
+import { ChevronDown, Plus, FolderOpen, Layers, Edit2, PanelRightOpen, PanelRightClose, User, Cloud, CloudOff } from 'lucide-react';
 import type { Collection } from '@principal-ai/alexandria-collections';
 
 // Dynamically import panels with SSR disabled
@@ -59,6 +60,11 @@ interface LibraryPageContentProps {
   onAddToCollection?: (repositoryId: string) => Promise<void>;
   // Action to remove a repo from the current collection
   onRemoveFromCollection?: (repositoryId: string) => Promise<void>;
+  // GitHub sync
+  gitHubSyncEnabled: boolean;
+  gitHubSyncLoading: boolean;
+  gitHubRepoUrl: string | null;
+  onOpenSyncModal: () => void;
 }
 
 function LibraryPageContent({
@@ -71,6 +77,10 @@ function LibraryPageContent({
   onCreateNew,
   onAddToCollection,
   onRemoveFromCollection,
+  gitHubSyncEnabled,
+  gitHubSyncLoading,
+  gitHubRepoUrl,
+  onOpenSyncModal,
 }: LibraryPageContentProps) {
   const { theme } = useTheme();
   const router = useRouter();
@@ -253,6 +263,31 @@ function LibraryPageContent({
                 </button>
               )}
             </div>
+          )}
+
+          {/* GitHub Sync Button */}
+          {isAuthenticated && (
+            <button
+              onClick={onOpenSyncModal}
+              disabled={gitHubSyncLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
+              style={{
+                background: gitHubSyncEnabled ? '#10b98120' : theme.colors.secondary,
+                color: gitHubSyncEnabled ? '#10b981' : theme.colors.text,
+                border: `1px solid ${gitHubSyncEnabled ? '#10b981' : theme.colors.border}`,
+                opacity: gitHubSyncLoading ? 0.6 : 1,
+              }}
+              title={gitHubSyncEnabled ? `Synced to ${gitHubRepoUrl || 'GitHub'}` : 'Sync to GitHub'}
+            >
+              {gitHubSyncEnabled ? (
+                <Cloud size={16} />
+              ) : (
+                <CloudOff size={16} />
+              )}
+              <span className="hidden sm:inline">
+                {gitHubSyncLoading ? 'Syncing...' : gitHubSyncEnabled ? 'Synced' : 'Sync'}
+              </span>
+            </button>
           )}
 
           {/* Right panel toggle */}
@@ -556,6 +591,7 @@ function LibraryPageWrapper() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [addRepoModalOpen, setAddRepoModalOpen] = useState(false);
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
 
   // Fetch curated collections
   useEffect(() => {
@@ -696,6 +732,10 @@ function LibraryPageWrapper() {
               onCreateNew={() => setCreateModalOpen(true)}
               onAddToCollection={isUserCollection ? handleAddRepository : undefined}
               onRemoveFromCollection={isUserCollection ? handleRemoveRepository : undefined}
+              gitHubSyncEnabled={userCollections.gitHubSyncEnabled}
+              gitHubSyncLoading={userCollections.gitHubSyncLoading}
+              gitHubRepoUrl={userCollections.gitHubRepoUrl}
+              onOpenSyncModal={() => setSyncModalOpen(true)}
             />
           </PanelProvider>
         </div>
@@ -763,6 +803,21 @@ function LibraryPageWrapper() {
           />
         </>
       )}
+
+      {/* GitHub Sync Modal */}
+      <GitHubSyncModal
+        isOpen={syncModalOpen}
+        onClose={() => setSyncModalOpen(false)}
+        onConfirm={async () => {
+          if (userCollections.gitHubSyncEnabled) {
+            await userCollections.syncToGitHub();
+          } else {
+            await userCollections.enableGitHubSync();
+          }
+        }}
+        repoUrl={userCollections.gitHubRepoUrl}
+        isSynced={userCollections.gitHubSyncEnabled}
+      />
     </div>
   );
 }

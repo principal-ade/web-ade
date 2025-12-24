@@ -5,6 +5,7 @@
  *
  * Provides state management for user-created collections.
  * Uses CollectionManager with a localStorage adapter.
+ * Optionally syncs to GitHub for persistence across devices.
  */
 
 import {
@@ -13,11 +14,13 @@ import {
   useState,
   useCallback,
   useEffect,
+  useRef,
   type ReactNode,
 } from 'react';
 import type { Collection, CollectionMembership } from '@principal-ai/alexandria-collections';
 import { CollectionManager } from '@/lib/collections/CollectionManager';
 import { LocalStorageFileSystemAdapter } from '@/lib/storage/LocalStorageFileSystemAdapter';
+import { useAuth } from './AuthContext';
 
 /** Repository info with optional source repository for forks */
 interface RepositoryInfo {
@@ -34,6 +37,11 @@ interface UserCollectionsContextValue {
   memberships: CollectionMembership[];
   loading: boolean;
   error: Error | null;
+
+  // GitHub sync state
+  gitHubSyncEnabled: boolean;
+  gitHubSyncLoading: boolean;
+  gitHubRepoUrl: string | null;
 
   // Collection CRUD
   createCollection: (
@@ -57,6 +65,11 @@ interface UserCollectionsContextValue {
   getCollection: (id: string) => Collection | undefined;
   isUserCollection: (id: string) => boolean;
   refresh: () => Promise<void>;
+
+  // GitHub sync functions
+  checkGitHubSync: () => Promise<void>;
+  enableGitHubSync: () => Promise<void>;
+  syncToGitHub: () => Promise<void>;
 }
 
 const UserCollectionsContext = createContext<UserCollectionsContextValue | undefined>(undefined);
@@ -75,11 +88,47 @@ function getManager(): CollectionManager {
   return manager;
 }
 
+// Helper to convert collections + memberships to the format for GitHub sync
+interface GitHubCollection {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  repositories: string[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+function collectionsToGitHubFormat(
+  collections: Collection[],
+  memberships: CollectionMembership[]
+): GitHubCollection[] {
+  return collections.map((col) => ({
+    id: col.id,
+    name: col.name,
+    description: col.description,
+    icon: col.icon,
+    repositories: memberships
+      .filter((m) => m.collectionId === col.id)
+      .map((m) => m.repositoryId),
+    createdAt: col.createdAt,
+    updatedAt: col.updatedAt,
+  }));
+}
+
 export function UserCollectionsProvider({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth();
   const [collections, setCollections] = useState<Collection[]>([]);
   const [memberships, setMemberships] = useState<CollectionMembership[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+
+  // GitHub sync state
+  const [gitHubSyncEnabled, setGitHubSyncEnabled] = useState(false);
+  const [gitHubSyncLoading, setGitHubSyncLoading] = useState(false);
+  const [gitHubRepoUrl, setGitHubRepoUrl] = useState<string | null>(null);
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const initialSyncDoneRef = useRef(false);
 
   // Load collections and memberships from localStorage
   const loadData = useCallback(async () => {
@@ -260,6 +309,159 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
     await loadData();
   }, [loadData]);
 
+  // Check if GitHub sync is enabled (repo exists)
+  const checkGitHubSync = useCallback(async (): Promise<void> => {
+    if (!isAuthenticated) {
+      setGitHubSyncEnabled(false);
+      setGitHubRepoUrl(null);
+      return;
+    }
+
+    try {
+      setGitHubSyncLoading(true);
+      const response = await fetch('/api/github/collections');
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setGitHubSyncEnabled(false);
+          setGitHubRepoUrl(null);
+          return;
+        }
+        throw new Error('Failed to check sync status');
+      }
+
+      const data = await response.json();
+      setGitHubSyncEnabled(data.exists);
+      setGitHubRepoUrl(data.repoUrl || null);
+
+      // If sync is enabled and we haven't done initial sync yet, load from GitHub
+      if (data.exists && data.collections && !initialSyncDoneRef.current) {
+        initialSyncDoneRef.current = true;
+        const gitHubCollections: GitHubCollection[] = data.collections.collections || [];
+
+        if (gitHubCollections.length > 0) {
+          // Import collections from GitHub into local storage
+          const colManager = getManager();
+
+          for (const ghCol of gitHubCollections) {
+            // Check if collection already exists locally
+            const existingLocal = collections.find((c) => c.id === ghCol.id);
+
+            if (!existingLocal) {
+              // Create the collection locally
+              const newCol = await colManager.createCollection({
+                name: ghCol.name,
+                description: ghCol.description,
+                icon: ghCol.icon,
+              });
+
+              // Add repositories
+              for (const repoId of ghCol.repositories) {
+                await colManager.addRepositoryToCollection(repoId, newCol.id);
+              }
+            }
+          }
+
+          // Reload local data
+          await loadData();
+        }
+      }
+    } catch (err) {
+      console.error('Failed to check GitHub sync:', err);
+    } finally {
+      setGitHubSyncLoading(false);
+    }
+  }, [isAuthenticated, collections, loadData]);
+
+  // Enable GitHub sync (create repo and save current collections)
+  const enableGitHubSync = useCallback(async (): Promise<void> => {
+    if (!isAuthenticated) {
+      throw new Error('Must be authenticated to enable GitHub sync');
+    }
+
+    try {
+      setGitHubSyncLoading(true);
+
+      const gitHubCollections = collectionsToGitHubFormat(collections, memberships);
+
+      const response = await fetch('/api/github/collections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ collections: gitHubCollections }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to enable sync');
+      }
+
+      const data = await response.json();
+      setGitHubSyncEnabled(true);
+      setGitHubRepoUrl(data.repoUrl || null);
+      initialSyncDoneRef.current = true;
+    } finally {
+      setGitHubSyncLoading(false);
+    }
+  }, [isAuthenticated, collections, memberships]);
+
+  // Sync current collections to GitHub
+  const syncToGitHub = useCallback(async (): Promise<void> => {
+    if (!gitHubSyncEnabled || !isAuthenticated) {
+      return;
+    }
+
+    try {
+      const gitHubCollections = collectionsToGitHubFormat(collections, memberships);
+
+      const response = await fetch('/api/github/collections', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ collections: gitHubCollections }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Failed to sync to GitHub:', errorData.error);
+      }
+    } catch (err) {
+      console.error('Failed to sync to GitHub:', err);
+    }
+  }, [gitHubSyncEnabled, isAuthenticated, collections, memberships]);
+
+  // Auto-sync to GitHub when collections/memberships change (debounced)
+  useEffect(() => {
+    if (!gitHubSyncEnabled || !initialSyncDoneRef.current) {
+      return;
+    }
+
+    // Clear existing timeout
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+
+    // Debounce sync by 2 seconds
+    syncTimeoutRef.current = setTimeout(() => {
+      syncToGitHub();
+    }, 2000);
+
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, [gitHubSyncEnabled, collections, memberships, syncToGitHub]);
+
+  // Check GitHub sync status when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      checkGitHubSync();
+    } else {
+      setGitHubSyncEnabled(false);
+      setGitHubRepoUrl(null);
+      initialSyncDoneRef.current = false;
+    }
+  }, [isAuthenticated, checkGitHubSync]);
+
   return (
     <UserCollectionsContext.Provider
       value={{
@@ -267,6 +469,9 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         memberships,
         loading,
         error,
+        gitHubSyncEnabled,
+        gitHubSyncLoading,
+        gitHubRepoUrl,
         createCollection,
         updateCollection,
         deleteCollection,
@@ -277,6 +482,9 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         getCollection,
         isUserCollection,
         refresh,
+        checkGitHubSync,
+        enableGitHubSync,
+        syncToGitHub,
       }}
     >
       {children}
