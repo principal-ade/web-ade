@@ -222,6 +222,35 @@ export class CollectionManager {
   }
 
   /**
+   * Import collections and memberships from external source (e.g., GitHub sync).
+   * This preserves the original IDs and merges with existing local data.
+   */
+  async importData(
+    importCollections: Collection[],
+    importMemberships: CollectionMembership[]
+  ): Promise<void> {
+    const existingCollections = await this.getCollections();
+    const existingMemberships = await this.getAllMemberships();
+
+    // Merge collections - add new ones, skip existing (by ID)
+    const existingIds = new Set(existingCollections.map((c) => c.id));
+    const newCollections = importCollections.filter((c) => !existingIds.has(c.id));
+    const mergedCollections = [...existingCollections, ...newCollections];
+
+    // Merge memberships - add new ones, skip existing (by collectionId + repositoryId)
+    const existingMembershipKeys = new Set(
+      existingMemberships.map((m) => `${m.collectionId}:${m.repositoryId}`)
+    );
+    const newMemberships = importMemberships.filter(
+      (m) => !existingMembershipKeys.has(`${m.collectionId}:${m.repositoryId}`)
+    );
+    const mergedMemberships = [...existingMemberships, ...newMemberships];
+
+    await this.saveCollections(mergedCollections);
+    await this.saveMemberships(mergedMemberships);
+  }
+
+  /**
    * Save collections to storage
    */
   private async saveCollections(collections: Collection[]): Promise<void> {

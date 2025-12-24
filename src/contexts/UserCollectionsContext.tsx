@@ -313,32 +313,9 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         const ghMemberships: CollectionMembership[] = data.memberships || [];
 
         if (ghCollections.length > 0) {
-          // Import collections from GitHub into local storage
+          // Import collections from GitHub into local storage (preserving original IDs)
           const colManager = getManager();
-
-          for (const ghCol of ghCollections) {
-            // Check if collection already exists locally
-            const existingLocal = collections.find((c) => c.id === ghCol.id);
-
-            if (!existingLocal) {
-              // Create the collection locally
-              const newCol = await colManager.createCollection({
-                name: ghCol.name,
-                description: ghCol.description,
-                icon: ghCol.icon,
-              });
-
-              // Add repositories from memberships
-              const colMemberships = ghMemberships.filter((m) => m.collectionId === ghCol.id);
-              for (const membership of colMemberships) {
-                await colManager.addRepositoryToCollection(
-                  membership.repositoryId,
-                  newCol.id,
-                  membership.metadata
-                );
-              }
-            }
-          }
+          await colManager.importData(ghCollections, ghMemberships);
 
           // Reload local data
           await loadData();
@@ -349,7 +326,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
     } finally {
       setGitHubSyncLoading(false);
     }
-  }, [isAuthenticated, collections, loadData]);
+  }, [isAuthenticated, loadData]);
 
   // Enable GitHub sync (create repo and save current collections)
   const enableGitHubSync = useCallback(async (): Promise<void> => {
