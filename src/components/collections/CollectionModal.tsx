@@ -138,7 +138,7 @@ export function CollectionModal({
     >
       <div
         style={{
-          backgroundColor: theme.colors.surface,
+          backgroundColor: theme.colors.background,
           borderRadius: '12px',
           border: `1px solid ${theme.colors.border}`,
           padding: '24px',
