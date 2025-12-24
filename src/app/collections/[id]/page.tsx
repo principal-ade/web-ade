@@ -66,9 +66,16 @@ interface Collection {
   theme?: string;
 }
 
+interface CollectionMembership {
+  repositoryId: string;
+  collectionId: string;
+  addedAt: number;
+  metadata?: Record<string, unknown>;
+}
+
 interface CollectionData {
   collection: Collection;
-  repositories: string[];
+  memberships: CollectionMembership[];
 }
 
 interface CollectionPageContentProps {
@@ -378,7 +385,9 @@ function CollectionPageWrapper({ collectionId }: { collectionId: string }) {
         })
         .then((data: CollectionData) => {
           setCollection(data.collection);
-          setRepositories(data.repositories);
+          // Extract repository IDs from memberships
+          const repoIds = (data.memberships || []).map(m => m.repositoryId);
+          setRepositories(repoIds);
           setLoading(false);
         })
         .catch((err) => {
