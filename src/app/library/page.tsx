@@ -57,6 +57,8 @@ interface LibraryPageContentProps {
   onCreateNew: () => void;
   // Action to add a repo to the current collection
   onAddToCollection?: (repositoryId: string) => Promise<void>;
+  // Action to remove a repo from the current collection
+  onRemoveFromCollection?: (repositoryId: string) => Promise<void>;
 }
 
 function LibraryPageContent({
@@ -68,6 +70,7 @@ function LibraryPageContent({
   onSelectCollection,
   onCreateNew,
   onAddToCollection,
+  onRemoveFromCollection,
 }: LibraryPageContentProps) {
   const { theme } = useTheme();
   const router = useRouter();
@@ -154,6 +157,11 @@ function LibraryPageContent({
                   repository.name
                 );
               },
+              removeRepositoryFromWorkspace: onRemoveFromCollection
+                ? async (repoKey: string) => {
+                    await onRemoveFromCollection(repoKey);
+                  }
+                : undefined,
             }}
             events={events}
             selectedRepository={previewedRepo}
@@ -687,6 +695,7 @@ function LibraryPageWrapper() {
               onSelectCollection={handleSelectCollection}
               onCreateNew={() => setCreateModalOpen(true)}
               onAddToCollection={isUserCollection ? handleAddRepository : undefined}
+              onRemoveFromCollection={isUserCollection ? handleRemoveRepository : undefined}
             />
           </PanelProvider>
         </div>
