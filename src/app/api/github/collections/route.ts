@@ -118,7 +118,8 @@ async function saveFile(
   owner: string,
   filename: string,
   content: unknown,
-  sha?: string | null
+  sha?: string | null,
+  retries = 3
 ): Promise<{ success: boolean; error?: string }> {
   const encoded = Buffer.from(JSON.stringify(content, null, 2)).toString('base64');
 
@@ -146,6 +147,15 @@ async function saveFile(
 
   if (!response.ok) {
     const error = await response.json();
+
+    // Handle SHA conflict (409) by refetching SHA and retrying
+    if (response.status === 409 && retries > 0) {
+      const currentFile = await getFile<unknown>(token, owner, filename);
+      if (currentFile.sha) {
+        return saveFile(token, owner, filename, content, currentFile.sha, retries - 1);
+      }
+    }
+
     return { success: false, error: error.message || `Failed to save ${filename}` };
   }
 
@@ -259,13 +269,13 @@ export async function POST(request: NextRequest) {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    // Get existing file SHAs
+    // Get existing file SHAs (files may not exist yet for new repos)
     const [collectionsResult, membershipsResult] = await Promise.all([
       getFile<CollectionsData>(token, user.login, COLLECTIONS_FILE),
       getFile<CollectionMembershipsData>(token, user.login, MEMBERSHIPS_FILE),
     ]);
 
-    // Save both files
+    // Save files sequentially to avoid race conditions
     const collectionsData: CollectionsData = {
       version: '1.0',
       collections,
@@ -276,11 +286,10 @@ export async function POST(request: NextRequest) {
       memberships,
     };
 
-    const [collectionsResult2, membershipsResult2] = await Promise.all([
-      saveFile(token, user.login, COLLECTIONS_FILE, collectionsData, collectionsResult.sha),
-      saveFile(token, user.login, MEMBERSHIPS_FILE, membershipsData, membershipsResult.sha),
-    ]);
-
+    // Save collections first
+    const collectionsResult2 = await saveFile(
+      token, user.login, COLLECTIONS_FILE, collectionsData, collectionsResult.sha
+    );
     if (!collectionsResult2.success) {
       return NextResponse.json(
         { error: collectionsResult2.error },
@@ -288,6 +297,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Then save memberships
+    const membershipsResult2 = await saveFile(
+      token, user.login, MEMBERSHIPS_FILE, membershipsData, membershipsResult.sha
+    );
     if (!membershipsResult2.success) {
       return NextResponse.json(
         { error: membershipsResult2.error },
@@ -360,7 +373,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Save both files
+    // Save files sequentially to avoid race conditions
     const collectionsData: CollectionsData = {
       version: '1.0',
       collections,
@@ -371,11 +384,10 @@ export async function PUT(request: NextRequest) {
       memberships,
     };
 
-    const [collectionsResult2, membershipsResult2] = await Promise.all([
-      saveFile(token, user.login, COLLECTIONS_FILE, collectionsData, collectionsResult.sha),
-      saveFile(token, user.login, MEMBERSHIPS_FILE, membershipsData, membershipsResult.sha),
-    ]);
-
+    // Save collections first
+    const collectionsResult2 = await saveFile(
+      token, user.login, COLLECTIONS_FILE, collectionsData, collectionsResult.sha
+    );
     if (!collectionsResult2.success) {
       return NextResponse.json(
         { error: collectionsResult2.error },
@@ -383,6 +395,10 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Then save memberships
+    const membershipsResult2 = await saveFile(
+      token, user.login, MEMBERSHIPS_FILE, membershipsData, membershipsResult.sha
+    );
     if (!membershipsResult2.success) {
       return NextResponse.json(
         { error: membershipsResult2.error },
