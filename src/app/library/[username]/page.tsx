@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { CollectionModal } from "@/components/collections/CollectionModal";
 import { AddRepositoryModal } from "@/components/collections/AddRepositoryModal";
+import type { Collection, CollectionMembership } from '@principal-ai/alexandria-collections';
 
 // Dynamically import panels with SSR disabled
 const WorkspaceCollectionPanelLoader = dynamic(
@@ -37,16 +38,6 @@ const WorkspaceCollectionPanelLoader = dynamic(
   { ssr: false }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as React.ComponentType<any>;
-
-interface SharedCollection {
-  id: string;
-  name: string;
-  description?: string;
-  icon?: string;
-  repositories: string[];
-  createdAt: number;
-  updatedAt: number;
-}
 
 interface UserInfo {
   login: string;
@@ -59,20 +50,18 @@ interface UserInfo {
 interface SharedLibraryData {
   user: UserInfo;
   exists: boolean;
-  collections: {
-    version: number;
-    collections: SharedCollection[];
-    updatedAt: number;
-  } | null;
+  collections: Collection[] | null;
+  memberships: CollectionMembership[] | null;
   repoUrl: string | null;
 }
 
 interface SharedLibraryContentProps {
   userData: SharedLibraryData;
-  collections: SharedCollection[];
+  collections: Collection[];
+  memberships: CollectionMembership[];
   selectedCollectionId: string | null;
   onSelectCollection: (id: string) => void;
-  onImportCollection: (collection: SharedCollection) => Promise<void>;
+  onImportCollection: (collection: Collection, collectionMemberships: CollectionMembership[]) => Promise<void>;
   importingCollectionId: string | null;
   importedCollectionIds: Set<string>;
   // Edit mode props
@@ -86,6 +75,7 @@ interface SharedLibraryContentProps {
 function SharedLibraryContent({
   userData,
   collections,
+  memberships,
   selectedCollectionId,
   onSelectCollection,
   onImportCollection,
@@ -282,6 +272,7 @@ function SharedLibraryContent({
 
           <SharedCollectionDropdown
             collections={collections}
+            memberships={memberships}
             selectedId={selectedCollectionId}
             onSelect={onSelectCollection}
             onCreateNew={canEdit ? onCreateCollection : undefined}
@@ -291,7 +282,10 @@ function SharedLibraryContent({
           {/* Import button (only for authenticated users viewing someone else's collection without edit access) */}
           {isAuthenticated && selectedCollection && user?.login !== userData.user.login && !canEdit && (
             <button
-              onClick={() => onImportCollection(selectedCollection)}
+              onClick={() => {
+                const colMemberships = memberships.filter(m => m.collectionId === selectedCollection.id);
+                onImportCollection(selectedCollection, colMemberships);
+              }}
               disabled={importingCollectionId === selectedCollection.id || importedCollectionIds.has(selectedCollection.id)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
               style={{
@@ -404,7 +398,8 @@ function SharedLibraryContent({
 }
 
 interface SharedCollectionDropdownProps {
-  collections: SharedCollection[];
+  collections: Collection[];
+  memberships: CollectionMembership[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onCreateNew?: () => void;
@@ -413,6 +408,7 @@ interface SharedCollectionDropdownProps {
 
 function SharedCollectionDropdown({
   collections,
+  memberships,
   selectedId,
   onSelect,
   onCreateNew,
@@ -420,6 +416,10 @@ function SharedCollectionDropdown({
 }: SharedCollectionDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const selected = collections.find(c => c.id === selectedId);
+
+  const getRepoCount = (collectionId: string) => {
+    return memberships.filter(m => m.collectionId === collectionId).length;
+  };
 
   return (
     <div style={{ position: 'relative' }}>
@@ -547,7 +547,7 @@ function SharedCollectionDropdown({
                       color: theme.colors.textMuted,
                     }}
                   >
-                    {collection.repositories.length} repos
+                    {getRepoCount(collection.id)} repos
                   </span>
                 </button>
               ))}
@@ -598,8 +598,8 @@ function SharedLibraryWrapper() {
       .then((data: SharedLibraryData) => {
         setLibraryData(data);
         // Auto-select first collection
-        if (data.exists && data.collections?.collections?.length) {
-          setSelectedCollectionId(data.collections.collections[0]!.id);
+        if (data.exists && data.collections?.length) {
+          setSelectedCollectionId(data.collections[0]!.id);
         }
         setLoading(false);
       })
@@ -629,15 +629,21 @@ function SharedLibraryWrapper() {
 
   // Get collections array
   const collections = useMemo(() => {
-    return libraryData?.collections?.collections || [];
+    return libraryData?.collections || [];
+  }, [libraryData]);
+
+  // Get memberships array
+  const memberships = useMemo(() => {
+    return libraryData?.memberships || [];
   }, [libraryData]);
 
   // Get repositories for selected collection
   const repositories = useMemo(() => {
     if (!selectedCollectionId) return [];
-    const collection = collections.find(c => c.id === selectedCollectionId);
-    return collection?.repositories || [];
-  }, [selectedCollectionId, collections]);
+    return memberships
+      .filter(m => m.collectionId === selectedCollectionId)
+      .map(m => m.repositoryId);
+  }, [selectedCollectionId, memberships]);
 
   // Handle collection selection
   const handleSelectCollection = useCallback((id: string) => {
@@ -645,7 +651,7 @@ function SharedLibraryWrapper() {
   }, []);
 
   // Handle import collection
-  const handleImportCollection = useCallback(async (collection: SharedCollection) => {
+  const handleImportCollection = useCallback(async (collection: Collection, collectionMemberships: CollectionMembership[]) => {
     try {
       setImportingCollectionId(collection.id);
 
@@ -657,9 +663,9 @@ function SharedLibraryWrapper() {
         collection.icon
       );
 
-      // Add all repositories
-      for (const repoId of collection.repositories) {
-        await userCollections.addRepository(newCollection.id, repoId);
+      // Add all repositories from memberships
+      for (const membership of collectionMemberships) {
+        await userCollections.addRepository(newCollection.id, membership.repositoryId);
       }
 
       // Mark as imported
@@ -672,12 +678,15 @@ function SharedLibraryWrapper() {
     }
   }, [username, userCollections]);
 
-  // Save collections to GitHub
-  const saveCollectionsToGitHub = useCallback(async (updatedCollections: SharedCollection[]) => {
+  // Save collections and memberships to GitHub
+  const saveToGitHub = useCallback(async (
+    updatedCollections: Collection[],
+    updatedMemberships: CollectionMembership[]
+  ) => {
     const response = await fetch(`/api/github/collections/${username}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ collections: updatedCollections }),
+      body: JSON.stringify({ collections: updatedCollections, memberships: updatedMemberships }),
     });
 
     if (!response.ok) {
@@ -688,30 +697,26 @@ function SharedLibraryWrapper() {
     // Update local state
     setLibraryData(prev => prev ? {
       ...prev,
-      collections: {
-        version: 1,
-        collections: updatedCollections,
-        updatedAt: Date.now(),
-      },
+      collections: updatedCollections,
+      memberships: updatedMemberships,
     } : null);
   }, [username]);
 
   // Handle create collection
   const handleCreateCollection = useCallback(async (name: string, description: string, icon: string) => {
-    const newCollection: SharedCollection = {
+    const newCollection: Collection = {
       id: `col-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name,
       description,
       icon,
-      repositories: [],
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
 
     const updatedCollections = [...collections, newCollection];
-    await saveCollectionsToGitHub(updatedCollections);
+    await saveToGitHub(updatedCollections, memberships);
     setSelectedCollectionId(newCollection.id);
-  }, [collections, saveCollectionsToGitHub]);
+  }, [collections, memberships, saveToGitHub]);
 
   // Handle update collection
   const handleUpdateCollection = useCallback(async (name: string, description: string, icon: string) => {
@@ -723,15 +728,16 @@ function SharedLibraryWrapper() {
         : col
     );
 
-    await saveCollectionsToGitHub(updatedCollections);
-  }, [collections, selectedCollectionId, saveCollectionsToGitHub]);
+    await saveToGitHub(updatedCollections, memberships);
+  }, [collections, memberships, selectedCollectionId, saveToGitHub]);
 
   // Handle delete collection
   const handleDeleteCollection = useCallback(async () => {
     if (!selectedCollectionId) return;
 
     const updatedCollections = collections.filter(col => col.id !== selectedCollectionId);
-    await saveCollectionsToGitHub(updatedCollections);
+    const updatedMemberships = memberships.filter(m => m.collectionId !== selectedCollectionId);
+    await saveToGitHub(updatedCollections, updatedMemberships);
 
     // Select first remaining collection
     if (updatedCollections.length > 0) {
@@ -739,41 +745,49 @@ function SharedLibraryWrapper() {
     } else {
       setSelectedCollectionId(null);
     }
-  }, [collections, selectedCollectionId, saveCollectionsToGitHub]);
+  }, [collections, memberships, selectedCollectionId, saveToGitHub]);
 
   // Handle add repository
   const handleAddRepository = useCallback(async (repositoryId: string) => {
     if (!selectedCollectionId) return;
 
+    // Add a new membership
+    const newMembership: CollectionMembership = {
+      repositoryId,
+      collectionId: selectedCollectionId,
+      addedAt: Date.now(),
+    };
+
+    const updatedMemberships = [...memberships, newMembership];
+
+    // Update the collection's updatedAt
     const updatedCollections = collections.map(col =>
       col.id === selectedCollectionId
-        ? {
-            ...col,
-            repositories: [...col.repositories, repositoryId],
-            updatedAt: Date.now(),
-          }
+        ? { ...col, updatedAt: Date.now() }
         : col
     );
 
-    await saveCollectionsToGitHub(updatedCollections);
-  }, [collections, selectedCollectionId, saveCollectionsToGitHub]);
+    await saveToGitHub(updatedCollections, updatedMemberships);
+  }, [collections, memberships, selectedCollectionId, saveToGitHub]);
 
   // Handle remove repository
   const handleRemoveRepository = useCallback(async (repositoryId: string) => {
     if (!selectedCollectionId) return;
 
+    // Remove the membership
+    const updatedMemberships = memberships.filter(
+      m => !(m.collectionId === selectedCollectionId && m.repositoryId === repositoryId)
+    );
+
+    // Update the collection's updatedAt
     const updatedCollections = collections.map(col =>
       col.id === selectedCollectionId
-        ? {
-            ...col,
-            repositories: col.repositories.filter(r => r !== repositoryId),
-            updatedAt: Date.now(),
-          }
+        ? { ...col, updatedAt: Date.now() }
         : col
     );
 
-    await saveCollectionsToGitHub(updatedCollections);
-  }, [collections, selectedCollectionId, saveCollectionsToGitHub]);
+    await saveToGitHub(updatedCollections, updatedMemberships);
+  }, [collections, memberships, selectedCollectionId, saveToGitHub]);
 
   // Loading state
   if (loading) {
@@ -963,6 +977,7 @@ function SharedLibraryWrapper() {
           <SharedLibraryContent
             userData={libraryData!}
             collections={collections}
+            memberships={memberships}
             selectedCollectionId={selectedCollectionId}
             onSelectCollection={handleSelectCollection}
             onImportCollection={handleImportCollection}

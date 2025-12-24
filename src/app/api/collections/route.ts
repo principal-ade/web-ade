@@ -1,47 +1,41 @@
 import { NextResponse } from 'next/server';
 import { unstable_cache } from 'next/cache';
-import { GitHubFileSystemAdapter } from '@principal-ai/alexandria-core-library/github';
-import { CollectionManager } from '@/lib/collections/CollectionManager';
+import type {
+  Collection,
+  CollectionMembership,
+  CollectionsData,
+  CollectionMembershipsData,
+} from '@principal-ai/alexandria-collections';
 
-async function fetchCollections() {
-  const adapter = new GitHubFileSystemAdapter({
-    owner: 'principal-ai',
-    repo: 'web-ade-collections',
-    branch: 'main',
-    token: process.env.GITHUB_TOKEN,
-  });
+const BASE_URL = 'https://raw.githubusercontent.com/principal-ai/web-ade-collections/main';
 
-  // Preload the collection files
-  await adapter.preload('/collections.json');
-  await adapter.preload('/collection-memberships.json');
+async function fetchCollections(): Promise<{
+  collections: Collection[];
+  memberships: CollectionMembership[];
+}> {
+  const [collectionsResponse, membershipsResponse] = await Promise.all([
+    fetch(`${BASE_URL}/collections.json`, {
+      headers: { Accept: 'application/json' },
+    }),
+    fetch(`${BASE_URL}/collection-memberships.json`, {
+      headers: { Accept: 'application/json' },
+    }),
+  ]);
 
-  const manager = new CollectionManager('/', adapter);
-  const collections = await manager.getCollections();
-
-  if (!collections) {
-    return { collections: [], memberships: {} };
+  if (!collectionsResponse.ok) {
+    throw new Error(`Failed to fetch collections: ${collectionsResponse.status}`);
   }
 
-  // Get memberships for each collection with full metadata
-  interface RepositoryInfo {
-    repositoryId: string;
-    sourceRepository?: {
-      owner: string;
-      name: string;
-    };
-  }
+  const collectionsData: CollectionsData = await collectionsResponse.json();
 
-  const memberships: Record<string, RepositoryInfo[]> = {};
-  for (const collection of collections) {
-    const colMemberships = await manager.getCollectionMemberships(collection.id);
-    memberships[collection.id] = colMemberships.map((m) => ({
-      repositoryId: m.repositoryId,
-      sourceRepository: m.metadata?.sourceRepository as { owner: string; name: string } | undefined,
-    }));
+  let memberships: CollectionMembership[] = [];
+  if (membershipsResponse.ok) {
+    const membershipsData: CollectionMembershipsData = await membershipsResponse.json();
+    memberships = membershipsData.memberships || [];
   }
 
   return {
-    collections,
+    collections: collectionsData.collections || [],
     memberships,
   };
 }

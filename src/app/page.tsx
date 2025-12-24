@@ -40,23 +40,11 @@ function getRecentItems(key: string, max: number = 10): string[] {
   }
 }
 
-interface RepositoryInfo {
-  repositoryId: string;
-  sourceRepository?: {
-    owner: string;
-    name: string;
-  };
-}
+import type { Collection, CollectionMembership } from '@principal-ai/alexandria-collections';
 
 interface CollectionsResponse {
-  collections: Array<{
-    id: string;
-    name: string;
-    description: string;
-    icon?: string;
-    theme?: string;
-  }>;
-  memberships: Record<string, RepositoryInfo[]>;
+  collections: Collection[];
+  memberships: CollectionMembership[];
 }
 
 function HomePageContent() {
@@ -78,10 +66,20 @@ function HomePageContent() {
     fetch('/api/collections')
       .then(res => res.json())
       .then((data: CollectionsResponse) => {
-        const collectionsWithRepos = data.collections.map(c => ({
-          ...c,
-          repositories: data.memberships[c.id] || [],
-        }));
+        const allMemberships = data.memberships || [];
+        const allCollections = data.collections || [];
+        const collectionsWithRepos = allCollections.map(c => {
+          // Get memberships for this collection
+          const collectionMemberships = allMemberships.filter(m => m.collectionId === c.id);
+          return {
+            ...c,
+            description: c.description || '',
+            repositories: collectionMemberships.map(m => ({
+              repositoryId: m.repositoryId,
+              sourceRepository: m.metadata?.sourceRepository as { owner: string; name: string } | undefined,
+            })),
+          };
+        });
         setCollections(collectionsWithRepos);
       })
       .catch(err => console.error('Failed to fetch collections:', err))

@@ -1,35 +1,47 @@
 import { NextResponse } from 'next/server';
 import { unstable_cache } from 'next/cache';
-import { GitHubFileSystemAdapter } from '@principal-ai/alexandria-core-library/github';
-import { CollectionManager } from '@/lib/collections/CollectionManager';
+import type {
+  Collection,
+  CollectionMembership,
+  CollectionsData,
+  CollectionMembershipsData,
+} from '@principal-ai/alexandria-collections';
 
-async function fetchCollection(id: string) {
-  const adapter = new GitHubFileSystemAdapter({
-    owner: 'principal-ai',
-    repo: 'collections',
-    branch: 'main',
-    token: process.env.GITHUB_TOKEN,
-  });
+const BASE_URL = 'https://raw.githubusercontent.com/principal-ai/web-ade-collections/main';
 
-  await adapter.preload('/collections.json');
-  await adapter.preload('/collection-memberships.json');
+async function fetchCollection(id: string): Promise<
+  | { collection: Collection; memberships: CollectionMembership[] }
+  | { error: string; status: number }
+> {
+  const [collectionsResponse, membershipsResponse] = await Promise.all([
+    fetch(`${BASE_URL}/collections.json`, {
+      headers: { Accept: 'application/json' },
+    }),
+    fetch(`${BASE_URL}/collection-memberships.json`, {
+      headers: { Accept: 'application/json' },
+    }),
+  ]);
 
-  const manager = new CollectionManager('/', adapter);
-  const collections = await manager.getCollections();
-
-  if (!collections) {
-    return { error: 'No collections found', status: 404 };
+  if (!collectionsResponse.ok) {
+    throw new Error(`Failed to fetch collections: ${collectionsResponse.status}`);
   }
 
-  const collection = collections.find((c) => c.id === id);
+  const collectionsData: CollectionsData = await collectionsResponse.json();
+  const collection = collectionsData.collections?.find((c) => c.id === id);
+
   if (!collection) {
     return { error: 'Collection not found', status: 404 };
   }
 
-  const memberships = await manager.getCollectionMemberships(id);
-  const repositories = memberships.map((m) => m.repositoryId);
+  let memberships: CollectionMembership[] = [];
+  if (membershipsResponse.ok) {
+    const membershipsData: CollectionMembershipsData = await membershipsResponse.json();
+    memberships = (membershipsData.memberships || []).filter(
+      (m) => m.collectionId === id
+    );
+  }
 
-  return { collection, repositories };
+  return { collection, memberships };
 }
 
 // Use Next.js data cache - persists across serverless instances
@@ -51,7 +63,7 @@ export async function GET(
   try {
     const result = await getCachedCollection(id);
 
-    if ('error' in result && result.status) {
+    if ('error' in result && 'status' in result) {
       return NextResponse.json({ error: result.error }, { status: result.status });
     }
 

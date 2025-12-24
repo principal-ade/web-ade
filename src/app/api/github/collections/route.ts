@@ -1,16 +1,23 @@
 /**
  * GitHub Collections Sync API
  *
- * GET  - Check if collections repo exists and fetch collections
- * POST - Create collections repo and/or save collections
- * PUT  - Update collections in existing repo
+ * GET  - Check if collections repo exists and fetch collections + memberships
+ * POST - Create collections repo and/or save collections + memberships
+ * PUT  - Update collections + memberships in existing repo
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getGitHubToken } from '@/lib/auth/cookies';
+import type {
+  Collection,
+  CollectionMembership,
+  CollectionsData,
+  CollectionMembershipsData,
+} from '@principal-ai/alexandria-collections';
 
 const REPO_NAME = 'web-ade-collections';
 const COLLECTIONS_FILE = 'collections.json';
+const MEMBERSHIPS_FILE = 'collection-memberships.json';
 
 interface GitHubUser {
   login: string;
@@ -20,22 +27,6 @@ interface GitHubContentResponse {
   content: string;
   sha: string;
   encoding: string;
-}
-
-interface Collection {
-  id: string;
-  name: string;
-  description?: string;
-  icon?: string;
-  repositories: string[];
-  createdAt: number;
-  updatedAt: number;
-}
-
-interface CollectionsData {
-  version: number;
-  collections: Collection[];
-  updatedAt: number;
 }
 
 async function getAuthenticatedUser(token: string): Promise<GitHubUser | null> {
@@ -76,7 +67,7 @@ async function createRepo(token: string): Promise<{ success: boolean; error?: st
       name: REPO_NAME,
       description: 'My web-ade collections - synced repository collections',
       public: true,
-      auto_init: true, // Creates README so we have a commit to work with
+      auto_init: true,
     }),
   });
 
@@ -88,12 +79,13 @@ async function createRepo(token: string): Promise<{ success: boolean; error?: st
   return { success: true };
 }
 
-async function getCollectionsFile(
+async function getFile<T>(
   token: string,
-  owner: string
-): Promise<{ data: CollectionsData | null; sha: string | null; error?: string }> {
+  owner: string,
+  filename: string
+): Promise<{ data: T | null; sha: string | null; error?: string }> {
   const response = await fetch(
-    `https://api.github.com/repos/${owner}/${REPO_NAME}/contents/${COLLECTIONS_FILE}`,
+    `https://api.github.com/repos/${owner}/${REPO_NAME}/contents/${filename}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -103,36 +95,36 @@ async function getCollectionsFile(
   );
 
   if (response.status === 404) {
-    // File doesn't exist yet
     return { data: null, sha: null };
   }
 
   if (!response.ok) {
-    return { data: null, sha: null, error: 'Failed to fetch collections' };
+    return { data: null, sha: null, error: `Failed to fetch ${filename}` };
   }
 
   const content: GitHubContentResponse = await response.json();
 
   try {
     const decoded = Buffer.from(content.content, 'base64').toString('utf-8');
-    const data: CollectionsData = JSON.parse(decoded);
+    const data: T = JSON.parse(decoded);
     return { data, sha: content.sha };
   } catch {
-    return { data: null, sha: content.sha, error: 'Failed to parse collections' };
+    return { data: null, sha: content.sha, error: `Failed to parse ${filename}` };
   }
 }
 
-async function saveCollectionsFile(
+async function saveFile(
   token: string,
   owner: string,
-  collections: CollectionsData,
+  filename: string,
+  content: unknown,
   sha?: string | null
 ): Promise<{ success: boolean; error?: string }> {
-  const content = Buffer.from(JSON.stringify(collections, null, 2)).toString('base64');
+  const encoded = Buffer.from(JSON.stringify(content, null, 2)).toString('base64');
 
   const body: Record<string, unknown> = {
-    message: `Update collections - ${new Date().toISOString()}`,
-    content,
+    message: `Update ${filename} - ${new Date().toISOString()}`,
+    content: encoded,
   };
 
   if (sha) {
@@ -140,7 +132,7 @@ async function saveCollectionsFile(
   }
 
   const response = await fetch(
-    `https://api.github.com/repos/${owner}/${REPO_NAME}/contents/${COLLECTIONS_FILE}`,
+    `https://api.github.com/repos/${owner}/${REPO_NAME}/contents/${filename}`,
     {
       method: 'PUT',
       headers: {
@@ -154,7 +146,7 @@ async function saveCollectionsFile(
 
   if (!response.ok) {
     const error = await response.json();
-    return { success: false, error: error.message || 'Failed to save collections' };
+    return { success: false, error: error.message || `Failed to save ${filename}` };
   }
 
   return { success: true };
@@ -163,8 +155,7 @@ async function saveCollectionsFile(
 /**
  * GET /api/github/collections
  *
- * Check if the collections repo exists and fetch collections if it does.
- * Returns: { exists: boolean, collections: CollectionsData | null }
+ * Check if the collections repo exists and fetch collections + memberships if it does.
  */
 export async function GET() {
   try {
@@ -191,22 +182,27 @@ export async function GET() {
       return NextResponse.json({
         exists: false,
         collections: null,
+        memberships: null,
         repoUrl: null,
       });
     }
 
-    const { data, error } = await getCollectionsFile(token, user.login);
+    const [collectionsResult, membershipsResult] = await Promise.all([
+      getFile<CollectionsData>(token, user.login, COLLECTIONS_FILE),
+      getFile<CollectionMembershipsData>(token, user.login, MEMBERSHIPS_FILE),
+    ]);
 
-    if (error) {
+    if (collectionsResult.error) {
       return NextResponse.json(
-        { error },
+        { error: collectionsResult.error },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       exists: true,
-      collections: data,
+      collections: collectionsResult.data?.collections || [],
+      memberships: membershipsResult.data?.memberships || [],
       repoUrl: `https://github.com/${user.login}/${REPO_NAME}`,
     });
   } catch (error) {
@@ -221,8 +217,8 @@ export async function GET() {
 /**
  * POST /api/github/collections
  *
- * Create the collections repo if it doesn't exist, then save collections.
- * Body: { collections: Collection[] }
+ * Create the collections repo if it doesn't exist, then save collections + memberships.
+ * Body: { collections: Collection[], memberships: CollectionMembership[] }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -245,12 +241,12 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const collections: Collection[] = body.collections || [];
+    const memberships: CollectionMembership[] = body.memberships || [];
 
     // Check if repo exists
     const exists = await checkRepoExists(token, user.login);
 
     if (!exists) {
-      // Create the repo
       const createResult = await createRepo(token);
       if (!createResult.success) {
         return NextResponse.json(
@@ -259,25 +255,42 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Wait a moment for GitHub to initialize the repo
+      // Wait for GitHub to initialize the repo
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    // Get existing file SHA if it exists
-    const { sha } = await getCollectionsFile(token, user.login);
+    // Get existing file SHAs
+    const [collectionsResult, membershipsResult] = await Promise.all([
+      getFile<CollectionsData>(token, user.login, COLLECTIONS_FILE),
+      getFile<CollectionMembershipsData>(token, user.login, MEMBERSHIPS_FILE),
+    ]);
 
-    // Save collections
+    // Save both files
     const collectionsData: CollectionsData = {
-      version: 1,
+      version: '1.0',
       collections,
-      updatedAt: Date.now(),
     };
 
-    const saveResult = await saveCollectionsFile(token, user.login, collectionsData, sha);
+    const membershipsData: CollectionMembershipsData = {
+      version: '1.0',
+      memberships,
+    };
 
-    if (!saveResult.success) {
+    const [collectionsResult2, membershipsResult2] = await Promise.all([
+      saveFile(token, user.login, COLLECTIONS_FILE, collectionsData, collectionsResult.sha),
+      saveFile(token, user.login, MEMBERSHIPS_FILE, membershipsData, membershipsResult.sha),
+    ]);
+
+    if (!collectionsResult2.success) {
       return NextResponse.json(
-        { error: saveResult.error },
+        { error: collectionsResult2.error },
+        { status: 500 }
+      );
+    }
+
+    if (!membershipsResult2.success) {
+      return NextResponse.json(
+        { error: membershipsResult2.error },
         { status: 500 }
       );
     }
@@ -298,8 +311,8 @@ export async function POST(request: NextRequest) {
 /**
  * PUT /api/github/collections
  *
- * Update collections in existing repo (fails if repo doesn't exist).
- * Body: { collections: Collection[] }
+ * Update collections + memberships in existing repo (fails if repo doesn't exist).
+ * Body: { collections: Collection[], memberships: CollectionMembership[] }
  */
 export async function PUT(request: NextRequest) {
   try {
@@ -322,6 +335,7 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json();
     const collections: Collection[] = body.collections || [];
+    const memberships: CollectionMembership[] = body.memberships || [];
 
     // Check if repo exists
     const exists = await checkRepoExists(token, user.login);
@@ -333,28 +347,45 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Get existing file SHA
-    const { sha, error: getError } = await getCollectionsFile(token, user.login);
+    // Get existing file SHAs
+    const [collectionsResult, membershipsResult] = await Promise.all([
+      getFile<CollectionsData>(token, user.login, COLLECTIONS_FILE),
+      getFile<CollectionMembershipsData>(token, user.login, MEMBERSHIPS_FILE),
+    ]);
 
-    if (getError) {
+    if (collectionsResult.error) {
       return NextResponse.json(
-        { error: getError },
+        { error: collectionsResult.error },
         { status: 500 }
       );
     }
 
-    // Save collections
+    // Save both files
     const collectionsData: CollectionsData = {
-      version: 1,
+      version: '1.0',
       collections,
-      updatedAt: Date.now(),
     };
 
-    const saveResult = await saveCollectionsFile(token, user.login, collectionsData, sha);
+    const membershipsData: CollectionMembershipsData = {
+      version: '1.0',
+      memberships,
+    };
 
-    if (!saveResult.success) {
+    const [collectionsResult2, membershipsResult2] = await Promise.all([
+      saveFile(token, user.login, COLLECTIONS_FILE, collectionsData, collectionsResult.sha),
+      saveFile(token, user.login, MEMBERSHIPS_FILE, membershipsData, membershipsResult.sha),
+    ]);
+
+    if (!collectionsResult2.success) {
       return NextResponse.json(
-        { error: saveResult.error },
+        { error: collectionsResult2.error },
+        { status: 500 }
+      );
+    }
+
+    if (!membershipsResult2.success) {
+      return NextResponse.json(
+        { error: membershipsResult2.error },
         { status: 500 }
       );
     }

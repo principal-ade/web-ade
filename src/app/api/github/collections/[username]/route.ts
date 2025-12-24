@@ -9,33 +9,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getGitHubToken } from '@/lib/auth/cookies';
+import type {
+  Collection,
+  CollectionMembership,
+  CollectionsData,
+  CollectionMembershipsData,
+} from '@principal-ai/alexandria-collections';
 
 const REPO_NAME = 'web-ade-collections';
 const COLLECTIONS_FILE = 'collections.json';
 const MEMBERSHIPS_FILE = 'collection-memberships.json';
-
-interface CollectionMembership {
-  repositoryId: string;
-  collectionId: string;
-  addedAt: number;
-  metadata?: Record<string, unknown>;
-}
-
-interface Collection {
-  id: string;
-  name: string;
-  description?: string;
-  icon?: string;
-  repositories: string[];
-  createdAt: number;
-  updatedAt: number;
-}
-
-interface CollectionsData {
-  version: number;
-  collections: Collection[];
-  updatedAt: number;
-}
 
 interface GitHubUser {
   login: string;
@@ -64,7 +47,6 @@ export async function GET(
       fetch(`https://api.github.com/users/${username}`, {
         headers: {
           Accept: 'application/vnd.github.v3+json',
-          // Use token if available for higher rate limits
           ...(process.env.GITHUB_TOKEN && {
             Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
           }),
@@ -72,19 +54,11 @@ export async function GET(
       }),
       fetch(
         `https://raw.githubusercontent.com/${username}/${REPO_NAME}/main/${COLLECTIONS_FILE}`,
-        {
-          headers: {
-            Accept: 'application/json',
-          },
-        }
+        { headers: { Accept: 'application/json' } }
       ),
       fetch(
         `https://raw.githubusercontent.com/${username}/${REPO_NAME}/main/${MEMBERSHIPS_FILE}`,
-        {
-          headers: {
-            Accept: 'application/json',
-          },
-        }
+        { headers: { Accept: 'application/json' } }
       ),
     ]);
 
@@ -114,6 +88,7 @@ export async function GET(
           },
           exists: false,
           collections: null,
+          memberships: null,
           repoUrl: null,
         });
       }
@@ -131,40 +106,15 @@ export async function GET(
       );
     }
 
-    // Parse memberships (optional - only exists for curated format)
+    // Parse memberships
     let memberships: CollectionMembership[] = [];
     if (membershipsResponse.ok) {
       try {
-        const membershipsData = await membershipsResponse.json();
+        const membershipsData: CollectionMembershipsData = await membershipsResponse.json();
         memberships = membershipsData.memberships || [];
       } catch {
         // Ignore parse errors for memberships
       }
-    }
-
-    // Merge memberships into collections if collections don't have repositories
-    // This handles the old format (separate memberships file)
-    if (collectionsData.collections && memberships.length > 0) {
-      collectionsData.collections = collectionsData.collections.map(col => {
-        // If collection already has repositories array, keep it
-        if (col.repositories && col.repositories.length > 0) {
-          return col;
-        }
-        // Otherwise, merge from memberships
-        const colMemberships = memberships.filter(m => m.collectionId === col.id);
-        return {
-          ...col,
-          repositories: colMemberships.map(m => m.repositoryId),
-        };
-      });
-    }
-
-    // Ensure all collections have repositories array (even if empty)
-    if (collectionsData.collections) {
-      collectionsData.collections = collectionsData.collections.map(col => ({
-        ...col,
-        repositories: col.repositories || [],
-      }));
     }
 
     return NextResponse.json({
@@ -176,7 +126,8 @@ export async function GET(
         html_url: user.html_url,
       },
       exists: true,
-      collections: collectionsData,
+      collections: collectionsData.collections || [],
+      memberships,
       repoUrl: `https://github.com/${username}/${REPO_NAME}`,
     });
   } catch (error) {
@@ -191,7 +142,7 @@ export async function GET(
 /**
  * PUT /api/github/collections/[username]
  *
- * Updates collections for a specific user/org.
+ * Updates collections and memberships for a specific user/org.
  * Requires the authenticated user to have write access to the repo.
  */
 export async function PUT(
@@ -218,75 +169,132 @@ export async function PUT(
 
     const body = await request.json();
     const collections: Collection[] = body.collections || [];
+    const memberships: CollectionMembership[] = body.memberships || [];
 
-    // Get current file SHA (needed for update)
-    const fileResponse = await fetch(
-      `https://api.github.com/repos/${username}/${REPO_NAME}/contents/${COLLECTIONS_FILE}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json',
-        },
-      }
-    );
+    // Get current file SHAs (needed for updates)
+    const [collectionsFileResponse, membershipsFileResponse] = await Promise.all([
+      fetch(
+        `https://api.github.com/repos/${username}/${REPO_NAME}/contents/${COLLECTIONS_FILE}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/vnd.github.v3+json',
+          },
+        }
+      ),
+      fetch(
+        `https://api.github.com/repos/${username}/${REPO_NAME}/contents/${MEMBERSHIPS_FILE}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/vnd.github.v3+json',
+          },
+        }
+      ),
+    ]);
 
-    let sha: string | undefined;
-    if (fileResponse.ok) {
-      const fileData = await fileResponse.json();
-      sha = fileData.sha;
-    } else if (fileResponse.status !== 404) {
+    let collectionsSha: string | undefined;
+    let membershipsSha: string | undefined;
+
+    if (collectionsFileResponse.ok) {
+      const fileData = await collectionsFileResponse.json();
+      collectionsSha = fileData.sha;
+    } else if (collectionsFileResponse.status !== 404) {
       return NextResponse.json(
         { error: 'Failed to access collections file' },
-        { status: fileResponse.status }
+        { status: collectionsFileResponse.status }
       );
     }
 
-    // Prepare collections data
-    const collectionsData: CollectionsData = {
-      version: 1,
-      collections,
-      updatedAt: Date.now(),
-    };
-
-    const content = Buffer.from(JSON.stringify(collectionsData, null, 2)).toString('base64');
-
-    // Update/create the file
-    const updateBody: Record<string, unknown> = {
-      message: `Update collections - ${new Date().toISOString()}`,
-      content,
-    };
-
-    if (sha) {
-      updateBody.sha = sha;
+    if (membershipsFileResponse.ok) {
+      const fileData = await membershipsFileResponse.json();
+      membershipsSha = fileData.sha;
     }
 
-    const updateResponse = await fetch(
-      `https://api.github.com/repos/${username}/${REPO_NAME}/contents/${COLLECTIONS_FILE}`,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updateBody),
-      }
-    );
+    // Prepare data
+    const collectionsData: CollectionsData = {
+      version: '1.0',
+      collections,
+    };
 
-    if (!updateResponse.ok) {
-      const errorData = await updateResponse.json();
+    const membershipsData: CollectionMembershipsData = {
+      version: '1.0',
+      memberships,
+    };
 
-      // Check for permission error
-      if (updateResponse.status === 403 || updateResponse.status === 404) {
+    const collectionsContent = Buffer.from(
+      JSON.stringify(collectionsData, null, 2)
+    ).toString('base64');
+
+    const membershipsContent = Buffer.from(
+      JSON.stringify(membershipsData, null, 2)
+    ).toString('base64');
+
+    // Update both files
+    const timestamp = new Date().toISOString();
+
+    const collectionsUpdateBody: Record<string, unknown> = {
+      message: `Update collections - ${timestamp}`,
+      content: collectionsContent,
+    };
+    if (collectionsSha) {
+      collectionsUpdateBody.sha = collectionsSha;
+    }
+
+    const membershipsUpdateBody: Record<string, unknown> = {
+      message: `Update memberships - ${timestamp}`,
+      content: membershipsContent,
+    };
+    if (membershipsSha) {
+      membershipsUpdateBody.sha = membershipsSha;
+    }
+
+    const [collectionsUpdateResponse, membershipsUpdateResponse] = await Promise.all([
+      fetch(
+        `https://api.github.com/repos/${username}/${REPO_NAME}/contents/${COLLECTIONS_FILE}`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(collectionsUpdateBody),
+        }
+      ),
+      fetch(
+        `https://api.github.com/repos/${username}/${REPO_NAME}/contents/${MEMBERSHIPS_FILE}`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(membershipsUpdateBody),
+        }
+      ),
+    ]);
+
+    if (!collectionsUpdateResponse.ok) {
+      const errorData = await collectionsUpdateResponse.json();
+      if (collectionsUpdateResponse.status === 403 || collectionsUpdateResponse.status === 404) {
         return NextResponse.json(
           { error: 'You do not have permission to edit this collection' },
           { status: 403 }
         );
       }
-
       return NextResponse.json(
         { error: errorData.message || 'Failed to update collections' },
-        { status: updateResponse.status }
+        { status: collectionsUpdateResponse.status }
+      );
+    }
+
+    if (!membershipsUpdateResponse.ok) {
+      const errorData = await membershipsUpdateResponse.json();
+      return NextResponse.json(
+        { error: errorData.message || 'Failed to update memberships' },
+        { status: membershipsUpdateResponse.status }
       );
     }
 

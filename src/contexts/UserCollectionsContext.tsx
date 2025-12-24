@@ -88,34 +88,6 @@ function getManager(): CollectionManager {
   return manager;
 }
 
-// Helper to convert collections + memberships to the format for GitHub sync
-interface GitHubCollection {
-  id: string;
-  name: string;
-  description?: string;
-  icon?: string;
-  repositories: string[];
-  createdAt: number;
-  updatedAt: number;
-}
-
-function collectionsToGitHubFormat(
-  collections: Collection[],
-  memberships: CollectionMembership[]
-): GitHubCollection[] {
-  return collections.map((col) => ({
-    id: col.id,
-    name: col.name,
-    description: col.description,
-    icon: col.icon,
-    repositories: memberships
-      .filter((m) => m.collectionId === col.id)
-      .map((m) => m.repositoryId),
-    createdAt: col.createdAt,
-    updatedAt: col.updatedAt,
-  }));
-}
-
 export function UserCollectionsProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -335,15 +307,16 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       setGitHubRepoUrl(data.repoUrl || null);
 
       // If sync is enabled and we haven't done initial sync yet, load from GitHub
-      if (data.exists && data.collections && !initialSyncDoneRef.current) {
+      if (data.exists && !initialSyncDoneRef.current) {
         initialSyncDoneRef.current = true;
-        const gitHubCollections: GitHubCollection[] = data.collections.collections || [];
+        const ghCollections: Collection[] = data.collections || [];
+        const ghMemberships: CollectionMembership[] = data.memberships || [];
 
-        if (gitHubCollections.length > 0) {
+        if (ghCollections.length > 0) {
           // Import collections from GitHub into local storage
           const colManager = getManager();
 
-          for (const ghCol of gitHubCollections) {
+          for (const ghCol of ghCollections) {
             // Check if collection already exists locally
             const existingLocal = collections.find((c) => c.id === ghCol.id);
 
@@ -355,9 +328,14 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
                 icon: ghCol.icon,
               });
 
-              // Add repositories
-              for (const repoId of ghCol.repositories) {
-                await colManager.addRepositoryToCollection(repoId, newCol.id);
+              // Add repositories from memberships
+              const colMemberships = ghMemberships.filter((m) => m.collectionId === ghCol.id);
+              for (const membership of colMemberships) {
+                await colManager.addRepositoryToCollection(
+                  membership.repositoryId,
+                  newCol.id,
+                  membership.metadata
+                );
               }
             }
           }
@@ -382,12 +360,10 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
     try {
       setGitHubSyncLoading(true);
 
-      const gitHubCollections = collectionsToGitHubFormat(collections, memberships);
-
       const response = await fetch('/api/github/collections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ collections: gitHubCollections }),
+        body: JSON.stringify({ collections, memberships }),
       });
 
       if (!response.ok) {
@@ -411,12 +387,10 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const gitHubCollections = collectionsToGitHubFormat(collections, memberships);
-
       const response = await fetch('/api/github/collections', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ collections: gitHubCollections }),
+        body: JSON.stringify({ collections, memberships }),
       });
 
       if (!response.ok) {
