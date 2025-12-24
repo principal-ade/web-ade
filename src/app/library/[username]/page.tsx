@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { PanelProvider, usePanelProvider } from "@/contexts/PanelContext";
@@ -348,12 +349,12 @@ function SharedLibraryContent({
                 color: theme.colors.textSecondary,
               }}
             >
-              <a
+              <Link
                 href="/library"
                 style={{ color: theme.colors.primary }}
               >
                 Login
-              </a>
+              </Link>
               {' to import'}
             </div>
           )}
@@ -880,7 +881,7 @@ function SharedLibraryWrapper() {
             textAlign: 'center',
           }}
         >
-          {libraryData.user.name || libraryData.user.login} hasn't shared any collections yet.
+          {libraryData.user.name || libraryData.user.login} hasn&apos;t shared any collections yet.
         </p>
         <button
           onClick={() => router.push('/library')}
@@ -915,7 +916,7 @@ function SharedLibraryWrapper() {
             color: theme.colors.textSecondary,
           }}
         >
-          {username}'s library is empty.
+          {username}&apos;s library is empty.
         </p>
         <button
           onClick={() => router.push('/library')}
