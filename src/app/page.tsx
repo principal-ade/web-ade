@@ -12,11 +12,29 @@ import type { CommandPaletteData } from "@/components/GlobalCommandPalette";
 const RECENT_REPOS_KEY = 'recent-repos';
 const RECENT_OWNERS_KEY = 'recent-owners';
 
+// RecentOwner format used by [owner]/page.tsx when storing to localStorage
+interface RecentOwner {
+  owner: string;
+  visitedAt: string;
+}
+
 function getRecentItems(key: string, max: number = 10): string[] {
   if (typeof window === 'undefined') return [];
   try {
     const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored).slice(0, max) : [];
+    if (!stored) return [];
+
+    const parsed: unknown[] = JSON.parse(stored);
+
+    // Handle recent-owners format: [{ owner: string, visitedAt: string }, ...]
+    // vs recent-repos format: [string, ...]
+    return parsed.slice(0, max).map(item => {
+      if (typeof item === 'string') return item;
+      if (item && typeof item === 'object' && 'owner' in item) {
+        return (item as RecentOwner).owner;
+      }
+      return '';
+    }).filter(Boolean);
   } catch {
     return [];
   }
