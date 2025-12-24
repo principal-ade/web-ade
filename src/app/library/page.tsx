@@ -17,7 +17,7 @@ import {
   PanelLayout,
 } from "@principal-ade/panel-layouts";
 import '@principal-ade/panel-layouts/styles.css';
-import { ChevronDown, Plus, FolderOpen, Layers, Edit2, PanelRightOpen, PanelRightClose, User, Cloud, CloudOff } from 'lucide-react';
+import { ChevronDown, Plus, FolderOpen, Layers, Edit2, PanelRightOpen, PanelRightClose, User, Cloud, CloudOff, Share2, Check } from 'lucide-react';
 import type { Collection } from '@principal-ai/alexandria-collections';
 
 // Dynamically import panels with SSR disabled
@@ -65,6 +65,9 @@ interface LibraryPageContentProps {
   gitHubSyncLoading: boolean;
   gitHubRepoUrl: string | null;
   onOpenSyncModal: () => void;
+  // Share
+  onShare: () => void;
+  shareSuccess: boolean;
 }
 
 function LibraryPageContent({
@@ -81,6 +84,8 @@ function LibraryPageContent({
   gitHubSyncLoading,
   gitHubRepoUrl,
   onOpenSyncModal,
+  onShare,
+  shareSuccess,
 }: LibraryPageContentProps) {
   const { theme } = useTheme();
   const router = useRouter();
@@ -263,6 +268,29 @@ function LibraryPageContent({
                 </button>
               )}
             </div>
+          )}
+
+          {/* Share Button (only show when sync is enabled) */}
+          {isAuthenticated && gitHubSyncEnabled && (
+            <button
+              onClick={onShare}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
+              style={{
+                background: shareSuccess ? '#10b98120' : theme.colors.secondary,
+                color: shareSuccess ? '#10b981' : theme.colors.text,
+                border: `1px solid ${shareSuccess ? '#10b981' : theme.colors.border}`,
+              }}
+              title="Copy your library URL to share"
+            >
+              {shareSuccess ? (
+                <Check size={16} />
+              ) : (
+                <Share2 size={16} />
+              )}
+              <span className="hidden sm:inline">
+                {shareSuccess ? 'Copied!' : 'Share'}
+              </span>
+            </button>
           )}
 
           {/* GitHub Sync Button */}
@@ -579,6 +607,7 @@ function LibraryPageWrapper() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const userCollections = useUserCollections();
+  const { user } = useAuth();
 
   const [curatedCollections, setCuratedCollections] = useState<CuratedCollection[]>([]);
   const [curatedMemberships, setCuratedMemberships] = useState<Record<string, string[]>>({});
@@ -592,6 +621,7 @@ function LibraryPageWrapper() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [addRepoModalOpen, setAddRepoModalOpen] = useState(false);
   const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
 
   // Fetch curated collections
   useEffect(() => {
@@ -690,6 +720,16 @@ function LibraryPageWrapper() {
     }
   }, [userCollections, selectedCollectionId]);
 
+  const handleShare = useCallback(() => {
+    if (!user?.login) return;
+
+    const shareUrl = `${window.location.origin}/library/${user.login}`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setShareSuccess(true);
+      setTimeout(() => setShareSuccess(false), 2000);
+    });
+  }, [user?.login]);
+
   if (loading || userCollections.loading) {
     return (
       <div
@@ -736,6 +776,8 @@ function LibraryPageWrapper() {
               gitHubSyncLoading={userCollections.gitHubSyncLoading}
               gitHubRepoUrl={userCollections.gitHubRepoUrl}
               onOpenSyncModal={() => setSyncModalOpen(true)}
+              onShare={handleShare}
+              shareSuccess={shareSuccess}
             />
           </PanelProvider>
         </div>
