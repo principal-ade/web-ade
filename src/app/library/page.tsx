@@ -17,7 +17,7 @@ import {
   PanelLayout,
 } from "@principal-ade/panel-layouts";
 import '@principal-ade/panel-layouts/styles.css';
-import { ChevronDown, Plus, FolderOpen, Layers, Edit2, PanelRightOpen, PanelRightClose, Cloud, CloudOff, Share2, Check } from 'lucide-react';
+import { Plus, FolderOpen, Layers, Edit2, Cloud, CloudOff, Share2, Check, ArrowLeftRight, Settings, Compass } from 'lucide-react';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import type { Collection } from '@principal-ai/alexandria-collections';
 
@@ -39,6 +39,39 @@ const GitHubProjectsPanelLoader = dynamic(
   { ssr: false }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as React.ComponentType<any>;
+
+// Explore mode panels
+const PrincipalViewPanelLoader = dynamic(
+  () => import('@industry-theme/principal-view-panels').then((mod) => mod.panels[0]!.component),
+  { ssr: false }
+);
+
+const CodeQualityPanelLoader = dynamic(
+  () => import('@principal-ade/code-quality-panels').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
+const FileCityPanelLoader = dynamic(
+  () => import('@industry-theme/file-city-panel').then((mod) => mod.panels[0]!.component),
+  { ssr: false }
+);
+
+const PackageCompositionPanelLoader = dynamic(
+  () => import('@industry-theme/repository-composition-panels').then((mod) => mod.PackageCompositionPanel),
+  { ssr: false }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) as React.ComponentType<any>;
+
+const DependencyGraphPanelLoader = dynamic(
+  () => import('@industry-theme/repository-composition-panels').then((mod) => mod.DependencyGraphPanel),
+  { ssr: false }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) as React.ComponentType<any>;
+
+type ViewMode = 'manage' | 'explore';
 
 interface LibraryPageContentProps {
   isUserCollection: boolean;
@@ -86,17 +119,33 @@ function LibraryPageContent({
   const { isAuthenticated } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
   const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
-  const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('manage');
+  const [leftCollapsed, _setLeftCollapsed] = useState(false);
+  const [rightCollapsed, _setRightCollapsed] = useState(false);
 
-  // Layout: no left panel, middle is collection, right is starred/projects
-  const layout: PanelLayout = {
-    left: 'empty',
-    middle: 'workspace-collection',
-    right: {
+  // Layout configurations for each mode
+  const manageLayout: PanelLayout = {
+    left: 'workspace-collection',
+    middle: {
       type: 'tabs',
       panels: ['github-starred', 'github-projects'],
     },
+    right: 'empty',
   };
+
+  const exploreLayout: PanelLayout = {
+    left: 'workspace-collection',
+    middle: {
+      type: 'tabs',
+      panels: ['file-city', 'visual-validation', 'dependency-graph'],
+    },
+    right: {
+      type: 'tabs',
+      panels: ['code-quality', 'package-composition'],
+    },
+  };
+
+  const layout = viewMode === 'manage' ? manageLayout : exploreLayout;
 
   // Detect mobile viewport
   useEffect(() => {
@@ -203,6 +252,52 @@ function LibraryPageContent({
         </div>
       ),
     },
+    // Explore mode panels
+    {
+      id: 'file-city',
+      label: 'File City',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <FileCityPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'visual-validation',
+      label: 'Architecture',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <PrincipalViewPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'dependency-graph',
+      label: 'Dependencies',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <DependencyGraphPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'code-quality',
+      label: 'Quality',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <CodeQualityPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'package-composition',
+      label: 'Packages',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <PackageCompositionPanelLoader context={context} actions={actions} events={events} />
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -215,8 +310,8 @@ function LibraryPageContent({
           borderColor: theme.colors.border,
         }}
       >
-        {/* Left: Collection Dropdown */}
-        <div className="flex items-center gap-3">
+        {/* Left: Collection Dropdown and Mode Switch */}
+        <div className="flex items-center gap-4">
           <CollectionDropdown
             collections={allCollections}
             selectedId={selectedCollectionId}
@@ -224,6 +319,42 @@ function LibraryPageContent({
             onCreateNew={onCreateNew}
             theme={theme}
           />
+
+          {/* Mode Switch */}
+          <div
+            className="flex items-center rounded-lg p-0.5"
+            style={{
+              background: theme.colors.backgroundTertiary,
+              border: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <button
+              onClick={() => setViewMode('manage')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all"
+              style={{
+                background: viewMode === 'manage' ? theme.colors.surface : 'transparent',
+                color: viewMode === 'manage' ? theme.colors.text : theme.colors.textSecondary,
+                boxShadow: viewMode === 'manage' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+              }}
+              title="Manage repositories in collection"
+            >
+              <Settings size={14} />
+              <span className="hidden sm:inline">Manage</span>
+            </button>
+            <button
+              onClick={() => setViewMode('explore')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all"
+              style={{
+                background: viewMode === 'explore' ? theme.colors.surface : 'transparent',
+                color: viewMode === 'explore' ? theme.colors.text : theme.colors.textSecondary,
+                boxShadow: viewMode === 'explore' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+              }}
+              title="Explore collection with visualizations"
+            >
+              <Compass size={14} />
+              <span className="hidden sm:inline">Explore</span>
+            </button>
+          </div>
         </div>
 
         {/* Right: Actions and toggles */}
@@ -313,23 +444,6 @@ function LibraryPageContent({
             </button>
           )}
 
-          {/* Right panel toggle */}
-          <button
-            onClick={() => setRightCollapsed(!rightCollapsed)}
-            className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
-            style={{
-              background: rightCollapsed ? theme.colors.primary : theme.colors.secondary,
-              color: rightCollapsed ? theme.colors.background : theme.colors.text,
-            }}
-            title={rightCollapsed ? 'Expand right panel' : 'Collapse right panel'}
-          >
-            {rightCollapsed ? (
-              <PanelRightOpen size={16} />
-            ) : (
-              <PanelRightClose size={16} />
-            )}
-          </button>
-
           {/* User Avatar Menu */}
           <UserAvatarMenu />
         </div>
@@ -337,26 +451,40 @@ function LibraryPageContent({
       <div className="flex-1 overflow-hidden">
         {isMobile ? (
           <ResponsiveConfigurablePanelLayout
+            key={viewMode}
             theme={theme}
             panels={panels}
             layout={layout}
-            defaultSizes={{ left: 0, middle: 60, right: 40 }}
-            minSizes={{ left: 0, middle: 40, right: 20 }}
-            collapsiblePanels={{ left: false, right: true }}
-            collapsed={{ left: true, right: rightCollapsed }}
+            defaultSizes={viewMode === 'manage'
+              ? { left: 40, middle: 60, right: 0 }
+              : { left: 25, middle: 50, right: 25 }
+            }
+            minSizes={viewMode === 'manage'
+              ? { left: 20, middle: 40, right: 0 }
+              : { left: 15, middle: 30, right: 15 }
+            }
+            collapsiblePanels={{ left: true, right: viewMode === 'explore' }}
+            collapsed={{ left: leftCollapsed, right: viewMode === 'manage' ? true : rightCollapsed }}
             showCollapseButtons={false}
             mobileBreakpoint="(max-width: 768px)"
           />
         ) : (
           <EditableConfigurablePanelLayout
+            key={viewMode}
             theme={theme}
             panels={panels}
             layout={layout}
             isEditMode={false}
-            defaultSizes={{ left: 0, middle: 60, right: 40 }}
-            minSizes={{ left: 0, middle: 40, right: 20 }}
-            collapsiblePanels={{ left: false, right: true }}
-            collapsed={{ left: true, right: rightCollapsed }}
+            defaultSizes={viewMode === 'manage'
+              ? { left: 40, middle: 60, right: 0 }
+              : { left: 25, middle: 50, right: 25 }
+            }
+            minSizes={viewMode === 'manage'
+              ? { left: 20, middle: 40, right: 0 }
+              : { left: 15, middle: 30, right: 15 }
+            }
+            collapsiblePanels={{ left: true, right: viewMode === 'explore' }}
+            collapsed={{ left: leftCollapsed, right: viewMode === 'manage' ? true : rightCollapsed }}
             showCollapseButtons={false}
           />
         )}
@@ -392,29 +520,41 @@ function CollectionDropdown({
   const selected = collections.find(c => c.id === selectedId);
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <span
+        style={{
+          color: theme.colors.text,
+          fontSize: `${theme.fontSizes[2]}px`,
+          fontWeight: theme.fontWeights.semibold,
+        }}
+      >
+        {selected?.name || 'Select Collection'}
+      </span>
       <button
         onClick={() => setIsOpen(!isOpen)}
+        title="Switch collection"
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          padding: '8px 12px',
-          backgroundColor: theme.colors.surface,
-          border: `1px solid ${theme.colors.border}`,
-          borderRadius: '8px',
+          justifyContent: 'center',
+          padding: '4px',
+          backgroundColor: 'transparent',
+          border: 'none',
+          borderRadius: '4px',
           cursor: 'pointer',
-          color: theme.colors.text,
-          fontSize: `${theme.fontSizes[2]}px`,
-          fontWeight: theme.fontWeights.medium,
-          minWidth: '200px',
+          color: theme.colors.textSecondary,
+          transition: 'all 0.15s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = theme.colors.surface;
+          e.currentTarget.style.color = theme.colors.text;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent';
+          e.currentTarget.style.color = theme.colors.textSecondary;
         }}
       >
-        <Layers size={18} style={{ color: theme.colors.primary }} />
-        <span style={{ flex: 1, textAlign: 'left' }}>
-          {selected?.name || 'Select Collection'}
-        </span>
-        <ChevronDown size={16} style={{ color: theme.colors.textSecondary }} />
+        <ArrowLeftRight size={16} />
       </button>
 
       {isOpen && (
