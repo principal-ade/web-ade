@@ -94,6 +94,9 @@ interface LibraryPageContentProps {
   // Share
   onShare: () => void;
   shareSuccess: boolean;
+  // Previewed repo for explore mode
+  onPreviewChange?: (repo: string | null) => void;
+  initialPreviewedRepo?: string | null;
 }
 
 function LibraryPageContent({
@@ -112,16 +115,46 @@ function LibraryPageContent({
   onOpenSyncModal,
   onShare,
   shareSuccess,
+  onPreviewChange,
+  initialPreviewedRepo,
 }: LibraryPageContentProps) {
   const { theme } = useTheme();
   const router = useRouter();
   const { context, actions, events } = usePanelProvider();
   const { isAuthenticated } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
-  const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
+  const [previewedRepo, setPreviewedRepo] = useState<string | null>(initialPreviewedRepo ?? null);
   const [viewMode, setViewMode] = useState<ViewMode>('manage');
   const [leftCollapsed, _setLeftCollapsed] = useState(false);
   const [rightCollapsed, _setRightCollapsed] = useState(false);
+
+  // Sync previewed repo with parent
+  const handlePreviewChange = useCallback((repo: string | null) => {
+    setPreviewedRepo(repo);
+    onPreviewChange?.(repo);
+  }, [onPreviewChange]);
+
+  // Auto-select first repository when in explore mode and no repo is selected
+  const workspaceReposSlice = context.getSlice('workspaceRepositories');
+  const workspaceReposData = workspaceReposSlice?.data as { repositories?: Array<{ full_name: string; owner: { login: string }; name: string }> } | undefined;
+  const workspaceReposLoading = workspaceReposSlice?.loading ?? true;
+
+  useEffect(() => {
+    if (viewMode !== 'explore' || workspaceReposLoading || previewedRepo) return;
+
+    const repositories = workspaceReposData?.repositories;
+    if (repositories && repositories.length > 0) {
+      const sortedRepos = [...repositories].sort((a, b) => a.name.localeCompare(b.name));
+      const firstRepo = sortedRepos[0];
+      if (firstRepo?.full_name) {
+        handlePreviewChange(firstRepo.full_name);
+        (actions as { previewReadme?: (owner: string, repo: string) => Promise<string> }).previewReadme?.(
+          firstRepo.owner.login,
+          firstRepo.name
+        );
+      }
+    }
+  }, [viewMode, workspaceReposLoading, workspaceReposData?.repositories, previewedRepo, handlePreviewChange, actions]);
 
   // Layout configurations for each mode
   const manageLayout: PanelLayout = {
@@ -175,7 +208,12 @@ function LibraryPageContent({
       events.on('repository:selected', (event) => {
         const payload = event.payload as { repository?: { full_name?: string } };
         if (payload?.repository?.full_name) {
-          setPreviewedRepo(payload.repository.full_name);
+          const fullName = payload.repository.full_name;
+          handlePreviewChange(fullName);
+          const [owner, repo] = fullName.split('/');
+          if (owner && repo) {
+            (actions as { previewReadme?: (owner: string, repo: string) => Promise<string> }).previewReadme?.(owner, repo);
+          }
         }
       }),
       events.on('repository:navigate', (event) => {
@@ -187,7 +225,7 @@ function LibraryPageContent({
     ];
 
     return () => unsubscribers.forEach((unsub) => unsub());
-  }, [events, router]);
+  }, [events, router, handlePreviewChange, actions]);
 
   const panels = [
     {
@@ -208,7 +246,7 @@ function LibraryPageContent({
                 router.push(`/${owner}/${repo}`);
               },
               previewRepository: (repository: { full_name: string; owner: { login: string }; name: string }) => {
-                setPreviewedRepo(repository.full_name);
+                handlePreviewChange(repository.full_name);
                 (actions as { previewReadme?: (owner: string, repo: string) => Promise<string> }).previewReadme?.(
                   repository.owner.login,
                   repository.name
@@ -662,6 +700,14 @@ function LibraryPageWrapper() {
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
 
+  // Previewed repo state for explore mode
+  const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
+
+  // Handle preview change and update URL
+  const handlePreviewChange = useCallback((repo: string | null) => {
+    setPreviewedRepo(repo);
+  }, []);
+
   // All collections (just user collections now)
   const allCollections = useMemo(() => {
     return userCollections.collections;
@@ -766,15 +812,16 @@ function LibraryPageWrapper() {
       {selectedCollection ? (
         <div style={{ height: '100vh' }}>
           <PanelProvider
-            key={selectedCollectionId}
+            key={`${selectedCollectionId}-${repositories.length}-${previewedRepo || 'none'}`}
             workspace={{
               name: selectedCollection.name,
               path: `/library`,
             }}
             repository={{
-              name: selectedCollection.name,
-              path: `/library`,
+              name: previewedRepo ? previewedRepo.split('/')[1] || selectedCollection.name : selectedCollection.name,
+              path: previewedRepo ? `/GitHub/${previewedRepo}` : `/library`,
             }}
+            githubRepo={previewedRepo || undefined}
             collectionId={selectedCollectionId || undefined}
             collectionRepositories={repositories}
           >
@@ -794,6 +841,8 @@ function LibraryPageWrapper() {
               onOpenSyncModal={() => setSyncModalOpen(true)}
               onShare={handleShare}
               shareSuccess={shareSuccess}
+              onPreviewChange={handlePreviewChange}
+              initialPreviewedRepo={previewedRepo}
             />
           </PanelProvider>
         </div>
