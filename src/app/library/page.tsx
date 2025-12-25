@@ -342,14 +342,14 @@ function LibraryPageContent({
     <div className="h-full w-full flex flex-col">
       {/* Custom header with collection dropdown */}
       <header
-        className="h-14 flex items-center justify-between px-4 border-b"
+        className="h-14 grid grid-cols-3 items-center px-4 border-b"
         style={{
           background: theme.colors.surface,
           borderColor: theme.colors.border,
         }}
       >
-        {/* Left: Collection Dropdown and Mode Switch */}
-        <div className="flex items-center gap-4">
+        {/* Left: Collection Dropdown */}
+        <div className="flex items-center">
           <CollectionDropdown
             collections={allCollections}
             selectedId={selectedCollectionId}
@@ -357,8 +357,10 @@ function LibraryPageContent({
             onCreateNew={onCreateNew}
             theme={theme}
           />
+        </div>
 
-          {/* Mode Switch */}
+        {/* Center: Mode Switch */}
+        <div className="flex items-center justify-center">
           <div
             className="flex items-center rounded-lg p-0.5"
             style={{
@@ -396,9 +398,9 @@ function LibraryPageContent({
         </div>
 
         {/* Right: Actions and toggles */}
-        <div className="flex items-center gap-3">
-          {/* User collection action buttons */}
-          {isUserCollection && (
+        <div className="flex items-center justify-end gap-3">
+          {/* User collection action buttons - only show in manage mode */}
+          {isUserCollection && viewMode === 'manage' && (
             <div className="flex items-center gap-2">
               {onAddRepository && (
                 <button
