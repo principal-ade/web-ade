@@ -19,7 +19,7 @@ import {
   PanelLayout,
 } from "@principal-ade/panel-layouts";
 import '@principal-ade/panel-layouts/styles.css';
-import { Plus, FolderOpen, Layers, Edit2, Cloud, CloudOff, Share2, Check, ArrowLeftRight, Settings, Compass, Clock, GitFork, User, Library, ArrowRight, X, Home, Star, Users } from 'lucide-react';
+import { Plus, FolderOpen, Layers, Edit2, Cloud, CloudOff, Share2, Check, Settings, Compass, Clock, GitFork, User, Library, ArrowRight, X, Home, Star, Users } from 'lucide-react';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { iconMap } from '@/components/collections/CollectionModal';
 import type { Collection } from '@principal-ai/alexandria-collections';
@@ -170,6 +170,7 @@ function LibraryPageContent({
   const [rightCollapsed, _setRightCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<'recent' | 'collections' | 'following' | 'starred'>('recent');
+  const [collectionDropdownOpen, setCollectionDropdownOpen] = useState(false);
   const [recentRepos, setRecentRepos] = useState<RecentRepository[]>([]);
   const [recentOwners, setRecentOwners] = useState<RecentOwner[]>([]);
   const [starredRepos, setStarredRepos] = useState<StarredRepo[]>([]);
@@ -473,14 +474,21 @@ function LibraryPageContent({
               <Logo width={32} height={32} color={theme.colors.primary} />
             </Link>
           )}
-          <span
+          <button
+            onClick={() => setCollectionDropdownOpen(!collectionDropdownOpen)}
             style={{
               color: theme.colors.textSecondary,
               fontSize: `${theme.fontSizes[2]}px`,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              fontFamily: 'inherit',
             }}
+            title="Switch collection"
           >
             Collections
-          </span>
+          </button>
           <span style={{ color: theme.colors.textSecondary, fontSize: `${theme.fontSizes[2]}px` }}>/</span>
           <CollectionDropdown
             collections={allCollections}
@@ -488,6 +496,8 @@ function LibraryPageContent({
             onSelect={onSelectCollection}
             onCreateNew={onCreateNew}
             theme={theme}
+            isOpen={collectionDropdownOpen}
+            onClose={() => setCollectionDropdownOpen(false)}
           />
         </div>
 
@@ -1151,7 +1161,7 @@ function CollectionDropdown({
               inset: 0,
               zIndex: 40,
             }}
-            onClick={() => setIsOpen(false)}
+            onClick={onClose}
           />
 
           {/* Dropdown */}
@@ -1173,7 +1183,7 @@ function CollectionDropdown({
             {/* Create New */}
             <button
               onClick={() => {
-                setIsOpen(false);
+                onClose();
                 onCreateNew();
               }}
               style={{
@@ -1201,7 +1211,7 @@ function CollectionDropdown({
                   key={collection.id}
                   onClick={() => {
                     onSelect(collection.id);
-                    setIsOpen(false);
+                    onClose();
                   }}
                   style={{
                     width: '100%',
