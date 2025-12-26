@@ -44,11 +44,11 @@ export const layoutConfigs: LayoutConfig[] = [
   },
   {
     id: 'file-city',
-    name: 'File City',
+    name: 'Test Telemetry',
     layout: {
-      left: 'file-city',
+      left: 'telemetry-coverage',
       middle: 'trace-viewer',
-      right: 'quality-hexagon',
+      right: 'file-city',
     },
     collapsed: {
       left: false,

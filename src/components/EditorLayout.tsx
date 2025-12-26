@@ -148,6 +148,13 @@ const PackageCompositionPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the TelemetryCoveragePanel with SSR disabled
+const TelemetryCoveragePanelLoader = dynamic(
+  () => import('@industry-theme/repository-composition-panels').then((mod) => mod.TelemetryCoveragePanel),
+  { ssr: false }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) as React.ComponentType<any>;
+
 // Dynamically import the GitCommitHistoryPanel with SSR disabled
 const GitCommitHistoryPanelLoader = dynamic(
   () => import('@industry-theme/git-panels').then((mod) => {
@@ -731,6 +738,15 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <FileCityPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'telemetry-coverage',
+      label: 'Telemetry Coverage',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <TelemetryCoveragePanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
