@@ -446,8 +446,8 @@ export function EditorHeader({
           </div>
         )}
 
-        {/* Open in Desktop App button */}
-        {repositoryName && (
+        {/* TODO: Open in Desktop App button - temporarily hidden, will be added back later */}
+        {/* {repositoryName && (
           <button
             onClick={() => {
               // Construct deep link URL for the desktop app
@@ -465,33 +465,29 @@ export function EditorHeader({
             <Monitor className="w-4 h-4" />
             <span>Desktop</span>
           </button>
-        )}
+        )} */}
 
-        {/* Commit changes button */}
-        {repositoryName && onCommitClick && (
+        {/* Commit changes button - only show when there are pending changes */}
+        {repositoryName && onCommitClick && pendingChangesCount > 0 && (
           <button
             onClick={onCommitClick}
-            disabled={pendingChangesCount === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
             style={{
-              background: pendingChangesCount > 0 ? theme.colors.primary : theme.colors.secondary,
-              color: pendingChangesCount > 0 ? '#fff' : theme.colors.text,
-              border: pendingChangesCount > 0 ? 'none' : `1px solid ${theme.colors.border}`,
+              background: theme.colors.primary,
+              color: '#fff',
             }}
-            title={pendingChangesCount > 0 ? `Commit ${pendingChangesCount} pending change${pendingChangesCount !== 1 ? 's' : ''}` : 'No pending changes'}
+            title={`Commit ${pendingChangesCount} pending change${pendingChangesCount !== 1 ? 's' : ''}`}
           >
             <GitCommit className="w-4 h-4" />
             <span className="hidden sm:inline">Commit</span>
-            {pendingChangesCount > 0 && (
-              <span
-                className="ml-1 px-1.5 py-0.5 text-xs rounded-full"
-                style={{
-                  background: 'rgba(255,255,255,0.2)',
-                }}
-              >
-                {pendingChangesCount}
-              </span>
-            )}
+            <span
+              className="ml-1 px-1.5 py-0.5 text-xs rounded-full"
+              style={{
+                background: 'rgba(255,255,255,0.2)',
+              }}
+            >
+              {pendingChangesCount}
+            </span>
           </button>
         )}
 
