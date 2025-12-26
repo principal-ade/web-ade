@@ -74,7 +74,7 @@ export const layoutConfigs: LayoutConfig[] = [
     layout: {
       left: 'git-changes',
       middle: 'file-editor',
-      right: 'visual-validation',
+      right: 'file-city',
     },
     collapsed: {
       left: false,
