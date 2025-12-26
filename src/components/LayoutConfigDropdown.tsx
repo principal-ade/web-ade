@@ -47,7 +47,7 @@ export const layoutConfigs: LayoutConfig[] = [
     name: 'File City',
     layout: {
       left: 'file-city',
-      middle: 'visual-validation',
+      middle: 'trace-viewer',
       right: 'quality-hexagon',
     },
     collapsed: {

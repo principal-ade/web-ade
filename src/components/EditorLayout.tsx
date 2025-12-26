@@ -85,6 +85,15 @@ const PrincipalViewPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the TraceViewerPanel with SSR disabled
+const TraceViewerPanelLoader = dynamic(
+  () => import('@industry-theme/principal-view-panels').then((mod) => {
+    const Component = mod.panels[1]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 // Dynamically import the QualityHexagonPanel with SSR disabled
 const QualityHexagonPanelLoader = dynamic(
   () => import('@principal-ade/code-quality-panels').then((mod) => {
@@ -770,6 +779,15 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <PrincipalViewPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'trace-viewer',
+      label: 'Trace Viewer',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <TraceViewerPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
