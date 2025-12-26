@@ -134,6 +134,8 @@ interface PackageQuality {
   path?: string;
   version?: string;
   metrics: QualityMetrics;
+  /** List of lens IDs that actually ran for this package */
+  lensesRan?: string[];
 }
 
 /** Per-file quality metric from a lens */
@@ -948,12 +950,13 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       const data = await response.json();
 
       // Transform API response to QualitySliceData format
-      // CLI now outputs per-package hexagons
+      // CLI now outputs per-package hexagons and lensesRan
       const qualitySliceData: QualitySliceData = {
-        packages: (data.qualityMetrics.packages ?? []).map((pkg: { name: string; path?: string; hexagon: QualityMetrics }) => ({
+        packages: (data.qualityMetrics.packages ?? []).map((pkg: { name: string; path?: string; hexagon: QualityMetrics; lensesRan?: string[] }) => ({
           name: pkg.name,
           path: pkg.path,
           metrics: pkg.hexagon,
+          lensesRan: pkg.lensesRan,
         })),
         lastUpdated: data.timestamp,
         commitSha: data.commitSha,
