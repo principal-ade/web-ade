@@ -1115,6 +1115,8 @@ interface CollectionDropdownProps {
   onSelect: (id: string) => void;
   onCreateNew: () => void;
   theme: ReturnType<typeof useTheme>['theme'];
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 function CollectionDropdown({
@@ -1123,32 +1125,22 @@ function CollectionDropdown({
   onSelect,
   onCreateNew,
   theme,
+  isOpen,
+  onClose,
 }: CollectionDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const selected = collections.find(c => c.id === selectedId);
 
   return (
     <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
+      <span
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
           color: theme.colors.text,
           fontSize: `${theme.fontSizes[2]}px`,
           fontWeight: theme.fontWeights.semibold,
-          background: 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-          padding: 0,
-          fontFamily: 'inherit',
         }}
-        title="Switch collection"
       >
-        <span>{selected?.name || 'Select Collection'}</span>
-        <ArrowLeftRight size={16} style={{ color: theme.colors.textSecondary }} />
-      </button>
+        {selected?.name || 'Select Collection'}
+      </span>
 
       {isOpen && (
         <>
