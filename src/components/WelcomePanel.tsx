@@ -1,8 +1,11 @@
 import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { ArrowRight, Search, ExternalLink, Github, User, Building2, Clock, GitFork } from 'lucide-react';
+import { ArrowRight, Search, ExternalLink, Github, User, Building2, Clock, GitFork, FolderOpen, Library } from 'lucide-react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserCollections } from '@/contexts/UserCollectionsContext';
 import { AvatarStack, type RepositoryInfo } from './collections/AvatarStack';
+import type { Collection } from '@principal-ai/alexandria-collections';
 
 const RECENT_REPOSITORIES_KEY = 'recent-repositories';
 const RECENT_OWNERS_KEY = 'recent-owners';
@@ -406,16 +409,93 @@ const RecentItem: React.FC<{
 };
 
 /**
+ * Collection item component for sidebar
+ */
+const CollectionItem: React.FC<{
+  collection: Collection;
+  repoCount: number;
+  theme: ReturnType<typeof useTheme>['theme'];
+  onClick: () => void;
+}> = ({ collection, repoCount, theme, onClick }) => {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        padding: '8px 12px',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        transition: 'background-color 0.15s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = theme.colors.border;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'transparent';
+      }}
+      onClick={onClick}
+    >
+      <div
+        style={{
+          width: 28,
+          height: 28,
+          borderRadius: '6px',
+          backgroundColor: theme.colors.surface,
+          border: `1px solid ${theme.colors.border}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        {collection.icon ? (
+          <span style={{ fontSize: '14px' }}>{collection.icon}</span>
+        ) : (
+          <FolderOpen size={14} style={{ color: theme.colors.textMuted }} />
+        )}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: `${theme.fontSizes[1]}px`,
+            color: theme.colors.text,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {collection.name}
+        </div>
+        <div
+          style={{
+            fontSize: `${theme.fontSizes[0]}px`,
+            color: theme.colors.textMuted,
+          }}
+        >
+          {repoCount} {repoCount === 1 ? 'repo' : 'repos'}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
  * Recent Activity Sidebar component
  */
 const RecentActivitySidebar: React.FC<{
   recentRepos: RecentRepository[];
   recentOwners: RecentOwner[];
   theme: ReturnType<typeof useTheme>['theme'];
-}> = ({ recentRepos, recentOwners, theme }) => {
+  isAuthenticated: boolean;
+  collections: Collection[];
+  getCollectionRepositories: (collectionId: string) => string[];
+}> = ({ recentRepos, recentOwners, theme, isAuthenticated, collections, getCollectionRepositories }) => {
+  const [activeTab, setActiveTab] = useState<'recent' | 'collections'>('recent');
   const hasRecent = recentRepos.length > 0 || recentOwners.length > 0;
 
-  if (!hasRecent) {
+  // For non-authenticated users, only show if there are recent items
+  if (!isAuthenticated && !hasRecent) {
     return null;
   }
 
@@ -446,81 +526,227 @@ const RecentActivitySidebar: React.FC<{
         flexShrink: 0,
       }}
     >
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Clock size={16} style={{ color: theme.colors.textMuted }} />
-        <h3
-          style={{
-            margin: 0,
-            fontSize: `${theme.fontSizes[2]}px`,
-            fontWeight: theme.fontWeights.semibold,
-            color: theme.colors.text,
-          }}
-        >
-          Recent
-        </h3>
-      </div>
-
-      {/* Recent Repositories */}
-      {recentRepos.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div
+      {/* Tab Header */}
+      {isAuthenticated ? (
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <button
+            onClick={() => setActiveTab('recent')}
             style={{
-              fontSize: `${theme.fontSizes[0]}px`,
-              fontWeight: theme.fontWeights.medium,
-              color: theme.colors.textMuted,
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              padding: '0 12px',
-              marginBottom: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontWeight: theme.fontWeights.semibold,
+              color: activeTab === 'recent' ? theme.colors.text : theme.colors.textMuted,
+              backgroundColor: activeTab === 'recent' ? theme.colors.surface : 'transparent',
+              border: activeTab === 'recent' ? `1px solid ${theme.colors.border}` : '1px solid transparent',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              fontFamily: theme.fonts.body,
             }}
           >
-            Repositories
-          </div>
-          {recentRepos.slice(0, 5).map((repo) => (
-            <RecentItem
-              key={`${repo.owner}/${repo.repo}`}
-              icon={<GitFork size={10} />}
-              label={`${repo.owner}/${repo.repo}`}
-              sublabel={formatTimeAgo(repo.visitedAt)}
-              theme={theme}
-              onClick={() => {
-                window.location.href = `/${repo.owner}/${repo.repo}`;
-              }}
-            />
-          ))}
+            <Clock size={14} />
+            Recent
+          </button>
+          <button
+            onClick={() => setActiveTab('collections')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontWeight: theme.fontWeights.semibold,
+              color: activeTab === 'collections' ? theme.colors.text : theme.colors.textMuted,
+              backgroundColor: activeTab === 'collections' ? theme.colors.surface : 'transparent',
+              border: activeTab === 'collections' ? `1px solid ${theme.colors.border}` : '1px solid transparent',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              fontFamily: theme.fonts.body,
+            }}
+          >
+            <FolderOpen size={14} />
+            Collections
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Clock size={16} style={{ color: theme.colors.textMuted }} />
+          <h3
+            style={{
+              margin: 0,
+              fontSize: `${theme.fontSizes[2]}px`,
+              fontWeight: theme.fontWeights.semibold,
+              color: theme.colors.text,
+            }}
+          >
+            Recent
+          </h3>
         </div>
       )}
 
-      {/* Recent Owners */}
-      {recentOwners.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div
-            style={{
-              fontSize: `${theme.fontSizes[0]}px`,
-              fontWeight: theme.fontWeights.medium,
-              color: theme.colors.textMuted,
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              padding: '0 12px',
-              marginBottom: '4px',
-            }}
-          >
-            Owners
-          </div>
-          {recentOwners.slice(0, 5).map((owner) => (
-            <RecentItem
-              key={owner.owner}
-              icon={<User size={10} />}
-              label={owner.owner}
-              sublabel={formatTimeAgo(owner.visitedAt)}
-              theme={theme}
-              onClick={() => {
-                window.location.href = `/${owner.owner}`;
+      {/* Recent Tab Content */}
+      {activeTab === 'recent' && (
+        <>
+          {/* Recent Repositories */}
+          {recentRepos.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div
+                style={{
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontWeight: theme.fontWeights.medium,
+                  color: theme.colors.textMuted,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  padding: '0 12px',
+                  marginBottom: '4px',
+                }}
+              >
+                Repositories
+              </div>
+              {recentRepos.slice(0, 5).map((repo) => (
+                <RecentItem
+                  key={`${repo.owner}/${repo.repo}`}
+                  icon={<GitFork size={10} />}
+                  label={`${repo.owner}/${repo.repo}`}
+                  sublabel={formatTimeAgo(repo.visitedAt)}
+                  theme={theme}
+                  onClick={() => {
+                    window.location.href = `/${repo.owner}/${repo.repo}`;
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Recent Owners */}
+          {recentOwners.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div
+                style={{
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontWeight: theme.fontWeights.medium,
+                  color: theme.colors.textMuted,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  padding: '0 12px',
+                  marginBottom: '4px',
+                }}
+              >
+                Owners
+              </div>
+              {recentOwners.slice(0, 5).map((owner) => (
+                <RecentItem
+                  key={owner.owner}
+                  icon={<User size={10} />}
+                  label={owner.owner}
+                  sublabel={formatTimeAgo(owner.visitedAt)}
+                  theme={theme}
+                  onClick={() => {
+                    window.location.href = `/${owner.owner}`;
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Empty state for Recent tab */}
+          {!hasRecent && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '32px 16px',
+                textAlign: 'center',
               }}
-            />
-          ))}
-        </div>
+            >
+              <Clock size={32} style={{ color: theme.colors.textMuted, marginBottom: '12px' }} />
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  color: theme.colors.textMuted,
+                }}
+              >
+                No recent activity
+              </p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Collections Tab Content */}
+      {activeTab === 'collections' && (
+        <>
+          {collections.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {collections.map((collection) => (
+                <CollectionItem
+                  key={collection.id}
+                  collection={collection}
+                  repoCount={getCollectionRepositories(collection.id).length}
+                  theme={theme}
+                  onClick={() => {
+                    window.location.href = `/collections/${collection.id}`;
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '32px 16px',
+                textAlign: 'center',
+              }}
+            >
+              <Library size={32} style={{ color: theme.colors.textMuted, marginBottom: '12px' }} />
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  color: theme.colors.textMuted,
+                  marginBottom: '16px',
+                }}
+              >
+                No collections yet
+              </p>
+              <Link
+                href="/library"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 16px',
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  fontWeight: theme.fontWeights.semibold,
+                  color: theme.colors.background,
+                  backgroundColor: theme.colors.text,
+                  borderRadius: '6px',
+                  textDecoration: 'none',
+                  transition: 'opacity 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.8';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+              >
+                Go to Library
+                <ArrowRight size={14} />
+              </Link>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -558,6 +784,7 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
 }) => {
   const { theme } = useTheme();
   const { isAuthenticated } = useAuth();
+  const { collections: userCollections, getCollectionRepositories } = useUserCollections();
   const [searchQuery, setSearchQuery] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
   const [userRepos, setUserRepos] = useState<UserReposResponse | null>(null);
@@ -1086,11 +1313,14 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
       </div>
 
       {/* Recent Activity Sidebar */}
-      {hasRecentItems && (
+      {(hasRecentItems || isAuthenticated) && (
         <RecentActivitySidebar
           recentRepos={recentRepos}
           recentOwners={recentOwners}
           theme={theme}
+          isAuthenticated={isAuthenticated}
+          collections={userCollections}
+          getCollectionRepositories={getCollectionRepositories}
         />
       )}
     </div>
