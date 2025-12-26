@@ -59,9 +59,9 @@ export const layoutConfigs: LayoutConfig[] = [
     id: 'quality-debug',
     name: 'Quality Debug',
     layout: {
-      left: 'file-city',
+      left: 'lens-debug',
       middle: 'quality-hexagon',
-      right: 'lens-debug',
+      right: 'file-city',
     },
     collapsed: {
       left: false,
