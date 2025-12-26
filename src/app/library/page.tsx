@@ -402,8 +402,8 @@ function LibraryPageContent({
           borderColor: theme.colors.border,
         }}
       >
-        {/* Left: User Avatar and Collection Dropdown */}
-        <div className="flex items-center gap-2">
+        {/* Left: User Avatar, Collections label, and Collection Dropdown */}
+        <div className="flex items-center gap-3">
           {user?.avatar_url ? (
             <button
               onClick={() => setSidebarOpen(true)}
@@ -431,6 +431,15 @@ function LibraryPageContent({
               <Logo width={32} height={32} color={theme.colors.primary} />
             </Link>
           )}
+          <span
+            style={{
+              color: theme.colors.textMuted,
+              fontSize: `${theme.fontSizes[1]}px`,
+            }}
+          >
+            Collections
+          </span>
+          <span style={{ color: theme.colors.border }}>/</span>
           <CollectionDropdown
             collections={allCollections}
             selectedId={selectedCollectionId}
