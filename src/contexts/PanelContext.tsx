@@ -136,6 +136,8 @@ interface PackageQuality {
   metrics: QualityMetrics;
   /** List of lens IDs that actually ran for this package */
   lensesRan?: string[];
+  /** True if this is a monorepo orchestrator package (config-only, no source) */
+  isOrchestrator?: boolean;
 }
 
 /** Per-file quality metric from a lens */
@@ -950,13 +952,14 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       const data = await response.json();
 
       // Transform API response to QualitySliceData format
-      // CLI now outputs per-package hexagons and lensesRan
+      // CLI now outputs per-package hexagons, lensesRan, and isOrchestrator
       const qualitySliceData: QualitySliceData = {
-        packages: (data.qualityMetrics.packages ?? []).map((pkg: { name: string; path?: string; hexagon: QualityMetrics; lensesRan?: string[] }) => ({
+        packages: (data.qualityMetrics.packages ?? []).map((pkg: { name: string; path?: string; hexagon: QualityMetrics; lensesRan?: string[]; isOrchestrator?: boolean }) => ({
           name: pkg.name,
           path: pkg.path,
           metrics: pkg.hexagon,
           lensesRan: pkg.lensesRan,
+          isOrchestrator: pkg.isOrchestrator,
         })),
         lastUpdated: data.timestamp,
         commitSha: data.commitSha,

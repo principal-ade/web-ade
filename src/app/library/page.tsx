@@ -474,22 +474,6 @@ function LibraryPageContent({
               <Logo width={32} height={32} color={theme.colors.primary} />
             </Link>
           )}
-          <button
-            onClick={() => setCollectionDropdownOpen(!collectionDropdownOpen)}
-            style={{
-              color: theme.colors.textSecondary,
-              fontSize: `${theme.fontSizes[2]}px`,
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 0,
-              fontFamily: 'inherit',
-            }}
-            title="Switch collection"
-          >
-            Collections
-          </button>
-          <span style={{ color: theme.colors.textSecondary, fontSize: `${theme.fontSizes[2]}px` }}>/</span>
           <CollectionDropdown
             collections={allCollections}
             selectedId={selectedCollectionId}
@@ -497,6 +481,7 @@ function LibraryPageContent({
             onCreateNew={onCreateNew}
             theme={theme}
             isOpen={collectionDropdownOpen}
+            onToggle={() => setCollectionDropdownOpen(!collectionDropdownOpen)}
             onClose={() => setCollectionDropdownOpen(false)}
           />
         </div>
@@ -1126,6 +1111,7 @@ interface CollectionDropdownProps {
   onCreateNew: () => void;
   theme: ReturnType<typeof useTheme>['theme'];
   isOpen: boolean;
+  onToggle: () => void;
   onClose: () => void;
 }
 
@@ -1136,12 +1122,29 @@ function CollectionDropdown({
   onCreateNew,
   theme,
   isOpen,
+  onToggle,
   onClose,
 }: CollectionDropdownProps) {
   const selected = collections.find(c => c.id === selectedId);
 
   return (
     <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <button
+        onClick={onToggle}
+        style={{
+          color: theme.colors.textSecondary,
+          fontSize: `${theme.fontSizes[2]}px`,
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: 0,
+          fontFamily: 'inherit',
+        }}
+        title="Switch collection"
+      >
+        Collections
+      </button>
+      <span style={{ color: theme.colors.textSecondary, fontSize: `${theme.fontSizes[2]}px` }}>/</span>
       <span
         style={{
           color: theme.colors.text,
