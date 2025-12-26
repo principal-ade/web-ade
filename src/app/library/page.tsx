@@ -19,9 +19,24 @@ import {
   PanelLayout,
 } from "@principal-ade/panel-layouts";
 import '@principal-ade/panel-layouts/styles.css';
-import { Plus, FolderOpen, Layers, Edit2, Cloud, CloudOff, Share2, Check, ArrowLeftRight, Settings, Compass } from 'lucide-react';
+import { Plus, FolderOpen, Layers, Edit2, Cloud, CloudOff, Share2, Check, ArrowLeftRight, Settings, Compass, Clock, GitFork, User, Library, ArrowRight, X, Home } from 'lucide-react';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
+import { iconMap } from '@/components/collections/CollectionModal';
 import type { Collection } from '@principal-ai/alexandria-collections';
+
+const RECENT_REPOSITORIES_KEY = 'recent-repositories';
+const RECENT_OWNERS_KEY = 'recent-owners';
+
+interface RecentRepository {
+  owner: string;
+  repo: string;
+  visitedAt: string;
+}
+
+interface RecentOwner {
+  owner: string;
+  visitedAt: string;
+}
 
 // Dynamically import panels with SSR disabled
 const WorkspaceCollectionPanelLoader = dynamic(
@@ -126,12 +141,44 @@ function LibraryPageContent({
   const { theme } = useTheme();
   const router = useRouter();
   const { context, actions, events } = usePanelProvider();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const userCollections = useUserCollections();
   const [isMobile, setIsMobile] = useState(false);
   const [previewedRepo, setPreviewedRepo] = useState<string | null>(initialPreviewedRepo ?? null);
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
   const [leftCollapsed, _setLeftCollapsed] = useState(false);
   const [rightCollapsed, _setRightCollapsed] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<'recent' | 'collections'>('recent');
+  const [recentRepos, setRecentRepos] = useState<RecentRepository[]>([]);
+  const [recentOwners, setRecentOwners] = useState<RecentOwner[]>([]);
+
+  // Load recent items from localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const storedRepos = localStorage.getItem(RECENT_REPOSITORIES_KEY);
+      if (storedRepos) setRecentRepos(JSON.parse(storedRepos));
+      const storedOwners = localStorage.getItem(RECENT_OWNERS_KEY);
+      if (storedOwners) setRecentOwners(JSON.parse(storedOwners));
+    } catch (err) {
+      console.error('Failed to load recent items:', err);
+    }
+  }, []);
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
 
   // Sync previewed repo with parent
   const handlePreviewChange = useCallback((repo: string | null) => {
@@ -355,15 +402,35 @@ function LibraryPageContent({
           borderColor: theme.colors.border,
         }}
       >
-        {/* Left: Logo and Collection Dropdown */}
+        {/* Left: User Avatar and Collection Dropdown */}
         <div className="flex items-center gap-2">
-          <Link
-            href="/"
-            className="flex items-center transition-all hover:opacity-80"
-            title="Home"
-          >
-            <Logo width={32} height={32} color={theme.colors.primary} />
-          </Link>
+          {user?.avatar_url ? (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="flex items-center transition-all hover:opacity-80"
+              title="Open recent activity"
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            >
+              <img
+                src={user.avatar_url}
+                alt={user.name || user.login}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  border: `2px solid ${theme.colors.border}`,
+                }}
+              />
+            </button>
+          ) : (
+            <Link
+              href="/"
+              className="flex items-center transition-all hover:opacity-80"
+              title="Home"
+            >
+              <Logo width={32} height={32} color={theme.colors.primary} />
+            </Link>
+          )}
           <CollectionDropdown
             collections={allCollections}
             selectedId={selectedCollectionId}
@@ -551,6 +618,359 @@ function LibraryPageContent({
           collections: allCollections.map(c => ({ id: c.id, name: c.name })),
         }}
       />
+
+      {/* Sidebar Overlay */}
+      {sidebarOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 50,
+            }}
+            onClick={() => setSidebarOpen(false)}
+          />
+
+          {/* Sidebar */}
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              bottom: 0,
+              width: '320px',
+              backgroundColor: theme.colors.background,
+              borderRight: `1px solid ${theme.colors.border}`,
+              zIndex: 51,
+              display: 'flex',
+              flexDirection: 'column',
+              animation: 'slideIn 0.2s ease-out',
+            }}
+          >
+            {/* Sidebar Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 20px',
+                borderBottom: `1px solid ${theme.colors.border}`,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {user?.avatar_url && (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.name || user.login}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      border: `2px solid ${theme.colors.border}`,
+                    }}
+                  />
+                )}
+                <div>
+                  <div style={{ fontSize: `${theme.fontSizes[2]}px`, fontWeight: theme.fontWeights.semibold, color: theme.colors.text }}>
+                    {user?.name || user?.login || 'User'}
+                  </div>
+                  {user?.login && user?.name && (
+                    <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted }}>
+                      @{user.login}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  color: theme.colors.textMuted,
+                  borderRadius: '4px',
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Home Link */}
+            <Link
+              href="/"
+              onClick={() => setSidebarOpen(false)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '12px 20px',
+                color: theme.colors.text,
+                textDecoration: 'none',
+                borderBottom: `1px solid ${theme.colors.border}`,
+              }}
+            >
+              <Home size={16} />
+              <span style={{ fontSize: `${theme.fontSizes[1]}px` }}>Home</span>
+            </Link>
+
+            {/* Tab Header */}
+            <div style={{ display: 'flex', gap: '4px', padding: '16px 20px 12px' }}>
+              <button
+                onClick={() => setSidebarTab('recent')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 12px',
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  fontWeight: theme.fontWeights.semibold,
+                  color: sidebarTab === 'recent' ? theme.colors.text : theme.colors.textMuted,
+                  backgroundColor: sidebarTab === 'recent' ? theme.colors.surface : 'transparent',
+                  border: sidebarTab === 'recent' ? `1px solid ${theme.colors.border}` : '1px solid transparent',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontFamily: theme.fonts.body,
+                }}
+              >
+                <Clock size={14} />
+                Recent
+              </button>
+              <button
+                onClick={() => setSidebarTab('collections')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 12px',
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  fontWeight: theme.fontWeights.semibold,
+                  color: sidebarTab === 'collections' ? theme.colors.text : theme.colors.textMuted,
+                  backgroundColor: sidebarTab === 'collections' ? theme.colors.surface : 'transparent',
+                  border: sidebarTab === 'collections' ? `1px solid ${theme.colors.border}` : '1px solid transparent',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontFamily: theme.fonts.body,
+                }}
+              >
+                <FolderOpen size={14} />
+                Collections
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px' }}>
+              {sidebarTab === 'recent' && (
+                <>
+                  {recentRepos.length > 0 && (
+                    <div style={{ marginBottom: '20px' }}>
+                      <div
+                        style={{
+                          fontSize: `${theme.fontSizes[0]}px`,
+                          fontWeight: theme.fontWeights.medium,
+                          color: theme.colors.textMuted,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          marginBottom: '8px',
+                        }}
+                      >
+                        Repositories
+                      </div>
+                      {recentRepos.slice(0, 5).map((repo) => (
+                        <Link
+                          key={`${repo.owner}/${repo.repo}`}
+                          href={`/${repo.owner}/${repo.repo}`}
+                          onClick={() => setSidebarOpen(false)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            textDecoration: 'none',
+                            color: theme.colors.text,
+                            marginBottom: '2px',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.surface; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          <img
+                            src={`https://avatars.githubusercontent.com/${repo.owner}?size=64`}
+                            alt={repo.owner}
+                            style={{ width: 28, height: 28, borderRadius: '6px' }}
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {repo.owner}/{repo.repo}
+                            </div>
+                            <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <GitFork size={10} />
+                              {formatTimeAgo(repo.visitedAt)}
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+
+                  {recentOwners.length > 0 && (
+                    <div>
+                      <div
+                        style={{
+                          fontSize: `${theme.fontSizes[0]}px`,
+                          fontWeight: theme.fontWeights.medium,
+                          color: theme.colors.textMuted,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          marginBottom: '8px',
+                        }}
+                      >
+                        Owners
+                      </div>
+                      {recentOwners.slice(0, 5).map((owner) => (
+                        <Link
+                          key={owner.owner}
+                          href={`/${owner.owner}`}
+                          onClick={() => setSidebarOpen(false)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            textDecoration: 'none',
+                            color: theme.colors.text,
+                            marginBottom: '2px',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.surface; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          <img
+                            src={`https://avatars.githubusercontent.com/${owner.owner}?size=64`}
+                            alt={owner.owner}
+                            style={{ width: 28, height: 28, borderRadius: '6px' }}
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: `${theme.fontSizes[1]}px` }}>{owner.owner}</div>
+                            <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <User size={10} />
+                              {formatTimeAgo(owner.visitedAt)}
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+
+                  {recentRepos.length === 0 && recentOwners.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '32px 16px', color: theme.colors.textMuted }}>
+                      <Clock size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                      <p style={{ margin: 0, fontSize: `${theme.fontSizes[1]}px` }}>No recent activity</p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {sidebarTab === 'collections' && (
+                <>
+                  {userCollections.collections.length > 0 ? (
+                    userCollections.collections.map((collection) => {
+                      const IconComponent = collection.icon ? iconMap[collection.icon] : null;
+                      const repoCount = userCollections.getCollectionRepositories(collection.id).length;
+                      return (
+                        <Link
+                          key={collection.id}
+                          href={`/library?collection=${collection.id}`}
+                          onClick={() => {
+                            setSidebarOpen(false);
+                            onSelectCollection(collection.id);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            textDecoration: 'none',
+                            color: theme.colors.text,
+                            marginBottom: '2px',
+                            backgroundColor: collection.id === selectedCollectionId ? theme.colors.surface : 'transparent',
+                          }}
+                          onMouseEnter={(e) => { if (collection.id !== selectedCollectionId) e.currentTarget.style.backgroundColor = theme.colors.surface; }}
+                          onMouseLeave={(e) => { if (collection.id !== selectedCollectionId) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          <div
+                            style={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: '6px',
+                              backgroundColor: theme.colors.surface,
+                              border: `1px solid ${theme.colors.border}`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            {IconComponent ? (
+                              <IconComponent size={14} style={{ color: theme.colors.textMuted }} />
+                            ) : (
+                              <FolderOpen size={14} style={{ color: theme.colors.textMuted }} />
+                            )}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {collection.name}
+                            </div>
+                            <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted }}>
+                              {repoCount} {repoCount === 1 ? 'repo' : 'repos'}
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '32px 16px', color: theme.colors.textMuted }}>
+                      <Library size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                      <p style={{ margin: 0, fontSize: `${theme.fontSizes[1]}px`, marginBottom: '16px' }}>No collections yet</p>
+                      <button
+                        onClick={() => {
+                          setSidebarOpen(false);
+                          onCreateNew();
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '8px 16px',
+                          fontSize: `${theme.fontSizes[1]}px`,
+                          fontWeight: theme.fontWeights.semibold,
+                          color: theme.colors.background,
+                          backgroundColor: theme.colors.text,
+                          borderRadius: '6px',
+                          border: 'none',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Create Collection
+                        <ArrowRight size={14} />
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          <style>{`
+            @keyframes slideIn {
+              from { transform: translateX(-100%); }
+              to { transform: translateX(0); }
+            }
+          `}</style>
+        </>
+      )}
     </div>
   );
 }
