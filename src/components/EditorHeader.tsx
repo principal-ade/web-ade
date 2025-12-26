@@ -2,7 +2,7 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { Wifi, WifiOff, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, Download, Plus, Edit2, Palette, GitCommit, ArrowLeftRight, Building2 } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, Download, Plus, Edit2, Palette, GitCommit, ArrowLeftRight, Building2 } from 'lucide-react';
 import { UserAvatarMenu } from './UserAvatarMenu';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
@@ -144,15 +144,93 @@ export function EditorHeader({
         {/* Show repo avatar + owner/repo on repo pages */}
         {repositoryName && (
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`https://github.com/${repositoryName.owner}.png?size=64`}
-              alt={repositoryName.owner}
-              className="w-8 h-8 flex-shrink-0"
-              style={{
-                borderRadius: '6px',
-              }}
-            />
+            {/* Org switcher dropdown */}
+            <div className="relative" ref={orgSwitcherRef}>
+              <button
+                onClick={() => setOrgSwitcherOpen(!orgSwitcherOpen)}
+                className="flex items-center transition-all hover:opacity-80"
+                title="Switch organization"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`https://github.com/${repositoryName.owner}.png?size=64`}
+                  alt={repositoryName.owner}
+                  className="w-8 h-8 flex-shrink-0"
+                  style={{
+                    borderRadius: '6px',
+                  }}
+                />
+              </button>
+
+              {/* Dropdown Menu */}
+              {orgSwitcherOpen && isAuthenticated && user && (
+                <div
+                  className="absolute left-0 top-full mt-1 py-1 rounded-md shadow-lg border min-w-[180px] z-50"
+                  style={{
+                    background: theme.colors.background,
+                    borderColor: theme.colors.border,
+                  }}
+                >
+                  {/* Current user */}
+                  <Link
+                    href={`/${user.login}`}
+                    className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
+                    style={{
+                      color: theme.colors.text,
+                      background: repositoryName.owner === user.login ? theme.colors.surface : 'transparent',
+                    }}
+                    onClick={() => setOrgSwitcherOpen(false)}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={user.avatar_url}
+                      alt={user.login}
+                      className="w-5 h-5 rounded"
+                    />
+                    {user.login}
+                  </Link>
+
+                  {/* Organizations */}
+                  {organizations.length > 0 && (
+                    <>
+                      <div
+                        className="my-1 h-px"
+                        style={{ background: theme.colors.border }}
+                      />
+                      <div
+                        className="px-3 py-1.5 text-xs font-medium"
+                        style={{ color: theme.colors.textMuted }}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <Building2 className="w-3 h-3" />
+                          Organizations
+                        </div>
+                      </div>
+                      {organizations.map((org) => (
+                        <Link
+                          key={org.id}
+                          href={`/${org.login}`}
+                          className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
+                          style={{
+                            color: theme.colors.text,
+                            background: repositoryName.owner === org.login ? theme.colors.surface : 'transparent',
+                          }}
+                          onClick={() => setOrgSwitcherOpen(false)}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={org.avatar_url}
+                            alt={org.login}
+                            className="w-5 h-5 rounded"
+                          />
+                          {org.login}
+                        </Link>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
             <div
               className="flex items-center gap-1.5 text-base font-semibold hidden sm:flex"
               style={{ fontFamily: theme.fonts.body }}
@@ -557,23 +635,7 @@ export function EditorHeader({
           </button>
         )}
 
-        {/* Global Presence Connection Indicator - only show when authenticated */}
-        {isAuthenticated && user && (
-          <div
-            className="flex items-center justify-center w-8 h-8 rounded-md"
-            style={{
-              background: connected ? theme.colors.success + '20' : theme.colors.error + '20',
-              color: connected ? theme.colors.success : theme.colors.error,
-            }}
-            title={connected ? 'Connected to server' : 'Disconnected from server'}
-          >
-            {connected ? (
-              <Wifi className="w-3 h-3" />
-            ) : (
-              <WifiOff className="w-3 h-3" />
-            )}
-          </div>
-        )}
+        {/* TODO: Connection indicator hidden - finding new placement */}
 
         {/* User Avatar Menu */}
         <UserAvatarMenu />
