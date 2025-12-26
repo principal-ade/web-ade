@@ -278,6 +278,7 @@ function LibraryPageContent({
             context={context}
             actions={panelActions}
             events={events}
+            defaultShowSearch={true}
           />
         </div>
       ),
@@ -291,6 +292,7 @@ function LibraryPageContent({
             context={context}
             actions={panelActions}
             events={events}
+            defaultShowSearch={true}
           />
         </div>
       ),
