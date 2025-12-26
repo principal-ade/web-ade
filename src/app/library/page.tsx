@@ -433,13 +433,13 @@ function LibraryPageContent({
           )}
           <span
             style={{
-              color: theme.colors.textMuted,
-              fontSize: `${theme.fontSizes[1]}px`,
+              color: theme.colors.textSecondary,
+              fontSize: `${theme.fontSizes[2]}px`,
             }}
           >
             Collections
           </span>
-          <span style={{ color: theme.colors.border }}>/</span>
+          <span style={{ color: theme.colors.textSecondary, fontSize: `${theme.fontSizes[2]}px` }}>/</span>
           <CollectionDropdown
             collections={allCollections}
             selectedId={selectedCollectionId}
