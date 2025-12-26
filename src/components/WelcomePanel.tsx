@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ArrowRight, Search, ExternalLink, Github, User, Building2, Clock, GitFork, FolderOpen, Library } from 'lucide-react';
 import Link from 'next/link';
@@ -494,7 +495,8 @@ const RecentActivitySidebar: React.FC<{
   isAuthenticated: boolean;
   collections: Collection[];
   getCollectionRepositories: (collectionId: string) => string[];
-}> = ({ recentRepos, recentOwners, theme, isAuthenticated, collections, getCollectionRepositories }) => {
+  onCollectionClick: (collectionId: string) => void;
+}> = ({ recentRepos, recentOwners, theme, isAuthenticated, collections, getCollectionRepositories, onCollectionClick }) => {
   const [activeTab, setActiveTab] = useState<'recent' | 'collections'>('recent');
   const hasRecent = recentRepos.length > 0 || recentOwners.length > 0;
 
@@ -695,9 +697,7 @@ const RecentActivitySidebar: React.FC<{
                   collection={collection}
                   repoCount={getCollectionRepositories(collection.id).length}
                   theme={theme}
-                  onClick={() => {
-                    window.location.href = `/collections/${collection.id}`;
-                  }}
+                  onClick={() => onCollectionClick(collection.id)}
                 />
               ))}
             </div>
@@ -789,6 +789,7 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
   const { theme } = useTheme();
   const { isAuthenticated } = useAuth();
   const { collections: userCollections, getCollectionRepositories } = useUserCollections();
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
   const [userRepos, setUserRepos] = useState<UserReposResponse | null>(null);
@@ -1325,6 +1326,7 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
           isAuthenticated={isAuthenticated}
           collections={userCollections}
           getCollectionRepositories={getCollectionRepositories}
+          onCollectionClick={(collectionId) => router.push(`/library?collection=${collectionId}`)}
         />
       )}
     </div>
