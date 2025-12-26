@@ -575,7 +575,7 @@ const RecentActivitySidebar: React.FC<{
             }}
           >
             <FolderOpen size={14} />
-            Collections
+            Personal Collections
           </button>
         </div>
       ) : (
