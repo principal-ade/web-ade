@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { PanelProvider, usePanelProvider } from "@/contexts/PanelContext";
@@ -10,6 +11,7 @@ import { CollectionModal } from "@/components/collections/CollectionModal";
 import { AddRepositoryModal } from "@/components/collections/AddRepositoryModal";
 import { GitHubSyncModal } from "@/components/collections/GitHubSyncModal";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
+import { Logo } from "@principal-ai/logo-component";
 import dynamic from "next/dynamic";
 import {
   EditableConfigurablePanelLayout,
@@ -351,8 +353,15 @@ function LibraryPageContent({
           borderColor: theme.colors.border,
         }}
       >
-        {/* Left: Collection Dropdown */}
-        <div className="flex items-center">
+        {/* Left: Logo and Collection Dropdown */}
+        <div className="flex items-center gap-2">
+          <Link
+            href="/"
+            className="flex items-center transition-all hover:opacity-80"
+            title="Home"
+          >
+            <Logo width={32} height={32} color={theme.colors.primary} />
+          </Link>
           <CollectionDropdown
             collections={allCollections}
             selectedId={selectedCollectionId}
