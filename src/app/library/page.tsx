@@ -811,7 +811,7 @@ function LibraryPageWrapper() {
       {selectedCollection ? (
         <div style={{ height: '100vh' }}>
           <PanelProvider
-            key={`${selectedCollectionId}-${repositories.length}`}
+            key={selectedCollectionId}
             workspace={{
               name: selectedCollection.name,
               path: `/library`,
