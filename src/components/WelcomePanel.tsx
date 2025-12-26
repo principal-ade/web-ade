@@ -527,7 +527,7 @@ const RecentActivitySidebar: React.FC<{
         flexDirection: 'column',
         gap: '24px',
         padding: '32px 24px',
-        borderLeft: `1px solid ${theme.colors.border}`,
+        borderRight: `1px solid ${theme.colors.border}`,
         width: '25%',
         flexShrink: 0,
       }}
@@ -950,6 +950,19 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
         width: '100%',
       }}
     >
+      {/* Recent Activity Sidebar - Left */}
+      {(hasRecentItems || isAuthenticated) && (
+        <RecentActivitySidebar
+          recentRepos={recentRepos}
+          recentOwners={recentOwners}
+          theme={theme}
+          isAuthenticated={isAuthenticated}
+          collections={userCollections}
+          getCollectionRepositories={getCollectionRepositories}
+          onCollectionClick={(collectionId) => router.push(`/library?collection=${collectionId}`)}
+        />
+      )}
+
       {/* Main content */}
       <div style={{ flex: 1, minWidth: 0 }}>
       {/* Curated Collections Section */}
@@ -1316,19 +1329,6 @@ export const WelcomePanel: React.FC<WelcomePanelProps> = ({
         </div>
       )}
       </div>
-
-      {/* Recent Activity Sidebar */}
-      {(hasRecentItems || isAuthenticated) && (
-        <RecentActivitySidebar
-          recentRepos={recentRepos}
-          recentOwners={recentOwners}
-          theme={theme}
-          isAuthenticated={isAuthenticated}
-          collections={userCollections}
-          getCollectionRepositories={getCollectionRepositories}
-          onCollectionClick={(collectionId) => router.push(`/library?collection=${collectionId}`)}
-        />
-      )}
     </div>
   );
 };
