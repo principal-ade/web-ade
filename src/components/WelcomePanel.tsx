@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserCollections } from '@/contexts/UserCollectionsContext';
 import { AvatarStack, type RepositoryInfo } from './collections/AvatarStack';
+import { iconMap } from './collections/CollectionModal';
 import type { Collection } from '@principal-ai/alexandria-collections';
 
 const RECENT_REPOSITORIES_KEY = 'recent-repositories';
@@ -449,11 +450,14 @@ const CollectionItem: React.FC<{
           flexShrink: 0,
         }}
       >
-        {collection.icon ? (
-          <span style={{ fontSize: '14px' }}>{collection.icon}</span>
-        ) : (
-          <FolderOpen size={14} style={{ color: theme.colors.textMuted }} />
-        )}
+        {(() => {
+          const IconComponent = collection.icon ? iconMap[collection.icon] : null;
+          return IconComponent ? (
+            <IconComponent size={14} style={{ color: theme.colors.textMuted }} />
+          ) : (
+            <FolderOpen size={14} style={{ color: theme.colors.textMuted }} />
+          );
+        })()}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
