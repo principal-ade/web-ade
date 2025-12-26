@@ -573,40 +573,25 @@ function CollectionDropdown({
 
   return (
     <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <span
-        style={{
-          color: theme.colors.text,
-          fontSize: `${theme.fontSizes[2]}px`,
-          fontWeight: theme.fontWeights.semibold,
-        }}
-      >
-        {selected?.name || 'Select Collection'}
-      </span>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        title="Switch collection"
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          padding: '4px',
-          backgroundColor: 'transparent',
+          gap: '8px',
+          color: theme.colors.text,
+          fontSize: `${theme.fontSizes[2]}px`,
+          fontWeight: theme.fontWeights.semibold,
+          background: 'transparent',
           border: 'none',
-          borderRadius: '4px',
           cursor: 'pointer',
-          color: theme.colors.textSecondary,
-          transition: 'all 0.15s ease',
+          padding: 0,
+          fontFamily: 'inherit',
         }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = theme.colors.surface;
-          e.currentTarget.style.color = theme.colors.text;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'transparent';
-          e.currentTarget.style.color = theme.colors.textSecondary;
-        }}
+        title="Switch collection"
       >
-        <ArrowLeftRight size={16} />
+        <span>{selected?.name || 'Select Collection'}</span>
+        <ArrowLeftRight size={16} style={{ color: theme.colors.textSecondary }} />
       </button>
 
       {isOpen && (
