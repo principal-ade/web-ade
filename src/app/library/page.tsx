@@ -97,6 +97,8 @@ interface LibraryPageContentProps {
   // Previewed repo for explore mode
   onPreviewChange?: (repo: string | null) => void;
   initialPreviewedRepo?: string | null;
+  // Initial view mode based on collection content
+  initialViewMode?: ViewMode;
 }
 
 function LibraryPageContent({
@@ -117,6 +119,7 @@ function LibraryPageContent({
   shareSuccess,
   onPreviewChange,
   initialPreviewedRepo,
+  initialViewMode = 'manage',
 }: LibraryPageContentProps) {
   const { theme } = useTheme();
   const router = useRouter();
@@ -124,7 +127,7 @@ function LibraryPageContent({
   const { isAuthenticated } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
   const [previewedRepo, setPreviewedRepo] = useState<string | null>(initialPreviewedRepo ?? null);
-  const [viewMode, setViewMode] = useState<ViewMode>('manage');
+  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
   const [leftCollapsed, _setLeftCollapsed] = useState(false);
   const [rightCollapsed, _setRightCollapsed] = useState(false);
 
@@ -845,6 +848,7 @@ function LibraryPageWrapper() {
               shareSuccess={shareSuccess}
               onPreviewChange={handlePreviewChange}
               initialPreviewedRepo={previewedRepo}
+              initialViewMode={repositories.length > 0 ? 'explore' : 'manage'}
             />
           </PanelProvider>
         </div>
