@@ -19,7 +19,7 @@ import {
   PanelLayout,
 } from "@principal-ade/panel-layouts";
 import '@principal-ade/panel-layouts/styles.css';
-import { Plus, FolderOpen, Layers, Edit2, Cloud, CloudOff, Share2, Check, ArrowLeftRight, Settings, Compass, Clock, GitFork, User, Library, ArrowRight, X, Home } from 'lucide-react';
+import { Plus, FolderOpen, Layers, Edit2, Cloud, CloudOff, Share2, Check, ArrowLeftRight, Settings, Compass, Clock, GitFork, User, Library, ArrowRight, X, Home, Star, Users } from 'lucide-react';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { iconMap } from '@/components/collections/CollectionModal';
 import type { Collection } from '@principal-ai/alexandria-collections';
@@ -36,6 +36,26 @@ interface RecentRepository {
 interface RecentOwner {
   owner: string;
   visitedAt: string;
+}
+
+interface StarredRepo {
+  id: number;
+  name: string;
+  full_name: string;
+  owner: {
+    login: string;
+    avatar_url: string;
+  };
+  description: string | null;
+  stargazers_count: number;
+}
+
+interface FollowingUser {
+  id: number;
+  login: string;
+  avatar_url: string;
+  name: string | null;
+  bio: string | null;
 }
 
 // Dynamically import panels with SSR disabled
@@ -149,9 +169,11 @@ function LibraryPageContent({
   const [leftCollapsed, _setLeftCollapsed] = useState(false);
   const [rightCollapsed, _setRightCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<'recent' | 'collections'>('recent');
+  const [sidebarTab, setSidebarTab] = useState<'recent' | 'collections' | 'following' | 'starred'>('recent');
   const [recentRepos, setRecentRepos] = useState<RecentRepository[]>([]);
   const [recentOwners, setRecentOwners] = useState<RecentOwner[]>([]);
+  const [starredRepos, setStarredRepos] = useState<StarredRepo[]>([]);
+  const [followingUsers, setFollowingUsers] = useState<FollowingUser[]>([]);
 
   // Load recent items from localStorage
   useEffect(() => {
@@ -165,6 +187,26 @@ function LibraryPageContent({
       console.error('Failed to load recent items:', err);
     }
   }, []);
+
+  // Fetch starred repos and following users when sidebar opens
+  useEffect(() => {
+    if (!sidebarOpen || !isAuthenticated) return;
+
+    const fetchUserData = async () => {
+      try {
+        const response = await fetch('/api/github/user/repos');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.starred) setStarredRepos(data.starred);
+          if (data.following) setFollowingUsers(data.following);
+        }
+      } catch (err) {
+        console.error('Failed to fetch user data:', err);
+      }
+    };
+
+    fetchUserData();
+  }, [sidebarOpen, isAuthenticated]);
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
@@ -726,47 +768,39 @@ function LibraryPageContent({
             </Link>
 
             {/* Tab Header */}
-            <div style={{ display: 'flex', gap: '4px', padding: '16px 20px 12px' }}>
-              <button
-                onClick={() => setSidebarTab('recent')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 12px',
-                  fontSize: `${theme.fontSizes[1]}px`,
-                  fontWeight: theme.fontWeights.semibold,
-                  color: sidebarTab === 'recent' ? theme.colors.text : theme.colors.textMuted,
-                  backgroundColor: sidebarTab === 'recent' ? theme.colors.surface : 'transparent',
-                  border: sidebarTab === 'recent' ? `1px solid ${theme.colors.border}` : '1px solid transparent',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontFamily: theme.fonts.body,
-                }}
-              >
-                <Clock size={14} />
-                Recent
-              </button>
-              <button
-                onClick={() => setSidebarTab('collections')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 12px',
-                  fontSize: `${theme.fontSizes[1]}px`,
-                  fontWeight: theme.fontWeights.semibold,
-                  color: sidebarTab === 'collections' ? theme.colors.text : theme.colors.textMuted,
-                  backgroundColor: sidebarTab === 'collections' ? theme.colors.surface : 'transparent',
-                  border: sidebarTab === 'collections' ? `1px solid ${theme.colors.border}` : '1px solid transparent',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontFamily: theme.fonts.body,
-                }}
-              >
-                <FolderOpen size={14} />
-                Collections
-              </button>
+            <div style={{ display: 'flex', gap: '4px', padding: '16px 20px 12px', flexWrap: 'wrap' }}>
+              {(['recent', 'collections', 'following', 'starred'] as const).map((tab) => {
+                const tabConfig = {
+                  recent: { icon: Clock, label: 'Recent' },
+                  collections: { icon: FolderOpen, label: 'Collections' },
+                  following: { icon: Users, label: 'Following' },
+                  starred: { icon: Star, label: 'Starred' },
+                };
+                const { icon: Icon, label } = tabConfig[tab];
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setSidebarTab(tab)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 12px',
+                      fontSize: `${theme.fontSizes[1]}px`,
+                      fontWeight: theme.fontWeights.semibold,
+                      color: sidebarTab === tab ? theme.colors.text : theme.colors.textMuted,
+                      backgroundColor: sidebarTab === tab ? theme.colors.surface : 'transparent',
+                      border: sidebarTab === tab ? `1px solid ${theme.colors.border}` : '1px solid transparent',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontFamily: theme.fonts.body,
+                    }}
+                  >
+                    <Icon size={14} />
+                    {label}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Tab Content */}
@@ -965,6 +999,97 @@ function LibraryPageContent({
                         Create Collection
                         <ArrowRight size={14} />
                       </button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {sidebarTab === 'following' && (
+                <>
+                  {followingUsers.length > 0 ? (
+                    followingUsers.map((followedUser) => (
+                      <Link
+                        key={followedUser.id}
+                        href={`/${followedUser.login}`}
+                        onClick={() => setSidebarOpen(false)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '8px 12px',
+                          borderRadius: '8px',
+                          textDecoration: 'none',
+                          color: theme.colors.text,
+                          marginBottom: '2px',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.surface; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                      >
+                        <img
+                          src={followedUser.avatar_url}
+                          alt={followedUser.login}
+                          style={{ width: 28, height: 28, borderRadius: '50%' }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {followedUser.name || followedUser.login}
+                          </div>
+                          <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted }}>
+                            @{followedUser.login}
+                          </div>
+                        </div>
+                      </Link>
+                    ))
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '32px 16px', color: theme.colors.textMuted }}>
+                      <Users size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                      <p style={{ margin: 0, fontSize: `${theme.fontSizes[1]}px` }}>Not following anyone yet</p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {sidebarTab === 'starred' && (
+                <>
+                  {starredRepos.length > 0 ? (
+                    starredRepos.map((repo) => (
+                      <Link
+                        key={repo.id}
+                        href={`/${repo.full_name}`}
+                        onClick={() => setSidebarOpen(false)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '8px 12px',
+                          borderRadius: '8px',
+                          textDecoration: 'none',
+                          color: theme.colors.text,
+                          marginBottom: '2px',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.surface; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                      >
+                        <img
+                          src={repo.owner.avatar_url}
+                          alt={repo.owner.login}
+                          style={{ width: 28, height: 28, borderRadius: '6px' }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {repo.full_name}
+                          </div>
+                          <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Star size={10} />
+                            {repo.stargazers_count.toLocaleString()}
+                          </div>
+                        </div>
+                      </Link>
+                    ))
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '32px 16px', color: theme.colors.textMuted }}>
+                      <Star size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                      <p style={{ margin: 0, fontSize: `${theme.fontSizes[1]}px` }}>No starred repos yet</p>
                     </div>
                   )}
                 </>

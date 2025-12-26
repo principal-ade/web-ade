@@ -42,6 +42,16 @@ interface GitHubOrg {
   description: string | null;
 }
 
+interface GitHubUser {
+  login: string;
+  id: number;
+  avatar_url: string;
+  html_url: string;
+  name: string | null;
+  bio: string | null;
+  type: string;
+}
+
 export async function GET() {
   try {
     const githubToken = await getGitHubToken();
@@ -58,11 +68,12 @@ export async function GET() {
       Accept: 'application/vnd.github.v3+json',
     };
 
-    // Fetch owned repos, starred repos, and orgs in parallel
-    const [ownedResponse, starredResponse, orgsResponse] = await Promise.all([
+    // Fetch owned repos, starred repos, orgs, and following in parallel
+    const [ownedResponse, starredResponse, orgsResponse, followingResponse] = await Promise.all([
       fetch('https://api.github.com/user/repos?sort=updated&per_page=100', { headers }),
       fetch('https://api.github.com/user/starred?sort=updated&per_page=50', { headers }),
       fetch('https://api.github.com/user/orgs', { headers }),
+      fetch('https://api.github.com/user/following?per_page=50', { headers }),
     ]);
 
     if (!ownedResponse.ok) {
@@ -78,6 +89,7 @@ export async function GET() {
     const ownedRepos: GitHubRepo[] = await ownedResponse.json();
     const starredRepos: GitHubRepo[] = starredResponse.ok ? await starredResponse.json() : [];
     const orgs: GitHubOrg[] = orgsResponse.ok ? await orgsResponse.json() : [];
+    const following: GitHubUser[] = followingResponse.ok ? await followingResponse.json() : [];
 
     // Fetch repos for each org
     const orgReposPromises = orgs.map(async (org) => {
@@ -156,6 +168,14 @@ export async function GET() {
         license: repo.license?.spdx_id || null,
       })),
       organizations,
+      following: following.map((user) => ({
+        id: user.id,
+        login: user.login,
+        avatar_url: user.avatar_url,
+        html_url: user.html_url,
+        name: user.name,
+        bio: user.bio,
+      })),
     });
   } catch (error) {
     console.error('GitHub repos error:', error);
