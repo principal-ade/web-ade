@@ -649,7 +649,7 @@ function LibraryPageContent({
               top: 0,
               left: 0,
               bottom: 0,
-              width: '320px',
+              width: '400px',
               backgroundColor: theme.colors.background,
               borderRight: `1px solid ${theme.colors.border}`,
               zIndex: 51,
