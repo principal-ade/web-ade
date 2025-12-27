@@ -94,20 +94,17 @@ export function CenteredSearchLayout() {
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        overflow: 'auto',
-        padding: '32px 24px',
+        overflow: 'hidden',
       }}
     >
-      {/* Centered Container */}
+      {/* Fixed Header Section */}
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          maxWidth: '800px',
-          width: '100%',
-          margin: '0 auto',
-          paddingTop: '15vh',
+          padding: '32px 24px 0',
+          paddingTop: 'min(15vh, 120px)',
         }}
       >
         {/* Title */}
@@ -182,89 +179,102 @@ export function CenteredSearchLayout() {
             }}
           />
         </div>
+      </div>
 
-        {/* Recent Repositories - show when no search query */}
-        {showRecents && activeView === 'github-search' && (
-          <div
-            style={{
-              display: 'flex',
-              gap: '24px',
-              justifyContent: 'center',
-              marginTop: '32px',
-            }}
-          >
-            {recentRepos.slice(0, 6).map((repo) => (
-              <Link
-                key={`${repo.owner}/${repo.repo}`}
-                href={`/${repo.owner}/${repo.repo}`}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  textDecoration: 'none',
-                  transition: 'all 0.15s ease',
-                  width: '100px',
-                  aspectRatio: '1',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.surface;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`https://github.com/${repo.owner}.png?size=64`}
-                  alt={repo.owner}
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: '50%',
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: '14px',
-                    color: theme.colors.text,
-                    fontFamily: theme.fonts.body,
-                    textAlign: 'center',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    width: '100%',
-                  }}
-                >
-                  {repo.repo}
-                </span>
-              </Link>
-            ))}
-          </div>
-        )}
-
-        {/* Content Area */}
+      {/* Scrollable Content Area */}
+      <div
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          padding: '0 24px 32px',
+        }}
+      >
         <div
           style={{
+            maxWidth: '800px',
             width: '100%',
-            marginTop: '32px',
+            margin: '0 auto',
           }}
         >
+          {/* Recent Repositories - show when no search query */}
+          {showRecents && activeView === 'github-search' && (
+            <div
+              style={{
+                display: 'flex',
+                gap: '24px',
+                justifyContent: 'center',
+                marginTop: '32px',
+              }}
+            >
+              {recentRepos.slice(0, 6).map((repo) => (
+                <Link
+                  key={`${repo.owner}/${repo.repo}`}
+                  href={`/${repo.owner}/${repo.repo}`}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    textDecoration: 'none',
+                    transition: 'all 0.15s ease',
+                    width: '100px',
+                    aspectRatio: '1',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.colors.surface;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`https://github.com/${repo.owner}.png?size=64`}
+                    alt={repo.owner}
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: '50%',
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: '14px',
+                      color: theme.colors.text,
+                      fontFamily: theme.fonts.body,
+                      textAlign: 'center',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      width: '100%',
+                    }}
+                  >
+                    {repo.repo}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+
           {/* Your Repos View */}
           {activeView === 'your-repos' && (
-            <UserReposGrid
-              repos={userRepos}
-              loading={userReposLoading}
-              isAuthenticated={isAuthenticated}
-            />
+            <div style={{ marginTop: '32px' }}>
+              <UserReposGrid
+                repos={userRepos}
+                loading={userReposLoading}
+                isAuthenticated={isAuthenticated}
+              />
+            </div>
           )}
 
           {/* GitHub Search View */}
-          {activeView === 'github-search' && (
-            <GitHubSearchResults searchQuery={searchQuery} />
+          {activeView === 'github-search' && searchQuery.trim() && (
+            <div style={{ marginTop: '32px' }}>
+              <GitHubSearchResults searchQuery={searchQuery} />
+            </div>
           )}
         </div>
       </div>

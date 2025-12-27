@@ -29,12 +29,10 @@ export function GitHubSearchResults({ searchQuery }: GitHubSearchResultsProps) {
   const [results, setResults] = useState<GitHubRepo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [totalCount, setTotalCount] = useState(0);
 
   const searchGitHub = useCallback(async (query: string) => {
     if (!query.trim()) {
       setResults([]);
-      setTotalCount(0);
       return;
     }
 
@@ -52,7 +50,6 @@ export function GitHubSearchResults({ searchQuery }: GitHubSearchResultsProps) {
 
       const data = await response.json();
       setResults(data.items || []);
-      setTotalCount(data.total_count || 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed');
       setResults([]);
@@ -135,17 +132,6 @@ export function GitHubSearchResults({ searchQuery }: GitHubSearchResultsProps) {
 
   return (
     <div style={{ width: '100%' }}>
-      {/* Results count */}
-      <div
-        style={{
-          marginBottom: '16px',
-          fontSize: `${theme.fontSizes[1]}px`,
-          color: theme.colors.textMuted,
-        }}
-      >
-        {totalCount.toLocaleString()} repositories found
-      </div>
-
       {/* Results grid */}
       <div
         style={{
@@ -190,21 +176,21 @@ const RepoCard: React.FC<{
       }}
     >
       {/* Header: Avatar and name */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={repo.owner.avatar_url}
           alt={repo.owner.login}
           style={{
-            width: 24,
-            height: 24,
-            borderRadius: '6px',
+            width: 36,
+            height: 36,
+            borderRadius: '8px',
             flexShrink: 0,
           }}
         />
         <div
           style={{
-            fontSize: `${theme.fontSizes[1]}px`,
+            fontSize: '16px',
             fontWeight: theme.fontWeights.semibold,
             color: theme.colors.text,
             overflow: 'hidden',
@@ -215,14 +201,14 @@ const RepoCard: React.FC<{
         >
           {repo.full_name}
         </div>
-        <ArrowRight size={14} style={{ color: theme.colors.textMuted, flexShrink: 0 }} />
+        <ArrowRight size={16} style={{ color: theme.colors.textMuted, flexShrink: 0 }} />
       </div>
 
       {/* Description */}
       {repo.description && (
         <div
           style={{
-            fontSize: `${theme.fontSizes[0]}px`,
+            fontSize: '14px',
             color: theme.colors.textMuted,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -242,7 +228,7 @@ const RepoCard: React.FC<{
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
-          fontSize: `${theme.fontSizes[0]}px`,
+          fontSize: '13px',
           color: theme.colors.textMuted,
         }}
       >
