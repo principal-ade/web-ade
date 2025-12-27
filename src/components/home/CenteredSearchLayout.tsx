@@ -201,9 +201,12 @@ export function CenteredSearchLayout() {
             <div
               style={{
                 display: 'flex',
-                gap: '24px',
+                flexWrap: 'wrap',
+                gap: '16px',
                 justifyContent: 'center',
                 marginTop: '32px',
+                maxWidth: '700px',
+                margin: '32px auto 0',
               }}
             >
               {recentRepos.slice(0, 6).map((repo) => (
@@ -220,8 +223,7 @@ export function CenteredSearchLayout() {
                     borderRadius: '12px',
                     textDecoration: 'none',
                     transition: 'all 0.15s ease',
-                    width: '100px',
-                    aspectRatio: '1',
+                    width: '200px',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = theme.colors.surface;
