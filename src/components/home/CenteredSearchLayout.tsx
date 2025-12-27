@@ -4,11 +4,47 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Search } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHomepageState } from '@/hooks/useHomepageState';
 import { SearchToggleButtons } from './SearchToggleButtons';
 import { UserReposGrid } from './UserReposGrid';
 import { GitHubSearchResults } from './GitHubSearchResults';
+
+/**
+ * Parse a GitHub URL and extract owner/repo
+ * Supports formats:
+ * - https://github.com/owner/repo
+ * - http://github.com/owner/repo
+ * - github.com/owner/repo
+ * - owner/repo (if it looks like a repo path)
+ */
+function parseGitHubUrl(input: string): { owner: string; repo: string } | null {
+  const trimmed = input.trim();
+
+  // Try to parse as URL first
+  const urlPatterns = [
+    /^https?:\/\/github\.com\/([^/]+)\/([^/]+)/i,
+    /^github\.com\/([^/]+)\/([^/]+)/i,
+  ];
+
+  for (const pattern of urlPatterns) {
+    const match = trimmed.match(pattern);
+    if (match && match[1] && match[2]) {
+      // Clean repo name (remove .git suffix, query params, etc.)
+      const repo = match[2].replace(/\.git$/, '').split(/[?#]/)[0];
+      return { owner: match[1], repo: repo || '' };
+    }
+  }
+
+  // Try owner/repo format (must have exactly one slash, no spaces, valid chars)
+  const repoPathMatch = trimmed.match(/^([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)$/);
+  if (repoPathMatch && repoPathMatch[1] && repoPathMatch[2]) {
+    return { owner: repoPathMatch[1], repo: repoPathMatch[2] };
+  }
+
+  return null;
+}
 
 const RECENT_REPOSITORIES_KEY = 'recent-repositories';
 
@@ -37,6 +73,7 @@ interface UserGitHubRepo {
 export function CenteredSearchLayout() {
   const { theme } = useTheme();
   const { isAuthenticated } = useAuth();
+  const router = useRouter();
 
   const {
     activeView,
@@ -44,6 +81,16 @@ export function CenteredSearchLayout() {
     searchQuery,
     setSearchQuery,
   } = useHomepageState();
+
+  // Handle Enter key to navigate to GitHub URLs
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const parsed = parseGitHubUrl(searchQuery);
+      if (parsed && parsed.repo) {
+        router.push(`/${parsed.owner}/${parsed.repo}`);
+      }
+    }
+  };
 
   // Recent repositories
   const [recentRepos, setRecentRepos] = useState<RecentRepository[]>([]);
@@ -152,11 +199,12 @@ export function CenteredSearchLayout() {
             type="text"
             placeholder={
               activeView === 'github-search'
-                ? 'Search GitHub repositories...'
+                ? 'Search GitHub repositories or paste a URL...'
                 : 'Filter your repositories...'
             }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
             style={{
               width: '100%',
               padding: '16px 20px 16px 52px',
