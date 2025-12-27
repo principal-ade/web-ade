@@ -2,7 +2,7 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Edit2, Palette, GitCommit, ArrowLeftRight, Building2, Sparkles } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Edit2, Palette, GitCommit, ArrowLeftRight, Building2, Sparkles, Terminal } from 'lucide-react';
 import { UserAvatarMenu } from './UserAvatarMenu';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
@@ -34,6 +34,9 @@ interface EditorHeaderProps {
   // Gallery toggle
   showGallery?: boolean;
   onToggleGallery?: () => void;
+  // Vim mode toggle
+  vimMode?: boolean;
+  onVimModeToggle?: () => void;
 }
 
 export function EditorHeader({
@@ -54,6 +57,8 @@ export function EditorHeader({
   hideLeftToggle = false,
   showGallery = false,
   onToggleGallery,
+  vimMode = false,
+  onVimModeToggle,
 }: EditorHeaderProps = {}) {
   const { theme } = useTheme();
   const { cycleTheme, currentThemeName } = useGlobalTheme();
@@ -530,6 +535,21 @@ export function EditorHeader({
             >
               {pendingChangesCount}
             </span>
+          </button>
+        )}
+
+        {/* Vim mode toggle - only show on file-editor layout */}
+        {currentLayoutConfigId === 'file-editor' && onVimModeToggle && (
+          <button
+            onClick={onVimModeToggle}
+            className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+            style={{
+              background: vimMode ? theme.colors.primary : theme.colors.secondary,
+              color: vimMode ? theme.colors.background : theme.colors.text,
+            }}
+            title={vimMode ? 'Disable Vim mode' : 'Enable Vim mode'}
+          >
+            <Terminal className="w-4 h-4" />
           </button>
         )}
 

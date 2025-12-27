@@ -247,6 +247,7 @@ function EditorLayoutContent({
   const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
   // Note: File selection state is managed internally by FileEditorPanel via events
   const [isCommitModalOpen, setIsCommitModalOpen] = useState(false);
+  const [vimMode, setVimMode] = useState(false);
 
   // Get pending changes for commit functionality
   const {
@@ -269,6 +270,21 @@ function EditorLayoutContent({
     setLeftSidebarCollapsed(config.collapsed.left);
     setRightSidebarCollapsed(config.collapsed.right);
   }, [onLayoutConfigIdChange, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed]);
+
+  // Handle vim mode toggle
+  const handleVimModeToggle = useCallback(() => {
+    setVimMode((prev) => {
+      const newValue = !prev;
+      // Emit event so FileEditorPanel can react
+      events.emit({
+        type: 'editor:vim-mode-change',
+        source: 'editor-layout',
+        timestamp: Date.now(),
+        payload: { enabled: newValue },
+      });
+      return newValue;
+    });
+  }, [events]);
 
   // Handle commit of pending changes
   const handleCommit = useCallback(async (message: string, selectedPaths: string[]) => {
@@ -952,6 +968,8 @@ function EditorLayoutContent({
         onSwapRightPanels={() => setLayout(prev => ({ ...prev, middle: prev.right, right: prev.middle }))}
         pendingChangesCount={pendingChangesCount}
         onCommitClick={() => setIsCommitModalOpen(true)}
+        vimMode={vimMode}
+        onVimModeToggle={handleVimModeToggle}
       />
 
       {/* Commit Modal */}
