@@ -31,30 +31,8 @@ export function SearchToggleButtons({
         border: `1px solid ${theme.colors.border}`,
         borderRadius: '24px',
         padding: '4px',
-        marginTop: '24px',
       }}
     >
-      <button
-        onClick={() => onViewChange('your-repos')}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '8px 16px',
-          borderRadius: '20px',
-          border: 'none',
-          background: activeView === 'your-repos' ? theme.colors.primary : 'transparent',
-          color: activeView === 'your-repos' ? '#fff' : theme.colors.textMuted,
-          fontSize: theme.fontSizes[1],
-          fontFamily: theme.fonts.body,
-          fontWeight: theme.fontWeights.medium,
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-        }}
-      >
-        <User size={16} />
-        <span>Your Repos</span>
-      </button>
       <button
         onClick={() => onViewChange('github-search')}
         style={{
@@ -75,6 +53,27 @@ export function SearchToggleButtons({
       >
         <Github size={16} />
         <span>Search GitHub</span>
+      </button>
+      <button
+        onClick={() => onViewChange('your-repos')}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '8px 16px',
+          borderRadius: '20px',
+          border: 'none',
+          background: activeView === 'your-repos' ? theme.colors.primary : 'transparent',
+          color: activeView === 'your-repos' ? '#fff' : theme.colors.textMuted,
+          fontSize: theme.fontSizes[1],
+          fontFamily: theme.fonts.body,
+          fontWeight: theme.fontWeights.medium,
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+        }}
+      >
+        <User size={16} />
+        <span>Your Repos</span>
       </button>
     </div>
   );
