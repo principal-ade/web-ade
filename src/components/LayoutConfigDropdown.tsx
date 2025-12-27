@@ -30,37 +30,24 @@ export const layoutConfigs: LayoutConfig[] = [
     },
   },
   {
+    id: 'kanban',
+    name: 'Backlog.md',
+    layout: {
+      left: 'kanban',
+      middle: 'task-detail',
+      right: 'commit-history',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
+  {
     id: 'documentation',
     name: 'Documentation',
     layout: {
       left: 'docs',
       middle: 'markdown-viewer',
-      right: 'file-city',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
-  },
-  {
-    id: 'file-city',
-    name: 'Test Telemetry',
-    layout: {
-      left: 'telemetry-coverage',
-      middle: 'trace-viewer',
-      right: 'file-city',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
-  },
-  {
-    id: 'quality-debug',
-    name: 'Quality Debug',
-    layout: {
-      left: 'lens-debug',
-      middle: 'quality-hexagon',
       right: 'file-city',
     },
     collapsed: {
@@ -95,12 +82,25 @@ export const layoutConfigs: LayoutConfig[] = [
     },
   },
   {
-    id: 'kanban',
-    name: 'Kanban',
+    id: 'quality-debug',
+    name: 'Quality Debug',
     layout: {
-      left: 'kanban',
-      middle: 'task-detail',
-      right: 'commit-history',
+      left: 'quality-hexagon',
+      middle: 'lens-debug',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
+  {
+    id: 'file-city',
+    name: 'Test Telemetry',
+    layout: {
+      left: 'telemetry-coverage',
+      middle: 'trace-viewer',
+      right: 'file-city',
     },
     collapsed: {
       left: false,
