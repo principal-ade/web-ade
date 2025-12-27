@@ -3,11 +3,20 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Search } from 'lucide-react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHomepageState } from '@/hooks/useHomepageState';
 import { SearchToggleButtons } from './SearchToggleButtons';
 import { UserReposGrid } from './UserReposGrid';
 import { GitHubSearchResults } from './GitHubSearchResults';
+
+const RECENT_REPOSITORIES_KEY = 'recent-repositories';
+
+interface RecentRepository {
+  owner: string;
+  repo: string;
+  visitedAt: string;
+}
 
 interface UserGitHubRepo {
   id: number;
@@ -36,9 +45,24 @@ export function CenteredSearchLayout() {
     setSearchQuery,
   } = useHomepageState();
 
+  // Recent repositories
+  const [recentRepos, setRecentRepos] = useState<RecentRepository[]>([]);
+
   // User's GitHub repos
   const [userRepos, setUserRepos] = useState<UserGitHubRepo[]>([]);
   const [userReposLoading, setUserReposLoading] = useState(false);
+
+  // Load recent repos from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(RECENT_REPOSITORIES_KEY);
+      if (saved) {
+        setRecentRepos(JSON.parse(saved));
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }, []);
 
   // Fetch user repos when authenticated and "Your Repos" is selected
   useEffect(() => {
@@ -61,6 +85,8 @@ export function CenteredSearchLayout() {
         setUserReposLoading(false);
       });
   }, [isAuthenticated, activeView]);
+
+  const showRecents = !searchQuery.trim() && recentRepos.length > 0;
 
   return (
     <div
@@ -156,6 +182,69 @@ export function CenteredSearchLayout() {
             }}
           />
         </div>
+
+        {/* Recent Repositories - show when no search query */}
+        {showRecents && activeView === 'github-search' && (
+          <div
+            style={{
+              display: 'flex',
+              gap: '24px',
+              justifyContent: 'center',
+              marginTop: '32px',
+            }}
+          >
+            {recentRepos.slice(0, 6).map((repo) => (
+              <Link
+                key={`${repo.owner}/${repo.repo}`}
+                href={`/${repo.owner}/${repo.repo}`}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  textDecoration: 'none',
+                  transition: 'all 0.15s ease',
+                  width: '100px',
+                  aspectRatio: '1',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.colors.surface;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`https://github.com/${repo.owner}.png?size=64`}
+                  alt={repo.owner}
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: '50%',
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: '14px',
+                    color: theme.colors.text,
+                    fontFamily: theme.fonts.body,
+                    textAlign: 'center',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    width: '100%',
+                  }}
+                >
+                  {repo.repo}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
 
         {/* Content Area */}
         <div
