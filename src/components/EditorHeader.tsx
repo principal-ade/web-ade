@@ -152,23 +152,41 @@ export function EditorHeader({
         {/* Show repo avatar + owner/repo on repo pages */}
         {repositoryName && (
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Org switcher dropdown */}
+            {/* Org switcher dropdown (when authenticated) or home link (when not) */}
             <div className="relative" ref={orgSwitcherRef}>
-              <button
-                onClick={() => setOrgSwitcherOpen(!orgSwitcherOpen)}
-                className="flex items-center transition-all hover:opacity-80"
-                title="Switch organization"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`https://github.com/${repositoryName.owner}.png?size=64`}
-                  alt={repositoryName.owner}
-                  className="w-8 h-8 flex-shrink-0"
-                  style={{
-                    borderRadius: '6px',
-                  }}
-                />
-              </button>
+              {isAuthenticated && user ? (
+                <button
+                  onClick={() => setOrgSwitcherOpen(!orgSwitcherOpen)}
+                  className="flex items-center transition-all hover:opacity-80"
+                  title="Switch organization"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`https://github.com/${repositoryName.owner}.png?size=64`}
+                    alt={repositoryName.owner}
+                    className="w-8 h-8 flex-shrink-0"
+                    style={{
+                      borderRadius: '6px',
+                    }}
+                  />
+                </button>
+              ) : (
+                <Link
+                  href="/"
+                  className="flex items-center transition-all hover:opacity-80"
+                  title="Home"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`https://github.com/${repositoryName.owner}.png?size=64`}
+                    alt={repositoryName.owner}
+                    className="w-8 h-8 flex-shrink-0"
+                    style={{
+                      borderRadius: '6px',
+                    }}
+                  />
+                </Link>
+              )}
 
               {/* Dropdown Menu */}
               {orgSwitcherOpen && isAuthenticated && user && (
