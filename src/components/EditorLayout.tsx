@@ -247,7 +247,21 @@ function EditorLayoutContent({
   const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
   // Note: File selection state is managed internally by FileEditorPanel via events
   const [isCommitModalOpen, setIsCommitModalOpen] = useState(false);
-  const [vimMode, setVimMode] = useState(false);
+  const [vimMode, setVimMode] = useState(() => {
+    // Initialize from localStorage
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('editor-preferences');
+        if (saved) {
+          const prefs = JSON.parse(saved);
+          return prefs.vimMode ?? false;
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }
+    return false;
+  });
 
   // Get pending changes for commit functionality
   const {
@@ -273,14 +287,14 @@ function EditorLayoutContent({
 
   // Handle vim mode toggle
   const handleVimModeToggle = useCallback(() => {
-    setVimMode((prev) => {
+    setVimMode((prev: boolean) => {
       const newValue = !prev;
-      // Emit event so FileEditorPanel can react
+      // Emit event to update preferences slice
       events.emit({
-        type: 'editor:vim-mode-change',
+        type: 'preferences:update',
         source: 'editor-layout',
         timestamp: Date.now(),
-        payload: { enabled: newValue },
+        payload: { vimMode: newValue },
       });
       return newValue;
     });

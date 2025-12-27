@@ -266,6 +266,7 @@ export function CenteredSearchLayout() {
                 repos={userRepos}
                 loading={userReposLoading}
                 isAuthenticated={isAuthenticated}
+                searchQuery={searchQuery}
               />
             </div>
           )}

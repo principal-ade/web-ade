@@ -25,12 +25,14 @@ interface UserReposGridProps {
   repos: UserGitHubRepo[];
   loading?: boolean;
   isAuthenticated: boolean;
+  searchQuery?: string;
 }
 
 export function UserReposGrid({
   repos,
   loading = false,
   isAuthenticated,
+  searchQuery = '',
 }: UserReposGridProps) {
   const { theme } = useTheme();
 
@@ -90,10 +92,43 @@ export function UserReposGrid({
     );
   }
 
+  // Filter by search query
+  const filteredRepos = searchQuery.trim()
+    ? repos.filter((repo) => {
+        const query = searchQuery.toLowerCase();
+        return (
+          repo.name.toLowerCase().includes(query) ||
+          repo.full_name.toLowerCase().includes(query) ||
+          repo.owner.login.toLowerCase().includes(query) ||
+          (repo.description?.toLowerCase().includes(query) ?? false)
+        );
+      })
+    : repos;
+
   // Sort by most recently updated
-  const sortedRepos = [...repos].sort(
+  const sortedRepos = [...filteredRepos].sort(
     (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
   );
+
+  // No matching results for search
+  if (sortedRepos.length === 0 && searchQuery.trim()) {
+    return (
+      <div
+        style={{
+          padding: '48px 24px',
+          textAlign: 'center',
+          color: theme.colors.textMuted,
+        }}
+      >
+        <p style={{ fontSize: `${theme.fontSizes[2]}px`, marginBottom: '8px' }}>
+          No repositories matching &quot;{searchQuery}&quot;
+        </p>
+        <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+          Try a different search term
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div

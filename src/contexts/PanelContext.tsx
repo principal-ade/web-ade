@@ -1442,6 +1442,30 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           refresh: fetchUserGitHubData,
         },
       ],
+      [
+        'preferences',
+        {
+          scope: 'global',
+          name: 'preferences',
+          data: (() => {
+            // Load initial preferences from localStorage
+            if (typeof window !== 'undefined') {
+              try {
+                const saved = localStorage.getItem('editor-preferences');
+                if (saved) {
+                  return JSON.parse(saved);
+                }
+              } catch {
+                // Ignore parse errors
+              }
+            }
+            return { vimMode: false };
+          })(),
+          loading: false,
+          error: null,
+          refresh: async () => {},
+        },
+      ],
     ])
   );
 
@@ -1682,6 +1706,29 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       loading: userGitHubLoading,
     });
   }
+
+  // Listen for preferences:update events to update preferences slice
+  useEffect(() => {
+    const unsubscribe = events.on('preferences:update', (event) => {
+      const payload = event.payload as { vimMode?: boolean };
+      const preferencesSlice = slicesRef.current.get('preferences');
+      if (preferencesSlice) {
+        const currentData = preferencesSlice.data || {};
+        const newData = { ...currentData, ...payload };
+        slicesRef.current.set('preferences', {
+          ...preferencesSlice,
+          data: newData,
+        });
+        // Persist to localStorage
+        try {
+          localStorage.setItem('editor-preferences', JSON.stringify(newData));
+        } catch {
+          // Ignore storage errors
+        }
+      }
+    });
+    return unsubscribe;
+  }, [events]);
 
   // Refresh function - use slicesRef instead of slices state
   const refresh = useCallback(
