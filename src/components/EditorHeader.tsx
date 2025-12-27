@@ -2,7 +2,7 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Edit2, Palette, GitCommit, ArrowLeftRight, Building2, Sparkles } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Edit2, Palette, GitCommit, ArrowLeftRight, Building2, Sparkles, Home } from 'lucide-react';
 import { UserAvatarMenu } from './UserAvatarMenu';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
@@ -179,6 +179,20 @@ export function EditorHeader({
                     borderColor: theme.colors.border,
                   }}
                 >
+                  {/* Home */}
+                  <Link
+                    href="/"
+                    className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
+                    style={{ color: theme.colors.text }}
+                    onClick={() => setOrgSwitcherOpen(false)}
+                  >
+                    <Home className="w-5 h-5" />
+                    Home
+                  </Link>
+                  <div
+                    className="my-1 h-px"
+                    style={{ background: theme.colors.border }}
+                  />
                   {/* Current user */}
                   <Link
                     href={`/${user.login}`}
@@ -304,6 +318,20 @@ export function EditorHeader({
                     borderColor: theme.colors.border,
                   }}
                 >
+                  {/* Home */}
+                  <Link
+                    href="/"
+                    className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
+                    style={{ color: theme.colors.text }}
+                    onClick={() => setOrgSwitcherOpen(false)}
+                  >
+                    <Home className="w-5 h-5" />
+                    Home
+                  </Link>
+                  <div
+                    className="my-1 h-px"
+                    style={{ background: theme.colors.border }}
+                  />
                   {/* Current user */}
                   <Link
                     href={`/${user.login}`}
