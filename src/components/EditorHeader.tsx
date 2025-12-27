@@ -2,7 +2,7 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Edit2, Palette, GitCommit, ArrowLeftRight, Building2, FolderOpen } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Edit2, Palette, GitCommit, ArrowLeftRight, Building2, Sparkles } from 'lucide-react';
 import { UserAvatarMenu } from './UserAvatarMenu';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
@@ -428,7 +428,7 @@ export function EditorHeader({
               border: `1px solid ${showGallery ? theme.colors.primary : theme.colors.border}`,
             }}
           >
-            <FolderOpen className="w-4 h-4" />
+            <Sparkles className="w-4 h-4" />
             <span>Gallery</span>
           </button>
         )}
