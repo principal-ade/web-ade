@@ -2,12 +2,12 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Monitor, Download, Plus, Edit2, Palette, GitCommit, ArrowLeftRight, Building2 } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Edit2, Palette, GitCommit, ArrowLeftRight, Building2, FolderOpen } from 'lucide-react';
 import { UserAvatarMenu } from './UserAvatarMenu';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { usePresenceData, RepositorySession } from '@/hooks/usePresenceData';
+import { usePresenceData } from '@/hooks/usePresenceData';
 import { useEffect, useState, useRef } from 'react';
 import { Logo } from '@principal-ai/logo-component';
 import { LayoutConfigDropdown, LayoutConfig } from './LayoutConfigDropdown';
@@ -126,10 +126,8 @@ export function EditorHeader({
   }, [isAuthenticated, user]);
 
   // Global presence connection status (connects to __global_presence__ room)
-  const { connected, sessions } = usePresenceData();
-
-  // Check if user has a desktop app connected
-  const hasDesktopApp = sessions.some((s: RepositorySession) => s.clientType === 'desktop');
+  // Keep connection active even though UI is hidden
+  usePresenceData();
 
   return (
     <header
@@ -414,64 +412,25 @@ export function EditorHeader({
             </div>
           </div>
         )}
-        {/* Download ADE or Open in Desktop - only show on home page (not owner pages) */}
+        {/* Collections button - only show on home page */}
         {!repositoryName && !ownerOnly && !collectionId && (
-          hasDesktopApp ? (
-            <button
-              onClick={() => {
-                window.location.href = 'principal-ade://open';
-              }}
-              className="flex items-center gap-1.5 px-2 py-1 text-sm rounded-md transition-all hover:opacity-80"
-              style={{
-                color: theme.colors.primary,
-              }}
-              title="Open Principal ADE desktop app"
-            >
-              <Monitor className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Open Desktop</span>
-            </button>
-          ) : (
-            <a
-              href="https://principal-ade.com/download"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-2 py-1 text-sm rounded-md transition-all hover:opacity-80"
-              style={{
-                color: theme.colors.primary,
-              }}
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Download ADE</span>
-            </a>
-          )
+          <Link
+            href="/library"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-all hover:opacity-80"
+            style={{
+              background: theme.colors.surface,
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <FolderOpen className="w-4 h-4" />
+            <span>Collections</span>
+          </Link>
         )}
       </div>
 
-      {/* Center section: Principal AI branding on home page */}
-      {!repositoryName && !ownerOnly && !collectionId ? (
-        /* Home page - show Principal AI Gallery */
-        <Link
-          href="/"
-          className="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2 transition-opacity hover:opacity-80"
-          style={{
-            fontFamily: theme.fonts.body,
-            textDecoration: 'none',
-          }}
-        >
-          <Logo width={32} height={32} color={theme.colors.primary} />
-          <span
-            className="text-xl font-bold"
-            style={{ fontFamily: theme.fonts.body }}
-          >
-            <span style={{ color: theme.colors.text }}>Principal</span>
-            {' '}
-            <span style={{ color: theme.colors.primary }}>AI</span>
-            {' '}
-            <span style={{ color: theme.colors.text }}>Gallery</span>
-          </span>
-          <Logo width={32} height={32} color={theme.colors.primary} />
-        </Link>
-      ) : collectionId && selectedRepository ? (
+      {/* Center section: Selected repository on collection page */}
+      {collectionId && selectedRepository ? (
         /* Collection page with selected repository - show in center */
         <Link
           href={`/${selectedRepository}`}
