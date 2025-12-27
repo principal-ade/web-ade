@@ -27,6 +27,7 @@ import type { FormattedResults } from '@principal-ai/codebase-quality-lenses';
 import { minimatch } from 'minimatch';
 import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
 import { useAuth } from './AuthContext';
+import { useLocalFileSystem } from './LocalFileSystemContext';
 import { usePresenceData, type RepositorySession } from '@/hooks/usePresenceData';
 
 // Current activity type for presence
@@ -448,6 +449,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
 
   // Get auth state for github-repositories slice
   const { isAuthenticated } = useAuth();
+  const { adapter: localAdapter } = useLocalFileSystem();
+  const isLocalMode = !!localAdapter;
 
   // Get presence data for current-projects slice
   const {
@@ -853,14 +856,49 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     }
   }, [isAuthenticated]);
 
-  // Fetch file tree from GitHub and build FileTree using PathsFileTreeBuilder
-  // Returns the commit SHA for use by other fetches (e.g., quality metrics)
+  // Fetch file tree from GitHub or local filesystem and build FileTree using PathsFileTreeBuilder
+  // Returns the commit SHA for use by other fetches (e.g., quality metrics) - null for local mode
   const fetchFileTree = useCallback(async (repo: string): Promise<string | null> => {
     setFileTreeLoading(true);
     setFileTreeError(null);
-    console.log('[PanelContext] Fetching file tree for:', repo);
+    console.log('[PanelContext] Fetching file tree for:', repo, isLocalMode ? '(local mode)' : '');
 
     try {
+      // Local mode: build file tree from local filesystem
+      if (isLocalMode && localAdapter) {
+        const filePaths = await localAdapter.buildFileTree();
+        const [owner, name] = repo.split('/');
+
+        // Use PathsFileTreeBuilder to construct the FileTree
+        const builder = new PathsFileTreeBuilder();
+        const builtTree = builder.build({
+          files: filePaths,
+          rootPath: `/${owner}/${name}`,
+        });
+
+        // Override metadata with local-specific info
+        const fileTreeData: FileTree = {
+          ...builtTree,
+          sha: 'local',
+          metadata: {
+            ...builtTree.metadata,
+            id: `local:${owner}/${name}`,
+            sourceType: 'local' as const,
+            sourceSha: 'local',
+            sourceInfo: {
+              owner,
+              name,
+              provider: 'local',
+            },
+          },
+        };
+
+        setFileTree(fileTreeData);
+        console.log('[PanelContext] Local file tree loaded with', fileTreeData.allFiles.length, 'files and', fileTreeData.allDirectories.length, 'directories');
+        return null; // No SHA for local mode
+      }
+
+      // GitHub mode: fetch from API
       const [owner, name] = repo.split('/');
 
       // Fetch file tree from GitHub API with cache-busting
@@ -914,7 +952,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     } finally {
       setFileTreeLoading(false);
     }
-  }, []);
+  }, [isLocalMode, localAdapter]);
 
   // Fetch quality metrics from GitHub Actions artifacts
   // When commitSha is provided, uses action=commit for better caching (immutable per SHA)
@@ -1087,35 +1125,53 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const fetchReadme = useCallback(async (repo: string) => {
     setMarkdownLoading(true);
     setMarkdownError(null);
-    console.log('[PanelContext] Fetching README for:', repo);
+    console.log('[PanelContext] Fetching README for:', repo, isLocalMode ? '(local mode)' : '');
 
     try {
-      // Parse owner and repo name
       const [owner, name] = repo.split('/');
-
-      // Fetch README from our GitHub proxy API
-      const response = await fetch(`/api/github/repo/${owner}/${name}?action=readme`);
-
-      if (!response.ok) {
-        throw new Error(
-          response.status === 404
-            ? 'Repository or README not found'
-            : `Failed to fetch README: ${response.statusText}`
-        );
-      }
-
-      const data = await response.json();
-
-      // Decode base64 content
       let content = '';
-      if (data.content && data.encoding === 'base64') {
-        const binaryString = atob(data.content.replace(/\n/g, ''));
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+
+      // Local mode: read README from local filesystem
+      if (isLocalMode && localAdapter) {
+        // Try common README filenames
+        const readmeNames = ['README.md', 'readme.md', 'Readme.md', 'README.MD'];
+        let found = false;
+        for (const readmeName of readmeNames) {
+          try {
+            content = await localAdapter.readFileAsync(readmeName);
+            found = true;
+            break;
+          } catch {
+            // Try next filename
+          }
         }
-        const decoder = new TextDecoder('utf-8');
-        content = decoder.decode(bytes);
+        if (!found) {
+          throw new Error('README not found');
+        }
+      } else {
+        // GitHub mode: fetch from API
+        const response = await fetch(`/api/github/repo/${owner}/${name}?action=readme`);
+
+        if (!response.ok) {
+          throw new Error(
+            response.status === 404
+              ? 'Repository or README not found'
+              : `Failed to fetch README: ${response.statusText}`
+          );
+        }
+
+        const data = await response.json();
+
+        // Decode base64 content
+        if (data.content && data.encoding === 'base64') {
+          const binaryString = atob(data.content.replace(/\n/g, ''));
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const decoder = new TextDecoder('utf-8');
+          content = decoder.decode(bytes);
+        }
       }
 
       // Create ActiveFileSlice structure
@@ -1126,7 +1182,11 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         size: content.length,
         lastModified: new Date(),
         encoding: 'utf-8',
-        source: {
+        source: isLocalMode ? {
+          type: 'local' as const,
+          provider: 'filesystem',
+          location: 'README.md',
+        } : {
           type: 'remote' as const,
           provider: 'github',
           owner,
@@ -1153,7 +1213,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     } finally {
       setMarkdownLoading(false);
     }
-  }, [events]);
+  }, [events, isLocalMode, localAdapter]);
 
   // Use ref for slices to avoid triggering context recreation on every slice update
   // This prevents the panel from re-rendering when slice data changes
@@ -1749,20 +1809,42 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     []  // No dependencies - uses ref
   );
 
-  // Helper function to read file from GitHub API
+  // Helper to clean file paths for reading (strips GitHub/ and repo prefixes)
+  const cleanFilePath = useCallback((filePath: string): string => {
+    let cleanPath = filePath;
+    if (cleanPath.startsWith('/')) cleanPath = cleanPath.slice(1);
+    if (cleanPath.startsWith('GitHub/')) cleanPath = cleanPath.slice('GitHub/'.length);
+    if (githubRepo) {
+      const repoPrefix = `${githubRepo}/`;
+      if (cleanPath.startsWith(repoPrefix)) {
+        cleanPath = cleanPath.slice(repoPrefix.length);
+      }
+    }
+    // Also strip local/ prefix for local mode
+    if (cleanPath.startsWith('local/')) {
+      const parts = cleanPath.split('/');
+      parts.shift(); // remove 'local'
+      parts.shift(); // remove folder name
+      cleanPath = parts.join('/');
+    }
+    return cleanPath;
+  }, [githubRepo]);
+
+  // Helper function to read file - uses local adapter if in local mode, otherwise GitHub API
   const readFileFromGitHub = useCallback(async (relativePath: string): Promise<string> => {
+    const cleanPath = cleanFilePath(relativePath);
+
+    // Local mode: read from local filesystem
+    if (isLocalMode && localAdapter) {
+      return await localAdapter.readFileAsync(cleanPath);
+    }
+
+    // GitHub mode: fetch from API
     if (!githubRepo) {
       throw new Error('No GitHub repo specified');
     }
 
     const [owner, name] = githubRepo.split('/');
-    // Clean path - remove leading slash and /GitHub/owner/repo prefix if present
-    let cleanPath = relativePath.startsWith('/') ? relativePath.slice(1) : relativePath;
-    // Strip the GitHub/owner/repo prefix that we add for MemoryPalace validation
-    const githubPrefix = `GitHub/${githubRepo}/`;
-    if (cleanPath.startsWith(githubPrefix)) {
-      cleanPath = cleanPath.slice(githubPrefix.length);
-    }
 
     const response = await fetch(
       `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(cleanPath)}`
@@ -1786,7 +1868,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     }
 
     return data.content || '';
-  }, [githubRepo]);
+  }, [githubRepo, isLocalMode, localAdapter, cleanFilePath]);
 
   // Create adapters for panels (e.g., Alexandria docs panel uses these for file reading)
   const adapters: PanelAdapters = useMemo(() => ({
@@ -1867,56 +1949,50 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const actions: PanelActions = useMemo(
     () => ({
       openFile: async (filePath: string) => {
-        // Remove leading slash from path
-        let cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
-
-        if (!githubRepo) {
-          console.error('No GitHub repo specified');
-          return;
-        }
-
-        // Strip "GitHub/" prefix if present
-        if (cleanPath.startsWith('GitHub/')) {
-          cleanPath = cleanPath.slice('GitHub/'.length);
-        }
-
-        // Strip the repo prefix if present (e.g., "owner/repo/src/file.ts" -> "src/file.ts")
-        const repoPrefix = `${githubRepo}/`;
-        if (cleanPath.startsWith(repoPrefix)) {
-          cleanPath = cleanPath.slice(repoPrefix.length);
-        }
-
-        console.log('Opening file:', cleanPath);
+        const cleanPath = cleanFilePath(filePath);
+        console.log('Opening file:', cleanPath, isLocalMode ? '(local mode)' : '(GitHub mode)');
 
         try {
-          const [owner, name] = githubRepo.split('/');
-
-          // Fetch file content from GitHub API
-          const response = await fetch(
-            `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(cleanPath)}`
-          );
-
-          if (!response.ok) {
-            throw new Error(`Failed to fetch file: ${response.statusText}`);
-          }
-
-          const data = await response.json();
-
-          // Decode base64 content
           let content = '';
-          if (data.content && data.encoding === 'base64') {
-            const binaryString = atob(data.content.replace(/\n/g, ''));
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
+
+          // Local mode: read from local filesystem
+          if (isLocalMode && localAdapter) {
+            content = await localAdapter.readFileAsync(cleanPath);
+          } else {
+            // GitHub mode: fetch from API
+            if (!githubRepo) {
+              console.error('No GitHub repo specified');
+              return;
             }
-            const decoder = new TextDecoder('utf-8');
-            content = decoder.decode(bytes);
+
+            const [owner, name] = githubRepo.split('/');
+
+            const response = await fetch(
+              `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(cleanPath)}`
+            );
+
+            if (!response.ok) {
+              throw new Error(`Failed to fetch file: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            // Decode base64 content
+            if (data.content && data.encoding === 'base64') {
+              const binaryString = atob(data.content.replace(/\n/g, ''));
+              const bytes = new Uint8Array(binaryString.length);
+              for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+              }
+              const decoder = new TextDecoder('utf-8');
+              content = decoder.decode(bytes);
+            }
           }
 
           // If this is a markdown file, update the active-file slice and markdownContent
           // so the markdown panel displays the new file
           if (cleanPath.endsWith('.md')) {
+            const [owner, name] = (githubRepo || '').split('/');
             const activeFileData = {
               path: cleanPath,
               content: content,
@@ -1924,7 +2000,11 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
               size: content.length,
               lastModified: new Date(),
               encoding: 'utf-8',
-              source: {
+              source: isLocalMode ? {
+                type: 'local' as const,
+                provider: 'filesystem',
+                location: cleanPath,
+              } : {
                 type: 'remote' as const,
                 provider: 'github',
                 owner,
@@ -1969,36 +2049,22 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         }
       },
       readFile: async (filePath: string): Promise<string> => {
-        console.log('[PanelContext] Reading file:', filePath);
-
-        if (!githubRepo) {
-          throw new Error('No GitHub repo specified');
-        }
+        const cleanPath = cleanFilePath(filePath);
+        console.log('[PanelContext] Reading file:', cleanPath, isLocalMode ? '(local mode)' : '(GitHub mode)');
 
         try {
+          // Local mode: read from local filesystem
+          if (isLocalMode && localAdapter) {
+            return await localAdapter.readFileAsync(cleanPath);
+          }
+
+          // GitHub mode: fetch from API
+          if (!githubRepo) {
+            throw new Error('No GitHub repo specified');
+          }
+
           const [owner, name] = githubRepo.split('/');
 
-          // Path comes as `${repositoryPath}/${configPath}` e.g. "/GitHub/owner/repo/.vgc/example.yaml"
-          // Strip all prefixes to get the relative path within the repo
-          let cleanPath = filePath;
-
-          // Strip leading slash
-          if (cleanPath.startsWith('/')) {
-            cleanPath = cleanPath.slice(1);
-          }
-
-          // Strip "GitHub/" prefix if present
-          if (cleanPath.startsWith('GitHub/')) {
-            cleanPath = cleanPath.slice('GitHub/'.length);
-          }
-
-          // Strip the owner/repo prefix to get the relative path
-          const repoPrefix = `${githubRepo}/`;
-          if (cleanPath.startsWith(repoPrefix)) {
-            cleanPath = cleanPath.slice(repoPrefix.length);
-          }
-
-          // Fetch file content from GitHub API
           const response = await fetch(
             `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(cleanPath)}`
           );
@@ -2130,7 +2196,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         }
       },
     }),
-    [events, githubRepo]
+    [events, githubRepo, isLocalMode, localAdapter, cleanFilePath]
   );
 
   const value: PanelProviderValue = useMemo(

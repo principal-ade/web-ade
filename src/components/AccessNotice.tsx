@@ -1,6 +1,7 @@
 'use client';
 
 import { useTheme } from '@principal-ade/industry-theme';
+import { LocalFolderButton } from './LocalFolderButton';
 
 export type AccessStatus = 'loading' | 'granted' | 'login-required' | 'unauthorized' | 'not-found' | 'error';
 
@@ -27,11 +28,11 @@ export function AccessNotice({ status, onRetry, onLogin, repository, errorMessag
   const descriptionByStatus: Record<AccessStatus, string> = {
     loading: 'Verifying permissions for the requested repository.',
     granted: 'Access granted',
-    'login-required': 'Log in with your GitHub account to open private repositories and enable editor features.',
+    'login-required': 'Log in with your GitHub account to open private repositories, or open from a local folder if you have it cloned.',
     unauthorized:
-      'Your account is signed in, but GitHub denied access. Confirm you are a collaborator or switch to a repository you can view.',
-    'not-found': 'The repository may be private or the name is incorrect. Ensure the owner and repo are spelled correctly.',
-    error: 'An unexpected error occurred while checking repository access. Please try again.',
+      'Your account is signed in, but GitHub denied access. You can open from a local folder if you have it cloned.',
+    'not-found': 'The repository may be private or the name is incorrect. You can open from a local folder if you have it cloned.',
+    error: 'An unexpected error occurred. You can open from a local folder if you have it cloned.',
   };
 
   const showLogin = status === 'login-required' && onLogin;
@@ -76,6 +77,10 @@ export function AccessNotice({ status, onRetry, onLogin, repository, errorMessag
           >
             Sign in with GitHub
           </button>
+        )}
+        {/* Local folder option - available when we have a repository */}
+        {repository && status !== 'loading' && (
+          <LocalFolderButton currentRepoId={repository} />
         )}
         {showRetry && (
           <button

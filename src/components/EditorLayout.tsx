@@ -30,6 +30,9 @@ import { useGemini } from '@/contexts/GeminiContext';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import { useNavigationCommands } from '@/hooks/useNavigationCommands';
 import type { Theme } from '@principal-ade/industry-theme';
+import type { LocalFileSystemAdapter } from '@/lib/client/LocalFileSystemAdapter';
+import { LocalFolderButton } from './LocalFolderButton';
+import { useLocalFileSystem } from '@/contexts/LocalFileSystemContext';
 
 // Dynamically import the MarkdownPanel with SSR disabled
 const MarkdownPanelLoader = dynamic(
@@ -243,6 +246,8 @@ function EditorLayoutContent({
   const { context, actions, events } = usePanelProvider();
   const { login } = useAuth();
   const { setTheme, setColor, resetColor, resetAllColors } = useGlobalTheme();
+  const { adapter: localAdapter } = useLocalFileSystem();
+  const isLocalMode = !!localAdapter;
   const [isMobile, setIsMobile] = useState(false);
   const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
   // Note: File selection state is managed internally by FileEditorPanel via events
@@ -711,8 +716,23 @@ function EditorLayoutContent({
   // Create enhanced actions that add writeFile and capture file metadata on read
   const enhancedActions = useMemo(() => ({
     ...actions,
-    // Enhanced readFile that captures SHA for later commits
+    // Enhanced readFile that captures SHA for later commits (or reads from local filesystem)
     readFile: async (filePath: string): Promise<string> => {
+      // Local mode: read directly from filesystem
+      if (isLocalMode && localAdapter) {
+        let cleanPath = filePath;
+        if (cleanPath.startsWith('/')) cleanPath = cleanPath.slice(1);
+        // Remove any repo prefix patterns
+        const patterns = ['GitHub/', `${githubRepo}/`, 'local/'];
+        for (const pattern of patterns) {
+          if (cleanPath.startsWith(pattern)) {
+            cleanPath = cleanPath.slice(pattern.length);
+          }
+        }
+        return await localAdapter.readFileAsync(cleanPath);
+      }
+
+      // GitHub mode: fetch from API
       if (!githubRepo || !githubRepo.includes('/')) {
         throw new Error('No valid repository available');
       }
@@ -756,8 +776,24 @@ function EditorLayoutContent({
 
       return content;
     },
-    // writeFile stores changes locally for later commit
+    // writeFile stores changes locally for later commit (or writes directly to local filesystem)
     writeFile: async (filePath: string, content: string): Promise<void> => {
+      // Local mode: write directly to filesystem
+      if (isLocalMode && localAdapter) {
+        let cleanPath = filePath;
+        if (cleanPath.startsWith('/')) cleanPath = cleanPath.slice(1);
+        // Remove any repo prefix patterns
+        const patterns = ['GitHub/', `${githubRepo}/`, 'local/'];
+        for (const pattern of patterns) {
+          if (cleanPath.startsWith(pattern)) {
+            cleanPath = cleanPath.slice(pattern.length);
+          }
+        }
+        await localAdapter.writeFileAsync(cleanPath, content);
+        return;
+      }
+
+      // GitHub mode: store for later commit
       const success = addPendingChangeFromWrite(filePath, content);
       if (!success) {
         console.warn('[EditorLayout] writeFile called but no metadata found for:', filePath);
@@ -765,7 +801,7 @@ function EditorLayoutContent({
         // The user will see it's not in pending changes if they try to commit
       }
     },
-  }), [actions, githubRepo, setFileMetadata, addPendingChangeFromWrite]);
+  }), [actions, githubRepo, setFileMetadata, addPendingChangeFromWrite, isLocalMode, localAdapter]);
 
   // Memoize panels that use stable props to prevent unnecessary re-renders
   const stablePanels = useMemo(() => [
@@ -1011,22 +1047,32 @@ function EditorLayoutContent({
 
   return (
     <div className="h-full w-full flex flex-col">
-      <EditorHeader
-        currentLayoutConfigId={currentLayoutConfigId}
-        onLayoutConfigChange={handleLayoutConfigChange}
-        leftCollapsed={leftSidebarCollapsed}
-        rightCollapsed={rightSidebarCollapsed}
-        onToggleLeft={() => setLeftSidebarCollapsed(prev => !prev)}
-        onToggleRight={() => setRightSidebarCollapsed(prev => !prev)}
-        onSwapRightPanels={() => setLayout(prev => ({ ...prev, middle: prev.right, right: prev.middle }))}
-        pendingChangesCount={pendingChangesCount}
-        onCommitClick={() => setIsCommitModalOpen(true)}
-        vimMode={vimMode}
-        onVimModeToggle={handleVimModeToggle}
-      />
+      <div className="flex items-center">
+        <div className="flex-1">
+          <EditorHeader
+            currentLayoutConfigId={currentLayoutConfigId}
+            onLayoutConfigChange={handleLayoutConfigChange}
+            leftCollapsed={leftSidebarCollapsed}
+            rightCollapsed={rightSidebarCollapsed}
+            onToggleLeft={() => setLeftSidebarCollapsed(prev => !prev)}
+            onToggleRight={() => setRightSidebarCollapsed(prev => !prev)}
+            onSwapRightPanels={() => setLayout(prev => ({ ...prev, middle: prev.right, right: prev.middle }))}
+            pendingChangesCount={isLocalMode ? 0 : pendingChangesCount}
+            onCommitClick={() => setIsCommitModalOpen(true)}
+            vimMode={vimMode}
+            onVimModeToggle={handleVimModeToggle}
+          />
+        </div>
+        {/* Local Folder Button - shown when on a repo page */}
+        {githubRepo && (
+          <div className="pr-4 h-14 flex items-center" style={{ background: theme.colors.surface }}>
+            <LocalFolderButton currentRepoId={githubRepo} />
+          </div>
+        )}
+      </div>
 
-      {/* Commit Modal */}
-      {repositoryInfo && (
+      {/* Commit Modal - only show when not in local mode */}
+      {repositoryInfo && !isLocalMode && (
         <CommitModal
           isOpen={isCommitModalOpen}
           onClose={() => setIsCommitModalOpen(false)}
@@ -1112,13 +1158,16 @@ function EditorLayoutContent({
 
 interface EditorLayoutProps {
   githubRepo?: string;
+  localAdapter?: LocalFileSystemAdapter | null;
   initialConfigId?: string;
   onConfigChange?: (configId: string) => void;
 }
 
-export function EditorLayout({ githubRepo, initialConfigId, onConfigChange }: EditorLayoutProps = {}) {
+export function EditorLayout({ githubRepo, localAdapter: _localAdapter, initialConfigId, onConfigChange }: EditorLayoutProps = {}) {
   const { theme } = useTheme();
   const { isAuthenticated, isLoading: authLoading, login } = useAuth();
+  const { adapter: localAdapter } = useLocalFileSystem();
+  const isLocalMode = !!localAdapter;
   const [accessStatus, setAccessStatus] = useState<AccessStatus>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [checkAttempt, setCheckAttempt] = useState(0);
@@ -1183,7 +1232,9 @@ export function EditorLayout({ githubRepo, initialConfigId, onConfigChange }: Ed
 
   const retryCheck = () => setCheckAttempt((attempt) => attempt + 1);
 
-  if (accessStatus !== 'granted') {
+  // Show access notice if not granted AND not in local mode
+  // Local mode bypasses GitHub access check since we're reading from local filesystem
+  if (accessStatus !== 'granted' && !isLocalMode) {
     return (
       <div
         className="h-full w-full flex flex-col"

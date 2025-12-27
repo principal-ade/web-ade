@@ -3,8 +3,10 @@
 import { EditorLayout } from "@/components/EditorLayout";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "@principal-ade/industry-theme";
-import { useMemo, useEffect, useCallback, Suspense } from "react";
+import { useMemo, useEffect, useCallback, Suspense, useState } from "react";
 import { useRepoPresence } from "@/hooks/useRepoPresence";
+import { useLocalFileSystem } from "@/contexts/LocalFileSystemContext";
+import { LocalFileSystemAdapter } from "@/lib/client/LocalFileSystemAdapter";
 
 const RECENT_REPOSITORIES_KEY = 'recent-repositories';
 const MAX_RECENT_ITEMS = 10;
@@ -68,6 +70,30 @@ function RepoPageContent() {
   const githubRepo = useMemo(() => `${owner}/${repo}`, [owner, repo]);
   const { theme } = useTheme();
 
+  // Local filesystem support
+  const { adapter, checkAndRestoreHandle } = useLocalFileSystem();
+  const [localAdapterState, setLocalAdapterState] = useState<LocalFileSystemAdapter | null>(null);
+  const [localModeChecked, setLocalModeChecked] = useState(false);
+
+  // Check for stored local folder handle on load
+  useEffect(() => {
+    async function checkLocalHandle() {
+      const restored = await checkAndRestoreHandle(githubRepo);
+      if (restored) {
+        // The adapter is now available via context
+        setLocalModeChecked(true);
+      } else {
+        setLocalModeChecked(true);
+      }
+    }
+    checkLocalHandle();
+  }, [githubRepo, checkAndRestoreHandle]);
+
+  // Sync adapter from context to local state
+  useEffect(() => {
+    setLocalAdapterState(adapter);
+  }, [adapter]);
+
   // Get initial config from URL, then fall back to localStorage
   const initialConfigId = useMemo(() => {
     const urlConfig = searchParams.get('config');
@@ -98,6 +124,16 @@ function RepoPageContent() {
     saveRecentRepository(owner, repo, initialConfigId);
   }, [owner, repo, initialConfigId]);
 
+  // Don't render until we've checked for local mode
+  if (!localModeChecked) {
+    return (
+      <div
+        className="h-screen w-screen overflow-hidden"
+        style={{ background: theme.colors.background }}
+      />
+    );
+  }
+
   return (
     <div
       className="h-screen w-screen overflow-hidden"
@@ -105,6 +141,7 @@ function RepoPageContent() {
     >
       <EditorLayout
         githubRepo={githubRepo}
+        localAdapter={localAdapterState}
         initialConfigId={initialConfigId}
         onConfigChange={handleConfigChange}
       />
