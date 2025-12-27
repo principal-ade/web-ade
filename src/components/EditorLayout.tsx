@@ -648,6 +648,45 @@ function EditorLayoutContent({
           }
         }
       }),
+      // Markdown panel preference events
+      events.on('markdown-panel:request-preferences', () => {
+        try {
+          const savedPrefs = localStorage.getItem('markdown-panel-preferences');
+          if (savedPrefs) {
+            const prefs = JSON.parse(savedPrefs);
+            events.emit({
+              type: 'markdown-panel:set-preferences',
+              source: 'editor-layout',
+              timestamp: Date.now(),
+              payload: prefs,
+            });
+          }
+        } catch (err) {
+          console.warn('[EditorLayout] Failed to load markdown panel preferences:', err);
+        }
+      }),
+      events.on('markdown-panel:view-mode-change', (event) => {
+        const payload = event.payload as { viewMode: 'document' | 'book' };
+        try {
+          const savedPrefs = localStorage.getItem('markdown-panel-preferences');
+          const prefs = savedPrefs ? JSON.parse(savedPrefs) : {};
+          prefs.viewMode = payload.viewMode;
+          localStorage.setItem('markdown-panel-preferences', JSON.stringify(prefs));
+        } catch (err) {
+          console.warn('[EditorLayout] Failed to save markdown panel view mode:', err);
+        }
+      }),
+      events.on('markdown-panel:font-scale-change', (event) => {
+        const payload = event.payload as { fontSizeScale: number };
+        try {
+          const savedPrefs = localStorage.getItem('markdown-panel-preferences');
+          const prefs = savedPrefs ? JSON.parse(savedPrefs) : {};
+          prefs.fontSizeScale = payload.fontSizeScale;
+          localStorage.setItem('markdown-panel-preferences', JSON.stringify(prefs));
+        } catch (err) {
+          console.warn('[EditorLayout] Failed to save markdown panel font scale:', err);
+        }
+      }),
     ];
 
     return () => {
