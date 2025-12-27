@@ -279,60 +279,62 @@ export class GitHubArtifactService {
       }
 
       // Extract fileMetrics by lens type
+      // Aggregate (concat) metrics from all packages since paths are git-root-relative
       if (resultWithExtras.fileMetrics && resultWithExtras.fileMetrics.length > 0) {
         const lensId = result.lens.id.toLowerCase();
+        const metrics = resultWithExtras.fileMetrics;
         switch (lensId) {
           // Linting
           case 'eslint':
-            fileMetrics.eslint = resultWithExtras.fileMetrics;
+            fileMetrics.eslint = [...(fileMetrics.eslint || []), ...metrics];
             break;
           case 'biome-lint':
           case 'biome':
-            fileMetrics['biome-lint'] = resultWithExtras.fileMetrics;
+            fileMetrics['biome-lint'] = [...(fileMetrics['biome-lint'] || []), ...metrics];
             break;
           // Types
           case 'typescript':
           case 'typecheck':
           case 'tsc':
-            fileMetrics.typescript = resultWithExtras.fileMetrics;
+            fileMetrics.typescript = [...(fileMetrics.typescript || []), ...metrics];
             break;
           // Formatting
           case 'prettier':
-            fileMetrics.prettier = resultWithExtras.fileMetrics;
+            fileMetrics.prettier = [...(fileMetrics.prettier || []), ...metrics];
             break;
           case 'biome-format':
-            fileMetrics['biome-format'] = resultWithExtras.fileMetrics;
+            fileMetrics['biome-format'] = [...(fileMetrics['biome-format'] || []), ...metrics];
             break;
           // Dead code
           case 'knip':
-            fileMetrics.knip = resultWithExtras.fileMetrics;
+            fileMetrics.knip = [...(fileMetrics.knip || []), ...metrics];
             break;
           // Tests - also extract to fileCoverage for coverage visualization
           case 'jest':
           case 'test':
-            fileMetrics.jest = resultWithExtras.fileMetrics;
+            fileMetrics.jest = [...(fileMetrics.jest || []), ...metrics];
             // Convert to fileCoverage format (score = line coverage %)
-            for (const fm of resultWithExtras.fileMetrics) {
+            for (const fm of metrics) {
               fileCoverage[fm.file] = fm.score;
             }
             break;
           case 'vitest':
-            fileMetrics.vitest = resultWithExtras.fileMetrics;
+            fileMetrics.vitest = [...(fileMetrics.vitest || []), ...metrics];
             // Convert to fileCoverage format (score = line coverage %)
-            for (const fm of resultWithExtras.fileMetrics) {
+            for (const fm of metrics) {
               fileCoverage[fm.file] = fm.score;
             }
             break;
           case 'bun-test':
-            fileMetrics['bun-test'] = resultWithExtras.fileMetrics;
+            fileMetrics['bun-test'] = [...(fileMetrics['bun-test'] || []), ...metrics];
             // Convert to fileCoverage format (score = line coverage %)
-            for (const fm of resultWithExtras.fileMetrics) {
+            for (const fm of metrics) {
               fileCoverage[fm.file] = fm.score;
             }
             break;
           // Documentation
           case 'alexandria':
-            fileMetrics.alexandria = resultWithExtras.fileMetrics;
+            fileMetrics.alexandria = [...(fileMetrics.alexandria || []), ...metrics];
             break;
         }
       }

@@ -168,6 +168,7 @@ function SharedLibraryContent({
             }}
             events={events}
             selectedRepository={previewedRepo}
+            defaultShowSearch
           />
         </div>
       ),
