@@ -23,12 +23,12 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Web ADE - Browser-Based Development Environment",
+  title: "Principal AI",
   description: "A full-featured browser-based IDE with real-time collaboration",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Web ADE",
+    title: "Principal AI",
   },
   formatDetection: {
     telephone: false,
