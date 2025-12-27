@@ -267,6 +267,7 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
             events={events}
             owner={owner}
             selectedRepository={previewedRepo}
+            defaultShowSearch
           />
         </div>
       ),

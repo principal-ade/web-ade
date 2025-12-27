@@ -355,6 +355,7 @@ function LibraryPageContent({
             }}
             events={events}
             selectedRepository={previewedRepo}
+            defaultShowSearch
           />
         </div>
       ),

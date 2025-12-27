@@ -218,6 +218,7 @@ function CollectionPageContent({
             }}
             events={events}
             selectedRepository={previewedRepo}
+            defaultShowSearch
           />
         </div>
       ),
