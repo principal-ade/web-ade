@@ -107,6 +107,19 @@ export const layoutConfigs: LayoutConfig[] = [
       right: false,
     },
   },
+  {
+    id: 'pull-requests',
+    name: 'Pull Requests',
+    layout: {
+      left: 'pull-requests',
+      middle: 'github-issue-detail',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
 ];
 
 interface LayoutConfigDropdownProps {
