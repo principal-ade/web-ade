@@ -37,7 +37,7 @@
     "@mlc-ai/web-llm": "^0.2.80",
     "@monaco-editor/react": "^4.7.0",
     "@octokit/rest": "^22.0.1",
-    "@principal-ade/code-quality-panels": "^0.1.23",
+    "@principal-ade/code-quality-panels": "^0.1.24",
     "@principal-ade/industry-theme": "^0.1.4",
     "@principal-ade/industry-themed-ai-sdk-panel": "^0.1.4",
     "@principal-ade/panel-framework-core": "^0.2.0",
