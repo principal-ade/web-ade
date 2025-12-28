@@ -1873,6 +1873,78 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   // Determine if user can write to the repo (authenticated or local mode)
   const canWrite = isLocalMode || isAuthenticated;
 
+  // Helper to add a file to the fileTree (optimistic update for new files)
+  // This updates the fileTree state so panels can see newly created files
+  const addFileToTree = useCallback((filePath: string) => {
+    setFileTree((prevTree) => {
+      if (!prevTree) return prevTree;
+
+      // Normalize path (remove leading slash if present)
+      const normalizedPath = filePath.replace(/^\//, '');
+
+      // Check if file already exists
+      if (prevTree.allFiles.some((f) => f.path === normalizedPath)) {
+        return prevTree; // File already exists, no update needed
+      }
+
+      // Build list of new directories that need to be added
+      const newDirs: string[] = [];
+      const parts = normalizedPath.split('/');
+      for (let i = 1; i < parts.length; i++) {
+        const dirPath = parts.slice(0, i).join('/');
+        if (!prevTree.allDirectories.some((d) => d.path === dirPath)) {
+          newDirs.push(dirPath);
+        }
+      }
+
+      // Get file extension
+      const fileName = parts[parts.length - 1] || '';
+      const dotIndex = fileName.lastIndexOf('.');
+      const extension = dotIndex > 0 ? fileName.slice(dotIndex) : '';
+
+      // Create new file entry (using type assertion - panels only use path/name/extension)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const newFile: any = {
+        path: normalizedPath,
+        name: fileName,
+        extension,
+        size: 0,
+        lastModified: new Date(),
+        isDirectory: false,
+        relativePath: normalizedPath,
+      };
+
+      // Create new directory entries (using type assertion)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const newDirEntries: any[] = newDirs.map((dirPath) => ({
+        path: dirPath,
+        name: dirPath.split('/').pop() || '',
+        isDirectory: true,
+        relativePath: dirPath,
+        children: [],
+        fileCount: 0,
+        totalSize: 0,
+        depth: dirPath.split('/').length,
+      }));
+
+      console.log('[PanelContext] Adding file to tree:', normalizedPath);
+      if (newDirs.length > 0) {
+        console.log('[PanelContext] Adding directories:', newDirs);
+      }
+
+      return {
+        ...prevTree,
+        allFiles: [...prevTree.allFiles, newFile],
+        allDirectories: [...prevTree.allDirectories, ...newDirEntries],
+        stats: {
+          ...prevTree.stats,
+          totalFiles: prevTree.stats.totalFiles + 1,
+          totalDirectories: prevTree.stats.totalDirectories + newDirs.length,
+        },
+      };
+    });
+  }, []);
+
   // Create adapters for panels (e.g., Alexandria docs panel uses these for file reading)
   // Write operations are only available when user is authenticated or in local mode
   const adapters: PanelAdapters = useMemo(() => {
@@ -1882,6 +1954,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       if (isLocalMode && localAdapter) {
         const cleanPath = cleanFilePath(path);
         await localAdapter.writeFileAsync(cleanPath, content);
+        // Update fileTree with the new file
+        addFileToTree(cleanPath);
         return;
       }
 
@@ -1896,6 +1970,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           if (payload.path === cleanPath) {
             cleanup();
             if (payload.success) {
+              // Update fileTree with the new file (optimistic update)
+              addFileToTree(cleanPath);
               resolve();
             } else {
               reject(new Error(payload.error || 'Failed to write file'));
@@ -1973,7 +2049,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       // fileSystem adapter with conditional write support
       fileSystem,
     };
-  }, [readFileFromGitHub, isLocalMode, localAdapter, cleanFilePath, events, canWrite]);
+  }, [readFileFromGitHub, isLocalMode, localAdapter, cleanFilePath, events, canWrite, addFileToTree]);
 
   // Context value - include all data states to ensure proper re-renders
   // We include data states (markdownContent, markdownFiles, etc.) as dependencies to force
