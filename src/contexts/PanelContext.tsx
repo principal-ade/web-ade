@@ -273,6 +273,45 @@ interface GitHubIssuesSliceData {
   error?: string;
 }
 
+// GitHub Pull Requests types for GitPullRequestsPanel
+interface PullRequestUser {
+  login: string;
+  avatar_url?: string;
+  html_url?: string;
+}
+
+interface PullRequestRef {
+  ref: string;
+  sha?: string;
+}
+
+interface PullRequestInfo {
+  id: number;
+  number: number;
+  title: string;
+  body?: string | null;
+  state: 'open' | 'closed';
+  draft?: boolean;
+  html_url: string;
+  user?: PullRequestUser | null;
+  created_at: string;
+  updated_at: string;
+  closed_at?: string | null;
+  merged_at?: string | null;
+  base?: PullRequestRef | null;
+  head?: PullRequestRef | null;
+  comments?: number;
+  review_comments?: number;
+}
+
+interface PullRequestsSliceData {
+  pullRequests: PullRequestInfo[];
+  owner?: string;
+  repo?: string;
+  isAuthenticated?: boolean;
+  error?: string;
+}
+
 interface PanelProviderProps {
   children: ReactNode;
   workspace?: WorkspaceMetadata;
@@ -531,6 +570,11 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const [issuesData, setIssuesData] = useState<GitHubIssuesSliceData | null>(null);
   const [issuesLoading, setIssuesLoading] = useState(false);
   const [issuesError, setIssuesError] = useState<Error | null>(null);
+
+  // State for GitHub pull requests (for GitPullRequestsPanel)
+  const [pullRequestsData, setPullRequestsData] = useState<PullRequestsSliceData | null>(null);
+  const [pullRequestsLoading, setPullRequestsLoading] = useState(false);
+  const [pullRequestsError, setPullRequestsError] = useState<Error | null>(null);
 
   // State for user GitHub data (for GitHubStarredPanel and GitHubProjectsPanel)
   interface UserGitHubData {
@@ -795,6 +839,48 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       setIssuesError(err instanceof Error ? err : new Error('Failed to fetch issues'));
     } finally {
       setIssuesLoading(false);
+    }
+  }, []);
+
+  // Fetch pull requests from GitHub API
+  const fetchPullRequests = useCallback(async (repo: string) => {
+    setPullRequestsLoading(true);
+    setPullRequestsError(null);
+    console.log('[PanelContext] Fetching pull requests for:', repo);
+
+    try {
+      const [owner, name] = repo.split('/');
+      const response = await fetch(
+        `/api/github/repo/${owner}/${name}/pull-requests?per_page=50`,
+        { credentials: 'include' }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        setPullRequestsData({
+          pullRequests: [],
+          owner: owner || '',
+          repo: name || '',
+          isAuthenticated: errorData.isAuthenticated ?? false,
+          error: errorData.error || `Failed to fetch pull requests: ${response.statusText}`,
+        });
+        return;
+      }
+
+      const data = await response.json();
+
+      setPullRequestsData({
+        pullRequests: data.pullRequests || [],
+        owner: data.owner || owner || '',
+        repo: data.repo || name || '',
+        isAuthenticated: data.isAuthenticated ?? false,
+      });
+      console.log('[PanelContext] Pull requests loaded:', data.pullRequests?.length || 0);
+    } catch (err) {
+      console.error('[PanelContext] Failed to fetch pull requests:', err);
+      setPullRequestsError(err instanceof Error ? err : new Error('Failed to fetch pull requests'));
+    } finally {
+      setPullRequestsLoading(false);
     }
   }, []);
 
@@ -1462,6 +1548,21 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         },
       ],
       [
+        'pullRequests',
+        {
+          scope: 'repository',
+          name: 'pullRequests',
+          data: pullRequestsData,
+          loading: pullRequestsLoading,
+          error: pullRequestsError,
+          refresh: async () => {
+            if (githubRepo) {
+              await fetchPullRequests(githubRepo);
+            }
+          },
+        },
+      ],
+      [
         'githubStarred',
         {
           scope: 'global',
@@ -1725,6 +1826,17 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       data: issuesData,
       loading: issuesLoading,
       error: issuesError,
+    });
+  }
+
+  // Update pullRequests slice with fetched data
+  const pullRequestsSlice = slicesRef.current.get('pullRequests');
+  if (pullRequestsSlice) {
+    slicesRef.current.set('pullRequests', {
+      ...pullRequestsSlice,
+      data: pullRequestsData,
+      loading: pullRequestsLoading,
+      error: pullRequestsError,
     });
   }
 
@@ -2093,7 +2205,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, userGitHubData, userGitHubLoading, qualityData, qualityLoading, qualityError, lensResults, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading, issuesData, issuesLoading, issuesError]
+    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, userGitHubData, userGitHubLoading, qualityData, qualityLoading, qualityError, lensResults, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading, issuesData, issuesLoading, issuesError, pullRequestsData, pullRequestsLoading, pullRequestsError]
   );
 
   // Actions
@@ -2381,6 +2493,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     fetchPackages(githubRepo);
     fetchCommits(githubRepo);
     fetchIssues(githubRepo);
+    fetchPullRequests(githubRepo);
 
     // Sequence tree → quality metrics to reuse SHA (saves GitHub API calls)
     // Tree fetch resolves commit SHA, which is then used for quality metrics caching
@@ -2391,7 +2504,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       fetchQualityMetrics(githubRepo, commitSha ?? undefined);
     };
     fetchTreeThenQuality();
-  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics, fetchPackages, fetchCommits, fetchIssues]);
+  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics, fetchPackages, fetchCommits, fetchIssues, fetchPullRequests]);
 
   // Fetch owner repositories when initialOwner prop is provided (handles client-side navigation)
   useEffect(() => {
