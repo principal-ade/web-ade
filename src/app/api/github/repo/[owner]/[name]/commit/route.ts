@@ -5,7 +5,7 @@ import { getGitHubToken } from '@/lib/auth/cookies';
 interface FileChange {
   path: string;
   content: string;
-  sha: string;  // Current file SHA for conflict detection
+  sha?: string;  // Current file SHA for conflict detection (undefined for new files)
 }
 
 interface CommitRequest {
@@ -135,15 +135,22 @@ async function commitSingleFile(
   file: FileChange,
   message: string
 ): Promise<CommitResponse> {
-  const { data } = await octokit.rest.repos.createOrUpdateFileContents({
+  // Build request options - only include sha if file is being updated (not new)
+  const requestOptions: Parameters<typeof octokit.rest.repos.createOrUpdateFileContents>[0] = {
     owner,
     repo,
     path: file.path,
     message,
     content: Buffer.from(file.content, 'utf-8').toString('base64'),
-    sha: file.sha,
     branch,
-  });
+  };
+
+  // Only include SHA for existing files (updates), not for new files
+  if (file.sha) {
+    requestOptions.sha = file.sha;
+  }
+
+  const { data } = await octokit.rest.repos.createOrUpdateFileContents(requestOptions);
 
   return {
     success: true,

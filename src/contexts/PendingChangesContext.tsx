@@ -18,8 +18,9 @@ export interface PendingFileChange {
   path: string;
   originalContent: string;
   newContent: string;
-  sha: string;  // Git SHA required for GitHub API commits
+  sha?: string;  // Git SHA for conflict detection (undefined for new files)
   modifiedAt: Date;
+  isNewFile?: boolean;  // True if this is a new file being created
 }
 
 /**
@@ -34,6 +35,7 @@ interface PendingChangesContextValue {
   getFileMetadata: (path: string) => FileMetadata | undefined;
   addPendingChange: (change: PendingFileChange) => void;
   addPendingChangeFromWrite: (path: string, newContent: string) => boolean;
+  addNewFilePendingChange: (path: string, content: string) => void;
   updatePendingChange: (path: string, newContent: string) => void;
   removePendingChange: (path: string) => void;
   clearAllPendingChanges: () => void;
@@ -108,6 +110,23 @@ export function PendingChangesProvider({ children }: { children: React.ReactNode
     return true;
   }, [fileMetadata]);
 
+  // Add a pending change for a new file that doesn't exist yet
+  // Used by features like backlog init that create new files
+  const addNewFilePendingChange = useCallback((path: string, content: string) => {
+    setPendingChanges(prev => {
+      const next = new Map(prev);
+      next.set(path, {
+        path,
+        originalContent: '',
+        newContent: content,
+        sha: undefined,  // No SHA for new files
+        modifiedAt: new Date(),
+        isNewFile: true,
+      });
+      return next;
+    });
+  }, []);
+
   const updatePendingChange = useCallback((path: string, newContent: string) => {
     setPendingChanges(prev => {
       const existing = prev.get(path);
@@ -163,6 +182,7 @@ export function PendingChangesProvider({ children }: { children: React.ReactNode
         getFileMetadata,
         addPendingChange,
         addPendingChangeFromWrite,
+        addNewFilePendingChange,
         updatePendingChange,
         removePendingChange,
         clearAllPendingChanges,

@@ -1889,16 +1889,60 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         }
       },
       readFile: readFileFromGitHub,
-      // writeFile and deleteFile not implemented - editor will be read-only
-      // To enable editing, these would need to integrate with the PendingChangesContext
-      writeFile: async (_path: string, _content: string): Promise<void> => {
-        throw new Error('Write operations not supported in web-ade viewer mode');
+      // writeFile emits an event that EditorLayoutContent handles
+      // This allows features like backlog init to create files
+      writeFile: async (path: string, content: string): Promise<void> => {
+        // Local mode: write directly to filesystem
+        if (isLocalMode && localAdapter) {
+          const cleanPath = cleanFilePath(path);
+          await localAdapter.writeFileAsync(cleanPath, content);
+          return;
+        }
+
+        // GitHub mode: emit event for EditorLayoutContent to handle
+        // (it has access to PendingChangesContext)
+        return new Promise((resolve, reject) => {
+          const cleanPath = cleanFilePath(path);
+
+          // Set up one-time listener for the response
+          const cleanup = events.on('file:write-complete', (event) => {
+            const payload = event.payload as { path: string; success: boolean; error?: string };
+            if (payload.path === cleanPath) {
+              cleanup();
+              if (payload.success) {
+                resolve();
+              } else {
+                reject(new Error(payload.error || 'Failed to write file'));
+              }
+            }
+          });
+
+          // Emit the write request
+          events.emit({
+            type: 'file:write-requested',
+            source: 'panel-context',
+            timestamp: Date.now(),
+            payload: { path: cleanPath, content },
+          });
+
+          // Timeout after 30 seconds
+          setTimeout(() => {
+            cleanup();
+            reject(new Error('Write operation timed out'));
+          }, 30000);
+        });
+      },
+      // createDir is a no-op for GitHub since directories are implicit
+      createDir: async (_path: string): Promise<void> => {
+        // GitHub doesn't need explicit directory creation
+        // Directories are created implicitly when files are added
+        return;
       },
       deleteFile: async (_path: string): Promise<void> => {
         throw new Error('Delete operations not supported in web-ade viewer mode');
       },
     },
-  }), [readFileFromGitHub]);
+  }), [readFileFromGitHub, isLocalMode, localAdapter, cleanFilePath, events]);
 
   // Context value - include all data states to ensure proper re-renders
   // We include data states (markdownContent, markdownFiles, etc.) as dependencies to force

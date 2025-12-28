@@ -276,6 +276,7 @@ function EditorLayoutContent({
     getPendingChangesArray,
     setFileMetadata,
     addPendingChangeFromWrite,
+    addNewFilePendingChange,
   } = usePendingChanges();
 
   // Get repository info for file fetching
@@ -421,6 +422,45 @@ function EditorLayoutContent({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Handle file:write-requested events from PanelContext's fileSystem adapter
+  // This enables features like backlog init to create new files
+  useEffect(() => {
+    if (!events) return;
+
+    const unsubscribe = events.on('file:write-requested', (event) => {
+      const { path, content } = event.payload as { path: string; content: string };
+
+      try {
+        // Add to pending changes as a new file
+        addNewFilePendingChange(path, content);
+
+        // Emit success response
+        events.emit({
+          type: 'file:write-complete',
+          source: 'editor-layout',
+          timestamp: Date.now(),
+          payload: { path, success: true },
+        });
+
+        console.log('[EditorLayout] Added new file to pending changes:', path);
+      } catch (error) {
+        // Emit error response
+        events.emit({
+          type: 'file:write-complete',
+          source: 'editor-layout',
+          timestamp: Date.now(),
+          payload: {
+            path,
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to write file',
+          },
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [events, addNewFilePendingChange]);
 
   // Listen for command palette events
   useEffect(() => {
