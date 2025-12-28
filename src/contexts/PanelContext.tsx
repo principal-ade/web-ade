@@ -1870,79 +1870,110 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     return data.content || '';
   }, [githubRepo, isLocalMode, localAdapter, cleanFilePath]);
 
+  // Determine if user can write to the repo (authenticated or local mode)
+  const canWrite = isLocalMode || isAuthenticated;
+
   // Create adapters for panels (e.g., Alexandria docs panel uses these for file reading)
-  const adapters: PanelAdapters = useMemo(() => ({
-    // readFile fetches file content from GitHub API (legacy adapter)
-    readFile: readFileFromGitHub,
-    // matchesPath uses minimatch for glob pattern matching
-    matchesPath: (pattern: string, filePath: string): boolean => {
-      return minimatch(filePath, pattern);
-    },
-    // fileSystem adapter for FileEditorPanel and other panels
-    fileSystem: {
-      exists: async (path: string): Promise<boolean> => {
-        try {
-          await readFileFromGitHub(path);
-          return true;
-        } catch {
-          return false;
-        }
-      },
-      readFile: readFileFromGitHub,
-      // writeFile emits an event that EditorLayoutContent handles
-      // This allows features like backlog init to create files
-      writeFile: async (path: string, content: string): Promise<void> => {
-        // Local mode: write directly to filesystem
-        if (isLocalMode && localAdapter) {
-          const cleanPath = cleanFilePath(path);
-          await localAdapter.writeFileAsync(cleanPath, content);
-          return;
-        }
-
-        // GitHub mode: emit event for EditorLayoutContent to handle
-        // (it has access to PendingChangesContext)
-        return new Promise((resolve, reject) => {
-          const cleanPath = cleanFilePath(path);
-
-          // Set up one-time listener for the response
-          const cleanup = events.on('file:write-complete', (event) => {
-            const payload = event.payload as { path: string; success: boolean; error?: string };
-            if (payload.path === cleanPath) {
-              cleanup();
-              if (payload.success) {
-                resolve();
-              } else {
-                reject(new Error(payload.error || 'Failed to write file'));
-              }
-            }
-          });
-
-          // Emit the write request
-          events.emit({
-            type: 'file:write-requested',
-            source: 'panel-context',
-            timestamp: Date.now(),
-            payload: { path: cleanPath, content },
-          });
-
-          // Timeout after 30 seconds
-          setTimeout(() => {
-            cleanup();
-            reject(new Error('Write operation timed out'));
-          }, 30000);
-        });
-      },
-      // createDir is a no-op for GitHub since directories are implicit
-      createDir: async (_path: string): Promise<void> => {
-        // GitHub doesn't need explicit directory creation
-        // Directories are created implicitly when files are added
+  // Write operations are only available when user is authenticated or in local mode
+  const adapters: PanelAdapters = useMemo(() => {
+    // writeFile implementation - emits an event that EditorLayoutContent handles
+    const writeFileImpl = async (path: string, content: string): Promise<void> => {
+      // Local mode: write directly to filesystem
+      if (isLocalMode && localAdapter) {
+        const cleanPath = cleanFilePath(path);
+        await localAdapter.writeFileAsync(cleanPath, content);
         return;
+      }
+
+      // GitHub mode: emit event for EditorLayoutContent to handle
+      // (it has access to PendingChangesContext)
+      return new Promise((resolve, reject) => {
+        const cleanPath = cleanFilePath(path);
+
+        // Set up one-time listener for the response
+        const cleanup = events.on('file:write-complete', (event) => {
+          const payload = event.payload as { path: string; success: boolean; error?: string };
+          if (payload.path === cleanPath) {
+            cleanup();
+            if (payload.success) {
+              resolve();
+            } else {
+              reject(new Error(payload.error || 'Failed to write file'));
+            }
+          }
+        });
+
+        // Emit the write request
+        events.emit({
+          type: 'file:write-requested',
+          source: 'panel-context',
+          timestamp: Date.now(),
+          payload: { path: cleanPath, content },
+        });
+
+        // Timeout after 30 seconds
+        setTimeout(() => {
+          cleanup();
+          reject(new Error('Write operation timed out'));
+        }, 30000);
+      });
+    };
+
+    // createDir is a no-op for GitHub since directories are implicit
+    const createDirImpl = async (_path: string): Promise<void> => {
+      // GitHub doesn't need explicit directory creation
+      // Directories are created implicitly when files are added
+      return;
+    };
+
+    // Build fileSystem adapter - only include write operations if user can write
+    const fileSystem: PanelAdapters['fileSystem'] = canWrite
+      ? {
+          exists: async (path: string): Promise<boolean> => {
+            try {
+              await readFileFromGitHub(path);
+              return true;
+            } catch {
+              return false;
+            }
+          },
+          readFile: readFileFromGitHub,
+          writeFile: writeFileImpl,
+          createDir: createDirImpl,
+          deleteFile: async (_path: string): Promise<void> => {
+            throw new Error('Delete operations not supported in web-ade viewer mode');
+          },
+        }
+      : {
+          // Read-only mode for unauthenticated users
+          exists: async (path: string): Promise<boolean> => {
+            try {
+              await readFileFromGitHub(path);
+              return true;
+            } catch {
+              return false;
+            }
+          },
+          readFile: readFileFromGitHub,
+          writeFile: async (_path: string, _content: string): Promise<void> => {
+            throw new Error('Write operations require authentication');
+          },
+          deleteFile: async (_path: string): Promise<void> => {
+            throw new Error('Delete operations not supported');
+          },
+        };
+
+    return {
+      // readFile fetches file content from GitHub API (legacy adapter)
+      readFile: readFileFromGitHub,
+      // matchesPath uses minimatch for glob pattern matching
+      matchesPath: (pattern: string, filePath: string): boolean => {
+        return minimatch(filePath, pattern);
       },
-      deleteFile: async (_path: string): Promise<void> => {
-        throw new Error('Delete operations not supported in web-ade viewer mode');
-      },
-    },
-  }), [readFileFromGitHub, isLocalMode, localAdapter, cleanFilePath, events]);
+      // fileSystem adapter with conditional write support
+      fileSystem,
+    };
+  }, [readFileFromGitHub, isLocalMode, localAdapter, cleanFilePath, events, canWrite]);
 
   // Context value - include all data states to ensure proper re-renders
   // We include data states (markdownContent, markdownFiles, etc.) as dependencies to force
