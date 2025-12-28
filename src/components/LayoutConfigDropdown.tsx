@@ -33,9 +33,9 @@ export const layoutConfigs: LayoutConfig[] = [
     id: 'kanban',
     name: 'Backlog.md',
     layout: {
-      left: 'kanban',
-      middle: 'task-detail',
-      right: 'commit-history',
+      left: 'milestones',
+      middle: 'kanban',
+      right: 'task-detail',
     },
     collapsed: {
       left: false,
