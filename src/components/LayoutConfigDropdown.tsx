@@ -112,7 +112,7 @@ export const layoutConfigs: LayoutConfig[] = [
     name: 'Pull Requests',
     layout: {
       left: 'pull-requests',
-      middle: 'github-issue-detail',
+      middle: 'pull-request-detail',
       right: 'file-city',
     },
     collapsed: {

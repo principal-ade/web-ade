@@ -185,6 +185,15 @@ const GitPullRequestsPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the GitPullRequestDetailPanel with SSR disabled
+const GitPullRequestDetailPanelLoader = dynamic(
+  () => import('@industry-theme/git-panels').then((mod) => {
+    const Component = mod.panels[2]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 // Dynamically import the GitHubIssuesPanel with SSR disabled
 const GitHubIssuesPanelLoader = dynamic(
   () => import('@industry-theme/github-panels').then((mod) => {
@@ -1075,6 +1084,15 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitPullRequestsPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'pull-request-detail',
+      label: 'Pull Request Detail',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <GitPullRequestDetailPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
