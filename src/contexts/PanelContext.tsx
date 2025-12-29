@@ -2288,41 +2288,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         console.log('Opening file:', cleanPath, isLocalMode ? '(local mode)' : '(GitHub mode)');
 
         try {
-          let content = '';
-
-          // Local mode: read from local filesystem
-          if (isLocalMode && localAdapter) {
-            content = await localAdapter.readFileAsync(cleanPath);
-          } else {
-            // GitHub mode: fetch from API
-            if (!githubRepo) {
-              console.error('No GitHub repo specified');
-              return;
-            }
-
-            const [owner, name] = githubRepo.split('/');
-
-            const response = await fetch(
-              `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(cleanPath)}`
-            );
-
-            if (!response.ok) {
-              throw new Error(`Failed to fetch file: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-
-            // Decode base64 content
-            if (data.content && data.encoding === 'base64') {
-              const binaryString = atob(data.content.replace(/\n/g, ''));
-              const bytes = new Uint8Array(binaryString.length);
-              for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-              }
-              const decoder = new TextDecoder('utf-8');
-              content = decoder.decode(bytes);
-            }
-          }
+          // Use readFileFromGitHub which handles VFS (checks pending layer first)
+          const content = await readFileFromGitHub(cleanPath);
 
           // If this is a markdown file, update the active-file slice and markdownContent
           // so the markdown panel displays the new file
@@ -2388,42 +2355,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         console.log('[PanelContext] Reading file:', cleanPath, isLocalMode ? '(local mode)' : '(GitHub mode)');
 
         try {
-          // Local mode: read from local filesystem
-          if (isLocalMode && localAdapter) {
-            return await localAdapter.readFileAsync(cleanPath);
-          }
-
-          // GitHub mode: fetch from API
-          if (!githubRepo) {
-            throw new Error('No GitHub repo specified');
-          }
-
-          const [owner, name] = githubRepo.split('/');
-
-          const response = await fetch(
-            `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(cleanPath)}`
-          );
-
-          if (!response.ok) {
-            throw new Error(`Failed to read file: ${response.statusText}`);
-          }
-
-          const data = await response.json();
-
-          // Decode base64 content
-          let content = '';
-          if (data.content && data.encoding === 'base64') {
-            const binaryString = atob(data.content.replace(/\n/g, ''));
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
-            }
-            const decoder = new TextDecoder('utf-8');
-            content = decoder.decode(bytes);
-          }
-
-          // Return content directly as expected by panels (framework signature)
-          return content;
+          // Use readFileFromGitHub which handles VFS (checks pending layer first)
+          return await readFileFromGitHub(cleanPath);
         } catch (error) {
           console.error('[PanelContext] Error reading file:', error);
           throw error;
@@ -2531,7 +2464,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         }
       },
     }),
-    [events, githubRepo, isLocalMode, localAdapter, cleanFilePath]
+    [events, githubRepo, isLocalMode, localAdapter, cleanFilePath, readFileFromGitHub]
   );
 
   const value: PanelProviderValue = useMemo(
