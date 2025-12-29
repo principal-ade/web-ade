@@ -493,8 +493,11 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const isLocalMode = !!localAdapter;
 
   // Get VFS for file operations (pending layer + GitHub fallback)
+  // Use refs to avoid dependency on vfs object which changes on every render
   const vfs = useVFS();
   const vfsInitializedRef = useRef(false);
+  const vfsRef = useRef(vfs);
+  vfsRef.current = vfs;
 
   // Initialize VFS when repository changes (GitHub mode only)
   useEffect(() => {
@@ -516,9 +519,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     // Get branch from repository prop or default to 'main'
     const branch: string = (repository as { default_branch?: string })?.default_branch || 'main';
 
-    // Initialize VFS
+    // Initialize VFS (use ref to avoid dependency on vfs object)
     console.log('[PanelContext] Initializing VFS for', githubRepo, 'branch:', branch);
-    vfs.initialize({
+    vfsRef.current.initialize({
       mode: 'github',
       github: {
         owner: repoOwner,
@@ -536,7 +539,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     return () => {
       vfsInitializedRef.current = false;
     };
-  }, [githubRepo, repository?.default_branch, isLocalMode, vfs]);
+  }, [githubRepo, repository?.default_branch, isLocalMode]);
 
   // Get presence data for current-projects slice
   const {
@@ -1999,8 +2002,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     }
 
     // GitHub mode: use VFS (checks pending layer first, then fetches from GitHub)
-    if (vfs.isInitialized) {
-      return await vfs.readFile(cleanPath);
+    if (vfsRef.current.isInitialized) {
+      return await vfsRef.current.readFile(cleanPath);
     }
 
     // Fallback to direct API call if VFS not ready
@@ -2034,7 +2037,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     }
 
     return data.content || '';
-  }, [githubRepo, isLocalMode, localAdapter, cleanFilePath, vfs]);
+  }, [githubRepo, isLocalMode, localAdapter, cleanFilePath]);
 
   // Determine if user can write to the repo (authenticated or local mode)
   const canWrite = isLocalMode || isAuthenticated;
@@ -2127,8 +2130,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       }
 
       // GitHub mode: use VFS (writes to pending layer)
-      if (vfs.isInitialized) {
-        await vfs.writeFile(cleanPath, content);
+      if (vfsRef.current.isInitialized) {
+        await vfsRef.current.writeFile(cleanPath, content);
         // Update fileTree with the new file (optimistic update)
         addFileToTree(cleanPath);
 
@@ -2230,7 +2233,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       // fileSystem adapter with conditional write support
       fileSystem,
     };
-  }, [readFileFromGitHub, isLocalMode, localAdapter, cleanFilePath, events, canWrite, addFileToTree, vfs]);
+  }, [readFileFromGitHub, isLocalMode, localAdapter, cleanFilePath, events, canWrite, addFileToTree]);
 
   // Context value - include all data states to ensure proper re-renders
   // We include data states (markdownContent, markdownFiles, etc.) as dependencies to force
