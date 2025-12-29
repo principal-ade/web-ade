@@ -24,11 +24,64 @@ interface GitHubSearchResultsProps {
   searchQuery: string;
 }
 
+/**
+ * Parse a GitHub URL and extract owner/repo
+ */
+function parseGitHubUrl(input: string): { owner: string; repo: string } | null {
+  const trimmed = input.trim();
+
+  // Try to parse as URL first
+  const urlPatterns = [
+    /^https?:\/\/github\.com\/([^/]+)\/([^/]+)/i,
+    /^github\.com\/([^/]+)\/([^/]+)/i,
+  ];
+
+  for (const pattern of urlPatterns) {
+    const match = trimmed.match(pattern);
+    if (match && match[1] && match[2]) {
+      // Clean repo name (remove .git suffix, query params, etc.)
+      const repo = match[2].replace(/\.git$/, '').split(/[?#]/)[0];
+      return { owner: match[1], repo: repo || '' };
+    }
+  }
+
+  // Try owner/repo format (must have exactly one slash, no spaces, valid chars)
+  const repoPathMatch = trimmed.match(/^([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)$/);
+  if (repoPathMatch && repoPathMatch[1] && repoPathMatch[2]) {
+    return { owner: repoPathMatch[1], repo: repoPathMatch[2] };
+  }
+
+  return null;
+}
+
 export function GitHubSearchResults({ searchQuery }: GitHubSearchResultsProps) {
   const { theme } = useTheme();
   const [results, setResults] = useState<GitHubRepo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [directRepo, setDirectRepo] = useState<GitHubRepo | null>(null);
+  const [directRepoLoading, setDirectRepoLoading] = useState(false);
+  const [pendingSearch, setPendingSearch] = useState(false); // Track debounce period
+
+  // Fetch a specific repo by owner/repo
+  const fetchDirectRepo = useCallback(async (owner: string, repo: string) => {
+    setDirectRepoLoading(true);
+    try {
+      const response = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setDirectRepo(data);
+      } else {
+        setDirectRepo(null);
+      }
+    } catch {
+      setDirectRepo(null);
+    } finally {
+      setDirectRepoLoading(false);
+    }
+  }, []);
 
   const searchGitHub = useCallback(async (query: string) => {
     if (!query.trim()) {
@@ -58,22 +111,42 @@ export function GitHubSearchResults({ searchQuery }: GitHubSearchResultsProps) {
     }
   }, []);
 
-  // Debounced search
+  // Debounced search - also check for direct URLs
   useEffect(() => {
+    if (searchQuery.trim()) {
+      setPendingSearch(true); // Show loading immediately while debouncing
+    }
+
     const timer = setTimeout(() => {
-      searchGitHub(searchQuery);
+      setPendingSearch(false);
+      const parsed = parseGitHubUrl(searchQuery);
+      if (parsed && parsed.repo) {
+        // It's a URL or owner/repo format - fetch directly
+        fetchDirectRepo(parsed.owner, parsed.repo);
+        setResults([]); // Clear search results when fetching direct
+      } else {
+        setDirectRepo(null);
+        searchGitHub(searchQuery);
+      }
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, searchGitHub]);
+  }, [searchQuery, searchGitHub, fetchDirectRepo]);
 
   // No search query - show nothing
   if (!searchQuery.trim()) {
     return null;
   }
 
-  // Loading state
-  if (loading) {
+  // Check if we parsed a URL/repo path
+  const parsedUrl = parseGitHubUrl(searchQuery);
+
+  // Show loading skeleton during debounce period or while fetching
+  const isLoading = pendingSearch || loading || directRepoLoading;
+
+  if (isLoading) {
+    // Show fewer skeletons for URL lookups, more for search
+    const skeletonCount = parsedUrl ? 1 : 6;
     return (
       <div
         style={{
@@ -83,9 +156,56 @@ export function GitHubSearchResults({ searchQuery }: GitHubSearchResultsProps) {
           width: '100%',
         }}
       >
-        {[1, 2, 3, 4, 5, 6].map((i) => (
+        {Array.from({ length: skeletonCount }, (_, i) => (
           <SkeletonCard key={i} theme={theme} />
         ))}
+      </div>
+    );
+  }
+
+  // Show direct repo if found via URL
+  if (parsedUrl && directRepo) {
+    return (
+      <div style={{ width: '100%' }}>
+        <p
+          style={{
+            fontSize: '14px',
+            color: theme.colors.textMuted,
+            marginBottom: '16px',
+          }}
+        >
+          Repository from URL:
+        </p>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: '16px',
+            width: '100%',
+          }}
+        >
+          <RepoCard repo={directRepo} theme={theme} />
+        </div>
+      </div>
+    );
+  }
+
+  // URL was parsed but repo not found
+  if (parsedUrl && !directRepo) {
+    return (
+      <div
+        style={{
+          padding: '48px 24px',
+          textAlign: 'center',
+          color: theme.colors.textMuted,
+        }}
+      >
+        <p style={{ fontSize: `${theme.fontSizes[2]}px`, marginBottom: '8px' }}>
+          Repository not found
+        </p>
+        <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+          {parsedUrl.owner}/{parsedUrl.repo} does not exist or is private
+        </p>
       </div>
     );
   }
