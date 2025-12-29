@@ -48,7 +48,7 @@
     "@principal-ai/codebase-composition": "^0.2.15",
     "@principal-ai/codebase-quality-lenses": "^0.1.20",
     "@principal-ai/control-tower-core": "^0.1.25",
-    "@principal-ai/logo-component": "^0.1.3",
+    "@principal-ai/logo-component": "^0.1.4",
     "@principal-ai/repository-abstraction": "^0.2.5",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

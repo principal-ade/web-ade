@@ -14,7 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { Logo } from '@principal-ai/logo-component';
+import { LogoSmall } from '@principal-ai/logo-component';
 import { layoutConfigs, LayoutConfig } from './LayoutConfigDropdown';
 
 const layoutIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -84,7 +84,7 @@ export function LayoutSidebar({
           className="flex items-center justify-center flex-shrink-0"
           style={{ width: `${ICON_CONTAINER_WIDTH}px` }}
         >
-          <Logo width={28} height={28} color={theme.colors.primary} />
+          <LogoSmall width={28} height={28} color={theme.colors.primary} />
         </div>
         <span
           style={{
