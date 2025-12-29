@@ -5,6 +5,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { ControlTowerProvider } from '@/contexts/ControlTowerContext';
 import { UserCollectionsProvider } from '@/contexts/UserCollectionsContext';
 import { LocalFileSystemProvider } from '@/contexts/LocalFileSystemContext';
+import { VFSProvider } from '@/contexts/VFSContext';
 import { GlobalThemeProvider, useGlobalTheme } from '@/contexts/ThemeContext';
 import { MermaidInitializer } from './MermaidInitializer';
 import { ReactNode } from 'react';
@@ -18,7 +19,9 @@ function ThemeProviderWrapper({ children }: { children: ReactNode }) {
       <AuthProvider>
         <ControlTowerProvider>
           <UserCollectionsProvider>
-            <LocalFileSystemProvider>{children}</LocalFileSystemProvider>
+            <LocalFileSystemProvider>
+              <VFSProvider>{children}</VFSProvider>
+            </LocalFileSystemProvider>
           </UserCollectionsProvider>
         </ControlTowerProvider>
       </AuthProvider>

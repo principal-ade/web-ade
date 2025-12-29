@@ -22,6 +22,7 @@ import { CommitModal } from './CommitModal';
 import { layoutConfigs, LayoutConfig } from './LayoutConfigDropdown';
 import { AIChatPanel } from './AIChatPanel';
 import { PendingChangesProvider, usePendingChanges } from '@/contexts/PendingChangesContext';
+import { useVFS } from '@/contexts/VFSContext';
 import '@principal-ade/panel-layouts/styles.css';
 import '@principal-ade/industry-themed-ai-sdk-panel/styles.css';
 // CSS removed from principal-view-panels exports - styles now bundled in JS
@@ -295,16 +296,39 @@ function EditorLayoutContent({
     return false;
   });
 
-  // Get pending changes for commit functionality
+  // Get pending changes for commit functionality (legacy - used as fallback)
   const {
     pendingChanges,
-    pendingChangesCount,
+    pendingChangesCount: legacyPendingChangesCount,
     removePendingChange,
-    getPendingChangesArray,
+    getPendingChangesArray: getLegacyPendingChangesArray,
     setFileMetadata,
     addPendingChangeFromWrite,
     addNewFilePendingChange,
   } = usePendingChanges();
+
+  // Get VFS for pending changes (new - preferred when available)
+  const vfs = useVFS();
+
+  // Use VFS pending changes when available, otherwise fall back to legacy context
+  const effectivePendingChangesCount = vfs.isInitialized
+    ? (vfs.stats?.pendingCount ?? 0)
+    : legacyPendingChangesCount;
+
+  const getEffectivePendingChangesArray = useCallback(() => {
+    if (vfs.isInitialized) {
+      // Convert VFS PendingFile to legacy format for CommitModal
+      return vfs.getPendingChanges().map(pf => ({
+        path: pf.path,
+        originalContent: '', // VFS doesn't track original content separately
+        newContent: pf.content,
+        sha: pf.originalSha,
+        modifiedAt: pf.modifiedAt,
+        isNewFile: pf.isNewFile,
+      }));
+    }
+    return getLegacyPendingChangesArray();
+  }, [vfs, getLegacyPendingChangesArray]);
 
   // Get repository info for file fetching
   const githubRepo = (context.currentScope.repository as { githubRepo?: string })?.githubRepo
@@ -340,9 +364,35 @@ function EditorLayoutContent({
     }
 
     const [owner, name] = githubRepo.split('/');
-    const filesToCommit = selectedPaths
-      .map(path => pendingChanges.get(path))
-      .filter((change): change is NonNullable<typeof change> => change !== undefined);
+
+    // Get files to commit from VFS or legacy pending changes
+    let filesToCommit: Array<{ path: string; content: string; sha?: string }>;
+
+    if (vfs.isInitialized) {
+      // Use VFS pending changes
+      const vfsPending = vfs.getPendingChanges();
+      filesToCommit = selectedPaths
+        .map(path => {
+          const pf = vfsPending.find(p => p.path === path);
+          if (!pf) return null;
+          return {
+            path: pf.path,
+            content: pf.content,
+            sha: pf.originalSha,
+          };
+        })
+        .filter((f): f is NonNullable<typeof f> => f !== null);
+    } else {
+      // Fallback to legacy pending changes
+      filesToCommit = selectedPaths
+        .map(path => pendingChanges.get(path))
+        .filter((change): change is NonNullable<typeof change> => change !== undefined)
+        .map(f => ({
+          path: f.path,
+          content: f.newContent,
+          sha: f.sha,
+        }));
+    }
 
     if (filesToCommit.length === 0) {
       throw new Error('No files selected for commit');
@@ -352,11 +402,7 @@ function EditorLayoutContent({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        files: filesToCommit.map(f => ({
-          path: f.path,
-          content: f.newContent,
-          sha: f.sha,
-        })),
+        files: filesToCommit,
         message,
       }),
     });
@@ -367,7 +413,11 @@ function EditorLayoutContent({
     }
 
     // Clear the committed files from pending changes
-    selectedPaths.forEach(path => removePendingChange(path));
+    if (vfs.isInitialized) {
+      vfs.clearPendingChanges(selectedPaths);
+    } else {
+      selectedPaths.forEach(path => removePendingChange(path));
+    }
 
     // Emit commit:complete event for other panels to react
     events.emit({
@@ -376,7 +426,7 @@ function EditorLayoutContent({
       timestamp: Date.now(),
       payload: await response.json(),
     });
-  }, [githubRepo, pendingChanges, removePendingChange, events]);
+  }, [githubRepo, pendingChanges, removePendingChange, events, vfs]);
 
   // Initialize Agent Command Palette (AI-driven, Cmd+Shift+P to open)
   const { sendMessage } = useGemini();
@@ -1151,7 +1201,7 @@ function EditorLayoutContent({
             onToggleLeft={() => setLeftSidebarCollapsed(prev => !prev)}
             onToggleRight={() => setRightSidebarCollapsed(prev => !prev)}
             onSwapRightPanels={() => setLayout(prev => ({ ...prev, middle: prev.right, right: prev.middle }))}
-            pendingChangesCount={isLocalMode ? 0 : pendingChangesCount}
+            pendingChangesCount={isLocalMode ? 0 : effectivePendingChangesCount}
             onCommitClick={() => setIsCommitModalOpen(true)}
             vimMode={vimMode}
             onVimModeToggle={handleVimModeToggle}
@@ -1170,7 +1220,7 @@ function EditorLayoutContent({
         <CommitModal
           isOpen={isCommitModalOpen}
           onClose={() => setIsCommitModalOpen(false)}
-          pendingChanges={getPendingChangesArray()}
+          pendingChanges={getEffectivePendingChangesArray()}
           repositoryName={repositoryInfo}
           onCommit={handleCommit}
         />

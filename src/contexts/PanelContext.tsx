@@ -28,6 +28,7 @@ import { minimatch } from 'minimatch';
 import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
 import { useAuth } from './AuthContext';
 import { useLocalFileSystem } from './LocalFileSystemContext';
+import { useVFS } from './VFSContext';
 import { usePresenceData, type RepositorySession } from '@/hooks/usePresenceData';
 
 // Current activity type for presence
@@ -490,6 +491,52 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const { isAuthenticated } = useAuth();
   const { adapter: localAdapter } = useLocalFileSystem();
   const isLocalMode = !!localAdapter;
+
+  // Get VFS for file operations (pending layer + GitHub fallback)
+  const vfs = useVFS();
+  const vfsInitializedRef = useRef(false);
+
+  // Initialize VFS when repository changes (GitHub mode only)
+  useEffect(() => {
+    // Skip if in local mode or no repo specified
+    if (isLocalMode || !githubRepo) {
+      vfsInitializedRef.current = false;
+      return;
+    }
+
+    // Parse owner/repo
+    const parts = githubRepo.split('/');
+    const repoOwner = parts[0];
+    const repoName = parts[1];
+    if (!repoOwner || !repoName) {
+      console.warn('[PanelContext] Invalid githubRepo format:', githubRepo);
+      return;
+    }
+
+    // Get branch from repository prop or default to 'main'
+    const branch: string = (repository as { default_branch?: string })?.default_branch || 'main';
+
+    // Initialize VFS
+    console.log('[PanelContext] Initializing VFS for', githubRepo, 'branch:', branch);
+    vfs.initialize({
+      mode: 'github',
+      github: {
+        owner: repoOwner,
+        repo: repoName,
+        branch: branch,
+      },
+    }).then(() => {
+      vfsInitializedRef.current = true;
+      console.log('[PanelContext] VFS initialized successfully');
+    }).catch((err) => {
+      console.error('[PanelContext] Failed to initialize VFS:', err);
+    });
+
+    // Cleanup on repo change
+    return () => {
+      vfsInitializedRef.current = false;
+    };
+  }, [githubRepo, repository?.default_branch, isLocalMode, vfs]);
 
   // Get presence data for current-projects slice
   const {
@@ -1942,7 +1989,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     return cleanPath;
   }, [githubRepo]);
 
-  // Helper function to read file - uses local adapter if in local mode, otherwise GitHub API
+  // Helper function to read file - uses VFS (which checks pending layer first, then GitHub)
   const readFileFromGitHub = useCallback(async (relativePath: string): Promise<string> => {
     const cleanPath = cleanFilePath(relativePath);
 
@@ -1951,10 +1998,17 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       return await localAdapter.readFileAsync(cleanPath);
     }
 
-    // GitHub mode: fetch from API
+    // GitHub mode: use VFS (checks pending layer first, then fetches from GitHub)
+    if (vfs.isInitialized) {
+      return await vfs.readFile(cleanPath);
+    }
+
+    // Fallback to direct API call if VFS not ready
     if (!githubRepo) {
       throw new Error('No GitHub repo specified');
     }
+
+    console.log('[PanelContext] VFS not ready, falling back to direct API call for:', cleanPath);
 
     const [owner, name] = githubRepo.split('/');
 
@@ -1980,7 +2034,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     }
 
     return data.content || '';
-  }, [githubRepo, isLocalMode, localAdapter, cleanFilePath]);
+  }, [githubRepo, isLocalMode, localAdapter, cleanFilePath, vfs]);
 
   // Determine if user can write to the repo (authenticated or local mode)
   const canWrite = isLocalMode || isAuthenticated;
@@ -2060,22 +2114,37 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   // Create adapters for panels (e.g., Alexandria docs panel uses these for file reading)
   // Write operations are only available when user is authenticated or in local mode
   const adapters: PanelAdapters = useMemo(() => {
-    // writeFile implementation - emits an event that EditorLayoutContent handles
+    // writeFile implementation - uses VFS for pending layer management
     const writeFileImpl = async (path: string, content: string): Promise<void> => {
+      const cleanPath = cleanFilePath(path);
+
       // Local mode: write directly to filesystem
       if (isLocalMode && localAdapter) {
-        const cleanPath = cleanFilePath(path);
         await localAdapter.writeFileAsync(cleanPath, content);
         // Update fileTree with the new file
         addFileToTree(cleanPath);
         return;
       }
 
-      // GitHub mode: emit event for EditorLayoutContent to handle
-      // (it has access to PendingChangesContext)
-      return new Promise((resolve, reject) => {
-        const cleanPath = cleanFilePath(path);
+      // GitHub mode: use VFS (writes to pending layer)
+      if (vfs.isInitialized) {
+        await vfs.writeFile(cleanPath, content);
+        // Update fileTree with the new file (optimistic update)
+        addFileToTree(cleanPath);
 
+        // Emit event to notify listeners (e.g., for UI updates)
+        events.emit({
+          type: 'file:write-complete',
+          source: 'panel-context',
+          timestamp: Date.now(),
+          payload: { path: cleanPath, success: true },
+        });
+        return;
+      }
+
+      // Fallback to event-based system if VFS not ready
+      console.log('[PanelContext] VFS not ready, falling back to event-based write for:', cleanPath);
+      return new Promise((resolve, reject) => {
         // Set up one-time listener for the response
         const cleanup = events.on('file:write-complete', (event) => {
           const payload = event.payload as { path: string; success: boolean; error?: string };
@@ -2161,7 +2230,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       // fileSystem adapter with conditional write support
       fileSystem,
     };
-  }, [readFileFromGitHub, isLocalMode, localAdapter, cleanFilePath, events, canWrite, addFileToTree]);
+  }, [readFileFromGitHub, isLocalMode, localAdapter, cleanFilePath, events, canWrite, addFileToTree, vfs]);
 
   // Context value - include all data states to ensure proper re-renders
   // We include data states (markdownContent, markdownFiles, etc.) as dependencies to force
