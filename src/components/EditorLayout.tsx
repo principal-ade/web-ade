@@ -19,6 +19,7 @@ import { SessionsPanel } from './SessionsPanel';
 import { AccessNotice, AccessStatus } from './AccessNotice';
 import { RepoSelectionModal } from './RepoSelectionModal';
 import { CommitModal } from './CommitModal';
+import { LayoutSidebar } from './LayoutSidebar';
 import { layoutConfigs, LayoutConfig } from './LayoutConfigDropdown';
 import { AIChatPanel } from './AIChatPanel';
 import { PendingChangesProvider, usePendingChanges } from '@/contexts/PendingChangesContext';
@@ -294,6 +295,24 @@ function EditorLayoutContent({
     }
     return false;
   });
+  const [layoutSidebarCollapsed, setLayoutSidebarCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('layout-sidebar-collapsed');
+        return saved ? JSON.parse(saved) : false;
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
+
+  // Persist layout sidebar collapsed state
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('layout-sidebar-collapsed', JSON.stringify(layoutSidebarCollapsed));
+    }
+  }, [layoutSidebarCollapsed]);
 
   // Get pending changes for commit functionality (legacy - used as fallback)
   const {
@@ -1189,103 +1208,113 @@ function EditorLayoutContent({
   }, [githubRepo]);
 
   return (
-    <div className="h-full w-full flex flex-col">
-      <EditorHeader
-        currentLayoutConfigId={currentLayoutConfigId}
-        onLayoutConfigChange={handleLayoutConfigChange}
-        leftCollapsed={leftSidebarCollapsed}
-        rightCollapsed={rightSidebarCollapsed}
-        onToggleLeft={() => setLeftSidebarCollapsed(prev => !prev)}
-        onToggleRight={() => setRightSidebarCollapsed(prev => !prev)}
-        onSwapRightPanels={() => setLayout(prev => ({ ...prev, middle: prev.right, right: prev.middle }))}
-        pendingChangesCount={isLocalMode ? 0 : effectivePendingChangesCount}
-        onCommitClick={() => setIsCommitModalOpen(true)}
-        vimMode={vimMode}
-        onVimModeToggle={handleVimModeToggle}
-        currentRepoId={githubRepo}
+    <div className="h-full w-full flex">
+      {/* Layout Sidebar - Far Left */}
+      <LayoutSidebar
+        currentConfigId={currentLayoutConfigId}
+        onConfigChange={handleLayoutConfigChange}
+        collapsed={layoutSidebarCollapsed}
+        onToggleCollapse={() => setLayoutSidebarCollapsed((prev: boolean) => !prev)}
       />
 
-      {/* Commit Modal - only show when not in local mode */}
-      {repositoryInfo && !isLocalMode && (
-        <CommitModal
-          isOpen={isCommitModalOpen}
-          onClose={() => setIsCommitModalOpen(false)}
-          pendingChanges={getEffectivePendingChangesArray()}
-          repositoryName={repositoryInfo}
-          onCommit={handleCommit}
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
+        <EditorHeader
+          currentLayoutConfigId={currentLayoutConfigId}
+          leftCollapsed={leftSidebarCollapsed}
+          rightCollapsed={rightSidebarCollapsed}
+          onToggleLeft={() => setLeftSidebarCollapsed(prev => !prev)}
+          onToggleRight={() => setRightSidebarCollapsed(prev => !prev)}
+          onSwapRightPanels={() => setLayout(prev => ({ ...prev, middle: prev.right, right: prev.middle }))}
+          pendingChangesCount={isLocalMode ? 0 : effectivePendingChangesCount}
+          onCommitClick={() => setIsCommitModalOpen(true)}
+          vimMode={vimMode}
+          onVimModeToggle={handleVimModeToggle}
+          currentRepoId={githubRepo}
         />
-      )}
 
-      <div className="flex-1 overflow-hidden">
-        {isMobile ? (
-          <ResponsiveConfigurablePanelLayout
-            theme={theme}
-            panels={panels}
-            layout={layout}
-            defaultSizes={{
-              left: 25,
-              middle: 50,
-              right: 25,
-            }}
-            minSizes={{
-              left: 15,
-              middle: 30,
-              right: 20,
-            }}
-            collapsiblePanels={{
-              left: true,
-              right: true,
-            }}
-            collapsed={{
-              left: leftSidebarCollapsed,
-              right: rightSidebarCollapsed,
-            }}
-            showCollapseButtons={false}
-            mobileBreakpoint="(max-width: 768px)"
-          />
-        ) : (
-          <EditableConfigurablePanelLayout
-            theme={theme}
-            panels={panels}
-            layout={layout}
-            isEditMode={false}
-            onLayoutChange={setLayout}
-            defaultSizes={{
-              left: 25,
-              middle: 50,
-              right: 25,
-            }}
-            minSizes={{
-              left: 15,
-              middle: 30,
-              right: 20,
-            }}
-            collapsiblePanels={{
-              left: true,
-              right: true,
-            }}
-            collapsed={{
-              left: leftSidebarCollapsed,
-              right: rightSidebarCollapsed,
-            }}
-            showCollapseButtons={false}
+        {/* Commit Modal - only show when not in local mode */}
+        {repositoryInfo && !isLocalMode && (
+          <CommitModal
+            isOpen={isCommitModalOpen}
+            onClose={() => setIsCommitModalOpen(false)}
+            pendingChanges={getEffectivePendingChangesArray()}
+            repositoryName={repositoryInfo}
+            onCommit={handleCommit}
           />
         )}
+
+        <div className="flex-1 overflow-hidden">
+          {isMobile ? (
+            <ResponsiveConfigurablePanelLayout
+              theme={theme}
+              panels={panels}
+              layout={layout}
+              defaultSizes={{
+                left: 25,
+                middle: 50,
+                right: 25,
+              }}
+              minSizes={{
+                left: 15,
+                middle: 30,
+                right: 20,
+              }}
+              collapsiblePanels={{
+                left: true,
+                right: true,
+              }}
+              collapsed={{
+                left: leftSidebarCollapsed,
+                right: rightSidebarCollapsed,
+              }}
+              showCollapseButtons={false}
+              mobileBreakpoint="(max-width: 768px)"
+            />
+          ) : (
+            <EditableConfigurablePanelLayout
+              theme={theme}
+              panels={panels}
+              layout={layout}
+              isEditMode={false}
+              onLayoutChange={setLayout}
+              defaultSizes={{
+                left: 25,
+                middle: 50,
+                right: 25,
+              }}
+              minSizes={{
+                left: 15,
+                middle: 30,
+                right: 20,
+              }}
+              collapsiblePanels={{
+                left: true,
+                right: true,
+              }}
+              collapsed={{
+                left: leftSidebarCollapsed,
+                right: rightSidebarCollapsed,
+              }}
+              showCollapseButtons={false}
+            />
+          )}
+        </div>
+
+        {/* Agent Command Palette (Cmd+Shift+P) - AI-driven natural language commands */}
+        <AgentCommandPalette
+          palette={agentPalette}
+          config={{
+            placeholder: 'What would you like to do?',
+          }}
+        />
+
+        {/* Repository Selection Modal */}
+        <RepoSelectionModal
+          isOpen={isRepoModalOpen}
+          onClose={() => setIsRepoModalOpen(false)}
+        />
       </div>
-
-      {/* Agent Command Palette (Cmd+Shift+P) - AI-driven natural language commands */}
-      <AgentCommandPalette
-        palette={agentPalette}
-        config={{
-          placeholder: 'What would you like to do?',
-        }}
-      />
-
-      {/* Repository Selection Modal */}
-      <RepoSelectionModal
-        isOpen={isRepoModalOpen}
-        onClose={() => setIsRepoModalOpen(false)}
-      />
     </div>
   );
 }

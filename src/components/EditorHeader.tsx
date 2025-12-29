@@ -10,12 +10,10 @@ import { usePathname } from 'next/navigation';
 import { usePresenceData } from '@/hooks/usePresenceData';
 import { useEffect, useState, useRef } from 'react';
 import { Logo } from '@principal-ai/logo-component';
-import { LayoutConfigDropdown, LayoutConfig } from './LayoutConfigDropdown';
 import { LocalFolderButton } from './LocalFolderButton';
 
 interface EditorHeaderProps {
   currentLayoutConfigId?: string;
-  onLayoutConfigChange?: (config: LayoutConfig) => void;
   leftCollapsed?: boolean;
   rightCollapsed?: boolean;
   onToggleLeft?: () => void;
@@ -43,8 +41,7 @@ interface EditorHeaderProps {
 }
 
 export function EditorHeader({
-  currentLayoutConfigId = 'default',
-  onLayoutConfigChange,
+  currentLayoutConfigId,
   leftCollapsed = false,
   rightCollapsed = false,
   onToggleLeft,
@@ -296,17 +293,6 @@ export function EditorHeader({
               >
                 {repositoryName.repo}
               </a>
-              {onLayoutConfigChange && (
-                <>
-                  <span style={{ color: theme.colors.textMuted }}>:</span>
-                  <LayoutConfigDropdown
-                    currentConfigId={currentLayoutConfigId}
-                    onConfigChange={onLayoutConfigChange}
-                    theme={theme}
-                    inline
-                  />
-                </>
-              )}
             </div>
           </div>
         )}
