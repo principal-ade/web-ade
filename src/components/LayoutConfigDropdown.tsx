@@ -78,6 +78,19 @@ export const layoutConfigs: LayoutConfig[] = [
     },
     collapsed: {
       left: false,
+      right: true,
+    },
+  },
+  {
+    id: 'pull-requests',
+    name: 'Pull Requests',
+    layout: {
+      left: 'pull-requests',
+      middle: 'pull-request-detail',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: false,
       right: false,
     },
   },
@@ -100,19 +113,6 @@ export const layoutConfigs: LayoutConfig[] = [
     layout: {
       left: 'telemetry-coverage',
       middle: 'trace-viewer',
-      right: 'file-city',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
-  },
-  {
-    id: 'pull-requests',
-    name: 'Pull Requests',
-    layout: {
-      left: 'pull-requests',
-      middle: 'pull-request-detail',
       right: 'file-city',
     },
     collapsed: {

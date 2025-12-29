@@ -69,14 +69,16 @@ export function LayoutSidebar({
         borderRight: `1px solid ${theme.colors.border}`,
       }}
     >
-      {/* Logo Header */}
-      <div
-        className="flex items-center"
+      {/* Logo Header - Click to toggle sidebar */}
+      <button
+        onClick={onToggleCollapse}
+        className="flex items-center w-full transition-opacity hover:opacity-80"
         style={{
           height: `${SIDEBAR_COLLAPSED_WIDTH}px`,
           minWidth: `${SIDEBAR_EXPANDED_WIDTH}px`,
           borderBottom: `1px solid ${theme.colors.border}`,
         }}
+        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         <div
           className="flex items-center justify-center flex-shrink-0"
@@ -90,15 +92,16 @@ export function LayoutSidebar({
             fontFamily: theme.fonts.heading,
             fontSize: theme.fontSizes[3],
             fontWeight: 600,
-            color: theme.colors.text,
           }}
         >
-          Principal AI
+          <span style={{ color: theme.colors.text }}>Principal</span>
+          {' '}
+          <span style={{ color: theme.colors.primary }}>AI</span>
         </span>
-      </div>
+      </button>
 
       {/* Layout Items */}
-      <nav className="flex-1 py-2 overflow-y-auto overflow-x-hidden">
+      <nav className="flex-1 pb-2 overflow-y-auto overflow-x-hidden">
         {layoutConfigs.map((config) => {
           const Icon = layoutIcons[config.id] || Blocks;
           const isActive = config.id === currentConfigId;
