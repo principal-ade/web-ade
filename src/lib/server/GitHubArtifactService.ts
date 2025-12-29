@@ -11,6 +11,11 @@ import type {
   FormattedResults,
   GitMetadata,
 } from '@principal-ai/codebase-quality-lenses';
+import {
+  extractQualityDataFromResults,
+  type FileMetricData,
+  type LensResultInput,
+} from '@principal-ai/quality-lens-registry';
 import JSZip from 'jszip';
 
 // Re-export types for consumers
@@ -28,20 +33,8 @@ export interface ArtifactInfo {
   commitSha: string | null;
 }
 
-/**
- * Per-file quality metric from a lens
- */
-export interface FileMetricData {
-  file: string;
-  score: number;
-  issueCount: number;
-  errorCount: number;
-  warningCount: number;
-  infoCount: number;
-  hintCount: number;
-  fixableCount?: number;
-  categories?: Record<string, number>;
-}
+// Re-export FileMetricData from registry
+export type { FileMetricData };
 
 /**
  * Per-package quality metrics (from CLI output)
@@ -259,86 +252,10 @@ export class GitHubArtifactService {
     // Extract and parse results.json
     const results = await extractResultsFromZip(zipData as ArrayBuffer);
 
-    // Extract file coverage and file metrics from lens results
-    // Note: coverage and fileMetrics fields are added in newer versions of codebase-quality-lenses
-    const fileCoverage: Record<string, number> = {};
-    const fileMetrics: QualityArtifactResponse['fileMetrics'] = {};
-
-    for (const result of results.results) {
-      // Use type assertion since these fields may not be in the published npm types yet
-      const resultWithExtras = result as typeof result & {
-        coverage?: { files?: Array<{ file: string; lines: number }> };
-        fileMetrics?: FileMetricData[];
-      };
-
-      // Extract coverage data (Jest)
-      if (resultWithExtras.coverage?.files) {
-        for (const file of resultWithExtras.coverage.files) {
-          fileCoverage[file.file] = file.lines;
-        }
-      }
-
-      // Extract fileMetrics by lens type
-      // Aggregate (concat) metrics from all packages since paths are git-root-relative
-      if (resultWithExtras.fileMetrics && resultWithExtras.fileMetrics.length > 0) {
-        const lensId = result.lens.id.toLowerCase();
-        const metrics = resultWithExtras.fileMetrics;
-        switch (lensId) {
-          // Linting
-          case 'eslint':
-            fileMetrics.eslint = [...(fileMetrics.eslint || []), ...metrics];
-            break;
-          case 'biome-lint':
-          case 'biome':
-            fileMetrics['biome-lint'] = [...(fileMetrics['biome-lint'] || []), ...metrics];
-            break;
-          // Types
-          case 'typescript':
-          case 'typecheck':
-          case 'tsc':
-            fileMetrics.typescript = [...(fileMetrics.typescript || []), ...metrics];
-            break;
-          // Formatting
-          case 'prettier':
-            fileMetrics.prettier = [...(fileMetrics.prettier || []), ...metrics];
-            break;
-          case 'biome-format':
-            fileMetrics['biome-format'] = [...(fileMetrics['biome-format'] || []), ...metrics];
-            break;
-          // Dead code
-          case 'knip':
-            fileMetrics.knip = [...(fileMetrics.knip || []), ...metrics];
-            break;
-          // Tests - also extract to fileCoverage for coverage visualization
-          case 'jest':
-          case 'test':
-            fileMetrics.jest = [...(fileMetrics.jest || []), ...metrics];
-            // Convert to fileCoverage format (score = line coverage %)
-            for (const fm of metrics) {
-              fileCoverage[fm.file] = fm.score;
-            }
-            break;
-          case 'vitest':
-            fileMetrics.vitest = [...(fileMetrics.vitest || []), ...metrics];
-            // Convert to fileCoverage format (score = line coverage %)
-            for (const fm of metrics) {
-              fileCoverage[fm.file] = fm.score;
-            }
-            break;
-          case 'bun-test':
-            fileMetrics['bun-test'] = [...(fileMetrics['bun-test'] || []), ...metrics];
-            // Convert to fileCoverage format (score = line coverage %)
-            for (const fm of metrics) {
-              fileCoverage[fm.file] = fm.score;
-            }
-            break;
-          // Documentation
-          case 'alexandria':
-            fileMetrics.alexandria = [...(fileMetrics.alexandria || []), ...metrics];
-            break;
-        }
-      }
-    }
+    // Extract file coverage and file metrics using registry utility
+    const { fileCoverage, fileMetrics } = extractQualityDataFromResults(
+      results.results as LensResultInput[],
+    );
 
     // Get per-package hexagons from CLI output
     const packages = (results.qualityMetrics as { packages?: PackageQualityMetrics[] })?.packages ?? [];
@@ -348,8 +265,8 @@ export class GitHubArtifactService {
       branch: results.metadata.git?.branch ?? 'unknown',
       timestamp: results.metadata.timestamp,
       qualityMetrics: { packages },
-      fileCoverage: Object.keys(fileCoverage).length > 0 ? fileCoverage : undefined,
-      fileMetrics: Object.keys(fileMetrics).length > 0 ? fileMetrics : undefined,
+      fileCoverage,
+      fileMetrics,
       artifactId,
       artifactName,
       rawResults: results,
