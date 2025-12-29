@@ -2043,75 +2043,93 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const canWrite = isLocalMode || isAuthenticated;
 
   // Helper to add a file to the fileTree (optimistic update for new files)
-  // This updates the fileTree state so panels can see newly created files
+  // This updates BOTH the fileTree state AND the slice synchronously
+  // so panels can immediately see newly created files
   const addFileToTree = useCallback((filePath: string) => {
-    setFileTree((prevTree) => {
-      if (!prevTree) return prevTree;
+    // Use fileTreeRef for synchronous access to current state
+    const prevTree = fileTreeRef.current;
+    if (!prevTree) return;
 
-      // Normalize path (remove leading slash if present)
-      const normalizedPath = filePath.replace(/^\//, '');
+    // Normalize path (remove leading slash if present)
+    const normalizedPath = filePath.replace(/^\//, '');
 
-      // Check if file already exists
-      if (prevTree.allFiles.some((f) => f.path === normalizedPath)) {
-        return prevTree; // File already exists, no update needed
+    // Check if file already exists
+    if (prevTree.allFiles.some((f) => f.path === normalizedPath)) {
+      return; // File already exists, no update needed
+    }
+
+    // Build list of new directories that need to be added
+    const newDirs: string[] = [];
+    const parts = normalizedPath.split('/');
+    for (let i = 1; i < parts.length; i++) {
+      const dirPath = parts.slice(0, i).join('/');
+      if (!prevTree.allDirectories.some((d) => d.path === dirPath)) {
+        newDirs.push(dirPath);
       }
+    }
 
-      // Build list of new directories that need to be added
-      const newDirs: string[] = [];
-      const parts = normalizedPath.split('/');
-      for (let i = 1; i < parts.length; i++) {
-        const dirPath = parts.slice(0, i).join('/');
-        if (!prevTree.allDirectories.some((d) => d.path === dirPath)) {
-          newDirs.push(dirPath);
-        }
-      }
+    // Get file extension
+    const fileName = parts[parts.length - 1] || '';
+    const dotIndex = fileName.lastIndexOf('.');
+    const extension = dotIndex > 0 ? fileName.slice(dotIndex) : '';
 
-      // Get file extension
-      const fileName = parts[parts.length - 1] || '';
-      const dotIndex = fileName.lastIndexOf('.');
-      const extension = dotIndex > 0 ? fileName.slice(dotIndex) : '';
+    // Create new file entry (using type assertion - panels only use path/name/extension)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const newFile: any = {
+      path: normalizedPath,
+      name: fileName,
+      extension,
+      size: 0,
+      lastModified: new Date(),
+      isDirectory: false,
+      relativePath: normalizedPath,
+    };
 
-      // Create new file entry (using type assertion - panels only use path/name/extension)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const newFile: any = {
-        path: normalizedPath,
-        name: fileName,
-        extension,
-        size: 0,
-        lastModified: new Date(),
-        isDirectory: false,
-        relativePath: normalizedPath,
-      };
+    // Create new directory entries (using type assertion)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const newDirEntries: any[] = newDirs.map((dirPath) => ({
+      path: dirPath,
+      name: dirPath.split('/').pop() || '',
+      isDirectory: true,
+      relativePath: dirPath,
+      children: [],
+      fileCount: 0,
+      totalSize: 0,
+      depth: dirPath.split('/').length,
+    }));
 
-      // Create new directory entries (using type assertion)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const newDirEntries: any[] = newDirs.map((dirPath) => ({
-        path: dirPath,
-        name: dirPath.split('/').pop() || '',
-        isDirectory: true,
-        relativePath: dirPath,
-        children: [],
-        fileCount: 0,
-        totalSize: 0,
-        depth: dirPath.split('/').length,
-      }));
+    console.log('[PanelContext] Adding file to tree:', normalizedPath);
+    if (newDirs.length > 0) {
+      console.log('[PanelContext] Adding directories:', newDirs);
+    }
 
-      console.log('[PanelContext] Adding file to tree:', normalizedPath);
-      if (newDirs.length > 0) {
-        console.log('[PanelContext] Adding directories:', newDirs);
-      }
+    // Build the new tree
+    const newTree = {
+      ...prevTree,
+      allFiles: [...prevTree.allFiles, newFile],
+      allDirectories: [...prevTree.allDirectories, ...newDirEntries],
+      stats: {
+        ...prevTree.stats,
+        totalFiles: prevTree.stats.totalFiles + 1,
+        totalDirectories: prevTree.stats.totalDirectories + newDirs.length,
+      },
+    };
 
-      return {
-        ...prevTree,
-        allFiles: [...prevTree.allFiles, newFile],
-        allDirectories: [...prevTree.allDirectories, ...newDirEntries],
-        stats: {
-          ...prevTree.stats,
-          totalFiles: prevTree.stats.totalFiles + 1,
-          totalDirectories: prevTree.stats.totalDirectories + newDirs.length,
-        },
-      };
-    });
+    // Update the slice SYNCHRONOUSLY so panels see it immediately
+    // This is critical for operations that write then immediately read (like backlog init)
+    const fileTreeSlice = slicesRef.current.get('fileTree');
+    if (fileTreeSlice) {
+      slicesRef.current.set('fileTree', {
+        ...fileTreeSlice,
+        data: newTree,
+      });
+    }
+
+    // Also update ref synchronously for subsequent calls in the same tick
+    fileTreeRef.current = newTree;
+
+    // Update React state (will trigger re-render for UI updates)
+    setFileTree(newTree);
   }, []);
 
   // Create adapters for panels (e.g., Alexandria docs panel uses these for file reading)
