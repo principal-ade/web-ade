@@ -11,6 +11,7 @@ import { usePresenceData } from '@/hooks/usePresenceData';
 import { useEffect, useState, useRef } from 'react';
 import { Logo } from '@principal-ai/logo-component';
 import { LayoutConfigDropdown, LayoutConfig } from './LayoutConfigDropdown';
+import { LocalFolderButton } from './LocalFolderButton';
 
 interface EditorHeaderProps {
   currentLayoutConfigId?: string;
@@ -37,6 +38,8 @@ interface EditorHeaderProps {
   // Vim mode toggle
   vimMode?: boolean;
   onVimModeToggle?: () => void;
+  // Local folder button
+  currentRepoId?: string;
 }
 
 export function EditorHeader({
@@ -59,6 +62,7 @@ export function EditorHeader({
   onToggleGallery,
   vimMode = false,
   onVimModeToggle,
+  currentRepoId,
 }: EditorHeaderProps = {}) {
   const { theme } = useTheme();
   const { cycleTheme, currentThemeName } = useGlobalTheme();
@@ -709,6 +713,9 @@ export function EditorHeader({
         )}
 
         {/* TODO: Connection indicator hidden - finding new placement */}
+
+        {/* Local Folder Button - shown when on a repo page */}
+        {currentRepoId && <LocalFolderButton currentRepoId={currentRepoId} />}
 
         {/* User Avatar Menu */}
         <UserAvatarMenu />

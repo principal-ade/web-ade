@@ -32,7 +32,6 @@ import { useGlobalTheme } from '@/contexts/ThemeContext';
 import { useNavigationCommands } from '@/hooks/useNavigationCommands';
 import type { Theme } from '@principal-ade/industry-theme';
 import type { LocalFileSystemAdapter } from '@/lib/client/LocalFileSystemAdapter';
-import { LocalFolderButton } from './LocalFolderButton';
 import { useLocalFileSystem } from '@/contexts/LocalFileSystemContext';
 
 // Dynamically import the MarkdownPanel with SSR disabled
@@ -1191,29 +1190,20 @@ function EditorLayoutContent({
 
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="flex items-center">
-        <div className="flex-1">
-          <EditorHeader
-            currentLayoutConfigId={currentLayoutConfigId}
-            onLayoutConfigChange={handleLayoutConfigChange}
-            leftCollapsed={leftSidebarCollapsed}
-            rightCollapsed={rightSidebarCollapsed}
-            onToggleLeft={() => setLeftSidebarCollapsed(prev => !prev)}
-            onToggleRight={() => setRightSidebarCollapsed(prev => !prev)}
-            onSwapRightPanels={() => setLayout(prev => ({ ...prev, middle: prev.right, right: prev.middle }))}
-            pendingChangesCount={isLocalMode ? 0 : effectivePendingChangesCount}
-            onCommitClick={() => setIsCommitModalOpen(true)}
-            vimMode={vimMode}
-            onVimModeToggle={handleVimModeToggle}
-          />
-        </div>
-        {/* Local Folder Button - shown when on a repo page */}
-        {githubRepo && (
-          <div className="pr-4 h-14 flex items-center" style={{ background: theme.colors.surface }}>
-            <LocalFolderButton currentRepoId={githubRepo} />
-          </div>
-        )}
-      </div>
+      <EditorHeader
+        currentLayoutConfigId={currentLayoutConfigId}
+        onLayoutConfigChange={handleLayoutConfigChange}
+        leftCollapsed={leftSidebarCollapsed}
+        rightCollapsed={rightSidebarCollapsed}
+        onToggleLeft={() => setLeftSidebarCollapsed(prev => !prev)}
+        onToggleRight={() => setRightSidebarCollapsed(prev => !prev)}
+        onSwapRightPanels={() => setLayout(prev => ({ ...prev, middle: prev.right, right: prev.middle }))}
+        pendingChangesCount={isLocalMode ? 0 : effectivePendingChangesCount}
+        onCommitClick={() => setIsCommitModalOpen(true)}
+        vimMode={vimMode}
+        onVimModeToggle={handleVimModeToggle}
+        currentRepoId={githubRepo}
+      />
 
       {/* Commit Modal - only show when not in local mode */}
       {repositoryInfo && !isLocalMode && (
