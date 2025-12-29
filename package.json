@@ -27,7 +27,7 @@
     "@industry-theme/backlogmd-kanban-panel": "^1.0.19",
     "@industry-theme/file-city-panel": "^0.2.22",
     "@industry-theme/file-editing-panels": "^0.2.1",
-    "@industry-theme/git-panels": "^0.1.3",
+    "@industry-theme/git-panels": "^0.1.4",
     "@industry-theme/git-sync-panels": "^0.1.4",
     "@industry-theme/github-panels": "^0.1.39",
     "@industry-theme/markdown-panels": "^0.2.15",
