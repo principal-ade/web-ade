@@ -29,7 +29,10 @@ const layoutIcons: Record<string, React.ComponentType<{ className?: string }>> =
 };
 
 // Match header height (h-14 = 56px)
-const HEADER_HEIGHT = 56;
+const SIDEBAR_COLLAPSED_WIDTH = 56;
+const SIDEBAR_EXPANDED_WIDTH = 200;
+// Icon container width to center icons (same as collapsed width)
+const ICON_CONTAINER_WIDTH = 56;
 
 interface LayoutSidebarProps {
   currentConfigId: string;
@@ -58,9 +61,9 @@ export function LayoutSidebar({
 
   return (
     <aside
-      className="h-full flex flex-col flex-shrink-0"
+      className="h-full flex flex-col flex-shrink-0 overflow-hidden"
       style={{
-        width: collapsed ? `${HEADER_HEIGHT}px` : '200px',
+        width: collapsed ? `${SIDEBAR_COLLAPSED_WIDTH}px` : `${SIDEBAR_EXPANDED_WIDTH}px`,
         transition: 'width 200ms ease-in-out',
         background: theme.colors.surface,
         borderRight: `1px solid ${theme.colors.border}`,
@@ -68,22 +71,22 @@ export function LayoutSidebar({
     >
       {/* Logo Header */}
       <div
-        className="flex items-center gap-3 transition-all"
+        className="flex items-center"
         style={{
-          height: `${HEADER_HEIGHT}px`,
-          padding: collapsed ? '0' : '0 12px',
-          justifyContent: collapsed ? 'center' : 'flex-start',
+          height: `${SIDEBAR_COLLAPSED_WIDTH}px`,
+          minWidth: `${SIDEBAR_EXPANDED_WIDTH}px`,
           borderBottom: `1px solid ${theme.colors.border}`,
         }}
       >
-        <Logo width={28} height={28} color={theme.colors.primary} />
+        <div
+          className="flex items-center justify-center flex-shrink-0"
+          style={{ width: `${ICON_CONTAINER_WIDTH}px` }}
+        >
+          <Logo width={28} height={28} color={theme.colors.primary} />
+        </div>
         <span
           style={{
-            opacity: collapsed ? 0 : 1,
-            width: collapsed ? 0 : 'auto',
-            overflow: 'hidden',
             whiteSpace: 'nowrap',
-            transition: 'opacity 150ms ease-in-out',
             fontFamily: theme.fonts.heading,
             fontSize: theme.fontSizes[3],
             fontWeight: 600,
@@ -95,7 +98,7 @@ export function LayoutSidebar({
       </div>
 
       {/* Layout Items */}
-      <nav className="flex-1 py-2 overflow-y-auto">
+      <nav className="flex-1 py-2 overflow-y-auto overflow-x-hidden">
         {layoutConfigs.map((config) => {
           const Icon = layoutIcons[config.id] || Blocks;
           const isActive = config.id === currentConfigId;
@@ -104,10 +107,9 @@ export function LayoutSidebar({
             <button
               key={config.id}
               onClick={() => onConfigChange(config)}
-              className="w-full flex items-center gap-3 h-10 transition-all"
+              className="w-full flex items-center h-10 transition-colors"
               style={{
-                padding: collapsed ? '0' : '0 12px',
-                justifyContent: collapsed ? 'center' : 'flex-start',
+                minWidth: `${SIDEBAR_EXPANDED_WIDTH}px`,
                 background: isActive ? theme.colors.backgroundTertiary : 'transparent',
                 color: isActive ? theme.colors.primary : theme.colors.text,
               }}
@@ -123,14 +125,15 @@ export function LayoutSidebar({
                 }
               }}
             >
-              <Icon className="w-5 h-5 flex-shrink-0" />
+              <div
+                className="flex items-center justify-center flex-shrink-0"
+                style={{ width: `${ICON_CONTAINER_WIDTH}px` }}
+              >
+                <Icon className="w-5 h-5" />
+              </div>
               <span
                 style={{
-                  opacity: collapsed ? 0 : 1,
-                  width: collapsed ? 0 : 'auto',
-                  overflow: 'hidden',
                   whiteSpace: 'nowrap',
-                  transition: 'opacity 150ms ease-in-out',
                   fontFamily: theme.fonts.body,
                   fontSize: theme.fontSizes[2],
                 }}
@@ -145,30 +148,33 @@ export function LayoutSidebar({
       {/* Collapse Toggle - Bottom */}
       <button
         onClick={onToggleCollapse}
-        className="flex items-center gap-3 h-10 transition-all hover:opacity-80"
+        className="flex items-center h-10 transition-all hover:opacity-80"
         style={{
-          padding: collapsed ? '0' : '0 12px',
-          justifyContent: collapsed ? 'center' : 'flex-start',
+          minWidth: `${SIDEBAR_EXPANDED_WIDTH}px`,
           borderTop: `1px solid ${theme.colors.border}`,
           color: theme.colors.textMuted,
         }}
         title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
-        {collapsed ? (
-          <ChevronRight className="w-5 h-5" />
-        ) : (
-          <>
+        <div
+          className="flex items-center justify-center flex-shrink-0"
+          style={{ width: `${ICON_CONTAINER_WIDTH}px` }}
+        >
+          {collapsed ? (
+            <ChevronRight className="w-5 h-5" />
+          ) : (
             <ChevronLeft className="w-5 h-5" />
-            <span
-              style={{
-                fontFamily: theme.fonts.body,
-                fontSize: theme.fontSizes[2],
-              }}
-            >
-              Collapse
-            </span>
-          </>
-        )}
+          )}
+        </div>
+        <span
+          style={{
+            whiteSpace: 'nowrap',
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[2],
+          }}
+        >
+          Collapse
+        </span>
       </button>
     </aside>
   );
