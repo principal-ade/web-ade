@@ -11,10 +11,10 @@ import {
   Hexagon,
   LineChart,
   GitPullRequest,
-  ChevronLeft,
-  ChevronRight,
+  Home,
 } from 'lucide-react';
-import { LogoSmall } from '@principal-ai/logo-component';
+import Link from 'next/link';
+import { Logo } from '@principal-ai/logo-component';
 import { layoutConfigs, LayoutConfig } from './LayoutConfigDropdown';
 
 const layoutIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -84,7 +84,7 @@ export function LayoutSidebar({
           className="flex items-center justify-center flex-shrink-0"
           style={{ width: `${ICON_CONTAINER_WIDTH}px` }}
         >
-          <LogoSmall width={28} height={28} color={theme.colors.primary} />
+          <Logo width={28} height={28} color={theme.colors.primary} />
         </div>
         <span
           style={{
@@ -148,26 +148,23 @@ export function LayoutSidebar({
         })}
       </nav>
 
-      {/* Collapse Toggle - Bottom */}
-      <button
-        onClick={onToggleCollapse}
+      {/* Home Button - Bottom */}
+      <Link
+        href="/"
         className="flex items-center h-10 transition-all hover:opacity-80"
         style={{
           minWidth: `${SIDEBAR_EXPANDED_WIDTH}px`,
           borderTop: `1px solid ${theme.colors.border}`,
           color: theme.colors.textMuted,
+          textDecoration: 'none',
         }}
-        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        title="Go to home page"
       >
         <div
           className="flex items-center justify-center flex-shrink-0"
           style={{ width: `${ICON_CONTAINER_WIDTH}px` }}
         >
-          {collapsed ? (
-            <ChevronRight className="w-5 h-5" />
-          ) : (
-            <ChevronLeft className="w-5 h-5" />
-          )}
+          <Home className="w-5 h-5" />
         </div>
         <span
           style={{
@@ -176,9 +173,9 @@ export function LayoutSidebar({
             fontSize: theme.fontSizes[2],
           }}
         >
-          Collapse
+          Home
         </span>
-      </button>
+      </Link>
     </aside>
   );
 }

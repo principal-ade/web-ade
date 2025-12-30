@@ -98,7 +98,7 @@ function RepoPageContent() {
   const initialConfigId = useMemo(() => {
     const urlConfig = searchParams.get('config');
     if (urlConfig) return urlConfig;
-    return getRecentRepositoryConfig(owner, repo) || 'default';
+    return getRecentRepositoryConfig(owner, repo) || 'documentation';
   }, [searchParams, owner, repo]);
 
   // Connect to presence system for this repository

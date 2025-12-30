@@ -1458,7 +1458,7 @@ function EditorContextWrapper({ initialConfigId, onConfigChange }: EditorContext
   // Initialize from initialConfigId prop (from URL/localStorage) or default
   const [currentLayoutConfigId, setCurrentLayoutConfigId] = useState(() => {
     const validConfig = layoutConfigs.find((c) => c.id === initialConfigId);
-    return validConfig ? initialConfigId! : 'default';
+    return validConfig ? initialConfigId! : 'documentation';
   });
   const currentLayoutConfig = layoutConfigs.find((c) => c.id === currentLayoutConfigId) || layoutConfigs[0]!;
   const [layout, setLayout] = useState<PanelLayout>(currentLayoutConfig.layout);
