@@ -177,6 +177,15 @@ const GitCommitHistoryPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the GitCommitDetailPanel with SSR disabled
+const GitCommitDetailPanelLoader = dynamic(
+  () => import('@industry-theme/git-panels').then((mod) => {
+    const Component = mod.panels[1]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 // Dynamically import the GitPullRequestsPanel with SSR disabled
 const GitPullRequestsPanelLoader = dynamic(
   () => import('@industry-theme/git-panels').then((mod) => {
@@ -841,6 +850,80 @@ function EditorLayoutContent({
           console.warn('[EditorLayout] Failed to save markdown panel font scale:', err);
         }
       }),
+      // Git commit detail - fetch full commit info when a commit is selected
+      events.on('git-panels.commit:selected', async (event) => {
+        const payload = event.payload as { hash: string };
+        if (!payload?.hash || !githubRepo || !githubRepo.includes('/')) {
+          return;
+        }
+
+        const [owner, name] = githubRepo.split('/');
+        const hash = payload.hash;
+
+        // Notify panel that we're loading
+        events.emit({
+          type: 'git-panels.commit-detail:loading',
+          source: 'web-ade',
+          timestamp: Date.now(),
+          payload: { hash },
+        });
+
+        try {
+          const response = await fetch(
+            `/api/github/repo/${owner}/${name}/commits/${hash}`,
+            { credentials: 'include' }
+          );
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch commit: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+
+          // Transform GitHub API response to GitCommitDetail format
+          const commitDetail = {
+            hash: data.sha,
+            message: data.commit.message,
+            author: data.commit.author.name,
+            authorEmail: data.commit.author.email,
+            date: data.commit.author.date,
+            htmlUrl: data.html_url,
+            stats: data.stats ? {
+              total: data.stats.total,
+              additions: data.stats.additions,
+              deletions: data.stats.deletions,
+            } : undefined,
+            files: data.files?.map((f: { filename: string; status: string; additions: number; deletions: number; changes: number; previous_filename?: string }) => ({
+              filename: f.filename,
+              status: f.status,
+              additions: f.additions,
+              deletions: f.deletions,
+              changes: f.changes,
+              previous_filename: f.previous_filename,
+            })),
+            parents: data.parents?.map((p: { sha: string }) => p.sha),
+          };
+
+          // Send commit detail to the panel
+          events.emit({
+            type: 'git-panels.commit-detail:loaded',
+            source: 'web-ade',
+            timestamp: Date.now(),
+            payload: { commit: commitDetail },
+          });
+        } catch (err) {
+          console.error('[EditorLayout] Failed to fetch commit details:', err);
+          events.emit({
+            type: 'git-panels.commit-detail:error',
+            source: 'web-ade',
+            timestamp: Date.now(),
+            payload: {
+              hash,
+              error: err instanceof Error ? err.message : 'Failed to fetch commit details',
+            },
+          });
+        }
+      }),
     ];
 
     return () => {
@@ -1116,6 +1199,15 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitCommitHistoryPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'commit-detail',
+      label: 'Commit Detail',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <GitCommitDetailPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },

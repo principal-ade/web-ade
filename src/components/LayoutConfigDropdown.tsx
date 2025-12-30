@@ -99,7 +99,7 @@ export const layoutConfigs: LayoutConfig[] = [
     name: 'Git History',
     layout: {
       left: 'commit-history',
-      middle: 'markdown-viewer',
+      middle: 'commit-detail',
       right: 'file-city',
     },
     collapsed: {
