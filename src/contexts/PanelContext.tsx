@@ -313,6 +313,33 @@ interface PullRequestsSliceData {
   error?: string;
 }
 
+// PR Files slice data (files changed in a selected pull request)
+interface PullRequestFile {
+  sha: string;
+  filename: string;
+  status: 'added' | 'removed' | 'modified' | 'renamed' | 'copied' | 'changed' | 'unchanged';
+  additions: number;
+  deletions: number;
+  changes: number;
+  patch?: string;
+  previous_filename?: string;
+}
+
+interface PrFilesSliceData {
+  files: PullRequestFile[];
+  filesByStatus: {
+    added: string[];
+    modified: string[];
+    removed: string[];
+    renamed: { filename: string; previous_filename?: string }[];
+  };
+  pullNumber: number | null;
+  owner?: string;
+  repo?: string;
+  isAuthenticated?: boolean;
+  error?: string;
+}
+
 interface PanelProviderProps {
   children: ReactNode;
   workspace?: WorkspaceMetadata;
@@ -626,6 +653,12 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const [pullRequestsLoading, setPullRequestsLoading] = useState(false);
   const [pullRequestsError, setPullRequestsError] = useState<Error | null>(null);
 
+  // State for PR files (files changed in selected pull request - for File-City visualization)
+  const [prFilesData, setPrFilesData] = useState<PrFilesSliceData | null>(null);
+  const [prFilesLoading, setPrFilesLoading] = useState(false);
+  const [prFilesError, setPrFilesError] = useState<Error | null>(null);
+  const [selectedPrNumber, setSelectedPrNumber] = useState<number | null>(null);
+
   // State for user GitHub data (for GitHubStarredPanel and GitHubProjectsPanel)
   interface UserGitHubData {
     starred: GitHubRepository[];
@@ -932,6 +965,60 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     } finally {
       setPullRequestsLoading(false);
     }
+  }, []);
+
+  // Fetch files for a specific pull request (for File-City visualization)
+  const fetchPrFiles = useCallback(async (repo: string, prNumber: number) => {
+    setPrFilesLoading(true);
+    setPrFilesError(null);
+    setSelectedPrNumber(prNumber);
+    console.log('[PanelContext] Fetching PR files for:', repo, 'PR #', prNumber);
+
+    try {
+      const [owner, name] = repo.split('/');
+      const response = await fetch(
+        `/api/github/repo/${owner}/${name}/pull-requests/${prNumber}/files`,
+        { credentials: 'include' }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        setPrFilesData({
+          files: [],
+          filesByStatus: { added: [], modified: [], removed: [], renamed: [] },
+          pullNumber: prNumber,
+          owner: owner || '',
+          repo: name || '',
+          isAuthenticated: errorData.isAuthenticated ?? false,
+          error: errorData.error || `Failed to fetch PR files: ${response.statusText}`,
+        });
+        return;
+      }
+
+      const data = await response.json();
+
+      setPrFilesData({
+        files: data.files || [],
+        filesByStatus: data.filesByStatus || { added: [], modified: [], removed: [], renamed: [] },
+        pullNumber: prNumber,
+        owner: data.owner || owner || '',
+        repo: data.repo || name || '',
+        isAuthenticated: data.isAuthenticated ?? false,
+      });
+      console.log('[PanelContext] PR files loaded:', data.files?.length || 0, 'files');
+    } catch (err) {
+      console.error('[PanelContext] Failed to fetch PR files:', err);
+      setPrFilesError(err instanceof Error ? err : new Error('Failed to fetch PR files'));
+    } finally {
+      setPrFilesLoading(false);
+    }
+  }, []);
+
+  // Clear PR files when deselecting a PR
+  const clearPrFiles = useCallback(() => {
+    setPrFilesData(null);
+    setSelectedPrNumber(null);
+    setPrFilesError(null);
   }, []);
 
   // Fetch user's GitHub repositories
@@ -1613,6 +1700,21 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         },
       ],
       [
+        'prFiles',
+        {
+          scope: 'repository',
+          name: 'prFiles',
+          data: prFilesData,
+          loading: prFilesLoading,
+          error: prFilesError,
+          refresh: async () => {
+            if (githubRepo && selectedPrNumber) {
+              await fetchPrFiles(githubRepo, selectedPrNumber);
+            }
+          },
+        },
+      ],
+      [
         'githubStarred',
         {
           scope: 'global',
@@ -1890,6 +1992,17 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     });
   }
 
+  // Update prFiles slice with fetched data (for File-City PR visualization)
+  const prFilesSlice = slicesRef.current.get('prFiles');
+  if (prFilesSlice) {
+    slicesRef.current.set('prFiles', {
+      ...prFilesSlice,
+      data: prFilesData,
+      loading: prFilesLoading,
+      error: prFilesError,
+    });
+  }
+
   // Update githubStarred slice with fetched data
   const starredSlice = slicesRef.current.get('githubStarred');
   if (starredSlice) {
@@ -1951,6 +2064,51 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     });
     return unsubscribe;
   }, [events]);
+
+  // Listen for pull-request:selected events to fetch PR files for File-City visualization
+  useEffect(() => {
+    const unsubscribeSelect = events.on('pull-request:selected', (event) => {
+      const payload = event.payload as { number?: number; pullNumber?: number };
+      const prNumber = payload.number ?? payload.pullNumber;
+      if (githubRepo && prNumber) {
+        console.log('[PanelContext] PR selected, fetching files for PR #', prNumber);
+        fetchPrFiles(githubRepo, prNumber);
+      }
+    });
+
+    const unsubscribeDeselect = events.on('pull-request:deselected', () => {
+      console.log('[PanelContext] PR deselected, clearing files');
+      clearPrFiles();
+    });
+
+    return () => {
+      unsubscribeSelect();
+      unsubscribeDeselect();
+    };
+  }, [events, githubRepo, fetchPrFiles, clearPrFiles]);
+
+  // Track previous color mode for restoring when PR is deselected
+  const previousColorModeRef = useRef<string | null>(null);
+
+  // Auto-switch to 'pr' color mode when PR files are loaded
+  useEffect(() => {
+    if (prFilesData && prFilesData.files.length > 0) {
+      // Save current color mode before switching
+      if (selectedColorMode !== 'pr') {
+        previousColorModeRef.current = selectedColorMode;
+      }
+      // Switch to PR color mode
+      console.log('[PanelContext] PR files loaded, switching to PR color mode');
+      setEnabledColorModes(['pr']);
+      setSelectedColorMode('pr');
+    } else if (!prFilesData && previousColorModeRef.current) {
+      // PR deselected - restore previous color mode
+      console.log('[PanelContext] PR deselected, restoring color mode to:', previousColorModeRef.current);
+      setEnabledColorModes([previousColorModeRef.current]);
+      setSelectedColorMode(previousColorModeRef.current);
+      previousColorModeRef.current = null;
+    }
+  }, [prFilesData, selectedColorMode]);
 
   // Refresh function - use slicesRef instead of slices state
   const refresh = useCallback(
