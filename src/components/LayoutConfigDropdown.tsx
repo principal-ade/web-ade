@@ -95,6 +95,19 @@ export const layoutConfigs: LayoutConfig[] = [
     },
   },
   {
+    id: 'git-history',
+    name: 'Git History',
+    layout: {
+      left: 'commit-history',
+      middle: 'markdown-viewer',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
+  {
     id: 'quality-debug',
     name: 'Quality Debug',
     layout: {
