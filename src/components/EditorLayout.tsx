@@ -1215,6 +1215,7 @@ function EditorLayoutContent({
         onConfigChange={handleLayoutConfigChange}
         collapsed={layoutSidebarCollapsed}
         onToggleCollapse={() => setLayoutSidebarCollapsed((prev: boolean) => !prev)}
+        owner={repositoryInfo?.owner}
       />
 
       {/* Main Content Area */}

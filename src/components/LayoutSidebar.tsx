@@ -11,6 +11,7 @@ import {
   Hexagon,
   LineChart,
   GitPullRequest,
+  Home,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@principal-ai/logo-component';
@@ -38,6 +39,7 @@ interface LayoutSidebarProps {
   onConfigChange: (config: LayoutConfig) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  owner?: string; // When provided, shows owner avatar/name instead of Principal AI logo
 }
 
 export function LayoutSidebar({
@@ -45,6 +47,7 @@ export function LayoutSidebar({
   onConfigChange,
   collapsed,
   onToggleCollapse,
+  owner,
 }: LayoutSidebarProps) {
   const { theme } = useTheme();
   const [isMobile, setIsMobile] = useState(false);
@@ -68,7 +71,7 @@ export function LayoutSidebar({
         borderRight: `1px solid ${theme.colors.border}`,
       }}
     >
-      {/* Logo Header - Logo toggles sidebar, name links home */}
+      {/* Header - Shows owner avatar/name on repo pages, or Principal AI logo on home */}
       <div
         className="flex items-center w-full"
         style={{
@@ -77,30 +80,74 @@ export function LayoutSidebar({
           borderBottom: `1px solid ${theme.colors.border}`,
         }}
       >
-        <button
-          onClick={onToggleCollapse}
-          className="flex items-center justify-center flex-shrink-0 transition-opacity hover:opacity-80"
-          style={{ width: `${ICON_CONTAINER_WIDTH}px`, height: '100%' }}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          <Logo width={28} height={28} color={theme.colors.primary} />
-        </button>
-        <Link
-          href="/"
-          className="flex items-center transition-opacity hover:opacity-80"
-          style={{
-            textDecoration: 'none',
-            whiteSpace: 'nowrap',
-            fontFamily: theme.fonts.heading,
-            fontSize: theme.fontSizes[3],
-            fontWeight: 600,
-          }}
-          title="Go to home page"
-        >
-          <span style={{ color: theme.colors.text }}>Principal</span>
-          {' '}
-          <span style={{ color: theme.colors.primary }}>AI</span>
-        </Link>
+        {owner ? (
+          <>
+            <button
+              onClick={onToggleCollapse}
+              className="flex items-center justify-center flex-shrink-0 transition-opacity hover:opacity-80"
+              style={{ width: `${ICON_CONTAINER_WIDTH}px`, height: '100%' }}
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`https://github.com/${owner}.png?size=64`}
+                alt={owner}
+                className="w-7 h-7 flex-shrink-0"
+                style={{ borderRadius: '6px' }}
+              />
+            </button>
+            <Link
+              href={`/${owner}`}
+              className="flex items-center transition-opacity hover:opacity-80"
+              style={{
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+                fontFamily: theme.fonts.heading,
+                fontSize: theme.fontSizes[3],
+                fontWeight: 600,
+                color: theme.colors.text,
+              }}
+              title={`Go to ${owner}'s page`}
+            >
+              {owner}
+            </Link>
+            <Link
+              href="/"
+              className="flex items-center justify-center ml-auto mr-2 transition-opacity hover:opacity-80"
+              style={{ color: theme.colors.textMuted }}
+              title="Go to home page"
+            >
+              <Home className="w-4 h-4" />
+            </Link>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={onToggleCollapse}
+              className="flex items-center justify-center flex-shrink-0 transition-opacity hover:opacity-80"
+              style={{ width: `${ICON_CONTAINER_WIDTH}px`, height: '100%' }}
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <Logo width={28} height={28} color={theme.colors.primary} />
+            </button>
+            <Link
+              href="/"
+              className="flex items-center transition-opacity hover:opacity-80"
+              style={{
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+                fontFamily: theme.fonts.heading,
+                fontSize: theme.fontSizes[3],
+                fontWeight: 600,
+              }}
+              title="Go to home page"
+            >
+              <span style={{ color: theme.colors.text }}>Principal</span>
+              {' '}
+              <span style={{ color: theme.colors.primary }}>AI</span>
+            </Link>
+          </>
+        )}
       </div>
 
       {/* Layout Items */}

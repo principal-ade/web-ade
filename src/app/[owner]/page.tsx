@@ -5,6 +5,7 @@ import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { PanelProvider, usePanelProvider } from "@/contexts/PanelContext";
 import { EditorHeader } from "@/components/EditorHeader";
+import { LayoutSidebar } from "@/components/LayoutSidebar";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import dynamic from "next/dynamic";
 import {
@@ -104,6 +105,25 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
   const canvasLoadedRef = useRef(false);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('layout-sidebar-collapsed');
+        return saved ? JSON.parse(saved) : false;
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
+
+  // Persist sidebar collapsed state
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('layout-sidebar-collapsed', JSON.stringify(sidebarCollapsed));
+    }
+  }, [sidebarCollapsed]);
+
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'owner-repositories',
     middle: {
@@ -316,16 +336,27 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
   ];
 
   return (
-    <div className="h-full w-full flex flex-col">
-      <EditorHeader
-        leftCollapsed={leftCollapsed}
-        rightCollapsed={rightCollapsed}
-        onToggleLeft={() => setLeftCollapsed(!leftCollapsed)}
-        onToggleRight={() => setRightCollapsed(!rightCollapsed)}
-        onSwapRightPanels={() => setLayout(prev => ({ ...prev, middle: prev.right, right: prev.middle }))}
-        selectedRepository={previewedRepo}
+    <div className="h-full w-full flex">
+      {/* Layout Sidebar - Far Left */}
+      <LayoutSidebar
+        currentConfigId="default"
+        onConfigChange={() => {}}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed((prev: boolean) => !prev)}
+        owner={owner}
       />
-      <div className="flex-1 overflow-hidden">
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
+        <EditorHeader
+          leftCollapsed={leftCollapsed}
+          rightCollapsed={rightCollapsed}
+          onToggleLeft={() => setLeftCollapsed(!leftCollapsed)}
+          onToggleRight={() => setRightCollapsed(!rightCollapsed)}
+          onSwapRightPanels={() => setLayout(prev => ({ ...prev, middle: prev.right, right: prev.middle }))}
+          selectedRepository={previewedRepo}
+        />
+        <div className="flex-1 overflow-hidden">
         {isMobile ? (
           <ResponsiveConfigurablePanelLayout
             theme={theme}
@@ -379,10 +410,11 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
             showCollapseButtons={false}
           />
         )}
-      </div>
+        </div>
 
-      {/* Global Command Palette (Cmd+Shift+P) */}
-      <GlobalCommandPalette events={events} />
+        {/* Global Command Palette (Cmd+Shift+P) */}
+        <GlobalCommandPalette events={events} />
+      </div>
     </div>
   );
 }
