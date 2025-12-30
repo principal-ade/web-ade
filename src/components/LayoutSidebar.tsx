@@ -11,7 +11,6 @@ import {
   Hexagon,
   LineChart,
   GitPullRequest,
-  Home,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@principal-ai/logo-component';
@@ -69,36 +68,40 @@ export function LayoutSidebar({
         borderRight: `1px solid ${theme.colors.border}`,
       }}
     >
-      {/* Logo Header - Click to toggle sidebar */}
-      <button
-        onClick={onToggleCollapse}
-        className="flex items-center w-full transition-opacity hover:opacity-80"
+      {/* Logo Header - Logo toggles sidebar, name links home */}
+      <div
+        className="flex items-center w-full"
         style={{
           height: `${SIDEBAR_COLLAPSED_WIDTH}px`,
           minWidth: `${SIDEBAR_EXPANDED_WIDTH}px`,
           borderBottom: `1px solid ${theme.colors.border}`,
         }}
-        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
-        <div
-          className="flex items-center justify-center flex-shrink-0"
-          style={{ width: `${ICON_CONTAINER_WIDTH}px` }}
+        <button
+          onClick={onToggleCollapse}
+          className="flex items-center justify-center flex-shrink-0 transition-opacity hover:opacity-80"
+          style={{ width: `${ICON_CONTAINER_WIDTH}px`, height: '100%' }}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           <Logo width={28} height={28} color={theme.colors.primary} />
-        </div>
-        <span
+        </button>
+        <Link
+          href="/"
+          className="flex items-center transition-opacity hover:opacity-80"
           style={{
+            textDecoration: 'none',
             whiteSpace: 'nowrap',
             fontFamily: theme.fonts.heading,
             fontSize: theme.fontSizes[3],
             fontWeight: 600,
           }}
+          title="Go to home page"
         >
           <span style={{ color: theme.colors.text }}>Principal</span>
           {' '}
           <span style={{ color: theme.colors.primary }}>AI</span>
-        </span>
-      </button>
+        </Link>
+      </div>
 
       {/* Layout Items */}
       <nav className="flex-1 pb-2 overflow-y-auto overflow-x-hidden">
@@ -148,34 +151,6 @@ export function LayoutSidebar({
         })}
       </nav>
 
-      {/* Home Button - Bottom */}
-      <Link
-        href="/"
-        className="flex items-center h-10 transition-all hover:opacity-80"
-        style={{
-          minWidth: `${SIDEBAR_EXPANDED_WIDTH}px`,
-          borderTop: `1px solid ${theme.colors.border}`,
-          color: theme.colors.textMuted,
-          textDecoration: 'none',
-        }}
-        title="Go to home page"
-      >
-        <div
-          className="flex items-center justify-center flex-shrink-0"
-          style={{ width: `${ICON_CONTAINER_WIDTH}px` }}
-        >
-          <Home className="w-5 h-5" />
-        </div>
-        <span
-          style={{
-            whiteSpace: 'nowrap',
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[2],
-          }}
-        >
-          Home
-        </span>
-      </Link>
     </aside>
   );
 }
