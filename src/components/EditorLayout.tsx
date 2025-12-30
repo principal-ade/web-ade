@@ -189,7 +189,7 @@ const GitCommitDetailPanelLoader = dynamic(
 // Dynamically import the GitPullRequestsPanel with SSR disabled
 const GitPullRequestsPanelLoader = dynamic(
   () => import('@industry-theme/git-panels').then((mod) => {
-    const Component = mod.panels[1]!.component;
+    const Component = mod.panels[2]!.component;
     return { default: Component };
   }),
   { ssr: false }
@@ -198,7 +198,7 @@ const GitPullRequestsPanelLoader = dynamic(
 // Dynamically import the GitPullRequestDetailPanel with SSR disabled
 const GitPullRequestDetailPanelLoader = dynamic(
   () => import('@industry-theme/git-panels').then((mod) => {
-    const Component = mod.panels[2]!.component;
+    const Component = mod.panels[3]!.component;
     return { default: Component };
   }),
   { ssr: false }
