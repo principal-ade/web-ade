@@ -2101,14 +2101,28 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       console.log('[PanelContext] PR files loaded, switching to PR color mode');
       setEnabledColorModes(['pr']);
       setSelectedColorMode('pr');
+      // Emit event so File-City can react to PR files change
+      events.emit({
+        type: 'prFiles:updated',
+        source: 'panel-context',
+        timestamp: Date.now(),
+        payload: { files: prFilesData.filesByStatus, pullNumber: prFilesData.pullNumber },
+      });
     } else if (!prFilesData && previousColorModeRef.current) {
       // PR deselected - restore previous color mode
       console.log('[PanelContext] PR deselected, restoring color mode to:', previousColorModeRef.current);
       setEnabledColorModes([previousColorModeRef.current]);
       setSelectedColorMode(previousColorModeRef.current);
       previousColorModeRef.current = null;
+      // Emit event so File-City can clear PR highlights
+      events.emit({
+        type: 'prFiles:cleared',
+        source: 'panel-context',
+        timestamp: Date.now(),
+        payload: {},
+      });
     }
-  }, [prFilesData, selectedColorMode]);
+  }, [prFilesData, selectedColorMode, events]);
 
   // Refresh function - use slicesRef instead of slices state
   const refresh = useCallback(
