@@ -359,6 +359,10 @@ interface PanelProviderValue {
   events: PanelEventEmitter;
   /** Whether connected to presence server (for showing current projects panel) */
   presenceConnected: boolean;
+  /** Currently selected color mode (for File City visualization) */
+  selectedColorMode: string | null;
+  /** Clear the current color mode selection */
+  clearColorMode: () => void;
 }
 
 const PanelContext = createContext<PanelProviderValue | null>(null);
@@ -2657,14 +2661,23 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     [events, githubRepo, isLocalMode, localAdapter, cleanFilePath, readFileFromGitHub]
   );
 
+  // Clear color mode selection (for header clear button)
+  const clearColorMode = useCallback(() => {
+    console.log('[PanelContext] Clearing color mode selection');
+    setEnabledColorModes([]);
+    setSelectedColorMode(null);
+  }, []);
+
   const value: PanelProviderValue = useMemo(
     () => ({
       context,
       actions,
       events,
       presenceConnected,
+      selectedColorMode,
+      clearColorMode,
     }),
-    [context, actions, events, presenceConnected]
+    [context, actions, events, presenceConnected, selectedColorMode, clearColorMode]
   );
 
   // Fetch GitHub repositories when authentication state changes

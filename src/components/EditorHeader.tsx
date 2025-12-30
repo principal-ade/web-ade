@@ -2,7 +2,7 @@
 
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Edit2, Palette, GitCommit, ArrowLeftRight, Building2, Sparkles, Home } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Edit2, Palette, GitCommit, ArrowLeftRight, Building2, Sparkles, Home, X } from 'lucide-react';
 import { UserAvatarMenu } from './UserAvatarMenu';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
@@ -38,6 +38,9 @@ interface EditorHeaderProps {
   onVimModeToggle?: () => void;
   // Local folder button
   currentRepoId?: string;
+  // Color mode selection (for clear button)
+  selectedColorMode?: string | null;
+  onClearColorMode?: () => void;
 }
 
 export function EditorHeader({
@@ -60,6 +63,8 @@ export function EditorHeader({
   vimMode = false,
   onVimModeToggle,
   currentRepoId,
+  selectedColorMode,
+  onClearColorMode,
 }: EditorHeaderProps = {}) {
   const { theme } = useTheme();
   const { cycleTheme, currentThemeName } = useGlobalTheme();
@@ -589,6 +594,23 @@ export function EditorHeader({
             >
               {pendingChangesCount}
             </span>
+          </button>
+        )}
+
+        {/* Clear color mode button - show when a color mode is selected */}
+        {selectedColorMode && onClearColorMode && (
+          <button
+            onClick={onClearColorMode}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
+            style={{
+              background: theme.colors.secondary,
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+            }}
+            title={`Clear ${selectedColorMode} color mode`}
+          >
+            <X className="w-4 h-4" />
+            <span className="hidden sm:inline capitalize">{selectedColorMode}</span>
           </button>
         )}
 

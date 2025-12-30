@@ -271,7 +271,7 @@ function EditorLayoutContent({
   onLayoutConfigIdChange,
 }: EditorLayoutContentProps) {
   const { theme } = useTheme();
-  const { context, actions, events } = usePanelProvider();
+  const { context, actions, events, selectedColorMode, clearColorMode } = usePanelProvider();
   const { login } = useAuth();
   const { setTheme, setColor, resetColor, resetAllColors } = useGlobalTheme();
   const { adapter: localAdapter } = useLocalFileSystem();
@@ -1231,6 +1231,8 @@ function EditorLayoutContent({
           vimMode={vimMode}
           onVimModeToggle={handleVimModeToggle}
           currentRepoId={githubRepo}
+          selectedColorMode={selectedColorMode}
+          onClearColorMode={clearColorMode}
         />
 
         {/* Commit Modal - only show when not in local mode */}
