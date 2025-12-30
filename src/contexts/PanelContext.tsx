@@ -2067,7 +2067,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
 
   // Listen for pull-request:selected events to fetch PR files for File-City visualization
   useEffect(() => {
-    const unsubscribeSelect = events.on('pull-request:selected', (event) => {
+    const unsubscribeSelect = events.on('git-panels.pull-request:selected', (event) => {
       const payload = event.payload as { number?: number; pullNumber?: number };
       const prNumber = payload.number ?? payload.pullNumber;
       if (githubRepo && prNumber) {
@@ -2076,7 +2076,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       }
     });
 
-    const unsubscribeDeselect = events.on('pull-request:deselected', () => {
+    const unsubscribeDeselect = events.on('git-panels.pull-request:deselected', () => {
       console.log('[PanelContext] PR deselected, clearing files');
       clearPrFiles();
     });
