@@ -31,6 +31,7 @@ export function SearchToggleButtons({
         border: `1px solid ${theme.colors.border}`,
         borderRadius: '24px',
         padding: '4px',
+        marginBottom: '8px',
       }}
     >
       <button
