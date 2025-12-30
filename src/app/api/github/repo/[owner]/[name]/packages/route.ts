@@ -12,6 +12,26 @@ import { PackageLayerModule } from '@principal-ai/codebase-composition';
 import type { FileTree, FileInfo, DirectoryInfo } from '@principal-ai/repository-abstraction';
 
 const GITHUB_API_BASE = 'https://api.github.com';
+const MAX_CONCURRENT_REQUESTS = 5;
+
+// Simple concurrency limiter
+function createLimiter(concurrency: number) {
+  let active = 0;
+  const queue: (() => void)[] = [];
+
+  return async <T>(fn: () => Promise<T>): Promise<T> => {
+    if (active >= concurrency) {
+      await new Promise<void>((resolve) => queue.push(resolve));
+    }
+    active++;
+    try {
+      return await fn();
+    } finally {
+      active--;
+      queue.shift()?.();
+    }
+  };
+}
 
 interface GitHubTreeItem {
   path: string;
@@ -217,26 +237,29 @@ export async function GET(
     // Build FileTree structure
     const fileTree = buildFileTree(treeData, owner, name);
 
-    // Create a file reader that fetches from GitHub
+    // Create a file reader that fetches from GitHub with concurrency limiting
+    const limit = createLimiter(MAX_CONCURRENT_REQUESTS);
     const fileReader = async (filePath: string): Promise<string> => {
       // Normalize path (remove leading slash if present)
       const normalizedPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
 
-      try {
-        const fileData = await makeGitHubRequest(
-          `/repos/${owner}/${name}/contents/${normalizedPath}`,
-          userToken
-        );
+      return limit(async () => {
+        try {
+          const fileData = await makeGitHubRequest(
+            `/repos/${owner}/${name}/contents/${normalizedPath}`,
+            userToken
+          );
 
-        if (fileData.content && fileData.encoding === 'base64') {
-          return Buffer.from(fileData.content, 'base64').toString('utf-8');
+          if (fileData.content && fileData.encoding === 'base64') {
+            return Buffer.from(fileData.content, 'base64').toString('utf-8');
+          }
+
+          throw new Error(`Unable to read file: ${filePath}`);
+        } catch (error) {
+          console.error(`[packages] Failed to read file ${filePath}:`, error);
+          throw error;
         }
-
-        throw new Error(`Unable to read file: ${filePath}`);
-      } catch (error) {
-        console.error(`[packages] Failed to read file ${filePath}:`, error);
-        throw error;
-      }
+      });
     };
 
     // Use PackageLayerModule to discover packages
