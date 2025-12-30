@@ -2068,8 +2068,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   // Listen for pull-request:selected events to fetch PR files for File-City visualization
   useEffect(() => {
     const unsubscribeSelect = events.on('git-panels.pull-request:selected', (event) => {
-      const payload = event.payload as { number?: number; pullNumber?: number };
-      const prNumber = payload.number ?? payload.pullNumber;
+      const payload = event.payload as { pr?: { number?: number } };
+      const prNumber = payload.pr?.number;
       if (githubRepo && prNumber) {
         console.log('[PanelContext] PR selected, fetching files for PR #', prNumber);
         fetchPrFiles(githubRepo, prNumber);
