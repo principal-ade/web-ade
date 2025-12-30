@@ -151,7 +151,7 @@ export function CenteredSearchLayout() {
           flexDirection: 'column',
           alignItems: 'center',
           padding: '32px 24px 0',
-          paddingTop: 'min(15vh, 120px)',
+          paddingTop: 'min(20vh, 160px)',
         }}
       >
         {/* Title */}
@@ -182,7 +182,7 @@ export function CenteredSearchLayout() {
             position: 'relative',
             width: '100%',
             maxWidth: '600px',
-            marginTop: '24px',
+            marginTop: '12px',
           }}
         >
           <Search
@@ -249,12 +249,9 @@ export function CenteredSearchLayout() {
             <div
               style={{
                 display: 'flex',
-                flexWrap: 'wrap',
                 gap: '16px',
                 justifyContent: 'center',
                 marginTop: '32px',
-                maxWidth: '700px',
-                margin: '32px auto 0',
               }}
             >
               {recentRepos.slice(0, 6).map((repo) => (
