@@ -124,6 +124,11 @@ function RepoPageContent() {
     saveRecentRepository(owner, repo, initialConfigId);
   }, [owner, repo, initialConfigId]);
 
+  // Set browser tab title to repo name
+  useEffect(() => {
+    document.title = `${owner}/${repo}`;
+  }, [owner, repo]);
+
   // Don't render until we've checked for local mode
   if (!localModeChecked) {
     return (
