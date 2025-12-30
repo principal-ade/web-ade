@@ -23,6 +23,9 @@ export const availableThemes = [
   { name: 'Slate', theme: slateTheme },
 ] as const;
 
+// Themes to skip when cycling (light themes that might surprise users)
+const cycleSkipThemes = new Set(['Landing Page Light']);
+
 export type ThemeName = typeof availableThemes[number]['name'];
 
 type ColorOverrides = Partial<Theme['colors']>;
@@ -86,7 +89,11 @@ export function GlobalThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const cycleTheme = useCallback(() => {
-    const nextIndex = (themeIndex + 1) % availableThemes.length;
+    let nextIndex = (themeIndex + 1) % availableThemes.length;
+    // Skip themes that shouldn't be in the cycle
+    while (cycleSkipThemes.has(availableThemes[nextIndex]!.name)) {
+      nextIndex = (nextIndex + 1) % availableThemes.length;
+    }
     setThemeIndex(nextIndex);
     localStorage.setItem('selectedTheme', availableThemes[nextIndex]!.name);
   }, [themeIndex]);
