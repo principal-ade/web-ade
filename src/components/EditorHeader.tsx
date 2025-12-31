@@ -117,23 +117,9 @@ export function EditorHeader({
     >
       {/* Left section: Logo/Avatar and Repository info */}
       <div className="flex items-center gap-3 flex-shrink-0 flex-1">
-        {/* Show repo name on repo pages with owner avatar */}
+        {/* Show repo name on repo pages */}
         {repositoryName && (
           <div className="flex items-center gap-2 flex-shrink-0">
-            <a
-              href={`https://github.com/${repositoryName.owner}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition-opacity hover:opacity-80"
-              title={repositoryName.owner}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`https://github.com/${repositoryName.owner}.png?size=64`}
-                alt={repositoryName.owner}
-                className="w-6 h-6 rounded-full"
-              />
-            </a>
             <a
               href={`https://github.com/${repositoryName.owner}/${repositoryName.repo}`}
               target="_blank"
