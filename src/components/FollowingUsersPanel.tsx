@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import Link from 'next/link';
 import type { PanelContextValue, PanelActions, PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { Users, Loader2, ExternalLink } from 'lucide-react';
 
@@ -11,6 +10,7 @@ export interface FollowingUsersPanelProps {
   actions: PanelActions;
   events: PanelEventEmitter;
   username?: string;
+  viewedUser?: string;
 }
 
 interface FollowingUser {
@@ -20,7 +20,7 @@ interface FollowingUser {
   bio: string | null;
 }
 
-export function FollowingUsersPanel({ context: _context, actions: _actions, events: _events, username }: FollowingUsersPanelProps) {
+export function FollowingUsersPanel({ context: _context, actions: _actions, events, username, viewedUser }: FollowingUsersPanelProps) {
   const { theme } = useTheme();
   const [following, setFollowing] = useState<FollowingUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,63 +149,70 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
           </div>
         ) : (
           <div className="p-2 space-y-1">
-            {following.map((user) => (
-              <Link
-                key={user.login}
-                href={`/activity/${user.login}`}
-                className="flex items-center gap-3 p-2 rounded transition-colors hover:opacity-80"
-                style={{
-                  background: 'transparent',
-                  textDecoration: 'none',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = theme.colors.surface;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                }}
-              >
-                <img
-                  src={user.avatarUrl}
-                  alt={user.login}
-                  className="w-8 h-8 rounded-full flex-shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <div
-                    className="truncate"
-                    style={{
-                      fontSize: `${theme.fontSizes[2]}px`,
-                      fontWeight: theme.fontWeights.medium,
-                      fontFamily: theme.fonts.body,
-                      color: theme.colors.text,
-                    }}
-                  >
-                    {user.name || user.login}
-                  </div>
-                  <div
-                    className="truncate"
-                    style={{
-                      fontSize: `${theme.fontSizes[1]}px`,
-                      fontFamily: theme.fonts.body,
-                      color: theme.colors.textMuted,
-                    }}
-                  >
-                    @{user.login}
-                  </div>
-                </div>
-                <a
-                  href={`https://github.com/${user.login}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-shrink-0 p-1 rounded opacity-0 hover:opacity-100 transition-opacity"
-                  style={{ color: theme.colors.textMuted }}
-                  title="Open in GitHub"
-                  onClick={(e) => e.stopPropagation()}
+            {following.map((user) => {
+              const isViewing = viewedUser === user.login;
+              return (
+                <button
+                  key={user.login}
+                  onClick={() => {
+                    events.emit({
+                      type: 'activity:view:user',
+                      source: 'following-users-panel',
+                      timestamp: Date.now(),
+                      payload: { username: user.login },
+                    });
+                  }}
+                  className="w-full flex items-center gap-3 p-2 rounded transition-colors hover:opacity-80 text-left"
+                  style={{
+                    background: isViewing ? theme.colors.surface : 'transparent',
+                    border: isViewing ? `1px solid ${theme.colors.border}` : '1px solid transparent',
+                  }}
                 >
-                  <ExternalLink className="w-4 h-4" />
-                </a>
-              </Link>
-            ))}
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.login}
+                    className="w-8 h-8 rounded-full flex-shrink-0"
+                    style={{
+                      boxShadow: isViewing ? `0 0 0 2px ${theme.colors.primary}` : 'none',
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className="truncate"
+                      style={{
+                        fontSize: `${theme.fontSizes[2]}px`,
+                        fontWeight: theme.fontWeights.medium,
+                        fontFamily: theme.fonts.body,
+                        color: isViewing ? theme.colors.primary : theme.colors.text,
+                      }}
+                    >
+                      {user.name || user.login}
+                    </div>
+                    <div
+                      className="truncate"
+                      style={{
+                        fontSize: `${theme.fontSizes[1]}px`,
+                        fontFamily: theme.fonts.body,
+                        color: theme.colors.textMuted,
+                      }}
+                    >
+                      @{user.login}
+                    </div>
+                  </div>
+                  <a
+                    href={`https://github.com/${user.login}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-shrink-0 p-1 rounded opacity-0 hover:opacity-100 transition-opacity"
+                    style={{ color: theme.colors.textMuted }}
+                    title="Open in GitHub"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

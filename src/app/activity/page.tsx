@@ -1,9 +1,8 @@
 'use client';
 
-import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTheme } from '@principal-ade/industry-theme';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { PanelProvider, usePanelProvider } from '@/contexts/PanelContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
@@ -21,6 +20,7 @@ import {
   PanelRightOpen,
   Calendar,
   Home,
+  ArrowLeft,
 } from 'lucide-react';
 
 import { UserActivityPanel } from '@/components/UserActivityPanel';
@@ -28,16 +28,19 @@ import { ActivityFilterPanel } from '@/components/ActivityFilterPanel';
 import { FollowingUsersPanel } from '@/components/FollowingUsersPanel';
 
 interface ActivityPageContentProps {
-  username: string;
+  currentUser: string;
 }
 
-function ActivityPageContent({ username }: ActivityPageContentProps) {
+function ActivityPageContent({ currentUser }: ActivityPageContentProps) {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
   const [isMobile, setIsMobile] = useState(false);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [rightCollapsed, setRightCollapsed] = useState(true); // Start collapsed since right panel is empty
+  const [rightCollapsed, setRightCollapsed] = useState(true);
+  const [viewedUser, setViewedUser] = useState(currentUser);
   const [userInfo, setUserInfo] = useState<{ login: string; name: string | null; avatarUrl: string } | null>(null);
+
+  const isViewingOther = viewedUser !== currentUser;
 
   const [layout] = useState<PanelLayout>({
     left: 'following-users',
@@ -45,11 +48,23 @@ function ActivityPageContent({ username }: ActivityPageContentProps) {
     right: 'activity-filters',
   });
 
-  // Fetch user info for header
+  // Listen for user selection events from FollowingUsersPanel
+  useEffect(() => {
+    const unsubscribe = events.on('activity:view:user', (event) => {
+      const payload = event.payload as { username: string };
+      if (payload?.username) {
+        setViewedUser(payload.username);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [events]);
+
+  // Fetch user info for header when viewed user changes
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
-        const response = await fetch(`/api/github/user/${username}/activity`);
+        const response = await fetch(`/api/github/user/${viewedUser}/activity`);
         if (response.ok) {
           const data = await response.json();
           setUserInfo(data.user);
@@ -60,7 +75,7 @@ function ActivityPageContent({ username }: ActivityPageContentProps) {
     };
 
     fetchUserInfo();
-  }, [username]);
+  }, [viewedUser]);
 
   // Detect mobile viewport
   useEffect(() => {
@@ -72,6 +87,10 @@ function ActivityPageContent({ username }: ActivityPageContentProps) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  const handleBackToSelf = useCallback(() => {
+    setViewedUser(currentUser);
+  }, [currentUser]);
+
   const panels = useMemo(() => [
     {
       id: 'following-users',
@@ -82,7 +101,8 @@ function ActivityPageContent({ username }: ActivityPageContentProps) {
             context={context}
             actions={actions}
             events={events}
-            username={username}
+            username={currentUser}
+            viewedUser={viewedUser}
           />
         </div>
       ),
@@ -96,7 +116,7 @@ function ActivityPageContent({ username }: ActivityPageContentProps) {
             context={context}
             actions={actions}
             events={events}
-            username={username}
+            username={viewedUser}
           />
         </div>
       ),
@@ -110,7 +130,7 @@ function ActivityPageContent({ username }: ActivityPageContentProps) {
             context={context}
             actions={actions}
             events={events}
-            username={username}
+            username={viewedUser}
           />
         </div>
       ),
@@ -120,7 +140,7 @@ function ActivityPageContent({ username }: ActivityPageContentProps) {
       label: '',
       content: <div />,
     },
-  ], [context, actions, events, username]);
+  ], [context, actions, events, currentUser, viewedUser]);
 
   return (
     <div className="h-full w-full flex flex-col overflow-hidden">
@@ -141,6 +161,24 @@ function ActivityPageContent({ username }: ActivityPageContentProps) {
           >
             <Logo width={32} height={32} color={theme.colors.primary} />
           </Link>
+
+          {/* Back button when viewing someone else */}
+          {isViewingOther && (
+            <button
+              onClick={handleBackToSelf}
+              className="flex items-center gap-1 px-2 py-1 rounded transition-all hover:opacity-80"
+              style={{
+                background: theme.colors.primary,
+                color: theme.colors.textOnPrimary,
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontFamily: theme.fonts.body,
+              }}
+              title="Back to your activity"
+            >
+              <ArrowLeft className="w-3 h-3" />
+              Back
+            </button>
+          )}
 
           {/* User info */}
           {userInfo && (
@@ -178,7 +216,7 @@ function ActivityPageContent({ username }: ActivityPageContentProps) {
                   border: `1px solid ${theme.colors.border}`,
                 }}
               >
-                Activity
+                {isViewingOther ? 'Viewing' : 'Activity'}
               </span>
             </div>
           )}
@@ -237,7 +275,7 @@ function ActivityPageContent({ username }: ActivityPageContentProps) {
 
           {/* Navigation links */}
           <Link
-            href={`/${username}`}
+            href={`/${viewedUser}`}
             className="px-3 py-1.5 text-xs rounded transition-all hover:opacity-80"
             style={{
               background: theme.colors.surface,
@@ -328,16 +366,16 @@ function ActivityPageWrapper({ username }: { username: string }) {
         }}
         repository={{
           name: 'activity',
-          path: `/activity/${username}`,
+          path: '/activity',
         }}
       >
-        <ActivityPageContent username={username} />
+        <ActivityPageContent currentUser={username} />
       </PanelProvider>
     </div>
   );
 }
 
-function ActivityPageNoUser() {
+export default function ActivityPage() {
   const { theme } = useTheme();
   const { isAuthenticated, user, isLoading } = useAuth();
 
@@ -356,7 +394,7 @@ function ActivityPageNoUser() {
     );
   }
 
-  // If authenticated, redirect to their activity
+  // If authenticated, show activity
   if (isAuthenticated && user?.login) {
     return <ActivityPageWrapper username={user.login} />;
   }
@@ -379,7 +417,7 @@ function ActivityPageNoUser() {
           className="text-sm mb-6"
           style={{ color: theme.colors.textMuted }}
         >
-          Sign in to view your GitHub activity, or visit a specific user&apos;s activity page.
+          Sign in to view your GitHub activity and see what the people you follow are up to.
         </p>
         <div className="flex items-center justify-center gap-3">
           <Link
@@ -408,19 +446,4 @@ function ActivityPageNoUser() {
       </div>
     </div>
   );
-}
-
-export default function ActivityPage() {
-  const params = useParams();
-
-  // Optional catch-all: params.username is an array or undefined
-  const usernameArray = params.username as string[] | undefined;
-  const username = usernameArray?.[0];
-
-  // If no username provided, show auth-aware page
-  if (!username) {
-    return <ActivityPageNoUser />;
-  }
-
-  return <ActivityPageWrapper username={username} />;
 }
