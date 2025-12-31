@@ -25,6 +25,7 @@ import {
 
 import { UserActivityPanel } from '@/components/UserActivityPanel';
 import { ActivityFilterPanel } from '@/components/ActivityFilterPanel';
+import { FollowingUsersPanel } from '@/components/FollowingUsersPanel';
 
 interface ActivityPageContentProps {
   username: string;
@@ -39,9 +40,9 @@ function ActivityPageContent({ username }: ActivityPageContentProps) {
   const [userInfo, setUserInfo] = useState<{ login: string; name: string | null; avatarUrl: string } | null>(null);
 
   const [layout] = useState<PanelLayout>({
-    left: 'activity-filters',
+    left: 'following-users',
     middle: 'activity-timeline',
-    right: 'activity-stats',
+    right: 'activity-filters',
   });
 
   // Fetch user info for header
@@ -73,11 +74,11 @@ function ActivityPageContent({ username }: ActivityPageContentProps) {
 
   const panels = useMemo(() => [
     {
-      id: 'activity-filters',
-      label: 'Filters',
+      id: 'following-users',
+      label: 'Following',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <ActivityFilterPanel
+          <FollowingUsersPanel
             context={context}
             actions={actions}
             events={events}
@@ -101,20 +102,16 @@ function ActivityPageContent({ username }: ActivityPageContentProps) {
       ),
     },
     {
-      id: 'activity-stats',
-      label: 'Stats',
+      id: 'activity-filters',
+      label: 'Filters',
       content: (
-        <div
-          className="h-full w-full flex items-center justify-center p-4"
-          style={{ color: theme.colors.textMuted }}
-        >
-          <div className="text-center">
-            <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <h3 className="text-sm font-semibold mb-1" style={{ color: theme.colors.text }}>
-              Activity Stats
-            </h3>
-            <p className="text-xs">Coming soon</p>
-          </div>
+        <div className="h-full w-full overflow-hidden">
+          <ActivityFilterPanel
+            context={context}
+            actions={actions}
+            events={events}
+            username={username}
+          />
         </div>
       ),
     },
@@ -123,7 +120,7 @@ function ActivityPageContent({ username }: ActivityPageContentProps) {
       label: '',
       content: <div />,
     },
-  ], [context, actions, events, username, theme]);
+  ], [context, actions, events, username]);
 
   return (
     <div className="h-full w-full flex flex-col overflow-hidden">

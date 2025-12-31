@@ -132,7 +132,6 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
   const { theme } = useTheme();
   const { user, isAuthenticated } = useAuth();
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
-  const [userInfo, setUserInfo] = useState<UserActivityResponse['user'] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>('all');
@@ -159,7 +158,6 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
       }
 
       const data: UserActivityResponse = await response.json();
-      setUserInfo(data.user);
       setActivity(data.activity);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch activity');
