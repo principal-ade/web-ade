@@ -199,10 +199,20 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
       >
         <div className="text-center">
           <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
-          <h3 className="text-sm font-semibold mb-1" style={{ color: theme.colors.text }}>
+          <h3
+            className="mb-1"
+            style={{
+              fontSize: `${theme.fontSizes[2]}px`,
+              fontWeight: theme.fontWeights.semibold,
+              fontFamily: theme.fonts.body,
+              color: theme.colors.text,
+            }}
+          >
             Activity Timeline
           </h3>
-          <p className="text-xs">Sign in to view your activity or visit a user&apos;s profile</p>
+          <p style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}>
+            Sign in to view your activity or visit a user&apos;s profile
+          </p>
         </div>
       </div>
     );
@@ -217,7 +227,9 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
       >
         <div className="text-center">
           <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-          <p className="text-sm">Loading activity...</p>
+          <p style={{ fontSize: `${theme.fontSizes[2]}px`, fontFamily: theme.fonts.body }}>
+            Loading activity...
+          </p>
         </div>
       </div>
     );
@@ -231,14 +243,28 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
         style={{ color: theme.colors.error }}
       >
         <div className="text-center max-w-xs">
-          <p className="text-sm mb-2">Failed to load activity</p>
-          <p className="text-xs mb-4" style={{ color: theme.colors.textMuted }}>
+          <p
+            className="mb-2"
+            style={{ fontSize: `${theme.fontSizes[2]}px`, fontFamily: theme.fonts.body }}
+          >
+            Failed to load activity
+          </p>
+          <p
+            className="mb-4"
+            style={{
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontFamily: theme.fonts.body,
+              color: theme.colors.textMuted,
+            }}
+          >
             {error}
           </p>
           <button
             onClick={() => void fetchActivity()}
-            className="px-3 py-1.5 text-xs rounded"
+            className="px-3 py-1.5 rounded"
             style={{
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontFamily: theme.fonts.body,
               background: theme.colors.surface,
               color: theme.colors.text,
               border: `1px solid ${theme.colors.border}`,
@@ -276,8 +302,10 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className="px-3 py-1.5 text-xs rounded transition-colors"
+              className="px-3 py-1.5 rounded transition-colors"
               style={{
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontFamily: theme.fonts.body,
                 background: filter === f ? theme.colors.primary : 'transparent',
                 color: filter === f ? theme.colors.textOnPrimary : theme.colors.textMuted,
               }}
@@ -290,10 +318,18 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="text-center" style={{ color: theme.colors.textMuted }}>
             <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <h3 className="text-sm font-semibold mb-1" style={{ color: theme.colors.text }}>
+            <h3
+              className="mb-1"
+              style={{
+                fontSize: `${theme.fontSizes[2]}px`,
+                fontWeight: theme.fontWeights.semibold,
+                fontFamily: theme.fonts.body,
+                color: theme.colors.text,
+              }}
+            >
               No Activity Found
             </h3>
-            <p className="text-xs">
+            <p style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}>
               No {filter === 'all' ? '' : filter + ' '}activity in the last 30 days
               {selectedRepo ? ` for ${selectedRepo}` : ''}
             </p>
@@ -320,11 +356,24 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
               alt={userInfo.login}
               className="w-6 h-6 rounded-full"
             />
-            <span className="text-sm font-medium" style={{ color: theme.colors.text }}>
+            <span
+              style={{
+                fontSize: `${theme.fontSizes[2]}px`,
+                fontWeight: theme.fontWeights.medium,
+                fontFamily: theme.fonts.body,
+                color: theme.colors.text,
+              }}
+            >
               {userInfo.name || userInfo.login}
             </span>
             {userInfo.name && (
-              <span className="text-xs" style={{ color: theme.colors.textMuted }}>
+              <span
+                style={{
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  fontFamily: theme.fonts.body,
+                  color: theme.colors.textMuted,
+                }}
+              >
                 @{userInfo.login}
               </span>
             )}
@@ -349,8 +398,10 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className="px-3 py-1.5 text-xs rounded transition-colors"
+            className="px-3 py-1.5 rounded transition-colors"
             style={{
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontFamily: theme.fonts.body,
               background: filter === f ? theme.colors.primary : 'transparent',
               color: filter === f ? theme.colors.textOnPrimary : theme.colors.textMuted,
             }}
@@ -361,8 +412,10 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
         {selectedRepo && (
           <button
             onClick={() => setSelectedRepo(null)}
-            className="ml-auto px-2 py-1 text-xs rounded"
+            className="ml-auto px-2 py-1 rounded"
             style={{
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontFamily: theme.fonts.body,
               background: theme.colors.surface,
               color: theme.colors.text,
               border: `1px solid ${theme.colors.border}`,
@@ -375,12 +428,15 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
 
       {/* Timeline Content */}
       <div className="flex-1 overflow-y-auto">
-        {Array.from(groupedEvents.entries()).map(([date, events]) => (
+        {Array.from(groupedEvents.entries()).map(([date, dateEvents]) => (
           <div key={date} className="border-b" style={{ borderColor: theme.colors.border }}>
             {/* Date Header */}
             <div
-              className="px-3 py-2 text-xs font-medium sticky top-0"
+              className="px-3 py-2 sticky top-0"
               style={{
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontWeight: theme.fontWeights.medium,
+                fontFamily: theme.fonts.body,
                 background: theme.colors.surface,
                 color: theme.colors.textMuted,
               }}
@@ -390,7 +446,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
 
             {/* Events for this date */}
             <div className="px-3 py-1">
-              {events.map((event) => {
+              {dateEvents.map((event) => {
                 const Icon = getEventIcon(event.type);
                 const color = getEventColor(event.type, theme);
 
@@ -411,15 +467,24 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span
-                          className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                          className="px-1.5 py-0.5 rounded"
                           style={{
+                            fontSize: `${theme.fontSizes[0]}px`,
+                            fontWeight: theme.fontWeights.medium,
+                            fontFamily: theme.fonts.body,
                             background: `${color}20`,
                             color,
                           }}
                         >
                           {getEventLabel(event.type)}
                         </span>
-                        <span className="text-[10px]" style={{ color: theme.colors.textMuted }}>
+                        <span
+                          style={{
+                            fontSize: `${theme.fontSizes[0]}px`,
+                            fontFamily: theme.fonts.body,
+                            color: theme.colors.textMuted,
+                          }}
+                        >
                           {formatRelativeTime(event.timestamp)}
                         </span>
                       </div>
@@ -427,14 +492,24 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                       {/* Title or commit info */}
                       {event.title ? (
                         <div
-                          className="text-sm truncate"
-                          style={{ color: theme.colors.text }}
+                          className="truncate"
+                          style={{
+                            fontSize: `${theme.fontSizes[2]}px`,
+                            fontFamily: theme.fonts.body,
+                            color: theme.colors.text,
+                          }}
                           title={event.title}
                         >
                           {event.title}
                         </div>
                       ) : event.type === 'commit' && event.metadata?.commitCount ? (
-                        <div className="text-sm" style={{ color: theme.colors.text }}>
+                        <div
+                          style={{
+                            fontSize: `${theme.fontSizes[2]}px`,
+                            fontFamily: theme.fonts.body,
+                            color: theme.colors.text,
+                          }}
+                        >
                           {event.metadata.commitCount} commit{event.metadata.commitCount !== 1 ? 's' : ''}
                         </div>
                       ) : null}
@@ -442,15 +517,22 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                       {/* Repository */}
                       <button
                         onClick={() => setSelectedRepo(event.repository)}
-                        className="text-xs hover:underline"
-                        style={{ color: theme.colors.textMuted }}
+                        className="hover:underline"
+                        style={{
+                          fontSize: `${theme.fontSizes[1]}px`,
+                          fontFamily: theme.fonts.body,
+                          color: theme.colors.textMuted,
+                        }}
                       >
                         {event.repository}
                       </button>
 
                       {/* PR stats */}
                       {event.type === 'pr_merged' && event.metadata && (
-                        <div className="flex items-center gap-2 mt-1 text-[10px]">
+                        <div
+                          className="flex items-center gap-2 mt-1"
+                          style={{ fontSize: `${theme.fontSizes[0]}px`, fontFamily: theme.fonts.body }}
+                        >
                           {event.metadata.additions !== undefined && (
                             <span style={{ color: theme.colors.success }}>
                               +{event.metadata.additions}
@@ -488,8 +570,10 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
 
       {/* Footer with stats */}
       <div
-        className="px-3 py-2 border-t text-[10px] text-center"
+        className="px-3 py-2 border-t text-center"
         style={{
+          fontSize: `${theme.fontSizes[0]}px`,
+          fontFamily: theme.fonts.body,
           borderColor: theme.colors.border,
           color: theme.colors.textMuted,
         }}
