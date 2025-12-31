@@ -17,32 +17,6 @@ export interface LayoutConfig {
 
 export const layoutConfigs: LayoutConfig[] = [
   {
-    id: 'default',
-    name: 'Architecture',
-    layout: {
-      left: 'packages',
-      middle: 'visual-validation',
-      right: 'file-city',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
-  },
-  {
-    id: 'kanban',
-    name: 'Backlog.md',
-    layout: {
-      left: 'milestones',
-      middle: 'kanban',
-      right: 'task-detail',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
-  },
-  {
     id: 'git-history',
     name: 'Change Log',
     layout: {
@@ -101,6 +75,32 @@ export const layoutConfigs: LayoutConfig[] = [
       left: 'pull-requests',
       middle: 'pull-request-detail',
       right: 'file-city',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
+  {
+    id: 'default',
+    name: 'Architecture',
+    layout: {
+      left: 'packages',
+      middle: 'visual-validation',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
+  {
+    id: 'kanban',
+    name: 'Backlog.md',
+    layout: {
+      left: 'milestones',
+      middle: 'kanban',
+      right: 'task-detail',
     },
     collapsed: {
       left: false,
