@@ -135,7 +135,7 @@ export function LocalFolderButton({ currentRepoId }: LocalFolderButtonProps) {
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
         style={{
           background: adapter ? theme.colors.success : theme.colors.secondary,
-          color: adapter ? '#fff' : theme.colors.text,
+          color: adapter ? theme.colors.textOnPrimary : theme.colors.text,
           border: `1px solid ${adapter ? theme.colors.success : theme.colors.border}`,
           opacity: isLoading ? 0.7 : 1,
         }}
@@ -171,7 +171,7 @@ export function LocalFolderButton({ currentRepoId }: LocalFolderButtonProps) {
           className="fixed bottom-4 right-4 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg z-50"
           style={{
             background: theme.colors.error,
-            color: '#fff',
+            color: theme.colors.textOnPrimary,
           }}
         >
           <AlertTriangle className="w-4 h-4" />
@@ -287,7 +287,7 @@ export function LocalFolderButton({ currentRepoId }: LocalFolderButtonProps) {
                     dialog.type === 'disconnect'
                       ? theme.colors.error
                       : theme.colors.primary,
-                  color: '#fff',
+                  color: theme.colors.textOnPrimary,
                 }}
               >
                 {dialog.type === 'disconnect'

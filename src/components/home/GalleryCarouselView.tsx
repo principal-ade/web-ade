@@ -251,7 +251,7 @@ export function GalleryCarouselView({
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = theme.colors.primary;
-                e.currentTarget.style.color = '#fff';
+                e.currentTarget.style.color = theme.colors.textOnPrimary;
                 e.currentTarget.style.borderColor = theme.colors.primary;
               }}
               onMouseLeave={(e) => {
@@ -288,7 +288,7 @@ export function GalleryCarouselView({
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = theme.colors.primary;
-                e.currentTarget.style.color = '#fff';
+                e.currentTarget.style.color = theme.colors.textOnPrimary;
                 e.currentTarget.style.borderColor = theme.colors.primary;
               }}
               onMouseLeave={(e) => {

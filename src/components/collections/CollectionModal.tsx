@@ -369,7 +369,7 @@ export function CollectionModal({
                 borderRadius: '8px',
                 border: 'none',
                 backgroundColor: theme.colors.primary,
-                color: '#fff',
+                color: theme.colors.textOnPrimary,
                 fontSize: `${theme.fontSizes[2]}px`,
                 fontWeight: theme.fontWeights.semibold,
                 cursor: saving || deleting || !name.trim() ? 'not-allowed' : 'pointer',

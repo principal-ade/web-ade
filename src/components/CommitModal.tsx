@@ -266,7 +266,7 @@ export function CommitModal({
               className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all hover:opacity-80 disabled:opacity-50"
               style={{
                 background: theme.colors.primary,
-                color: '#fff',
+                color: theme.colors.textOnPrimary,
               }}
             >
               {isCommitting ? (

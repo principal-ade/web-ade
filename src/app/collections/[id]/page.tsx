@@ -451,7 +451,7 @@ function CollectionPageWrapper({ collectionId }: { collectionId: string }) {
             padding: '8px 16px',
             borderRadius: '8px',
             backgroundColor: theme.colors.primary,
-            color: '#fff',
+            color: theme.colors.textOnPrimary,
             textDecoration: 'none',
           }}
         >

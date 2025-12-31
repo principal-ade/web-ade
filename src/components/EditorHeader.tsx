@@ -150,7 +150,7 @@ export function EditorHeader({
                 className="ml-2 px-2 py-0.5 rounded text-xs transition-all hover:opacity-80"
                 style={{
                   background: theme.colors.primary,
-                  color: '#fff',
+                  color: theme.colors.textOnPrimary,
                   textDecoration: 'none',
                 }}
               >
@@ -190,7 +190,7 @@ export function EditorHeader({
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-all hover:opacity-80"
             style={{
               background: showGallery ? theme.colors.primary : theme.colors.surface,
-              color: showGallery ? '#fff' : theme.colors.text,
+              color: showGallery ? theme.colors.textOnPrimary : theme.colors.text,
               border: `1px solid ${showGallery ? theme.colors.primary : theme.colors.border}`,
             }}
           >
@@ -228,7 +228,7 @@ export function EditorHeader({
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
                 style={{
                   background: theme.colors.primary,
-                  color: '#fff',
+                  color: theme.colors.textOnPrimary,
                 }}
                 title="Add repository to collection"
               >
@@ -282,7 +282,7 @@ export function EditorHeader({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
             style={{
               background: theme.colors.primary,
-              color: '#fff',
+              color: theme.colors.textOnPrimary,
             }}
             title={`Commit ${pendingChangesCount} pending change${pendingChangesCount !== 1 ? 's' : ''}`}
           >

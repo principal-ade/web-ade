@@ -238,7 +238,7 @@ export function AddRepositoryModal({
                 borderRadius: '8px',
                 border: 'none',
                 backgroundColor: theme.colors.primary,
-                color: '#fff',
+                color: theme.colors.textOnPrimary,
                 fontSize: `${theme.fontSizes[2]}px`,
                 fontWeight: theme.fontWeights.semibold,
                 cursor: adding || !input.trim() ? 'not-allowed' : 'pointer',

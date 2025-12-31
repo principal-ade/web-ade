@@ -245,7 +245,7 @@ function SharedLibraryContent({
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
                   style={{
                     background: theme.colors.primary,
-                    color: '#fff',
+                    color: theme.colors.textOnPrimary,
                   }}
                   title="Add repository to collection"
                 >
@@ -295,7 +295,7 @@ function SharedLibraryContent({
                   : theme.colors.primary,
                 color: importedCollectionIds.has(selectedCollection.id)
                   ? '#10b981'
-                  : '#fff',
+                  : theme.colors.textOnPrimary,
                 border: importedCollectionIds.has(selectedCollection.id)
                   ? '1px solid #10b981'
                   : 'none',
@@ -835,7 +835,7 @@ function SharedLibraryWrapper() {
           className="flex items-center gap-2 px-4 py-2 rounded-md transition-all hover:opacity-80"
           style={{
             background: theme.colors.primary,
-            color: '#fff',
+            color: theme.colors.textOnPrimary,
             border: 'none',
             cursor: 'pointer',
             fontSize: `${theme.fontSizes[2]}px`,

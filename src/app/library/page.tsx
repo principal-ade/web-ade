@@ -536,7 +536,7 @@ function LibraryPageContent({
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
                   style={{
                     background: theme.colors.primary,
-                    color: '#fff',
+                    color: theme.colors.textOnPrimary,
                   }}
                   title="Add repository to collection"
                 >
@@ -1430,7 +1430,7 @@ function LibraryPageWrapper() {
               gap: '8px',
               padding: '10px 20px',
               backgroundColor: theme.colors.primary,
-              color: '#fff',
+              color: theme.colors.textOnPrimary,
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',
