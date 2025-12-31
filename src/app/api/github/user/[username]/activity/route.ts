@@ -73,7 +73,7 @@ const USER_ACTIVITY_QUERY = `
         }
       }
 
-      pullRequests(first: 30, states: MERGED, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      pullRequests(first: 10, states: MERGED, orderBy: {field: UPDATED_AT, direction: DESC}) {
         nodes {
           title
           number
@@ -99,7 +99,7 @@ const USER_ACTIVITY_QUERY = `
         }
       }
 
-      issues(first: 20, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      issues(first: 10, orderBy: {field: UPDATED_AT, direction: DESC}) {
         nodes {
           title
           number
@@ -187,8 +187,9 @@ interface GraphQLUser {
   };
 }
 
-function normalizeActivity(user: GraphQLUser): ActivityEvent[] {
+function normalizeActivity(user: GraphQLUser, fromDate: Date): ActivityEvent[] {
   const events: ActivityEvent[] = [];
+  const fromTime = fromDate.getTime();
 
   // Normalize commit contributions
   for (const repo of user.contributionsCollection.commitContributionsByRepository) {
@@ -206,8 +207,9 @@ function normalizeActivity(user: GraphQLUser): ActivityEvent[] {
     }
   }
 
-  // Normalize merged PRs
+  // Normalize merged PRs (filter by date)
   for (const pr of user.pullRequests.nodes) {
+    if (new Date(pr.mergedAt).getTime() < fromTime) continue;
     events.push({
       id: `pr-merged-${pr.repository.nameWithOwner}-${pr.number}`,
       type: 'pr_merged',
@@ -223,8 +225,9 @@ function normalizeActivity(user: GraphQLUser): ActivityEvent[] {
     });
   }
 
-  // Normalize open PRs
+  // Normalize open PRs (filter by date)
   for (const pr of user.openPullRequests.nodes) {
+    if (new Date(pr.createdAt).getTime() < fromTime) continue;
     events.push({
       id: `pr-opened-${pr.repository.nameWithOwner}-${pr.number}`,
       type: 'pr_opened',
@@ -238,13 +241,15 @@ function normalizeActivity(user: GraphQLUser): ActivityEvent[] {
     });
   }
 
-  // Normalize issues
+  // Normalize issues (filter by date)
   for (const issue of user.issues.nodes) {
     const isClosed = issue.state === 'CLOSED';
+    const timestamp = isClosed && issue.closedAt ? issue.closedAt : issue.createdAt;
+    if (new Date(timestamp).getTime() < fromTime) continue;
     events.push({
       id: `issue-${issue.repository.nameWithOwner}-${issue.number}`,
       type: isClosed ? 'issue_closed' : 'issue_opened',
-      timestamp: isClosed && issue.closedAt ? issue.closedAt : issue.createdAt,
+      timestamp,
       repository: issue.repository.nameWithOwner,
       title: issue.title,
       url: issue.url,
@@ -268,9 +273,9 @@ export async function GET(
     const { username } = await params;
     const userToken = await getGitHubToken();
 
-    // Calculate 30 days ago
+    // Calculate 1 day ago
     const from = new Date();
-    from.setDate(from.getDate() - 30);
+    from.setDate(from.getDate() - 1);
 
     const data = await makeGitHubGraphQLRequest(
       USER_ACTIVITY_QUERY,
@@ -290,7 +295,7 @@ export async function GET(
       );
     }
 
-    const activity = normalizeActivity(user);
+    const activity = normalizeActivity(user, from);
 
     const response: UserActivityResponse = {
       user: {
