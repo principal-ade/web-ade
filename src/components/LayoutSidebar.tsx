@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { useGlobalTheme } from '@/contexts/ThemeContext';
 import {
   Blocks,
   KanbanSquare,
@@ -12,6 +13,7 @@ import {
   LineChart,
   GitPullRequest,
   Home,
+  Palette,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@principal-ai/logo-component';
@@ -30,7 +32,7 @@ const layoutIcons: Record<string, React.ComponentType<{ className?: string }>> =
 
 // Match header height (h-14 = 56px)
 const SIDEBAR_COLLAPSED_WIDTH = 56;
-const SIDEBAR_EXPANDED_WIDTH = 200;
+const SIDEBAR_EXPANDED_WIDTH = 250;
 // Icon container width to center icons (same as collapsed width)
 const ICON_CONTAINER_WIDTH = 56;
 
@@ -50,6 +52,7 @@ export function LayoutSidebar({
   owner,
 }: LayoutSidebarProps) {
   const { theme } = useTheme();
+  const { currentThemeName, cycleTheme } = useGlobalTheme();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -198,6 +201,48 @@ export function LayoutSidebar({
         })}
       </nav>
 
+      {/* Theme Toggle */}
+      <div
+        style={{
+          borderTop: `1px solid ${theme.colors.border}`,
+          padding: '8px',
+        }}
+      >
+        <button
+          onClick={cycleTheme}
+          className="w-full flex items-center h-10 transition-colors rounded-lg"
+          style={{
+            minWidth: `${SIDEBAR_EXPANDED_WIDTH - 16}px`,
+            background: 'transparent',
+            color: theme.colors.text,
+          }}
+          title={collapsed ? `Theme: ${currentThemeName}` : 'Cycle theme'}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = theme.colors.backgroundSecondary;
+            e.currentTarget.style.color = theme.colors.primary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = theme.colors.text;
+          }}
+        >
+          <div
+            className="flex items-center justify-center flex-shrink-0"
+            style={{ width: `${ICON_CONTAINER_WIDTH - 16}px` }}
+          >
+            <Palette className="w-5 h-5" style={{ color: theme.colors.primary }} />
+          </div>
+          <span
+            style={{
+              whiteSpace: 'nowrap',
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[2],
+            }}
+          >
+            {currentThemeName}
+          </span>
+        </button>
+      </div>
     </aside>
   );
 }
