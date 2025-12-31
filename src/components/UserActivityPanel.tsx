@@ -14,8 +14,17 @@ import {
   RefreshCw,
   ExternalLink,
   Calendar,
+  ChevronRight,
+  ChevronDown,
 } from 'lucide-react';
 import type { ActivityEvent, UserActivityResponse } from '@/app/api/github/user/[username]/activity/route';
+
+interface CommitDetails {
+  sha: string;
+  message: string;
+  date: string;
+  url: string;
+}
 
 export interface UserActivityPanelProps {
   context: PanelContextValue;
@@ -136,6 +145,9 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>('all');
   const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
+  const [expandedCommits, setExpandedCommits] = useState<Set<string>>(new Set());
+  const [commitDetails, setCommitDetails] = useState<Record<string, CommitDetails[]>>({});
+  const [loadingCommits, setLoadingCommits] = useState<Set<string>>(new Set());
 
   // Determine which username to fetch
   const targetUsername = username || user?.login;
@@ -169,6 +181,54 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
   useEffect(() => {
     fetchActivity();
   }, [fetchActivity]);
+
+  // Toggle commit expansion and fetch details if needed
+  const toggleCommitExpansion = useCallback(async (event: ActivityEvent) => {
+    const eventId = event.id;
+
+    if (expandedCommits.has(eventId)) {
+      // Collapse
+      setExpandedCommits((prev) => {
+        const next = new Set(prev);
+        next.delete(eventId);
+        return next;
+      });
+      return;
+    }
+
+    // Expand
+    setExpandedCommits((prev) => new Set(prev).add(eventId));
+
+    // Already have details cached
+    if (commitDetails[eventId]) return;
+
+    // Fetch commit details
+    const [owner, repo] = event.repository.split('/');
+    if (!owner || !repo || !targetUsername) return;
+
+    setLoadingCommits((prev) => new Set(prev).add(eventId));
+
+    try {
+      const response = await fetch(
+        `/api/github/user/${targetUsername}/commits/${owner}/${repo}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setCommitDetails((prev) => ({
+          ...prev,
+          [eventId]: data.commits,
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch commit details:', err);
+    } finally {
+      setLoadingCommits((prev) => {
+        const next = new Set(prev);
+        next.delete(eventId);
+        return next;
+      });
+    }
+  }, [expandedCommits, commitDetails, targetUsername]);
 
   // Listen for filter events from ActivityFilterPanel
   useEffect(() => {
@@ -456,15 +516,22 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                           {event.title}
                         </div>
                       ) : event.type === 'commit' && event.metadata?.commitCount ? (
-                        <div
+                        <button
+                          onClick={() => toggleCommitExpansion(event)}
+                          className="flex items-center gap-1 hover:opacity-80 transition-opacity"
                           style={{
                             fontSize: `${theme.fontSizes[2]}px`,
                             fontFamily: theme.fonts.body,
                             color: theme.colors.text,
                           }}
                         >
+                          {expandedCommits.has(event.id) ? (
+                            <ChevronDown className="w-4 h-4" style={{ color: theme.colors.textMuted }} />
+                          ) : (
+                            <ChevronRight className="w-4 h-4" style={{ color: theme.colors.textMuted }} />
+                          )}
                           {event.metadata.commitCount} commit{event.metadata.commitCount !== 1 ? 's' : ''}
-                        </div>
+                        </button>
                       ) : null}
 
                       {/* Repository */}
@@ -495,6 +562,70 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             <span style={{ color: theme.colors.error }}>
                               -{event.metadata.deletions}
                             </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Expanded commit details */}
+                      {event.type === 'commit' && expandedCommits.has(event.id) && (
+                        <div
+                          className="mt-2 pl-5 border-l-2 space-y-1"
+                          style={{ borderColor: theme.colors.border }}
+                        >
+                          {loadingCommits.has(event.id) ? (
+                            <div
+                              className="flex items-center gap-2 py-1"
+                              style={{ color: theme.colors.textMuted }}
+                            >
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <span style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}>
+                                Loading commits...
+                              </span>
+                            </div>
+                          ) : commitDetails[event.id]?.length ? (
+                            commitDetails[event.id]!.map((commit) => (
+                              <a
+                                key={commit.sha}
+                                href={commit.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-start gap-2 py-1 hover:opacity-80 transition-opacity"
+                                style={{ textDecoration: 'none' }}
+                              >
+                                <code
+                                  className="flex-shrink-0"
+                                  style={{
+                                    fontSize: `${theme.fontSizes[0]}px`,
+                                    fontFamily: theme.fonts.monospace,
+                                    color: theme.colors.info,
+                                  }}
+                                >
+                                  {commit.sha}
+                                </code>
+                                <span
+                                  className="truncate"
+                                  style={{
+                                    fontSize: `${theme.fontSizes[1]}px`,
+                                    fontFamily: theme.fonts.body,
+                                    color: theme.colors.text,
+                                  }}
+                                  title={commit.message}
+                                >
+                                  {commit.message}
+                                </span>
+                              </a>
+                            ))
+                          ) : (
+                            <div
+                              className="py-1"
+                              style={{
+                                fontSize: `${theme.fontSizes[1]}px`,
+                                fontFamily: theme.fonts.body,
+                                color: theme.colors.textMuted,
+                              }}
+                            >
+                              No commit details available
+                            </div>
                           )}
                         </div>
                       )}
