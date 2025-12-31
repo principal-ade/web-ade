@@ -2788,7 +2788,27 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     console.log('[PanelContext] Clearing color mode selection');
     setEnabledColorModes([]);
     setSelectedColorMode(null);
-  }, []);
+    // Also clear underlying data to prevent useEffect from re-enabling
+    setPrFilesData(null);
+    setSelectedPrNumber(null);
+    setCommitFilesData(null);
+    // Clear the refs so we don't try to restore old state
+    previousColorModeRef.current = null;
+    previousCommitColorModeRef.current = null;
+    // Emit events so visualizations can react
+    events.emit({
+      type: 'prFiles:cleared',
+      source: 'panel-context',
+      timestamp: Date.now(),
+      payload: {},
+    });
+    events.emit({
+      type: 'commitFiles:cleared',
+      source: 'panel-context',
+      timestamp: Date.now(),
+      payload: {},
+    });
+  }, [events]);
 
   const value: PanelProviderValue = useMemo(
     () => ({
