@@ -344,51 +344,6 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
       className="h-full w-full flex flex-col overflow-hidden"
       style={{ background: theme.colors.background }}
     >
-      {/* Header with user info */}
-      {userInfo && (
-        <div
-          className="flex items-center justify-between p-3 border-b"
-          style={{ borderColor: theme.colors.border }}
-        >
-          <div className="flex items-center gap-2">
-            <img
-              src={userInfo.avatarUrl}
-              alt={userInfo.login}
-              className="w-6 h-6 rounded-full"
-            />
-            <span
-              style={{
-                fontSize: `${theme.fontSizes[2]}px`,
-                fontWeight: theme.fontWeights.medium,
-                fontFamily: theme.fonts.body,
-                color: theme.colors.text,
-              }}
-            >
-              {userInfo.name || userInfo.login}
-            </span>
-            {userInfo.name && (
-              <span
-                style={{
-                  fontSize: `${theme.fontSizes[1]}px`,
-                  fontFamily: theme.fonts.body,
-                  color: theme.colors.textMuted,
-                }}
-              >
-                @{userInfo.login}
-              </span>
-            )}
-          </div>
-          <button
-            onClick={() => void fetchActivity()}
-            className="p-1 rounded hover:opacity-75"
-            style={{ color: theme.colors.textMuted }}
-            title="Refresh activity"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-
       {/* Filter Tabs */}
       <div
         className="flex items-center gap-1 p-2 border-b"
