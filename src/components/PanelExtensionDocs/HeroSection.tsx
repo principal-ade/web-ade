@@ -18,7 +18,7 @@ export function HeroSection() {
           <div className="inline-block mb-4 px-4 py-2 rounded-full text-sm font-medium"
             style={{
               background: theme.colors.primary,
-              color: theme.colors.background,
+              color: theme.colors.textOnPrimary,
             }}
           >
             Panel Extension System
@@ -38,7 +38,7 @@ export function HeroSection() {
               className="px-6 py-3 rounded-lg font-medium transition-all hover:scale-105"
               style={{
                 background: theme.colors.primary,
-                color: theme.colors.background,
+                color: theme.colors.textOnPrimary,
               }}
             >
               Get Started →

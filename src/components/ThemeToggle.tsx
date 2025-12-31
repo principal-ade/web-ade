@@ -131,7 +131,7 @@ export function ThemeToggle() {
         className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
         style={{
           background: theme.colors.primary,
-          color: theme.colors.background,
+          color: theme.colors.textOnPrimary,
           border: 'none',
           fontSize: theme.fontSizes[1],
           fontWeight: 600,

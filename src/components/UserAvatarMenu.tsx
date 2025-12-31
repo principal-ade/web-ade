@@ -68,7 +68,7 @@ export function UserAvatarMenu() {
         className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
         style={{
           background: theme.colors.primary,
-          color: theme.colors.background,
+          color: theme.colors.textOnPrimary,
         }}
         title="Login"
       >

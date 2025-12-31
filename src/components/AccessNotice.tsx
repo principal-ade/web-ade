@@ -72,7 +72,7 @@ export function AccessNotice({ status, onRetry, onLogin, repository, errorMessag
             className="px-4 py-2 rounded-md text-sm"
             style={{
               background: theme.colors.primary,
-              color: theme.colors.background,
+              color: theme.colors.textOnPrimary,
             }}
           >
             Sign in with GitHub

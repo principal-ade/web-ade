@@ -157,7 +157,7 @@ export function PanelShowcaseSection() {
                   className="px-4 py-2 rounded text-sm font-medium flex-1 transition-all"
                   style={{
                     background: theme.colors.primary,
-                    color: theme.colors.background,
+                    color: theme.colors.textOnPrimary,
                   }}
                   disabled={panel.status !== 'Available'}
                 >
@@ -196,7 +196,7 @@ export function PanelShowcaseSection() {
               className="px-6 py-3 rounded-lg font-medium transition-all hover:scale-105"
               style={{
                 background: theme.colors.primary,
-                color: theme.colors.background,
+                color: theme.colors.textOnPrimary,
               }}
             >
               Read the Spec

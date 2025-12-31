@@ -148,7 +148,7 @@ export function AvatarStack({
             justifyContent: 'center',
             fontSize: size * 0.35,
             fontWeight: 600,
-            color: theme.colors.background,
+            color: theme.colors.textOnPrimary,
             flexShrink: 0,
           }}
         >
