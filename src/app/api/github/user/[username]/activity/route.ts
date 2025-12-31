@@ -64,7 +64,7 @@ const USER_ACTIVITY_QUERY = `
             nameWithOwner
             url
           }
-          contributions(first: 10, orderBy: {direction: DESC}) {
+          contributions(first: 10, orderBy: {field: OCCURRED_AT, direction: DESC}) {
             nodes {
               occurredAt
               commitCount
