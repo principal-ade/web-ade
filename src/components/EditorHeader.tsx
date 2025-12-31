@@ -323,7 +323,7 @@ export function EditorHeader({
             className="hidden md:flex items-center justify-center px-3 py-1.5 rounded-md text-sm font-medium transition-all hover:opacity-80"
             style={{
               background: vimMode ? theme.colors.primary : theme.colors.secondary,
-              color: vimMode ? theme.colors.textOnPrimary : theme.colors.text,
+              color: theme.colors.textOnPrimary,
               border: `1px solid ${vimMode ? theme.colors.primary : theme.colors.border}`,
             }}
             title={vimMode ? 'Disable Vim mode' : 'Enable Vim mode'}
@@ -340,7 +340,7 @@ export function EditorHeader({
               className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
               style={{
                 background: leftCollapsed ? theme.colors.primary : theme.colors.secondary,
-                color: leftCollapsed ? theme.colors.textOnPrimary : theme.colors.text,
+                color: theme.colors.textOnPrimary,
               }}
               title={leftCollapsed ? 'Expand left panel' : 'Collapse left panel'}
             >
@@ -370,7 +370,7 @@ export function EditorHeader({
               className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
               style={{
                 background: rightCollapsed ? theme.colors.primary : theme.colors.secondary,
-                color: rightCollapsed ? theme.colors.textOnPrimary : theme.colors.text,
+                color: theme.colors.textOnPrimary,
               }}
               title={rightCollapsed ? 'Expand right panel' : 'Collapse right panel'}
             >
