@@ -464,9 +464,28 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                 const color = getEventColor(event.type, theme);
 
                 return (
-                  <div
+                  <button
                     key={event.id}
-                    className="flex items-start gap-3 py-2 group"
+                    className="w-full flex items-start gap-3 py-2 group text-left rounded transition-colors"
+                    style={{ background: 'transparent' }}
+                    onClick={() => {
+                      events.emit({
+                        type: 'activity:item:selected',
+                        source: 'user-activity-panel',
+                        timestamp: Date.now(),
+                        payload: {
+                          repository: event.repository,
+                          type: event.type,
+                          url: event.url,
+                        },
+                      });
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = theme.colors.surface;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
                   >
                     {/* Icon */}
                     <div
@@ -640,11 +659,12 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                         className="flex-shrink-0 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                         style={{ color: theme.colors.textMuted }}
                         title="Open in GitHub"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <ExternalLink className="w-4 h-4" />
                       </a>
                     )}
-                  </div>
+                  </button>
                 );
               })}
             </div>

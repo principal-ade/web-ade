@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -21,17 +22,28 @@ import {
   Calendar,
   Home,
   ArrowLeft,
+  Map,
 } from 'lucide-react';
 
 import { UserActivityPanel } from '@/components/UserActivityPanel';
-import { ActivityFilterPanel } from '@/components/ActivityFilterPanel';
 import { FollowingUsersPanel } from '@/components/FollowingUsersPanel';
+
+// Dynamic import for FileCityPanel (SSR disabled)
+const FileCityPanelLoader = dynamic(
+  () => import('@industry-theme/file-city-panel').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
 
 interface ActivityPageContentProps {
   currentUser: string;
+  selectedRepo: string | null;
+  onRepoSelect: (repo: string | null) => void;
 }
 
-function ActivityPageContent({ currentUser }: ActivityPageContentProps) {
+function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: ActivityPageContentProps) {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
   const [isMobile, setIsMobile] = useState(false);
@@ -45,7 +57,7 @@ function ActivityPageContent({ currentUser }: ActivityPageContentProps) {
   const [layout] = useState<PanelLayout>({
     left: 'following-users',
     middle: 'activity-timeline',
-    right: 'activity-filters',
+    right: 'file-city',
   });
 
   // Listen for user selection events from FollowingUsersPanel
@@ -59,6 +71,27 @@ function ActivityPageContent({ currentUser }: ActivityPageContentProps) {
 
     return () => unsubscribe();
   }, [events]);
+
+  // Listen for activity item selection to show in file-city
+  useEffect(() => {
+    const unsubscribe = events.on('activity:item:selected', (event) => {
+      const payload = event.payload as { repository: string };
+      if (payload?.repository) {
+        onRepoSelect(payload.repository);
+        setRightCollapsed(false); // Expand right panel to show file-city
+
+        // Emit repository:preview for file-city panel
+        events.emit({
+          type: 'repository:preview',
+          source: 'activity-page',
+          timestamp: Date.now(),
+          payload: { repository: { full_name: payload.repository } },
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [events, onRepoSelect]);
 
   // Fetch user info for header when viewed user changes
   useEffect(() => {
@@ -122,16 +155,29 @@ function ActivityPageContent({ currentUser }: ActivityPageContentProps) {
       ),
     },
     {
-      id: 'activity-filters',
-      label: 'Filters',
+      id: 'file-city',
+      label: 'Map',
       content: (
         <div className="h-full w-full overflow-hidden">
-          <ActivityFilterPanel
-            context={context}
-            actions={actions}
-            events={events}
-            username={viewedUser}
-          />
+          {selectedRepo ? (
+            <FileCityPanelLoader
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          ) : (
+            <div
+              className="h-full w-full flex items-center justify-center"
+              style={{ color: theme.colors.textMuted }}
+            >
+              <div className="text-center p-4">
+                <Map className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p style={{ fontSize: `${theme.fontSizes[2]}px`, fontFamily: theme.fonts.body }}>
+                  Click an activity item to view the repository
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       ),
     },
@@ -140,7 +186,7 @@ function ActivityPageContent({ currentUser }: ActivityPageContentProps) {
       label: '',
       content: <div />,
     },
-  ], [context, actions, events, currentUser, viewedUser]);
+  ], [context, actions, events, currentUser, viewedUser, selectedRepo, theme]);
 
   return (
     <div className="h-full w-full flex flex-col overflow-hidden">
@@ -353,6 +399,11 @@ function ActivityPageContent({ currentUser }: ActivityPageContentProps) {
 
 function ActivityPageWrapper({ username }: { username: string }) {
   const { theme } = useTheme();
+  const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
+
+  const handleRepoSelect = useCallback((repo: string | null) => {
+    setSelectedRepo(repo);
+  }, []);
 
   return (
     <div
@@ -365,11 +416,16 @@ function ActivityPageWrapper({ username }: { username: string }) {
           path: '/workspace',
         }}
         repository={{
-          name: 'activity',
-          path: '/activity',
+          name: selectedRepo ? selectedRepo.split('/')[1] || 'activity' : 'activity',
+          path: selectedRepo ? `/GitHub/${selectedRepo}` : '/activity',
         }}
+        githubRepo={selectedRepo || undefined}
       >
-        <ActivityPageContent currentUser={username} />
+        <ActivityPageContent
+          currentUser={username}
+          selectedRepo={selectedRepo}
+          onRepoSelect={handleRepoSelect}
+        />
       </PanelProvider>
     </div>
   );
