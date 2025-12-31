@@ -315,6 +315,7 @@ function EditorLayoutContent({
     }
     return false;
   });
+  const [repoCounts, setRepoCounts] = useState<{ openIssues: number; openPullRequests: number } | null>(null);
 
   // Persist layout sidebar collapsed state
   useEffect(() => {
@@ -360,6 +361,35 @@ function EditorLayoutContent({
   // Get repository info for file fetching
   const githubRepo = (context.currentScope.repository as { githubRepo?: string })?.githubRepo
     || context.currentScope.repository?.path;
+
+  // Fetch PR and issue counts for sidebar badges
+  useEffect(() => {
+    if (!githubRepo || !githubRepo.includes('/')) {
+      setRepoCounts(null);
+      return;
+    }
+
+    const [owner, name] = githubRepo.split('/');
+    const controller = new AbortController();
+
+    fetch(`/api/github/repo/${owner}/${name}?action=counts`, {
+      signal: controller.signal,
+      credentials: 'include',
+    })
+      .then(async (response) => {
+        if (controller.signal.aborted) return;
+        if (response.ok) {
+          const data = await response.json();
+          setRepoCounts(data);
+        }
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        console.warn('[EditorLayout] Failed to fetch repo counts:', error);
+      });
+
+    return () => controller.abort();
+  }, [githubRepo]);
 
   // Handle layout configuration change
   const handleLayoutConfigChange = useCallback((config: LayoutConfig) => {
@@ -1308,6 +1338,10 @@ function EditorLayoutContent({
         collapsed={layoutSidebarCollapsed}
         onToggleCollapse={() => setLayoutSidebarCollapsed((prev: boolean) => !prev)}
         owner={repositoryInfo?.owner}
+        badges={repoCounts ? {
+          'github-issues': repoCounts.openIssues,
+          'pull-requests': repoCounts.openPullRequests,
+        } : undefined}
       />
 
       {/* Main Content Area */}

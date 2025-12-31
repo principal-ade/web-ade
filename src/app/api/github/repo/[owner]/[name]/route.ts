@@ -32,6 +32,7 @@ const CACHE_DURATIONS = {
   file: 600, // 10 minutes - individual files change rarely
   contributors: 1800, // 30 minutes - very stable data
   "file-count": 600, // 10 minutes - stable data
+  counts: 120, // 2 minutes - PR/issue counts can change frequently
 } as const;
 
 class GitHubApiError extends Error {
@@ -82,6 +83,47 @@ async function makeGitHubRequest(endpoint: string, userToken?: string | null) {
   }
 
   return response.json();
+}
+
+// GraphQL request for efficient data fetching
+async function makeGitHubGraphQLRequest(
+  query: string,
+  variables: Record<string, unknown>,
+  userToken?: string | null
+) {
+  const token = userToken || process.env.GITHUB_TOKEN || null;
+
+  if (!token) {
+    throw new GitHubApiError("GitHub token required for GraphQL API", 401);
+  }
+
+  const response = await fetch("https://api.github.com/graphql", {
+    method: "POST",
+    headers: {
+      Authorization: `bearer ${token}`,
+      "Content-Type": "application/json",
+      "User-Agent": "CodeCity-App/1.0",
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  if (!response.ok) {
+    throw new GitHubApiError(
+      `GitHub GraphQL Error: ${response.status} ${response.statusText}`,
+      response.status
+    );
+  }
+
+  const data = await response.json();
+
+  if (data.errors) {
+    throw new GitHubApiError(
+      `GitHub GraphQL Error: ${data.errors[0]?.message || "Unknown error"}`,
+      400
+    );
+  }
+
+  return data.data;
 }
 
 // Cached version of makeGitHubRequest
@@ -202,6 +244,28 @@ export async function GET(
           userToken,
         );
         break;
+
+      case "counts": {
+        // Use GraphQL to efficiently fetch PR and issue counts in a single request
+        const countsQuery = `
+          query($owner: String!, $name: String!) {
+            repository(owner: $owner, name: $name) {
+              issues(states: OPEN) { totalCount }
+              pullRequests(states: OPEN) { totalCount }
+            }
+          }
+        `;
+        const countsData = await makeGitHubGraphQLRequest(
+          countsQuery,
+          { owner, name },
+          userToken
+        );
+        data = {
+          openIssues: countsData.repository.issues.totalCount,
+          openPullRequests: countsData.repository.pullRequests.totalCount,
+        };
+        break;
+      }
 
       default:
         return NextResponse.json({ error: "Invalid action" }, { status: 400 });

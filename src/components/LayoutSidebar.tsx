@@ -42,6 +42,7 @@ interface LayoutSidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   owner?: string; // When provided, shows owner avatar/name instead of Principal AI logo
+  badges?: Record<string, number>; // Badge counts for specific layout config IDs (e.g., { 'github-issues': 12, 'pull-requests': 5 })
 }
 
 export function LayoutSidebar({
@@ -50,6 +51,7 @@ export function LayoutSidebar({
   collapsed,
   onToggleCollapse,
   owner,
+  badges,
 }: LayoutSidebarProps) {
   const { theme } = useTheme();
   const { currentThemeName, cycleTheme } = useGlobalTheme();
@@ -159,6 +161,8 @@ export function LayoutSidebar({
           const Icon = layoutIcons[config.id] || Blocks;
           const isActive = config.id === currentConfigId;
 
+          const badgeCount = badges?.[config.id];
+
           return (
             <button
               key={config.id}
@@ -169,7 +173,7 @@ export function LayoutSidebar({
                 background: isActive ? theme.colors.backgroundTertiary : 'transparent',
                 color: isActive ? theme.colors.primary : theme.colors.text,
               }}
-              title={collapsed ? config.name : undefined}
+              title={collapsed ? `${config.name}${badgeCount ? ` (${badgeCount})` : ''}` : undefined}
               onMouseEnter={(e) => {
                 if (!isActive) {
                   e.currentTarget.style.background = theme.colors.backgroundSecondary;
@@ -182,12 +186,27 @@ export function LayoutSidebar({
               }}
             >
               <div
-                className="flex items-center justify-center flex-shrink-0"
+                className="flex items-center justify-center flex-shrink-0 relative"
                 style={{ width: `${ICON_CONTAINER_WIDTH}px` }}
               >
                 <Icon className="w-5 h-5" />
+                {/* Badge indicator when collapsed */}
+                {collapsed && badgeCount !== undefined && badgeCount > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-xs font-medium"
+                    style={{
+                      background: theme.colors.primary,
+                      color: theme.colors.background,
+                      fontSize: '10px',
+                      padding: '0 4px',
+                    }}
+                  >
+                    {badgeCount > 99 ? '99+' : badgeCount}
+                  </span>
+                )}
               </div>
               <span
+                className="flex items-center gap-2"
                 style={{
                   whiteSpace: 'nowrap',
                   fontFamily: theme.fonts.body,
@@ -195,6 +214,20 @@ export function LayoutSidebar({
                 }}
               >
                 {config.name}
+                {/* Badge when expanded */}
+                {!collapsed && badgeCount !== undefined && badgeCount > 0 && (
+                  <span
+                    className="min-w-[20px] h-[20px] flex items-center justify-center rounded-full text-xs font-medium"
+                    style={{
+                      background: theme.colors.primary,
+                      color: theme.colors.background,
+                      fontSize: '11px',
+                      padding: '0 6px',
+                    }}
+                  >
+                    {badgeCount > 99 ? '99+' : badgeCount}
+                  </span>
+                )}
               </span>
             </button>
           );
