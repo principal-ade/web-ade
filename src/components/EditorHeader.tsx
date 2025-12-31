@@ -133,7 +133,6 @@ export function EditorHeader({
             >
               {repositoryName.repo}
             </a>
-            {currentRepoId && <LocalFolderButton currentRepoId={currentRepoId} />}
           </div>
         )}
         {/* Show owner info on owner pages */}
@@ -236,23 +235,27 @@ export function EditorHeader({
         )}
       </div>
 
-      {/* Center section: Selected repository on collection page */}
-      {collectionId && selectedRepository ? (
-        /* Collection page with selected repository - show in center */
-        <Link
-          href={`/${selectedRepository}`}
-          className="absolute left-1/2 transform -translate-x-1/2 transition-opacity hover:opacity-80"
-          style={{
-            fontSize: theme.fontSizes[4],
-            fontWeight: theme.fontWeights.semibold,
-            fontFamily: theme.fonts.body,
-            color: theme.colors.text,
-            textDecoration: 'none',
-          }}
-        >
-          {selectedRepository.split('/')[1]}
-        </Link>
-      ) : null}
+      {/* Center section */}
+      <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center">
+        {/* GitHub/Local toggle on repo pages */}
+        {repositoryName && currentRepoId && <LocalFolderButton currentRepoId={currentRepoId} />}
+        {/* Selected repository on collection page */}
+        {collectionId && selectedRepository && (
+          <Link
+            href={`/${selectedRepository}`}
+            className="transition-opacity hover:opacity-80"
+            style={{
+              fontSize: theme.fontSizes[4],
+              fontWeight: theme.fontWeights.semibold,
+              fontFamily: theme.fonts.body,
+              color: theme.colors.text,
+              textDecoration: 'none',
+            }}
+          >
+            {selectedRepository.split('/')[1]}
+          </Link>
+        )}
+      </div>
 
       <div className="flex items-center gap-3 flex-shrink-0 flex-1 justify-end">
         {/* User collection action buttons */}
