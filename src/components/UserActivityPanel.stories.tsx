@@ -11,6 +11,20 @@ import {
 } from './__mocks__/activityMocks';
 import type { ActivityEvent } from '@/app/api/github/user/[username]/activity/route';
 
+// Generate mock contributions
+const generateContributions = () => {
+  const contributions = [];
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    contributions.push({
+      date: date.toISOString().split('T')[0],
+      count: Math.floor(Math.random() * 10),
+    });
+  }
+  return contributions;
+};
+
 // Story wrapper that mocks fetch and provides all contexts
 const StoryWrapper: React.FC<{
   children: React.ReactNode;
@@ -18,8 +32,11 @@ const StoryWrapper: React.FC<{
   loading?: boolean;
   error?: string | null;
 }> = ({ children, activityData = mockActivityEvents, loading = false, error = null }) => {
-  React.useEffect(() => {
-    const originalFetch = global.fetch;
+  const [ready, setReady] = React.useState(false);
+  const originalFetchRef = React.useRef<typeof global.fetch | null>(null);
+
+  React.useLayoutEffect(() => {
+    originalFetchRef.current = global.fetch;
 
     global.fetch = async (input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
@@ -34,7 +51,11 @@ const StoryWrapper: React.FC<{
           return new Response(JSON.stringify({ error }), { status: 500 });
         }
         return new Response(
-          JSON.stringify({ user: mockUserInfo, activity: activityData }),
+          JSON.stringify({
+            user: mockUserInfo,
+            activity: activityData,
+            contributions: generateContributions(),
+          }),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
         );
       }
@@ -46,13 +67,19 @@ const StoryWrapper: React.FC<{
         );
       }
 
-      return originalFetch(input);
+      return originalFetchRef.current!(input);
     };
 
+    setReady(true);
+
     return () => {
-      global.fetch = originalFetch;
+      if (originalFetchRef.current) {
+        global.fetch = originalFetchRef.current;
+      }
     };
   }, [activityData, loading, error]);
+
+  if (!ready) return null;
 
   return (
     <ThemeProvider>

@@ -70,6 +70,22 @@ export const mockActivityEvents: ActivityEvent[] = [
 ];
 
 /**
+ * Generate mock 7-day contributions
+ */
+const generateMockContributions = (baseActivity: number) => {
+  const contributions = [];
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    contributions.push({
+      date: date.toISOString().split('T')[0],
+      count: Math.floor(Math.random() * baseActivity * 2),
+    });
+  }
+  return contributions;
+};
+
+/**
  * Mock following users for Storybook
  */
 export const mockFollowingUsers = [
@@ -78,24 +94,28 @@ export const mockFollowingUsers = [
     name: 'Chris Wanstrath',
     avatarUrl: 'https://avatars.githubusercontent.com/u/2?v=4',
     bio: 'Co-founder of GitHub',
+    contributions: generateMockContributions(5),
   },
   {
     login: 'mojombo',
     name: 'Tom Preston-Werner',
     avatarUrl: 'https://avatars.githubusercontent.com/u/1?v=4',
     bio: 'Cofounder of GitHub & Chatterbug',
+    contributions: generateMockContributions(8),
   },
   {
     login: 'pjhyett',
     name: 'PJ Hyett',
     avatarUrl: 'https://avatars.githubusercontent.com/u/3?v=4',
     bio: null,
+    contributions: generateMockContributions(2),
   },
   {
     login: 'wycats',
     name: 'Yehuda Katz',
     avatarUrl: 'https://avatars.githubusercontent.com/u/4?v=4',
     bio: 'Tilde Inc. // Ember.js // Rust // Ruby',
+    contributions: generateMockContributions(12),
   },
 ];
 
@@ -281,6 +301,7 @@ export const MockActivityProvider: React.FC<MockActivityProviderProps> = ({
           JSON.stringify({
             user: mockUserInfo,
             activity: activityData,
+            contributions: generateMockContributions(6),
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
         );

@@ -7,12 +7,32 @@ import {
   mockFollowingUsers,
 } from './__mocks__/activityMocks';
 
+interface DailyContribution {
+  date: string;
+  count: number;
+}
+
 interface FollowingUser {
   login: string;
   name: string | null;
   avatarUrl: string;
   bio: string | null;
+  contributions?: DailyContribution[];
 }
+
+// Generate mock contributions for stories
+const generateContributions = (baseActivity: number): DailyContribution[] => {
+  const contributions = [];
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    contributions.push({
+      date: date.toISOString().split('T')[0],
+      count: Math.floor(Math.random() * baseActivity * 2),
+    });
+  }
+  return contributions;
+};
 
 // Story wrapper that mocks fetch and provides theme
 const StoryWrapper: React.FC<{
@@ -21,8 +41,11 @@ const StoryWrapper: React.FC<{
   loading?: boolean;
   error?: string | null;
 }> = ({ children, followingData = mockFollowingUsers, loading = false, error = null }) => {
-  React.useEffect(() => {
-    const originalFetch = global.fetch;
+  const [ready, setReady] = React.useState(false);
+  const originalFetchRef = React.useRef<typeof global.fetch | null>(null);
+
+  React.useLayoutEffect(() => {
+    originalFetchRef.current = global.fetch;
 
     global.fetch = async (input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
@@ -41,13 +64,19 @@ const StoryWrapper: React.FC<{
         );
       }
 
-      return originalFetch(input);
+      return originalFetchRef.current!(input);
     };
 
+    setReady(true);
+
     return () => {
-      global.fetch = originalFetch;
+      if (originalFetchRef.current) {
+        global.fetch = originalFetchRef.current;
+      }
     };
   }, [followingData, loading, error]);
+
+  if (!ready) return null;
 
   return (
     <ThemeProvider>
@@ -137,6 +166,7 @@ export const ManyUsers: Story = {
       name: `User Number ${i + 1}`,
       avatarUrl: `https://avatars.githubusercontent.com/u/${i + 100}?v=4`,
       bio: i % 2 === 0 ? `This is user ${i + 1}'s bio` : null,
+      contributions: generateContributions(i + 1),
     }));
 
     return (

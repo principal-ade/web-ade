@@ -13,11 +13,56 @@ export interface FollowingUsersPanelProps {
   viewedUser?: string;
 }
 
+interface DailyContribution {
+  date: string;
+  count: number;
+}
+
 interface FollowingUser {
   login: string;
   name: string | null;
   avatarUrl: string;
   bio: string | null;
+  contributions: DailyContribution[];
+}
+
+// Activity graph component showing 7 days of contributions as squares
+function ActivityGraph({ contributions, theme }: { contributions: DailyContribution[]; theme: ReturnType<typeof useTheme>['theme'] }) {
+  // Find max contribution count to normalize colors
+  const maxCount = Math.max(...contributions.map(c => c.count), 1);
+
+  // Get style based on contribution count (GitHub-style intensity)
+  const getStyle = (count: number): React.CSSProperties => {
+    if (count === 0) {
+      return {
+        background: 'transparent',
+        border: `1px solid ${theme.colors.border}`,
+      };
+    }
+    const intensity = Math.min(count / maxCount, 1);
+    let bg = theme.colors.success;
+    if (intensity < 0.25) bg = theme.colors.success + '40';
+    else if (intensity < 0.5) bg = theme.colors.success + '70';
+    else if (intensity < 0.75) bg = theme.colors.success + 'A0';
+    return { background: bg };
+  };
+
+  return (
+    <div className="flex gap-1 mt-1">
+      {contributions.map((day) => (
+        <div
+          key={day.date}
+          style={{
+            width: 12,
+            height: 12,
+            borderRadius: 2,
+            ...getStyle(day.count),
+          }}
+          title={`${day.date}: ${day.count} contribution${day.count !== 1 ? 's' : ''}`}
+        />
+      ))}
+    </div>
+  );
 }
 
 export function FollowingUsersPanel({ context: _context, actions: _actions, events, username, viewedUser }: FollowingUsersPanelProps) {
@@ -198,6 +243,9 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
                     >
                       @{user.login}
                     </div>
+                    {user.contributions && user.contributions.length > 0 && (
+                      <ActivityGraph contributions={user.contributions} theme={theme} />
+                    )}
                   </div>
                   <a
                     href={`https://github.com/${user.login}`}

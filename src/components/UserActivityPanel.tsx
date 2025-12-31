@@ -388,7 +388,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
               No Activity Found
             </h3>
             <p style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}>
-              No {filter === 'all' ? '' : filter + ' '}activity in the last day
+              No {filter === 'all' ? '' : filter + ' '}activity in the last 7 days
               {selectedRepo ? ` for ${selectedRepo}` : ''}
             </p>
           </div>
@@ -682,7 +682,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
           color: theme.colors.textMuted,
         }}
       >
-        {filteredActivity.length} activities in the last day
+        {filteredActivity.length} activities in the last 7 days
       </div>
     </div>
   );

@@ -59,12 +59,21 @@ const USER_ACTIVITY_QUERY = `
       avatarUrl
 
       contributionsCollection(from: $from) {
+        contributionCalendar {
+          totalContributions
+          weeks {
+            contributionDays {
+              contributionCount
+              date
+            }
+          }
+        }
         commitContributionsByRepository(maxRepositories: 20) {
           repository {
             nameWithOwner
             url
           }
-          contributions(first: 10, orderBy: {field: OCCURRED_AT, direction: DESC}) {
+          contributions(first: 20, orderBy: {field: OCCURRED_AT, direction: DESC}) {
             nodes {
               occurredAt
               commitCount
@@ -133,6 +142,11 @@ export interface ActivityEvent {
   };
 }
 
+export interface DailyContribution {
+  date: string;
+  count: number;
+}
+
 export interface UserActivityResponse {
   user: {
     login: string;
@@ -140,6 +154,7 @@ export interface UserActivityResponse {
     avatarUrl: string;
   };
   activity: ActivityEvent[];
+  contributions: DailyContribution[];
 }
 
 interface GraphQLUser {
@@ -147,6 +162,15 @@ interface GraphQLUser {
   name: string | null;
   avatarUrl: string;
   contributionsCollection: {
+    contributionCalendar: {
+      totalContributions: number;
+      weeks: Array<{
+        contributionDays: Array<{
+          contributionCount: number;
+          date: string;
+        }>;
+      }>;
+    };
     commitContributionsByRepository: Array<{
       repository: { nameWithOwner: string; url: string };
       contributions: {
@@ -273,9 +297,9 @@ export async function GET(
     const { username } = await params;
     const userToken = await getGitHubToken();
 
-    // Calculate 1 day ago
+    // Calculate 7 days ago
     const from = new Date();
-    from.setDate(from.getDate() - 1);
+    from.setDate(from.getDate() - 7);
 
     const data = await makeGitHubGraphQLRequest(
       USER_ACTIVITY_QUERY,
@@ -297,6 +321,20 @@ export async function GET(
 
     const activity = normalizeActivity(user, from);
 
+    // Extract last 7 days of contributions from calendar
+    const allDays: DailyContribution[] = [];
+    for (const week of user.contributionsCollection.contributionCalendar.weeks) {
+      for (const day of week.contributionDays) {
+        allDays.push({
+          date: day.date,
+          count: day.contributionCount,
+        });
+      }
+    }
+    // Sort by date descending and take last 7 days
+    allDays.sort((a, b) => b.date.localeCompare(a.date));
+    const contributions = allDays.slice(0, 7).reverse(); // Oldest to newest for display
+
     const response: UserActivityResponse = {
       user: {
         login: user.login,
@@ -304,6 +342,7 @@ export async function GET(
         avatarUrl: user.avatarUrl,
       },
       activity,
+      contributions,
     };
 
     const jsonResponse = NextResponse.json(response);
