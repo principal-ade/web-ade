@@ -1222,7 +1222,7 @@ function EditorLayoutContent({
     },
     {
       id: 'github-issues',
-      label: 'GitHub Issues',
+      label: 'Issues',
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitHubIssuesPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1262,7 +1262,7 @@ function EditorLayoutContent({
   const fileEditingPanels = useMemo(() => [
     {
       id: 'file-editor',
-      label: 'File Editor',
+      label: 'Files',
       content: (
         <div className="h-full w-full overflow-hidden">
           <FileEditorPanelLoader context={context} actions={enhancedActions} events={events} />

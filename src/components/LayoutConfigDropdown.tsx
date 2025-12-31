@@ -43,6 +43,19 @@ export const layoutConfigs: LayoutConfig[] = [
     },
   },
   {
+    id: 'git-history',
+    name: 'Change Log',
+    layout: {
+      left: 'commit-history',
+      middle: 'commit-detail',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
+  {
     id: 'documentation',
     name: 'Documentation',
     layout: {
@@ -57,7 +70,7 @@ export const layoutConfigs: LayoutConfig[] = [
   },
   {
     id: 'file-editor',
-    name: 'File Editor',
+    name: 'Files',
     layout: {
       left: 'git-changes',
       middle: 'file-editor',
@@ -70,7 +83,7 @@ export const layoutConfigs: LayoutConfig[] = [
   },
   {
     id: 'github-issues',
-    name: 'GitHub Issues',
+    name: 'Issues',
     layout: {
       left: 'github-issues',
       middle: 'github-issue-detail',
@@ -95,21 +108,8 @@ export const layoutConfigs: LayoutConfig[] = [
     },
   },
   {
-    id: 'git-history',
-    name: 'Git History',
-    layout: {
-      left: 'commit-history',
-      middle: 'commit-detail',
-      right: 'file-city',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
-  },
-  {
     id: 'quality-debug',
-    name: 'Quality Debug',
+    name: 'Quality Views',
     layout: {
       left: 'quality-hexagon',
       middle: 'lens-debug',
