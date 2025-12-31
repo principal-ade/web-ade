@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, User, Github, Building2, Home, FolderOpen } from 'lucide-react';
+import { LogOut, User, Github, Building2, Home, FolderOpen, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
 interface Organization {
@@ -135,6 +135,16 @@ export function UserAvatarMenu() {
           >
             <User className="w-4 h-4" />
             Your Repositories
+          </Link>
+          {/* Your Activity */}
+          <Link
+            href="/activity"
+            className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
+            style={{ color: theme.colors.text }}
+            onClick={() => setUserMenuOpen(false)}
+          >
+            <Calendar className="w-4 h-4" />
+            Your Activity
           </Link>
           <a
             href={`https://github.com/${user.login}`}
