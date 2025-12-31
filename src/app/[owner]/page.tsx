@@ -1,11 +1,16 @@
 'use client';
 
 import { useParams, useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { PanelProvider, usePanelProvider } from "@/contexts/PanelContext";
-import { EditorHeader } from "@/components/EditorHeader";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUserCollections } from "@/contexts/UserCollectionsContext";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
+import { UserAvatarMenu } from "@/components/UserAvatarMenu";
+import { Logo } from "@principal-ai/logo-component";
+import { iconMap } from "@/components/collections/CollectionModal";
 import dynamic from "next/dynamic";
 import {
   EditableConfigurablePanelLayout,
@@ -13,13 +18,57 @@ import {
   PanelLayout,
 } from "@principal-ade/panel-layouts";
 import '@principal-ade/panel-layouts/styles.css';
+import {
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+  ArrowLeftRight,
+  Clock,
+  FolderOpen,
+  GitFork,
+  User,
+  Library,
+  ArrowRight,
+  X,
+  Home,
+  Star,
+  Users,
+} from 'lucide-react';
 
 const RECENT_OWNERS_KEY = 'recent-owners';
+const RECENT_REPOSITORIES_KEY = 'recent-repositories';
 const MAX_RECENT_ITEMS = 10;
 
 interface RecentOwner {
   owner: string;
   visitedAt: string;
+}
+
+interface RecentRepository {
+  owner: string;
+  repo: string;
+  visitedAt: string;
+}
+
+interface StarredRepo {
+  id: number;
+  name: string;
+  full_name: string;
+  owner: {
+    login: string;
+    avatar_url: string;
+  };
+  description: string | null;
+  stargazers_count: number;
+}
+
+interface FollowingUser {
+  id: number;
+  login: string;
+  avatar_url: string;
+  name: string | null;
+  bio: string | null;
 }
 
 function saveRecentOwner(owner: string) {
@@ -97,6 +146,8 @@ interface OwnerPageContentProps {
 function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: OwnerPageContentProps) {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
+  const { isAuthenticated, user } = useAuth();
+  const userCollections = useUserCollections();
   const [isMobile, setIsMobile] = useState(false);
   const [previewedRepo, setPreviewedRepo] = useState<string | null>(initialPreviewedRepo ?? null);
   const [canvasExists, setCanvasExists] = useState(false);
@@ -104,6 +155,14 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
   const canvasLoadedRef = useRef(false);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
+
+  // Sidebar state
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<'recent' | 'collections' | 'following' | 'starred'>('recent');
+  const [recentRepos, setRecentRepos] = useState<RecentRepository[]>([]);
+  const [recentOwners, setRecentOwners] = useState<RecentOwner[]>([]);
+  const [starredRepos, setStarredRepos] = useState<StarredRepo[]>([]);
+  const [followingUsers, setFollowingUsers] = useState<FollowingUser[]>([]);
 
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'owner-repositories',
@@ -116,6 +175,53 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
       panels: ['code-quality', 'package-composition'],
     },
   });
+
+  // Load recent items from localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const storedRepos = localStorage.getItem(RECENT_REPOSITORIES_KEY);
+      if (storedRepos) setRecentRepos(JSON.parse(storedRepos));
+      const storedOwners = localStorage.getItem(RECENT_OWNERS_KEY);
+      if (storedOwners) setRecentOwners(JSON.parse(storedOwners));
+    } catch (err) {
+      console.error('Failed to load recent items:', err);
+    }
+  }, []);
+
+  // Fetch starred repos and following users when sidebar opens
+  useEffect(() => {
+    if (!sidebarOpen || !isAuthenticated) return;
+
+    const fetchUserData = async () => {
+      try {
+        const response = await fetch('/api/github/user/repos');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.starred) setStarredRepos(data.starred);
+          if (data.following) setFollowingUsers(data.following);
+        }
+      } catch (err) {
+        console.error('Failed to fetch user data:', err);
+      }
+    };
+
+    fetchUserData();
+  }, [sidebarOpen, isAuthenticated]);
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
 
   // Notify parent when previewed repo changes
   const handlePreviewChange = useCallback((repo: string | null) => {
@@ -318,14 +424,152 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
 
   return (
     <div className="h-full w-full flex flex-col overflow-hidden">
-        <EditorHeader
-          leftCollapsed={leftCollapsed}
-          rightCollapsed={rightCollapsed}
-          onToggleLeft={() => setLeftCollapsed(!leftCollapsed)}
-          onToggleRight={() => setRightCollapsed(!rightCollapsed)}
-          onSwapRightPanels={() => setLayout(prev => ({ ...prev, middle: prev.right, right: prev.middle }))}
-          selectedRepository={previewedRepo}
-        />
+        {/* Custom header with avatar button for sidebar */}
+        <header
+          className="h-14 flex items-center justify-between px-4 border-b relative z-50"
+          style={{
+            background: theme.colors.surface,
+            borderColor: theme.colors.border,
+          }}
+        >
+          {/* Left section: Avatar and Owner info */}
+          <div className="flex items-center gap-3 flex-shrink-0 flex-1">
+            {user?.avatar_url ? (
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="flex items-center transition-all hover:opacity-80"
+                title="Open recent activity"
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+              >
+                <img
+                  src={user.avatar_url}
+                  alt={user.name || user.login}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: '50%',
+                    border: `2px solid ${theme.colors.border}`,
+                  }}
+                />
+              </button>
+            ) : (
+              <Link
+                href="/"
+                className="flex items-center transition-all hover:opacity-80"
+                title="Home"
+              >
+                <Logo width={32} height={32} color={theme.colors.primary} />
+              </Link>
+            )}
+            {/* Owner info */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <a
+                href={`https://github.com/${owner}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-opacity hover:opacity-80"
+              >
+                <img
+                  src={`https://github.com/${owner}.png?size=64`}
+                  alt={owner}
+                  className="w-6 h-6 rounded-full"
+                />
+              </a>
+              <a
+                href={`https://github.com/${owner}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-base font-semibold transition-opacity hover:opacity-80"
+                style={{
+                  fontFamily: theme.fonts.body,
+                  color: theme.colors.text,
+                  textDecoration: 'none',
+                }}
+              >
+                {owner}
+              </a>
+            </div>
+            {/* Selected repository */}
+            {previewedRepo && (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span style={{ color: theme.colors.textMuted }}>/</span>
+                <Link
+                  href={`/${previewedRepo}`}
+                  className="text-base font-semibold transition-opacity hover:opacity-80"
+                  style={{
+                    fontFamily: theme.fonts.body,
+                    color: theme.colors.text,
+                    textDecoration: 'none',
+                  }}
+                >
+                  {previewedRepo.split('/')[1]}
+                </Link>
+                <Link
+                  href={`/${previewedRepo}`}
+                  className="px-2 py-0.5 rounded text-xs transition-all hover:opacity-80"
+                  style={{
+                    background: theme.colors.primary,
+                    color: theme.colors.textOnPrimary,
+                    textDecoration: 'none',
+                  }}
+                >
+                  Open
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Right section: Panel controls and User menu */}
+          <div className="flex items-center gap-3 flex-shrink-0 flex-1 justify-end">
+            {/* Panel collapse toggles */}
+            <div className="hidden md:flex items-center gap-1">
+              <button
+                onClick={() => setLeftCollapsed(!leftCollapsed)}
+                className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+                style={{
+                  background: leftCollapsed ? theme.colors.primary : theme.colors.secondary,
+                  color: theme.colors.textOnPrimary,
+                }}
+                title={leftCollapsed ? 'Expand left panel' : 'Collapse left panel'}
+              >
+                {leftCollapsed ? (
+                  <PanelLeftOpen className="w-4 h-4" />
+                ) : (
+                  <PanelLeftClose className="w-4 h-4" />
+                )}
+              </button>
+              <button
+                onClick={() => setLayout(prev => ({ ...prev, middle: prev.right, right: prev.middle }))}
+                className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+                style={{
+                  background: theme.colors.secondary,
+                  color: theme.colors.text,
+                }}
+                title="Swap middle and right panels"
+              >
+                <ArrowLeftRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setRightCollapsed(!rightCollapsed)}
+                className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+                style={{
+                  background: rightCollapsed ? theme.colors.primary : theme.colors.secondary,
+                  color: theme.colors.textOnPrimary,
+                }}
+                title={rightCollapsed ? 'Expand right panel' : 'Collapse right panel'}
+              >
+                {rightCollapsed ? (
+                  <PanelRightOpen className="w-4 h-4" />
+                ) : (
+                  <PanelRightClose className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+
+            {/* User Avatar Menu */}
+            <UserAvatarMenu />
+          </div>
+        </header>
         <div className="flex-1 overflow-hidden">
         {isMobile ? (
           <ResponsiveConfigurablePanelLayout
@@ -384,6 +628,435 @@ function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: Owne
 
         {/* Global Command Palette (Cmd+Shift+P) */}
         <GlobalCommandPalette events={events} />
+
+        {/* Sidebar Overlay */}
+        {sidebarOpen && (
+          <>
+            {/* Backdrop */}
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                zIndex: 50,
+              }}
+              onClick={() => setSidebarOpen(false)}
+            />
+
+            {/* Sidebar */}
+            <div
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                bottom: 0,
+                width: '400px',
+                backgroundColor: theme.colors.background,
+                borderRight: `1px solid ${theme.colors.border}`,
+                zIndex: 51,
+                display: 'flex',
+                flexDirection: 'column',
+                animation: 'slideIn 0.2s ease-out',
+              }}
+            >
+              {/* Sidebar Header */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '16px 20px',
+                  borderBottom: `1px solid ${theme.colors.border}`,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {user?.avatar_url && (
+                    <img
+                      src={user.avatar_url}
+                      alt={user.name || user.login}
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: '50%',
+                        border: `2px solid ${theme.colors.border}`,
+                      }}
+                    />
+                  )}
+                  <div>
+                    <div style={{ fontSize: `${theme.fontSizes[2]}px`, fontWeight: theme.fontWeights.semibold, color: theme.colors.text }}>
+                      {user?.name || user?.login || 'User'}
+                    </div>
+                    {user?.login && user?.name && (
+                      <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted }}>
+                        @{user.login}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    color: theme.colors.textMuted,
+                    borderRadius: '4px',
+                  }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Home Link */}
+              <Link
+                href="/"
+                onClick={() => setSidebarOpen(false)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 20px',
+                  color: theme.colors.text,
+                  textDecoration: 'none',
+                  borderBottom: `1px solid ${theme.colors.border}`,
+                }}
+              >
+                <Home size={16} />
+                <span style={{ fontSize: `${theme.fontSizes[1]}px` }}>Home</span>
+              </Link>
+
+              {/* Tab Header */}
+              <div style={{ display: 'flex', gap: '4px', padding: '16px 20px 12px', flexWrap: 'wrap' }}>
+                {(['recent', 'collections', 'following', 'starred'] as const).map((tab) => {
+                  const tabConfig = {
+                    recent: { icon: Clock, label: 'Recent' },
+                    collections: { icon: FolderOpen, label: 'Collections' },
+                    following: { icon: Users, label: 'Following' },
+                    starred: { icon: Star, label: 'Starred' },
+                  };
+                  const { icon: Icon, label } = tabConfig[tab];
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => setSidebarTab(tab)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 12px',
+                        fontSize: `${theme.fontSizes[1]}px`,
+                        fontWeight: theme.fontWeights.semibold,
+                        color: sidebarTab === tab ? theme.colors.text : theme.colors.textMuted,
+                        backgroundColor: sidebarTab === tab ? theme.colors.surface : 'transparent',
+                        border: sidebarTab === tab ? `1px solid ${theme.colors.border}` : '1px solid transparent',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontFamily: theme.fonts.body,
+                      }}
+                    >
+                      <Icon size={14} />
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Tab Content */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px' }}>
+                {sidebarTab === 'recent' && (
+                  <>
+                    {recentRepos.length > 0 && (
+                      <div style={{ marginBottom: '20px' }}>
+                        <div
+                          style={{
+                            fontSize: `${theme.fontSizes[0]}px`,
+                            fontWeight: theme.fontWeights.medium,
+                            color: theme.colors.textMuted,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            marginBottom: '8px',
+                          }}
+                        >
+                          Repositories
+                        </div>
+                        {recentRepos.slice(0, 5).map((repo) => (
+                          <Link
+                            key={`${repo.owner}/${repo.repo}`}
+                            href={`/${repo.owner}/${repo.repo}`}
+                            onClick={() => setSidebarOpen(false)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px',
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              textDecoration: 'none',
+                              color: theme.colors.text,
+                              marginBottom: '2px',
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.surface; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                          >
+                            <img
+                              src={`https://avatars.githubusercontent.com/${repo.owner}?size=64`}
+                              alt={repo.owner}
+                              style={{ width: 28, height: 28, borderRadius: '6px' }}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {repo.owner}/{repo.repo}
+                              </div>
+                              <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <GitFork size={10} />
+                                {formatTimeAgo(repo.visitedAt)}
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+
+                    {recentOwners.length > 0 && (
+                      <div>
+                        <div
+                          style={{
+                            fontSize: `${theme.fontSizes[0]}px`,
+                            fontWeight: theme.fontWeights.medium,
+                            color: theme.colors.textMuted,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            marginBottom: '8px',
+                          }}
+                        >
+                          Owners
+                        </div>
+                        {recentOwners.slice(0, 5).map((recentOwner) => (
+                          <Link
+                            key={recentOwner.owner}
+                            href={`/${recentOwner.owner}`}
+                            onClick={() => setSidebarOpen(false)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px',
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              textDecoration: 'none',
+                              color: theme.colors.text,
+                              marginBottom: '2px',
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.surface; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                          >
+                            <img
+                              src={`https://avatars.githubusercontent.com/${recentOwner.owner}?size=64`}
+                              alt={recentOwner.owner}
+                              style={{ width: 28, height: 28, borderRadius: '6px' }}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: `${theme.fontSizes[1]}px` }}>{recentOwner.owner}</div>
+                              <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <User size={10} />
+                                {formatTimeAgo(recentOwner.visitedAt)}
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+
+                    {recentRepos.length === 0 && recentOwners.length === 0 && (
+                      <div style={{ textAlign: 'center', padding: '32px 16px', color: theme.colors.textMuted }}>
+                        <Clock size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                        <p style={{ margin: 0, fontSize: `${theme.fontSizes[1]}px` }}>No recent activity</p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {sidebarTab === 'collections' && (
+                  <>
+                    {userCollections.collections.length > 0 ? (
+                      userCollections.collections.map((collection) => {
+                        const IconComponent = collection.icon ? iconMap[collection.icon] : null;
+                        const repoCount = userCollections.getCollectionRepositories(collection.id).length;
+                        return (
+                          <Link
+                            key={collection.id}
+                            href={`/library?collection=${collection.id}`}
+                            onClick={() => setSidebarOpen(false)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px',
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              textDecoration: 'none',
+                              color: theme.colors.text,
+                              marginBottom: '2px',
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.surface; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                          >
+                            <div
+                              style={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: '6px',
+                                backgroundColor: theme.colors.surface,
+                                border: `1px solid ${theme.colors.border}`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              {IconComponent ? (
+                                <IconComponent size={14} style={{ color: theme.colors.textMuted }} />
+                              ) : (
+                                <FolderOpen size={14} style={{ color: theme.colors.textMuted }} />
+                              )}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {collection.name}
+                              </div>
+                              <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted }}>
+                                {repoCount} {repoCount === 1 ? 'repo' : 'repos'}
+                              </div>
+                            </div>
+                          </Link>
+                        );
+                      })
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '32px 16px', color: theme.colors.textMuted }}>
+                        <Library size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                        <p style={{ margin: 0, fontSize: `${theme.fontSizes[1]}px`, marginBottom: '16px' }}>No collections yet</p>
+                        <Link
+                          href="/library"
+                          onClick={() => setSidebarOpen(false)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '8px 16px',
+                            fontSize: `${theme.fontSizes[1]}px`,
+                            fontWeight: theme.fontWeights.semibold,
+                            color: theme.colors.background,
+                            backgroundColor: theme.colors.text,
+                            borderRadius: '6px',
+                            textDecoration: 'none',
+                          }}
+                        >
+                          Create Collection
+                          <ArrowRight size={14} />
+                        </Link>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {sidebarTab === 'following' && (
+                  <>
+                    {followingUsers.length > 0 ? (
+                      followingUsers.map((followedUser) => (
+                        <Link
+                          key={followedUser.id}
+                          href={`/${followedUser.login}`}
+                          onClick={() => setSidebarOpen(false)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            textDecoration: 'none',
+                            color: theme.colors.text,
+                            marginBottom: '2px',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.surface; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          <img
+                            src={followedUser.avatar_url}
+                            alt={followedUser.login}
+                            style={{ width: 28, height: 28, borderRadius: '50%' }}
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {followedUser.name || followedUser.login}
+                            </div>
+                            <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted }}>
+                              @{followedUser.login}
+                            </div>
+                          </div>
+                        </Link>
+                      ))
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '32px 16px', color: theme.colors.textMuted }}>
+                        <Users size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                        <p style={{ margin: 0, fontSize: `${theme.fontSizes[1]}px` }}>Not following anyone yet</p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {sidebarTab === 'starred' && (
+                  <>
+                    {starredRepos.length > 0 ? (
+                      starredRepos.map((repo) => (
+                        <Link
+                          key={repo.id}
+                          href={`/${repo.full_name}`}
+                          onClick={() => setSidebarOpen(false)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            textDecoration: 'none',
+                            color: theme.colors.text,
+                            marginBottom: '2px',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.surface; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          <img
+                            src={repo.owner.avatar_url}
+                            alt={repo.owner.login}
+                            style={{ width: 28, height: 28, borderRadius: '6px' }}
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {repo.full_name}
+                            </div>
+                            <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Star size={10} />
+                              {repo.stargazers_count.toLocaleString()}
+                            </div>
+                          </div>
+                        </Link>
+                      ))
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '32px 16px', color: theme.colors.textMuted }}>
+                        <Star size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                        <p style={{ margin: 0, fontSize: `${theme.fontSizes[1]}px` }}>No starred repos yet</p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+
+            <style>{`
+              @keyframes slideIn {
+                from { transform: translateX(-100%); }
+                to { transform: translateX(0); }
+              }
+            `}</style>
+          </>
+        )}
     </div>
   );
 }
