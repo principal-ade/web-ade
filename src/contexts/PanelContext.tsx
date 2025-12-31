@@ -340,6 +340,21 @@ interface PrFilesSliceData {
   error?: string;
 }
 
+interface CommitFilesSliceData {
+  filesByStatus: {
+    added: string[];
+    modified: string[];
+    removed: string[];
+    renamed: string[];
+  };
+  commitHash: string | null;
+  stats?: {
+    total: number;
+    additions: number;
+    deletions: number;
+  };
+}
+
 interface PanelProviderProps {
   children: ReactNode;
   workspace?: WorkspaceMetadata;
@@ -662,6 +677,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const [prFilesLoading, setPrFilesLoading] = useState(false);
   const [prFilesError, setPrFilesError] = useState<Error | null>(null);
   const [selectedPrNumber, setSelectedPrNumber] = useState<number | null>(null);
+
+  // State for commit files (files changed in selected commit - for File-City visualization)
+  const [commitFilesData, setCommitFilesData] = useState<CommitFilesSliceData | null>(null);
 
   // State for user GitHub data (for GitHubStarredPanel and GitHubProjectsPanel)
   interface UserGitHubData {
@@ -1719,6 +1737,19 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         },
       ],
       [
+        'commitFiles',
+        {
+          scope: 'repository',
+          name: 'commitFiles',
+          data: commitFilesData,
+          loading: false,
+          error: null,
+          refresh: async () => {
+            // Commit files are populated via events, no direct refresh
+          },
+        },
+      ],
+      [
         'githubStarred',
         {
           scope: 'global',
@@ -2007,6 +2038,15 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     });
   }
 
+  // Update commitFiles slice with data (for File-City commit visualization)
+  const commitFilesSlice = slicesRef.current.get('commitFiles');
+  if (commitFilesSlice) {
+    slicesRef.current.set('commitFiles', {
+      ...commitFilesSlice,
+      data: commitFilesData,
+    });
+  }
+
   // Update githubStarred slice with fetched data
   const starredSlice = slicesRef.current.get('githubStarred');
   if (starredSlice) {
@@ -2091,6 +2131,44 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     };
   }, [events, githubRepo, fetchPrFiles, clearPrFiles]);
 
+  // Listen for commit-detail:loaded events to update commit files for File-City visualization
+  useEffect(() => {
+    const unsubscribeLoaded = events.on('git-panels.commit-detail:loaded', (event) => {
+      const payload = event.payload as {
+        commit?: {
+          hash: string;
+          files?: Array<{ filename: string; status: string; additions: number; deletions: number }>;
+          stats?: { total: number; additions: number; deletions: number };
+        };
+      };
+      const commit = payload?.commit;
+      if (commit && commit.files) {
+        console.log('[PanelContext] Commit detail loaded, updating commit files');
+        const filesByStatus = {
+          added: commit.files.filter(f => f.status === 'added').map(f => f.filename),
+          modified: commit.files.filter(f => f.status === 'modified').map(f => f.filename),
+          removed: commit.files.filter(f => f.status === 'removed').map(f => f.filename),
+          renamed: commit.files.filter(f => f.status === 'renamed').map(f => f.filename),
+        };
+        setCommitFilesData({
+          filesByStatus,
+          commitHash: commit.hash,
+          stats: commit.stats,
+        });
+      }
+    });
+
+    const unsubscribeDeselect = events.on('git-panels.commit:deselected', () => {
+      console.log('[PanelContext] Commit deselected, clearing files');
+      setCommitFilesData(null);
+    });
+
+    return () => {
+      unsubscribeLoaded();
+      unsubscribeDeselect();
+    };
+  }, [events]);
+
   // Track previous color mode for restoring when PR is deselected
   const previousColorModeRef = useRef<string | null>(null);
 
@@ -2127,6 +2205,50 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       });
     }
   }, [prFilesData, selectedColorMode, events]);
+
+  // Track previous color mode for restoring when commit is deselected
+  const previousCommitColorModeRef = useRef<string | null>(null);
+
+  // Auto-switch to 'commit' color mode when commit files are loaded
+  useEffect(() => {
+    if (commitFilesData && commitFilesData.commitHash) {
+      const totalFiles = commitFilesData.filesByStatus.added.length +
+        commitFilesData.filesByStatus.modified.length +
+        commitFilesData.filesByStatus.removed.length +
+        commitFilesData.filesByStatus.renamed.length;
+
+      if (totalFiles > 0) {
+        // Save current color mode before switching
+        if (selectedColorMode !== 'commit') {
+          previousCommitColorModeRef.current = selectedColorMode;
+        }
+        // Switch to commit color mode
+        console.log('[PanelContext] Commit files loaded, switching to commit color mode');
+        setEnabledColorModes(['commit']);
+        setSelectedColorMode('commit');
+        // Emit event so File-City can react to commit files change
+        events.emit({
+          type: 'commitFiles:updated',
+          source: 'panel-context',
+          timestamp: Date.now(),
+          payload: { files: commitFilesData.filesByStatus, commitHash: commitFilesData.commitHash },
+        });
+      }
+    } else if (!commitFilesData && previousCommitColorModeRef.current) {
+      // Commit deselected - restore previous color mode
+      console.log('[PanelContext] Commit deselected, restoring color mode to:', previousCommitColorModeRef.current);
+      setEnabledColorModes([previousCommitColorModeRef.current]);
+      setSelectedColorMode(previousCommitColorModeRef.current);
+      previousCommitColorModeRef.current = null;
+      // Emit event so File-City can clear commit highlights
+      events.emit({
+        type: 'commitFiles:cleared',
+        source: 'panel-context',
+        timestamp: Date.now(),
+        payload: {},
+      });
+    }
+  }, [commitFilesData, selectedColorMode, events]);
 
   // Refresh function - use slicesRef instead of slices state
   const refresh = useCallback(
