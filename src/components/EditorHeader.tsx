@@ -1,13 +1,14 @@
 'use client';
 
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Edit2, Palette, GitCommit, ArrowLeftRight, Sparkles, X } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Edit2, Palette, GitCommit, ArrowLeftRight, Sparkles, X, Star } from 'lucide-react';
 import { UserAvatarMenu } from './UserAvatarMenu';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { usePresenceData } from '@/hooks/usePresenceData';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Logo } from '@principal-ai/logo-component';
 import { LocalFolderButton } from './LocalFolderButton';
 
@@ -68,9 +69,12 @@ export function EditorHeader({
   const { theme } = useTheme();
   const { cycleTheme, currentThemeName } = useGlobalTheme();
   const pathname = usePathname();
+  const { isAuthenticated } = useAuth();
   const [repositoryName, setRepositoryName] = useState<{ owner: string; repo: string } | null>(null);
   const [ownerOnly, setOwnerOnly] = useState<string | null>(null);
   const [collectionId, setCollectionId] = useState<string | null>(null);
+  const [isStarred, setIsStarred] = useState(false);
+  const [isStarLoading, setIsStarLoading] = useState(false);
 
   // Extract repository name, owner, or collection from URL
   useEffect(() => {
@@ -107,6 +111,49 @@ export function EditorHeader({
   // Keep connection active even though UI is hidden
   usePresenceData();
 
+  // Fetch starred status when on a repo page and user is authenticated
+  useEffect(() => {
+    if (!repositoryName || !isAuthenticated) {
+      setIsStarred(false);
+      return;
+    }
+
+    const fetchStarredStatus = async () => {
+      try {
+        const response = await fetch(`/api/github/star/${repositoryName.owner}/${repositoryName.repo}`);
+        if (response.ok) {
+          const data = await response.json();
+          setIsStarred(data.starred);
+        }
+      } catch (error) {
+        console.error('Failed to fetch starred status:', error);
+      }
+    };
+
+    fetchStarredStatus();
+  }, [repositoryName, isAuthenticated]);
+
+  // Toggle star status
+  const handleToggleStar = useCallback(async () => {
+    if (!repositoryName || isStarLoading) return;
+
+    setIsStarLoading(true);
+    try {
+      const method = isStarred ? 'DELETE' : 'PUT';
+      const response = await fetch(`/api/github/star/${repositoryName.owner}/${repositoryName.repo}`, {
+        method,
+      });
+
+      if (response.ok) {
+        setIsStarred(!isStarred);
+      }
+    } catch (error) {
+      console.error('Failed to toggle star:', error);
+    } finally {
+      setIsStarLoading(false);
+    }
+  }, [repositoryName, isStarred, isStarLoading]);
+
   return (
     <header
       className="h-14 flex items-center justify-between px-4 border-b relative z-50"
@@ -133,6 +180,25 @@ export function EditorHeader({
             >
               {repositoryName.repo}
             </a>
+            {/* Star button - only show for authenticated users */}
+            {isAuthenticated && (
+              <button
+                onClick={handleToggleStar}
+                disabled={isStarLoading}
+                className="flex items-center justify-center w-7 h-7 rounded-md transition-all hover:opacity-80 disabled:opacity-50"
+                style={{
+                  background: 'transparent',
+                  color: isStarred ? '#f59e0b' : theme.colors.textMuted,
+                }}
+                title={isStarred ? 'Unstar repository' : 'Star repository'}
+              >
+                <Star
+                  className="w-4 h-4"
+                  fill={isStarred ? '#f59e0b' : 'none'}
+                  strokeWidth={isStarred ? 0 : 2}
+                />
+              </button>
+            )}
           </div>
         )}
         {/* Show owner info on owner pages */}
