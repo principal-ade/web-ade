@@ -133,6 +133,7 @@ export function EditorHeader({
             >
               {repositoryName.repo}
             </a>
+            {currentRepoId && <LocalFolderButton currentRepoId={currentRepoId} />}
           </div>
         )}
         {/* Show selected repository on owner pages (owner info is now in sidebar) */}
@@ -421,11 +422,6 @@ export function EditorHeader({
             <Palette className="w-4 h-4" />
           </button>
         )}
-
-        {/* TODO: Connection indicator hidden - finding new placement */}
-
-        {/* Local Folder Button - shown when on a repo page */}
-        {currentRepoId && <LocalFolderButton currentRepoId={currentRepoId} />}
 
         {/* User Avatar Menu */}
         <UserAvatarMenu />

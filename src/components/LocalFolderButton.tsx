@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Folder, FolderOpen, X, AlertTriangle } from 'lucide-react';
+import { Github, HardDrive, X, AlertTriangle } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useLocalFileSystem } from '@/contexts/LocalFileSystemContext';
 
@@ -38,15 +38,20 @@ export function LocalFolderButton({ currentRepoId }: LocalFolderButtonProps) {
     type: null,
   });
 
-  const handleClick = useCallback(async () => {
-    if (adapter) {
-      // Already attached - show disconnect confirmation
-      setDialog({
-        isOpen: true,
-        type: 'disconnect',
-      });
-      return;
-    }
+  const isLocal = !!adapter;
+
+  const handleGitHubClick = useCallback(async () => {
+    if (!adapter) return; // Already on GitHub
+
+    // Show disconnect confirmation
+    setDialog({
+      isOpen: true,
+      type: 'disconnect',
+    });
+  }, [adapter]);
+
+  const handleLocalClick = useCallback(async () => {
+    if (adapter) return; // Already on Local
 
     // Pick a directory
     const result = await pickDirectory(currentRepoId);
@@ -110,60 +115,81 @@ export function LocalFolderButton({ currentRepoId }: LocalFolderButtonProps) {
   // Don't render if not supported
   if (!isSupported) {
     return (
-      <button
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all opacity-50 cursor-not-allowed"
+      <div
+        className="flex items-center rounded-md text-xs opacity-50"
         style={{
           background: theme.colors.secondary,
-          color: theme.colors.textMuted,
           border: `1px solid ${theme.colors.border}`,
         }}
         title="Local folder access requires Chrome or Edge browser"
-        disabled
       >
-        <Folder className="w-4 h-4" />
-        <span className="hidden sm:inline">Local</span>
-      </button>
+        <span
+          className="flex items-center gap-1 px-2 py-1 rounded-l-md"
+          style={{
+            background: theme.colors.primary,
+            color: theme.colors.textOnPrimary,
+          }}
+        >
+          <Github className="w-3 h-3" />
+          GitHub
+        </span>
+        <span
+          className="flex items-center gap-1 px-2 py-1 rounded-r-md"
+          style={{
+            color: theme.colors.textMuted,
+          }}
+        >
+          <HardDrive className="w-3 h-3" />
+          Local
+        </span>
+      </div>
     );
   }
 
   return (
     <>
-      {/* Main Button */}
-      <button
-        onClick={handleClick}
-        disabled={isLoading}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
+      {/* Toggle Switch */}
+      <div
+        className="flex items-center rounded-md text-xs"
         style={{
-          background: adapter ? theme.colors.success : theme.colors.secondary,
-          color: adapter ? theme.colors.textOnPrimary : theme.colors.text,
-          border: `1px solid ${adapter ? theme.colors.success : theme.colors.border}`,
+          background: theme.colors.secondary,
+          border: `1px solid ${theme.colors.border}`,
           opacity: isLoading ? 0.7 : 1,
         }}
-        title={
-          adapter
-            ? `Local folder: ${folderName} (click to disconnect)`
-            : 'Open local folder'
-        }
       >
-        {adapter ? (
-          <FolderOpen className="w-4 h-4" />
-        ) : (
-          <Folder className="w-4 h-4" />
-        )}
-        <span className="hidden sm:inline">
-          {adapter ? folderName : 'Local'}
-        </span>
-        {adapter && (
-          <span
-            className="ml-1 px-1.5 py-0.5 text-xs rounded-full"
-            style={{
-              background: 'rgba(255,255,255,0.2)',
-            }}
-          >
-            Active
-          </span>
-        )}
-      </button>
+        <button
+          onClick={handleGitHubClick}
+          disabled={isLoading || !isLocal}
+          className="flex items-center gap-1 px-2 py-1 rounded-l-md transition-all"
+          style={{
+            background: !isLocal ? theme.colors.primary : 'transparent',
+            color: !isLocal ? theme.colors.textOnPrimary : theme.colors.text,
+            cursor: isLocal ? 'pointer' : 'default',
+          }}
+          title={isLocal ? 'Switch to GitHub' : 'Currently viewing from GitHub'}
+        >
+          <Github className="w-3 h-3" />
+          <span className="hidden sm:inline">GitHub</span>
+        </button>
+        <button
+          onClick={handleLocalClick}
+          disabled={isLoading}
+          className="flex items-center gap-1 px-2 py-1 rounded-r-md transition-all"
+          style={{
+            background: isLocal ? theme.colors.primary : 'transparent',
+            color: isLocal ? theme.colors.textOnPrimary : theme.colors.text,
+            cursor: !isLocal ? 'pointer' : 'default',
+          }}
+          title={
+            isLocal
+              ? `Local folder: ${folderName}`
+              : 'Connect local folder'
+          }
+        >
+          <HardDrive className="w-3 h-3" />
+          <span className="hidden sm:inline">Local</span>
+        </button>
+      </div>
 
       {/* Error Toast */}
       {error && (
@@ -204,14 +230,13 @@ export function LocalFolderButton({ currentRepoId }: LocalFolderButtonProps) {
                   className="text-lg font-semibold mb-2"
                   style={{ color: theme.colors.text }}
                 >
-                  Disconnect Local Folder?
+                  Switch to GitHub?
                 </h3>
                 <p
                   className="text-sm mb-4"
                   style={{ color: theme.colors.textMuted }}
                 >
-                  This will disconnect <strong>{folderName}</strong> from this
-                  repository. You can reconnect it anytime.
+                  This will disconnect <strong>{folderName}</strong> and switch back to viewing files from GitHub.
                 </p>
               </>
             )}
@@ -285,13 +310,13 @@ export function LocalFolderButton({ currentRepoId }: LocalFolderButtonProps) {
                 style={{
                   background:
                     dialog.type === 'disconnect'
-                      ? theme.colors.error
+                      ? theme.colors.primary
                       : theme.colors.primary,
                   color: theme.colors.textOnPrimary,
                 }}
               >
                 {dialog.type === 'disconnect'
-                  ? 'Disconnect'
+                  ? 'Switch to GitHub'
                   : dialog.type === 'different-repo'
                   ? 'Switch Repository'
                   : 'Attach Anyway'}
