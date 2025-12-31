@@ -205,32 +205,29 @@ export function LayoutSidebar({
       <div
         style={{
           borderTop: `1px solid ${theme.colors.border}`,
-          padding: '8px',
         }}
       >
         <button
           onClick={cycleTheme}
-          className="w-full flex items-center h-10 transition-colors rounded-lg"
+          className="w-full flex items-center h-10 transition-colors"
           style={{
-            minWidth: `${SIDEBAR_EXPANDED_WIDTH - 16}px`,
+            minWidth: `${SIDEBAR_EXPANDED_WIDTH}px`,
             background: 'transparent',
             color: theme.colors.text,
           }}
           title={collapsed ? `Theme: ${currentThemeName}` : 'Cycle theme'}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = theme.colors.backgroundSecondary;
-            e.currentTarget.style.color = theme.colors.primary;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.color = theme.colors.text;
           }}
         >
           <div
             className="flex items-center justify-center flex-shrink-0"
-            style={{ width: `${ICON_CONTAINER_WIDTH - 16}px` }}
+            style={{ width: `${ICON_CONTAINER_WIDTH}px` }}
           >
-            <Palette className="w-5 h-5" style={{ color: theme.colors.primary }} />
+            <Palette className="w-5 h-5" />
           </div>
           <span
             style={{
