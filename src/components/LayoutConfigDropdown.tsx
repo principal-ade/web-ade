@@ -17,37 +17,11 @@ export interface LayoutConfig {
 
 export const layoutConfigs: LayoutConfig[] = [
   {
-    id: 'git-history',
-    name: 'Change Log',
-    layout: {
-      left: 'commit-history',
-      middle: 'commit-detail',
-      right: 'file-city',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
-  },
-  {
     id: 'documentation',
     name: 'Documentation',
     layout: {
       left: 'docs',
       middle: 'markdown-viewer',
-      right: 'file-city',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
-  },
-  {
-    id: 'file-editor',
-    name: 'Files',
-    layout: {
-      left: 'git-changes',
-      middle: 'file-editor',
       right: 'file-city',
     },
     collapsed: {
@@ -69,11 +43,50 @@ export const layoutConfigs: LayoutConfig[] = [
     },
   },
   {
+    id: 'kanban',
+    name: 'Triaged',
+    layout: {
+      left: 'milestones',
+      middle: 'kanban',
+      right: 'task-detail',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
+  {
     id: 'pull-requests',
     name: 'Pull Requests',
     layout: {
       left: 'pull-requests',
       middle: 'pull-request-detail',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
+  {
+    id: 'git-history',
+    name: 'Change Log',
+    layout: {
+      left: 'commit-history',
+      middle: 'commit-detail',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
+  {
+    id: 'file-editor',
+    name: 'Files',
+    layout: {
+      left: 'git-changes',
+      middle: 'file-editor',
       right: 'file-city',
     },
     collapsed: {
@@ -88,19 +101,6 @@ export const layoutConfigs: LayoutConfig[] = [
       left: 'packages',
       middle: 'visual-validation',
       right: 'file-city',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
-  },
-  {
-    id: 'kanban',
-    name: 'Backlog.md',
-    layout: {
-      left: 'milestones',
-      middle: 'kanban',
-      right: 'task-detail',
     },
     collapsed: {
       left: false,
