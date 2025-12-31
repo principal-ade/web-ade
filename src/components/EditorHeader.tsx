@@ -117,9 +117,23 @@ export function EditorHeader({
     >
       {/* Left section: Logo/Avatar and Repository info */}
       <div className="flex items-center gap-3 flex-shrink-0 flex-1">
-        {/* Show repo name on repo pages (owner info is now in sidebar) */}
+        {/* Show repo name on repo pages with owner avatar */}
         {repositoryName && (
           <div className="flex items-center gap-2 flex-shrink-0">
+            <a
+              href={`https://github.com/${repositoryName.owner}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-opacity hover:opacity-80"
+              title={repositoryName.owner}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`https://github.com/${repositoryName.owner}.png?size=64`}
+                alt={repositoryName.owner}
+                className="w-6 h-6 rounded-full"
+              />
+            </a>
             <a
               href={`https://github.com/${repositoryName.owner}/${repositoryName.repo}`}
               target="_blank"
@@ -136,28 +150,63 @@ export function EditorHeader({
             {currentRepoId && <LocalFolderButton currentRepoId={currentRepoId} />}
           </div>
         )}
-        {/* Show selected repository on owner pages (owner info is now in sidebar) */}
+        {/* Show owner info on owner pages */}
+        {ownerOnly && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <a
+              href={`https://github.com/${ownerOnly}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-opacity hover:opacity-80"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`https://github.com/${ownerOnly}.png?size=64`}
+                alt={ownerOnly}
+                className="w-6 h-6 rounded-full"
+              />
+            </a>
+            <a
+              href={`https://github.com/${ownerOnly}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-base font-semibold transition-opacity hover:opacity-80"
+              style={{
+                fontFamily: theme.fonts.body,
+                color: theme.colors.text,
+                textDecoration: 'none',
+              }}
+            >
+              {ownerOnly}
+            </a>
+          </div>
+        )}
+        {/* Show selected repository on owner pages */}
         {ownerOnly && selectedRepository && (
           <div className="flex items-center gap-2 flex-shrink-0">
-            <div
-              className="flex items-center gap-1.5 text-base font-semibold"
-              style={{ fontFamily: theme.fonts.body }}
+            <span style={{ color: theme.colors.textMuted }}>/</span>
+            <Link
+              href={`/${selectedRepository}`}
+              className="text-base font-semibold transition-opacity hover:opacity-80"
+              style={{
+                fontFamily: theme.fonts.body,
+                color: theme.colors.text,
+                textDecoration: 'none',
+              }}
             >
-              <span style={{ color: theme.colors.text }}>
-                {selectedRepository.split('/')[1]}
-              </span>
-              <Link
-                href={`/${selectedRepository}`}
-                className="ml-2 px-2 py-0.5 rounded text-xs transition-all hover:opacity-80"
-                style={{
-                  background: theme.colors.primary,
-                  color: theme.colors.textOnPrimary,
-                  textDecoration: 'none',
-                }}
-              >
-                Open
-              </Link>
-            </div>
+              {selectedRepository.split('/')[1]}
+            </Link>
+            <Link
+              href={`/${selectedRepository}`}
+              className="px-2 py-0.5 rounded text-xs transition-all hover:opacity-80"
+              style={{
+                background: theme.colors.primary,
+                color: theme.colors.textOnPrimary,
+                textDecoration: 'none',
+              }}
+            >
+              Open
+            </Link>
           </div>
         )}
         {/* Collection name on left with logo */}
