@@ -74,6 +74,12 @@ const GitHubProjectsPanelLoader = dynamic(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as React.ComponentType<any>;
 
+const GitHubSearchPanelLoader = dynamic(
+  () => import('@industry-theme/github-panels').then((mod) => mod.GitHubSearchPanel),
+  { ssr: false }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) as React.ComponentType<any>;
+
 // Explore mode panels
 const PrincipalViewPanelLoader = dynamic(
   () => import('@industry-theme/principal-view-panels').then((mod) => mod.panels[0]!.component),
@@ -253,7 +259,7 @@ export function CollectionsPageContent({
     left: 'workspace-collection',
     middle: {
       type: 'tabs',
-      panels: ['github-starred', 'github-projects'],
+      panels: ['github-projects', 'github-starred', 'github-search'],
     },
     right: 'empty',
   };
@@ -381,6 +387,19 @@ export function CollectionsPageContent({
             actions={panelActions}
             events={events}
             defaultShowSearch={true}
+          />
+        </div>
+      ),
+    },
+    {
+      id: 'github-search',
+      label: 'Search',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <GitHubSearchPanelLoader
+            context={context}
+            actions={panelActions}
+            events={events}
           />
         </div>
       ),

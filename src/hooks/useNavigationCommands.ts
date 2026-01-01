@@ -42,7 +42,7 @@ export const navigationQuickCommands: QuickCommand[] = [
     name: 'collections',
     description: 'Open collections',
     category: 'Navigation',
-    aliases: ['lib', 'l', 'library'],
+    aliases: ['c', 'col'],
   },
   {
     name: 'repo',
@@ -155,8 +155,8 @@ export function useNavigationCommands(additionalOptions?: {
           return { success: true };
 
         case 'collections':
-        case 'library':
-        case 'lib':
+        case 'col':
+        case 'c':
           navigate('/collections');
           return { success: true };
 
