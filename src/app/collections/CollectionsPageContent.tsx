@@ -286,7 +286,7 @@ export function CollectionsPageContent({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Extended actions for panels with addToCollection
+  // Extended actions for panels with addToCollection and searchRepositories
   const panelActions = useMemo(() => {
     return {
       ...actions,
@@ -295,6 +295,17 @@ export function CollectionsPageContent({
             await onAddToCollection(repo.full_name);
           }
         : undefined,
+      searchRepositories: async (query: string, options?: { perPage?: number }) => {
+        const perPage = options?.perPage || 30;
+        const response = await fetch(
+          `/api/github/search?q=${encodeURIComponent(query)}&per_page=${perPage}`
+        );
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Search failed');
+        }
+        return response.json();
+      },
     };
   }, [actions, onAddToCollection]);
 
