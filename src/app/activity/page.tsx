@@ -46,7 +46,6 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
   const [leftCollapsed] = useState(false);
   const [rightCollapsed] = useState(false);
   const [viewedUser, setViewedUser] = useState(currentUser);
-  const [userInfo, setUserInfo] = useState<{ login: string; name: string | null; avatarUrl: string } | null>(null);
 
   const isViewingOther = viewedUser !== currentUser;
 
@@ -163,23 +162,6 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
     return () => unsubscribe();
   }, [events, selectedRepo, onRepoSelect]);
 
-  // Fetch user info for header when viewed user changes
-  useEffect(() => {
-    const fetchUserInfo = async () => {
-      try {
-        const response = await fetch(`/api/github/user/${viewedUser}/activity`);
-        if (response.ok) {
-          const data = await response.json();
-          setUserInfo(data.user);
-        }
-      } catch (err) {
-        console.error('Failed to fetch user info:', err);
-      }
-    };
-
-    fetchUserInfo();
-  }, [viewedUser]);
-
   // Detect mobile viewport
   useEffect(() => {
     const checkMobile = () => {
@@ -278,6 +260,16 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
             <Logo width={32} height={32} color={theme.colors.primary} />
           </Link>
 
+          <span
+            className="text-base font-semibold"
+            style={{
+              fontFamily: theme.fonts.body,
+              color: theme.colors.text,
+            }}
+          >
+            Feed
+          </span>
+
           {/* Back button when viewing someone else */}
           {isViewingOther && (
             <button
@@ -294,62 +286,6 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
               <ArrowLeft className="w-3 h-3" />
               Back
             </button>
-          )}
-
-          {/* User info */}
-          {userInfo && (
-            <div className="flex items-center gap-2">
-              <a
-                href={`https://github.com/${userInfo.login}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="transition-opacity hover:opacity-80"
-              >
-                <img
-                  src={userInfo.avatarUrl}
-                  alt={userInfo.login}
-                  className="w-6 h-6 rounded-full"
-                />
-              </a>
-              <a
-                href={`https://github.com/${userInfo.login}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-base font-semibold transition-opacity hover:opacity-80"
-                style={{
-                  fontFamily: theme.fonts.body,
-                  color: theme.colors.text,
-                  textDecoration: 'none',
-                }}
-              >
-                {userInfo.name || userInfo.login}
-              </a>
-              <span
-                className="px-2 py-0.5 rounded text-xs"
-                style={{
-                  background: theme.colors.surface,
-                  color: theme.colors.textMuted,
-                  border: `1px solid ${theme.colors.border}`,
-                }}
-              >
-                {isViewingOther ? 'Viewing' : 'Activity'}
-              </span>
-            </div>
-          )}
-
-          {!userInfo && (
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5" style={{ color: theme.colors.textMuted }} />
-              <span
-                className="text-base font-semibold"
-                style={{
-                  fontFamily: theme.fonts.body,
-                  color: theme.colors.text,
-                }}
-              >
-                Activity
-              </span>
-            </div>
           )}
         </div>
 

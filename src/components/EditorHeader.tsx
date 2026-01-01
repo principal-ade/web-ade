@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Edit2, Palette, GitCommit, ArrowLeftRight, Sparkles, X, Star } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Edit2, Palette, GitCommit, ArrowLeftRight, Sparkles, X, Star, Rss } from 'lucide-react';
 import { UserAvatarMenu } from './UserAvatarMenu';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
@@ -284,20 +284,37 @@ export function EditorHeader({
             </div>
           </div>
         )}
-        {/* Gallery button - only show on home page */}
-        {!repositoryName && !ownerOnly && !collectionId && onToggleGallery && (
-          <button
-            onClick={onToggleGallery}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-all hover:opacity-80"
-            style={{
-              background: showGallery ? theme.colors.primary : theme.colors.surface,
-              color: showGallery ? theme.colors.textOnPrimary : theme.colors.text,
-              border: `1px solid ${showGallery ? theme.colors.primary : theme.colors.border}`,
-            }}
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Gallery</span>
-          </button>
+        {/* Feed and Gallery buttons - only show on home page */}
+        {!repositoryName && !ownerOnly && !collectionId && (
+          <div className="flex items-center gap-2">
+            <Link
+              href="/activity"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-all hover:opacity-80"
+              style={{
+                background: theme.colors.surface,
+                color: theme.colors.text,
+                border: `1px solid ${theme.colors.border}`,
+                textDecoration: 'none',
+              }}
+            >
+              <Rss className="w-4 h-4" />
+              <span>Feed</span>
+            </Link>
+            {onToggleGallery && (
+              <button
+                onClick={onToggleGallery}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-all hover:opacity-80"
+                style={{
+                  background: showGallery ? theme.colors.primary : theme.colors.surface,
+                  color: showGallery ? theme.colors.textOnPrimary : theme.colors.text,
+                  border: `1px solid ${showGallery ? theme.colors.primary : theme.colors.border}`,
+                }}
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Gallery</span>
+              </button>
+            )}
+          </div>
         )}
       </div>
 

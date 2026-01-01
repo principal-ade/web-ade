@@ -668,7 +668,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                       {/* Expanded issue body */}
                       {(event.type === 'issue_opened' || event.type === 'issue_closed') && expandedIssues.has(event.id) && (
                         <div
-                          className="mt-2 rounded-md overflow-hidden"
+                          className="mt-2 rounded-md overflow-hidden min-w-0"
                           style={{
                             border: `1px solid ${theme.colors.border}`,
                             background: theme.colors.surface,
@@ -685,13 +685,15 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                               </span>
                             </div>
                           ) : issueDetails[event.id]?.body ? (
-                            <div className="max-h-64 overflow-y-auto">
-                              <DocumentView
-                                content={issueDetails[event.id]!.body!}
-                                theme={theme}
-                                maxWidth="100%"
-                                transparentBackground
-                              />
+                            <div className="max-h-64 overflow-y-auto overflow-x-hidden">
+                              <div className="p-3 min-w-0 break-words" style={{ wordBreak: 'break-word' }}>
+                                <DocumentView
+                                  content={issueDetails[event.id]!.body!}
+                                  theme={theme}
+                                  maxWidth="100%"
+                                  transparentBackground
+                                />
+                              </div>
                             </div>
                           ) : (
                             <div
