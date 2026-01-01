@@ -32,6 +32,7 @@ export async function GET(
     // Get date filter from query params (default to 1 day ago)
     const searchParams = request.nextUrl.searchParams;
     const since = searchParams.get("since") || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const until = searchParams.get("until");
 
     const headers: Record<string, string> = {
       Accept: "application/vnd.github.v3+json",
@@ -42,10 +43,12 @@ export async function GET(
       headers["Authorization"] = `token ${token}`;
     }
 
-    const response = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/commits?author=${username}&since=${since}&per_page=20`,
-      { headers }
-    );
+    let url = `https://api.github.com/repos/${owner}/${repo}/commits?author=${username}&since=${since}&per_page=30`;
+    if (until) {
+      url += `&until=${until}`;
+    }
+
+    const response = await fetch(url, { headers });
 
     if (!response.ok) {
       return NextResponse.json(

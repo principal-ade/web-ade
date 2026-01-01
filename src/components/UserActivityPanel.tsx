@@ -184,8 +184,15 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
     setLoadingCommits((prev) => new Set(prev).add(eventId));
 
     try {
+      // Use the event timestamp to get commits from that day
+      const eventDate = new Date(event.timestamp);
+      const startOfDay = new Date(eventDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(eventDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
       const response = await fetch(
-        `/api/github/user/${targetUsername}/commits/${owner}/${repo}`
+        `/api/github/user/${targetUsername}/commits/${owner}/${repo}?since=${startOfDay.toISOString()}&until=${endOfDay.toISOString()}`
       );
       if (response.ok) {
         const data = await response.json();
