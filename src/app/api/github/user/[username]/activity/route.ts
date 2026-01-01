@@ -325,13 +325,17 @@ export async function GET(
     const activity = normalizeActivity(user, sevenDaysAgo);
 
     // Extract last 7 days of contributions from calendar
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     const allDays: DailyContribution[] = [];
     for (const week of user.contributionsCollection.contributionCalendar.weeks) {
       for (const day of week.contributionDays) {
-        allDays.push({
-          date: day.date,
-          count: day.contributionCount,
-        });
+        // Only include dates up to today (calendar includes future dates)
+        if (day.date <= today) {
+          allDays.push({
+            date: day.date,
+            count: day.contributionCount,
+          });
+        }
       }
     }
     // Sort by date descending and take last 7 days
