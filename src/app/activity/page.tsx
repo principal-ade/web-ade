@@ -15,10 +15,6 @@ import {
 } from '@principal-ade/panel-layouts';
 import '@principal-ade/panel-layouts/styles.css';
 import {
-  PanelLeftClose,
-  PanelLeftOpen,
-  PanelRightClose,
-  PanelRightOpen,
   Calendar,
   Home,
   ArrowLeft,
@@ -47,8 +43,8 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
   const [isMobile, setIsMobile] = useState(false);
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [rightCollapsed, setRightCollapsed] = useState(true);
+  const [leftCollapsed] = useState(false);
+  const [rightCollapsed] = useState(false);
   const [viewedUser, setViewedUser] = useState(currentUser);
   const [userInfo, setUserInfo] = useState<{ login: string; name: string | null; avatarUrl: string } | null>(null);
 
@@ -88,7 +84,6 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
         }
 
         onRepoSelect(payload.repository);
-        setRightCollapsed(false); // Expand right panel to show file-city
 
         // Emit repository:preview for file-city panel
         events.emit({
@@ -115,7 +110,6 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
       // Ensure the repo is selected first
       if (selectedRepo !== payload.repository) {
         onRepoSelect(payload.repository);
-        setRightCollapsed(false);
       }
 
       try {
@@ -361,40 +355,6 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
 
         {/* Right section */}
         <div className="flex items-center gap-3 flex-shrink-0 flex-1 justify-end">
-          {/* Panel collapse toggles */}
-          <div className="hidden md:flex items-center gap-1">
-            <button
-              onClick={() => setLeftCollapsed(!leftCollapsed)}
-              className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
-              style={{
-                background: leftCollapsed ? theme.colors.primary : theme.colors.secondary,
-                color: theme.colors.textOnPrimary,
-              }}
-              title={leftCollapsed ? 'Expand left panel' : 'Collapse left panel'}
-            >
-              {leftCollapsed ? (
-                <PanelLeftOpen className="w-4 h-4" />
-              ) : (
-                <PanelLeftClose className="w-4 h-4" />
-              )}
-            </button>
-            <button
-              onClick={() => setRightCollapsed(!rightCollapsed)}
-              className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
-              style={{
-                background: rightCollapsed ? theme.colors.primary : theme.colors.secondary,
-                color: theme.colors.textOnPrimary,
-              }}
-              title={rightCollapsed ? 'Expand right panel' : 'Collapse right panel'}
-            >
-              {rightCollapsed ? (
-                <PanelRightOpen className="w-4 h-4" />
-              ) : (
-                <PanelRightClose className="w-4 h-4" />
-              )}
-            </button>
-          </div>
-
           {/* Navigation links */}
           <Link
             href={`/${viewedUser}`}
@@ -421,18 +381,18 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
             panels={panels}
             layout={layout}
             defaultSizes={{
-              left: 25,
-              middle: 50,
-              right: 25,
+              left: 35,
+              middle: 30,
+              right: 35,
             }}
             minSizes={{
-              left: 15,
-              middle: 40,
-              right: 15,
+              left: 20,
+              middle: 20,
+              right: 20,
             }}
             collapsiblePanels={{
-              left: true,
-              right: true,
+              left: false,
+              right: false,
             }}
             collapsed={{
               left: leftCollapsed,
@@ -448,18 +408,18 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
             layout={layout}
             isEditMode={false}
             defaultSizes={{
-              left: 20,
-              middle: 60,
-              right: 20,
+              left: 35,
+              middle: 30,
+              right: 35,
             }}
             minSizes={{
-              left: 15,
-              middle: 40,
-              right: 15,
+              left: 20,
+              middle: 20,
+              right: 20,
             }}
             collapsiblePanels={{
-              left: true,
-              right: true,
+              left: false,
+              right: false,
             }}
             collapsed={{
               left: leftCollapsed,
