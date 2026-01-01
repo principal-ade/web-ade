@@ -145,10 +145,12 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
         }
 
         const data = await response.json();
-        // Sort alphabetically by login (case-insensitive)
-        const sorted = (data.following || []).sort((a: FollowingUser, b: FollowingUser) =>
-          a.login.toLowerCase().localeCompare(b.login.toLowerCase())
-        );
+        // Sort alphabetically by name (fall back to login if no name)
+        const sorted = (data.following || []).sort((a: FollowingUser, b: FollowingUser) => {
+          const nameA = (a.name || a.login).toLowerCase();
+          const nameB = (b.name || b.login).toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
         setFollowing(sorted);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch following');
