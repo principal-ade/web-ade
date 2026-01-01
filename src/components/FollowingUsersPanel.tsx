@@ -23,7 +23,6 @@ interface FollowingUser {
   name: string | null;
   avatarUrl: string;
   bio: string | null;
-  contributions: DailyContribution[];
 }
 
 // Activity graph component showing 7 days of contributions as squares
@@ -63,6 +62,41 @@ function ActivityGraph({ contributions, theme }: { contributions: DailyContribut
       ))}
     </div>
   );
+}
+
+// Component that fetches and displays contributions for a single user
+function UserContributions({ login, theme }: { login: string; theme: ReturnType<typeof useTheme>['theme'] }) {
+  const [contributions, setContributions] = useState<DailyContribution[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchContributions = async () => {
+      try {
+        const response = await fetch(`/api/github/user/${login}/activity`);
+        if (!response.ok) return;
+
+        const data = await response.json();
+        if (!cancelled && data.contributions) {
+          setContributions(data.contributions);
+        }
+      } catch {
+        // Silently fail - contributions are optional
+      }
+    };
+
+    fetchContributions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [login]);
+
+  if (!contributions || contributions.length === 0) {
+    return null;
+  }
+
+  return <ActivityGraph contributions={contributions} theme={theme} />;
 }
 
 export function FollowingUsersPanel({ context: _context, actions: _actions, events, username, viewedUser }: FollowingUsersPanelProps) {
@@ -243,9 +277,7 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
                     >
                       @{user.login}
                     </div>
-                    {user.contributions && user.contributions.length > 0 && (
-                      <ActivityGraph contributions={user.contributions} theme={theme} />
-                    )}
+                    <UserContributions login={user.login} theme={theme} />
                   </div>
                   <a
                     href={`https://github.com/${user.login}`}

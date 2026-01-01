@@ -52,7 +52,7 @@ async function makeGitHubGraphQLRequest(
 }
 
 const FOLLOWING_QUERY = `
-  query Following($login: String!, $from: DateTime!) {
+  query Following($login: String!) {
     user(login: $login) {
       following(first: 50) {
         nodes {
@@ -60,33 +60,17 @@ const FOLLOWING_QUERY = `
           name
           avatarUrl
           bio
-          contributionsCollection(from: $from) {
-            contributionCalendar {
-              weeks {
-                contributionDays {
-                  contributionCount
-                  date
-                }
-              }
-            }
-          }
         }
       }
     }
   }
 `;
 
-export interface DailyContribution {
-  date: string;
-  count: number;
-}
-
 export interface FollowingUser {
   login: string;
   name: string | null;
   avatarUrl: string;
   bio: string | null;
-  contributions: DailyContribution[];
 }
 
 interface GraphQLFollowingUser {
@@ -94,31 +78,6 @@ interface GraphQLFollowingUser {
   name: string | null;
   avatarUrl: string;
   bio: string | null;
-  contributionsCollection: {
-    contributionCalendar: {
-      weeks: Array<{
-        contributionDays: Array<{
-          contributionCount: number;
-          date: string;
-        }>;
-      }>;
-    };
-  };
-}
-
-function extractLast7Days(user: GraphQLFollowingUser): DailyContribution[] {
-  const allDays: DailyContribution[] = [];
-  for (const week of user.contributionsCollection.contributionCalendar.weeks) {
-    for (const day of week.contributionDays) {
-      allDays.push({
-        date: day.date,
-        count: day.contributionCount,
-      });
-    }
-  }
-  // Sort by date descending and take last 7 days
-  allDays.sort((a, b) => b.date.localeCompare(a.date));
-  return allDays.slice(0, 7).reverse(); // Oldest to newest for display
 }
 
 export async function GET(
@@ -129,16 +88,9 @@ export async function GET(
     const { username } = await params;
     const userToken = await getGitHubToken();
 
-    // Calculate 14 days ago to ensure we get full week data
-    const from = new Date();
-    from.setDate(from.getDate() - 14);
-
     const data = await makeGitHubGraphQLRequest(
       FOLLOWING_QUERY,
-      {
-        login: username,
-        from: from.toISOString(),
-      },
+      { login: username },
       userToken
     );
 
@@ -149,7 +101,6 @@ export async function GET(
       name: user.name,
       avatarUrl: user.avatarUrl,
       bio: user.bio,
-      contributions: extractLast7Days(user),
     }));
 
     const jsonResponse = NextResponse.json({ following });
