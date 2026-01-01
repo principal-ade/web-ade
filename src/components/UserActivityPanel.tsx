@@ -353,7 +353,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
       )}
 
       {/* Timeline Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {Array.from(groupedEvents.entries()).map(([date, dateEvents]) => (
           <div key={date}>
             {/* Date Header */}
