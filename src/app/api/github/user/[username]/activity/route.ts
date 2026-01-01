@@ -297,9 +297,9 @@ export async function GET(
     const { username } = await params;
     const userToken = await getGitHubToken();
 
-    // Calculate 7 days ago
+    // Calculate 14 days ago to ensure we get full contribution calendar data
     const from = new Date();
-    from.setDate(from.getDate() - 7);
+    from.setDate(from.getDate() - 14);
 
     const data = await makeGitHubGraphQLRequest(
       USER_ACTIVITY_QUERY,
@@ -319,7 +319,10 @@ export async function GET(
       );
     }
 
-    const activity = normalizeActivity(user, from);
+    // Filter activity to last 7 days only
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const activity = normalizeActivity(user, sevenDaysAgo);
 
     // Extract last 7 days of contributions from calendar
     const allDays: DailyContribution[] = [];

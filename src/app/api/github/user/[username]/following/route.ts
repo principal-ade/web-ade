@@ -129,9 +129,9 @@ export async function GET(
     const { username } = await params;
     const userToken = await getGitHubToken();
 
-    // Calculate 7 days ago for contribution data
+    // Calculate 14 days ago to ensure we get full week data
     const from = new Date();
-    from.setDate(from.getDate() - 7);
+    from.setDate(from.getDate() - 14);
 
     const data = await makeGitHubGraphQLRequest(
       FOLLOWING_QUERY,
