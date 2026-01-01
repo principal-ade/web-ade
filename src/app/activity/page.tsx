@@ -436,7 +436,7 @@ export default function ActivityPage() {
             Home
           </Link>
           <Link
-            href="/api/auth/github"
+            href="/api/auth/login"
             className="px-4 py-2 rounded text-sm font-medium transition-all hover:opacity-80"
             style={{
               background: theme.colors.primary,
