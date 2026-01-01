@@ -93,6 +93,72 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
     return () => unsubscribe();
   }, [events, onRepoSelect]);
 
+  // Listen for commit selection to fetch details and show in file-city
+  useEffect(() => {
+    const unsubscribe = events.on('git-panels.commit-detail:selected', async (event) => {
+      const payload = event.payload as { hash: string; repository: string };
+      if (!payload?.hash || !payload?.repository) return;
+
+      const [owner, repo] = payload.repository.split('/');
+      if (!owner || !repo) return;
+
+      // Ensure the repo is selected first
+      if (selectedRepo !== payload.repository) {
+        onRepoSelect(payload.repository);
+        setRightCollapsed(false);
+      }
+
+      try {
+        const response = await fetch(
+          `/api/github/repo/${owner}/${repo}/commits/${payload.hash}`,
+          { credentials: 'include' }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch commit: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        // Transform GitHub API response to GitCommitDetail format
+        const commitDetail = {
+          hash: data.sha,
+          message: data.commit.message,
+          author: data.commit.author.name,
+          authorEmail: data.commit.author.email,
+          date: data.commit.author.date,
+          htmlUrl: data.html_url,
+          stats: data.stats ? {
+            total: data.stats.total,
+            additions: data.stats.additions,
+            deletions: data.stats.deletions,
+          } : undefined,
+          files: data.files?.map((f: { filename: string; status: string; additions: number; deletions: number; changes: number; previous_filename?: string }) => ({
+            filename: f.filename,
+            status: f.status,
+            additions: f.additions,
+            deletions: f.deletions,
+            changes: f.changes,
+            previous_filename: f.previous_filename,
+          })),
+          parents: data.parents?.map((p: { sha: string }) => p.sha),
+        };
+
+        // Send commit detail to trigger file-city visualization
+        events.emit({
+          type: 'git-panels.commit-detail:loaded',
+          source: 'activity-page',
+          timestamp: Date.now(),
+          payload: { commit: commitDetail },
+        });
+      } catch (err) {
+        console.error('[activity] Failed to fetch commit details:', err);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [events, selectedRepo, onRepoSelect]);
+
   // Fetch user info for header when viewed user changes
   useEffect(() => {
     const fetchUserInfo = async () => {

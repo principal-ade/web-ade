@@ -514,13 +514,22 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             </div>
                           ) : commitDetails[event.id]?.length ? (
                             commitDetails[event.id]!.map((commit) => (
-                              <a
+                              <button
                                 key={commit.sha}
-                                href={commit.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-start gap-2 py-1 hover:opacity-80 transition-opacity"
-                                style={{ textDecoration: 'none' }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // Emit event to select this commit for file-city visualization
+                                  events.emit({
+                                    type: 'git-panels.commit-detail:selected',
+                                    source: 'user-activity-panel',
+                                    timestamp: Date.now(),
+                                    payload: {
+                                      hash: commit.sha,
+                                      repository: event.repository,
+                                    },
+                                  });
+                                }}
+                                className="flex items-start gap-2 py-1 hover:opacity-80 transition-opacity w-full text-left"
                               >
                                 <code
                                   className="flex-shrink-0"
@@ -543,7 +552,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                                 >
                                   {commit.message}
                                 </span>
-                              </a>
+                              </button>
                             ))
                           ) : (
                             <div
