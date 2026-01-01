@@ -449,11 +449,10 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                 return (
                   <button
                     key={event.id}
-                    className="w-full flex items-start gap-3 px-3 py-2 group text-left transition-colors border-b"
+                    className="w-full flex items-start gap-4 px-4 py-4 group text-left transition-all border-b cursor-pointer"
                     style={{
                       background: isEventSelected ? theme.colors.primary + '15' : 'transparent',
                       borderColor: theme.colors.border,
-                      borderLeft: isEventSelected ? `3px solid ${theme.colors.primary}` : '3px solid transparent',
                     }}
                     onClick={() => {
                       setSelectedEventId(event.id);
@@ -472,11 +471,13 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                     onMouseEnter={(e) => {
                       if (!isEventSelected) {
                         e.currentTarget.style.background = theme.colors.surface;
+                        e.currentTarget.style.transform = 'translateX(4px)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!isEventSelected) {
                         e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.transform = 'translateX(0)';
                       }
                     }}
                   >
