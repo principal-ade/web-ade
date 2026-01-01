@@ -59,13 +59,13 @@ export const mockActivityEvents: ActivityEvent[] = [
     metadata: { prNumber: 15 },
   },
   {
-    id: 'issue-closed-octocat/spoon-knife-88',
-    type: 'issue_closed',
+    id: 'issue-opened-octocat/spoon-knife-88',
+    type: 'issue_opened',
     timestamp: new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString(), // 18 hours ago
     repository: 'octocat/spoon-knife',
     title: 'Feature request: export to PDF',
     url: 'https://github.com/octocat/spoon-knife/issues/88',
-    metadata: { issueNumber: 88 },
+    metadata: { issueNumber: 88, isClosed: true },
   },
 ];
 

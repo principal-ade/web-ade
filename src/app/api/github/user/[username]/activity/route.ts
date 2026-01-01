@@ -119,6 +119,15 @@ const USER_ACTIVITY_QUERY = `
           repository {
             nameWithOwner
           }
+          timelineItems(last: 1, itemTypes: [CLOSED_EVENT]) {
+            nodes {
+              ... on ClosedEvent {
+                actor {
+                  login
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -127,7 +136,7 @@ const USER_ACTIVITY_QUERY = `
 
 export interface ActivityEvent {
   id: string;
-  type: 'commit' | 'pr_merged' | 'pr_opened' | 'issue_opened' | 'issue_closed';
+  type: 'commit' | 'pr_merged' | 'pr_opened' | 'issue_opened';
   timestamp: string;
   repository: string;
   repositoryUrl?: string;
@@ -139,6 +148,8 @@ export interface ActivityEvent {
     deletions?: number;
     prNumber?: number;
     issueNumber?: number;
+    isClosed?: boolean;
+    closedBy?: string;
   };
 }
 
@@ -207,6 +218,11 @@ interface GraphQLUser {
       closedAt: string | null;
       url: string;
       repository: { nameWithOwner: string };
+      timelineItems: {
+        nodes: Array<{
+          actor?: { login: string };
+        }>;
+      };
     }>;
   };
 }
@@ -266,19 +282,24 @@ function normalizeActivity(user: GraphQLUser, fromDate: Date): ActivityEvent[] {
   }
 
   // Normalize issues (filter by date)
+  // Note: user.issues returns issues authored by the user, so always "opened"
   for (const issue of user.issues.nodes) {
-    const isClosed = issue.state === 'CLOSED';
-    const timestamp = isClosed && issue.closedAt ? issue.closedAt : issue.createdAt;
-    if (new Date(timestamp).getTime() < fromTime) continue;
+    if (new Date(issue.createdAt).getTime() < fromTime) continue;
+
+    // Extract who closed the issue from timeline events
+    const closedBy = issue.timelineItems?.nodes?.[0]?.actor?.login;
+
     events.push({
       id: `issue-${issue.repository.nameWithOwner}-${issue.number}`,
-      type: isClosed ? 'issue_closed' : 'issue_opened',
-      timestamp,
+      type: 'issue_opened',
+      timestamp: issue.createdAt,
       repository: issue.repository.nameWithOwner,
       title: issue.title,
       url: issue.url,
       metadata: {
         issueNumber: issue.number,
+        isClosed: issue.state === 'CLOSED',
+        closedBy,
       },
     });
   }

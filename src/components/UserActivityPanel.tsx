@@ -53,8 +53,6 @@ function getEventColor(type: ActivityEvent['type'], theme: ReturnType<typeof use
       return theme.colors.success;
     case 'issue_opened':
       return theme.colors.success;
-    case 'issue_closed':
-      return theme.colors.error;
     default:
       return theme.colors.textMuted;
   }
@@ -71,8 +69,6 @@ function getEventLabel(type: ActivityEvent['type'], repository: string) {
       return `Opened PR in ${repoName}`;
     case 'issue_opened':
       return `Opened issue in ${repoName}`;
-    case 'issue_closed':
-      return `Closed issue in ${repoName}`;
     default:
       return `Activity in ${repoName}`;
   }
@@ -470,14 +466,12 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                     }}
                     onMouseEnter={(e) => {
                       if (!isEventSelected) {
-                        e.currentTarget.style.background = theme.colors.surface;
-                        e.currentTarget.style.transform = 'translateX(4px)';
+                        e.currentTarget.style.background = theme.colors.primary + '10';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!isEventSelected) {
                         e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.style.transform = 'translateX(0)';
                       }
                     }}
                   >
@@ -512,10 +506,26 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                         >
                           {formatRelativeTime(event.timestamp)}
                         </span>
+                        {event.type === 'issue_opened' && event.metadata?.isClosed && (
+                          <span
+                            className="flex items-center gap-1"
+                            style={{
+                              fontSize: `${theme.fontSizes[0]}px`,
+                              fontFamily: theme.fonts.body,
+                              color: theme.colors.textMuted,
+                            }}
+                          >
+                            <span>•</span>
+                            <span style={{ color: theme.colors.error }}>Closed</span>
+                            {event.metadata.closedBy && (
+                              <span>by @{event.metadata.closedBy}</span>
+                            )}
+                          </span>
+                        )}
                       </div>
 
                       {/* Title or commit info */}
-                      {(event.type === 'issue_opened' || event.type === 'issue_closed') && event.title ? (
+                      {event.type === 'issue_opened' && event.title ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -668,7 +678,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                       )}
 
                       {/* Expanded issue body */}
-                      {(event.type === 'issue_opened' || event.type === 'issue_closed') && expandedIssues.has(event.id) && (
+                      {event.type === 'issue_opened' && expandedIssues.has(event.id) && (
                         <div
                           className="mt-2 rounded-md overflow-hidden min-w-0"
                           style={{
