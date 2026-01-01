@@ -5,11 +5,6 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
 import type { PanelContextValue, PanelActions, PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import {
-  GitCommit,
-  GitMerge,
-  GitPullRequest,
-  CircleDot,
-  CheckCircle2,
   Loader2,
   RefreshCw,
   ExternalLink,
@@ -31,25 +26,6 @@ export interface UserActivityPanelProps {
   actions: PanelActions;
   events: PanelEventEmitter;
   username?: string;
-}
-
-type FilterType = 'all' | 'commits' | 'prs' | 'issues';
-
-function getEventIcon(type: ActivityEvent['type']) {
-  switch (type) {
-    case 'commit':
-      return GitCommit;
-    case 'pr_merged':
-      return GitMerge;
-    case 'pr_opened':
-      return GitPullRequest;
-    case 'issue_opened':
-      return CircleDot;
-    case 'issue_closed':
-      return CheckCircle2;
-    default:
-      return CircleDot;
-  }
 }
 
 function getEventColor(type: ActivityEvent['type'], theme: ReturnType<typeof useTheme>['theme']) {
@@ -120,30 +96,12 @@ function groupEventsByDate(events: ActivityEvent[]): Map<string, ActivityEvent[]
   return groups;
 }
 
-function filterEvents(events: ActivityEvent[], filter: FilterType): ActivityEvent[] {
-  if (filter === 'all') return events;
-
-  return events.filter((event) => {
-    switch (filter) {
-      case 'commits':
-        return event.type === 'commit';
-      case 'prs':
-        return event.type === 'pr_merged' || event.type === 'pr_opened';
-      case 'issues':
-        return event.type === 'issue_opened' || event.type === 'issue_closed';
-      default:
-        return true;
-    }
-  });
-}
-
 export function UserActivityPanel({ context: _context, actions: _actions, events, username }: UserActivityPanelProps) {
   const { theme } = useTheme();
   const { user, isAuthenticated } = useAuth();
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<FilterType>('all');
   const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
   const [expandedCommits, setExpandedCommits] = useState<Set<string>>(new Set());
   const [commitDetails, setCommitDetails] = useState<Record<string, CommitDetails[]>>({});
@@ -230,22 +188,14 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
     }
   }, [expandedCommits, commitDetails, targetUsername]);
 
-  // Listen for filter events from ActivityFilterPanel
+  // Listen for repo filter events
   useEffect(() => {
-    const unsubscribers = [
-      events.on('activity:filter:type', (event) => {
-        const payload = event.payload as { filter: FilterType };
-        if (payload?.filter) {
-          setFilter(payload.filter);
-        }
-      }),
-      events.on('activity:filter:repo', (event) => {
-        const payload = event.payload as { repository: string | null };
-        setSelectedRepo(payload?.repository ?? null);
-      }),
-    ];
+    const unsubscribe = events.on('activity:filter:repo', (event) => {
+      const payload = event.payload as { repository: string | null };
+      setSelectedRepo(payload?.repository ?? null);
+    });
 
-    return () => unsubscribers.forEach((unsub) => unsub());
+    return () => unsubscribe();
   }, [events]);
 
   // Show auth prompt if no username provided and not authenticated
@@ -337,7 +287,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
   }
 
   // Apply filters
-  let filteredActivity = filterEvents(activity, filter);
+  let filteredActivity = activity;
   if (selectedRepo) {
     filteredActivity = filteredActivity.filter((e) => e.repository === selectedRepo);
   }
@@ -351,28 +301,6 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
         className="h-full w-full flex flex-col overflow-hidden"
         style={{ background: theme.colors.background }}
       >
-        {/* Filter Tabs */}
-        <div
-          className="flex items-center gap-1 p-2 border-b"
-          style={{ borderColor: theme.colors.border }}
-        >
-          {(['all', 'commits', 'prs', 'issues'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className="px-3 py-1.5 rounded transition-colors"
-              style={{
-                fontSize: `${theme.fontSizes[1]}px`,
-                fontFamily: theme.fonts.body,
-                background: filter === f ? theme.colors.primary : 'transparent',
-                color: filter === f ? theme.colors.textOnPrimary : theme.colors.textMuted,
-              }}
-            >
-              {f === 'all' ? 'All' : f === 'commits' ? 'Commits' : f === 'prs' ? 'PRs' : 'Issues'}
-            </button>
-          ))}
-        </div>
-
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="text-center" style={{ color: theme.colors.textMuted }}>
             <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -388,7 +316,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
               No Activity Found
             </h3>
             <p style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}>
-              No {filter === 'all' ? '' : filter + ' '}activity in the last 7 days
+              No activity in the last 7 days
               {selectedRepo ? ` for ${selectedRepo}` : ''}
             </p>
           </div>
@@ -402,30 +330,15 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
       className="h-full w-full flex flex-col overflow-hidden"
       style={{ background: theme.colors.background }}
     >
-      {/* Filter Tabs */}
-      <div
-        className="flex items-center gap-1 p-2 border-b"
-        style={{ borderColor: theme.colors.border }}
-      >
-        {(['all', 'commits', 'prs', 'issues'] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className="px-3 py-1.5 rounded transition-colors"
-            style={{
-              fontSize: `${theme.fontSizes[1]}px`,
-              fontFamily: theme.fonts.body,
-              background: filter === f ? theme.colors.primary : 'transparent',
-              color: filter === f ? theme.colors.textOnPrimary : theme.colors.textMuted,
-            }}
-          >
-            {f === 'all' ? 'All' : f === 'commits' ? 'Commits' : f === 'prs' ? 'PRs' : 'Issues'}
-          </button>
-        ))}
-        {selectedRepo && (
+      {/* Header with selected repo chip */}
+      {selectedRepo && (
+        <div
+          className="flex items-center gap-1 p-2 border-b"
+          style={{ borderColor: theme.colors.border }}
+        >
           <button
             onClick={() => setSelectedRepo(null)}
-            className="ml-auto px-2 py-1 rounded"
+            className="px-2 py-1 rounded"
             style={{
               fontSize: `${theme.fontSizes[1]}px`,
               fontFamily: theme.fonts.body,
@@ -436,13 +349,13 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
           >
             {selectedRepo.split('/')[1]} &times;
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Timeline Content */}
       <div className="flex-1 overflow-y-auto">
         {Array.from(groupedEvents.entries()).map(([date, dateEvents]) => (
-          <div key={date} className="border-b" style={{ borderColor: theme.colors.border }}>
+          <div key={date}>
             {/* Date Header */}
             <div
               className="px-3 py-2 sticky top-0"
@@ -458,16 +371,15 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
             </div>
 
             {/* Events for this date */}
-            <div className="px-3 py-1">
+            <div>
               {dateEvents.map((event) => {
-                const Icon = getEventIcon(event.type);
                 const color = getEventColor(event.type, theme);
 
                 return (
                   <button
                     key={event.id}
-                    className="w-full flex items-start gap-3 py-2 group text-left rounded transition-colors"
-                    style={{ background: 'transparent' }}
+                    className="w-full flex items-start gap-3 px-3 py-2 group text-left transition-colors border-b"
+                    style={{ background: 'transparent', borderColor: theme.colors.border }}
                     onClick={() => {
                       events.emit({
                         type: 'activity:item:selected',
@@ -487,13 +399,12 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                       e.currentTarget.style.background = 'transparent';
                     }}
                   >
-                    {/* Icon */}
-                    <div
-                      className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5"
-                      style={{ background: `${color}20` }}
-                    >
-                      <Icon className="w-3.5 h-3.5" style={{ color }} />
-                    </div>
+                    {/* Repo Owner Avatar */}
+                    <img
+                      src={`https://github.com/${event.repository.split('/')[0]}.png?size=48`}
+                      alt={event.repository.split('/')[0]}
+                      className="flex-shrink-0 w-6 h-6 rounded-full mt-0.5"
+                    />
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
