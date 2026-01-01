@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Edit2, Palette, GitCommit, ArrowLeftRight, Sparkles, X, Star, Rss } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Palette, GitCommit, ArrowLeftRight, Sparkles, X, Star, Rss } from 'lucide-react';
 import { UserAvatarMenu } from './UserAvatarMenu';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
@@ -9,7 +9,6 @@ import { usePathname } from 'next/navigation';
 import { usePresenceData } from '@/hooks/usePresenceData';
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Logo } from '@principal-ai/logo-component';
 import { LocalFolderButton } from './LocalFolderButton';
 
 interface EditorHeaderProps {
@@ -20,11 +19,6 @@ interface EditorHeaderProps {
   onToggleRight?: () => void;
   onSwapRightPanels?: () => void;
   selectedRepository?: string | null; // Format: "owner/repo"
-  // User collection actions
-  isUserCollection?: boolean;
-  collectionName?: string;
-  onAddRepository?: () => void;
-  onEditCollection?: () => void;
   // Commit actions
   pendingChangesCount?: number;
   onCommitClick?: () => void;
@@ -51,10 +45,6 @@ export function EditorHeader({
   onToggleRight,
   onSwapRightPanels,
   selectedRepository,
-  isUserCollection = false,
-  collectionName,
-  onAddRepository,
-  onEditCollection,
   pendingChangesCount = 0,
   onCommitClick,
   hideLeftToggle = false,
@@ -72,37 +62,27 @@ export function EditorHeader({
   const { isAuthenticated } = useAuth();
   const [repositoryName, setRepositoryName] = useState<{ owner: string; repo: string } | null>(null);
   const [ownerOnly, setOwnerOnly] = useState<string | null>(null);
-  const [collectionId, setCollectionId] = useState<string | null>(null);
   const [isStarred, setIsStarred] = useState(false);
   const [isStarLoading, setIsStarLoading] = useState(false);
 
-  // Extract repository name, owner, or collection from URL
+  // Extract repository name or owner from URL
   useEffect(() => {
     if (pathname) {
       const pathParts = pathname.split('/').filter(Boolean);
 
-      // Check for collection path: /collections/[id]
-      if (pathParts[0] === 'collections' && pathParts[1]) {
-        setRepositoryName(null);
-        setOwnerOnly(null);
-        setCollectionId(pathParts[1]);
-      }
       // Path format: /owner/repo
-      else if (pathParts.length >= 2 && pathParts[0] && pathParts[1]) {
+      if (pathParts.length >= 2 && pathParts[0] && pathParts[1]) {
         const owner = pathParts[0];
         const repo = pathParts[1];
         setRepositoryName({ owner, repo });
         setOwnerOnly(null);
-        setCollectionId(null);
       } else if (pathParts.length === 1 && pathParts[0]) {
         // Path format: /owner (owner page only)
         setRepositoryName(null);
         setOwnerOnly(pathParts[0]);
-        setCollectionId(null);
       } else {
         setRepositoryName(null);
         setOwnerOnly(null);
-        setCollectionId(null);
       }
     }
   }, [pathname]);
@@ -260,32 +240,8 @@ export function EditorHeader({
             </Link>
           </div>
         )}
-        {/* Collection name on left with logo */}
-        {collectionId && (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Link
-              href="/"
-              className="flex items-center transition-all hover:opacity-80"
-              title="Home"
-            >
-              <Logo width={32} height={32} color={theme.colors.primary} />
-            </Link>
-            <div
-              className="flex items-center gap-1.5 text-base font-semibold"
-              style={{ fontFamily: theme.fonts.body }}
-            >
-              <Link
-                href={`/collections/${collectionId}`}
-                className="transition-opacity hover:opacity-80"
-                style={{ color: theme.colors.text, textDecoration: 'none' }}
-              >
-                {collectionName || collectionId.replace('ws-', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-              </Link>
-            </div>
-          </div>
-        )}
         {/* Feed and Gallery buttons - only show on home page */}
-        {!repositoryName && !ownerOnly && !collectionId && (
+        {!repositoryName && !ownerOnly && (
           <div className="flex items-center gap-2">
             <Link
               href="/activity"
@@ -322,60 +278,9 @@ export function EditorHeader({
       <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center">
         {/* GitHub/Local toggle on repo pages */}
         {repositoryName && currentRepoId && <LocalFolderButton currentRepoId={currentRepoId} />}
-        {/* Selected repository on collection page */}
-        {collectionId && selectedRepository && (
-          <Link
-            href={`/${selectedRepository}`}
-            className="transition-opacity hover:opacity-80"
-            style={{
-              fontSize: theme.fontSizes[4],
-              fontWeight: theme.fontWeights.semibold,
-              fontFamily: theme.fonts.body,
-              color: theme.colors.text,
-              textDecoration: 'none',
-            }}
-          >
-            {selectedRepository.split('/')[1]}
-          </Link>
-        )}
       </div>
 
       <div className="flex items-center gap-3 flex-shrink-0 flex-1 justify-end">
-        {/* User collection action buttons */}
-        {isUserCollection && collectionId && (
-          <div className="flex items-center gap-2">
-            {onAddRepository && (
-              <button
-                onClick={onAddRepository}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
-                style={{
-                  background: theme.colors.primary,
-                  color: theme.colors.textOnPrimary,
-                }}
-                title="Add repository to collection"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Add Repo</span>
-              </button>
-            )}
-            {onEditCollection && (
-              <button
-                onClick={onEditCollection}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
-                style={{
-                  background: theme.colors.secondary,
-                  color: theme.colors.text,
-                  border: `1px solid ${theme.colors.border}`,
-                }}
-                title="Edit collection"
-              >
-                <Edit2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Edit</span>
-              </button>
-            )}
-          </div>
-        )}
-
         {/* TODO: Open in Desktop App button - temporarily hidden, will be added back later */}
         {/* {repositoryName && (
           <button
@@ -506,7 +411,7 @@ export function EditorHeader({
         </div>
 
         {/* Discord Link - only on home page */}
-        {!repositoryName && !ownerOnly && !collectionId && (
+        {!repositoryName && !ownerOnly && (
           <a
             href="https://discord.gg/G3qdcC2DXq"
             target="_blank"
@@ -530,7 +435,7 @@ export function EditorHeader({
         )}
 
         {/* Theme Switcher - only on home page */}
-        {!repositoryName && !ownerOnly && !collectionId && (
+        {!repositoryName && !ownerOnly && (
           <button
             onClick={cycleTheme}
             className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"

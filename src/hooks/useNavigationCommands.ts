@@ -71,19 +71,6 @@ export const navigationQuickCommands: QuickCommand[] = [
     ],
   },
   {
-    name: 'collection',
-    description: 'Navigate to a collection',
-    category: 'Navigation',
-    aliases: ['c', 'col'],
-    args: [
-      {
-        name: 'collection',
-        description: 'Collection ID or name',
-        required: true,
-      },
-    ],
-  },
-  {
     name: 'github',
     description: 'Open a GitHub URL',
     category: 'Navigation',
@@ -123,7 +110,6 @@ export const navigationQuickCommands: QuickCommand[] = [
 export function useNavigationCommands(additionalOptions?: {
   repositories?: string[];
   owners?: string[];
-  collections?: Array<{ id: string; name: string }>;
 }) {
   // Build quick commands with optional autocomplete data
   const quickCommands = useMemo(() => {
@@ -145,16 +131,6 @@ export function useNavigationCommands(additionalOptions?: {
           args: cmd.args?.map(arg => ({
             ...arg,
             options: additionalOptions.owners,
-          })),
-        };
-      }
-      if (cmd.name === 'collection' && additionalOptions.collections?.length) {
-        const collectionIds = additionalOptions.collections.map(c => c.id);
-        return {
-          ...cmd,
-          args: cmd.args?.map(arg => ({
-            ...arg,
-            options: collectionIds,
           })),
         };
       }
@@ -198,14 +174,6 @@ export function useNavigationCommands(additionalOptions?: {
             return { success: true };
           }
           return { success: false, error: 'Owner name required' };
-
-        case 'collection':
-        case 'col':
-          if (firstArg) {
-            navigate(`/collections/${firstArg}`);
-            return { success: true };
-          }
-          return { success: false, error: 'Collection ID required' };
 
         case 'github':
         case 'gh':
