@@ -57,6 +57,9 @@ const USER_ACTIVITY_QUERY = `
       login
       name
       avatarUrl
+      followers {
+        totalCount
+      }
 
       contributionsCollection(from: $from) {
         contributionCalendar {
@@ -176,6 +179,7 @@ export interface UserActivityResponse {
     login: string;
     name: string | null;
     avatarUrl: string;
+    followersCount: number;
   };
   activity: ActivityEvent[];
   contributions: DailyContribution[];
@@ -185,6 +189,9 @@ interface GraphQLUser {
   login: string;
   name: string | null;
   avatarUrl: string;
+  followers: {
+    totalCount: number;
+  };
   contributionsCollection: {
     contributionCalendar: {
       totalContributions: number;
@@ -385,6 +392,7 @@ export async function GET(
         login: user.login,
         name: user.name,
         avatarUrl: user.avatarUrl,
+        followersCount: user.followers?.totalCount ?? 0,
       },
       activity,
       contributions,

@@ -23,6 +23,7 @@ interface FollowingUser {
   name: string | null;
   avatarUrl: string;
   bio: string | null;
+  followersCount?: number;
 }
 
 // Activity graph component showing 7 days of contributions as squares
@@ -104,7 +105,7 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
   const [following, setFollowing] = useState<FollowingUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selfInfo, setSelfInfo] = useState<{ login: string; name: string | null; avatarUrl: string } | null>(null);
+  const [selfInfo, setSelfInfo] = useState<{ login: string; name: string | null; avatarUrl: string; followersCount?: number } | null>(null);
 
   // Fetch current user's info for the "You" entry
   useEffect(() => {
@@ -115,7 +116,12 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
         const response = await fetch(`/api/github/user/${username}/activity`);
         if (response.ok) {
           const data = await response.json();
-          setSelfInfo(data.user);
+          setSelfInfo({
+            login: data.user.login,
+            name: data.user.name,
+            avatarUrl: data.user.avatarUrl,
+            followersCount: data.user.followersCount,
+          });
         }
       } catch {
         // Silently fail - we can still show username
@@ -210,6 +216,82 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
       className="h-full w-full flex flex-col overflow-hidden"
       style={{ background: theme.colors.background }}
     >
+      {/* Current user (You) at the top */}
+      {selfInfo && (
+        <div className="p-2 border-b" style={{ borderColor: theme.colors.border }}>
+          <button
+            onClick={() => {
+              events.emit({
+                type: 'activity:view:user',
+                source: 'following-users-panel',
+                timestamp: Date.now(),
+                payload: { username: selfInfo.login },
+              });
+            }}
+            className="w-full flex items-center gap-3 p-2 rounded transition-colors hover:opacity-80 text-left"
+            style={{
+              background: viewedUser === selfInfo.login ? theme.colors.surface : 'transparent',
+              border: viewedUser === selfInfo.login ? `1px solid ${theme.colors.border}` : '1px solid transparent',
+            }}
+          >
+            <img
+              src={selfInfo.avatarUrl}
+              alt={selfInfo.login}
+              className="w-8 h-8 rounded-full flex-shrink-0"
+              style={{
+                boxShadow: viewedUser === selfInfo.login ? `0 0 0 2px ${theme.colors.primary}` : 'none',
+              }}
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span
+                  className="truncate"
+                  style={{
+                    fontSize: `${theme.fontSizes[2]}px`,
+                    fontWeight: theme.fontWeights.medium,
+                    fontFamily: theme.fonts.body,
+                    color: viewedUser === selfInfo.login ? theme.colors.primary : theme.colors.text,
+                  }}
+                >
+                  {selfInfo.name || selfInfo.login}
+                </span>
+                <span
+                  className="px-1.5 py-0.5 rounded text-xs"
+                  style={{
+                    background: theme.colors.primary + '20',
+                    color: theme.colors.primary,
+                    fontFamily: theme.fonts.body,
+                  }}
+                >
+                  You
+                </span>
+              </div>
+              {selfInfo.name && (
+                <div
+                  className="flex items-center gap-2"
+                  style={{
+                    fontSize: `${theme.fontSizes[1]}px`,
+                    fontFamily: theme.fonts.body,
+                    color: theme.colors.textMuted,
+                  }}
+                >
+                  <span className="truncate">@{selfInfo.login}</span>
+                  {selfInfo.followersCount !== undefined && (
+                    <span
+                      className="flex-shrink-0"
+                      title={`${selfInfo.followersCount.toLocaleString()} followers`}
+                    >
+                      · {selfInfo.followersCount.toLocaleString()}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            <UserContributions login={selfInfo.login} theme={theme} />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div
         className="flex items-center gap-2 p-3 border-b"
@@ -255,78 +337,6 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
           </div>
         ) : (
           <div className="p-2 space-y-1">
-            {/* Current user (You) at the top */}
-            {selfInfo && (
-              <>
-                <button
-                  onClick={() => {
-                    events.emit({
-                      type: 'activity:view:user',
-                      source: 'following-users-panel',
-                      timestamp: Date.now(),
-                      payload: { username: selfInfo.login },
-                    });
-                  }}
-                  className="w-full flex items-center gap-3 p-2 rounded transition-colors hover:opacity-80 text-left"
-                  style={{
-                    background: viewedUser === selfInfo.login ? theme.colors.surface : 'transparent',
-                    border: viewedUser === selfInfo.login ? `1px solid ${theme.colors.border}` : '1px solid transparent',
-                  }}
-                >
-                  <img
-                    src={selfInfo.avatarUrl}
-                    alt={selfInfo.login}
-                    className="w-8 h-8 rounded-full flex-shrink-0"
-                    style={{
-                      boxShadow: viewedUser === selfInfo.login ? `0 0 0 2px ${theme.colors.primary}` : 'none',
-                    }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="truncate"
-                        style={{
-                          fontSize: `${theme.fontSizes[2]}px`,
-                          fontWeight: theme.fontWeights.medium,
-                          fontFamily: theme.fonts.body,
-                          color: viewedUser === selfInfo.login ? theme.colors.primary : theme.colors.text,
-                        }}
-                      >
-                        {selfInfo.name || selfInfo.login}
-                      </span>
-                      <span
-                        className="px-1.5 py-0.5 rounded text-xs"
-                        style={{
-                          background: theme.colors.primary + '20',
-                          color: theme.colors.primary,
-                          fontFamily: theme.fonts.body,
-                        }}
-                      >
-                        You
-                      </span>
-                    </div>
-                    {selfInfo.name && (
-                      <div
-                        className="truncate"
-                        style={{
-                          fontSize: `${theme.fontSizes[1]}px`,
-                          fontFamily: theme.fonts.body,
-                          color: theme.colors.textMuted,
-                        }}
-                      >
-                        @{selfInfo.login}
-                      </div>
-                    )}
-                  </div>
-                  <UserContributions login={selfInfo.login} theme={theme} />
-                </button>
-                {/* Separator */}
-                <div
-                  className="my-2"
-                  style={{ borderBottom: `1px solid ${theme.colors.border}` }}
-                />
-              </>
-            )}
             {following.map((user) => {
               const isViewing = viewedUser === user.login;
               return (
@@ -367,14 +377,22 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
                       {user.name || user.login}
                     </div>
                     <div
-                      className="truncate"
+                      className="flex items-center gap-2"
                       style={{
                         fontSize: `${theme.fontSizes[1]}px`,
                         fontFamily: theme.fonts.body,
                         color: theme.colors.textMuted,
                       }}
                     >
-                      @{user.login}
+                      <span className="truncate">@{user.login}</span>
+                      {user.followersCount !== undefined && (
+                        <span
+                          className="flex-shrink-0"
+                          title={`${user.followersCount.toLocaleString()} followers`}
+                        >
+                          · {user.followersCount.toLocaleString()}
+                        </span>
+                      )}
                     </div>
                     <UserContributions login={user.login} theme={theme} />
                   </div>

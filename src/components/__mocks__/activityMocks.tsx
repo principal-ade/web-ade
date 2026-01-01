@@ -101,6 +101,7 @@ export const mockFollowingUsers = [
     avatarUrl: 'https://avatars.githubusercontent.com/u/2?v=4',
     bio: 'Co-founder of GitHub',
     contributions: generateMockContributions(5),
+    followersCount: 21500,
   },
   {
     login: 'mojombo',
@@ -108,6 +109,7 @@ export const mockFollowingUsers = [
     avatarUrl: 'https://avatars.githubusercontent.com/u/1?v=4',
     bio: 'Cofounder of GitHub & Chatterbug',
     contributions: generateMockContributions(8),
+    followersCount: 23800,
   },
   {
     login: 'pjhyett',
@@ -115,6 +117,7 @@ export const mockFollowingUsers = [
     avatarUrl: 'https://avatars.githubusercontent.com/u/3?v=4',
     bio: null,
     contributions: generateMockContributions(2),
+    followersCount: 8200,
   },
   {
     login: 'wycats',
@@ -122,6 +125,7 @@ export const mockFollowingUsers = [
     avatarUrl: 'https://avatars.githubusercontent.com/u/4?v=4',
     bio: 'Tilde Inc. // Ember.js // Rust // Ruby',
     contributions: generateMockContributions(12),
+    followersCount: 15400,
   },
 ];
 
@@ -156,6 +160,7 @@ export const mockUserInfo = {
   login: 'octocat',
   name: 'The Octocat',
   avatarUrl: 'https://avatars.githubusercontent.com/u/583231?v=4',
+  followersCount: 12500,
 };
 
 /**

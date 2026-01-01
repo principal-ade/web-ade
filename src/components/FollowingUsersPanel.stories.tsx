@@ -18,6 +18,7 @@ interface FollowingUser {
   avatarUrl: string;
   bio: string | null;
   contributions?: DailyContribution[];
+  followersCount?: number;
 }
 
 // Generate mock contributions for stories
@@ -40,7 +41,8 @@ const StoryWrapper: React.FC<{
   followingData?: FollowingUser[];
   loading?: boolean;
   error?: string | null;
-}> = ({ children, followingData = mockFollowingUsers, loading = false, error = null }) => {
+  username?: string;
+}> = ({ children, followingData = mockFollowingUsers, loading = false, error = null, username = 'octocat' }) => {
   const [ready, setReady] = React.useState(false);
   const originalFetchRef = React.useRef<typeof global.fetch | null>(null);
 
@@ -52,6 +54,35 @@ const StoryWrapper: React.FC<{
 
       if (loading) {
         await new Promise(() => {});
+      }
+
+      // Mock the user activity endpoint (for selfInfo)
+      if (url.includes('/activity') && url.includes(`/user/${username}`)) {
+        return new Response(
+          JSON.stringify({
+            user: {
+              login: username,
+              name: username === 'octocat' ? 'The Octocat' : username,
+              avatarUrl: `https://github.com/${username}.png?size=64`,
+              followersCount: 12500,
+            },
+            contributions: generateContributions(5),
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Mock contributions for followed users
+      if (url.includes('/activity')) {
+        const loginMatch = url.match(/\/user\/([^/]+)\/activity/);
+        const login = loginMatch?.[1];
+        return new Response(
+          JSON.stringify({
+            user: { login, name: null, avatarUrl: `https://github.com/${login}.png?size=64` },
+            contributions: generateContributions(3),
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
       }
 
       if (url.includes('/following')) {
@@ -74,7 +105,7 @@ const StoryWrapper: React.FC<{
         global.fetch = originalFetchRef.current;
       }
     };
-  }, [followingData, loading, error]);
+  }, [followingData, loading, error, username]);
 
   if (!ready) return null;
 
@@ -167,6 +198,7 @@ export const ManyUsers: Story = {
       avatarUrl: `https://avatars.githubusercontent.com/u/${i + 100}?v=4`,
       bio: i % 2 === 0 ? `This is user ${i + 1}'s bio` : null,
       contributions: generateContributions(i + 1),
+      followersCount: Math.floor(Math.random() * 50000) + 100,
     }));
 
     return (

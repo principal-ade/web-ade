@@ -60,6 +60,9 @@ const FOLLOWING_QUERY = `
           name
           avatarUrl
           bio
+          followers {
+            totalCount
+          }
         }
       }
     }
@@ -71,6 +74,7 @@ export interface FollowingUser {
   name: string | null;
   avatarUrl: string;
   bio: string | null;
+  followersCount: number;
 }
 
 interface GraphQLFollowingUser {
@@ -78,6 +82,9 @@ interface GraphQLFollowingUser {
   name: string | null;
   avatarUrl: string;
   bio: string | null;
+  followers: {
+    totalCount: number;
+  };
 }
 
 export async function GET(
@@ -101,6 +108,7 @@ export async function GET(
       name: user.name,
       avatarUrl: user.avatarUrl,
       bio: user.bio,
+      followersCount: user.followers?.totalCount ?? 0,
     }));
 
     const jsonResponse = NextResponse.json({ following });
