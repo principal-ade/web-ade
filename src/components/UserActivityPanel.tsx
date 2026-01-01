@@ -60,20 +60,21 @@ function getEventColor(type: ActivityEvent['type'], theme: ReturnType<typeof use
   }
 }
 
-function getEventLabel(type: ActivityEvent['type']) {
+function getEventLabel(type: ActivityEvent['type'], repository: string) {
+  const repoName = repository.split('/')[1] || repository;
   switch (type) {
     case 'commit':
-      return 'Commits';
+      return `Commits to ${repoName}`;
     case 'pr_merged':
-      return 'Merged PR';
+      return `Merged PR in ${repoName}`;
     case 'pr_opened':
-      return 'Opened PR';
+      return `Opened PR in ${repoName}`;
     case 'issue_opened':
-      return 'Opened Issue';
+      return `Opened issue in ${repoName}`;
     case 'issue_closed':
-      return 'Closed Issue';
+      return `Closed issue in ${repoName}`;
     default:
-      return 'Activity';
+      return `Activity in ${repoName}`;
   }
 }
 
@@ -125,6 +126,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
   const [issueDetails, setIssueDetails] = useState<Record<string, IssueDetails>>({});
   const [loadingIssues, setLoadingIssues] = useState<Set<string>>(new Set());
   const [selectedCommit, setSelectedCommit] = useState<string | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   // Determine which username to fetch
   const targetUsername = username || user?.login;
@@ -442,13 +444,20 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
             <div>
               {dateEvents.map((event) => {
                 const color = getEventColor(event.type, theme);
+                const isEventSelected = selectedEventId === event.id;
 
                 return (
                   <button
                     key={event.id}
                     className="w-full flex items-start gap-3 px-3 py-2 group text-left transition-colors border-b"
-                    style={{ background: 'transparent', borderColor: theme.colors.border }}
+                    style={{
+                      background: isEventSelected ? theme.colors.primary + '15' : 'transparent',
+                      borderColor: theme.colors.border,
+                      borderLeft: isEventSelected ? `3px solid ${theme.colors.primary}` : '3px solid transparent',
+                    }}
                     onClick={() => {
+                      setSelectedEventId(event.id);
+                      setSelectedCommit(null); // Clear individual commit selection
                       events.emit({
                         type: 'activity:item:selected',
                         source: 'user-activity-panel',
@@ -461,17 +470,21 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                       });
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = theme.colors.surface;
+                      if (!isEventSelected) {
+                        e.currentTarget.style.background = theme.colors.surface;
+                      }
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
+                      if (!isEventSelected) {
+                        e.currentTarget.style.background = 'transparent';
+                      }
                     }}
                   >
                     {/* Repo Owner Avatar */}
                     <img
-                      src={`https://github.com/${event.repository.split('/')[0]}.png?size=48`}
+                      src={`https://github.com/${event.repository.split('/')[0]}.png?size=64`}
                       alt={event.repository.split('/')[0]}
-                      className="flex-shrink-0 w-6 h-6 rounded-full mt-0.5"
+                      className="flex-shrink-0 w-10 h-10 rounded-full"
                     />
 
                     {/* Content */}
@@ -487,7 +500,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             color,
                           }}
                         >
-                          {getEventLabel(event.type)}
+                          {getEventLabel(event.type, event.repository)}
                         </span>
                         <span
                           style={{
@@ -552,19 +565,6 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                         </button>
                       ) : null}
 
-                      {/* Repository */}
-                      <button
-                        onClick={() => setSelectedRepo(event.repository)}
-                        className="hover:underline"
-                        style={{
-                          fontSize: `${theme.fontSizes[1]}px`,
-                          fontFamily: theme.fonts.body,
-                          color: theme.colors.textMuted,
-                        }}
-                      >
-                        {event.repository}
-                      </button>
-
                       {/* PR stats */}
                       {event.type === 'pr_merged' && event.metadata && (
                         <div
@@ -609,6 +609,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedCommit(commit.sha);
+                                    setSelectedEventId(event.id); // Also mark parent event as selected
                                     // Emit event to select this commit for file-city visualization
                                     events.emit({
                                       type: 'git-panels.commit-detail:selected',

@@ -104,6 +104,27 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
   const [following, setFollowing] = useState<FollowingUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selfInfo, setSelfInfo] = useState<{ login: string; name: string | null; avatarUrl: string } | null>(null);
+
+  // Fetch current user's info for the "You" entry
+  useEffect(() => {
+    if (!username) return;
+
+    const fetchSelfInfo = async () => {
+      try {
+        const response = await fetch(`/api/github/user/${username}/activity`);
+        if (response.ok) {
+          const data = await response.json();
+          setSelfInfo(data.user);
+        }
+      } catch {
+        // Silently fail - we can still show username
+        setSelfInfo({ login: username, name: null, avatarUrl: `https://github.com/${username}.png?size=64` });
+      }
+    };
+
+    fetchSelfInfo();
+  }, [username]);
 
   useEffect(() => {
     if (!username) {
@@ -124,7 +145,11 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
         }
 
         const data = await response.json();
-        setFollowing(data.following || []);
+        // Sort alphabetically by login (case-insensitive)
+        const sorted = (data.following || []).sort((a: FollowingUser, b: FollowingUser) =>
+          a.login.toLowerCase().localeCompare(b.login.toLowerCase())
+        );
+        setFollowing(sorted);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch following');
       } finally {
@@ -228,6 +253,78 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
           </div>
         ) : (
           <div className="p-2 space-y-1">
+            {/* Current user (You) at the top */}
+            {selfInfo && (
+              <>
+                <button
+                  onClick={() => {
+                    events.emit({
+                      type: 'activity:view:user',
+                      source: 'following-users-panel',
+                      timestamp: Date.now(),
+                      payload: { username: selfInfo.login },
+                    });
+                  }}
+                  className="w-full flex items-center gap-3 p-2 rounded transition-colors hover:opacity-80 text-left"
+                  style={{
+                    background: viewedUser === selfInfo.login ? theme.colors.surface : 'transparent',
+                    border: viewedUser === selfInfo.login ? `1px solid ${theme.colors.border}` : '1px solid transparent',
+                  }}
+                >
+                  <img
+                    src={selfInfo.avatarUrl}
+                    alt={selfInfo.login}
+                    className="w-8 h-8 rounded-full flex-shrink-0"
+                    style={{
+                      boxShadow: viewedUser === selfInfo.login ? `0 0 0 2px ${theme.colors.primary}` : 'none',
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="truncate"
+                        style={{
+                          fontSize: `${theme.fontSizes[2]}px`,
+                          fontWeight: theme.fontWeights.medium,
+                          fontFamily: theme.fonts.body,
+                          color: viewedUser === selfInfo.login ? theme.colors.primary : theme.colors.text,
+                        }}
+                      >
+                        {selfInfo.name || selfInfo.login}
+                      </span>
+                      <span
+                        className="px-1.5 py-0.5 rounded text-xs"
+                        style={{
+                          background: theme.colors.primary + '20',
+                          color: theme.colors.primary,
+                          fontFamily: theme.fonts.body,
+                        }}
+                      >
+                        You
+                      </span>
+                    </div>
+                    {selfInfo.name && (
+                      <div
+                        className="truncate"
+                        style={{
+                          fontSize: `${theme.fontSizes[1]}px`,
+                          fontFamily: theme.fonts.body,
+                          color: theme.colors.textMuted,
+                        }}
+                      >
+                        @{selfInfo.login}
+                      </div>
+                    )}
+                  </div>
+                  <UserContributions login={selfInfo.login} theme={theme} />
+                </button>
+                {/* Separator */}
+                <div
+                  className="my-2"
+                  style={{ borderBottom: `1px solid ${theme.colors.border}` }}
+                />
+              </>
+            )}
             {following.map((user) => {
               const isViewing = viewedUser === user.login;
               return (

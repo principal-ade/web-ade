@@ -17,7 +17,6 @@ import '@principal-ade/panel-layouts/styles.css';
 import {
   Calendar,
   Home,
-  ArrowLeft,
   Map,
 } from 'lucide-react';
 
@@ -46,8 +45,6 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
   const [leftCollapsed] = useState(false);
   const [rightCollapsed] = useState(false);
   const [viewedUser, setViewedUser] = useState(currentUser);
-
-  const isViewingOther = viewedUser !== currentUser;
 
   const [layout] = useState<PanelLayout>({
     left: 'following-users',
@@ -172,10 +169,6 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const handleBackToSelf = useCallback(() => {
-    setViewedUser(currentUser);
-  }, [currentUser]);
-
   const panels = useMemo(() => [
     {
       id: 'following-users',
@@ -269,24 +262,6 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
           >
             Feed
           </span>
-
-          {/* Back button when viewing someone else */}
-          {isViewingOther && (
-            <button
-              onClick={handleBackToSelf}
-              className="flex items-center gap-1 px-2 py-1 rounded transition-all hover:opacity-80"
-              style={{
-                background: theme.colors.primary,
-                color: theme.colors.textOnPrimary,
-                fontSize: `${theme.fontSizes[1]}px`,
-                fontFamily: theme.fonts.body,
-              }}
-              title="Back to your activity"
-            >
-              <ArrowLeft className="w-3 h-3" />
-              Back
-            </button>
-          )}
         </div>
 
         {/* Right section */}
