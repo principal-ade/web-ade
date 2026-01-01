@@ -325,7 +325,7 @@ export async function GET(
     const activity = normalizeActivity(user, sevenDaysAgo);
 
     // Extract last 7 days of contributions from calendar
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
     const allDays: DailyContribution[] = [];
     for (const week of user.contributionsCollection.contributionCalendar.weeks) {
       for (const day of week.contributionDays) {
