@@ -2609,7 +2609,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
 
           // If this is a markdown file, update the active-file slice and markdownContent
           // so the markdown panel displays the new file
-          if (cleanPath.endsWith('.md')) {
+          if (/\.(md|mdx|markdown)$/i.test(cleanPath)) {
             const [owner, name] = (githubRepo || '').split('/');
             const activeFileData = {
               path: cleanPath,
@@ -2645,6 +2645,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
             }
 
             // Update state to trigger re-render with new file
+            // Clear any previous error (e.g., from failed README fetch) so the slice
+            // update during re-render doesn't overwrite our error: null with stale error state
+            setMarkdownError(null);
             setActiveFilePath(cleanPath);
             setMarkdownContent(content);
 
