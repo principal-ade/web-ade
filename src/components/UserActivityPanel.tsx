@@ -12,6 +12,7 @@ import {
   ChevronRight,
   ChevronDown,
 } from 'lucide-react';
+import { DocumentView } from 'themed-markdown';
 import type { ActivityEvent, UserActivityResponse } from '@/app/api/github/user/[username]/activity/route';
 
 interface CommitDetails {
@@ -19,6 +20,20 @@ interface CommitDetails {
   message: string;
   date: string;
   url: string;
+}
+
+interface IssueDetails {
+  number: number;
+  title: string;
+  body: string | null;
+  state: string;
+  html_url: string;
+  user: {
+    login: string;
+    avatar_url: string;
+  };
+  labels: Array<{ id: number; name: string; color: string }>;
+  comments: number;
 }
 
 export interface UserActivityPanelProps {
@@ -106,6 +121,9 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
   const [expandedCommits, setExpandedCommits] = useState<Set<string>>(new Set());
   const [commitDetails, setCommitDetails] = useState<Record<string, CommitDetails[]>>({});
   const [loadingCommits, setLoadingCommits] = useState<Set<string>>(new Set());
+  const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set());
+  const [issueDetails, setIssueDetails] = useState<Record<string, IssueDetails>>({});
+  const [loadingIssues, setLoadingIssues] = useState<Set<string>>(new Set());
 
   // Determine which username to fetch
   const targetUsername = username || user?.login;
@@ -187,6 +205,55 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
       });
     }
   }, [expandedCommits, commitDetails, targetUsername]);
+
+  // Toggle issue expansion and fetch body if needed
+  const toggleIssueExpansion = useCallback(async (event: ActivityEvent) => {
+    const eventId = event.id;
+
+    if (expandedIssues.has(eventId)) {
+      // Collapse
+      setExpandedIssues((prev) => {
+        const next = new Set(prev);
+        next.delete(eventId);
+        return next;
+      });
+      return;
+    }
+
+    // Expand
+    setExpandedIssues((prev) => new Set(prev).add(eventId));
+
+    // Already have details cached
+    if (issueDetails[eventId]) return;
+
+    // Fetch issue details
+    const [owner, repo] = event.repository.split('/');
+    const issueNumber = event.metadata?.issueNumber;
+    if (!owner || !repo || !issueNumber) return;
+
+    setLoadingIssues((prev) => new Set(prev).add(eventId));
+
+    try {
+      const response = await fetch(
+        `/api/github/repo/${owner}/${repo}/issues/${issueNumber}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setIssueDetails((prev) => ({
+          ...prev,
+          [eventId]: data,
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch issue details:', err);
+    } finally {
+      setLoadingIssues((prev) => {
+        const next = new Set(prev);
+        next.delete(eventId);
+        return next;
+      });
+    }
+  }, [expandedIssues, issueDetails]);
 
   // Listen for repo filter events
   useEffect(() => {
@@ -433,7 +500,27 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                       </div>
 
                       {/* Title or commit info */}
-                      {event.title ? (
+                      {(event.type === 'issue_opened' || event.type === 'issue_closed') && event.title ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleIssueExpansion(event);
+                          }}
+                          className="flex items-center gap-1 hover:opacity-80 transition-opacity text-left"
+                          style={{
+                            fontSize: `${theme.fontSizes[2]}px`,
+                            fontFamily: theme.fonts.body,
+                            color: theme.colors.text,
+                          }}
+                        >
+                          {expandedIssues.has(event.id) ? (
+                            <ChevronDown className="w-4 h-4 flex-shrink-0" style={{ color: theme.colors.textMuted }} />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: theme.colors.textMuted }} />
+                          )}
+                          <span className="truncate" title={event.title}>{event.title}</span>
+                        </button>
+                      ) : event.title ? (
                         <div
                           className="truncate"
                           style={{
@@ -564,6 +651,50 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                               }}
                             >
                               No commit details available
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Expanded issue body */}
+                      {(event.type === 'issue_opened' || event.type === 'issue_closed') && expandedIssues.has(event.id) && (
+                        <div
+                          className="mt-2 rounded-md overflow-hidden"
+                          style={{
+                            border: `1px solid ${theme.colors.border}`,
+                            background: theme.colors.surface,
+                          }}
+                        >
+                          {loadingIssues.has(event.id) ? (
+                            <div
+                              className="flex items-center gap-2 p-3"
+                              style={{ color: theme.colors.textMuted }}
+                            >
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <span style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}>
+                                Loading issue...
+                              </span>
+                            </div>
+                          ) : issueDetails[event.id]?.body ? (
+                            <div className="max-h-64 overflow-y-auto">
+                              <DocumentView
+                                content={issueDetails[event.id]!.body!}
+                                theme={theme}
+                                maxWidth="100%"
+                                transparentBackground
+                              />
+                            </div>
+                          ) : (
+                            <div
+                              className="p-3"
+                              style={{
+                                fontSize: `${theme.fontSizes[1]}px`,
+                                fontFamily: theme.fonts.body,
+                                color: theme.colors.textMuted,
+                                fontStyle: 'italic',
+                              }}
+                            >
+                              No description provided
                             </div>
                           )}
                         </div>
