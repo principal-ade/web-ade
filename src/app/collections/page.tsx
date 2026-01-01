@@ -267,7 +267,7 @@ function CollectionsPageLoading() {
       className="h-screen w-screen flex items-center justify-center"
       style={{ background: theme.colors.background, color: theme.colors.text }}
     >
-      Loading library...
+      Loading collections...
     </div>
   );
 }
