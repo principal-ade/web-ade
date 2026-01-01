@@ -124,6 +124,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set());
   const [issueDetails, setIssueDetails] = useState<Record<string, IssueDetails>>({});
   const [loadingIssues, setLoadingIssues] = useState<Set<string>>(new Set());
+  const [selectedCommit, setSelectedCommit] = useState<string | null>(null);
 
   // Determine which username to fetch
   const targetUsername = username || user?.login;
@@ -600,47 +601,55 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                               </span>
                             </div>
                           ) : commitDetails[event.id]?.length ? (
-                            commitDetails[event.id]!.map((commit) => (
-                              <button
-                                key={commit.sha}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  // Emit event to select this commit for file-city visualization
-                                  events.emit({
-                                    type: 'git-panels.commit-detail:selected',
-                                    source: 'user-activity-panel',
-                                    timestamp: Date.now(),
-                                    payload: {
-                                      hash: commit.sha,
-                                      repository: event.repository,
-                                    },
-                                  });
-                                }}
-                                className="flex items-start gap-2 py-1 hover:opacity-80 transition-opacity w-full text-left"
-                              >
-                                <code
-                                  className="flex-shrink-0"
+                            commitDetails[event.id]!.map((commit) => {
+                              const isSelected = selectedCommit === commit.sha;
+                              return (
+                                <button
+                                  key={commit.sha}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedCommit(commit.sha);
+                                    // Emit event to select this commit for file-city visualization
+                                    events.emit({
+                                      type: 'git-panels.commit-detail:selected',
+                                      source: 'user-activity-panel',
+                                      timestamp: Date.now(),
+                                      payload: {
+                                        hash: commit.sha,
+                                        repository: event.repository,
+                                      },
+                                    });
+                                  }}
+                                  className="flex items-start gap-2 py-1 px-2 rounded transition-all w-full text-left"
                                   style={{
-                                    fontSize: `${theme.fontSizes[0]}px`,
-                                    fontFamily: theme.fonts.monospace,
-                                    color: theme.colors.info,
+                                    background: isSelected ? theme.colors.primary + '20' : 'transparent',
+                                    border: isSelected ? `1px solid ${theme.colors.primary}` : '1px solid transparent',
                                   }}
                                 >
-                                  {commit.sha}
-                                </code>
-                                <span
-                                  className="truncate"
-                                  style={{
-                                    fontSize: `${theme.fontSizes[1]}px`,
-                                    fontFamily: theme.fonts.body,
-                                    color: theme.colors.text,
-                                  }}
-                                  title={commit.message}
-                                >
-                                  {commit.message}
-                                </span>
-                              </button>
-                            ))
+                                  <code
+                                    className="flex-shrink-0"
+                                    style={{
+                                      fontSize: `${theme.fontSizes[0]}px`,
+                                      fontFamily: theme.fonts.monospace,
+                                      color: isSelected ? theme.colors.primary : theme.colors.info,
+                                    }}
+                                  >
+                                    {commit.sha}
+                                  </code>
+                                  <span
+                                    className="truncate"
+                                    style={{
+                                      fontSize: `${theme.fontSizes[1]}px`,
+                                      fontFamily: theme.fonts.body,
+                                      color: isSelected ? theme.colors.primary : theme.colors.text,
+                                    }}
+                                    title={commit.message}
+                                  >
+                                    {commit.message}
+                                  </span>
+                                </button>
+                              );
+                            })
                           ) : (
                             <div
                               className="py-1"

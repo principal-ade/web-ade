@@ -381,9 +381,9 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
             panels={panels}
             layout={layout}
             defaultSizes={{
-              left: 35,
-              middle: 30,
-              right: 35,
+              left: 30,
+              middle: 40,
+              right: 30,
             }}
             minSizes={{
               left: 20,
@@ -408,9 +408,9 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
             layout={layout}
             isEditMode={false}
             defaultSizes={{
-              left: 35,
-              middle: 30,
-              right: 35,
+              left: 30,
+              middle: 40,
+              right: 30,
             }}
             minSizes={{
               left: 20,

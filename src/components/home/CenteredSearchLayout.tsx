@@ -7,8 +7,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHomepageState } from '@/hooks/useHomepageState';
-import { SearchToggleButtons } from './SearchToggleButtons';
-import { UserReposGrid } from './UserReposGrid';
 import { GitHubSearchResults } from './GitHubSearchResults';
 
 /**
@@ -76,8 +74,6 @@ export function CenteredSearchLayout() {
   const router = useRouter();
 
   const {
-    activeView,
-    setActiveView,
     searchQuery,
     setSearchQuery,
   } = useHomepageState();
@@ -95,9 +91,8 @@ export function CenteredSearchLayout() {
   // Recent repositories
   const [recentRepos, setRecentRepos] = useState<RecentRepository[]>([]);
 
-  // User's GitHub repos
+  // User's GitHub repos (for prioritizing in search)
   const [userRepos, setUserRepos] = useState<UserGitHubRepo[]>([]);
-  const [userReposLoading, setUserReposLoading] = useState(false);
 
   // Load recent repos from localStorage
   useEffect(() => {
@@ -111,9 +106,9 @@ export function CenteredSearchLayout() {
     }
   }, []);
 
-  // Fetch user repos when authenticated and "Your Repos" is selected
+  // Fetch user repos when authenticated (for prioritizing in search)
   useEffect(() => {
-    if (!isAuthenticated || activeView !== 'your-repos') return;
+    if (!isAuthenticated) return;
 
     setUserReposLoading(true);
     fetch('/api/github/user/repos')
@@ -131,7 +126,7 @@ export function CenteredSearchLayout() {
       .finally(() => {
         setUserReposLoading(false);
       });
-  }, [isAuthenticated, activeView]);
+  }, [isAuthenticated]);
 
   const showRecents = !searchQuery.trim() && recentRepos.length > 0;
 
@@ -169,13 +164,6 @@ export function CenteredSearchLayout() {
           <span style={{ color: theme.colors.primary }}>AI</span>
         </h1>
 
-        {/* Toggle Buttons - above search bar */}
-        <SearchToggleButtons
-          activeView={activeView}
-          onViewChange={setActiveView}
-          isAuthenticated={isAuthenticated}
-        />
-
         {/* Large Centered Search Bar */}
         <div
           style={{
@@ -197,11 +185,7 @@ export function CenteredSearchLayout() {
           />
           <input
             type="text"
-            placeholder={
-              activeView === 'github-search'
-                ? 'Search GitHub repositories or paste a URL...'
-                : 'Filter your repositories...'
-            }
+            placeholder="Search GitHub repositories or paste a URL..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -245,7 +229,7 @@ export function CenteredSearchLayout() {
           }}
         >
           {/* Recent Repositories - show when no search query */}
-          {showRecents && activeView === 'github-search' && (
+          {showRecents && (
             <div
               style={{
                 display: 'flex',
@@ -306,22 +290,13 @@ export function CenteredSearchLayout() {
             </div>
           )}
 
-          {/* Your Repos View */}
-          {activeView === 'your-repos' && (
+          {/* Search Results */}
+          {searchQuery.trim() && (
             <div style={{ marginTop: '32px' }}>
-              <UserReposGrid
-                repos={userRepos}
-                loading={userReposLoading}
-                isAuthenticated={isAuthenticated}
+              <GitHubSearchResults
                 searchQuery={searchQuery}
+                userRepos={userRepos}
               />
-            </div>
-          )}
-
-          {/* GitHub Search View */}
-          {activeView === 'github-search' && searchQuery.trim() && (
-            <div style={{ marginTop: '32px' }}>
-              <GitHubSearchResults searchQuery={searchQuery} />
             </div>
           )}
         </div>

@@ -20,8 +20,23 @@ interface GitHubRepo {
   updated_at: string;
 }
 
+interface UserRepo {
+  id: number;
+  name: string;
+  full_name: string;
+  owner: {
+    login: string;
+    avatar_url: string;
+  };
+  description: string | null;
+  language: string | null;
+  stargazers_count: number;
+  updated_at: string;
+}
+
 interface GitHubSearchResultsProps {
   searchQuery: string;
+  userRepos?: UserRepo[];
 }
 
 /**
@@ -54,7 +69,7 @@ function parseGitHubUrl(input: string): { owner: string; repo: string } | null {
   return null;
 }
 
-export function GitHubSearchResults({ searchQuery }: GitHubSearchResultsProps) {
+export function GitHubSearchResults({ searchQuery, userRepos = [] }: GitHubSearchResultsProps) {
   const { theme } = useTheme();
   const [results, setResults] = useState<GitHubRepo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,6 +77,20 @@ export function GitHubSearchResults({ searchQuery }: GitHubSearchResultsProps) {
   const [directRepo, setDirectRepo] = useState<GitHubRepo | null>(null);
   const [directRepoLoading, setDirectRepoLoading] = useState(false);
   const [pendingSearch, setPendingSearch] = useState(false); // Track debounce period
+
+  // Filter user repos that match the search query
+  const matchingUserRepos = userRepos.filter((repo) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      repo.name.toLowerCase().includes(query) ||
+      repo.full_name.toLowerCase().includes(query) ||
+      repo.owner.login.toLowerCase().includes(query) ||
+      (repo.description?.toLowerCase().includes(query) ?? false)
+    );
+  });
+
+  // Get IDs of matching user repos to filter from GitHub results
+  const userRepoFullNames = new Set(matchingUserRepos.map((r) => r.full_name.toLowerCase()));
 
   // Fetch a specific repo by owner/repo
   const fetchDirectRepo = useCallback(async (owner: string, repo: string) => {
@@ -230,8 +259,13 @@ export function GitHubSearchResults({ searchQuery }: GitHubSearchResultsProps) {
     );
   }
 
-  // No results
-  if (results.length === 0) {
+  // Filter GitHub results to exclude user repos (avoid duplicates)
+  const filteredResults = results.filter(
+    (repo) => !userRepoFullNames.has(repo.full_name.toLowerCase())
+  );
+
+  // No results (neither user repos nor GitHub results)
+  if (matchingUserRepos.length === 0 && filteredResults.length === 0) {
     return (
       <div
         style={{
@@ -252,19 +286,69 @@ export function GitHubSearchResults({ searchQuery }: GitHubSearchResultsProps) {
 
   return (
     <div style={{ width: '100%' }}>
-      {/* Results grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '16px',
-          width: '100%',
-        }}
-      >
-        {results.map((repo) => (
-          <RepoCard key={repo.id} repo={repo} theme={theme} />
-        ))}
-      </div>
+      {/* User repos section - shown first */}
+      {matchingUserRepos.length > 0 && (
+        <>
+          <p
+            style={{
+              fontSize: '14px',
+              color: theme.colors.textMuted,
+              marginBottom: '12px',
+            }}
+          >
+            Your repositories
+          </p>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: '16px',
+              width: '100%',
+              marginBottom: filteredResults.length > 0 ? '24px' : 0,
+            }}
+          >
+            {matchingUserRepos.slice(0, 6).map((repo) => (
+              <RepoCard
+                key={repo.id}
+                repo={{
+                  ...repo,
+                  forks_count: 0,
+                }}
+                theme={theme}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* GitHub search results */}
+      {filteredResults.length > 0 && (
+        <>
+          {matchingUserRepos.length > 0 && (
+            <p
+              style={{
+                fontSize: '14px',
+                color: theme.colors.textMuted,
+                marginBottom: '12px',
+              }}
+            >
+              GitHub
+            </p>
+          )}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: '16px',
+              width: '100%',
+            }}
+          >
+            {filteredResults.map((repo) => (
+              <RepoCard key={repo.id} repo={repo} theme={theme} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
