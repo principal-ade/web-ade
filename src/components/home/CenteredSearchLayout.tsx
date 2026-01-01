@@ -110,7 +110,6 @@ export function CenteredSearchLayout() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    setUserReposLoading(true);
     fetch('/api/github/user/repos')
       .then((res) => res.json())
       .then((data) => {
@@ -122,9 +121,6 @@ export function CenteredSearchLayout() {
       })
       .catch((err) => {
         console.error('Failed to fetch user repos:', err);
-      })
-      .finally(() => {
-        setUserReposLoading(false);
       });
   }, [isAuthenticated]);
 
