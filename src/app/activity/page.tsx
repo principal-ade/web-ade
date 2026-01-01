@@ -77,6 +77,16 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
     const unsubscribe = events.on('activity:item:selected', (event) => {
       const payload = event.payload as { repository: string };
       if (payload?.repository) {
+        // Clear any previous commit highlighting when switching repos
+        if (selectedRepo && selectedRepo !== payload.repository) {
+          events.emit({
+            type: 'commitFiles:cleared',
+            source: 'activity-page',
+            timestamp: Date.now(),
+            payload: {},
+          });
+        }
+
         onRepoSelect(payload.repository);
         setRightCollapsed(false); // Expand right panel to show file-city
 
@@ -91,7 +101,7 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
     });
 
     return () => unsubscribe();
-  }, [events, onRepoSelect]);
+  }, [events, onRepoSelect, selectedRepo]);
 
   // Listen for commit selection to fetch details and show in file-city
   useEffect(() => {
