@@ -87,7 +87,7 @@ export function UserAvatarMenu() {
           </Link>
           {/* Collections */}
           <Link
-            href="/library"
+            href="/collections"
             className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
             style={{ color: theme.colors.text }}
             onClick={() => setUserMenuOpen(false)}

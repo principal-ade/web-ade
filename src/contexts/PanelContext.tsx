@@ -2922,7 +2922,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     }
   }, [collectionRepositories, fetchCollectionRepoDetails]);
 
-  // Fetch user GitHub data (starred, owned, orgs) when on collection/library pages
+  // Fetch user GitHub data (starred, owned, orgs) when on collections pages
   useEffect(() => {
     if (collectionId) {
       fetchUserGitHubData();

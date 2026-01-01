@@ -107,7 +107,7 @@ const DependencyGraphPanelLoader = dynamic(
 
 export type ViewMode = 'manage' | 'explore';
 
-export interface LibraryPageContentProps {
+export interface CollectionsPageContentProps {
   isUserCollection: boolean;
   onAddRepository?: () => void;
   onEditCollection?: () => void;
@@ -135,7 +135,7 @@ export interface LibraryPageContentProps {
   initialViewMode?: ViewMode;
 }
 
-export function LibraryPageContent({
+export function CollectionsPageContent({
   isUserCollection,
   onAddRepository,
   onEditCollection,
@@ -154,7 +154,7 @@ export function LibraryPageContent({
   onPreviewChange,
   initialPreviewedRepo,
   initialViewMode = 'manage',
-}: LibraryPageContentProps) {
+}: CollectionsPageContentProps) {
   const { theme } = useTheme();
   const router = useRouter();
   const { context, actions, events } = usePanelProvider();
@@ -569,7 +569,7 @@ export function LibraryPageContent({
                 color: shareSuccess ? '#10b981' : theme.colors.text,
                 border: `1px solid ${shareSuccess ? '#10b981' : theme.colors.border}`,
               }}
-              title="Copy your library URL to share"
+              title="Copy your collections URL to share"
             >
               {shareSuccess ? (
                 <Check size={16} />
@@ -918,7 +918,7 @@ export function LibraryPageContent({
                       return (
                         <Link
                           key={collection.id}
-                          href={`/library?collection=${collection.id}`}
+                          href={`/collections?collection=${collection.id}`}
                           onClick={() => {
                             setSidebarOpen(false);
                             onSelectCollection(collection.id);

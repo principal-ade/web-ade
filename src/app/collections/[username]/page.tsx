@@ -47,7 +47,7 @@ interface UserInfo {
   html_url: string;
 }
 
-interface SharedLibraryData {
+interface SharedCollectionsData {
   user: UserInfo;
   exists: boolean;
   collections: Collection[] | null;
@@ -55,8 +55,8 @@ interface SharedLibraryData {
   repoUrl: string | null;
 }
 
-interface SharedLibraryContentProps {
-  userData: SharedLibraryData;
+interface SharedCollectionsContentProps {
+  userData: SharedCollectionsData;
   collections: Collection[];
   memberships: CollectionMembership[];
   selectedCollectionId: string | null;
@@ -72,7 +72,7 @@ interface SharedLibraryContentProps {
   onRemoveRepository?: (repositoryId: string) => Promise<void>;
 }
 
-function SharedLibraryContent({
+function SharedCollectionsContent({
   userData,
   collections,
   memberships,
@@ -86,7 +86,7 @@ function SharedLibraryContent({
   onEditCollection,
   onCreateCollection,
   onRemoveRepository,
-}: SharedLibraryContentProps) {
+}: SharedCollectionsContentProps) {
   const { theme } = useTheme();
   const router = useRouter();
   const { context, actions, events } = usePanelProvider();
@@ -302,7 +302,7 @@ function SharedLibraryContent({
                 opacity: importingCollectionId === selectedCollection.id ? 0.6 : 1,
                 cursor: importingCollectionId === selectedCollection.id ? 'not-allowed' : 'pointer',
               }}
-              title="Import this collection to your library"
+              title="Import to your collections"
             >
               {importingCollectionId === selectedCollection.id ? (
                 <>
@@ -332,7 +332,7 @@ function SharedLibraryContent({
               }}
             >
               <Link
-                href="/library"
+                href="/collections"
                 style={{ color: theme.colors.primary }}
               >
                 Login
@@ -560,7 +560,7 @@ function SharedCollectionDropdown({
   );
 }
 
-function SharedLibraryWrapper() {
+function SharedCollectionsWrapper() {
   const { theme } = useTheme();
   const router = useRouter();
   const params = useParams();
@@ -568,7 +568,7 @@ function SharedLibraryWrapper() {
   const userCollections = useUserCollections();
   const { isAuthenticated } = useAuth();
 
-  const [libraryData, setLibraryData] = useState<SharedLibraryData | null>(null);
+  const [collectionsData, setCollectionsData] = useState<SharedCollectionsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
@@ -596,8 +596,8 @@ function SharedLibraryWrapper() {
         }
         return res.json();
       })
-      .then((data: SharedLibraryData) => {
-        setLibraryData(data);
+      .then((data: SharedCollectionsData) => {
+        setCollectionsData(data);
         // Auto-select first collection
         if (data.exists && data.collections?.length) {
           setSelectedCollectionId(data.collections[0]!.id);
@@ -605,7 +605,7 @@ function SharedLibraryWrapper() {
         setLoading(false);
       })
       .catch((err) => {
-        console.error('Failed to fetch shared library:', err);
+        console.error('Failed to fetch shared collections:', err);
         setError(err.message);
         setLoading(false);
       });
@@ -630,13 +630,13 @@ function SharedLibraryWrapper() {
 
   // Get collections array
   const collections = useMemo(() => {
-    return libraryData?.collections || [];
-  }, [libraryData]);
+    return collectionsData?.collections || [];
+  }, [collectionsData]);
 
   // Get memberships array
   const memberships = useMemo(() => {
-    return libraryData?.memberships || [];
-  }, [libraryData]);
+    return collectionsData?.memberships || [];
+  }, [collectionsData]);
 
   // Get repositories for selected collection
   const repositories = useMemo(() => {
@@ -696,7 +696,7 @@ function SharedLibraryWrapper() {
     }
 
     // Update local state
-    setLibraryData(prev => prev ? {
+    setCollectionsData(prev => prev ? {
       ...prev,
       collections: updatedCollections,
       memberships: updatedMemberships,
@@ -831,7 +831,7 @@ function SharedLibraryWrapper() {
             : error}
         </p>
         <button
-          onClick={() => router.push('/library')}
+          onClick={() => router.push('/collections')}
           className="flex items-center gap-2 px-4 py-2 rounded-md transition-all hover:opacity-80"
           style={{
             background: theme.colors.primary,
@@ -842,14 +842,14 @@ function SharedLibraryWrapper() {
           }}
         >
           <ArrowLeft size={16} />
-          Back to Library
+          Back to Collections
         </button>
       </div>
     );
   }
 
   // User doesn't have collections repo
-  if (libraryData && !libraryData.exists) {
+  if (collectionsData && !collectionsData.exists) {
     return (
       <div
         className="h-screen w-screen flex flex-col items-center justify-center gap-4"
@@ -858,8 +858,8 @@ function SharedLibraryWrapper() {
         <div className="flex items-center gap-4 mb-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={libraryData.user.avatar_url}
-            alt={libraryData.user.name || libraryData.user.login}
+            src={collectionsData.user.avatar_url}
+            alt={collectionsData.user.name || collectionsData.user.login}
             className="w-16 h-16 rounded-full"
           />
           <div>
@@ -870,10 +870,10 @@ function SharedLibraryWrapper() {
                 color: theme.colors.text,
               }}
             >
-              {libraryData.user.name || libraryData.user.login}
+              {collectionsData.user.name || collectionsData.user.login}
             </h2>
             <a
-              href={libraryData.user.html_url}
+              href={collectionsData.user.html_url}
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -884,7 +884,7 @@ function SharedLibraryWrapper() {
                 gap: '4px',
               }}
             >
-              @{libraryData.user.login}
+              @{collectionsData.user.login}
               <ExternalLink size={14} />
             </a>
           </div>
@@ -898,10 +898,10 @@ function SharedLibraryWrapper() {
             textAlign: 'center',
           }}
         >
-          {libraryData.user.name || libraryData.user.login} hasn&apos;t shared any collections yet.
+          {collectionsData.user.name || collectionsData.user.login} hasn&apos;t shared any collections yet.
         </p>
         <button
-          onClick={() => router.push('/library')}
+          onClick={() => router.push('/collections')}
           className="flex items-center gap-2 px-4 py-2 rounded-md transition-all hover:opacity-80"
           style={{
             background: theme.colors.secondary,
@@ -912,7 +912,7 @@ function SharedLibraryWrapper() {
           }}
         >
           <ArrowLeft size={16} />
-          Back to Library
+          Back to Collections
         </button>
       </div>
     );
@@ -933,10 +933,10 @@ function SharedLibraryWrapper() {
             color: theme.colors.textSecondary,
           }}
         >
-          {username}&apos;s library is empty.
+          {username}&apos;s collections are empty.
         </p>
         <button
-          onClick={() => router.push('/library')}
+          onClick={() => router.push('/collections')}
           className="flex items-center gap-2 px-4 py-2 rounded-md transition-all hover:opacity-80"
           style={{
             background: theme.colors.secondary,
@@ -947,7 +947,7 @@ function SharedLibraryWrapper() {
           }}
         >
           <ArrowLeft size={16} />
-          Back to Library
+          Back to Collections
         </button>
       </div>
     );
@@ -965,18 +965,18 @@ function SharedLibraryWrapper() {
         <PanelProvider
           key={selectedCollectionId}
           workspace={{
-            name: selectedCollection?.name || 'Shared Library',
-            path: `/library/${username}`,
+            name: selectedCollection?.name || 'Shared Collections',
+            path: `/collections/${username}`,
           }}
           repository={{
-            name: selectedCollection?.name || 'Shared Library',
-            path: `/library/${username}`,
+            name: selectedCollection?.name || 'Shared Collections',
+            path: `/collections/${username}`,
           }}
           collectionId={selectedCollectionId || undefined}
           collectionRepositories={repositories}
         >
-          <SharedLibraryContent
-            userData={libraryData!}
+          <SharedCollectionsContent
+            userData={collectionsData!}
             collections={collections}
             memberships={memberships}
             selectedCollectionId={selectedCollectionId}
@@ -1036,7 +1036,7 @@ function SharedLibraryWrapper() {
   );
 }
 
-function SharedLibraryLoading() {
+function SharedCollectionsLoading() {
   const { theme } = useTheme();
   return (
     <div
@@ -1048,10 +1048,10 @@ function SharedLibraryLoading() {
   );
 }
 
-export default function SharedLibraryPage() {
+export default function SharedCollectionsPage() {
   return (
-    <Suspense fallback={<SharedLibraryLoading />}>
-      <SharedLibraryWrapper />
+    <Suspense fallback={<SharedCollectionsLoading />}>
+      <SharedCollectionsWrapper />
     </Suspense>
   );
 }

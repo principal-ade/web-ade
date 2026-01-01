@@ -12,9 +12,9 @@ import { GitHubSyncModal } from "@/components/collections/GitHubSyncModal";
 import '@principal-ade/panel-layouts/styles.css';
 import { Plus, Layers } from 'lucide-react';
 import type { Collection } from '@principal-ai/alexandria-collections';
-import { LibraryPageContent } from './LibraryPageContent';
+import { CollectionsPageContent } from './CollectionsPageContent';
 
-function LibraryPageWrapper() {
+function CollectionsPageWrapper() {
   const { theme } = useTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -51,7 +51,7 @@ function LibraryPageWrapper() {
       const firstId = allCollections[0]?.id;
       if (firstId) {
         setSelectedCollectionId(firstId);
-        router.replace(`/library?collection=${firstId}`, { scroll: false });
+        router.replace(`/collections?collection=${firstId}`, { scroll: false });
       }
     }
   }, [selectedCollectionId, allCollections, userCollections.loading, router]);
@@ -73,13 +73,13 @@ function LibraryPageWrapper() {
   // Handlers
   const handleSelectCollection = useCallback((id: string) => {
     setSelectedCollectionId(id);
-    router.replace(`/library?collection=${id}`, { scroll: false });
+    router.replace(`/collections?collection=${id}`, { scroll: false });
   }, [router]);
 
   const handleCreateCollection = useCallback(async (name: string, description: string, icon: string) => {
     const newCollection = await userCollections.createCollection(name, description, icon);
     setSelectedCollectionId(newCollection.id);
-    router.replace(`/library?collection=${newCollection.id}`, { scroll: false });
+    router.replace(`/collections?collection=${newCollection.id}`, { scroll: false });
   }, [userCollections, router]);
 
   const handleUpdateCollection = useCallback(async (name: string, description: string, icon: string) => {
@@ -97,7 +97,7 @@ function LibraryPageWrapper() {
         handleSelectCollection(remaining[0]!.id);
       } else {
         setSelectedCollectionId(null);
-        router.replace('/library', { scroll: false });
+        router.replace('/collections', { scroll: false });
       }
     }
   }, [userCollections, selectedCollectionId, allCollections, handleSelectCollection, router]);
@@ -117,7 +117,7 @@ function LibraryPageWrapper() {
   const handleShare = useCallback(() => {
     if (!user?.login) return;
 
-    const shareUrl = `${window.location.origin}/library/${user.login}`;
+    const shareUrl = `${window.location.origin}/collections/${user.login}`;
     navigator.clipboard.writeText(shareUrl).then(() => {
       setShareSuccess(true);
       setTimeout(() => setShareSuccess(false), 2000);
@@ -130,7 +130,7 @@ function LibraryPageWrapper() {
         className="h-screen w-screen flex items-center justify-center"
         style={{ background: theme.colors.background, color: theme.colors.text }}
       >
-        Loading library...
+        Loading collections...
       </div>
     );
   }
@@ -147,17 +147,17 @@ function LibraryPageWrapper() {
             key={selectedCollectionId}
             workspace={{
               name: selectedCollection.name,
-              path: `/library`,
+              path: `/collections`,
             }}
             repository={{
               name: previewedRepo ? previewedRepo.split('/')[1] || selectedCollection.name : selectedCollection.name,
-              path: previewedRepo ? `/GitHub/${previewedRepo}` : `/library`,
+              path: previewedRepo ? `/GitHub/${previewedRepo}` : `/collections`,
             }}
             githubRepo={previewedRepo || undefined}
             collectionId={selectedCollectionId || undefined}
             collectionRepositories={repositories}
           >
-            <LibraryPageContent
+            <CollectionsPageContent
               isUserCollection={isUserCollection}
               onAddRepository={isUserCollection ? () => setAddRepoModalOpen(true) : undefined}
               onEditCollection={isUserCollection ? () => setEditModalOpen(true) : undefined}
@@ -260,7 +260,7 @@ function LibraryPageWrapper() {
   );
 }
 
-function LibraryPageLoading() {
+function CollectionsPageLoading() {
   const { theme } = useTheme();
   return (
     <div
@@ -272,10 +272,10 @@ function LibraryPageLoading() {
   );
 }
 
-export default function LibraryPage() {
+export default function CollectionsPage() {
   return (
-    <Suspense fallback={<LibraryPageLoading />}>
-      <LibraryPageWrapper />
+    <Suspense fallback={<CollectionsPageLoading />}>
+      <CollectionsPageWrapper />
     </Suspense>
   );
 }

@@ -54,7 +54,7 @@ export function GlobalCommandPalette({
   onNaturalLanguageSubmit,
   initialSuggestions = [
     '/home',
-    '/library',
+    '/collections',
     '/repo',
     '/collection',
     '/github',
