@@ -431,49 +431,29 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
             borderColor: theme.colors.border,
           }}
         >
-          {/* Left section: Avatar and Owner info */}
+          {/* Left section: Logo and Owner info */}
           <div className="flex items-center gap-3 flex-shrink-0 flex-1">
-            {user?.avatar_url ? (
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="flex items-center transition-all hover:opacity-80"
-                title="Open recent activity"
-                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-              >
-                <img
-                  src={user.avatar_url}
-                  alt={user.name || user.login}
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: '50%',
-                    border: `2px solid ${theme.colors.border}`,
-                  }}
-                />
-              </button>
-            ) : (
-              <Link
-                href="/"
-                className="flex items-center transition-all hover:opacity-80"
-                title="Home"
-              >
-                <Logo width={32} height={32} color={theme.colors.primary} />
-              </Link>
-            )}
+            <Link
+              href="/"
+              className="flex items-center transition-all hover:opacity-80"
+              title="Home"
+            >
+              <Logo width={32} height={32} color={theme.colors.primary} />
+            </Link>
             {/* Owner info */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              <a
-                href={`https://github.com/${owner}`}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => setSidebarOpen(true)}
                 className="transition-opacity hover:opacity-80"
+                title="Open navigation"
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
               >
                 <img
                   src={`https://github.com/${owner}.png?size=64`}
                   alt={owner}
                   className="w-6 h-6 rounded-full"
                 />
-              </a>
+              </button>
               <a
                 href={`https://github.com/${owner}`}
                 target="_blank"
