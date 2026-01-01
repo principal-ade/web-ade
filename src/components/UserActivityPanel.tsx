@@ -502,17 +502,28 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             color,
                           }}
                         >
-                          {getEventLabel(event.type)}
+                          {event.type === 'issue_opened' && event.metadata?.isClosed
+                            ? 'Issue'
+                            : getEventLabel(event.type)}
                         </span>
                         <span
                           style={{
                             fontSize: `${theme.fontSizes[0]}px`,
                             fontFamily: theme.fonts.body,
-                            color: theme.colors.text,
+                            color: theme.colors.textMuted,
                           }}
                         >
                           {event.type === 'commit' ? 'to ' : 'in '}
-                          {event.repository.split('/')[1] || event.repository}
+                          <span style={{ color }}>{event.repository.split('/')[1] || event.repository}</span>
+                          {event.type === 'issue_opened' && event.metadata?.isClosed && (
+                            <>
+                              {' was '}
+                              <span style={{ color: theme.colors.error }}>Closed</span>
+                              {event.metadata.closedBy && (
+                                <span> by @{event.metadata.closedBy}</span>
+                              )}
+                            </>
+                          )}
                         </span>
                         <span
                           style={{
@@ -523,22 +534,6 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                         >
                           {formatRelativeTime(event.timestamp)}
                         </span>
-                        {event.type === 'issue_opened' && event.metadata?.isClosed && (
-                          <span
-                            className="flex items-center gap-1"
-                            style={{
-                              fontSize: `${theme.fontSizes[0]}px`,
-                              fontFamily: theme.fonts.body,
-                              color: theme.colors.textMuted,
-                            }}
-                          >
-                            <span>•</span>
-                            <span style={{ color: theme.colors.error }}>Closed</span>
-                            {event.metadata.closedBy && (
-                              <span>by @{event.metadata.closedBy}</span>
-                            )}
-                          </span>
-                        )}
                       </div>
 
                       {/* Title or commit info */}
