@@ -72,6 +72,9 @@ const USER_ACTIVITY_QUERY = `
           repository {
             nameWithOwner
             url
+            owner {
+              __typename
+            }
           }
           contributions(first: 20, orderBy: {field: OCCURRED_AT, direction: DESC}) {
             nodes {
@@ -90,6 +93,9 @@ const USER_ACTIVITY_QUERY = `
           url
           repository {
             nameWithOwner
+            owner {
+              __typename
+            }
           }
           additions
           deletions
@@ -104,6 +110,9 @@ const USER_ACTIVITY_QUERY = `
           url
           repository {
             nameWithOwner
+            owner {
+              __typename
+            }
           }
         }
       }
@@ -118,6 +127,9 @@ const USER_ACTIVITY_QUERY = `
           url
           repository {
             nameWithOwner
+            owner {
+              __typename
+            }
           }
           timelineItems(last: 1, itemTypes: [CLOSED_EVENT]) {
             nodes {
@@ -140,6 +152,7 @@ export interface ActivityEvent {
   timestamp: string;
   repository: string;
   repositoryUrl?: string;
+  ownerType?: 'User' | 'Organization';
   title?: string;
   url?: string;
   metadata?: {
@@ -183,7 +196,7 @@ interface GraphQLUser {
       }>;
     };
     commitContributionsByRepository: Array<{
-      repository: { nameWithOwner: string; url: string };
+      repository: { nameWithOwner: string; url: string; owner: { __typename: string } };
       contributions: {
         nodes: Array<{ occurredAt: string; commitCount: number }>;
       };
@@ -195,7 +208,7 @@ interface GraphQLUser {
       number: number;
       mergedAt: string;
       url: string;
-      repository: { nameWithOwner: string };
+      repository: { nameWithOwner: string; owner: { __typename: string } };
       additions: number;
       deletions: number;
     }>;
@@ -206,7 +219,7 @@ interface GraphQLUser {
       number: number;
       createdAt: string;
       url: string;
-      repository: { nameWithOwner: string };
+      repository: { nameWithOwner: string; owner: { __typename: string } };
     }>;
   };
   issues: {
@@ -217,7 +230,7 @@ interface GraphQLUser {
       createdAt: string;
       closedAt: string | null;
       url: string;
-      repository: { nameWithOwner: string };
+      repository: { nameWithOwner: string; owner: { __typename: string } };
       timelineItems: {
         nodes: Array<{
           actor?: { login: string };
@@ -240,6 +253,7 @@ function normalizeActivity(user: GraphQLUser, fromDate: Date): ActivityEvent[] {
         timestamp: contribution.occurredAt,
         repository: repo.repository.nameWithOwner,
         repositoryUrl: repo.repository.url,
+        ownerType: repo.repository.owner.__typename as 'User' | 'Organization',
         metadata: {
           commitCount: contribution.commitCount,
         },
@@ -255,6 +269,7 @@ function normalizeActivity(user: GraphQLUser, fromDate: Date): ActivityEvent[] {
       type: 'pr_merged',
       timestamp: pr.mergedAt,
       repository: pr.repository.nameWithOwner,
+      ownerType: pr.repository.owner.__typename as 'User' | 'Organization',
       title: pr.title,
       url: pr.url,
       metadata: {
@@ -273,6 +288,7 @@ function normalizeActivity(user: GraphQLUser, fromDate: Date): ActivityEvent[] {
       type: 'pr_opened',
       timestamp: pr.createdAt,
       repository: pr.repository.nameWithOwner,
+      ownerType: pr.repository.owner.__typename as 'User' | 'Organization',
       title: pr.title,
       url: pr.url,
       metadata: {
@@ -294,6 +310,7 @@ function normalizeActivity(user: GraphQLUser, fromDate: Date): ActivityEvent[] {
       type: 'issue_opened',
       timestamp: issue.createdAt,
       repository: issue.repository.nameWithOwner,
+      ownerType: issue.repository.owner.__typename as 'User' | 'Organization',
       title: issue.title,
       url: issue.url,
       metadata: {

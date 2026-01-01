@@ -58,18 +58,19 @@ function getEventColor(type: ActivityEvent['type'], theme: ReturnType<typeof use
   }
 }
 
-function getEventLabel(type: ActivityEvent['type']) {
+function getEventLabel(type: ActivityEvent['type'], repository: string) {
+  const repoName = repository.split('/')[1] || repository;
   switch (type) {
     case 'commit':
-      return 'Commits';
+      return `Commits to ${repoName}`;
     case 'pr_merged':
-      return 'Merged PR';
+      return `Merged PR in ${repoName}`;
     case 'pr_opened':
-      return 'Opened PR';
+      return `Opened PR in ${repoName}`;
     case 'issue_opened':
-      return 'Opened issue';
+      return `Opened issue in ${repoName}`;
     default:
-      return 'Activity';
+      return `Activity in ${repoName}`;
   }
 }
 
@@ -84,7 +85,8 @@ function formatRelativeTime(timestamp: string) {
   if (diffMins < 1) return 'just now';
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
   return date.toLocaleDateString();
 }
 
@@ -485,7 +487,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                     <img
                       src={`https://github.com/${event.repository.split('/')[0]}.png?size=64`}
                       alt={event.repository.split('/')[0]}
-                      className="flex-shrink-0 w-10 h-10 rounded-full"
+                      className={`flex-shrink-0 w-10 h-10 ${event.ownerType === 'Organization' ? 'rounded-lg' : 'rounded-full'}`}
                     />
 
                     {/* Content */}
@@ -501,7 +503,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             color,
                           }}
                         >
-                          {getEventLabel(event.type)}
+                          {getEventLabel(event.type, event.repository)}
                         </span>
                         <span
                           style={{
@@ -528,18 +530,6 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             )}
                           </span>
                         )}
-                      </div>
-
-                      {/* Repository name */}
-                      <div
-                        className="truncate"
-                        style={{
-                          fontSize: `${theme.fontSizes[1]}px`,
-                          fontFamily: theme.fonts.body,
-                          color: theme.colors.textMuted,
-                        }}
-                      >
-                        {event.repository}
                       </div>
 
                       {/* Title or commit info */}

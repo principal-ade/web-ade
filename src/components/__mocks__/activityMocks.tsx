@@ -21,6 +21,7 @@ export const mockActivityEvents: ActivityEvent[] = [
     timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
     repository: 'octocat/hello-world',
     repositoryUrl: 'https://github.com/octocat/hello-world',
+    ownerType: 'User',
     metadata: { commitCount: 3 },
   },
   {
@@ -28,16 +29,18 @@ export const mockActivityEvents: ActivityEvent[] = [
     type: 'pr_merged',
     timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
     repository: 'octocat/spoon-knife',
+    ownerType: 'User',
     title: 'feat: add dark mode toggle',
     url: 'https://github.com/octocat/spoon-knife/pull/42',
     metadata: { prNumber: 42, additions: 150, deletions: 23 },
   },
   {
-    id: 'commit-octocat/linguist-2024-01-15T08:00:00Z',
+    id: 'commit-github/linguist-2024-01-15T08:00:00Z',
     type: 'commit',
     timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
-    repository: 'octocat/linguist',
-    repositoryUrl: 'https://github.com/octocat/linguist',
+    repository: 'github/linguist',
+    repositoryUrl: 'https://github.com/github/linguist',
+    ownerType: 'Organization',
     metadata: { commitCount: 1 },
   },
   {
@@ -45,17 +48,19 @@ export const mockActivityEvents: ActivityEvent[] = [
     type: 'issue_opened',
     timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), // 8 hours ago
     repository: 'octocat/hello-world',
+    ownerType: 'User',
     title: 'Bug: Button not clickable on mobile',
     url: 'https://github.com/octocat/hello-world/issues/101',
     metadata: { issueNumber: 101 },
   },
   {
-    id: 'pr-opened-octocat/git-consortium-15',
+    id: 'pr-opened-facebook/react-15',
     type: 'pr_opened',
     timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), // 12 hours ago
-    repository: 'octocat/git-consortium',
+    repository: 'facebook/react',
+    ownerType: 'Organization',
     title: 'refactor: extract utility functions',
-    url: 'https://github.com/octocat/git-consortium/pull/15',
+    url: 'https://github.com/facebook/react/pull/15',
     metadata: { prNumber: 15 },
   },
   {
@@ -63,6 +68,7 @@ export const mockActivityEvents: ActivityEvent[] = [
     type: 'issue_opened',
     timestamp: new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString(), // 18 hours ago
     repository: 'octocat/spoon-knife',
+    ownerType: 'User',
     title: 'Feature request: export to PDF',
     url: 'https://github.com/octocat/spoon-knife/issues/88',
     metadata: { issueNumber: 88, isClosed: true },
