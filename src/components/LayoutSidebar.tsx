@@ -193,7 +193,7 @@ export function LayoutSidebar({
                 {/* Badge indicator when collapsed */}
                 {collapsed && badgeCount !== undefined && badgeCount > 0 && (
                   <span
-                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-xs font-medium"
+                    className="absolute -top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-xs font-medium"
                     style={{
                       background: theme.colors.primary,
                       color: theme.colors.background,
