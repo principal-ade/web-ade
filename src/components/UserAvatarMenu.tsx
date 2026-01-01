@@ -75,15 +75,15 @@ export function UserAvatarMenu() {
             borderColor: theme.colors.border,
           }}
         >
-          {/* Search */}
+          {/* Feed */}
           <Link
-            href="/"
+            href="/activity"
             className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
             style={{ color: theme.colors.text }}
             onClick={() => setUserMenuOpen(false)}
           >
-            <Home className="w-4 h-4" />
-            Search
+            <Calendar className="w-4 h-4" />
+            Feed
           </Link>
           {/* Collections */}
           <Link
@@ -95,15 +95,15 @@ export function UserAvatarMenu() {
             <FolderOpen className="w-4 h-4" />
             Collections
           </Link>
-          {/* Feed */}
+          {/* Search */}
           <Link
-            href="/activity"
+            href="/"
             className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
             style={{ color: theme.colors.text }}
             onClick={() => setUserMenuOpen(false)}
           >
-            <Calendar className="w-4 h-4" />
-            Feed
+            <Home className="w-4 h-4" />
+            Search
           </Link>
           <div
             className="my-1 h-px"

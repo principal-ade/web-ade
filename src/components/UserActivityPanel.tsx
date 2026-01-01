@@ -58,19 +58,18 @@ function getEventColor(type: ActivityEvent['type'], theme: ReturnType<typeof use
   }
 }
 
-function getEventLabel(type: ActivityEvent['type'], repository: string) {
-  const repoName = repository.split('/')[1] || repository;
+function getEventLabel(type: ActivityEvent['type']) {
   switch (type) {
     case 'commit':
-      return `Commits to ${repoName}`;
+      return 'Commits';
     case 'pr_merged':
-      return `Merged PR in ${repoName}`;
+      return 'Merged PR';
     case 'pr_opened':
-      return `Opened PR in ${repoName}`;
+      return 'Opened PR';
     case 'issue_opened':
-      return `Opened issue in ${repoName}`;
+      return 'Opened issue';
     default:
-      return `Activity in ${repoName}`;
+      return 'Activity';
   }
 }
 
@@ -502,7 +501,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             color,
                           }}
                         >
-                          {getEventLabel(event.type, event.repository)}
+                          {getEventLabel(event.type)}
                         </span>
                         <span
                           style={{
@@ -529,6 +528,18 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             )}
                           </span>
                         )}
+                      </div>
+
+                      {/* Repository name */}
+                      <div
+                        className="truncate"
+                        style={{
+                          fontSize: `${theme.fontSizes[1]}px`,
+                          fontFamily: theme.fonts.body,
+                          color: theme.colors.textMuted,
+                        }}
+                      >
+                        {event.repository}
                       </div>
 
                       {/* Title or commit info */}
