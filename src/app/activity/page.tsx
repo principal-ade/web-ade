@@ -72,25 +72,28 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
     const unsubscribe = events.on('activity:item:selected', (event) => {
       const payload = event.payload as { repository: string };
       if (payload?.repository) {
-        // Clear any previous commit highlighting when switching repos
-        if (selectedRepo && selectedRepo !== payload.repository) {
+        // Only trigger repo change if actually different
+        if (selectedRepo !== payload.repository) {
+          // Clear any previous commit highlighting when switching repos
+          if (selectedRepo) {
+            events.emit({
+              type: 'commitFiles:cleared',
+              source: 'activity-page',
+              timestamp: Date.now(),
+              payload: {},
+            });
+          }
+
+          onRepoSelect(payload.repository);
+
+          // Emit repository:preview for file-city panel
           events.emit({
-            type: 'commitFiles:cleared',
+            type: 'repository:preview',
             source: 'activity-page',
             timestamp: Date.now(),
-            payload: {},
+            payload: { repository: { full_name: payload.repository } },
           });
         }
-
-        onRepoSelect(payload.repository);
-
-        // Emit repository:preview for file-city panel
-        events.emit({
-          type: 'repository:preview',
-          source: 'activity-page',
-          timestamp: Date.now(),
-          payload: { repository: { full_name: payload.repository } },
-        });
       }
     });
 
