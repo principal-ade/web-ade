@@ -53,6 +53,9 @@ async function makeGitHubGraphQLRequest(
 
 const USER_ACTIVITY_QUERY = `
   query UserActivity($login: String!, $from: DateTime!) {
+    viewer {
+      login
+    }
     user(login: $login) {
       login
       name
@@ -106,6 +109,10 @@ const USER_ACTIVITY_QUERY = `
             totalCount
             nodes {
               content
+              databaseId
+              user {
+                login
+              }
             }
           }
         }
@@ -127,6 +134,10 @@ const USER_ACTIVITY_QUERY = `
             totalCount
             nodes {
               content
+              databaseId
+              user {
+                login
+              }
             }
           }
         }
@@ -159,6 +170,10 @@ const USER_ACTIVITY_QUERY = `
             totalCount
             nodes {
               content
+              databaseId
+              user {
+                login
+              }
             }
           }
         }
@@ -172,6 +187,7 @@ export type ReactionContent = 'THUMBS_UP' | 'THUMBS_DOWN' | 'LAUGH' | 'HOORAY' |
 export interface ReactionCounts {
   totalCount: number;
   counts: Partial<Record<ReactionContent, number>>;
+  viewerReactions: Partial<Record<ReactionContent, number>>; // Maps reaction type to databaseId
 }
 
 export interface ActivityEvent {
@@ -213,7 +229,11 @@ export interface UserActivityResponse {
 
 interface GraphQLReactions {
   totalCount: number;
-  nodes: Array<{ content: ReactionContent }>;
+  nodes: Array<{
+    content: ReactionContent;
+    databaseId: number;
+    user: { login: string } | null;
+  }>;
 }
 
 interface GraphQLUser {
@@ -281,21 +301,28 @@ interface GraphQLUser {
   };
 }
 
-function parseReactions(reactions: GraphQLReactions): ReactionCounts | undefined {
-  if (!reactions || reactions.totalCount === 0) return undefined;
-
+function parseReactions(reactions: GraphQLReactions, viewerLogin: string): ReactionCounts {
   const counts: Partial<Record<ReactionContent, number>> = {};
-  for (const node of reactions.nodes) {
-    counts[node.content] = (counts[node.content] || 0) + 1;
+  const viewerReactions: Partial<Record<ReactionContent, number>> = {};
+
+  if (reactions?.nodes) {
+    for (const node of reactions.nodes) {
+      counts[node.content] = (counts[node.content] || 0) + 1;
+      // Track viewer's reactions with their databaseId for deletion
+      if (node.user?.login === viewerLogin) {
+        viewerReactions[node.content] = node.databaseId;
+      }
+    }
   }
 
   return {
-    totalCount: reactions.totalCount,
+    totalCount: reactions?.totalCount || 0,
     counts,
+    viewerReactions,
   };
 }
 
-function normalizeActivity(user: GraphQLUser, fromDate: Date): ActivityEvent[] {
+function normalizeActivity(user: GraphQLUser, fromDate: Date, viewerLogin: string): ActivityEvent[] {
   const events: ActivityEvent[] = [];
   const fromTime = fromDate.getTime();
 
@@ -331,7 +358,7 @@ function normalizeActivity(user: GraphQLUser, fromDate: Date): ActivityEvent[] {
         prNumber: pr.number,
         additions: pr.additions,
         deletions: pr.deletions,
-        reactions: parseReactions(pr.reactions),
+        reactions: parseReactions(pr.reactions, viewerLogin),
       },
     });
   }
@@ -349,7 +376,7 @@ function normalizeActivity(user: GraphQLUser, fromDate: Date): ActivityEvent[] {
       url: pr.url,
       metadata: {
         prNumber: pr.number,
-        reactions: parseReactions(pr.reactions),
+        reactions: parseReactions(pr.reactions, viewerLogin),
       },
     });
   }
@@ -374,7 +401,7 @@ function normalizeActivity(user: GraphQLUser, fromDate: Date): ActivityEvent[] {
         issueNumber: issue.number,
         isClosed: issue.state === 'CLOSED',
         closedBy,
-        reactions: parseReactions(issue.reactions),
+        reactions: parseReactions(issue.reactions, viewerLogin),
       },
     });
   }
@@ -407,6 +434,7 @@ export async function GET(
     );
 
     const user = data.user as GraphQLUser;
+    const viewerLogin = (data.viewer?.login as string) || '';
 
     if (!user) {
       return NextResponse.json(
@@ -418,7 +446,7 @@ export async function GET(
     // Filter activity to last 7 days only
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const activity = normalizeActivity(user, sevenDaysAgo);
+    const activity = normalizeActivity(user, sevenDaysAgo, viewerLogin);
 
     // Extract last 7 days of contributions from calendar
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD

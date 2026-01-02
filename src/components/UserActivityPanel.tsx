@@ -38,32 +38,116 @@ const REACTION_ORDER: ReactionContent[] = [
   'THUMBS_DOWN',
 ];
 
-function ReactionBar({ reactions, theme }: { reactions: ReactionCounts; theme: ReturnType<typeof useTheme>['theme'] }) {
+interface ReactionBarProps {
+  reactions: ReactionCounts;
+  theme: ReturnType<typeof useTheme>['theme'];
+  isAuthenticated: boolean;
+  onToggleReaction?: (type: ReactionContent, currentReactionId?: number) => void;
+  disabled?: boolean;
+}
+
+function ReactionBar({ reactions, theme, isAuthenticated, onToggleReaction, disabled }: ReactionBarProps) {
+  const [showPicker, setShowPicker] = useState(false);
+
   const sortedReactions = REACTION_ORDER
     .filter((type) => reactions.counts[type])
-    .map((type) => ({ type, count: reactions.counts[type]! }));
+    .map((type) => ({
+      type,
+      count: reactions.counts[type]!,
+      viewerReacted: !!reactions.viewerReactions[type],
+      reactionId: reactions.viewerReactions[type],
+    }));
 
-  if (sortedReactions.length === 0) return null;
+  const handleReactionClick = (type: ReactionContent, reactionId?: number) => {
+    if (!isAuthenticated || disabled || !onToggleReaction) return;
+    onToggleReaction(type, reactionId);
+  };
+
+  const handlePickerSelect = (type: ReactionContent) => {
+    setShowPicker(false);
+    if (!isAuthenticated || disabled || !onToggleReaction) return;
+    // Check if viewer already reacted with this type
+    const reactionId = reactions.viewerReactions[type];
+    onToggleReaction(type, reactionId);
+  };
 
   return (
     <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-      {sortedReactions.map(({ type, count }) => (
-        <span
+      {sortedReactions.map(({ type, count, viewerReacted, reactionId }) => (
+        <button
           key={type}
-          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleReactionClick(type, reactionId);
+          }}
+          disabled={!isAuthenticated || disabled}
+          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full transition-all"
           style={{
             fontSize: `${theme.fontSizes[0]}px`,
             fontFamily: theme.fonts.body,
-            background: theme.colors.surface,
-            border: `1px solid ${theme.colors.border}`,
-            color: theme.colors.textMuted,
+            background: viewerReacted ? theme.colors.primary + '20' : theme.colors.surface,
+            border: `1px solid ${viewerReacted ? theme.colors.primary : theme.colors.border}`,
+            color: viewerReacted ? theme.colors.primary : theme.colors.textMuted,
+            cursor: isAuthenticated && !disabled ? 'pointer' : 'default',
+            opacity: disabled ? 0.5 : 1,
           }}
-          title={type.replace('_', ' ').toLowerCase()}
+          title={`${type.replace('_', ' ').toLowerCase()}${viewerReacted ? ' (click to remove)' : isAuthenticated ? ' (click to add)' : ''}`}
         >
           <span>{REACTION_EMOJI[type]}</span>
           <span>{count}</span>
-        </span>
+        </button>
       ))}
+
+      {/* Add reaction button */}
+      {isAuthenticated && !disabled && (
+        <div className="relative">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowPicker(!showPicker);
+            }}
+            className="inline-flex items-center justify-center w-6 h-6 rounded-full transition-all hover:scale-110"
+            style={{
+              fontSize: `${theme.fontSizes[0]}px`,
+              background: theme.colors.surface,
+              border: `1px solid ${theme.colors.border}`,
+              color: theme.colors.textMuted,
+            }}
+            title="Add reaction"
+          >
+            +
+          </button>
+
+          {/* Emoji picker popover */}
+          {showPicker && (
+            <div
+              className="absolute bottom-full left-0 mb-1 p-1 rounded-lg shadow-lg z-50 flex gap-0.5"
+              style={{
+                background: theme.colors.surface,
+                border: `1px solid ${theme.colors.border}`,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {REACTION_ORDER.map((type) => {
+                const viewerReacted = !!reactions.viewerReactions[type];
+                return (
+                  <button
+                    key={type}
+                    onClick={() => handlePickerSelect(type)}
+                    className="p-1 rounded hover:scale-125 transition-transform"
+                    style={{
+                      background: viewerReacted ? theme.colors.primary + '20' : 'transparent',
+                    }}
+                    title={type.replace('_', ' ').toLowerCase()}
+                  >
+                    {REACTION_EMOJI[type]}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -200,6 +284,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
   const [loadingPRs, setLoadingPRs] = useState<Set<string>>(new Set());
   const [selectedCommit, setSelectedCommit] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [loadingReactions, setLoadingReactions] = useState<Set<string>>(new Set()); // eventId-reactionType
 
   // Determine which username to fetch
   const targetUsername = username || user?.login;
@@ -386,6 +471,140 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
       });
     }
   }, [expandedPRs, prDetails]);
+
+  // Toggle reaction (add or remove)
+  const toggleReaction = useCallback(async (
+    event: ActivityEvent,
+    reactionType: ReactionContent,
+    currentReactionId?: number
+  ) => {
+    if (!isAuthenticated) return;
+
+    const [owner, repo] = event.repository.split('/');
+    const issueNumber = event.metadata?.prNumber || event.metadata?.issueNumber;
+    if (!owner || !repo || !issueNumber) return;
+
+    const loadingKey = `${event.id}-${reactionType}`;
+    setLoadingReactions((prev) => new Set(prev).add(loadingKey));
+
+    // Optimistic update
+    setActivity((prev) => prev.map((e) => {
+      if (e.id !== event.id || !e.metadata?.reactions) return e;
+
+      const reactions = { ...e.metadata.reactions };
+      const counts = { ...reactions.counts };
+      const viewerReactions = { ...reactions.viewerReactions };
+
+      if (currentReactionId) {
+        // Remove reaction
+        counts[reactionType] = Math.max(0, (counts[reactionType] || 1) - 1);
+        if (counts[reactionType] === 0) delete counts[reactionType];
+        delete viewerReactions[reactionType];
+      } else {
+        // Add reaction
+        counts[reactionType] = (counts[reactionType] || 0) + 1;
+        viewerReactions[reactionType] = -1; // Temporary ID
+      }
+
+      return {
+        ...e,
+        metadata: {
+          ...e.metadata,
+          reactions: {
+            ...reactions,
+            totalCount: Object.values(counts).reduce((a, b) => a + (b || 0), 0),
+            counts,
+            viewerReactions,
+          },
+        },
+      };
+    }));
+
+    try {
+      if (currentReactionId) {
+        // Delete reaction
+        const response = await fetch(
+          `/api/github/repo/${owner}/${repo}/issues/${issueNumber}/reactions?reactionId=${currentReactionId}`,
+          { method: 'DELETE' }
+        );
+        if (!response.ok) {
+          throw new Error('Failed to remove reaction');
+        }
+      } else {
+        // Add reaction
+        const response = await fetch(
+          `/api/github/repo/${owner}/${repo}/issues/${issueNumber}/reactions`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: reactionType }),
+          }
+        );
+        if (!response.ok) {
+          throw new Error('Failed to add reaction');
+        }
+        const data = await response.json();
+
+        // Update with real reaction ID
+        setActivity((prev) => prev.map((e) => {
+          if (e.id !== event.id || !e.metadata?.reactions) return e;
+          return {
+            ...e,
+            metadata: {
+              ...e.metadata,
+              reactions: {
+                ...e.metadata.reactions,
+                viewerReactions: {
+                  ...e.metadata.reactions.viewerReactions,
+                  [reactionType]: data.id,
+                },
+              },
+            },
+          };
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to toggle reaction:', err);
+      // Revert optimistic update on error
+      setActivity((prev) => prev.map((e) => {
+        if (e.id !== event.id || !e.metadata?.reactions) return e;
+
+        const reactions = { ...e.metadata.reactions };
+        const counts = { ...reactions.counts };
+        const viewerReactions = { ...reactions.viewerReactions };
+
+        if (currentReactionId) {
+          // Revert removal
+          counts[reactionType] = (counts[reactionType] || 0) + 1;
+          viewerReactions[reactionType] = currentReactionId;
+        } else {
+          // Revert addition
+          counts[reactionType] = Math.max(0, (counts[reactionType] || 1) - 1);
+          if (counts[reactionType] === 0) delete counts[reactionType];
+          delete viewerReactions[reactionType];
+        }
+
+        return {
+          ...e,
+          metadata: {
+            ...e.metadata,
+            reactions: {
+              ...reactions,
+              totalCount: Object.values(counts).reduce((a, b) => a + (b || 0), 0),
+              counts,
+              viewerReactions,
+            },
+          },
+        };
+      }));
+    } finally {
+      setLoadingReactions((prev) => {
+        const next = new Set(prev);
+        next.delete(loadingKey);
+        return next;
+      });
+    }
+  }, [isAuthenticated]);
 
   // Listen for repo filter events
   useEffect(() => {
@@ -756,7 +975,13 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                       {/* Reactions for PRs and issues */}
                       {(event.type === 'pr_merged' || event.type === 'pr_opened' || event.type === 'issue_opened') &&
                         event.metadata?.reactions && (
-                          <ReactionBar reactions={event.metadata.reactions} theme={theme} />
+                          <ReactionBar
+                            reactions={event.metadata.reactions}
+                            theme={theme}
+                            isAuthenticated={isAuthenticated}
+                            onToggleReaction={(type, reactionId) => toggleReaction(event, type, reactionId)}
+                            disabled={REACTION_ORDER.some((t) => loadingReactions.has(`${event.id}-${t}`))}
+                          />
                         )}
 
                       {/* Expanded PR body */}
