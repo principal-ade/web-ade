@@ -112,7 +112,6 @@ export function WeeklyTimelineHeader({
         {weekData.map((day, index) => {
           const isCurrentSegment = index === currentWeekIndex;
           const isFuture = day.contributionLevel === -1;
-          const hasActivity = day.events.length > 0;
           const isInScrollRange = index >= currentWeekIndex && index <= todayDayOfWeek;
           const scrollIndexForDay = todayDayOfWeek - index;
 
