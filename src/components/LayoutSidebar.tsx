@@ -14,6 +14,7 @@ import {
   GitPullRequest,
   Home,
   Palette,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@principal-ai/logo-component';
@@ -43,6 +44,8 @@ interface LayoutSidebarProps {
   onToggleCollapse: () => void;
   owner?: string; // When provided, shows owner avatar/name instead of Principal AI logo
   badges?: Record<string, number>; // Badge counts for specific layout config IDs (e.g., { 'github-issues': 12, 'pull-requests': 5 })
+  mobileOpen?: boolean; // When true, renders as slide-in overlay on mobile
+  onMobileClose?: () => void; // Callback to close mobile overlay
 }
 
 export function LayoutSidebar({
@@ -52,6 +55,8 @@ export function LayoutSidebar({
   onToggleCollapse,
   owner,
   badges,
+  mobileOpen,
+  onMobileClose,
 }: LayoutSidebarProps) {
   const { theme } = useTheme();
   const { currentThemeName, cycleTheme } = useGlobalTheme();
@@ -64,7 +69,195 @@ export function LayoutSidebar({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  if (isMobile) return null;
+  // On mobile, only render when mobileOpen is true (as overlay)
+  if (isMobile && !mobileOpen) return null;
+
+  // Mobile overlay mode
+  if (isMobile && mobileOpen) {
+    return (
+      <>
+        {/* Backdrop */}
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 50,
+          }}
+          onClick={onMobileClose}
+        />
+
+        {/* Sidebar overlay */}
+        <aside
+          className="h-full flex flex-col overflow-hidden"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            bottom: 0,
+            width: `${SIDEBAR_EXPANDED_WIDTH}px`,
+            maxWidth: '100vw',
+            background: theme.colors.surface,
+            borderRight: `1px solid ${theme.colors.border}`,
+            zIndex: 51,
+            animation: 'layoutSidebarSlideIn 0.2s ease-out',
+          }}
+        >
+          {/* Mobile Header with close button */}
+          <div
+            className="flex items-center justify-between w-full"
+            style={{
+              height: `${SIDEBAR_COLLAPSED_WIDTH}px`,
+              borderBottom: `1px solid ${theme.colors.border}`,
+              padding: '0 16px',
+            }}
+          >
+            {owner ? (
+              <Link
+                href={`/${owner}`}
+                onClick={onMobileClose}
+                className="flex items-center gap-3 transition-opacity hover:opacity-80"
+                style={{ textDecoration: 'none' }}
+              >
+                <img
+                  src={`https://github.com/${owner}.png?size=64`}
+                  alt={owner}
+                  className="w-7 h-7 flex-shrink-0"
+                  style={{ borderRadius: '6px' }}
+                />
+                <span
+                  style={{
+                    fontFamily: theme.fonts.heading,
+                    fontSize: theme.fontSizes[3],
+                    fontWeight: 600,
+                    color: theme.colors.text,
+                  }}
+                >
+                  {owner}
+                </span>
+              </Link>
+            ) : (
+              <Link
+                href="/"
+                onClick={onMobileClose}
+                className="flex items-center gap-3 transition-opacity hover:opacity-80"
+                style={{ textDecoration: 'none' }}
+              >
+                <Logo width={28} height={28} color={theme.colors.primary} />
+                <span style={{ fontFamily: theme.fonts.heading, fontSize: theme.fontSizes[3], fontWeight: 600 }}>
+                  <span style={{ color: theme.colors.text }}>Principal</span>{' '}
+                  <span style={{ color: theme.colors.primary }}>AI</span>
+                </span>
+              </Link>
+            )}
+            <button
+              onClick={onMobileClose}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                color: theme.colors.textMuted,
+                borderRadius: '4px',
+              }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Home Link */}
+          <Link
+            href="/"
+            onClick={onMobileClose}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 16px',
+              color: theme.colors.text,
+              textDecoration: 'none',
+              borderBottom: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <Home size={16} />
+            <span style={{ fontSize: `${theme.fontSizes[1]}px` }}>Home</span>
+          </Link>
+
+          {/* Layout Items */}
+          <nav className="flex-1 py-2 overflow-y-auto overflow-x-hidden">
+            {layoutConfigs.map((config) => {
+              const Icon = layoutIcons[config.id] || Blocks;
+              const isActive = config.id === currentConfigId;
+              const badgeCount = badges?.[config.id];
+
+              return (
+                <button
+                  key={config.id}
+                  onClick={() => {
+                    onConfigChange(config);
+                    onMobileClose?.();
+                  }}
+                  className="w-full flex items-center h-10 px-4 gap-3 transition-colors"
+                  style={{
+                    background: isActive ? theme.colors.backgroundTertiary : 'transparent',
+                    color: isActive ? theme.colors.primary : theme.colors.text,
+                  }}
+                >
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <span
+                    className="flex items-center gap-2"
+                    style={{
+                      fontFamily: theme.fonts.body,
+                      fontSize: theme.fontSizes[2],
+                    }}
+                  >
+                    {config.name}
+                    {badgeCount !== undefined && badgeCount > 0 && (
+                      <span
+                        className="min-w-[20px] h-[20px] flex items-center justify-center rounded-full text-xs font-medium"
+                        style={{
+                          background: theme.colors.primary,
+                          color: theme.colors.background,
+                          fontSize: '11px',
+                          padding: '0 6px',
+                        }}
+                      >
+                        {badgeCount > 99 ? '99+' : badgeCount}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Theme Toggle */}
+          <div style={{ borderTop: `1px solid ${theme.colors.border}` }}>
+            <button
+              onClick={cycleTheme}
+              className="w-full flex items-center h-10 px-4 gap-3 transition-colors"
+              style={{
+                background: 'transparent',
+                color: theme.colors.text,
+              }}
+            >
+              <Palette className="w-5 h-5 flex-shrink-0" />
+              <span style={{ fontFamily: theme.fonts.body, fontSize: theme.fontSizes[2] }}>
+                {currentThemeName}
+              </span>
+            </button>
+          </div>
+        </aside>
+
+        <style>{`
+          @keyframes layoutSidebarSlideIn {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
+          }
+        `}</style>
+      </>
+    );
+  }
 
   return (
     <aside

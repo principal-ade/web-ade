@@ -325,6 +325,7 @@ function EditorLayoutContent({
     return false;
   });
   const [repoCounts, setRepoCounts] = useState<{ openIssues: number; openPullRequests: number } | null>(null);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Persist layout sidebar collapsed state
   useEffect(() => {
@@ -1354,6 +1355,8 @@ function EditorLayoutContent({
           } : {}),
           ...(triagedCount > 0 ? { 'kanban': triagedCount } : {}),
         } : undefined}
+        mobileOpen={mobileSidebarOpen}
+        onMobileClose={() => setMobileSidebarOpen(false)}
       />
 
       {/* Main Content Area */}
@@ -1372,6 +1375,8 @@ function EditorLayoutContent({
           currentRepoId={githubRepo}
           selectedColorMode={selectedColorMode}
           onClearColorMode={clearColorMode}
+          owner={repositoryInfo?.owner}
+          onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
         />
 
         {/* Commit Modal - only show when not in local mode */}

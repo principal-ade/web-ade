@@ -35,6 +35,9 @@ interface EditorHeaderProps {
   // Color mode selection (for clear button)
   selectedColorMode?: string | null;
   onClearColorMode?: () => void;
+  // Mobile sidebar
+  owner?: string;
+  onOpenMobileSidebar?: () => void;
 }
 
 export function EditorHeader({
@@ -55,6 +58,8 @@ export function EditorHeader({
   currentRepoId,
   selectedColorMode,
   onClearColorMode,
+  owner,
+  onOpenMobileSidebar,
 }: EditorHeaderProps = {}) {
   const { theme } = useTheme();
   const { cycleTheme, currentThemeName } = useGlobalTheme();
@@ -144,6 +149,22 @@ export function EditorHeader({
     >
       {/* Left section: Logo/Avatar and Repository info */}
       <div className="flex items-center gap-3 flex-shrink-0 flex-1">
+        {/* Mobile-only owner avatar button to open sidebar */}
+        {owner && onOpenMobileSidebar && (
+          <button
+            onClick={onOpenMobileSidebar}
+            className="md:hidden flex items-center justify-center transition-opacity hover:opacity-80"
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            title="Open navigation"
+          >
+            <img
+              src={`https://github.com/${owner}.png?size=64`}
+              alt={owner}
+              className="w-7 h-7"
+              style={{ borderRadius: '6px' }}
+            />
+          </button>
+        )}
         {/* Show repo name on repo pages */}
         {repositoryName && (
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -274,8 +295,8 @@ export function EditorHeader({
         )}
       </div>
 
-      {/* Center section */}
-      <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center">
+      {/* Center section - hidden on mobile since local file access isn't available */}
+      <div className="absolute left-1/2 transform -translate-x-1/2 hidden md:flex items-center">
         {/* GitHub/Local toggle on repo pages */}
         {repositoryName && currentRepoId && <LocalFolderButton currentRepoId={currentRepoId} />}
       </div>
