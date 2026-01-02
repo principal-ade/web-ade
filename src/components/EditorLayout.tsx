@@ -290,6 +290,15 @@ function EditorLayoutContent({
 }: EditorLayoutContentProps) {
   const { theme } = useTheme();
   const { context, actions, events, selectedColorMode, clearColorMode } = usePanelProvider();
+
+  // Count triaged items from fileTree (files in .backlog/active/)
+  const fileTreeSlice = context.getSlice<{ allFiles?: Array<{ path: string }> }>('fileTree');
+  const triagedCount = useMemo(() => {
+    const allFiles = fileTreeSlice?.data?.allFiles;
+    if (!allFiles) return 0;
+    return allFiles.filter((file) => file.path.includes('/.backlog/active/')).length;
+  }, [fileTreeSlice?.data?.allFiles]);
+
   const { login } = useAuth();
   const { setTheme, setColor, resetColor, resetAllColors } = useGlobalTheme();
   const { adapter: localAdapter } = useLocalFileSystem();
@@ -1356,9 +1365,12 @@ function EditorLayoutContent({
         collapsed={layoutSidebarCollapsed}
         onToggleCollapse={() => setLayoutSidebarCollapsed((prev: boolean) => !prev)}
         owner={repositoryInfo?.owner}
-        badges={repoCounts ? {
-          'github-issues': repoCounts.openIssues,
-          'pull-requests': repoCounts.openPullRequests,
+        badges={(repoCounts || triagedCount > 0) ? {
+          ...(repoCounts ? {
+            'github-issues': repoCounts.openIssues,
+            'pull-requests': repoCounts.openPullRequests,
+          } : {}),
+          ...(triagedCount > 0 ? { 'kanban': triagedCount } : {}),
         } : undefined}
       />
 
