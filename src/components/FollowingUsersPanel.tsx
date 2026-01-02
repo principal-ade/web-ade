@@ -239,7 +239,7 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
                 payload: { username: selfInfo.login },
               });
             }}
-            className="w-full max-w-[300px] flex items-center gap-3 p-2 rounded transition-colors hover:opacity-80 text-left"
+            className="w-full lg:max-w-[300px] flex items-center gap-3 p-2 rounded transition-colors hover:opacity-80 text-left"
             style={{
               background: viewedUser === selfInfo.login ? theme.colors.surface : 'transparent',
               border: viewedUser === selfInfo.login ? `1px solid ${theme.colors.border}` : '1px solid transparent',
@@ -308,7 +308,7 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
         className="flex justify-end p-2 border-b"
         style={{ borderColor: theme.colors.border }}
       >
-        <div className="w-full max-w-[300px] flex items-center gap-2 p-1">
+        <div className="w-full lg:max-w-[300px] flex items-center gap-2 p-1">
           <Users className="h-4 w-4" style={{ color: theme.colors.textMuted }} />
           <span
             style={{
@@ -363,7 +363,7 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
                       payload: { username: user.login },
                     });
                   }}
-                  className="w-full max-w-[300px] flex items-center gap-3 p-2 rounded transition-colors hover:opacity-80 text-left"
+                  className="w-full lg:max-w-[300px] flex items-center gap-3 p-2 rounded transition-colors hover:opacity-80 text-left"
                   style={{
                     background: isViewing ? theme.colors.surface : 'transparent',
                     border: isViewing ? `1px solid ${theme.colors.border}` : '1px solid transparent',
