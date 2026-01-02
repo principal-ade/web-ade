@@ -10,6 +10,9 @@ interface GitHubCommit {
       date: string;
     };
   };
+  author: {
+    login: string;
+  } | null;
   html_url: string;
 }
 
@@ -43,7 +46,10 @@ export async function GET(
       headers["Authorization"] = `token ${token}`;
     }
 
-    let url = `https://api.github.com/repos/${owner}/${repo}/commits?author=${username}&since=${since}&per_page=30`;
+    // Note: We don't filter by author because GitHub's author filter uses git commit
+    // author name/email, not GitHub username. The contribution data already tells us
+    // these are this user's commits within the date range.
+    let url = `https://api.github.com/repos/${owner}/${repo}/commits?since=${since}&per_page=30`;
     if (until) {
       url += `&until=${until}`;
     }
@@ -57,9 +63,15 @@ export async function GET(
       );
     }
 
-    const commits: GitHubCommit[] = await response.json();
+    const allCommits: GitHubCommit[] = await response.json();
 
-    const details: CommitDetails[] = commits.map((commit) => ({
+    // Filter by GitHub username (author.login) since the API's author param
+    // filters by git commit author name/email which often doesn't match
+    const userCommits = allCommits.filter(
+      (commit) => commit.author?.login?.toLowerCase() === username.toLowerCase()
+    );
+
+    const details: CommitDetails[] = userCommits.map((commit) => ({
       sha: commit.sha.slice(0, 7),
       message: commit.commit.message.split("\n")[0] || "", // First line only
       date: commit.commit.author.date,
