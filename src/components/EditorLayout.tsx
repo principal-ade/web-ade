@@ -80,15 +80,6 @@ const TaskDetailPanelLoader = dynamic(
   { ssr: false }
 );
 
-// Dynamically import the MilestonePanel with SSR disabled
-const MilestonePanelLoader = dynamic(
-  () => import('@industry-theme/backlogmd-kanban-panel').then((mod) => {
-    const Component = mod.panels[2]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
 // Dynamically import the PrincipalViewPanel (Graph) with SSR disabled
 const PrincipalViewPanelLoader = dynamic(
   () => import('@industry-theme/principal-view-panels').then((mod) => {
@@ -1136,15 +1127,6 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <TaskDetailPanelLoader context={context} actions={enhancedActions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'milestones',
-      label: 'Milestones',
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <MilestonePanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
