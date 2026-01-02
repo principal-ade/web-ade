@@ -104,7 +104,7 @@ function ReactionBar({ reactions, theme, isAuthenticated, onToggleReaction, disa
           disabled={!isAuthenticated || disabled}
           className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full transition-all"
           style={{
-            fontSize: `${theme.fontSizes[0]}px`,
+            fontSize: `${theme.fontSizes[1]}px`,
             fontFamily: theme.fonts.body,
             background: viewerReacted ? theme.colors.primary + '20' : theme.colors.surface,
             border: `1px solid ${viewerReacted ? theme.colors.primary : theme.colors.border}`,
@@ -129,7 +129,7 @@ function ReactionBar({ reactions, theme, isAuthenticated, onToggleReaction, disa
             }}
             className="inline-flex items-center justify-center w-6 h-6 rounded-full transition-all hover:scale-110"
             style={{
-              fontSize: `${theme.fontSizes[0]}px`,
+              fontSize: `${theme.fontSizes[1]}px`,
               background: theme.colors.surface,
               border: `1px solid ${theme.colors.border}`,
               color: theme.colors.textMuted,
@@ -689,7 +689,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
           <h3
             className="mb-1"
             style={{
-              fontSize: `${theme.fontSizes[2]}px`,
+              fontSize: `${theme.fontSizes[3]}px`,
               fontWeight: theme.fontWeights.semibold,
               fontFamily: theme.fonts.body,
               color: theme.colors.text,
@@ -697,7 +697,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
           >
             Activity Timeline
           </h3>
-          <p style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}>
+          <p style={{ fontSize: `${theme.fontSizes[2]}px`, fontFamily: theme.fonts.body }}>
             Sign in to view your activity or visit a user&apos;s profile
           </p>
         </div>
@@ -714,7 +714,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
       >
         <div className="text-center">
           <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-          <p style={{ fontSize: `${theme.fontSizes[2]}px`, fontFamily: theme.fonts.body }}>
+          <p style={{ fontSize: `${theme.fontSizes[3]}px`, fontFamily: theme.fonts.body }}>
             Loading activity...
           </p>
         </div>
@@ -732,14 +732,14 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
         <div className="text-center max-w-xs">
           <p
             className="mb-2"
-            style={{ fontSize: `${theme.fontSizes[2]}px`, fontFamily: theme.fonts.body }}
+            style={{ fontSize: `${theme.fontSizes[3]}px`, fontFamily: theme.fonts.body }}
           >
             Failed to load activity
           </p>
           <p
             className="mb-4"
             style={{
-              fontSize: `${theme.fontSizes[1]}px`,
+              fontSize: `${theme.fontSizes[2]}px`,
               fontFamily: theme.fonts.body,
               color: theme.colors.textMuted,
             }}
@@ -750,7 +750,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
             onClick={() => void fetchActivity()}
             className="px-3 py-1.5 rounded"
             style={{
-              fontSize: `${theme.fontSizes[1]}px`,
+              fontSize: `${theme.fontSizes[2]}px`,
               fontFamily: theme.fonts.body,
               background: theme.colors.surface,
               color: theme.colors.text,
@@ -809,7 +809,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
             <h3
               className="mb-1"
               style={{
-                fontSize: `${theme.fontSizes[2]}px`,
+                fontSize: `${theme.fontSizes[3]}px`,
                 fontWeight: theme.fontWeights.semibold,
                 fontFamily: theme.fonts.body,
                 color: theme.colors.text,
@@ -817,7 +817,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
             >
               No Activity Found
             </h3>
-            <p style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}>
+            <p style={{ fontSize: `${theme.fontSizes[2]}px`, fontFamily: theme.fonts.body }}>
               No activity in the last 7 days
               {selectedRepo ? ` for ${selectedRepo}` : ''}
             </p>
@@ -851,7 +851,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
             onClick={() => setSelectedRepo(null)}
             className="px-2 py-1 rounded"
             style={{
-              fontSize: `${theme.fontSizes[1]}px`,
+              fontSize: `${theme.fontSizes[2]}px`,
               fontFamily: theme.fonts.body,
               background: theme.colors.surface,
               color: theme.colors.text,
@@ -884,7 +884,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                 <div
                   className="px-3 py-2"
                   style={{
-                    fontSize: `${theme.fontSizes[1]}px`,
+                    fontSize: `${theme.fontSizes[2]}px`,
                     fontWeight: theme.fontWeights.medium,
                     fontFamily: theme.fonts.body,
                     background: theme.colors.surface,
@@ -902,7 +902,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                   className="px-4 py-8 text-center"
                   style={{
                     color: theme.colors.textMuted,
-                    fontSize: `${theme.fontSizes[1]}px`,
+                    fontSize: `${theme.fontSizes[2]}px`,
                     fontFamily: theme.fonts.body,
                   }}
                 >
@@ -958,7 +958,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                         <span
                           className="px-1.5 py-0.5 rounded"
                           style={{
-                            fontSize: `${theme.fontSizes[0]}px`,
+                            fontSize: `${theme.fontSizes[1]}px`,
                             fontWeight: theme.fontWeights.medium,
                             fontFamily: theme.fonts.body,
                             background: `${color}20`,
@@ -971,7 +971,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                         </span>
                         <span
                           style={{
-                            fontSize: `${theme.fontSizes[0]}px`,
+                            fontSize: `${theme.fontSizes[1]}px`,
                             fontFamily: theme.fonts.body,
                             color: theme.colors.textMuted,
                           }}
@@ -990,7 +990,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                         </span>
                         <span
                           style={{
-                            fontSize: `${theme.fontSizes[0]}px`,
+                            fontSize: `${theme.fontSizes[1]}px`,
                             fontFamily: theme.fonts.body,
                             color: theme.colors.textMuted,
                           }}
@@ -1008,7 +1008,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                           }}
                           className="flex items-center gap-1 hover:opacity-80 transition-opacity text-left"
                           style={{
-                            fontSize: `${theme.fontSizes[2]}px`,
+                            fontSize: `${theme.fontSizes[4]}px`,
                             fontFamily: theme.fonts.body,
                             color: theme.colors.text,
                           }}
@@ -1028,7 +1028,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                           }}
                           className="flex items-center gap-1 hover:opacity-80 transition-opacity text-left"
                           style={{
-                            fontSize: `${theme.fontSizes[2]}px`,
+                            fontSize: `${theme.fontSizes[4]}px`,
                             fontFamily: theme.fonts.body,
                             color: theme.colors.text,
                           }}
@@ -1044,7 +1044,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                         <div
                           className="truncate"
                           style={{
-                            fontSize: `${theme.fontSizes[2]}px`,
+                            fontSize: `${theme.fontSizes[4]}px`,
                             fontFamily: theme.fonts.body,
                             color: theme.colors.text,
                           }}
@@ -1057,7 +1057,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                           onClick={() => toggleCommitExpansion(event)}
                           className="flex items-center gap-1 hover:opacity-80 transition-opacity"
                           style={{
-                            fontSize: `${theme.fontSizes[2]}px`,
+                            fontSize: `${theme.fontSizes[4]}px`,
                             fontFamily: theme.fonts.body,
                             color: theme.colors.text,
                           }}
@@ -1075,7 +1075,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                       {event.type === 'pr_merged' && event.metadata && (
                         <div
                           className="flex items-center gap-2 mt-1 flex-wrap"
-                          style={{ fontSize: `${theme.fontSizes[0]}px`, fontFamily: theme.fonts.body }}
+                          style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}
                         >
                           {event.metadata.additions !== undefined && (
                             <span style={{ color: theme.colors.success }}>
@@ -1117,7 +1117,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                               style={{ color: theme.colors.textMuted }}
                             >
                               <Loader2 className="w-3 h-3 animate-spin" />
-                              <span style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}>
+                              <span style={{ fontSize: `${theme.fontSizes[2]}px`, fontFamily: theme.fonts.body }}>
                                 Loading PR...
                               </span>
                             </div>
@@ -1136,7 +1136,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             <div
                               className="p-3"
                               style={{
-                                fontSize: `${theme.fontSizes[1]}px`,
+                                fontSize: `${theme.fontSizes[2]}px`,
                                 fontFamily: theme.fonts.body,
                                 color: theme.colors.textMuted,
                                 fontStyle: 'italic',
@@ -1160,7 +1160,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                               style={{ color: theme.colors.textMuted }}
                             >
                               <Loader2 className="w-3 h-3 animate-spin" />
-                              <span style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}>
+                              <span style={{ fontSize: `${theme.fontSizes[2]}px`, fontFamily: theme.fonts.body }}>
                                 Loading commits...
                               </span>
                             </div>
@@ -1194,7 +1194,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                                   <code
                                     className="flex-shrink-0"
                                     style={{
-                                      fontSize: `${theme.fontSizes[0]}px`,
+                                      fontSize: `${theme.fontSizes[1]}px`,
                                       fontFamily: theme.fonts.monospace,
                                       color: isSelected ? theme.colors.primary : theme.colors.info,
                                     }}
@@ -1204,7 +1204,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                                   <span
                                     className="truncate"
                                     style={{
-                                      fontSize: `${theme.fontSizes[1]}px`,
+                                      fontSize: `${theme.fontSizes[2]}px`,
                                       fontFamily: theme.fonts.body,
                                       color: isSelected ? theme.colors.primary : theme.colors.text,
                                     }}
@@ -1219,7 +1219,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             <div
                               className="py-1"
                               style={{
-                                fontSize: `${theme.fontSizes[1]}px`,
+                                fontSize: `${theme.fontSizes[2]}px`,
                                 fontFamily: theme.fonts.body,
                                 color: theme.colors.textMuted,
                               }}
@@ -1245,7 +1245,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                               style={{ color: theme.colors.textMuted }}
                             >
                               <Loader2 className="w-3 h-3 animate-spin" />
-                              <span style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}>
+                              <span style={{ fontSize: `${theme.fontSizes[2]}px`, fontFamily: theme.fonts.body }}>
                                 Loading issue...
                               </span>
                             </div>
@@ -1264,7 +1264,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             <div
                               className="p-3"
                               style={{
-                                fontSize: `${theme.fontSizes[1]}px`,
+                                fontSize: `${theme.fontSizes[2]}px`,
                                 fontFamily: theme.fonts.body,
                                 color: theme.colors.textMuted,
                                 fontStyle: 'italic',
@@ -1303,7 +1303,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
       <div
         className="px-3 py-2 border-t text-center"
         style={{
-          fontSize: `${theme.fontSizes[0]}px`,
+          fontSize: `${theme.fontSizes[1]}px`,
           fontFamily: theme.fonts.body,
           borderColor: theme.colors.border,
           color: theme.colors.textMuted,
