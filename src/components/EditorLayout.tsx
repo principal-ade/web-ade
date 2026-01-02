@@ -296,7 +296,7 @@ function EditorLayoutContent({
   const triagedCount = useMemo(() => {
     const allFiles = fileTreeSlice?.data?.allFiles;
     if (!allFiles) return 0;
-    return allFiles.filter((file) => file.path.includes('/.backlog/tasks/')).length;
+    return allFiles.filter((file) => file.path.includes('.backlog/tasks/')).length;
   }, [fileTreeSlice?.data?.allFiles]);
 
   const { login } = useAuth();
