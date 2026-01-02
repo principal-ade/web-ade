@@ -188,6 +188,7 @@ export interface ReactionCounts {
   totalCount: number;
   counts: Partial<Record<ReactionContent, number>>;
   viewerReactions: Partial<Record<ReactionContent, number>>; // Maps reaction type to databaseId
+  users: Partial<Record<ReactionContent, string[]>>; // Usernames who reacted with each type
 }
 
 export interface ActivityEvent {
@@ -304,6 +305,7 @@ interface GraphQLUser {
 function parseReactions(reactions: GraphQLReactions, viewerLogin: string): ReactionCounts {
   const counts: Partial<Record<ReactionContent, number>> = {};
   const viewerReactions: Partial<Record<ReactionContent, number>> = {};
+  const users: Partial<Record<ReactionContent, string[]>> = {};
 
   if (reactions?.nodes) {
     for (const node of reactions.nodes) {
@@ -312,6 +314,13 @@ function parseReactions(reactions: GraphQLReactions, viewerLogin: string): React
       if (node.user?.login === viewerLogin) {
         viewerReactions[node.content] = node.databaseId;
       }
+      // Collect usernames for tooltip
+      if (node.user?.login) {
+        if (!users[node.content]) {
+          users[node.content] = [];
+        }
+        users[node.content]!.push(node.user.login);
+      }
     }
   }
 
@@ -319,6 +328,7 @@ function parseReactions(reactions: GraphQLReactions, viewerLogin: string): React
     totalCount: reactions?.totalCount || 0,
     counts,
     viewerReactions,
+    users,
   };
 }
 

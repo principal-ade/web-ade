@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
 import type { PanelContextValue, PanelActions, PanelEventEmitter } from '@principal-ade/panel-framework-core';
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { DocumentView } from 'themed-markdown';
 import type { ActivityEvent, UserActivityResponse, ReactionContent, ReactionCounts } from '@/app/api/github/user/[username]/activity/route';
+import { WeeklyTimelineHeader } from './WeeklyTimelineHeader';
 
 const REACTION_EMOJI: Record<ReactionContent, string> = {
   THUMBS_UP: '👍',
@@ -46,6 +47,25 @@ interface ReactionBarProps {
   disabled?: boolean;
 }
 
+function formatUsersTooltip(users: string[], viewerReacted: boolean, isAuthenticated: boolean): string {
+  if (users.length === 0) return '';
+
+  const maxNames = 3;
+  const displayNames = users.slice(0, maxNames);
+  const remaining = users.length - maxNames;
+
+  let text = displayNames.join(', ');
+  if (remaining > 0) {
+    text += ` and ${remaining} other${remaining > 1 ? 's' : ''}`;
+  }
+
+  if (isAuthenticated) {
+    text += viewerReacted ? '\n(click to remove)' : '\n(click to add)';
+  }
+
+  return text;
+}
+
 function ReactionBar({ reactions, theme, isAuthenticated, onToggleReaction, disabled }: ReactionBarProps) {
   const [showPicker, setShowPicker] = useState(false);
 
@@ -56,6 +76,7 @@ function ReactionBar({ reactions, theme, isAuthenticated, onToggleReaction, disa
       count: reactions.counts[type]!,
       viewerReacted: !!reactions.viewerReactions[type],
       reactionId: reactions.viewerReactions[type],
+      users: reactions.users[type] || [],
     }));
 
   const handleReactionClick = (type: ReactionContent, reactionId?: number) => {
@@ -73,7 +94,7 @@ function ReactionBar({ reactions, theme, isAuthenticated, onToggleReaction, disa
 
   return (
     <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-      {sortedReactions.map(({ type, count, viewerReacted, reactionId }) => (
+      {sortedReactions.map(({ type, count, viewerReacted, reactionId, users }) => (
         <button
           key={type}
           onClick={(e) => {
@@ -91,7 +112,7 @@ function ReactionBar({ reactions, theme, isAuthenticated, onToggleReaction, disa
             cursor: isAuthenticated && !disabled ? 'pointer' : 'default',
             opacity: disabled ? 0.5 : 1,
           }}
-          title={`${type.replace('_', ' ').toLowerCase()}${viewerReacted ? ' (click to remove)' : isAuthenticated ? ' (click to add)' : ''}`}
+          title={formatUsersTooltip(users, viewerReacted, isAuthenticated)}
         >
           <span>{REACTION_EMOJI[type]}</span>
           <span>{count}</span>
@@ -234,38 +255,6 @@ function formatRelativeTime(timestamp: string) {
   return date.toLocaleDateString();
 }
 
-function groupEventsByDate(events: ActivityEvent[]): Map<string, ActivityEvent[]> {
-  const groups = new Map<string, ActivityEvent[]>();
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today.getTime() - 86400000);
-
-  for (const event of events) {
-    const eventDate = new Date(event.timestamp);
-    const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-
-    let dateLabel: string;
-    if (eventDay.getTime() === today.getTime()) {
-      dateLabel = 'Today';
-    } else if (eventDay.getTime() === yesterday.getTime()) {
-      dateLabel = 'Yesterday';
-    } else {
-      dateLabel = eventDate.toLocaleDateString('en-US', {
-        weekday: 'long',
-        month: 'short',
-        day: 'numeric',
-      });
-    }
-
-    if (!groups.has(dateLabel)) {
-      groups.set(dateLabel, []);
-    }
-    groups.get(dateLabel)!.push(event);
-  }
-
-  return groups;
-}
-
 export function UserActivityPanel({ context: _context, actions: _actions, events, username }: UserActivityPanelProps) {
   const { theme } = useTheme();
   const { user, isAuthenticated } = useAuth();
@@ -284,7 +273,13 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
   const [loadingPRs, setLoadingPRs] = useState<Set<string>>(new Set());
   const [selectedCommit, setSelectedCommit] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [loadingReactions, setLoadingReactions] = useState<Set<string>>(new Set()); // eventId-reactionType
+  const [loadingReactions, setLoadingReactions] = useState<Set<string>>(new Set());
+
+  // Scroll tracking for WeeklyTimelineHeader
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sectionRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [currentDayIndex, setCurrentDayIndex] = useState(0);
 
   // Determine which username to fetch
   const targetUsername = username || user?.login;
@@ -488,22 +483,33 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
     setLoadingReactions((prev) => new Set(prev).add(loadingKey));
 
     // Optimistic update
+    const viewerLogin = user?.login || '';
     setActivity((prev) => prev.map((e) => {
       if (e.id !== event.id || !e.metadata?.reactions) return e;
 
       const reactions = { ...e.metadata.reactions };
       const counts = { ...reactions.counts };
       const viewerReactions = { ...reactions.viewerReactions };
+      const users = { ...reactions.users };
 
       if (currentReactionId) {
         // Remove reaction
         counts[reactionType] = Math.max(0, (counts[reactionType] || 1) - 1);
         if (counts[reactionType] === 0) delete counts[reactionType];
         delete viewerReactions[reactionType];
+        // Remove viewer from users list
+        if (users[reactionType] && viewerLogin) {
+          users[reactionType] = users[reactionType]!.filter((u) => u !== viewerLogin);
+          if (users[reactionType]!.length === 0) delete users[reactionType];
+        }
       } else {
         // Add reaction
         counts[reactionType] = (counts[reactionType] || 0) + 1;
         viewerReactions[reactionType] = -1; // Temporary ID
+        // Add viewer to users list
+        if (viewerLogin) {
+          users[reactionType] = [...(users[reactionType] || []), viewerLogin];
+        }
       }
 
       return {
@@ -515,6 +521,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
             totalCount: Object.values(counts).reduce((a, b) => a + (b || 0), 0),
             counts,
             viewerReactions,
+            users,
           },
         },
       };
@@ -572,16 +579,26 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
         const reactions = { ...e.metadata.reactions };
         const counts = { ...reactions.counts };
         const viewerReactions = { ...reactions.viewerReactions };
+        const users = { ...reactions.users };
 
         if (currentReactionId) {
           // Revert removal
           counts[reactionType] = (counts[reactionType] || 0) + 1;
           viewerReactions[reactionType] = currentReactionId;
+          // Re-add viewer to users list
+          if (viewerLogin) {
+            users[reactionType] = [...(users[reactionType] || []), viewerLogin];
+          }
         } else {
           // Revert addition
           counts[reactionType] = Math.max(0, (counts[reactionType] || 1) - 1);
           if (counts[reactionType] === 0) delete counts[reactionType];
           delete viewerReactions[reactionType];
+          // Remove viewer from users list
+          if (users[reactionType] && viewerLogin) {
+            users[reactionType] = users[reactionType]!.filter((u) => u !== viewerLogin);
+            if (users[reactionType]!.length === 0) delete users[reactionType];
+          }
         }
 
         return {
@@ -593,6 +610,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
               totalCount: Object.values(counts).reduce((a, b) => a + (b || 0), 0),
               counts,
               viewerReactions,
+              users,
             },
           },
         };
@@ -615,6 +633,49 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
 
     return () => unsubscribe();
   }, [events]);
+
+  // Scroll tracking for WeeklyTimelineHeader
+  const todayDayOfWeek = new Date().getDay();
+  const maxScrollIndex = todayDayOfWeek; // Can only scroll back to Sunday of this week
+
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    const maxScroll = scrollHeight - clientHeight;
+    const progress = maxScroll > 0 ? scrollTop / maxScroll : 0;
+    setScrollProgress(progress);
+
+    // Determine current day based on scroll position
+    const containerTop = scrollRef.current.getBoundingClientRect().top;
+    let currentDay = 0;
+
+    sectionRefs.current.forEach((ref, day) => {
+      const rect = ref.getBoundingClientRect();
+      if (rect.top <= containerTop + 80) { // 80px offset for header
+        currentDay = day;
+      }
+    });
+
+    setCurrentDayIndex(currentDay);
+  }, []);
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
+  const scrollToDay = useCallback((scrollIndex: number) => {
+    const section = sectionRefs.current.get(scrollIndex);
+    if (section && scrollRef.current) {
+      const containerTop = scrollRef.current.getBoundingClientRect().top;
+      const sectionTop = section.getBoundingClientRect().top;
+      const offset = sectionTop - containerTop - 80;
+      scrollRef.current.scrollBy({ top: offset, behavior: 'smooth' });
+    }
+  }, []);
 
   // Show auth prompt if no username provided and not authenticated
   if (!targetUsername && !isAuthenticated) {
@@ -710,7 +771,30 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
     filteredActivity = filteredActivity.filter((e) => e.repository === selectedRepo);
   }
 
-  const groupedEvents = groupEventsByDate(filteredActivity);
+  // Group events by scroll index (0 = today, 1 = yesterday, etc.)
+  const now = new Date();
+  const eventsByScrollIndex = new Map<number, ActivityEvent[]>();
+
+  filteredActivity.forEach((event) => {
+    const eventDate = new Date(event.timestamp);
+    const dayDiff = Math.floor((now.getTime() - eventDate.getTime()) / (1000 * 60 * 60 * 24));
+    if (dayDiff >= 0 && dayDiff <= maxScrollIndex) {
+      if (!eventsByScrollIndex.has(dayDiff)) {
+        eventsByScrollIndex.set(dayDiff, []);
+      }
+      eventsByScrollIndex.get(dayDiff)!.push(event);
+    }
+  });
+
+  const getDayLabel = (scrollIndex: number) => {
+    if (scrollIndex === 0) return 'Today';
+    if (scrollIndex === 1) return 'Yesterday';
+    const date = new Date(now);
+    date.setDate(date.getDate() - scrollIndex);
+    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  };
+
+  const numDaysToShow = maxScrollIndex + 1;
 
   // Empty state
   if (filteredActivity.length === 0) {
@@ -748,6 +832,15 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
       className="h-full w-full flex flex-col overflow-hidden"
       style={{ background: theme.colors.background }}
     >
+      {/* Weekly Timeline Header */}
+      <WeeklyTimelineHeader
+        events={filteredActivity}
+        scrollProgress={scrollProgress}
+        currentDayIndex={currentDayIndex}
+        totalActivities={filteredActivity.length}
+        onDayClick={scrollToDay}
+      />
+
       {/* Header with selected repo chip */}
       {selectedRepo && (
         <div
@@ -771,26 +864,40 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
       )}
 
       {/* Timeline Content */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-        {Array.from(groupedEvents.entries()).map(([date, dateEvents]) => (
-          <div key={date}>
-            {/* Date Header */}
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto scrollbar-hide"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {Array.from({ length: numDaysToShow }, (_, scrollIndex) => {
+          const dayEvents = eventsByScrollIndex.get(scrollIndex) || [];
+
+          return (
             <div
-              className="px-3 py-2 sticky top-0"
-              style={{
-                fontSize: `${theme.fontSizes[1]}px`,
-                fontWeight: theme.fontWeights.medium,
-                fontFamily: theme.fonts.body,
-                background: theme.colors.surface,
-                color: theme.colors.textMuted,
+              key={scrollIndex}
+              ref={(el) => {
+                if (el) sectionRefs.current.set(scrollIndex, el);
               }}
             >
-              {date}
-            </div>
+              {/* Day section header - skip for Today since it's in the WeeklyTimelineHeader */}
+              {scrollIndex > 0 && (
+                <div
+                  className="px-3 py-2"
+                  style={{
+                    fontSize: `${theme.fontSizes[1]}px`,
+                    fontWeight: theme.fontWeights.medium,
+                    fontFamily: theme.fonts.body,
+                    background: theme.colors.surface,
+                    color: theme.colors.textMuted,
+                    borderBottom: `1px solid ${theme.colors.border}`,
+                  }}
+                >
+                  {getDayLabel(scrollIndex)}
+                </div>
+              )}
 
-            {/* Events for this date */}
-            <div>
-              {dateEvents.map((event) => {
+              {/* Events for this day */}
+              {dayEvents.map((event) => {
                 const color = getEventColor(event.type, theme);
                 const isEventSelected = selectedEventId === event.id;
 
@@ -1177,8 +1284,8 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                 );
               })}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Footer with stats */}
