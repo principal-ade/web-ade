@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { PanelProvider, usePanelProvider } from '@/contexts/PanelContext';
@@ -23,10 +24,11 @@ import {
 import { UserActivityPanel } from '@/components/UserActivityPanel';
 import { FollowingUsersPanel } from '@/components/FollowingUsersPanel';
 
-// Dynamic import for FileCityPanel (SSR disabled)
-const FileCityPanelLoader = dynamic(
+// Dynamic import for FeedCodeCityPanel (SSR disabled)
+const FeedCodeCityPanelLoader = dynamic(
   () => import('@industry-theme/file-city-panel').then((mod) => {
-    const Component = mod.panels[0]!.component;
+    // Use FeedCodeCityPanel (index 1) which includes project header
+    const Component = mod.panels[1]!.component;
     return { default: Component };
   }),
   { ssr: false }
@@ -41,6 +43,7 @@ interface ActivityPageContentProps {
 function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: ActivityPageContentProps) {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
+  const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   const [leftCollapsed] = useState(false);
   const [rightCollapsed] = useState(false);
@@ -159,6 +162,19 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
     return () => unsubscribe();
   }, [events, selectedRepo, onRepoSelect]);
 
+  // Listen for project:open event from FeedCodeCityPanel
+  useEffect(() => {
+    const unsubscribe = events.on('project:open', (event) => {
+      const payload = event.payload as { repo?: { fullName?: string } };
+      if (payload?.repo?.fullName) {
+        // Navigate to the repository page
+        router.push(`/${payload.repo.fullName}`);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [events, router]);
+
   // Detect mobile viewport
   useEffect(() => {
     const checkMobile = () => {
@@ -205,7 +221,7 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
       content: (
         <div className="h-full w-full overflow-hidden">
           {selectedRepo ? (
-            <FileCityPanelLoader
+            <FeedCodeCityPanelLoader
               context={context}
               actions={actions}
               events={events}

@@ -681,6 +681,37 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   // State for commit files (files changed in selected commit - for File-City visualization)
   const [commitFilesData, setCommitFilesData] = useState<CommitFilesSliceData | null>(null);
 
+  // State for feed project (GitHub repo info + root package info for FeedCodeCityPanel)
+  interface FeedProjectData {
+    repo: {
+      owner: string;
+      name: string;
+      fullName: string;
+      description?: string;
+      htmlUrl: string;
+      stars: number;
+      forks: number;
+      watchers?: number;
+      openIssues?: number;
+      isOrganization?: boolean;
+      avatarUrl?: string;
+      license?: string;
+    };
+    rootPackage?: {
+      name?: string;
+      version?: string;
+      license?: string;
+      packageManager?: 'npm' | 'yarn' | 'pnpm' | 'bun' | 'pip' | 'cargo' | 'unknown';
+      dependencyCount?: number;
+      devDependencyCount?: number;
+      isMonorepo?: boolean;
+      packageCount?: number;
+    };
+  }
+  const [feedProjectData, setFeedProjectData] = useState<FeedProjectData | null>(null);
+  const [feedProjectLoading, setFeedProjectLoading] = useState(false);
+  const [feedProjectError, setFeedProjectError] = useState<Error | null>(null);
+
   // State for user GitHub data (for GitHubStarredPanel and GitHubProjectsPanel)
   interface UserGitHubData {
     starred: GitHubRepository[];
@@ -1332,6 +1363,84 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     }
   }, []);
 
+  // Fetch feed project data (GitHub repo info + root package info) for FeedCodeCityPanel
+  const fetchFeedProject = useCallback(async (repo: string) => {
+    setFeedProjectLoading(true);
+    setFeedProjectError(null);
+    console.log('[PanelContext] Fetching feed project data for:', repo);
+
+    try {
+      const [owner, name] = repo.split('/');
+      if (!owner || !name) {
+        throw new Error('Invalid repository format');
+      }
+
+      // Fetch repo info and packages in parallel
+      const [repoResponse, packagesResponse] = await Promise.all([
+        fetch(`/api/github/repo/${owner}/${name}?action=info`, { credentials: 'include' }),
+        fetch(`/api/github/repo/${owner}/${name}/packages`, { credentials: 'include' }),
+      ]);
+
+      if (!repoResponse.ok) {
+        throw new Error(`Failed to fetch repo info: ${repoResponse.statusText}`);
+      }
+
+      const repoData = await repoResponse.json();
+      let rootPackage: FeedProjectData['rootPackage'] | undefined;
+
+      // Parse packages data if available
+      if (packagesResponse.ok) {
+        const packagesData = await packagesResponse.json();
+        if (packagesData.packages && packagesData.summary) {
+          // Find root package (monorepo root or single package)
+          const rootPkg = packagesData.packages.find(
+            (p: { packageData?: { isMonorepoRoot?: boolean } }) => p.packageData?.isMonorepoRoot
+          ) || packagesData.packages[0];
+
+          if (rootPkg?.packageData) {
+            rootPackage = {
+              name: rootPkg.packageData.name,
+              version: rootPkg.packageData.version,
+              packageManager: rootPkg.packageData.packageManager,
+              dependencyCount: Object.keys(rootPkg.packageData.dependencies || {}).length,
+              devDependencyCount: Object.keys(rootPkg.packageData.devDependencies || {}).length,
+              isMonorepo: packagesData.summary.isMonorepo,
+              packageCount: packagesData.summary.totalPackages,
+            };
+          }
+        }
+      }
+
+      // Transform GitHub API response to FeedProjectData format
+      const feedData: FeedProjectData = {
+        repo: {
+          owner: repoData.owner?.login || owner,
+          name: repoData.name || name,
+          fullName: repoData.full_name || `${owner}/${name}`,
+          description: repoData.description,
+          htmlUrl: repoData.html_url || `https://github.com/${owner}/${name}`,
+          stars: repoData.stargazers_count || 0,
+          forks: repoData.forks_count || 0,
+          watchers: repoData.watchers_count,
+          openIssues: repoData.open_issues_count,
+          isOrganization: repoData.owner?.type === 'Organization',
+          avatarUrl: repoData.owner?.avatar_url,
+          license: repoData.license?.spdx_id || repoData.license?.name,
+        },
+        rootPackage,
+      };
+
+      setFeedProjectData(feedData);
+      console.log('[PanelContext] Feed project data loaded:', feedData.repo.fullName);
+    } catch (err) {
+      console.error('[PanelContext] Failed to fetch feed project data:', err);
+      setFeedProjectError(err instanceof Error ? err : new Error('Failed to load feed project'));
+      setFeedProjectData(null);
+    } finally {
+      setFeedProjectLoading(false);
+    }
+  }, []);
+
   // Fetch codebase views from server-side API
   const fetchCodebaseViews = useCallback(async (repo: string) => {
     setCodebaseViewsLoading(true);
@@ -1602,6 +1711,21 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           refresh: async () => {
             if (githubRepo) {
               await fetchPackages(githubRepo);
+            }
+          },
+        },
+      ],
+      [
+        'feedProject',
+        {
+          scope: 'repository',
+          name: 'feedProject',
+          data: feedProjectData,
+          loading: feedProjectLoading,
+          error: feedProjectError,
+          refresh: async () => {
+            if (githubRepo) {
+              await fetchFeedProject(githubRepo);
             }
           },
         },
@@ -1936,6 +2060,17 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       data: packagesData,
       loading: packagesLoading,
       error: packagesError,
+    });
+  }
+
+  // Update feedProject slice with fetched data
+  const feedProjectSlice = slicesRef.current.get('feedProject');
+  if (feedProjectSlice) {
+    slicesRef.current.set('feedProject', {
+      ...feedProjectSlice,
+      data: feedProjectData,
+      loading: feedProjectLoading,
+      error: feedProjectError,
     });
   }
 
@@ -2847,6 +2982,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     fetchCommits(githubRepo);
     fetchIssues(githubRepo);
     fetchPullRequests(githubRepo);
+    fetchFeedProject(githubRepo);
 
     // Sequence tree → quality metrics to reuse SHA (saves GitHub API calls)
     // Tree fetch resolves commit SHA, which is then used for quality metrics caching
@@ -2857,7 +2993,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       fetchQualityMetrics(githubRepo, commitSha ?? undefined);
     };
     fetchTreeThenQuality();
-  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics, fetchPackages, fetchCommits, fetchIssues, fetchPullRequests]);
+  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics, fetchPackages, fetchCommits, fetchIssues, fetchPullRequests, fetchFeedProject]);
 
   // Fetch owner repositories when initialOwner prop is provided (handles client-side navigation)
   useEffect(() => {
