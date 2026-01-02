@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Palette, GitCommit, ArrowLeftRight, Sparkles, X, Star, Rss } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Palette, GitCommit, ArrowLeftRight, Sparkles, X, Star, Rss, Mic } from 'lucide-react';
 import { UserAvatarMenu } from './UserAvatarMenu';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
@@ -38,6 +38,8 @@ interface EditorHeaderProps {
   // Mobile sidebar
   owner?: string;
   onOpenMobileSidebar?: () => void;
+  // Voice input
+  onOpenWithMic?: () => void;
 }
 
 export function EditorHeader({
@@ -60,6 +62,7 @@ export function EditorHeader({
   onClearColorMode,
   owner,
   onOpenMobileSidebar,
+  onOpenWithMic,
 }: EditorHeaderProps = {}) {
   const { theme } = useTheme();
   const { cycleTheme, currentThemeName } = useGlobalTheme();
@@ -467,6 +470,21 @@ export function EditorHeader({
             title={`Theme: ${currentThemeName} (click to cycle)`}
           >
             <Palette className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Voice Input Button */}
+        {onOpenWithMic && (
+          <button
+            onClick={onOpenWithMic}
+            className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+            style={{
+              background: theme.colors.secondary,
+              color: theme.colors.text,
+            }}
+            title="Voice command (opens command palette with microphone)"
+          >
+            <Mic className="w-4 h-4" />
           </button>
         )}
 

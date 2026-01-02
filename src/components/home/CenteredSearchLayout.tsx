@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Search } from 'lucide-react';
+import { Search, Sparkles, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -68,7 +68,11 @@ interface UserGitHubRepo {
   updated_at: string;
 }
 
-export function CenteredSearchLayout() {
+interface CenteredSearchLayoutProps {
+  onToggleGallery?: () => void;
+}
+
+export function CenteredSearchLayout({ onToggleGallery }: CenteredSearchLayoutProps) {
   const { theme } = useTheme();
   const { isAuthenticated } = useAuth();
   const router = useRouter();
@@ -123,6 +127,21 @@ export function CenteredSearchLayout() {
         console.error('Failed to fetch user repos:', err);
       });
   }, [isAuthenticated]);
+
+  // Remove a repo from the recent list
+  const removeRecentRepo = (owner: string, repo: string) => {
+    const updated = recentRepos.filter(
+      (r) => !(r.owner === owner && r.repo === repo)
+    );
+    setRecentRepos(updated);
+    try {
+      localStorage.setItem(RECENT_REPOSITORIES_KEY, JSON.stringify(updated));
+    } catch {
+      // Ignore storage errors
+    }
+  };
+
+  const [hoveredRepo, setHoveredRepo] = useState<string | null>(null);
 
   const showRecents = !searchQuery.trim() && recentRepos.length > 0;
 
@@ -234,55 +253,153 @@ export function CenteredSearchLayout() {
                 marginTop: '32px',
               }}
             >
-              {recentRepos.slice(0, 6).map((repo) => (
-                <Link
-                  key={`${repo.owner}/${repo.repo}`}
-                  href={`/${repo.owner}/${repo.repo}`}
+              {recentRepos.slice(0, 6).map((repo) => {
+                const repoKey = `${repo.owner}/${repo.repo}`;
+                const isHovered = hoveredRepo === repoKey;
+                return (
+                  <div
+                    key={repoKey}
+                    style={{
+                      position: 'relative',
+                      width: '100px',
+                    }}
+                    onMouseEnter={() => setHoveredRepo(repoKey)}
+                    onMouseLeave={() => setHoveredRepo(null)}
+                  >
+                    <Link
+                      href={`/${repo.owner}/${repo.repo}`}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        padding: '12px',
+                        borderRadius: '12px',
+                        textDecoration: 'none',
+                        transition: 'all 0.15s ease',
+                        width: '100%',
+                        backgroundColor: isHovered ? theme.colors.surface : 'transparent',
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`https://github.com/${repo.owner}.png?size=64`}
+                        alt={repo.owner}
+                        style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: '50%',
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: '14px',
+                          color: theme.colors.text,
+                          fontFamily: theme.fonts.body,
+                          textAlign: 'center',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          width: '100%',
+                        }}
+                      >
+                        {repo.repo}
+                      </span>
+                    </Link>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        removeRecentRepo(repo.owner, repo.repo);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '20px',
+                        height: '20px',
+                        padding: 0,
+                        border: 'none',
+                        borderRadius: '50%',
+                        background: theme.colors.surface,
+                        color: theme.colors.textMuted,
+                        cursor: 'pointer',
+                        opacity: isHovered ? 1 : 0,
+                        transition: 'opacity 0.15s ease, color 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = theme.colors.text;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = theme.colors.textMuted;
+                      }}
+                      title="Remove from recent"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Empty state - show when no search query and no recent repos */}
+          {!searchQuery.trim() && recentRepos.length === 0 && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '16px',
+                marginTop: '48px',
+                color: theme.colors.textMuted,
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '15px',
+                }}
+              >
+                No recently visited repositories
+              </p>
+              {onToggleGallery && (
+                <button
+                  onClick={onToggleGallery}
                   style={{
-                    display: 'flex',
-                    flexDirection: 'column',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    padding: '12px',
-                    borderRadius: '12px',
-                    textDecoration: 'none',
+                    gap: '6px',
+                    padding: '10px 20px',
+                    fontSize: '15px',
+                    fontWeight: 500,
+                    fontFamily: theme.fonts.body,
+                    color: theme.colors.text,
+                    background: theme.colors.surface,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
                     transition: 'all 0.15s ease',
-                    width: '200px',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = theme.colors.surface;
+                    e.currentTarget.style.background = theme.colors.primary;
+                    e.currentTarget.style.borderColor = theme.colors.primary;
+                    e.currentTarget.style.color = theme.colors.textOnPrimary;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.background = theme.colors.surface;
+                    e.currentTarget.style.borderColor = theme.colors.border;
+                    e.currentTarget.style.color = theme.colors.text;
                   }}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={`https://github.com/${repo.owner}.png?size=64`}
-                    alt={repo.owner}
-                    style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: '50%',
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: '14px',
-                      color: theme.colors.text,
-                      fontFamily: theme.fonts.body,
-                      textAlign: 'center',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      width: '100%',
-                    }}
-                  >
-                    {repo.repo}
-                  </span>
-                </Link>
-              ))}
+                  <Sparkles size={16} />
+                  Explore the Gallery
+                </button>
+              )}
             </div>
           )}
 

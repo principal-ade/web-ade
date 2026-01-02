@@ -15,7 +15,7 @@
  * Supports dynamic autocomplete for collections, repositories, and owners.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useCallback } from 'react';
 import {
   AgentCommandPalette,
   useAgentCommandPalette,
@@ -23,6 +23,7 @@ import {
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { useNavigationCommands } from '@/hooks/useNavigationCommands';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 
 /** Data for autocomplete suggestions */
 export interface CommandPaletteData {
@@ -47,6 +48,8 @@ interface GlobalCommandPaletteProps {
   autocompleteData?: CommandPaletteData;
   /** Whether AI agent is available (defaults to false for standalone) */
   agentAvailable?: boolean;
+  /** Callback that receives the openWithMic function when component mounts */
+  onOpenWithMicReady?: (openWithMic: (() => void) | null) => void;
 }
 
 export function GlobalCommandPalette({
@@ -63,6 +66,7 @@ export function GlobalCommandPalette({
   placeholder = 'Type a command (/) or ask a question...',
   autocompleteData = {},
   agentAvailable = false,
+  onOpenWithMicReady,
 }: GlobalCommandPaletteProps) {
   // Create internal events if none provided
   const internalEvents = useMemo(() => new PanelEventBus(), []);
@@ -84,6 +88,36 @@ export function GlobalCommandPalette({
     quickCommands,
     onExecuteTool: handleExecuteTool,
   });
+
+  // Speech recognition for voice input
+  const { startListening, isSupported: isSpeechSupported } = useSpeechRecognition({
+    onTranscript: (transcript, isFinal) => {
+      agentPalette.setQuery(transcript);
+      if (isFinal && transcript.trim()) {
+        setTimeout(() => {
+          agentPalette.submit();
+        }, 300);
+      }
+    },
+    onError: (error) => {
+      console.error('Speech recognition error:', error);
+    },
+  });
+
+  // Handler to open command palette with voice input
+  const handleOpenWithMic = useCallback(() => {
+    agentPalette.open();
+    setTimeout(() => {
+      startListening();
+    }, 100);
+  }, [agentPalette, startListening]);
+
+  // Notify parent when openWithMic is ready (only if agent is available)
+  useEffect(() => {
+    if (onOpenWithMicReady) {
+      onOpenWithMicReady(isSpeechSupported && agentAvailable ? handleOpenWithMic : null);
+    }
+  }, [onOpenWithMicReady, isSpeechSupported, agentAvailable, handleOpenWithMic]);
 
   // Handle natural language submissions (AI mode)
   useEffect(() => {

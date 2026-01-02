@@ -31,6 +31,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useGemini } from '@/contexts/GeminiContext';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import { useNavigationCommands } from '@/hooks/useNavigationCommands';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import type { Theme } from '@principal-ade/industry-theme';
 import type { LocalFileSystemAdapter } from '@/lib/client/LocalFileSystemAdapter';
 import { useLocalFileSystem } from '@/contexts/LocalFileSystemContext';
@@ -518,6 +519,37 @@ function EditorLayoutContent({
     quickCommands: navigationCommands,
     onExecuteTool: handleNavigationCommand,
   });
+
+  // Speech recognition for voice input to command palette
+  const { startListening: startSpeechRecognition, isSupported: isSpeechSupported } = useSpeechRecognition({
+    onTranscript: (transcript, isFinal) => {
+      // Update the command palette query as speech is recognized
+      agentPalette.setQuery(transcript);
+
+      // Auto-submit when final transcript is received
+      if (isFinal && transcript.trim()) {
+        // Small delay to let user see the final text before submitting
+        setTimeout(() => {
+          agentPalette.submit();
+        }, 300);
+      }
+    },
+    onEnd: () => {
+      // Speech recognition ended
+    },
+    onError: (error) => {
+      console.error('Speech recognition error:', error);
+    },
+  });
+
+  // Handler to open command palette with voice input
+  const handleOpenWithMic = useCallback(() => {
+    agentPalette.open();
+    // Start listening after a small delay to ensure palette is open
+    setTimeout(() => {
+      startSpeechRecognition();
+    }, 100);
+  }, [agentPalette, startSpeechRecognition]);
 
   // Wire Agent Command Palette to Gemini for natural language processing
   useEffect(() => {
@@ -1377,6 +1409,7 @@ function EditorLayoutContent({
           onClearColorMode={clearColorMode}
           owner={repositoryInfo?.owner}
           onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
+          onOpenWithMic={isSpeechSupported ? handleOpenWithMic : undefined}
         />
 
         {/* Commit Modal - only show when not in local mode */}

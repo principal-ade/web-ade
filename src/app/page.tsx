@@ -67,6 +67,8 @@ function HomePageContent() {
   const [galleryCollections, setGalleryCollections] = useState<GalleryCollection[]>([]);
   const [galleryLoading, setGalleryLoading] = useState(false);
   const detailsFetchedRef = useRef(false);
+  const openWithMicRef = useRef<(() => void) | null>(null);
+  const [speechSupported, setSpeechSupported] = useState(false);
 
   // Load recent items from localStorage on mount
   useEffect(() => {
@@ -218,6 +220,10 @@ function HomePageContent() {
     setShowGallery((prev) => !prev);
   }, []);
 
+  const handleOpenWithMic = useCallback(() => {
+    openWithMicRef.current?.();
+  }, []);
+
   // Build autocomplete data for command palette
   const autocompleteData: CommandPaletteData = useMemo(() => {
     return {
@@ -235,6 +241,7 @@ function HomePageContent() {
       <EditorHeader
         showGallery={showGallery}
         onToggleGallery={handleToggleGallery}
+        onOpenWithMic={speechSupported ? handleOpenWithMic : undefined}
       />
       <div
         style={{
@@ -261,7 +268,7 @@ function HomePageContent() {
             <GalleryCarouselView collections={galleryCollections} />
           )
         ) : (
-          <WelcomePanel />
+          <WelcomePanel onToggleGallery={handleToggleGallery} />
         )}
       </div>
 
@@ -274,6 +281,10 @@ function HomePageContent() {
           '/github',
           '/home',
         ]}
+        onOpenWithMicReady={(fn) => {
+          openWithMicRef.current = fn;
+          setSpeechSupported(fn !== null);
+        }}
       />
     </div>
   );

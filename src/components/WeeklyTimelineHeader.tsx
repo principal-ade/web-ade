@@ -141,7 +141,7 @@ export function WeeklyTimelineHeader({
                 }}
                 title={isFuture ? 'Future' : `${day.dayName}: ${day.events.length} activities`}
               >
-                {!isFuture && day.events.length > 0 ? day.events.length : ''}
+                {WEEK_DAYS[index]!.charAt(0)}
               </div>
             </button>
           );

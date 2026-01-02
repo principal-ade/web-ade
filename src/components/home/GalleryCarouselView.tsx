@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ChevronLeft, ChevronRight, Star, GitFork, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
@@ -68,6 +68,42 @@ export function GalleryCarouselView({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentIndex, hasPrevious, hasNext]);
 
+  // Touch swipe navigation
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    touchStartX.current = touch.clientX;
+    touchStartY.current = touch.clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+
+    const touch = e.changedTouches[0];
+    if (!touch) return;
+    const touchEndX = touch.clientX;
+    const touchEndY = touch.clientY;
+    const deltaX = touchEndX - touchStartX.current;
+    const deltaY = touchEndY - touchStartY.current;
+
+    // Only trigger swipe if horizontal movement is greater than vertical
+    // and exceeds minimum threshold (50px)
+    const minSwipeDistance = 50;
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+      if (deltaX > 0) {
+        goToPrevious();
+      } else {
+        goToNext();
+      }
+    }
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
+
   if (!currentCollection || collections.length === 0) {
     return (
       <div
@@ -93,6 +129,8 @@ export function GalleryCarouselView({
         height: '100%',
         overflow: 'hidden',
       }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Fixed Header Section */}
       <div
