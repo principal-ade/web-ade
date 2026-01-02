@@ -36,6 +36,14 @@ interface IssueDetails {
   comments: number;
 }
 
+interface PRDetails {
+  number: number;
+  title: string;
+  body: string | null;
+  state: string;
+  html_url: string;
+}
+
 export interface UserActivityPanelProps {
   context: PanelContextValue;
   actions: PanelActions;
@@ -134,6 +142,9 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
   const [expandedIssues, setExpandedIssues] = useState<Set<string>>(new Set());
   const [issueDetails, setIssueDetails] = useState<Record<string, IssueDetails>>({});
   const [loadingIssues, setLoadingIssues] = useState<Set<string>>(new Set());
+  const [expandedPRs, setExpandedPRs] = useState<Set<string>>(new Set());
+  const [prDetails, setPRDetails] = useState<Record<string, PRDetails>>({});
+  const [loadingPRs, setLoadingPRs] = useState<Set<string>>(new Set());
   const [selectedCommit, setSelectedCommit] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
@@ -273,6 +284,55 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
       });
     }
   }, [expandedIssues, issueDetails]);
+
+  // Toggle PR expansion and fetch body if needed
+  const togglePRExpansion = useCallback(async (event: ActivityEvent) => {
+    const eventId = event.id;
+
+    if (expandedPRs.has(eventId)) {
+      // Collapse
+      setExpandedPRs((prev) => {
+        const next = new Set(prev);
+        next.delete(eventId);
+        return next;
+      });
+      return;
+    }
+
+    // Expand
+    setExpandedPRs((prev) => new Set(prev).add(eventId));
+
+    // Already have details cached
+    if (prDetails[eventId]) return;
+
+    // Fetch PR details
+    const [owner, repo] = event.repository.split('/');
+    const prNumber = event.metadata?.prNumber;
+    if (!owner || !repo || !prNumber) return;
+
+    setLoadingPRs((prev) => new Set(prev).add(eventId));
+
+    try {
+      const response = await fetch(
+        `/api/github/repo/${owner}/${repo}/pull-requests/${prNumber}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setPRDetails((prev) => ({
+          ...prev,
+          [eventId]: data,
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch PR details:', err);
+    } finally {
+      setLoadingPRs((prev) => {
+        const next = new Set(prev);
+        next.delete(eventId);
+        return next;
+      });
+    }
+  }, [expandedPRs, prDetails]);
 
   // Listen for repo filter events
   useEffect(() => {
@@ -570,6 +630,26 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                           )}
                           <span className="truncate" title={event.title}>{event.title}</span>
                         </button>
+                      ) : event.type === 'pr_merged' && event.title ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            togglePRExpansion(event);
+                          }}
+                          className="flex items-center gap-1 hover:opacity-80 transition-opacity text-left"
+                          style={{
+                            fontSize: `${theme.fontSizes[2]}px`,
+                            fontFamily: theme.fonts.body,
+                            color: theme.colors.text,
+                          }}
+                        >
+                          {expandedPRs.has(event.id) ? (
+                            <ChevronDown className="w-4 h-4 flex-shrink-0" style={{ color: theme.colors.textMuted }} />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: theme.colors.textMuted }} />
+                          )}
+                          <span className="truncate" title={event.title}>{event.title}</span>
+                        </button>
                       ) : event.title ? (
                         <div
                           className="truncate"
@@ -616,6 +696,52 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             <span style={{ color: theme.colors.error }}>
                               -{event.metadata.deletions}
                             </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Expanded PR body */}
+                      {event.type === 'pr_merged' && expandedPRs.has(event.id) && (
+                        <div
+                          className="mt-2 rounded-md overflow-hidden min-w-0"
+                          style={{
+                            border: `1px solid ${theme.colors.border}`,
+                            background: theme.colors.surface,
+                          }}
+                        >
+                          {loadingPRs.has(event.id) ? (
+                            <div
+                              className="flex items-center gap-2 p-3"
+                              style={{ color: theme.colors.textMuted }}
+                            >
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <span style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}>
+                                Loading PR...
+                              </span>
+                            </div>
+                          ) : prDetails[event.id]?.body ? (
+                            <div className="max-h-64 overflow-y-auto overflow-x-hidden">
+                              <div className="p-3 min-w-0 break-words" style={{ wordBreak: 'break-word' }}>
+                                <DocumentView
+                                  content={prDetails[event.id]!.body!}
+                                  theme={theme}
+                                  maxWidth="100%"
+                                  transparentBackground
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div
+                              className="p-3"
+                              style={{
+                                fontSize: `${theme.fontSizes[1]}px`,
+                                fontFamily: theme.fonts.body,
+                                color: theme.colors.textMuted,
+                                fontStyle: 'italic',
+                              }}
+                            >
+                              No description provided
+                            </div>
                           )}
                         </div>
                       )}
