@@ -336,7 +336,7 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
             </div>
           </div>
         ) : (
-          <div className="p-2 space-y-1">
+          <div className="p-2 space-y-1 flex flex-col items-end">
             {following.map((user) => {
               const isViewing = viewedUser === user.login;
               return (
@@ -350,7 +350,7 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
                       payload: { username: user.login },
                     });
                   }}
-                  className="w-full flex items-center gap-3 p-2 rounded transition-colors hover:opacity-80 text-left"
+                  className="w-full max-w-[200px] flex items-center gap-3 p-2 rounded transition-colors hover:opacity-80 text-left"
                   style={{
                     background: isViewing ? theme.colors.surface : 'transparent',
                     border: isViewing ? `1px solid ${theme.colors.border}` : '1px solid transparent',

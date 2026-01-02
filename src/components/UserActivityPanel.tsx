@@ -720,7 +720,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                               </span>
                             </div>
                           ) : prDetails[event.id]?.body ? (
-                            <div className="max-h-64 overflow-y-auto overflow-x-hidden">
+                            <div className="max-h-[32rem] overflow-y-auto overflow-x-hidden">
                               <div className="p-3 min-w-0 break-words" style={{ wordBreak: 'break-word' }}>
                                 <DocumentView
                                   content={prDetails[event.id]!.body!}
@@ -848,7 +848,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                               </span>
                             </div>
                           ) : issueDetails[event.id]?.body ? (
-                            <div className="max-h-64 overflow-y-auto overflow-x-hidden">
+                            <div className="max-h-[32rem] overflow-y-auto overflow-x-hidden">
                               <div className="p-3 min-w-0 break-words" style={{ wordBreak: 'break-word' }}>
                                 <DocumentView
                                   content={issueDetails[event.id]!.body!}
