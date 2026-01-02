@@ -2975,6 +2975,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     setEnabledColorModes([]);
     setSelectedColorMode(null);
 
+    // Reset feed project data to avoid showing stale repo info
+    setFeedProjectData(null);
+
     // Fetch independent data in parallel
     fetchReadme(githubRepo);
     fetchCodebaseViews(githubRepo);
