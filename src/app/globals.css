@@ -19,6 +19,10 @@
   }
 }
 
+html {
+  background: var(--background);
+}
+
 html,
 body {
   width: 100%;
