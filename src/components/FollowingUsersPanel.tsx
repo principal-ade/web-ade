@@ -65,9 +65,24 @@ function ActivityGraph({ contributions, theme }: { contributions: DailyContribut
   );
 }
 
+// Generate placeholder contributions for 7 days (all zeros)
+function getPlaceholderContributions(): DailyContribution[] {
+  const days: DailyContribution[] = [];
+  const now = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    days.push({
+      date: date.toISOString().slice(0, 10),
+      count: 0,
+    });
+  }
+  return days;
+}
+
 // Component that fetches and displays contributions for a single user
 function UserContributions({ login, theme }: { login: string; theme: ReturnType<typeof useTheme>['theme'] }) {
-  const [contributions, setContributions] = useState<DailyContribution[] | null>(null);
+  const [contributions, setContributions] = useState<DailyContribution[]>(getPlaceholderContributions);
 
   useEffect(() => {
     let cancelled = false;
@@ -78,11 +93,11 @@ function UserContributions({ login, theme }: { login: string; theme: ReturnType<
         if (!response.ok) return;
 
         const data = await response.json();
-        if (!cancelled && data.contributions) {
+        if (!cancelled && data.contributions && data.contributions.length > 0) {
           setContributions(data.contributions);
         }
       } catch {
-        // Silently fail - contributions are optional
+        // Silently fail - contributions are optional, placeholder stays
       }
     };
 
@@ -92,10 +107,6 @@ function UserContributions({ login, theme }: { login: string; theme: ReturnType<
       cancelled = true;
     };
   }, [login]);
-
-  if (!contributions || contributions.length === 0) {
-    return null;
-  }
 
   return <ActivityGraph contributions={contributions} theme={theme} />;
 }
