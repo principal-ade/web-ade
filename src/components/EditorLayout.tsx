@@ -282,19 +282,12 @@ function EditorLayoutContent({
   const { theme } = useTheme();
   const { context, actions, events, selectedColorMode, clearColorMode } = usePanelProvider();
 
-  // Count triaged items from fileTree (files in .backlog/tasks/)
+  // Count triaged items from fileTree (files in backlog/tasks/)
   const fileTreeSlice = context.getSlice<{ allFiles?: Array<{ path: string }> }>('fileTree');
   const triagedCount = useMemo(() => {
     const allFiles = fileTreeSlice?.data?.allFiles;
-    console.log('[EditorLayout] fileTreeSlice:', fileTreeSlice);
-    console.log('[EditorLayout] allFiles count:', allFiles?.length);
-    if (allFiles?.length) {
-      console.log('[EditorLayout] sample paths:', allFiles.slice(0, 5).map(f => f.path));
-      const backlogFiles = allFiles.filter((file) => file.path.includes('.backlog/tasks/'));
-      console.log('[EditorLayout] backlog files:', backlogFiles.length, backlogFiles.map(f => f.path));
-    }
     if (!allFiles) return 0;
-    return allFiles.filter((file) => file.path.includes('.backlog/tasks/')).length;
+    return allFiles.filter((file) => file.path.includes('backlog/tasks/')).length;
   }, [fileTreeSlice?.data?.allFiles]);
 
   const { login } = useAuth();
