@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { unstable_cache } from 'next/cache';
+import { gzip } from 'zlib';
+import { promisify } from 'util';
 import { getGitHubToken } from '@/lib/auth/cookies';
 import {
   GitHubArtifactService,
   type QualityArtifactResponse,
   type ArtifactInfo,
 } from '@/lib/server/GitHubArtifactService';
+
+const gzipAsync = promisify(gzip);
 
 function addCorsHeaders(response: NextResponse) {
   response.headers.set('Access-Control-Allow-Origin', '*');
@@ -36,8 +40,11 @@ const CACHE_DURATION = 300;
  * - commit: commit SHA (required when action='commit')
  * - branch: branch name (default: 'main', used when action='latest')
  * - limit: number of artifacts to return (default: 10, used when action='list')
+ * - full: 'true' to include rawResults (WARNING: can exceed Lambda 6MB limit)
  *
- * Returns quality metrics from GitHub Actions artifacts produced by quality-lens-cli
+ * By default, rawResults is omitted to keep response under Lambda limits.
+ * fileMetrics is always included.
+ * Response is gzip compressed when Accept-Encoding includes gzip and response > 100KB.
  */
 export async function GET(
   request: NextRequest,
@@ -127,7 +134,39 @@ export async function GET(
       );
     }
 
-    const response = NextResponse.json(data);
+    // By default, strip rawResults to keep under Lambda 6MB limit
+    // Use ?full=true to include rawResults (for debug panel)
+    const includeFull = searchParams.get('full') === 'true';
+    let responseData = data;
+
+    if (!includeFull && !Array.isArray(data)) {
+      // For QualityArtifactResponse, remove rawResults (keeps fileMetrics)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { rawResults, ...compactData } = data as QualityArtifactResponse;
+      responseData = compactData;
+    }
+
+    const jsonString = JSON.stringify(responseData);
+
+    // Check if client accepts gzip
+    const acceptEncoding = request.headers.get('accept-encoding') || '';
+    const supportsGzip = acceptEncoding.includes('gzip');
+
+    // Gzip compress if supported and response is large (> 100KB)
+    if (supportsGzip && jsonString.length > 100 * 1024) {
+      const compressed = await gzipAsync(Buffer.from(jsonString));
+      const response = new NextResponse(compressed, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Encoding': 'gzip',
+          'Cache-Control': `public, s-maxage=${CACHE_DURATION}, stale-while-revalidate=${CACHE_DURATION * 2}`,
+        },
+      });
+      return addCorsHeaders(response);
+    }
+
+    const response = NextResponse.json(responseData);
     response.headers.set(
       'Cache-Control',
       `public, s-maxage=${CACHE_DURATION}, stale-while-revalidate=${CACHE_DURATION * 2}`
