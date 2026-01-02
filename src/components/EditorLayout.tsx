@@ -291,12 +291,12 @@ function EditorLayoutContent({
   const { theme } = useTheme();
   const { context, actions, events, selectedColorMode, clearColorMode } = usePanelProvider();
 
-  // Count triaged items from fileTree (files in backlog/active/)
+  // Count triaged items from fileTree (files in .backlog/tasks/)
   const fileTreeSlice = context.getSlice<{ allFiles?: Array<{ path: string }> }>('fileTree');
   const triagedCount = useMemo(() => {
     const allFiles = fileTreeSlice?.data?.allFiles;
     if (!allFiles) return 0;
-    return allFiles.filter((file) => file.path.includes('/backlog/active/')).length;
+    return allFiles.filter((file) => file.path.includes('/.backlog/tasks/')).length;
   }, [fileTreeSlice?.data?.allFiles]);
 
   const { login } = useAuth();
