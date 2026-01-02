@@ -652,7 +652,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
 
     sectionRefs.current.forEach((ref, day) => {
       const rect = ref.getBoundingClientRect();
-      if (rect.top <= containerTop + 80) { // 80px offset for header
+      if (rect.top <= containerTop + 60) {
         currentDay = day;
       }
     });
@@ -665,17 +665,17 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
     if (!container) return;
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
+  }, [handleScroll, loading]); // Re-run when loading changes so we attach after content loads
 
-  const scrollToDay = useCallback((scrollIndex: number) => {
+  const scrollToDay = (scrollIndex: number) => {
     const section = sectionRefs.current.get(scrollIndex);
     if (section && scrollRef.current) {
       const containerTop = scrollRef.current.getBoundingClientRect().top;
       const sectionTop = section.getBoundingClientRect().top;
-      const offset = sectionTop - containerTop - 80;
+      const offset = sectionTop - containerTop - 60;
       scrollRef.current.scrollBy({ top: offset, behavior: 'smooth' });
     }
-  }, []);
+  };
 
   // Show auth prompt if no username provided and not authenticated
   if (!targetUsername && !isAuthenticated) {
@@ -897,7 +897,18 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
               )}
 
               {/* Events for this day */}
-              {dayEvents.map((event) => {
+              {dayEvents.length === 0 ? (
+                <div
+                  className="px-4 py-8 text-center"
+                  style={{
+                    color: theme.colors.textMuted,
+                    fontSize: `${theme.fontSizes[1]}px`,
+                    fontFamily: theme.fonts.body,
+                  }}
+                >
+                  No activity
+                </div>
+              ) : dayEvents.map((event) => {
                 const color = getEventColor(event.type, theme);
                 const isEventSelected = selectedEventId === event.id;
 

@@ -122,26 +122,21 @@ export function WeeklyTimelineHeader({
               onClick={() => !isFuture && onDayClick?.(scrollIndexForDay)}
               className="flex-1 flex flex-col items-center justify-center relative transition-all"
               style={{
-                background: isCurrentSegment
-                  ? theme.colors.primary + '20'
-                  : isInScrollRange && !isFuture
-                    ? theme.colors.surface
-                    : 'transparent',
+                background: isInScrollRange && !isFuture ? theme.colors.surface : 'transparent',
                 borderRight: index < 6 ? `1px solid ${theme.colors.border}` : 'none',
                 cursor: isFuture ? 'default' : 'pointer',
                 opacity: isFuture ? 0.4 : 1,
               }}
             >
-              {/* Activity indicator with count inside */}
+              {/* Activity indicator with count inside - grows when current */}
               <div
-                className="rounded flex items-center justify-center"
+                className="rounded flex items-center justify-center transition-all duration-200"
                 style={{
-                  width: '20px',
-                  height: '20px',
+                  width: isCurrentSegment ? '28px' : '20px',
+                  height: isCurrentSegment ? '28px' : '20px',
                   background: getContributionColor(day.contributionLevel),
-                  border: `1px solid ${hasActivity ? theme.colors.success + '50' : theme.colors.border}`,
-                  boxShadow: isCurrentSegment ? `0 0 0 2px ${theme.colors.primary}40` : 'none',
-                  fontSize: '10px',
+                  border: `1px solid ${theme.colors.border}`,
+                  fontSize: isCurrentSegment ? '12px' : '10px',
                   fontWeight: theme.fontWeights.semibold,
                   color: day.contributionLevel >= 2 ? '#fff' : theme.colors.textMuted,
                 }}
@@ -149,17 +144,6 @@ export function WeeklyTimelineHeader({
               >
                 {!isFuture && day.events.length > 0 ? day.events.length : ''}
               </div>
-
-              {/* Current position indicator */}
-              {isCurrentSegment && (
-                <div
-                  className="absolute bottom-0 left-0 right-0"
-                  style={{
-                    height: '3px',
-                    background: theme.colors.primary,
-                  }}
-                />
-              )}
             </button>
           );
         })}
@@ -170,7 +154,7 @@ export function WeeklyTimelineHeader({
         className="px-3 py-2 flex items-center justify-between transition-all"
         style={{
           background: scrollProgress > 0.9 ? theme.colors.success + '10' : 'transparent',
-          borderTop: scrollProgress > 0.9 ? `1px solid ${theme.colors.success}30` : 'none',
+          borderTop: `1px solid ${scrollProgress > 0.9 ? theme.colors.success + '30' : theme.colors.border}`,
         }}
       >
         <span

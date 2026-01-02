@@ -25,6 +25,48 @@ const generateContributions = () => {
   return contributions;
 };
 
+// Generate activity spread across the week (for testing WeeklyTimelineHeader)
+const generateWeeklyActivity = (): ActivityEvent[] => {
+  const events: ActivityEvent[] = [];
+  const now = new Date();
+  const todayDayOfWeek = now.getDay(); // 0 = Sunday
+
+  // Generate events for each day from Sunday to today
+  for (let dayOffset = 0; dayOffset <= todayDayOfWeek; dayOffset++) {
+    const dayDate = new Date(now);
+    dayDate.setDate(dayDate.getDate() - (todayDayOfWeek - dayOffset));
+
+    // Random number of events per day (1-5)
+    const eventCount = Math.floor(Math.random() * 5) + 1;
+
+    for (let i = 0; i < eventCount; i++) {
+      const hourOffset = Math.floor(Math.random() * 24);
+      const eventDate = new Date(dayDate);
+      eventDate.setHours(hourOffset, Math.floor(Math.random() * 60), 0, 0);
+
+      const types: ActivityEvent['type'][] = ['commit', 'pr_merged', 'pr_opened', 'issue_opened'];
+      const type = types[Math.floor(Math.random() * types.length)]!;
+      const repos = ['octocat/hello-world', 'github/linguist', 'facebook/react'];
+      const repo = repos[Math.floor(Math.random() * repos.length)]!;
+
+      events.push({
+        id: `weekly-${dayOffset}-${i}-${Date.now()}`,
+        type,
+        timestamp: eventDate.toISOString(),
+        repository: repo,
+        ownerType: repo.includes('octocat') ? 'User' : 'Organization',
+        title: type === 'commit' ? undefined : `Sample ${type.replace('_', ' ')} #${i + 1}`,
+        url: type === 'commit' ? undefined : `https://github.com/${repo}/issues/${i + 1}`,
+        metadata: type === 'commit'
+          ? { commitCount: Math.floor(Math.random() * 5) + 1 }
+          : { prNumber: i + 1, issueNumber: i + 1 },
+      });
+    }
+  }
+
+  return events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+};
+
 // Story wrapper that mocks fetch and provides all contexts
 const StoryWrapper: React.FC<{
   children: React.ReactNode;
@@ -206,4 +248,22 @@ export const ManyItems: Story = {
       <UserActivityPanel {...mockProps} username="octocat" />
     </StoryWrapper>
   ),
+};
+
+/**
+ * Weekly activity spread across multiple days to test WeeklyTimelineHeader
+ * - Shows contribution boxes for Sun-Sat
+ * - Click boxes to jump to that day
+ * - Scroll to see day indicator move
+ */
+export const WeeklyTimeline: Story = {
+  render: () => {
+    // Generate fresh data on each render
+    const weeklyData = generateWeeklyActivity();
+    return (
+      <StoryWrapper activityData={weeklyData}>
+        <UserActivityPanel {...mockProps} username="octocat" />
+      </StoryWrapper>
+    );
+  },
 };
