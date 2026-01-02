@@ -91,18 +91,31 @@ function formatRelativeTime(timestamp: string) {
 
 function groupEventsByDate(events: ActivityEvent[]): Map<string, ActivityEvent[]> {
   const groups = new Map<string, ActivityEvent[]>();
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today.getTime() - 86400000);
 
   for (const event of events) {
-    const date = new Date(event.timestamp).toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'short',
-      day: 'numeric',
-    });
+    const eventDate = new Date(event.timestamp);
+    const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
 
-    if (!groups.has(date)) {
-      groups.set(date, []);
+    let dateLabel: string;
+    if (eventDay.getTime() === today.getTime()) {
+      dateLabel = 'Today';
+    } else if (eventDay.getTime() === yesterday.getTime()) {
+      dateLabel = 'Yesterday';
+    } else {
+      dateLabel = eventDate.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+      });
     }
-    groups.get(date)!.push(event);
+
+    if (!groups.has(dateLabel)) {
+      groups.set(dateLabel, []);
+    }
+    groups.get(dateLabel)!.push(event);
   }
 
   return groups;
