@@ -294,7 +294,7 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
 
       {/* Header */}
       <div
-        className="flex items-center gap-2 p-3 border-b"
+        className="flex items-center justify-end gap-2 p-3 border-b"
         style={{ borderColor: theme.colors.border }}
       >
         <Users className="h-4 w-4" style={{ color: theme.colors.textMuted }} />
@@ -309,7 +309,7 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
           Following
         </span>
         <span
-          className="ml-auto px-1.5 py-0.5 rounded"
+          className="px-1.5 py-0.5 rounded"
           style={{
             fontSize: `${theme.fontSizes[0]}px`,
             fontFamily: theme.fonts.body,
@@ -350,7 +350,7 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
                       payload: { username: user.login },
                     });
                   }}
-                  className="w-full max-w-[200px] flex items-center gap-3 p-2 rounded transition-colors hover:opacity-80 text-left"
+                  className="w-full max-w-[300px] flex items-center gap-3 p-2 rounded transition-colors hover:opacity-80 text-left"
                   style={{
                     background: isViewing ? theme.colors.surface : 'transparent',
                     border: isViewing ? `1px solid ${theme.colors.border}` : '1px solid transparent',
