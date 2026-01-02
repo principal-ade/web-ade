@@ -294,31 +294,33 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
 
       {/* Header */}
       <div
-        className="flex items-center justify-end gap-2 p-3 border-b"
+        className="flex justify-end p-2 border-b"
         style={{ borderColor: theme.colors.border }}
       >
-        <Users className="h-4 w-4" style={{ color: theme.colors.textMuted }} />
-        <span
-          style={{
-            fontSize: `${theme.fontSizes[2]}px`,
-            fontWeight: theme.fontWeights.medium,
-            fontFamily: theme.fonts.body,
-            color: theme.colors.text,
-          }}
-        >
-          Following
-        </span>
-        <span
-          className="px-1.5 py-0.5 rounded"
-          style={{
-            fontSize: `${theme.fontSizes[0]}px`,
-            fontFamily: theme.fonts.body,
-            background: theme.colors.surface,
-            color: theme.colors.textMuted,
-          }}
-        >
-          {following.length}
-        </span>
+        <div className="w-full max-w-[300px] flex items-center gap-2 p-1">
+          <Users className="h-4 w-4" style={{ color: theme.colors.textMuted }} />
+          <span
+            style={{
+              fontSize: `${theme.fontSizes[2]}px`,
+              fontWeight: theme.fontWeights.medium,
+              fontFamily: theme.fonts.body,
+              color: theme.colors.text,
+            }}
+          >
+            Following
+          </span>
+          <span
+            className="px-1.5 py-0.5 rounded"
+            style={{
+              fontSize: `${theme.fontSizes[0]}px`,
+              fontFamily: theme.fonts.body,
+              background: theme.colors.surface,
+              color: theme.colors.textMuted,
+            }}
+          >
+            {following.length}
+          </span>
+        </div>
       </div>
 
       {/* List */}
