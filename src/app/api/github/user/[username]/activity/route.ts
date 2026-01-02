@@ -102,6 +102,12 @@ const USER_ACTIVITY_QUERY = `
           }
           additions
           deletions
+          reactions(first: 100) {
+            totalCount
+            nodes {
+              content
+            }
+          }
         }
       }
 
@@ -115,6 +121,12 @@ const USER_ACTIVITY_QUERY = `
             nameWithOwner
             owner {
               __typename
+            }
+          }
+          reactions(first: 100) {
+            totalCount
+            nodes {
+              content
             }
           }
         }
@@ -143,11 +155,24 @@ const USER_ACTIVITY_QUERY = `
               }
             }
           }
+          reactions(first: 100) {
+            totalCount
+            nodes {
+              content
+            }
+          }
         }
       }
     }
   }
 `;
+
+export type ReactionContent = 'THUMBS_UP' | 'THUMBS_DOWN' | 'LAUGH' | 'HOORAY' | 'CONFUSED' | 'HEART' | 'ROCKET' | 'EYES';
+
+export interface ReactionCounts {
+  totalCount: number;
+  counts: Partial<Record<ReactionContent, number>>;
+}
 
 export interface ActivityEvent {
   id: string;
@@ -166,6 +191,7 @@ export interface ActivityEvent {
     issueNumber?: number;
     isClosed?: boolean;
     closedBy?: string;
+    reactions?: ReactionCounts;
   };
 }
 
@@ -183,6 +209,11 @@ export interface UserActivityResponse {
   };
   activity: ActivityEvent[];
   contributions: DailyContribution[];
+}
+
+interface GraphQLReactions {
+  totalCount: number;
+  nodes: Array<{ content: ReactionContent }>;
 }
 
 interface GraphQLUser {
@@ -218,6 +249,7 @@ interface GraphQLUser {
       repository: { nameWithOwner: string; owner: { __typename: string } };
       additions: number;
       deletions: number;
+      reactions: GraphQLReactions;
     }>;
   };
   openPullRequests: {
@@ -227,6 +259,7 @@ interface GraphQLUser {
       createdAt: string;
       url: string;
       repository: { nameWithOwner: string; owner: { __typename: string } };
+      reactions: GraphQLReactions;
     }>;
   };
   issues: {
@@ -243,7 +276,22 @@ interface GraphQLUser {
           actor?: { login: string };
         }>;
       };
+      reactions: GraphQLReactions;
     }>;
+  };
+}
+
+function parseReactions(reactions: GraphQLReactions): ReactionCounts | undefined {
+  if (!reactions || reactions.totalCount === 0) return undefined;
+
+  const counts: Partial<Record<ReactionContent, number>> = {};
+  for (const node of reactions.nodes) {
+    counts[node.content] = (counts[node.content] || 0) + 1;
+  }
+
+  return {
+    totalCount: reactions.totalCount,
+    counts,
   };
 }
 
@@ -283,6 +331,7 @@ function normalizeActivity(user: GraphQLUser, fromDate: Date): ActivityEvent[] {
         prNumber: pr.number,
         additions: pr.additions,
         deletions: pr.deletions,
+        reactions: parseReactions(pr.reactions),
       },
     });
   }
@@ -300,6 +349,7 @@ function normalizeActivity(user: GraphQLUser, fromDate: Date): ActivityEvent[] {
       url: pr.url,
       metadata: {
         prNumber: pr.number,
+        reactions: parseReactions(pr.reactions),
       },
     });
   }
@@ -324,6 +374,7 @@ function normalizeActivity(user: GraphQLUser, fromDate: Date): ActivityEvent[] {
         issueNumber: issue.number,
         isClosed: issue.state === 'CLOSED',
         closedBy,
+        reactions: parseReactions(issue.reactions),
       },
     });
   }

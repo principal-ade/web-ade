@@ -13,7 +13,60 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { DocumentView } from 'themed-markdown';
-import type { ActivityEvent, UserActivityResponse } from '@/app/api/github/user/[username]/activity/route';
+import type { ActivityEvent, UserActivityResponse, ReactionContent, ReactionCounts } from '@/app/api/github/user/[username]/activity/route';
+
+const REACTION_EMOJI: Record<ReactionContent, string> = {
+  THUMBS_UP: '👍',
+  THUMBS_DOWN: '👎',
+  LAUGH: '😄',
+  HOORAY: '🎉',
+  CONFUSED: '😕',
+  HEART: '❤️',
+  ROCKET: '🚀',
+  EYES: '👀',
+};
+
+// Order reactions should appear (most positive first)
+const REACTION_ORDER: ReactionContent[] = [
+  'THUMBS_UP',
+  'HEART',
+  'HOORAY',
+  'ROCKET',
+  'EYES',
+  'LAUGH',
+  'CONFUSED',
+  'THUMBS_DOWN',
+];
+
+function ReactionBar({ reactions, theme }: { reactions: ReactionCounts; theme: ReturnType<typeof useTheme>['theme'] }) {
+  const sortedReactions = REACTION_ORDER
+    .filter((type) => reactions.counts[type])
+    .map((type) => ({ type, count: reactions.counts[type]! }));
+
+  if (sortedReactions.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+      {sortedReactions.map(({ type, count }) => (
+        <span
+          key={type}
+          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full"
+          style={{
+            fontSize: `${theme.fontSizes[0]}px`,
+            fontFamily: theme.fonts.body,
+            background: theme.colors.surface,
+            border: `1px solid ${theme.colors.border}`,
+            color: theme.colors.textMuted,
+          }}
+          title={type.replace('_', ' ').toLowerCase()}
+        >
+          <span>{REACTION_EMOJI[type]}</span>
+          <span>{count}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
 
 interface CommitDetails {
   sha: string;
@@ -681,10 +734,10 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                         </button>
                       ) : null}
 
-                      {/* PR stats */}
+                      {/* PR stats and reactions */}
                       {event.type === 'pr_merged' && event.metadata && (
                         <div
-                          className="flex items-center gap-2 mt-1"
+                          className="flex items-center gap-2 mt-1 flex-wrap"
                           style={{ fontSize: `${theme.fontSizes[0]}px`, fontFamily: theme.fonts.body }}
                         >
                           {event.metadata.additions !== undefined && (
@@ -699,6 +752,12 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                           )}
                         </div>
                       )}
+
+                      {/* Reactions for PRs and issues */}
+                      {(event.type === 'pr_merged' || event.type === 'pr_opened' || event.type === 'issue_opened') &&
+                        event.metadata?.reactions && (
+                          <ReactionBar reactions={event.metadata.reactions} theme={theme} />
+                        )}
 
                       {/* Expanded PR body */}
                       {event.type === 'pr_merged' && expandedPRs.has(event.id) && (
