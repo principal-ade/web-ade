@@ -1006,7 +1006,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             e.stopPropagation();
                             toggleIssueExpansion(event);
                           }}
-                          className="flex items-center gap-1 hover:opacity-80 transition-opacity text-left"
+                          className="flex items-center gap-1 hover:opacity-80 transition-opacity text-left min-w-0"
                           style={{
                             fontSize: `${theme.fontSizes[4]}px`,
                             fontFamily: theme.fonts.body,
@@ -1026,7 +1026,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             e.stopPropagation();
                             togglePRExpansion(event);
                           }}
-                          className="flex items-center gap-1 hover:opacity-80 transition-opacity text-left"
+                          className="flex items-center gap-1 hover:opacity-80 transition-opacity text-left min-w-0"
                           style={{
                             fontSize: `${theme.fontSizes[4]}px`,
                             fontFamily: theme.fonts.body,
