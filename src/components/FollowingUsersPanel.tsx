@@ -218,7 +218,7 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
     >
       {/* Current user (You) at the top */}
       {selfInfo && (
-        <div className="p-2 border-b" style={{ borderColor: theme.colors.border }}>
+        <div className="flex justify-end p-2 border-b" style={{ borderColor: theme.colors.border }}>
           <button
             onClick={() => {
               events.emit({
@@ -228,7 +228,7 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
                 payload: { username: selfInfo.login },
               });
             }}
-            className="w-full flex items-center gap-3 p-2 rounded transition-colors hover:opacity-80 text-left"
+            className="w-full max-w-[300px] flex items-center gap-3 p-2 rounded transition-colors hover:opacity-80 text-left"
             style={{
               background: viewedUser === selfInfo.login ? theme.colors.surface : 'transparent',
               border: viewedUser === selfInfo.login ? `1px solid ${theme.colors.border}` : '1px solid transparent',
