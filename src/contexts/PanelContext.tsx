@@ -274,6 +274,31 @@ interface GitHubIssuesSliceData {
   error?: string;
 }
 
+// GitHub Messages types for GitHubMessagesPanel
+interface GitHubMessagesTarget {
+  type: 'issue' | 'pull_request';
+  number: number;
+  title: string;
+  state: 'open' | 'closed';
+  user: GitHubIssueUser;
+  created_at: string;
+  html_url: string;
+  merged?: boolean;
+  merged_at?: string | null;
+  draft?: boolean;
+}
+
+interface GitHubMessagesSliceData {
+  target: GitHubMessagesTarget | null;
+  timeline: unknown[];
+  reviewComments: unknown[];
+  owner: string;
+  repo: string;
+  loading: boolean;
+  isAuthenticated: boolean;
+  error?: string;
+}
+
 // GitHub Pull Requests types for GitPullRequestsPanel
 interface PullRequestUser {
   login: string;
@@ -672,6 +697,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const [pullRequestsLoading, setPullRequestsLoading] = useState(false);
   const [pullRequestsError, setPullRequestsError] = useState<Error | null>(null);
 
+  // State for GitHub messages/timeline (for GitHubMessagesPanel)
+  const [messagesData, setMessagesData] = useState<GitHubMessagesSliceData | null>(null);
+
   // State for PR files (files changed in selected pull request - for File-City visualization)
   const [prFilesData, setPrFilesData] = useState<PrFilesSliceData | null>(null);
   const [prFilesLoading, setPrFilesLoading] = useState(false);
@@ -1019,6 +1047,98 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       setPullRequestsLoading(false);
     }
   }, []);
+
+  // Fetch messages/timeline for an issue or PR
+  const fetchMessages = useCallback(async (
+    owner: string,
+    repo: string,
+    number: number,
+    issue: GitHubIssue
+  ) => {
+    console.log('[PanelContext] Fetching messages for:', owner, repo, '#', number);
+
+    // Set loading state
+    setMessagesData({
+      target: {
+        type: 'issue', // Will be updated based on timeline response
+        number: issue.number,
+        title: issue.title,
+        state: issue.state,
+        user: issue.user,
+        created_at: issue.created_at,
+        html_url: issue.html_url,
+      },
+      timeline: [],
+      reviewComments: [],
+      owner,
+      repo,
+      loading: true,
+      isAuthenticated: true,
+    });
+
+    try {
+      const response = await fetch(
+        `/api/github/repo/${owner}/${repo}/issues/${number}/timeline?per_page=100`,
+        { credentials: 'include' }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        setMessagesData(prev => prev ? {
+          ...prev,
+          loading: false,
+          error: errorData.error || `Failed to fetch messages: ${response.statusText}`,
+        } : null);
+        return;
+      }
+
+      const data = await response.json();
+
+      setMessagesData(prev => prev ? {
+        ...prev,
+        target: prev.target ? {
+          ...prev.target,
+          type: data.isPullRequest ? 'pull_request' : 'issue',
+        } : null,
+        timeline: data.timeline || [],
+        reviewComments: data.reviewComments || [],
+        loading: false,
+      } : null);
+
+      console.log('[PanelContext] Messages loaded:', data.timeline?.length || 0, 'events');
+
+      // Emit the data event so the panel can receive it
+      events.emit({
+        type: 'github-messages:data',
+        source: 'panel-context',
+        timestamp: Date.now(),
+        payload: {
+          target: {
+            type: data.isPullRequest ? 'pull_request' : 'issue',
+            number: issue.number,
+            title: issue.title,
+            state: issue.state,
+            user: issue.user,
+            created_at: issue.created_at,
+            html_url: issue.html_url,
+          },
+          timeline: data.timeline || [],
+          reviewComments: data.reviewComments || [],
+          owner,
+          repo,
+          loading: false,
+          isAuthenticated: true,
+        },
+      });
+    } catch (err) {
+      console.error('[PanelContext] Failed to fetch messages:', err);
+      setMessagesData(prev => prev ? {
+        ...prev,
+        loading: false,
+        error: err instanceof Error ? err.message : 'Failed to fetch messages',
+      } : null);
+    }
+  }, [events]);
 
   // Fetch files for a specific pull request (for File-City visualization)
   const fetchPrFiles = useCallback(async (repo: string, prNumber: number) => {
@@ -1861,6 +1981,19 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         },
       ],
       [
+        'github-messages',
+        {
+          scope: 'repository',
+          name: 'github-messages',
+          data: messagesData,
+          loading: messagesData?.loading ?? false,
+          error: messagesData?.error ? new Error(messagesData.error) : null,
+          refresh: async () => {
+            // Messages are fetched on issue selection, no manual refresh needed
+          },
+        },
+      ],
+      [
         'commitFiles',
         {
           scope: 'repository',
@@ -2265,6 +2398,32 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       unsubscribeDeselect();
     };
   }, [events, githubRepo, fetchPrFiles, clearPrFiles]);
+
+  // Listen for issue:selected events to fetch messages/timeline
+  useEffect(() => {
+    const unsubscribeSelect = events.on('issue:selected', (event) => {
+      const payload = event.payload as {
+        issue?: GitHubIssue;
+        owner?: string;
+        repo?: string;
+      };
+      const { issue, owner, repo } = payload;
+      if (issue && owner && repo) {
+        console.log('[PanelContext] Issue selected, fetching messages for #', issue.number);
+        fetchMessages(owner, repo, issue.number, issue);
+      }
+    });
+
+    const unsubscribeDeselect = events.on('issue:deselected', () => {
+      console.log('[PanelContext] Issue deselected, clearing messages');
+      setMessagesData(null);
+    });
+
+    return () => {
+      unsubscribeSelect();
+      unsubscribeDeselect();
+    };
+  }, [events, fetchMessages]);
 
   // Listen for commit-detail:loaded events to update commit files for File-City visualization
   useEffect(() => {
