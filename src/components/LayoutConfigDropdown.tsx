@@ -35,11 +35,11 @@ export const layoutConfigs: LayoutConfig[] = [
     layout: {
       left: 'github-issues',
       middle: 'github-issue-detail',
-      right: 'kanban',
+      right: 'github-messages',
     },
     collapsed: {
       left: false,
-      right: true,
+      right: false,
     },
   },
   {
