@@ -74,6 +74,13 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
       const payload = event.payload as { username: string };
       if (payload?.username) {
         setViewedUser(payload.username);
+        // Focus the activity panel when a user is selected
+        events.emit({
+          type: 'panel:focus',
+          source: 'activity-page',
+          timestamp: Date.now(),
+          payload: { panelId: 'activity-timeline', panelSlot: 'middle' },
+        });
       }
     });
 

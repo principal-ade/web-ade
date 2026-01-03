@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
 import type { PanelContextValue, PanelActions, PanelEventEmitter } from '@principal-ade/panel-framework-core';
+import { usePanelFocusListener } from '@principal-ade/panel-layouts';
 import {
   Loader2,
   RefreshCw,
@@ -273,11 +274,21 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [loadingReactions, setLoadingReactions] = useState<Set<string>>(new Set());
 
+  // Panel container ref for focus management
+  const panelRef = useRef<HTMLDivElement>(null);
+
   // Scroll tracking for WeeklyTimelineHeader
   const scrollRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const [scrollProgress, setScrollProgress] = useState(0);
   const [currentDayIndex, setCurrentDayIndex] = useState(0);
+
+  // Listen for panel focus events - focus the panel container when event received
+  usePanelFocusListener(
+    'activity-timeline',
+    events,
+    () => panelRef.current?.focus()
+  );
 
   // Determine which username to fetch
   const targetUsername = username || user?.login;
@@ -827,7 +838,9 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
 
   return (
     <div
-      className="h-full w-full flex flex-col overflow-hidden"
+      ref={panelRef}
+      tabIndex={-1}
+      className="h-full w-full flex flex-col overflow-hidden outline-none"
       style={{ background: theme.colors.background }}
     >
       {/* Weekly Timeline Header */}
