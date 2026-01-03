@@ -945,7 +945,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                   >
                     {/* Header row with avatar and metadata */}
                     {(() => {
-                      const hasSecondRow = event.url || (event.type === 'pr_merged' && event.metadata?.additions !== undefined) || (event.type === 'issue_opened' && event.metadata?.isClosed);
+                      const hasSecondRow = (event.type === 'pr_merged' && event.metadata?.additions !== undefined) || (event.type === 'issue_opened' && event.metadata?.isClosed);
                       return (
                         <div className={`flex gap-3 ${hasSecondRow ? 'items-start' : 'items-center'}`}>
                           <img
@@ -993,7 +993,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                           </span>
                         </div>
                         {/* Second row: line changes/closed status + open in github */}
-                        {(event.url || (event.type === 'pr_merged' && event.metadata?.additions !== undefined) || (event.type === 'issue_opened' && event.metadata?.isClosed)) && (
+                        {((event.type === 'pr_merged' && event.metadata?.additions !== undefined) || (event.type === 'issue_opened' && event.metadata?.isClosed)) && (
                           <div
                             className="flex items-center gap-2"
                             style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}
@@ -1055,7 +1055,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                           color: theme.colors.text,
                         }}
                       >
-                        <span className="w-4 h-4 flex-shrink-0" />
+                        <span className="w-4 lg:w-[52px] flex-shrink-0" />
                         <span className="break-words" title={event.title}>{event.title}</span>
                       </button>
                     ) : event.type === 'pr_merged' && event.title ? (
@@ -1071,7 +1071,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                           color: theme.colors.text,
                         }}
                       >
-                        <span className="w-4 h-4 flex-shrink-0" />
+                        <span className="w-4 lg:w-[52px] flex-shrink-0" />
                         <span className="break-words" title={event.title}>{event.title}</span>
                       </button>
                     ) : event.title ? (
@@ -1083,7 +1083,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                           color: theme.colors.text,
                         }}
                       >
-                        <span className="w-4 h-4 flex-shrink-0" />
+                        <span className="w-4 lg:w-[52px] flex-shrink-0" />
                         <span className="break-words" title={event.title}>{event.title}</span>
                       </div>
                     ) : event.type === 'commit' && event.metadata?.commitCount ? (
@@ -1095,7 +1095,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                           color: theme.colors.text,
                         }}
                       >
-                        <span className="w-4 h-4 flex-shrink-0" />
+                        <span className="w-4 lg:w-[52px] flex-shrink-0" />
                         <button
                           onClick={() => toggleCommitExpansion(event)}
                           className="hover:opacity-80 transition-opacity"
@@ -1109,7 +1109,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                     {(event.type === 'pr_merged' || event.type === 'pr_opened' || event.type === 'issue_opened') &&
                       event.metadata?.reactions && (
                         <div className="flex items-start gap-1">
-                          <span className="w-4 h-4 flex-shrink-0" />
+                          <span className="w-4 lg:w-[52px] flex-shrink-0" />
                           <ReactionBar
                             reactions={event.metadata.reactions}
                             theme={theme}
