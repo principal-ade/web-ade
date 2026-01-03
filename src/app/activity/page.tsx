@@ -57,15 +57,16 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
   const [leftCollapsed] = useState(false);
   const [rightCollapsed] = useState(false);
   const [viewedUser, setViewedUser] = useState(currentUser);
+  const [hasMessagesSelected, setHasMessagesSelected] = useState(false);
 
-  const [layout] = useState<PanelLayout>({
+  // Dynamic layout based on whether an issue/PR is selected
+  const layout = useMemo<PanelLayout>(() => ({
     left: 'following-users',
     middle: 'activity-timeline',
-    right: {
-      type: 'tabs',
-      panels: ['file-city', 'github-messages'],
-    },
-  });
+    right: hasMessagesSelected
+      ? { type: 'tabs', panels: ['file-city', 'github-messages'] }
+      : 'file-city',
+  }), [hasMessagesSelected]);
 
   // Listen for user selection events from FollowingUsersPanel
   useEffect(() => {
@@ -190,98 +191,14 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
     return () => unsubscribe();
   }, [events, router]);
 
-  // Fetch messages for an issue or PR
-  const fetchMessages = useCallback(async (
-    owner: string,
-    repo: string,
-    number: number,
-    target: {
-      type: 'issue' | 'pull_request';
-      number: number;
-      title: string;
-      state: 'open' | 'closed';
-      merged?: boolean;
-    }
-  ) => {
-    try {
-      const response = await fetch(
-        `/api/github/repo/${owner}/${repo}/issues/${number}/timeline?per_page=100`,
-        { credentials: 'include' }
-      );
+  // Listen for issue/PR selection to show messages panel
+  useEffect(() => {
+    const unsubscribe = events.on('issue:selected', () => {
+      setHasMessagesSelected(true);
+    });
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch messages: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-
-      events.emit({
-        type: 'github-messages:data',
-        source: 'activity-page',
-        timestamp: Date.now(),
-        payload: {
-          target: {
-            type: target.type,
-            number: target.number,
-            title: target.title,
-            state: target.state,
-            merged: target.merged,
-          },
-          timeline: data.timeline || [],
-          reviewComments: data.reviewComments || [],
-          owner,
-          repo,
-          loading: false,
-          isAuthenticated: true,
-        },
-      });
-    } catch (err) {
-      console.error('[activity] Failed to fetch messages:', err);
-    }
+    return () => unsubscribe();
   }, [events]);
-
-  // Listen for issue selection to fetch messages
-  useEffect(() => {
-    const unsubscribe = events.on('issue:selected', (event) => {
-      const payload = event.payload as {
-        issue?: { number: number; title: string; state: string };
-        owner?: string;
-        repo?: string;
-      };
-      if (payload?.issue && payload.owner && payload.repo) {
-        fetchMessages(payload.owner, payload.repo, payload.issue.number, {
-          type: 'issue',
-          number: payload.issue.number,
-          title: payload.issue.title,
-          state: payload.issue.state === 'closed' ? 'closed' : 'open',
-        });
-      }
-    });
-
-    return () => unsubscribe();
-  }, [events, fetchMessages]);
-
-  // Listen for PR selection to fetch messages
-  useEffect(() => {
-    const unsubscribe = events.on('pr:selected', (event) => {
-      const payload = event.payload as {
-        pr?: { number: number; title: string; state: string; merged?: boolean };
-        owner?: string;
-        repo?: string;
-      };
-      if (payload?.pr && payload.owner && payload.repo) {
-        fetchMessages(payload.owner, payload.repo, payload.pr.number, {
-          type: 'pull_request',
-          number: payload.pr.number,
-          title: payload.pr.title,
-          state: payload.pr.state === 'closed' ? 'closed' : 'open',
-          merged: payload.pr.merged,
-        });
-      }
-    });
-
-    return () => unsubscribe();
-  }, [events, fetchMessages]);
 
   // Detect mobile viewport
   useEffect(() => {
