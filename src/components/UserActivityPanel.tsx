@@ -8,8 +8,6 @@ import {
   Loader2,
   RefreshCw,
   Calendar,
-  ChevronRight,
-  ChevronDown,
   ExternalLink,
 } from 'lucide-react';
 import { DocumentView } from 'themed-markdown';
@@ -946,15 +944,18 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                     }}
                   >
                     {/* Header row with avatar and metadata */}
-                    <div className="flex items-start gap-3">
-                      <img
-                        src={`https://github.com/${event.repository.split('/')[0]}.png?size=64`}
-                        alt={event.repository.split('/')[0]}
-                        className={`flex-shrink-0 w-10 h-10 ${event.ownerType === 'Organization' ? 'rounded-lg' : 'rounded-full'}`}
-                      />
-                      <div className="flex-1 flex flex-col gap-0.5 min-w-0 overflow-hidden">
-                        {/* First row: badge, repo, time */}
-                        <div className="flex items-center gap-2">
+                    {(() => {
+                      const hasSecondRow = event.url || (event.type === 'pr_merged' && event.metadata?.additions !== undefined) || (event.type === 'issue_opened' && event.metadata?.isClosed);
+                      return (
+                        <div className={`flex gap-3 ${hasSecondRow ? 'items-start' : 'items-center'}`}>
+                          <img
+                            src={`https://github.com/${event.repository.split('/')[0]}.png?size=64`}
+                            alt={event.repository.split('/')[0]}
+                            className={`flex-shrink-0 w-10 h-10 ${event.ownerType === 'Organization' ? 'rounded-lg' : 'rounded-full'}`}
+                          />
+                          <div className="flex-1 flex flex-col gap-0.5 min-w-0 overflow-hidden">
+                            {/* First row: badge, repo, time */}
+                            <div className="flex items-center gap-2">
                           <span
                             className="px-1.5 py-0.5 rounded flex-shrink-0"
                             style={{
@@ -1035,8 +1036,10 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             )}
                           </div>
                         )}
-                      </div>
-                    </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Title or commit info */}
                     {event.type === 'issue_opened' && event.title ? (
@@ -1084,27 +1087,29 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                         <span className="break-words" title={event.title}>{event.title}</span>
                       </div>
                     ) : event.type === 'commit' && event.metadata?.commitCount ? (
+                      <div
+                        className="flex items-start gap-1"
+                        style={{
+                          fontSize: `${theme.fontSizes[3]}px`,
+                          fontFamily: theme.fonts.body,
+                          color: theme.colors.text,
+                        }}
+                      >
+                        <span className="w-4 h-4 flex-shrink-0" />
                         <button
                           onClick={() => toggleCommitExpansion(event)}
-                          className="flex items-center gap-1 hover:opacity-80 transition-opacity"
-                          style={{
-                            fontSize: `${theme.fontSizes[3]}px`,
-                            fontFamily: theme.fonts.body,
-                            color: theme.colors.text,
-                          }}
+                          className="hover:opacity-80 transition-opacity"
                         >
-                          {expandedCommits.has(event.id) ? (
-                            <ChevronDown className="w-4 h-4" style={{ color: theme.colors.textMuted }} />
-                          ) : (
-                            <ChevronRight className="w-4 h-4" style={{ color: theme.colors.textMuted }} />
-                          )}
                           {event.metadata.commitCount} commit{event.metadata.commitCount !== 1 ? 's' : ''}
                         </button>
-                      ) : null}
+                      </div>
+                    ) : null}
 
-                      {/* Reactions for PRs and issues */}
-                      {(event.type === 'pr_merged' || event.type === 'pr_opened' || event.type === 'issue_opened') &&
-                        event.metadata?.reactions && (
+                    {/* Reactions for PRs and issues */}
+                    {(event.type === 'pr_merged' || event.type === 'pr_opened' || event.type === 'issue_opened') &&
+                      event.metadata?.reactions && (
+                        <div className="flex items-start gap-1">
+                          <span className="w-4 h-4 flex-shrink-0" />
                           <ReactionBar
                             reactions={event.metadata.reactions}
                             theme={theme}
@@ -1112,7 +1117,8 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             onToggleReaction={(type, reactionId) => toggleReaction(event, type, reactionId)}
                             disabled={REACTION_ORDER.some((t) => loadingReactions.has(`${event.id}-${t}`))}
                           />
-                        )}
+                        </div>
+                      )}
 
                       {/* Expanded PR body */}
                       {event.type === 'pr_merged' && expandedPRs.has(event.id) && (
