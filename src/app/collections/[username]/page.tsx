@@ -961,7 +961,7 @@ function SharedCollectionsWrapper() {
   return (
     <div
       className="h-screen w-screen overflow-hidden"
-      style={{ background: theme.colors.background }}
+      style={{ background: theme.colors.background, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div style={{ height: '100vh' }}>
         <PanelProvider

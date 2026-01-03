@@ -142,7 +142,7 @@ function RepoPageContent() {
   return (
     <div
       className="h-screen w-screen overflow-hidden"
-      style={{ background: theme.colors.background }}
+      style={{ background: theme.colors.background, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <EditorLayout
         githubRepo={githubRepo}
