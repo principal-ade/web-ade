@@ -126,7 +126,7 @@ const StoryWrapper: React.FC<{
   return (
     <ThemeProvider>
       <AuthProvider>
-        <div style={{ height: '600px', width: '100%' }}>
+        <div style={{ height: '100%', width: '100%' }}>
           {children}
         </div>
       </AuthProvider>
@@ -266,4 +266,85 @@ export const WeeklyTimeline: Story = {
       </StoryWrapper>
     );
   },
+};
+
+// Mock data with very long titles to test text overflow/truncation
+const longTitleEvents: ActivityEvent[] = [
+  {
+    id: 'pr-merged-long-1',
+    type: 'pr_merged',
+    timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+    repository: 'octocat/hello-world',
+    ownerType: 'User',
+    title: 'feat: implement comprehensive user authentication system with OAuth2, SAML, and OpenID Connect support including multi-factor authentication and session management',
+    url: 'https://github.com/octocat/hello-world/pull/100',
+    metadata: { prNumber: 100, additions: 500, deletions: 50 },
+  },
+  {
+    id: 'pr-opened-long-2',
+    type: 'pr_opened',
+    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    repository: 'facebook/react',
+    ownerType: 'Organization',
+    title: 'refactor(core): migrate entire codebase from class components to functional components with hooks while maintaining backwards compatibility and adding comprehensive TypeScript types',
+    url: 'https://github.com/facebook/react/pull/200',
+    metadata: { prNumber: 200 },
+  },
+  {
+    id: 'issue-opened-long-3',
+    type: 'issue_opened',
+    timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    repository: 'octocat/spoon-knife',
+    ownerType: 'User',
+    title: 'Bug: Application crashes when user attempts to upload files larger than 2GB with special characters in filename on Windows systems running in dark mode',
+    url: 'https://github.com/octocat/spoon-knife/issues/300',
+    metadata: { issueNumber: 300 },
+  },
+  {
+    id: 'pr-merged-long-4',
+    type: 'pr_merged',
+    timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+    repository: 'github/linguist',
+    ownerType: 'Organization',
+    title: 'fix: resolve critical memory leak in background worker process that causes server to become unresponsive after processing approximately 10,000 concurrent requests',
+    url: 'https://github.com/github/linguist/pull/400',
+    metadata: { prNumber: 400, additions: 25, deletions: 100 },
+  },
+  {
+    id: 'issue-opened-long-5',
+    type: 'issue_opened',
+    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    repository: 'octocat/hello-world',
+    ownerType: 'User',
+    title: 'Feature request: add support for real-time collaborative editing with conflict resolution, presence indicators, cursor tracking, and undo/redo history synchronization',
+    url: 'https://github.com/octocat/hello-world/issues/500',
+    metadata: { issueNumber: 500, isClosed: true, closedBy: 'octocat' },
+  },
+];
+
+/**
+ * Tests long PR/issue titles to verify they truncate properly
+ * - Titles should not overflow the panel width
+ * - Text should be truncated with ellipsis
+ * - Full title visible on hover (via title attribute)
+ */
+export const LongTitles: Story = {
+  render: () => (
+    <StoryWrapper activityData={longTitleEvents}>
+      <UserActivityPanel {...mockProps} username="octocat" />
+    </StoryWrapper>
+  ),
+};
+
+/**
+ * Long titles in a narrow container to stress-test overflow handling
+ */
+export const LongTitlesNarrow: Story = {
+  render: () => (
+    <StoryWrapper activityData={longTitleEvents}>
+      <div style={{ width: '320px' }}>
+        <UserActivityPanel {...mockProps} username="octocat" />
+      </div>
+    </StoryWrapper>
+  ),
 };

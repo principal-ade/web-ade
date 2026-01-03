@@ -7,10 +7,10 @@ import type { PanelContextValue, PanelActions, PanelEventEmitter } from '@princi
 import {
   Loader2,
   RefreshCw,
-  ExternalLink,
   Calendar,
   ChevronRight,
   ChevronDown,
+  ExternalLink,
 } from 'lucide-react';
 import { DocumentView } from 'themed-markdown';
 import type { ActivityEvent, UserActivityResponse, ReactionContent, ReactionCounts } from '@/app/api/github/user/[username]/activity/route';
@@ -915,7 +915,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                 return (
                   <button
                     key={event.id}
-                    className="w-full flex items-start gap-4 px-4 py-4 group text-left transition-all border-b cursor-pointer"
+                    className="w-full flex flex-col gap-1 px-4 py-4 group text-left transition-all border-b cursor-pointer"
                     style={{
                       background: isEventSelected ? theme.colors.primary + '15' : 'transparent',
                       borderColor: theme.colors.border,
@@ -945,119 +945,150 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                       }
                     }}
                   >
-                    {/* Repo Owner Avatar */}
-                    <img
-                      src={`https://github.com/${event.repository.split('/')[0]}.png?size=64`}
-                      alt={event.repository.split('/')[0]}
-                      className={`flex-shrink-0 w-10 h-10 ${event.ownerType === 'Organization' ? 'rounded-lg' : 'rounded-full'}`}
-                    />
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span
-                          className="px-1.5 py-0.5 rounded"
-                          style={{
-                            fontSize: `${theme.fontSizes[1]}px`,
-                            fontWeight: theme.fontWeights.medium,
-                            fontFamily: theme.fonts.body,
-                            background: `${color}20`,
-                            color,
-                          }}
-                        >
-                          {event.type === 'issue_opened' && event.metadata?.isClosed
-                            ? 'Issue'
-                            : getEventLabel(event.type)}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: `${theme.fontSizes[1]}px`,
-                            fontFamily: theme.fonts.body,
-                            color: theme.colors.textMuted,
-                          }}
-                        >
-                          {event.type === 'commit' ? 'to ' : 'in '}
-                          <span style={{ color }}>{event.repository.split('/')[1] || event.repository}</span>
-                          {event.type === 'issue_opened' && event.metadata?.isClosed && (
-                            <>
-                              {' was '}
-                              <span style={{ color: theme.colors.error }}>Closed</span>
-                              {event.metadata.closedBy && (
-                                <span> by @{event.metadata.closedBy}</span>
-                              )}
-                            </>
-                          )}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: `${theme.fontSizes[1]}px`,
-                            fontFamily: theme.fonts.body,
-                            color: theme.colors.textMuted,
-                          }}
-                        >
-                          {formatRelativeTime(event.timestamp)}
-                        </span>
-                      </div>
-
-                      {/* Title or commit info */}
-                      {event.type === 'issue_opened' && event.title ? (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleIssueExpansion(event);
-                          }}
-                          className="flex items-center gap-1 hover:opacity-80 transition-opacity text-left min-w-0"
-                          style={{
-                            fontSize: `${theme.fontSizes[4]}px`,
-                            fontFamily: theme.fonts.body,
-                            color: theme.colors.text,
-                          }}
-                        >
-                          {expandedIssues.has(event.id) ? (
-                            <ChevronDown className="w-4 h-4 flex-shrink-0" style={{ color: theme.colors.textMuted }} />
-                          ) : (
-                            <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: theme.colors.textMuted }} />
-                          )}
-                          <span className="truncate" title={event.title}>{event.title}</span>
-                        </button>
-                      ) : event.type === 'pr_merged' && event.title ? (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            togglePRExpansion(event);
-                          }}
-                          className="flex items-center gap-1 hover:opacity-80 transition-opacity text-left min-w-0"
-                          style={{
-                            fontSize: `${theme.fontSizes[4]}px`,
-                            fontFamily: theme.fonts.body,
-                            color: theme.colors.text,
-                          }}
-                        >
-                          {expandedPRs.has(event.id) ? (
-                            <ChevronDown className="w-4 h-4 flex-shrink-0" style={{ color: theme.colors.textMuted }} />
-                          ) : (
-                            <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: theme.colors.textMuted }} />
-                          )}
-                          <span className="truncate" title={event.title}>{event.title}</span>
-                        </button>
-                      ) : event.title ? (
-                        <div
-                          className="truncate"
-                          style={{
-                            fontSize: `${theme.fontSizes[4]}px`,
-                            fontFamily: theme.fonts.body,
-                            color: theme.colors.text,
-                          }}
-                          title={event.title}
-                        >
-                          {event.title}
+                    {/* Header row with avatar and metadata */}
+                    <div className="flex items-start gap-3">
+                      <img
+                        src={`https://github.com/${event.repository.split('/')[0]}.png?size=64`}
+                        alt={event.repository.split('/')[0]}
+                        className={`flex-shrink-0 w-10 h-10 ${event.ownerType === 'Organization' ? 'rounded-lg' : 'rounded-full'}`}
+                      />
+                      <div className="flex-1 flex flex-col gap-0.5 min-w-0 overflow-hidden">
+                        {/* First row: badge, repo, time */}
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="px-1.5 py-0.5 rounded flex-shrink-0"
+                            style={{
+                              fontSize: `${theme.fontSizes[1]}px`,
+                              fontWeight: theme.fontWeights.medium,
+                              fontFamily: theme.fonts.body,
+                              background: `${color}20`,
+                              color,
+                            }}
+                          >
+                            {event.type === 'issue_opened' && event.metadata?.isClosed
+                              ? 'Issue'
+                              : getEventLabel(event.type)}
+                          </span>
+                          <span
+                            className="truncate"
+                            style={{
+                              fontSize: `${theme.fontSizes[1]}px`,
+                              fontFamily: theme.fonts.body,
+                              color: theme.colors.textMuted,
+                            }}
+                          >
+                            {event.type === 'commit' ? 'to ' : 'in '}
+                            <span style={{ color }}>{event.repository.split('/')[1] || event.repository}</span>
+                          </span>
+                          <span
+                            className="flex-shrink-0 ml-auto"
+                            style={{
+                              fontSize: `${theme.fontSizes[1]}px`,
+                              fontFamily: theme.fonts.body,
+                              color: theme.colors.textMuted,
+                            }}
+                          >
+                            {formatRelativeTime(event.timestamp)}
+                          </span>
                         </div>
-                      ) : event.type === 'commit' && event.metadata?.commitCount ? (
+                        {/* Second row: line changes/closed status + open in github */}
+                        {(event.url || (event.type === 'pr_merged' && event.metadata?.additions !== undefined) || (event.type === 'issue_opened' && event.metadata?.isClosed)) && (
+                          <div
+                            className="flex items-center gap-2"
+                            style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}
+                          >
+                            {event.type === 'pr_merged' && event.metadata && (
+                              <>
+                                {event.metadata.additions !== undefined && (
+                                  <span style={{ color: theme.colors.success }}>
+                                    +{event.metadata.additions}
+                                  </span>
+                                )}
+                                {event.metadata.deletions !== undefined && (
+                                  <span style={{ color: theme.colors.error }}>
+                                    -{event.metadata.deletions}
+                                  </span>
+                                )}
+                              </>
+                            )}
+                            {event.type === 'issue_opened' && event.metadata?.isClosed && (
+                              <span style={{ color: theme.colors.textMuted }}>
+                                <span style={{ color: theme.colors.error }}>Closed</span>
+                                {event.metadata.closedBy && (
+                                  <span> by @{event.metadata.closedBy}</span>
+                                )}
+                              </span>
+                            )}
+                            {event.url && (
+                              <a
+                                href={event.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 ml-auto hover:opacity-80 transition-opacity"
+                                style={{ color: theme.colors.textMuted }}
+                                title="Open in GitHub"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                <span>GitHub</span>
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Title or commit info */}
+                    {event.type === 'issue_opened' && event.title ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleIssueExpansion(event);
+                        }}
+                        className="w-full flex items-start gap-1 hover:opacity-80 transition-opacity text-left min-w-0"
+                        style={{
+                          fontSize: `${theme.fontSizes[3]}px`,
+                          fontFamily: theme.fonts.body,
+                          color: theme.colors.text,
+                        }}
+                      >
+                        <span className="w-4 h-4 flex-shrink-0" />
+                        <span className="break-words" title={event.title}>{event.title}</span>
+                      </button>
+                    ) : event.type === 'pr_merged' && event.title ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePRExpansion(event);
+                        }}
+                        className="w-full flex items-start gap-1 hover:opacity-80 transition-opacity text-left min-w-0"
+                        style={{
+                          fontSize: `${theme.fontSizes[3]}px`,
+                          fontFamily: theme.fonts.body,
+                          color: theme.colors.text,
+                        }}
+                      >
+                        <span className="w-4 h-4 flex-shrink-0" />
+                        <span className="break-words" title={event.title}>{event.title}</span>
+                      </button>
+                    ) : event.title ? (
+                      <div
+                        className="flex items-start gap-1"
+                        style={{
+                          fontSize: `${theme.fontSizes[3]}px`,
+                          fontFamily: theme.fonts.body,
+                          color: theme.colors.text,
+                        }}
+                      >
+                        <span className="w-4 h-4 flex-shrink-0" />
+                        <span className="break-words" title={event.title}>{event.title}</span>
+                      </div>
+                    ) : event.type === 'commit' && event.metadata?.commitCount ? (
                         <button
                           onClick={() => toggleCommitExpansion(event)}
                           className="flex items-center gap-1 hover:opacity-80 transition-opacity"
                           style={{
-                            fontSize: `${theme.fontSizes[4]}px`,
+                            fontSize: `${theme.fontSizes[3]}px`,
                             fontFamily: theme.fonts.body,
                             color: theme.colors.text,
                           }}
@@ -1070,25 +1101,6 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                           {event.metadata.commitCount} commit{event.metadata.commitCount !== 1 ? 's' : ''}
                         </button>
                       ) : null}
-
-                      {/* PR stats and reactions */}
-                      {event.type === 'pr_merged' && event.metadata && (
-                        <div
-                          className="flex items-center gap-2 mt-1 flex-wrap"
-                          style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}
-                        >
-                          {event.metadata.additions !== undefined && (
-                            <span style={{ color: theme.colors.success }}>
-                              +{event.metadata.additions}
-                            </span>
-                          )}
-                          {event.metadata.deletions !== undefined && (
-                            <span style={{ color: theme.colors.error }}>
-                              -{event.metadata.deletions}
-                            </span>
-                          )}
-                        </div>
-                      )}
 
                       {/* Reactions for PRs and issues */}
                       {(event.type === 'pr_merged' || event.type === 'pr_opened' || event.type === 'issue_opened') &&
@@ -1275,41 +1287,12 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                           )}
                         </div>
                       )}
-                    </div>
-
-                    {/* External link */}
-                    {event.url && (
-                      <a
-                        href={event.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-shrink-0 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={{ color: theme.colors.textMuted }}
-                        title="Open in GitHub"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                    )}
                   </button>
                 );
               })}
             </div>
           );
         })}
-      </div>
-
-      {/* Footer with stats */}
-      <div
-        className="px-3 py-2 border-t text-center"
-        style={{
-          fontSize: `${theme.fontSizes[1]}px`,
-          fontFamily: theme.fonts.body,
-          borderColor: theme.colors.border,
-          color: theme.colors.textMuted,
-        }}
-      >
-        {filteredActivity.length} activities in the last 7 days
       </div>
     </div>
   );
