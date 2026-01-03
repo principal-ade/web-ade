@@ -71,7 +71,7 @@
     "react-dom": "19.2.0",
     "react-markdown": "^10.1.0",
     "tailwindcss": "^4",
-    "themed-markdown": "^0.1.73",
+    "themed-markdown": "^0.1.75",
     "typescript": "^5"
   },
   "devDependencies": {

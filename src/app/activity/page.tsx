@@ -34,6 +34,15 @@ const FeedCodeCityPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamic import for GitHubMessagesPanel (SSR disabled)
+const GitHubMessagesPanelLoader = dynamic(
+  () => import('@industry-theme/github-panels').then((mod) => {
+    const Component = mod.panels[6]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 interface ActivityPageContentProps {
   currentUser: string;
   selectedRepo: string | null;
@@ -52,7 +61,10 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
   const [layout] = useState<PanelLayout>({
     left: 'following-users',
     middle: 'activity-timeline',
-    right: 'file-city',
+    right: {
+      type: 'tabs',
+      panels: ['file-city', 'github-messages'],
+    },
   });
 
   // Listen for user selection events from FollowingUsersPanel
@@ -178,6 +190,99 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
     return () => unsubscribe();
   }, [events, router]);
 
+  // Fetch messages for an issue or PR
+  const fetchMessages = useCallback(async (
+    owner: string,
+    repo: string,
+    number: number,
+    target: {
+      type: 'issue' | 'pull_request';
+      number: number;
+      title: string;
+      state: 'open' | 'closed';
+      merged?: boolean;
+    }
+  ) => {
+    try {
+      const response = await fetch(
+        `/api/github/repo/${owner}/${repo}/issues/${number}/timeline?per_page=100`,
+        { credentials: 'include' }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch messages: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      events.emit({
+        type: 'github-messages:data',
+        source: 'activity-page',
+        timestamp: Date.now(),
+        payload: {
+          target: {
+            type: target.type,
+            number: target.number,
+            title: target.title,
+            state: target.state,
+            merged: target.merged,
+          },
+          timeline: data.timeline || [],
+          reviewComments: data.reviewComments || [],
+          owner,
+          repo,
+          loading: false,
+          isAuthenticated: true,
+        },
+      });
+    } catch (err) {
+      console.error('[activity] Failed to fetch messages:', err);
+    }
+  }, [events]);
+
+  // Listen for issue selection to fetch messages
+  useEffect(() => {
+    const unsubscribe = events.on('issue:selected', (event) => {
+      const payload = event.payload as {
+        issue?: { number: number; title: string; state: string };
+        owner?: string;
+        repo?: string;
+      };
+      if (payload?.issue && payload.owner && payload.repo) {
+        fetchMessages(payload.owner, payload.repo, payload.issue.number, {
+          type: 'issue',
+          number: payload.issue.number,
+          title: payload.issue.title,
+          state: payload.issue.state === 'closed' ? 'closed' : 'open',
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [events, fetchMessages]);
+
+  // Listen for PR selection to fetch messages
+  useEffect(() => {
+    const unsubscribe = events.on('pr:selected', (event) => {
+      const payload = event.payload as {
+        pr?: { number: number; title: string; state: string; merged?: boolean };
+        owner?: string;
+        repo?: string;
+      };
+      if (payload?.pr && payload.owner && payload.repo) {
+        fetchMessages(payload.owner, payload.repo, payload.pr.number, {
+          type: 'pull_request',
+          number: payload.pr.number,
+          title: payload.pr.title,
+          state: payload.pr.state === 'closed' ? 'closed' : 'open',
+          merged: payload.pr.merged,
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [events, fetchMessages]);
+
   // Detect mobile viewport
   useEffect(() => {
     const checkMobile = () => {
@@ -242,6 +347,19 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
               </div>
             </div>
           )}
+        </div>
+      ),
+    },
+    {
+      id: 'github-messages',
+      label: 'Conversation',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <GitHubMessagesPanelLoader
+            context={context}
+            actions={actions}
+            events={events}
+          />
         </div>
       ),
     },

@@ -111,17 +111,69 @@ function UserContributions({ login, theme }: { login: string; theme: ReturnType<
   return <ActivityGraph contributions={contributions} theme={theme} />;
 }
 
+// Skeleton component for the current user section
+function UserSkeleton({ theme }: { theme: ReturnType<typeof useTheme>['theme'] }) {
+  return (
+    <div className="w-full lg:max-w-[300px] flex items-center gap-3 p-2">
+      {/* Avatar skeleton */}
+      <div
+        className="w-8 h-8 rounded-full flex-shrink-0 animate-pulse"
+        style={{ background: theme.colors.surface }}
+      />
+      <div className="flex-1 min-w-0 space-y-2">
+        <div className="flex items-center gap-2">
+          {/* Name skeleton */}
+          <div
+            className="h-4 w-24 rounded animate-pulse"
+            style={{ background: theme.colors.surface }}
+          />
+          {/* "You" badge skeleton */}
+          <div
+            className="h-5 w-8 rounded animate-pulse"
+            style={{ background: theme.colors.primary + '20' }}
+          />
+        </div>
+        {/* Username skeleton */}
+        <div
+          className="h-3 w-32 rounded animate-pulse"
+          style={{ background: theme.colors.surface }}
+        />
+      </div>
+      {/* Activity graph skeleton */}
+      <div className="flex gap-1">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <div
+            key={i}
+            className="animate-pulse"
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: 2,
+              background: theme.colors.surface,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function FollowingUsersPanel({ context: _context, actions: _actions, events, username, viewedUser }: FollowingUsersPanelProps) {
   const { theme } = useTheme();
   const [following, setFollowing] = useState<FollowingUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selfInfo, setSelfInfo] = useState<{ login: string; name: string | null; avatarUrl: string; followersCount?: number } | null>(null);
+  const [selfInfoLoading, setSelfInfoLoading] = useState(true);
 
   // Fetch current user's info for the "You" entry
   useEffect(() => {
-    if (!username) return;
+    if (!username) {
+      setSelfInfoLoading(false);
+      return;
+    }
 
+    setSelfInfoLoading(true);
     const fetchSelfInfo = async () => {
       try {
         const response = await fetch(`/api/github/user/${username}/activity`);
@@ -137,6 +189,8 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
       } catch {
         // Silently fail - we can still show username
         setSelfInfo({ login: username, name: null, avatarUrl: `https://github.com/${username}.png?size=64` });
+      } finally {
+        setSelfInfoLoading(false);
       }
     };
 
@@ -228,8 +282,11 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
       style={{ background: theme.colors.background }}
     >
       {/* Current user (You) at the top */}
-      {selfInfo && (
+      {username && (
         <div className="flex justify-end p-2 border-b" style={{ borderColor: theme.colors.border }}>
+          {selfInfoLoading ? (
+            <UserSkeleton theme={theme} />
+          ) : selfInfo ? (
           <button
             onClick={() => {
               events.emit({
@@ -300,6 +357,7 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
             </div>
             <UserContributions login={selfInfo.login} theme={theme} />
           </button>
+          ) : null}
         </div>
       )}
 
