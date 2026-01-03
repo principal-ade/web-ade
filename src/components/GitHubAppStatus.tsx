@@ -12,6 +12,8 @@ interface GitHubAppStatusProps {
   onInstallClick?: () => void;
   /** Compact mode for inline display */
   compact?: boolean;
+  /** Whether the user has permission to install the GitHub App (admin access) */
+  canInstall?: boolean;
 }
 
 interface AppStatus {
@@ -41,6 +43,7 @@ export function GitHubAppStatus({
   trafficControllerUrl = process.env.NEXT_PUBLIC_TRAFFIC_CONTROLLER_URL || 'http://localhost:3000',
   onInstallClick,
   compact = false,
+  canInstall = false,
 }: GitHubAppStatusProps) {
   const { theme } = useTheme();
   const [status, setStatus] = useState<AppStatus | null>(null);
@@ -136,6 +139,11 @@ export function GitHubAppStatus({
           Sync Active
         </span>
       );
+    }
+
+    // Hide the button if user doesn't have admin access to install the app
+    if (!canInstall) {
+      return null;
     }
 
     return (
@@ -343,7 +351,7 @@ export function GitHubAppStatus({
             The GitHub App is currently suspended. Please check your GitHub App settings.
           </p>
         </div>
-      ) : (
+      ) : canInstall ? (
         <div>
           <p
             style={{
@@ -380,6 +388,20 @@ export function GitHubAppStatus({
             Install GitHub App
             <ExternalLink size={14} />
           </button>
+        </div>
+      ) : (
+        <div>
+          <p
+            style={{
+              margin: 0,
+              fontSize: `${theme.fontSizes[1]}px`,
+              color: theme.colors.textSecondary,
+              lineHeight: 1.5,
+            }}
+          >
+            Real-time sync is not enabled. Contact a repository admin to install the
+            Principal GitHub App.
+          </p>
         </div>
       )}
     </div>

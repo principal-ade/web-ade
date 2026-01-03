@@ -73,6 +73,7 @@ export function EditorHeader({
   const [ownerOnly, setOwnerOnly] = useState<string | null>(null);
   const [isStarred, setIsStarred] = useState(false);
   const [isStarLoading, setIsStarLoading] = useState(false);
+  const [canInstallApp, setCanInstallApp] = useState(false);
 
   // Extract repository name or owner from URL
   useEffect(() => {
@@ -120,6 +121,29 @@ export function EditorHeader({
     };
 
     fetchStarredStatus();
+  }, [repositoryName, isAuthenticated]);
+
+  // Fetch admin permissions when on a repo page and user is authenticated
+  useEffect(() => {
+    if (!repositoryName || !isAuthenticated) {
+      setCanInstallApp(false);
+      return;
+    }
+
+    const fetchPermissions = async () => {
+      try {
+        const response = await fetch(`/api/github/repo/${repositoryName.owner}/${repositoryName.repo}/permissions`);
+        if (response.ok) {
+          const data = await response.json();
+          setCanInstallApp(data.isAdmin === true);
+        }
+      } catch (error) {
+        console.error('Failed to fetch permissions:', error);
+        setCanInstallApp(false);
+      }
+    };
+
+    fetchPermissions();
   }, [repositoryName, isAuthenticated]);
 
   // Toggle star status
@@ -210,6 +234,7 @@ export function EditorHeader({
             <GitHubAppStatus
               repoId={`${repositoryName.owner}/${repositoryName.repo}`}
               compact
+              canInstall={canInstallApp}
             />
           </div>
         )}
