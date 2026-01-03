@@ -632,7 +632,8 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                 left: 0,
                 bottom: 0,
                 width: '400px',
-                backgroundColor: theme.colors.background,
+                // Layer surface color on solid black to ensure opacity regardless of theme
+                background: `linear-gradient(${theme.colors.surface}, ${theme.colors.surface}), #000`,
                 borderRight: `1px solid ${theme.colors.border}`,
                 zIndex: 51,
                 display: 'flex',
