@@ -10,6 +10,7 @@ import { usePresenceData } from '@/hooks/usePresenceData';
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { LocalFolderButton } from './LocalFolderButton';
+import { GitHubAppStatus } from './GitHubAppStatus';
 
 interface EditorHeaderProps {
   currentLayoutConfigId?: string;
@@ -205,6 +206,11 @@ export function EditorHeader({
                 />
               </button>
             )}
+            {/* GitHub App sync status */}
+            <GitHubAppStatus
+              repoId={`${repositoryName.owner}/${repositoryName.repo}`}
+              compact
+            />
           </div>
         )}
         {/* Show owner info on owner pages */}
