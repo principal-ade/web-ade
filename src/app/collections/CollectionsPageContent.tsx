@@ -467,10 +467,12 @@ export function CollectionsPageContent({
     <div className="h-full w-full flex flex-col">
       {/* Custom header with collection dropdown */}
       <header
-        className="h-14 grid grid-cols-3 items-center px-4 border-b"
+        className="grid grid-cols-3 items-center px-4 border-b"
         style={{
           background: theme.colors.surface,
           borderColor: theme.colors.border,
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)',
+          paddingBottom: '0.75rem',
         }}
       >
         {/* Left: User Avatar, Collections label, and Collection Dropdown */}

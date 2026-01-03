@@ -425,10 +425,12 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
     <div className="h-full w-full flex flex-col overflow-hidden">
         {/* Custom header with avatar button for sidebar */}
         <header
-          className="h-14 flex items-center justify-between px-4 border-b relative z-50"
+          className="flex items-center justify-between px-4 border-b relative z-50"
           style={{
             background: theme.colors.surface,
             borderColor: theme.colors.border,
+            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)',
+            paddingBottom: '0.75rem',
           }}
         >
           {/* Left section: Logo and Owner info */}
