@@ -754,6 +754,27 @@ function EditorLayoutContent({
       events.on('github:login-requested', () => {
         login();
       }),
+      // Focus issue detail panel when an issue is selected
+      events.on('issue:selected', (event) => {
+        const payload = event.payload as {
+          issue?: unknown;
+          owner?: string;
+          repo?: string;
+        };
+
+        if (payload?.issue) {
+          // Emit focus event to the issue detail panel
+          events.emit({
+            type: 'panel:focus',
+            source: 'editor-layout',
+            timestamp: Date.now(),
+            payload: {
+              panelId: 'github-issue-detail',
+              panelSlot: 'middle',
+            },
+          });
+        }
+      }),
       events.on('panel:switch', (event) => {
         const payload = event.payload as { slot?: string; panel?: string };
         if (payload.slot && payload.panel) {

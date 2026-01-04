@@ -189,6 +189,153 @@ These control panel focus:
   - `payload.panelSlot` - Optional slot name (left/middle/right)
 - `panel:blur` - Blur a specific panel (emitted automatically by usePanelFocus)
 
+## Example: Issue Detail Focus on Owner/Repo Page
+
+When a user clicks an issue in the issues list, the issue detail panel should receive focus.
+
+### Implementation Status
+
+✅ **COMPLETED**: Both `GitHubIssuesPanel` and `GitHubIssueDetailPanel` now have `usePanelFocusListener` implemented in `@industry-theme/github-panels` package.
+
+### How It Works
+
+**1. GitHubIssuesPanel emits `issue:selected` event** (already implemented)
+
+Located in: `/Users/griever/Developer/industry-themed-github-panels/src/panels/GitHubIssuesPanel.tsx:108-117`
+
+```tsx
+const handleIssueClick = (issue: GitHubIssue) => {
+  setSelectedIssueId(issue.id);
+  // Emit issue selected event for detail panel
+  events.emit<IssueSelectedEventPayload>({
+    type: 'issue:selected',
+    source: 'github-issues-panel',
+    timestamp: Date.now(),
+    payload: {
+      issue,
+      owner,
+      repo,
+    },
+  });
+};
+```
+
+**2. Host page needs to listen and emit focus event**
+
+In your `[owner]/[repo]/page.tsx`, add this listener:
+
+```tsx
+// In [owner]/[repo]/page.tsx
+useEffect(() => {
+  const unsubscribe = events.on('issue:selected', (event) => {
+    const payload = event.payload as {
+      issue?: GitHubIssue;
+      owner?: string;
+      repo?: string;
+    };
+
+    if (payload?.issue) {
+      // Emit focus event to the issue detail panel
+      events.emit({
+        type: 'panel:focus',
+        source: 'repo-page',
+        timestamp: Date.now(),
+        payload: {
+          panelId: 'github-issue-detail',
+          panelSlot: 'middle'  // or whichever slot contains the detail panel
+        },
+      });
+    }
+  });
+
+  return () => unsubscribe();
+}, [events]);
+```
+
+**3. GitHubIssueDetailPanel listens for focus** (✅ implemented)
+
+Located in: `/Users/griever/Developer/industry-themed-github-panels/src/panels/GitHubIssueDetailPanel.tsx:44-49`
+
+```tsx
+// Listen for panel focus events
+usePanelFocusListener(
+  'github-issue-detail',
+  events,
+  () => panelRef.current?.focus()
+);
+```
+
+The panel container has been configured with:
+- `ref={panelRef}` - For DOM access
+- `tabIndex={-1}` - Makes it focusable programmatically
+- `outline: 'none'` - Removes default focus outline
+
+### Optional: Tab Switching Pattern
+
+If the detail panel is in a tabbed container, switch tabs before focusing:
+
+```tsx
+// In [owner]/[repo]/page.tsx
+useEffect(() => {
+  const unsubscribe = events.on('issue:selected', (event) => {
+    const payload = event.payload as {
+      issue?: GitHubIssue;
+      owner?: string;
+      repo?: string;
+    };
+
+    if (payload?.issue) {
+      // Switch to the detail tab first (e.g., index 1)
+      setActiveTab(1);
+
+      // Focus after tab switch completes
+      requestAnimationFrame(() => {
+        events.emit({
+          type: 'panel:focus',
+          source: 'repo-page',
+          timestamp: Date.now(),
+          payload: {
+            panelId: 'github-issue-detail',
+            panelSlot: 'middle'
+          },
+        });
+      });
+    }
+  });
+
+  return () => unsubscribe();
+}, [events]);
+```
+
+### GitHubIssuesPanel Focus (✅ implemented)
+
+The issues panel also supports focus, allowing the host to focus it when needed (e.g., after closing an issue detail):
+
+Located in: `/Users/griever/Developer/industry-themed-github-panels/src/panels/GitHubIssuesPanel.tsx:54-59`
+
+```tsx
+// Listen for panel focus events
+usePanelFocusListener(
+  'github-issues',
+  events,
+  () => panelRef.current?.focus()
+);
+```
+
+To focus the issues panel from the host:
+
+```tsx
+events.emit({
+  type: 'panel:focus',
+  source: 'repo-page',
+  timestamp: Date.now(),
+  payload: {
+    panelId: 'github-issues',
+    panelSlot: 'left'  // or whichever slot contains the issues panel
+  },
+});
+```
+
 ## Example: Adding Focus to Another Panel
 
 Say you want the file-city panel to focus when an activity item is selected:
