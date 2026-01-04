@@ -1160,7 +1160,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                       )}
 
                       {/* Expanded PR body */}
-                      {event.type === 'pr_merged' && expandedPRs.has(event.id) && (
+                      {(event.type === 'pr_merged' || event.type === 'pr_opened') && expandedPRs.has(event.id) && (
                         <div
                           className="mt-2 rounded-md overflow-hidden min-w-0"
                           style={{

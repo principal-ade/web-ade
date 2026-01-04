@@ -278,7 +278,7 @@ export function CollectionsPageContent({
 
   // Mobile layout: distribute panels across slots instead of tabs
   const mobileLayout: PanelLayout = {
-    left: 'workspace-collection',
+    left: 'github-search',
     middle: 'github-projects',
     right: 'github-starred',
   };
