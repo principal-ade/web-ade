@@ -2456,9 +2456,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     };
   }, [events, githubRepo, fetchPrFiles, clearPrFiles]);
 
-  // Listen for issue:selected events to fetch messages/timeline
+  // Listen for issue:selected and pr:selected events to fetch messages/timeline
   useEffect(() => {
-    const unsubscribeSelect = events.on('issue:selected', (event) => {
+    const unsubscribeIssue = events.on('issue:selected', (event) => {
       const payload = event.payload as {
         issue?: GitHubIssue;
         owner?: string;
@@ -2471,13 +2471,27 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       }
     });
 
+    const unsubscribePR = events.on('pr:selected', (event) => {
+      const payload = event.payload as {
+        pullRequest?: GitHubIssue; // GitHubPullRequest has same structure as GitHubIssue
+        owner?: string;
+        repo?: string;
+      };
+      const { pullRequest, owner, repo } = payload;
+      if (pullRequest && owner && repo) {
+        console.log('[PanelContext] PR selected, fetching messages for #', pullRequest.number);
+        fetchMessages(owner, repo, pullRequest.number, pullRequest);
+      }
+    });
+
     const unsubscribeDeselect = events.on('issue:deselected', () => {
       console.log('[PanelContext] Issue deselected, clearing messages');
       setMessagesData(null);
     });
 
     return () => {
-      unsubscribeSelect();
+      unsubscribeIssue();
+      unsubscribePR();
       unsubscribeDeselect();
     };
   }, [events, fetchMessages]);
