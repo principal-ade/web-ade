@@ -1123,12 +1123,14 @@ function EditorLayoutContent({
                   content = new TextDecoder('utf-8').decode(bytes);
                 }
 
-                // Parse task, add reference, and serialize back using Backlog-Core
+                // Parse task, add reference, set status to in-progress, and serialize back
                 const parsedTask = parseTaskMarkdown(content, task.filePath);
                 const existingRefs = parsedTask.references || [];
                 if (!existingRefs.includes(issueUrl)) {
                   parsedTask.references = [...existingRefs, issueUrl];
                 }
+                // Set status to in-progress when assigning to Claude
+                parsedTask.status = 'in-progress';
                 const updatedContent = serializeTaskMarkdown(parsedTask);
 
                 // Commit the updated file
@@ -1142,7 +1144,7 @@ function EditorLayoutContent({
                       content: updatedContent,
                       sha: fileData.sha,
                     }],
-                    message: `Link task ${task.id} to issue #${issueNumber}`,
+                    message: `Assign task ${task.id} to Claude (issue #${issueNumber})`,
                   }),
                 });
 
