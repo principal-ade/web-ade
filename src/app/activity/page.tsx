@@ -57,16 +57,36 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
   const [leftCollapsed] = useState(false);
   const [rightCollapsed] = useState(false);
   const [viewedUser, setViewedUser] = useState(currentUser);
-  const [hasMessagesSelected, setHasMessagesSelected] = useState(false);
+  const [rightPanelActiveTab, setRightPanelActiveTab] = useState(0);
 
-  // Dynamic layout based on whether an issue/PR is selected
+  // Layout with tabs always present in right panel
   const layout = useMemo<PanelLayout>(() => ({
     left: 'following-users',
     middle: 'activity-timeline',
-    right: hasMessagesSelected
-      ? { type: 'tabs', panels: ['file-city', 'github-messages'] }
-      : 'file-city',
-  }), [hasMessagesSelected]);
+    right: {
+      type: 'tabs',
+      panels: ['file-city', 'github-messages'],
+      config: {
+        activeTabIndex: rightPanelActiveTab,
+        onTabChange: (index: number) => {
+          setRightPanelActiveTab(index);
+          // Focus the newly active panel
+          const panelIds = ['file-city', 'github-messages'];
+          requestAnimationFrame(() => {
+            events.emit({
+              type: 'panel:focus',
+              source: 'tab-change',
+              timestamp: Date.now(),
+              payload: {
+                panelId: panelIds[index],
+                panelSlot: 'right'
+              }
+            });
+          });
+        }
+      }
+    }
+  }), [rightPanelActiveTab, events]);
 
   // Listen for user selection events from FollowingUsersPanel
   useEffect(() => {
@@ -198,21 +218,30 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
     return () => unsubscribe();
   }, [events, router]);
 
-  // Listen for issue/PR selection to show messages panel and focus it
+  // Listen for issue/PR selection to switch to messages tab and focus it
   useEffect(() => {
-    const unsubscribe = events.on('issue:selected', () => {
-      setHasMessagesSelected(true);
+    const handleIssueOrPRSelected = () => {
+      // Switch to messages tab (index 1) first, then focus it
+      setRightPanelActiveTab(1);
 
-      // Focus the messages panel when an issue/PR is selected
-      events.emit({
-        type: 'panel:focus',
-        source: 'activity-page',
-        timestamp: Date.now(),
-        payload: { panelId: 'github-messages', panelSlot: 'right' },
+      // Focus the messages panel after tab switch completes
+      requestAnimationFrame(() => {
+        events.emit({
+          type: 'panel:focus',
+          source: 'activity-page',
+          timestamp: Date.now(),
+          payload: { panelId: 'github-messages', panelSlot: 'right' },
+        });
       });
-    });
+    };
 
-    return () => unsubscribe();
+    const unsubIssue = events.on('issue:selected', handleIssueOrPRSelected);
+    const unsubPR = events.on('pr:selected', handleIssueOrPRSelected);
+
+    return () => {
+      if (typeof unsubIssue === 'function') unsubIssue();
+      if (typeof unsubPR === 'function') unsubPR();
+    };
   }, [events]);
 
   // Detect mobile viewport
