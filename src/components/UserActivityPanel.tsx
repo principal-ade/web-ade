@@ -1069,7 +1069,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             {formatRelativeTime(event.timestamp)}
                           </span>
                         </div>
-                        {/* Second row: line changes/closed status + view conversation + open in github */}
+                        {/* Second row: line changes/closed status + open in github */}
                         {((event.type === 'pr_merged' && event.metadata?.additions !== undefined) || (event.type === 'pr_opened') || (event.type === 'issue_opened')) && (
                           <div
                             className="flex items-center gap-2"
@@ -1096,51 +1096,6 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                                   <span> by @{event.metadata.closedBy}</span>
                                 )}
                               </span>
-                            )}
-                            {/* View Conversation button for PRs and issues */}
-                            {(event.type === 'pr_merged' || event.type === 'pr_opened' || event.type === 'issue_opened') && (
-                              <button
-                                className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:opacity-80 transition-opacity"
-                                style={{
-                                  color: theme.colors.primary,
-                                  background: theme.colors.primary + '15',
-                                  border: `1px solid ${theme.colors.primary}40`,
-                                }}
-                                title="View conversation"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const [owner, repo] = event.repository.split('/');
-                                  const number = event.metadata?.prNumber || event.metadata?.issueNumber;
-                                  if (number) {
-                                    events.emit({
-                                      type: 'issue:selected',
-                                      source: 'user-activity-panel',
-                                      timestamp: Date.now(),
-                                      payload: {
-                                        issue: {
-                                          id: 0,
-                                          number,
-                                          title: event.title || '',
-                                          state: event.metadata?.isClosed || event.type === 'pr_merged' ? 'closed' : 'open',
-                                          body: null,
-                                          html_url: event.url || '',
-                                          created_at: event.timestamp,
-                                          updated_at: event.timestamp,
-                                          labels: [],
-                                          comments: 0,
-                                          user: { login: '', avatar_url: '' },
-                                          assignees: [],
-                                        },
-                                        owner,
-                                        repo,
-                                      },
-                                    });
-                                  }
-                                }}
-                              >
-                                <MessageSquare className="w-3 h-3" />
-                                <span>Conversation</span>
-                              </button>
                             )}
                             {event.url && (
                               <a
@@ -1195,7 +1150,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                     {/* Reactions for PRs and issues */}
                     {(event.type === 'pr_merged' || event.type === 'pr_opened' || event.type === 'issue_opened') &&
                       event.metadata?.reactions && (
-                        <div className="flex items-start gap-1">
+                        <div className="flex items-center gap-2">
                           <span className="w-4 lg:w-[52px] flex-shrink-0" />
                           <ReactionBar
                             reactions={event.metadata.reactions}
@@ -1204,6 +1159,49 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             onToggleReaction={(type, reactionId) => toggleReaction(event, type, reactionId)}
                             disabled={REACTION_ORDER.some((t) => loadingReactions.has(`${event.id}-${t}`))}
                           />
+                          {/* View Conversation button */}
+                          <button
+                            className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:opacity-80 transition-opacity ml-auto"
+                            style={{
+                              color: theme.colors.primary,
+                              background: theme.colors.primary + '15',
+                              border: `1px solid ${theme.colors.primary}40`,
+                            }}
+                            title="View conversation"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const [owner, repo] = event.repository.split('/');
+                              const number = event.metadata?.prNumber || event.metadata?.issueNumber;
+                              if (number) {
+                                events.emit({
+                                  type: 'issue:selected',
+                                  source: 'user-activity-panel',
+                                  timestamp: Date.now(),
+                                  payload: {
+                                    issue: {
+                                      id: 0,
+                                      number,
+                                      title: event.title || '',
+                                      state: event.metadata?.isClosed || event.type === 'pr_merged' ? 'closed' : 'open',
+                                      body: null,
+                                      html_url: event.url || '',
+                                      created_at: event.timestamp,
+                                      updated_at: event.timestamp,
+                                      labels: [],
+                                      comments: 0,
+                                      user: { login: '', avatar_url: '' },
+                                      assignees: [],
+                                    },
+                                    owner,
+                                    repo,
+                                  },
+                                });
+                              }
+                            }}
+                          >
+                            <MessageSquare className="w-3 h-3" />
+                            <span>Conversation</span>
+                          </button>
                         </div>
                       )}
 
