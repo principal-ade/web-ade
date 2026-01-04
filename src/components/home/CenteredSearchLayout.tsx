@@ -103,7 +103,20 @@ export function CenteredSearchLayout({ onToggleGallery }: CenteredSearchLayoutPr
     try {
       const saved = localStorage.getItem(RECENT_REPOSITORIES_KEY);
       if (saved) {
-        setRecentRepos(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        // Validate and filter to ensure correct format
+        const validated = Array.isArray(parsed)
+          ? parsed.filter(
+              (item): item is RecentRepository =>
+                item &&
+                typeof item === 'object' &&
+                typeof item.owner === 'string' &&
+                typeof item.repo === 'string' &&
+                item.owner.length > 0 &&
+                item.repo.length > 0
+            )
+          : [];
+        setRecentRepos(validated);
       }
     } catch {
       // Ignore parse errors
