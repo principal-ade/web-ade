@@ -51,7 +51,7 @@ function CollectionsPageWrapper() {
       const firstId = allCollections[0]?.id;
       if (firstId) {
         setSelectedCollectionId(firstId);
-        router.replace(`/collections?collection=${firstId}`, { scroll: false });
+        router.replace(`/repos?collection=${firstId}`, { scroll: false });
       }
     }
   }, [selectedCollectionId, allCollections, userCollections.loading, router]);
@@ -73,13 +73,13 @@ function CollectionsPageWrapper() {
   // Handlers
   const handleSelectCollection = useCallback((id: string) => {
     setSelectedCollectionId(id);
-    router.replace(`/collections?collection=${id}`, { scroll: false });
+    router.replace(`/repos?collection=${id}`, { scroll: false });
   }, [router]);
 
   const handleCreateCollection = useCallback(async (name: string, description: string, icon: string) => {
     const newCollection = await userCollections.createCollection(name, description, icon);
     setSelectedCollectionId(newCollection.id);
-    router.replace(`/collections?collection=${newCollection.id}`, { scroll: false });
+    router.replace(`/repos?collection=${newCollection.id}`, { scroll: false });
   }, [userCollections, router]);
 
   const handleUpdateCollection = useCallback(async (name: string, description: string, icon: string) => {
@@ -97,7 +97,7 @@ function CollectionsPageWrapper() {
         handleSelectCollection(remaining[0]!.id);
       } else {
         setSelectedCollectionId(null);
-        router.replace('/collections', { scroll: false });
+        router.replace('/repos', { scroll: false });
       }
     }
   }, [userCollections, selectedCollectionId, allCollections, handleSelectCollection, router]);
@@ -117,7 +117,7 @@ function CollectionsPageWrapper() {
   const handleShare = useCallback(() => {
     if (!user?.login) return;
 
-    const shareUrl = `${window.location.origin}/collections/${user.login}`;
+    const shareUrl = `${window.location.origin}/repos/${user.login}`;
     navigator.clipboard.writeText(shareUrl).then(() => {
       setShareSuccess(true);
       setTimeout(() => setShareSuccess(false), 2000);
@@ -147,11 +147,11 @@ function CollectionsPageWrapper() {
             key={selectedCollectionId}
             workspace={{
               name: selectedCollection.name,
-              path: `/collections`,
+              path: `/repos`,
             }}
             repository={{
               name: previewedRepo ? previewedRepo.split('/')[1] || selectedCollection.name : selectedCollection.name,
-              path: previewedRepo ? `/GitHub/${previewedRepo}` : `/collections`,
+              path: previewedRepo ? `/GitHub/${previewedRepo}` : `/repos`,
             }}
             githubRepo={previewedRepo || undefined}
             collectionId={selectedCollectionId || undefined}

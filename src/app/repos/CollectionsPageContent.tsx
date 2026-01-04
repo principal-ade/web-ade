@@ -517,47 +517,49 @@ export function CollectionsPageContent({
         </div>
 
         {/* Center: Mode Switch */}
-        <div className="flex items-center justify-center">
-          <div
-            className="flex items-center rounded-lg p-0.5"
-            style={{
-              background: theme.colors.backgroundTertiary,
-              border: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            <button
-              onClick={() => setViewMode('manage')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all"
+        {!isMobile && (
+          <div className="flex items-center justify-center">
+            <div
+              className="flex items-center rounded-lg p-0.5"
               style={{
-                background: viewMode === 'manage' ? theme.colors.surface : 'transparent',
-                color: viewMode === 'manage' ? theme.colors.text : theme.colors.textSecondary,
-                boxShadow: viewMode === 'manage' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                background: theme.colors.backgroundTertiary,
+                border: `1px solid ${theme.colors.border}`,
               }}
-              title="Manage repositories in collection"
             >
-              <Settings size={14} />
-              <span className="hidden sm:inline">Manage</span>
-            </button>
-            <button
-              onClick={() => setViewMode('explore')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all"
-              style={{
-                background: viewMode === 'explore' ? theme.colors.surface : 'transparent',
-                color: viewMode === 'explore' ? theme.colors.text : theme.colors.textSecondary,
-                boxShadow: viewMode === 'explore' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
-              }}
-              title="Explore collection with visualizations"
-            >
-              <Compass size={14} />
-              <span className="hidden sm:inline">Explore</span>
-            </button>
+              <button
+                onClick={() => setViewMode('manage')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all"
+                style={{
+                  background: viewMode === 'manage' ? theme.colors.surface : 'transparent',
+                  color: viewMode === 'manage' ? theme.colors.text : theme.colors.textSecondary,
+                  boxShadow: viewMode === 'manage' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                }}
+                title="Manage repositories in collection"
+              >
+                <Settings size={14} />
+                <span className="hidden sm:inline">Manage</span>
+              </button>
+              <button
+                onClick={() => setViewMode('explore')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all"
+                style={{
+                  background: viewMode === 'explore' ? theme.colors.surface : 'transparent',
+                  color: viewMode === 'explore' ? theme.colors.text : theme.colors.textSecondary,
+                  boxShadow: viewMode === 'explore' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                }}
+                title="Explore collection with visualizations"
+              >
+                <Compass size={14} />
+                <span className="hidden sm:inline">Explore</span>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Right: Actions and toggles */}
         <div className="flex items-center justify-end gap-3">
           {/* User collection action buttons - only show in manage mode */}
-          {isUserCollection && viewMode === 'manage' && (
+          {!isMobile && isUserCollection && viewMode === 'manage' && (
             <div className="flex items-center gap-2">
               {onAddRepository && (
                 <button
@@ -592,7 +594,7 @@ export function CollectionsPageContent({
           )}
 
           {/* Share Button (only show when repo exists) */}
-          {isAuthenticated && gitHubRepoExists && (
+          {!isMobile && isAuthenticated && gitHubRepoExists && (
             <button
               onClick={onShare}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
@@ -615,7 +617,7 @@ export function CollectionsPageContent({
           )}
 
           {/* GitHub Sync Button */}
-          {isAuthenticated && (
+          {!isMobile && isAuthenticated && (
             <button
               onClick={onOpenSyncModal}
               disabled={saving}
@@ -950,7 +952,7 @@ export function CollectionsPageContent({
                       return (
                         <Link
                           key={collection.id}
-                          href={`/collections?collection=${collection.id}`}
+                          href={`/repos?collection=${collection.id}`}
                           onClick={() => {
                             setSidebarOpen(false);
                             onSelectCollection(collection.id);

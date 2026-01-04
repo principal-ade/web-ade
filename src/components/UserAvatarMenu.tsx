@@ -85,15 +85,15 @@ export function UserAvatarMenu() {
             <Calendar className="w-4 h-4" />
             Feed
           </Link>
-          {/* Collections */}
+          {/* Repos */}
           <Link
-            href="/collections"
+            href="/repos"
             className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
             style={{ color: theme.colors.text }}
             onClick={() => setUserMenuOpen(false)}
           >
             <FolderOpen className="w-4 h-4" />
-            Collections
+            Repos
           </Link>
           {/* Search */}
           <Link
