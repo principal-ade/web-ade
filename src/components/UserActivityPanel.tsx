@@ -878,7 +878,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
       {/* Timeline Content */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto scrollbar-hide"
+        className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {Array.from({ length: numDaysToShow }, (_, scrollIndex) => {
@@ -890,6 +890,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
               ref={(el) => {
                 if (el) sectionRefs.current.set(scrollIndex, el);
               }}
+              className="min-w-0"
             >
               {/* Day section header - skip for Today since it's in the WeeklyTimelineHeader */}
               {scrollIndex > 0 && (
@@ -927,7 +928,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                 return (
                   <button
                     key={event.id}
-                    className="w-full flex flex-col gap-1 px-4 py-4 group text-left transition-all border-b cursor-pointer"
+                    className="w-full flex flex-col gap-1 px-4 py-4 group text-left transition-all border-b cursor-pointer min-w-0 overflow-hidden"
                     style={{
                       background: isEventSelected ? theme.colors.primary + '15' : 'transparent',
                       borderColor: theme.colors.border,
