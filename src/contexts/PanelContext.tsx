@@ -2341,6 +2341,17 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     });
   }
 
+  // Update github-messages slice with fetched data
+  const messagesSlice = slicesRef.current.get('github-messages');
+  if (messagesSlice) {
+    slicesRef.current.set('github-messages', {
+      ...messagesSlice,
+      data: messagesData,
+      loading: messagesData?.loading ?? false,
+      error: messagesData?.error ? new Error(messagesData.error) : null,
+    });
+  }
+
   // Update prFiles slice with fetched data (for File-City PR visualization)
   const prFilesSlice = slicesRef.current.get('prFiles');
   if (prFilesSlice) {
