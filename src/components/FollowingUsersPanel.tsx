@@ -127,11 +127,6 @@ function UserSkeleton({ theme }: { theme: ReturnType<typeof useTheme>['theme'] }
             className="h-4 w-24 rounded animate-pulse"
             style={{ background: theme.colors.surface }}
           />
-          {/* "You" badge skeleton */}
-          <div
-            className="h-5 w-8 rounded animate-pulse"
-            style={{ background: theme.colors.primary + '20' }}
-          />
         </div>
         {/* Username skeleton */}
         <div
@@ -283,7 +278,7 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
     >
       {/* Current user (You) at the top */}
       {username && (
-        <div className="flex justify-end p-2 border-b" style={{ borderColor: theme.colors.border }}>
+        <div className="flex justify-end border-b" style={{ borderColor: theme.colors.border }}>
           {selfInfoLoading ? (
             <UserSkeleton theme={theme} />
           ) : selfInfo ? (
@@ -299,7 +294,6 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
             className="w-full lg:max-w-[300px] flex items-center gap-3 p-2 rounded transition-colors hover:opacity-80 text-left"
             style={{
               background: viewedUser === selfInfo.login ? theme.colors.surface : 'transparent',
-              border: viewedUser === selfInfo.login ? `1px solid ${theme.colors.border}` : '1px solid transparent',
             }}
           >
             <img
@@ -322,16 +316,6 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
                   }}
                 >
                   {selfInfo.name || selfInfo.login}
-                </span>
-                <span
-                  className="px-1.5 py-0.5 rounded text-xs"
-                  style={{
-                    background: theme.colors.primary + '20',
-                    color: theme.colors.primary,
-                    fontFamily: theme.fonts.body,
-                  }}
-                >
-                  You
                 </span>
               </div>
               {selfInfo.name && (
@@ -424,7 +408,6 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
                   className="w-full lg:max-w-[300px] flex items-center gap-3 p-2 rounded transition-colors hover:opacity-80 text-left"
                   style={{
                     background: isViewing ? theme.colors.surface : 'transparent',
-                    border: isViewing ? `1px solid ${theme.colors.border}` : '1px solid transparent',
                   }}
                 >
                   <img
