@@ -259,6 +259,57 @@ const MDXEditorPanelLoader = dynamic(
   { ssr: false }
 );
 
+/**
+ * Build the GitHub issue body for a backlog task (without @claude tag)
+ * The @claude tag will be added in a separate comment after the task file is updated
+ */
+function buildClaudeIssueBody(task: {
+  id: string;
+  title: string;
+  description?: string;
+  priority?: string;
+  labels?: string[];
+  acceptanceCriteria?: Array<{ text: string; checked: boolean }>;
+  implementationPlan?: string;
+  rawContent?: string;
+}): string {
+  const lines: string[] = [];
+
+  lines.push(`## Task: ${task.title}`);
+  lines.push('');
+
+  if (task.priority) {
+    lines.push(`**Priority:** ${task.priority}`);
+    lines.push('');
+  }
+
+  if (task.description) {
+    lines.push('### Description');
+    lines.push(task.description);
+    lines.push('');
+  }
+
+  if (task.acceptanceCriteria && task.acceptanceCriteria.length > 0) {
+    lines.push('### Acceptance Criteria');
+    for (const criterion of task.acceptanceCriteria) {
+      const checkbox = criterion.checked ? '[x]' : '[ ]';
+      lines.push(`- ${checkbox} ${criterion.text}`);
+    }
+    lines.push('');
+  }
+
+  if (task.implementationPlan) {
+    lines.push('### Implementation Plan');
+    lines.push(task.implementationPlan);
+    lines.push('');
+  }
+
+  lines.push('---');
+  lines.push(`*Backlog Task ID: ${task.id}*`);
+
+  return lines.join('\n');
+}
+
 interface EditorLayoutContentProps {
   layout: PanelLayout;
   setLayout: React.Dispatch<React.SetStateAction<PanelLayout>>;
@@ -996,12 +1047,91 @@ function EditorLayoutContent({
           });
         }
       }),
+      // Handle "Assign to Claude" from kanban panel
+      events.on('task:assign-to-claude', async (event) => {
+        const payload = event.payload as {
+          taskId: string;
+          task: {
+            id: string;
+            title: string;
+            description?: string;
+            priority?: string;
+            labels?: string[];
+            acceptanceCriteria?: Array<{ text: string; checked: boolean }>;
+            implementationPlan?: string;
+            rawContent?: string;
+          };
+        };
+
+        if (!payload?.task || !githubRepo || !githubRepo.includes('/')) {
+          console.error('[EditorLayout] Cannot assign to Claude: missing task or repo');
+          return;
+        }
+
+        const [owner, name] = githubRepo.split('/');
+        const task = payload.task;
+
+        // Build issue body with task details
+        const issueBody = buildClaudeIssueBody(task);
+
+        try {
+          // 1. Create the GitHub issue
+          const issueResponse = await fetch(`/api/github/repo/${owner}/${name}/issues`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              title: `[${task.id}] ${task.title}`,
+              body: issueBody,
+              labels: ['claude-task'],
+            }),
+          });
+
+          if (!issueResponse.ok) {
+            const errorData = await issueResponse.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to create issue: ${issueResponse.statusText}`);
+          }
+
+          const { issue } = await issueResponse.json();
+          const issueUrl = issue.html_url;
+          const issueNumber = issue.number;
+
+          console.log(`[EditorLayout] Created GitHub issue #${issueNumber} for task ${task.id}`);
+
+          // 2. Emit success event so kanban panel can update UI
+          events.emit({
+            type: 'task:assigned-to-claude',
+            source: 'web-ade',
+            timestamp: Date.now(),
+            payload: {
+              taskId: task.id,
+              issueNumber,
+              issueUrl,
+            },
+          });
+
+          // TODO: Update task file with reference and commit
+          // This requires the backlog Core integration to update the task's references field
+
+        } catch (err) {
+          console.error('[EditorLayout] Failed to assign task to Claude:', err);
+          events.emit({
+            type: 'task:assign-to-claude:error',
+            source: 'web-ade',
+            timestamp: Date.now(),
+            payload: {
+              taskId: task.id,
+              error: err instanceof Error ? err.message : 'Failed to assign to Claude',
+            },
+          });
+        }
+      }),
     ];
 
     return () => {
       unsubscribers.forEach((unsub) => unsub());
     };
-  }, [events, login, actions, layout, leftSidebarCollapsed, rightSidebarCollapsed, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed, setTheme, setColor, resetColor, resetAllColors]);
+  }, [events, login, actions, layout, leftSidebarCollapsed, rightSidebarCollapsed, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed, setTheme, setColor, resetColor, resetAllColors, githubRepo]);
 
   // Create enhanced actions that add writeFile and capture file metadata on read
   const enhancedActions = useMemo(() => ({

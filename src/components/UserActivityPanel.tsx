@@ -934,6 +934,16 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                     onClick={() => {
                       setSelectedEventId(event.id);
                       setSelectedCommit(null); // Clear individual commit selection
+
+                      // Toggle expansion based on event type
+                      if (event.type === 'issue_opened') {
+                        toggleIssueExpansion(event);
+                      } else if (event.type === 'pr_merged' || event.type === 'pr_opened') {
+                        togglePRExpansion(event);
+                      } else if (event.type === 'commit') {
+                        toggleCommitExpansion(event);
+                      }
+
                       events.emit({
                         type: 'activity:item:selected',
                         source: 'user-activity-panel',
@@ -1107,39 +1117,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                     })()}
 
                     {/* Title or commit info */}
-                    {event.type === 'issue_opened' && event.title ? (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleIssueExpansion(event);
-                        }}
-                        className="w-full flex items-start gap-1 hover:opacity-80 transition-opacity text-left min-w-0"
-                        style={{
-                          fontSize: `${theme.fontSizes[3]}px`,
-                          fontFamily: theme.fonts.body,
-                          color: theme.colors.text,
-                        }}
-                      >
-                        <span className="w-4 lg:w-[52px] flex-shrink-0" />
-                        <span className="break-words" title={event.title}>{event.title}</span>
-                      </button>
-                    ) : event.type === 'pr_merged' && event.title ? (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          togglePRExpansion(event);
-                        }}
-                        className="w-full flex items-start gap-1 hover:opacity-80 transition-opacity text-left min-w-0"
-                        style={{
-                          fontSize: `${theme.fontSizes[3]}px`,
-                          fontFamily: theme.fonts.body,
-                          color: theme.colors.text,
-                        }}
-                      >
-                        <span className="w-4 lg:w-[52px] flex-shrink-0" />
-                        <span className="break-words" title={event.title}>{event.title}</span>
-                      </button>
-                    ) : event.title ? (
+                    {event.title ? (
                       <div
                         className="flex items-start gap-1"
                         style={{
@@ -1161,12 +1139,9 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                         }}
                       >
                         <span className="w-4 lg:w-[52px] flex-shrink-0" />
-                        <button
-                          onClick={() => toggleCommitExpansion(event)}
-                          className="hover:opacity-80 transition-opacity"
-                        >
+                        <span>
                           {event.metadata.commitCount} commit{event.metadata.commitCount !== 1 ? 's' : ''}
-                        </button>
+                        </span>
                       </div>
                     ) : null}
 

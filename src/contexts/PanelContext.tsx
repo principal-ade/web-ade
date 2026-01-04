@@ -239,6 +239,12 @@ interface PackagesSliceData {
   summary: PackageSummary;
 }
 
+// Repository capabilities slice data (Claude workflow detection, etc.)
+interface RepoCapabilitiesSliceData {
+  hasClaudeWorkflow: boolean;
+  claudeWorkflowPath?: string;
+}
+
 // GitHub Issues types for GitHubIssuesPanel
 interface GitHubIssueLabel {
   id: number;
@@ -2071,6 +2077,26 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           refresh: async () => {},
         },
       ],
+      [
+        'repoCapabilities',
+        {
+          scope: 'repository',
+          name: 'repoCapabilities',
+          data: {
+            hasClaudeWorkflow: false,
+            claudeWorkflowPath: undefined,
+          } as RepoCapabilitiesSliceData,
+          loading: false,
+          error: null,
+          refresh: async () => {
+            // Capabilities are derived from fileTree, so refresh fileTree instead
+            const fileTreeSlice = slicesRef.current.get('fileTree');
+            if (fileTreeSlice?.refresh) {
+              await fileTreeSlice.refresh();
+            }
+          },
+        },
+      ],
     ])
   );
 
@@ -2115,6 +2141,26 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     slicesRef.current.set('fileTree', {
       ...fileTreeSlice,
       data: fileTree,
+      loading: fileTreeLoading,
+      error: fileTreeError,
+    });
+  }
+
+  // Update repoCapabilities slice based on file tree
+  // Check for Claude workflow file in .github/workflows/
+  const repoCapabilitiesSlice = slicesRef.current.get('repoCapabilities');
+  if (repoCapabilitiesSlice) {
+    const allFiles = fileTree?.allFiles;
+    const claudeWorkflowPath = allFiles?.find(
+      (file) => file.path === '.github/workflows/claude.yml' || file.path === '.github/workflows/claude.yaml'
+    )?.path;
+
+    slicesRef.current.set('repoCapabilities', {
+      ...repoCapabilitiesSlice,
+      data: {
+        hasClaudeWorkflow: !!claudeWorkflowPath,
+        claudeWorkflowPath,
+      } as RepoCapabilitiesSliceData,
       loading: fileTreeLoading,
       error: fileTreeError,
     });

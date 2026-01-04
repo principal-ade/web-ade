@@ -3,7 +3,7 @@ import { getGitHubToken } from "@/lib/auth/cookies";
 
 function addCorsHeaders(response: NextResponse) {
   response.headers.set("Access-Control-Allow-Origin", "*");
-  response.headers.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+  response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   response.headers.set(
     "Access-Control-Allow-Headers",
     "Content-Type, Authorization",
@@ -107,6 +107,74 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         },
         { status: 500 },
       ),
+    );
+  }
+}
+
+/**
+ * Create a new issue in the repository
+ * POST /api/github/repo/{owner}/{name}/issues
+ */
+export async function POST(request: NextRequest, { params }: RouteParams) {
+  const { owner, name } = await params;
+
+  // Get user's GitHub token - REQUIRED for creating issues
+  const userToken = await getGitHubToken();
+
+  if (!userToken) {
+    return addCorsHeaders(
+      NextResponse.json(
+        { error: "Authentication required to create issues" },
+        { status: 401 }
+      )
+    );
+  }
+
+  try {
+    const body = await request.json();
+    const { title, body: issueBody, labels, assignees } = body;
+
+    if (!title) {
+      return addCorsHeaders(
+        NextResponse.json({ error: "Title is required" }, { status: 400 })
+      );
+    }
+
+    const response = await fetch(
+      `${GITHUB_API_BASE}/repos/${owner}/${name}/issues`,
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/vnd.github.v3+json",
+          Authorization: `token ${userToken}`,
+          "Content-Type": "application/json",
+          "User-Agent": "WebADE/1.0",
+        },
+        body: JSON.stringify({
+          title,
+          body: issueBody,
+          labels,
+          assignees,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return addCorsHeaders(
+        NextResponse.json(
+          { error: errorData.message || `GitHub API error: ${response.status}` },
+          { status: response.status }
+        )
+      );
+    }
+
+    const issue = await response.json();
+    return addCorsHeaders(NextResponse.json({ issue, success: true }));
+  } catch (error) {
+    console.error("[issues API] Error creating issue:", error);
+    return addCorsHeaders(
+      NextResponse.json({ error: "Failed to create issue" }, { status: 500 })
     );
   }
 }
