@@ -46,13 +46,13 @@ export const layoutConfigs: LayoutConfig[] = [
     id: 'kanban',
     name: 'Triaged',
     layout: {
-      left: 'empty',
-      middle: 'kanban',
-      right: 'task-detail',
+      left: 'kanban',
+      middle: 'task-detail',
+      right: 'github-messages',
     },
     collapsed: {
-      left: true,
-      right: false,
+      left: false,
+      right: true,
     },
   },
   {
