@@ -42,7 +42,6 @@ export function WeeklyTimelineHeader({
   // Build last 7 days data (0=today, 6=7 days ago)
   const weekData: DayData[] = [];
   const now = new Date();
-  const todayDayOfWeek = now.getDay();
 
   for (let i = 6; i >= 0; i--) {
     const date = new Date(now);

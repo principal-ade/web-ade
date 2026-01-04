@@ -1615,7 +1615,6 @@ function EditorLayoutContent({
           currentRepoId={githubRepo}
           selectedColorMode={selectedColorMode}
           onClearColorMode={clearColorMode}
-          owner={repositoryInfo?.owner}
           onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
           onOpenWithMic={isSpeechSupported ? handleOpenWithMic : undefined}
         />

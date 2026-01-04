@@ -38,7 +38,7 @@
     "@monaco-editor/react": "^4.7.0",
     "@octokit/rest": "^22.0.1",
     "@principal-ade/code-quality-panels": "^0.1.27",
-    "@principal-ade/industry-theme": "^0.1.5",
+    "@principal-ade/industry-theme": "^0.1.6",
     "@principal-ade/industry-themed-ai-sdk-panel": "^0.1.4",
     "@principal-ade/panel-framework-core": "^0.2.0",
     "@principal-ade/panel-layouts": "^0.3.8",
