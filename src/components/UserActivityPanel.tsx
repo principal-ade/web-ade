@@ -1023,7 +1023,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                     {(() => {
                       const hasSecondRow = (event.type === 'pr_merged' && event.metadata?.additions !== undefined) || (event.type === 'issue_opened' && event.metadata?.isClosed);
                       return (
-                        <div className={`flex gap-3 ${hasSecondRow ? 'items-start' : 'items-center'}`}>
+                        <div className={`flex gap-3 w-full ${hasSecondRow ? 'items-start' : 'items-center'}`}>
                           <img
                             src={`https://github.com/${event.repository.split('/')[0]}.png?size=64`}
                             alt={event.repository.split('/')[0]}
@@ -1031,7 +1031,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                           />
                           <div className="flex-1 flex flex-col gap-0.5 min-w-0 overflow-hidden">
                             {/* First row: badge, repo, time */}
-                            <div className="flex items-center gap-2 min-w-0">
+                            <div className="flex items-center gap-2 min-w-0 w-full">
                           <span
                             className="px-1.5 py-0.5 rounded flex-shrink-0"
                             style={{
@@ -1047,7 +1047,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                               : getEventLabel(event.type)}
                           </span>
                           <span
-                            className="truncate min-w-0 flex-shrink"
+                            className="truncate min-w-0 flex-1"
                             style={{
                               fontSize: `${theme.fontSizes[1]}px`,
                               fontFamily: theme.fonts.body,
@@ -1071,7 +1071,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                         {/* Second row: line changes/closed status + open in github */}
                         {((event.type === 'pr_merged' && event.metadata?.additions !== undefined) || (event.type === 'pr_opened') || (event.type === 'issue_opened')) && (
                           <div
-                            className="flex items-center gap-2"
+                            className="flex items-center gap-2 w-full"
                             style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}
                           >
                             {event.type === 'pr_merged' && event.metadata && (
