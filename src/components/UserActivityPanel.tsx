@@ -1162,7 +1162,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                       {/* Expanded PR body */}
                       {(event.type === 'pr_merged' || event.type === 'pr_opened') && expandedPRs.has(event.id) && (
                         <div
-                          className="mt-2 rounded-md overflow-hidden min-w-0"
+                          className="mt-2 rounded-md overflow-hidden w-full"
                           style={{
                             border: `1px solid ${theme.colors.border}`,
                             background: theme.colors.surface,
@@ -1179,8 +1179,8 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                               </span>
                             </div>
                           ) : prDetails[event.id]?.body ? (
-                            <div className="max-h-[32rem] overflow-y-auto overflow-x-hidden">
-                              <div className="p-3 min-w-0 break-words" style={{ wordBreak: 'break-word' }}>
+                            <div className="max-h-[32rem] overflow-y-auto overflow-x-auto">
+                              <div className="p-3 min-w-0 w-full" style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}>
                                 <DocumentView
                                   content={prDetails[event.id]!.body!}
                                   theme={theme}
@@ -1291,7 +1291,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                       {/* Expanded issue body */}
                       {event.type === 'issue_opened' && expandedIssues.has(event.id) && (
                         <div
-                          className="mt-2 rounded-md overflow-hidden min-w-0"
+                          className="mt-2 rounded-md overflow-hidden w-full"
                           style={{
                             border: `1px solid ${theme.colors.border}`,
                             background: theme.colors.surface,
@@ -1308,8 +1308,8 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                               </span>
                             </div>
                           ) : issueDetails[event.id]?.body ? (
-                            <div className="max-h-[32rem] overflow-y-auto overflow-x-hidden">
-                              <div className="p-3 min-w-0 break-words" style={{ wordBreak: 'break-word' }}>
+                            <div className="max-h-[32rem] overflow-y-auto overflow-x-auto">
+                              <div className="p-3 min-w-0 w-full" style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}>
                                 <DocumentView
                                   content={issueDetails[event.id]!.body!}
                                   theme={theme}

@@ -110,6 +110,40 @@ const StoryWrapper: React.FC<{
         );
       }
 
+      // Mock issue details endpoint
+      if (url.match(/\/api\/github\/repo\/[\w-]+\/[\w-]+\/issues\/\d+$/)) {
+        return new Response(
+          JSON.stringify({
+            number: 101,
+            title: 'Bug: Button not clickable on mobile',
+            body: '## Description\n\nThe submit button is not responding to clicks on iOS Safari. This appears to be a CSS issue with the z-index.\n\n## Steps to Reproduce\n\n1. Open the app on iOS Safari\n2. Navigate to the form page\n3. Try to click the submit button\n\n## Expected Behavior\n\nButton should be clickable and submit the form.\n\n## Actual Behavior\n\nButton does not respond to clicks.\n\n## Configuration\n\nHere\'s the current button config:\n\n```json\n{\n  "button": {\n    "type": "submit",\n    "className": "btn-primary btn-large btn-submit-form btn-with-icon btn-shadow btn-rounded",\n    "zIndex": 10,\n    "position": "relative",\n    "ariaLabel": "Submit the user registration form and proceed to the email verification step",\n    "description": "This button component handles form submission with built-in validation, error handling, and loading states. It supports multiple themes and can be customized with various CSS classes.",\n    "errorMessage": "Unable to submit the form due to validation errors. Please check all required fields and ensure your email address is valid before trying again.",\n    "styles": {\n      "backgroundColor": "#0969da",\n      "color": "#ffffff",\n      "padding": "12px 24px",\n      "borderRadius": "6px",\n      "boxShadow": "0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24)"\n    }\n  }\n}\n```',
+            state: 'open',
+            html_url: 'https://github.com/octocat/hello-world/issues/101',
+            user: {
+              login: 'octocat',
+              avatar_url: 'https://avatars.githubusercontent.com/u/583231?v=4',
+            },
+            labels: [],
+            comments: 5,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Mock PR details endpoint
+      if (url.match(/\/api\/github\/repo\/[\w-]+\/[\w-]+\/pull-requests\/\d+$/)) {
+        return new Response(
+          JSON.stringify({
+            number: 42,
+            title: 'feat: add dark mode toggle',
+            body: '## Summary\n\nThis PR adds a dark mode toggle to the application settings.\n\n## Changes\n\n- Added theme context provider\n- Implemented dark mode CSS variables\n- Added toggle button in settings panel\n- Updated all components to respect theme preference\n\n## Testing\n\n- [x] Tested on Chrome, Firefox, Safari\n- [x] Verified localStorage persistence\n- [x] Checked accessibility contrast ratios\n\n## Screenshots\n\n_Dark mode enabled showing improved visibility in low-light conditions_',
+            state: 'merged',
+            html_url: 'https://github.com/octocat/spoon-knife/pull/42',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
       return originalFetchRef.current!(input);
     };
 
