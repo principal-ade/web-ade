@@ -1096,20 +1096,50 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                                 )}
                               </span>
                             )}
-                            {event.url && (
-                              <a
-                                href={event.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1 ml-auto hover:opacity-80 transition-opacity"
-                                style={{ color: theme.colors.textMuted }}
-                                title="Open in GitHub"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <ExternalLink className="w-3 h-3" />
-                                <span>GitHub</span>
-                              </a>
-                            )}
+                            {/* View Conversation button */}
+                            <button
+                              className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:opacity-80 transition-opacity ml-auto"
+                              style={{
+                                fontSize: `${theme.fontSizes[1]}px`,
+                                color: theme.colors.primary,
+                                background: theme.colors.primary + '15',
+                                border: `1px solid ${theme.colors.primary}40`,
+                              }}
+                              title="View conversation"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const [owner, repo] = event.repository.split('/');
+                                const number = event.metadata?.prNumber || event.metadata?.issueNumber;
+                                if (number) {
+                                  events.emit({
+                                    type: 'issue:selected',
+                                    source: 'user-activity-panel',
+                                    timestamp: Date.now(),
+                                    payload: {
+                                      issue: {
+                                        id: 0,
+                                        number,
+                                        title: event.title || '',
+                                        state: event.metadata?.isClosed || event.type === 'pr_merged' ? 'closed' : 'open',
+                                        body: null,
+                                        html_url: event.url || '',
+                                        created_at: event.timestamp,
+                                        updated_at: event.timestamp,
+                                        labels: [],
+                                        comments: 0,
+                                        user: { login: '', avatar_url: '' },
+                                        assignees: [],
+                                      },
+                                      owner,
+                                      repo,
+                                    },
+                                  });
+                                }
+                              }}
+                            >
+                              <MessageSquare className="w-3 h-3" />
+                              <span>Conversation</span>
+                            </button>
                           </div>
                         )}
                           </div>
@@ -1158,49 +1188,26 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             onToggleReaction={(type, reactionId) => toggleReaction(event, type, reactionId)}
                             disabled={REACTION_ORDER.some((t) => loadingReactions.has(`${event.id}-${t}`))}
                           />
-                          {/* View Conversation button */}
+                          {/* Details button */}
                           <button
                             className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:opacity-80 transition-opacity ml-auto"
                             style={{
                               fontSize: `${theme.fontSizes[1]}px`,
-                              color: theme.colors.primary,
-                              background: theme.colors.primary + '15',
-                              border: `1px solid ${theme.colors.primary}40`,
+                              color: theme.colors.textMuted,
+                              background: theme.colors.surface,
+                              border: `1px solid ${theme.colors.border}`,
                             }}
-                            title="View conversation"
+                            title="Show details"
                             onClick={(e) => {
                               e.stopPropagation();
-                              const [owner, repo] = event.repository.split('/');
-                              const number = event.metadata?.prNumber || event.metadata?.issueNumber;
-                              if (number) {
-                                events.emit({
-                                  type: 'issue:selected',
-                                  source: 'user-activity-panel',
-                                  timestamp: Date.now(),
-                                  payload: {
-                                    issue: {
-                                      id: 0,
-                                      number,
-                                      title: event.title || '',
-                                      state: event.metadata?.isClosed || event.type === 'pr_merged' ? 'closed' : 'open',
-                                      body: null,
-                                      html_url: event.url || '',
-                                      created_at: event.timestamp,
-                                      updated_at: event.timestamp,
-                                      labels: [],
-                                      comments: 0,
-                                      user: { login: '', avatar_url: '' },
-                                      assignees: [],
-                                    },
-                                    owner,
-                                    repo,
-                                  },
-                                });
+                              if (event.type === 'issue_opened') {
+                                toggleIssueExpansion(event);
+                              } else if (event.type === 'pr_merged' || event.type === 'pr_opened') {
+                                togglePRExpansion(event);
                               }
                             }}
                           >
-                            <MessageSquare className="w-3 h-3" />
-                            <span>Conversation</span>
+                            <span>See Details</span>
                           </button>
                         </div>
                       )}

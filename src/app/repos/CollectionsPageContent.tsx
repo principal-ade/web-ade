@@ -276,7 +276,14 @@ export function CollectionsPageContent({
     },
   };
 
-  const layout = viewMode === 'manage' ? manageLayout : exploreLayout;
+  // Mobile layout: distribute panels across slots instead of tabs
+  const mobileLayout: PanelLayout = {
+    left: 'workspace-collection',
+    middle: 'github-projects',
+    right: 'github-starred',
+  };
+
+  const layout = isMobile ? mobileLayout : (viewMode === 'manage' ? manageLayout : exploreLayout);
 
   // Detect mobile viewport
   useEffect(() => {
@@ -504,16 +511,28 @@ export function CollectionsPageContent({
               <Logo width={32} height={32} color={theme.colors.primary} />
             </Link>
           )}
-          <CollectionDropdown
-            collections={allCollections}
-            selectedId={selectedCollectionId}
-            onSelect={onSelectCollection}
-            onCreateNew={onCreateNew}
-            theme={theme}
-            isOpen={collectionDropdownOpen}
-            onToggle={() => setCollectionDropdownOpen(!collectionDropdownOpen)}
-            onClose={() => setCollectionDropdownOpen(false)}
-          />
+          {isMobile ? (
+            <span
+              style={{
+                color: theme.colors.text,
+                fontSize: `${theme.fontSizes[2]}px`,
+                fontWeight: theme.fontWeights.semibold,
+              }}
+            >
+              Repo
+            </span>
+          ) : (
+            <CollectionDropdown
+              collections={allCollections}
+              selectedId={selectedCollectionId}
+              onSelect={onSelectCollection}
+              onCreateNew={onCreateNew}
+              theme={theme}
+              isOpen={collectionDropdownOpen}
+              onToggle={() => setCollectionDropdownOpen(!collectionDropdownOpen)}
+              onClose={() => setCollectionDropdownOpen(false)}
+            />
+          )}
         </div>
 
         {/* Center: Mode Switch */}
