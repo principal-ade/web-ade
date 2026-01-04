@@ -93,7 +93,7 @@ function ReactionBar({ reactions, theme, isAuthenticated, onToggleReaction, disa
   };
 
   return (
-    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+    <div className="flex items-center gap-1.5 flex-wrap">
       {sortedReactions.map(({ type, count, viewerReacted, reactionId, users }) => (
         <button
           key={type}
@@ -1149,7 +1149,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                     {/* Reactions for PRs and issues */}
                     {(event.type === 'pr_merged' || event.type === 'pr_opened' || event.type === 'issue_opened') &&
                       event.metadata?.reactions && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 w-full">
                           <span className="w-4 lg:w-[52px] flex-shrink-0" />
                           <ReactionBar
                             reactions={event.metadata.reactions}
@@ -1162,6 +1162,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                           <button
                             className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:opacity-80 transition-opacity ml-auto"
                             style={{
+                              fontSize: `${theme.fontSizes[1]}px`,
                               color: theme.colors.primary,
                               background: theme.colors.primary + '15',
                               border: `1px solid ${theme.colors.primary}40`,

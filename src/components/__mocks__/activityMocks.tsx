@@ -32,7 +32,17 @@ export const mockActivityEvents: ActivityEvent[] = [
     ownerType: 'User',
     title: 'feat: add dark mode toggle',
     url: 'https://github.com/octocat/spoon-knife/pull/42',
-    metadata: { prNumber: 42, additions: 150, deletions: 23 },
+    metadata: {
+      prNumber: 42,
+      additions: 150,
+      deletions: 23,
+      reactions: {
+        totalCount: 5,
+        counts: { THUMBS_UP: 3, HEART: 1, ROCKET: 1 },
+        viewerReactions: { THUMBS_UP: 123 },
+        users: { THUMBS_UP: ['octocat', 'defunkt', 'mojombo'], HEART: ['wycats'], ROCKET: ['pjhyett'] },
+      },
+    },
   },
   {
     id: 'commit-github/linguist-2024-01-15T08:00:00Z',
@@ -51,7 +61,15 @@ export const mockActivityEvents: ActivityEvent[] = [
     ownerType: 'User',
     title: 'Bug: Button not clickable on mobile',
     url: 'https://github.com/octocat/hello-world/issues/101',
-    metadata: { issueNumber: 101 },
+    metadata: {
+      issueNumber: 101,
+      reactions: {
+        totalCount: 4,
+        counts: { THUMBS_UP: 2, EYES: 1, CONFUSED: 1 },
+        viewerReactions: {},
+        users: { THUMBS_UP: ['defunkt', 'mojombo'], EYES: ['wycats'], CONFUSED: ['pjhyett'] },
+      },
+    },
   },
   {
     id: 'pr-opened-facebook/react-15',
@@ -61,7 +79,15 @@ export const mockActivityEvents: ActivityEvent[] = [
     ownerType: 'Organization',
     title: 'refactor: extract utility functions',
     url: 'https://github.com/facebook/react/pull/15',
-    metadata: { prNumber: 15 },
+    metadata: {
+      prNumber: 15,
+      reactions: {
+        totalCount: 6,
+        counts: { THUMBS_UP: 4, HOORAY: 2 },
+        viewerReactions: { HOORAY: 456 },
+        users: { THUMBS_UP: ['defunkt', 'mojombo', 'wycats', 'pjhyett'], HOORAY: ['octocat', 'defunkt'] },
+      },
+    },
   },
   {
     id: 'issue-opened-octocat/spoon-knife-88',
@@ -71,7 +97,16 @@ export const mockActivityEvents: ActivityEvent[] = [
     ownerType: 'User',
     title: 'Feature request: export to PDF',
     url: 'https://github.com/octocat/spoon-knife/issues/88',
-    metadata: { issueNumber: 88, isClosed: true },
+    metadata: {
+      issueNumber: 88,
+      isClosed: true,
+      reactions: {
+        totalCount: 3,
+        counts: { THUMBS_UP: 1, HEART: 1, LAUGH: 1 },
+        viewerReactions: { HEART: 789 },
+        users: { THUMBS_UP: ['mojombo'], HEART: ['octocat'], LAUGH: ['wycats'] },
+      },
+    },
   },
 ];
 
