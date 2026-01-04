@@ -646,7 +646,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
 
   // Scroll tracking for WeeklyTimelineHeader
   const todayDayOfWeek = new Date().getDay();
-  const maxScrollIndex = todayDayOfWeek; // Can only scroll back to Sunday of this week
+  const maxScrollIndex = 6; // Show last 7 days (0=today, 1=yesterday, ..., 6=7 days ago)
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;

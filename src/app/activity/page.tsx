@@ -366,19 +366,6 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
 
         {/* Right section */}
         <div className="flex items-center gap-3 flex-shrink-0 flex-1 justify-end">
-          {/* Navigation links */}
-          <Link
-            href={`/${viewedUser}`}
-            className="px-3 py-1.5 text-xs rounded transition-all hover:opacity-80"
-            style={{
-              background: theme.colors.surface,
-              color: theme.colors.text,
-              border: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            View Repos
-          </Link>
-
           {/* User Avatar Menu */}
           <UserAvatarMenu />
         </div>

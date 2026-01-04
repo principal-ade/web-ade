@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Palette, GitCommit, ArrowLeftRight, Sparkles, X, Star, Rss, Mic } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Palette, GitCommit, ArrowLeftRight, Sparkles, X, Star, Rss, Mic, Menu } from 'lucide-react';
 import { UserAvatarMenu } from './UserAvatarMenu';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
@@ -179,25 +179,23 @@ export function EditorHeader({
     >
       {/* Left section: Logo/Avatar and Repository info */}
       <div className="flex items-center gap-3 flex-shrink-0 flex-1">
-        {/* Mobile-only owner avatar button to open sidebar */}
-        {owner && onOpenMobileSidebar && (
-          <button
-            onClick={onOpenMobileSidebar}
-            className="md:hidden flex items-center justify-center transition-opacity hover:opacity-80"
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-            title="Open navigation"
-          >
-            <img
-              src={`https://github.com/${owner}.png?size=64`}
-              alt={owner}
-              className="w-7 h-7"
-              style={{ borderRadius: '6px' }}
-            />
-          </button>
-        )}
         {/* Show repo name on repo pages */}
         {repositoryName && (
           <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Mobile hamburger menu */}
+            {onOpenMobileSidebar && (
+              <button
+                onClick={onOpenMobileSidebar}
+                className="md:hidden flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+                style={{
+                  background: theme.colors.secondary,
+                  color: theme.colors.text,
+                }}
+                title="Open navigation"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
+            )}
             <a
               href={`https://github.com/${repositoryName.owner}/${repositoryName.repo}`}
               target="_blank"
@@ -230,12 +228,14 @@ export function EditorHeader({
                 />
               </button>
             )}
-            {/* GitHub App sync status */}
-            <GitHubAppStatus
-              repoId={`${repositoryName.owner}/${repositoryName.repo}`}
-              compact
-              canInstall={canInstallApp}
-            />
+            {/* GitHub App sync status - hidden on mobile */}
+            <div className="hidden md:inline-flex">
+              <GitHubAppStatus
+                repoId={`${repositoryName.owner}/${repositoryName.repo}`}
+                compact
+                canInstall={canInstallApp}
+              />
+            </div>
           </div>
         )}
         {/* Show owner info on owner pages */}

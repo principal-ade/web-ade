@@ -6,15 +6,6 @@ import type { ActivityEvent } from '@/app/api/github/user/[username]/activity/ro
 // Days of the week starting with Sunday
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-// Get the start of the current week (Sunday)
-const getWeekStart = (date: Date): Date => {
-  const d = new Date(date);
-  const day = d.getDay();
-  d.setDate(d.getDate() - day);
-  d.setHours(0, 0, 0, 0);
-  return d;
-};
-
 // Get contribution level (0-4) based on activity count
 const getContributionLevel = (count: number): number => {
   if (count === 0) return 0;
@@ -48,15 +39,15 @@ export function WeeklyTimelineHeader({
 }: WeeklyTimelineHeaderProps) {
   const { theme } = useTheme();
 
-  // Build week data starting from Sunday (for display)
+  // Build last 7 days data (0=today, 6=7 days ago)
   const weekData: DayData[] = [];
   const now = new Date();
-  const weekStart = getWeekStart(now);
   const todayDayOfWeek = now.getDay();
 
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(weekStart);
-    date.setDate(date.getDate() + i);
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    date.setHours(0, 0, 0, 0);
 
     const nextDate = new Date(date);
     nextDate.setDate(nextDate.getDate() + 1);
@@ -66,25 +57,20 @@ export function WeeklyTimelineHeader({
       return eventDate >= date && eventDate < nextDate;
     });
 
-    const isToday = i === todayDayOfWeek;
-    const isFuture = i > todayDayOfWeek;
+    const isToday = i === 0;
+    const dayOfWeek = date.getDay();
 
     weekData.push({
       date,
-      dayName: isToday ? 'Today' : WEEK_DAYS[i]!,
-      events: isFuture ? [] : dayEvents,
-      contributionLevel: isFuture ? -1 : getContributionLevel(dayEvents.length),
+      dayName: isToday ? 'Today' : WEEK_DAYS[dayOfWeek]!,
+      events: dayEvents,
+      contributionLevel: getContributionLevel(dayEvents.length),
     });
   }
 
-  // Convert scroll-based currentDayIndex to week-based index
-  const getWeekIndexFromScrollIndex = (scrollIdx: number) => {
-    const dayOfWeek = todayDayOfWeek - scrollIdx;
-    if (dayOfWeek < 0) return -1;
-    return dayOfWeek;
-  };
-
-  const currentWeekIndex = getWeekIndexFromScrollIndex(currentDayIndex);
+  // Current day index maps directly to weekData array (0=today at end, 6=7 days ago at start)
+  // weekData is in chronological order (oldest first), so invert the index
+  const currentWeekIndex = 6 - currentDayIndex;
 
   // Contribution level colors (GitHub-style)
   const getContributionColor = (level: number) => {
@@ -107,24 +93,22 @@ export function WeeklyTimelineHeader({
         borderBottom: `1px solid ${theme.colors.border}`,
       }}
     >
-      {/* Week bar with 7 segments - Sun through Sat */}
+      {/* Week bar with 7 segments - last 7 days */}
       <div className="flex items-stretch" style={{ height: '48px' }}>
         {weekData.map((day, index) => {
           const isCurrentSegment = index === currentWeekIndex;
-          const isFuture = day.contributionLevel === -1;
-          const isInScrollRange = index >= currentWeekIndex && index <= todayDayOfWeek;
-          const scrollIndexForDay = todayDayOfWeek - index;
+          const isInScrollRange = index >= currentWeekIndex;
+          const scrollIndexForDay = 6 - index; // Convert array index to scroll index
 
           return (
             <button
               key={index}
-              onClick={() => !isFuture && onDayClick?.(scrollIndexForDay)}
+              onClick={() => onDayClick?.(scrollIndexForDay)}
               className="flex-1 flex flex-col items-center justify-center relative transition-all"
               style={{
-                background: isInScrollRange && !isFuture ? theme.colors.surface : 'transparent',
+                background: isInScrollRange ? theme.colors.surface : 'transparent',
                 borderRight: index < 6 ? `1px solid ${theme.colors.border}` : 'none',
-                cursor: isFuture ? 'default' : 'pointer',
-                opacity: isFuture ? 0.4 : 1,
+                cursor: 'pointer',
               }}
             >
               {/* Activity indicator with count inside - grows when current */}
@@ -139,9 +123,9 @@ export function WeeklyTimelineHeader({
                   fontWeight: theme.fontWeights.semibold,
                   color: day.contributionLevel >= 2 ? '#fff' : theme.colors.textMuted,
                 }}
-                title={isFuture ? 'Future' : `${day.dayName}: ${day.events.length} activities`}
+                title={`${day.dayName}: ${day.events.length} activities`}
               >
-                {WEEK_DAYS[index]!.charAt(0)}
+                {WEEK_DAYS[day.date.getDay()]!.charAt(0)}
               </div>
             </button>
           );
@@ -163,18 +147,18 @@ export function WeeklyTimelineHeader({
             color: theme.colors.textMuted,
           }}
         >
-          {currentWeekIndex >= 0 && weekData[currentWeekIndex]
-            ? currentWeekIndex === todayDayOfWeek
+          {currentWeekIndex >= 0 && currentWeekIndex < weekData.length && weekData[currentWeekIndex]
+            ? currentWeekIndex === 6
               ? 'Today'
               : weekData[currentWeekIndex].date.toLocaleDateString('en-US', {
                   weekday: 'long',
                   month: 'short',
                   day: 'numeric',
                 })
-            : 'Earlier this week'}
+            : 'Last 7 days'}
         </span>
 
-        {/* Week summary (shows when near bottom) */}
+        {/* 7-day summary (shows when near bottom) */}
         {scrollProgress > 0.7 && (
           <div
             className="flex items-center gap-1"
@@ -189,7 +173,7 @@ export function WeeklyTimelineHeader({
                 color: theme.colors.textMuted,
               }}
             >
-              Week total:
+              7-day total:
             </span>
             <span
               style={{
