@@ -8,34 +8,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGitHubToken } from '@/lib/auth/cookies';
 
-interface InstallationResponse {
-  id: number;
-  account: {
-    login: string;
-    id: number;
-    type: string;
-  };
-  repository_selection: string;
-  access_tokens_url: string;
-  repositories_url: string;
-  html_url: string;
-  app_id: number;
-  app_slug: string;
-  target_id: number;
-  target_type: string;
-  permissions: Record<string, string>;
-  events: string[];
-  created_at: string;
-  updated_at: string;
-  single_file_name: string | null;
-  has_multiple_single_files: boolean;
-  suspended_by: {
-    login: string;
-    id: number;
-  } | null;
-  suspended_at: string | null;
-}
-
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ owner: string; name: string }> }
@@ -58,10 +30,12 @@ export async function GET(
       );
     }
 
-    // Check if a GitHub App is installed on this repository
-    // https://docs.github.com/en/rest/apps/installations#get-a-repository-installation-for-the-authenticated-app
-    const response = await fetch(
-      `https://api.github.com/repos/${owner}/${name}/installation`,
+    const repoFullName = `${owner}/${name}`;
+
+    // List all GitHub App installations accessible to the user
+    // https://docs.github.com/en/rest/apps/installations#list-app-installations-accessible-to-the-user-access-token
+    const installationsResponse = await fetch(
+      'https://api.github.com/user/installations',
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -71,43 +45,71 @@ export async function GET(
       }
     );
 
-    // 404 means no app is installed on this repository
-    if (response.status === 404) {
-      return NextResponse.json({
-        installed: false,
-        reason: 'no_installation',
-      });
-    }
-
-    // Other errors (401, 403, etc.)
-    if (!response.ok) {
+    if (!installationsResponse.ok) {
       console.error(
-        `GitHub App installation check failed: ${response.status} ${response.statusText}`
+        `GitHub installations check failed: ${installationsResponse.status} ${installationsResponse.statusText}`
       );
       return NextResponse.json(
         {
           installed: false,
           reason: 'api_error',
-          error: `GitHub API returned ${response.status}`,
+          error: `GitHub API returned ${installationsResponse.status}`,
         },
-        { status: response.status }
+        { status: installationsResponse.status }
       );
     }
 
-    const data: InstallationResponse = await response.json();
+    const installationsData = await installationsResponse.json();
+    const installations = installationsData.installations || [];
 
-    // Check if the installation is suspended
-    const isSuspended = data.suspended_at !== null;
+    // Check each installation to see if it has access to this repository
+    for (const installation of installations) {
+      // Get repositories for this installation
+      // https://docs.github.com/en/rest/apps/installations#list-repositories-accessible-to-the-user-access-token
+      const reposResponse = await fetch(
+        `https://api.github.com/user/installations/${installation.id}/repositories`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+          },
+        }
+      );
 
+      if (!reposResponse.ok) {
+        continue; // Skip this installation if we can't fetch repos
+      }
+
+      const reposData = await reposResponse.json();
+      const repositories = reposData.repositories || [];
+
+      // Check if this installation has access to our target repository
+      const repoMatch = repositories.find(
+        (repo: { full_name: string }) => repo.full_name === repoFullName
+      );
+
+      if (repoMatch) {
+        // Found an installation with access to this repo
+        const isSuspended = installation.suspended_at !== null;
+
+        return NextResponse.json({
+          installed: true,
+          suspended: isSuspended,
+          installationId: installation.id,
+          appSlug: installation.app_slug,
+          installedAt: new Date(installation.created_at).getTime(),
+          installedBy: installation.account.login,
+          events: installation.events,
+          permissions: installation.permissions,
+        });
+      }
+    }
+
+    // No installation found with access to this repository
     return NextResponse.json({
-      installed: true,
-      suspended: isSuspended,
-      installationId: data.id,
-      appSlug: data.app_slug,
-      installedAt: new Date(data.created_at).getTime(),
-      installedBy: data.account.login,
-      events: data.events,
-      permissions: data.permissions,
+      installed: false,
+      reason: 'no_installation',
     });
   } catch (error) {
     console.error('GitHub App installation check error:', error);
