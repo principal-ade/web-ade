@@ -35,6 +35,7 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import type { Theme } from '@principal-ade/industry-theme';
 import type { LocalFileSystemAdapter } from '@/lib/client/LocalFileSystemAdapter';
 import { useLocalFileSystem } from '@/contexts/LocalFileSystemContext';
+import { parseTaskMarkdown, serializeTaskMarkdown } from '@backlog-md/core';
 
 // Dynamically import the MarkdownPanel with SSR disabled
 const MarkdownPanelLoader = dynamic(
@@ -309,6 +310,7 @@ function buildClaudeIssueBody(task: {
 
   return lines.join('\n');
 }
+
 
 interface EditorLayoutContentProps {
   layout: PanelLayout;
@@ -1060,6 +1062,9 @@ function EditorLayoutContent({
             acceptanceCriteria?: Array<{ text: string; checked: boolean }>;
             implementationPlan?: string;
             rawContent?: string;
+            filePath?: string;
+            status?: string;
+            references?: string[];
           };
         };
 
@@ -1075,7 +1080,7 @@ function EditorLayoutContent({
         const issueBody = buildClaudeIssueBody(task);
 
         try {
-          // 1. Create the GitHub issue
+          // 1. Create the GitHub issue (without @claude tag)
           const issueResponse = await fetch(`/api/github/repo/${owner}/${name}/issues`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1093,12 +1098,86 @@ function EditorLayoutContent({
           }
 
           const { issue } = await issueResponse.json();
-          const issueUrl = issue.html_url;
-          const issueNumber = issue.number;
+          const issueUrl = issue.html_url as string;
+          const issueNumber = issue.number as number;
 
           console.log(`[EditorLayout] Created GitHub issue #${issueNumber} for task ${task.id}`);
 
-          // 2. Emit success event so kanban panel can update UI
+          // 2. Update task file with issue reference and commit
+          if (task.filePath) {
+            try {
+              // Read current task file content and get SHA
+              const fileResponse = await fetch(
+                `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(task.filePath)}`
+              );
+
+              if (fileResponse.ok) {
+                const fileData = await fileResponse.json();
+                let content = '';
+                if (fileData.content && fileData.encoding === 'base64') {
+                  const binaryString = atob(fileData.content.replace(/\n/g, ''));
+                  const bytes = new Uint8Array(binaryString.length);
+                  for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                  }
+                  content = new TextDecoder('utf-8').decode(bytes);
+                }
+
+                // Parse task, add reference, and serialize back using Backlog-Core
+                const parsedTask = parseTaskMarkdown(content, task.filePath);
+                const existingRefs = parsedTask.references || [];
+                if (!existingRefs.includes(issueUrl)) {
+                  parsedTask.references = [...existingRefs, issueUrl];
+                }
+                const updatedContent = serializeTaskMarkdown(parsedTask);
+
+                // Commit the updated file
+                const commitResponse = await fetch(`/api/github/repo/${owner}/${name}/commit`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    files: [{
+                      path: task.filePath,
+                      content: updatedContent,
+                      sha: fileData.sha,
+                    }],
+                    message: `Link task ${task.id} to issue #${issueNumber}`,
+                  }),
+                });
+
+                if (!commitResponse.ok) {
+                  console.warn('[EditorLayout] Failed to commit task file update, but issue was created');
+                } else {
+                  console.log(`[EditorLayout] Committed task file update with issue reference`);
+                }
+              }
+            } catch (fileErr) {
+              console.warn('[EditorLayout] Failed to update task file, but issue was created:', fileErr);
+            }
+          }
+
+          // 3. Add @claude comment to trigger the workflow
+          try {
+            const commentResponse = await fetch(`/api/github/repo/${owner}/${name}/issues/${issueNumber}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({
+                comment: '@claude Please work on this task. Follow the acceptance criteria and implementation plan in the issue description.',
+              }),
+            });
+
+            if (!commentResponse.ok) {
+              console.warn('[EditorLayout] Failed to add @claude comment, but issue was created');
+            } else {
+              console.log(`[EditorLayout] Added @claude comment to issue #${issueNumber}`);
+            }
+          } catch (commentErr) {
+            console.warn('[EditorLayout] Failed to add @claude comment:', commentErr);
+          }
+
+          // 4. Emit success event so kanban panel can update UI
           events.emit({
             type: 'task:assigned-to-claude',
             source: 'web-ade',
@@ -1109,9 +1188,6 @@ function EditorLayoutContent({
               issueUrl,
             },
           });
-
-          // TODO: Update task file with reference and commit
-          // This requires the backlog Core integration to update the task's references field
 
         } catch (err) {
           console.error('[EditorLayout] Failed to assign task to Claude:', err);
