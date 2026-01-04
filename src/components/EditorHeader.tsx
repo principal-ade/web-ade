@@ -37,7 +37,6 @@ interface EditorHeaderProps {
   selectedColorMode?: string | null;
   onClearColorMode?: () => void;
   // Mobile sidebar
-  owner?: string;
   onOpenMobileSidebar?: () => void;
   // Voice input
   onOpenWithMic?: () => void;
@@ -61,7 +60,6 @@ export function EditorHeader({
   currentRepoId,
   selectedColorMode,
   onClearColorMode,
-  owner,
   onOpenMobileSidebar,
   onOpenWithMic,
 }: EditorHeaderProps = {}) {
