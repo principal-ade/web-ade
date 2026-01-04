@@ -1031,7 +1031,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                           />
                           <div className="flex-1 flex flex-col gap-0.5 min-w-0 overflow-hidden">
                             {/* First row: badge, repo, time */}
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
                           <span
                             className="px-1.5 py-0.5 rounded flex-shrink-0"
                             style={{
@@ -1047,7 +1047,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                               : getEventLabel(event.type)}
                           </span>
                           <span
-                            className="truncate"
+                            className="truncate min-w-0"
                             style={{
                               fontSize: `${theme.fontSizes[1]}px`,
                               fontFamily: theme.fonts.body,
@@ -1058,7 +1058,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             <span style={{ color }}>{event.repository.split('/')[1] || event.repository}</span>
                           </span>
                           <span
-                            className="flex-shrink-0 ml-auto"
+                            className="flex-shrink-0 ml-auto whitespace-nowrap"
                             style={{
                               fontSize: `${theme.fontSizes[1]}px`,
                               fontFamily: theme.fonts.body,
