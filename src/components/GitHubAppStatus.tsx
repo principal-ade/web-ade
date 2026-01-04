@@ -58,18 +58,26 @@ export function GitHubAppStatus({
     setError(null);
 
     try {
+      // Parse repoId (format: "owner/repo")
+      const [owner, repo] = repoId.split('/');
+
+      if (!owner || !repo) {
+        throw new Error('Invalid repository ID format');
+      }
+
+      // Use local API endpoint that checks GitHub directly
       const response = await fetch(
-        `${trafficControllerUrl}/api/github-app/status?repoId=${encodeURIComponent(repoId)}`
+        `/api/github/repo/${owner}/${repo}/app-installation`
       );
 
-      if (!response.ok) {
+      if (!response.ok && response.status !== 404) {
         throw new Error('Failed to fetch app status');
       }
 
       const data: AppStatus = await response.json();
       setStatus(data);
 
-      // If not installed, fetch the install URL
+      // If not installed, fetch the install URL from traffic controller
       if (!data.installed) {
         const urlResponse = await fetch(
           `${trafficControllerUrl}/api/github-app/install-url?repoId=${encodeURIComponent(repoId)}`
