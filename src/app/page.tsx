@@ -247,6 +247,20 @@ function HomePageContent() {
     openWithMicRef.current?.();
   }, []);
 
+  // Listen for repository selection events from panels (single-click navigation)
+  useEffect(() => {
+    if (!events) return;
+
+    const unsubscribe = events.on('repository:selected', (event) => {
+      const payload = event.payload as { repository?: { full_name?: string } };
+      if (payload?.repository?.full_name) {
+        router.push(`/${payload.repository.full_name}`);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [events, router]);
+
   // Build autocomplete data for command palette
   const autocompleteData: CommandPaletteData = useMemo(() => {
     return {
