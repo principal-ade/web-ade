@@ -9,7 +9,6 @@ import {
   Loader2,
   RefreshCw,
   Calendar,
-  ExternalLink,
   MessageSquare,
 } from 'lucide-react';
 import { DocumentView } from 'themed-markdown';
@@ -955,58 +954,6 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                           url: event.url,
                         },
                       });
-
-                      // Emit issue/PR selection events for messages panel
-                      const [owner, repo] = event.repository.split('/');
-                      if (event.type === 'issue_opened' && event.metadata?.issueNumber) {
-                        events.emit({
-                          type: 'issue:selected',
-                          source: 'user-activity-panel',
-                          timestamp: Date.now(),
-                          payload: {
-                            issue: {
-                              id: 0, // Not available in activity feed
-                              number: event.metadata.issueNumber,
-                              title: event.title || '',
-                              state: event.metadata?.isClosed ? 'closed' : 'open',
-                              body: null,
-                              html_url: event.url || '',
-                              created_at: event.timestamp,
-                              updated_at: event.timestamp,
-                              labels: [],
-                              comments: 0,
-                              user: { login: '', avatar_url: '' },
-                              assignees: [],
-                            },
-                            owner,
-                            repo,
-                          },
-                        });
-                      } else if ((event.type === 'pr_merged' || event.type === 'pr_opened') && event.metadata?.prNumber) {
-                        events.emit({
-                          type: 'issue:selected', // PRs use same event type for messages
-                          source: 'user-activity-panel',
-                          timestamp: Date.now(),
-                          payload: {
-                            issue: {
-                              id: 0,
-                              number: event.metadata.prNumber,
-                              title: event.title || '',
-                              state: event.type === 'pr_merged' ? 'closed' : 'open',
-                              body: null,
-                              html_url: event.url || '',
-                              created_at: event.timestamp,
-                              updated_at: event.timestamp,
-                              labels: [],
-                              comments: 0,
-                              user: { login: '', avatar_url: '' },
-                              assignees: [],
-                            },
-                            owner,
-                            repo,
-                          },
-                        });
-                      }
                     }}
                     onMouseEnter={(e) => {
                       if (!isEventSelected) {
