@@ -11,6 +11,7 @@ import { UserAvatarMenu } from "@/components/UserAvatarMenu";
 import { Logo } from "@principal-ai/logo-component";
 import { iconMap } from "@/components/collections/CollectionModal";
 import dynamic from "next/dynamic";
+import { addRecentOwner, type OwnerInfo } from "@industry-theme/github-panels";
 import {
   EditableConfigurablePanelLayout,
   ResponsiveConfigurablePanelLayout,
@@ -70,7 +71,8 @@ interface FollowingUser {
   bio: string | null;
 }
 
-function saveRecentOwner(owner: string) {
+// Legacy function for backward compatibility
+function saveRecentOwnerLegacy(owner: string) {
   if (typeof window === 'undefined') return;
 
   try {
@@ -92,6 +94,53 @@ function saveRecentOwner(owner: string) {
     localStorage.setItem(RECENT_OWNERS_KEY, JSON.stringify(trimmed));
   } catch (err) {
     console.error('Failed to save recent owner:', err);
+  }
+}
+
+// Save owner with full GitHub metadata
+async function saveRecentOwnerWithMetadata(owner: string) {
+  if (typeof window === 'undefined') return;
+
+  try {
+    // Try fetching as user first
+    let response = await fetch(`https://api.github.com/users/${owner}`);
+    let ownerData = null;
+    let ownerType: 'User' | 'Organization' = 'User';
+
+    if (response.ok) {
+      ownerData = await response.json();
+      ownerType = ownerData.type === 'Organization' ? 'Organization' : 'User';
+    } else {
+      // If user fetch fails, try as organization
+      response = await fetch(`https://api.github.com/orgs/${owner}`);
+      if (response.ok) {
+        ownerData = await response.json();
+        ownerType = 'Organization';
+      }
+    }
+
+    if (ownerData) {
+      // Use the panel's helper function with full metadata
+      const ownerInfo: OwnerInfo = {
+        id: ownerData.id,
+        login: ownerData.login,
+        avatar_url: ownerData.avatar_url,
+        name: ownerData.name || null,
+        bio: ownerData.bio || null,
+        type: ownerType,
+        public_repos: ownerData.public_repos,
+        followers: ownerData.followers,
+      };
+
+      addRecentOwner(ownerInfo);
+    }
+
+    // Also save to legacy storage for backward compatibility
+    saveRecentOwnerLegacy(owner);
+  } catch (err) {
+    console.error('Failed to save recent owner with metadata:', err);
+    // Fallback to legacy save if API call fails
+    saveRecentOwnerLegacy(owner);
   }
 }
 
@@ -228,9 +277,9 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
     onPreviewChange?.(repo);
   }, [onPreviewChange]);
 
-  // Save owner to recent history
+  // Save owner to recent history with full metadata
   useEffect(() => {
-    saveRecentOwner(owner);
+    saveRecentOwnerWithMetadata(owner);
   }, [owner]);
 
   // Check if .vgc/architecture.canvas exists when a repo is previewed

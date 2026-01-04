@@ -7,6 +7,7 @@ import { useMemo, useEffect, useCallback, Suspense, useState } from "react";
 import { useRepoPresence } from "@/hooks/useRepoPresence";
 import { useLocalFileSystem } from "@/contexts/LocalFileSystemContext";
 import { LocalFileSystemAdapter } from "@/lib/client/LocalFileSystemAdapter";
+import { addRecentRepository } from "@industry-theme/github-panels";
 
 const RECENT_REPOSITORIES_KEY = 'recent-repositories';
 const MAX_RECENT_ITEMS = 10;
@@ -18,7 +19,8 @@ interface RecentRepository {
   configId?: string;
 }
 
-function saveRecentRepository(owner: string, repo: string, configId?: string) {
+// Legacy function for backward compatibility with config ID tracking
+function saveRecentRepositoryConfigId(owner: string, repo: string, configId?: string) {
   if (typeof window === 'undefined') return;
 
   try {
@@ -57,6 +59,30 @@ function getRecentRepositoryConfig(owner: string, repo: string): string | undefi
     return found?.configId;
   } catch {
     return undefined;
+  }
+}
+
+// Save repository with full GitHub metadata
+async function saveRecentRepositoryWithMetadata(owner: string, repo: string, configId?: string) {
+  if (typeof window === 'undefined') return;
+
+  try {
+    // Fetch full repository metadata from GitHub API
+    const response = await fetch(`/api/github/repo/${owner}/${repo}?action=info`);
+
+    if (response.ok) {
+      const repoData = await response.json();
+
+      // Use the panel's helper function with full metadata
+      addRecentRepository(repoData);
+    }
+
+    // Also save config ID to legacy storage for backward compatibility
+    saveRecentRepositoryConfigId(owner, repo, configId);
+  } catch (err) {
+    console.error('Failed to save recent repository with metadata:', err);
+    // Fallback to legacy save if API call fails
+    saveRecentRepositoryConfigId(owner, repo, configId);
   }
 }
 
@@ -115,13 +141,13 @@ function RepoPageContent() {
     }
     router.replace(url.pathname + url.search, { scroll: false });
 
-    // Save to recent repositories
-    saveRecentRepository(owner, repo, configId);
+    // Save to recent repositories with full metadata
+    saveRecentRepositoryWithMetadata(owner, repo, configId);
   }, [router, owner, repo]);
 
   // Save repository to recent history on initial load
   useEffect(() => {
-    saveRecentRepository(owner, repo, initialConfigId);
+    saveRecentRepositoryWithMetadata(owner, repo, initialConfigId);
   }, [owner, repo, initialConfigId]);
 
   // Set browser tab title to repo name

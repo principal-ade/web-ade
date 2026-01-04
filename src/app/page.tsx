@@ -7,6 +7,21 @@ import { GalleryCarouselView } from "@/components/home/GalleryCarouselView";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import type { CommandPaletteData } from "@/components/GlobalCommandPalette";
+import { PanelProvider, usePanelProvider } from "@/contexts/PanelContext";
+import {
+  ResponsiveConfigurablePanelLayout,
+  PanelLayout,
+} from '@principal-ade/panel-layouts';
+import '@principal-ade/panel-layouts/styles.css';
+import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
+
+// Dynamic import for RecentRepositoriesPanel
+const RecentRepositoriesPanelLoader = dynamic(
+  () => import('@industry-theme/github-panels').then((mod) => mod.RecentRepositoriesPanel),
+  { ssr: false }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) as React.ComponentType<any>;
 
 // LocalStorage keys for recent items
 const RECENT_REPOS_KEY = 'recent-repos';
@@ -61,6 +76,8 @@ function getRecentItems(key: string, max: number = 10): string[] {
 
 function HomePageContent() {
   const { theme } = useTheme();
+  const { context, actions, events } = usePanelProvider();
+  const router = useRouter();
   const [recentRepos, setRecentRepos] = useState<string[]>([]);
   const [recentOwners, setRecentOwners] = useState<string[]>([]);
   const [showGallery, setShowGallery] = useState(false);
@@ -69,6 +86,12 @@ function HomePageContent() {
   const detailsFetchedRef = useRef(false);
   const openWithMicRef = useRef<(() => void) | null>(null);
   const [speechSupported, setSpeechSupported] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Set mounted to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Load recent items from localStorage on mount
   useEffect(() => {
@@ -233,6 +256,63 @@ function HomePageContent() {
     };
   }, [recentRepos, recentOwners]);
 
+  // Define panels for the layout
+  const panels = useMemo(() => [
+    {
+      id: 'recent',
+      label: 'Recent',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <RecentRepositoriesPanelLoader
+            context={context}
+            actions={actions}
+            events={events}
+            onNavigate={(path: string) => router.push(path)}
+          />
+        </div>
+      ),
+    },
+    {
+      id: 'welcome',
+      label: 'Search',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          {showGallery ? (
+            galleryLoading ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '100%',
+                  color: theme.colors.textMuted,
+                }}
+              >
+                Loading gallery...
+              </div>
+            ) : (
+              <GalleryCarouselView collections={galleryCollections} />
+            )
+          ) : (
+            <WelcomePanel onToggleGallery={handleToggleGallery} />
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'empty-right',
+      label: '',
+      content: <div />,
+    },
+  ], [showGallery, galleryLoading, galleryCollections, handleToggleGallery, theme, context, actions, events, router]);
+
+  // Define layout with recent panel on left, welcome panel in the middle
+  const layout = useMemo<PanelLayout>(() => ({
+    left: 'recent',
+    middle: 'welcome',
+    right: 'empty-right',
+  }), []);
+
   return (
     <div
       className="h-screen w-screen overflow-hidden flex flex-col"
@@ -243,32 +323,47 @@ function HomePageContent() {
         onToggleGallery={handleToggleGallery}
         onOpenWithMic={speechSupported ? handleOpenWithMic : undefined}
       />
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          height: '100%',
-          backgroundColor: theme.colors.background,
-        }}
-      >
-        {showGallery ? (
-          galleryLoading ? (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
-                color: theme.colors.textMuted,
-              }}
-            >
-              Loading gallery...
-            </div>
-          ) : (
-            <GalleryCarouselView collections={galleryCollections} />
-          )
+
+      {/* Panel Layout */}
+      <div className="flex-1 overflow-hidden">
+        {mounted ? (
+          <ResponsiveConfigurablePanelLayout
+            theme={theme}
+            panels={panels}
+            layout={layout}
+            defaultSizes={{
+              left: 25,
+              middle: 75,
+              right: 0,
+            }}
+            minSizes={{
+              left: 20,
+              middle: 40,
+              right: 0,
+            }}
+            collapsiblePanels={{
+              left: true,
+              right: false,
+            }}
+            collapsed={{
+              left: false,
+              right: true,
+            }}
+            showCollapseButtons={true}
+            mobileBreakpoint="(max-width: 768px)"
+          />
         ) : (
-          <WelcomePanel onToggleGallery={handleToggleGallery} />
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              color: theme.colors.textMuted,
+            }}
+          >
+            Loading...
+          </div>
         )}
       </div>
 
@@ -291,5 +386,18 @@ function HomePageContent() {
 }
 
 export default function HomePage() {
-  return <HomePageContent />;
+  return (
+    <PanelProvider
+      workspace={{
+        name: 'web-ade',
+        path: '/workspace',
+      }}
+      repository={{
+        name: 'home',
+        path: '/home',
+      }}
+    >
+      <HomePageContent />
+    </PanelProvider>
+  );
 }
