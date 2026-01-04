@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Calendar,
   ExternalLink,
+  MessageSquare,
 } from 'lucide-react';
 import { DocumentView } from 'themed-markdown';
 import type { ActivityEvent, UserActivityResponse, ReactionContent, ReactionCounts } from '@/app/api/github/user/[username]/activity/route';
@@ -1067,8 +1068,8 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                             {formatRelativeTime(event.timestamp)}
                           </span>
                         </div>
-                        {/* Second row: line changes/closed status + open in github */}
-                        {((event.type === 'pr_merged' && event.metadata?.additions !== undefined) || (event.type === 'issue_opened' && event.metadata?.isClosed)) && (
+                        {/* Second row: line changes/closed status + view conversation + open in github */}
+                        {((event.type === 'pr_merged' && event.metadata?.additions !== undefined) || (event.type === 'pr_opened') || (event.type === 'issue_opened')) && (
                           <div
                             className="flex items-center gap-2"
                             style={{ fontSize: `${theme.fontSizes[1]}px`, fontFamily: theme.fonts.body }}
@@ -1094,6 +1095,51 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                                   <span> by @{event.metadata.closedBy}</span>
                                 )}
                               </span>
+                            )}
+                            {/* View Conversation button for PRs and issues */}
+                            {(event.type === 'pr_merged' || event.type === 'pr_opened' || event.type === 'issue_opened') && (
+                              <button
+                                className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:opacity-80 transition-opacity"
+                                style={{
+                                  color: theme.colors.primary,
+                                  background: theme.colors.primary + '15',
+                                  border: `1px solid ${theme.colors.primary}40`,
+                                }}
+                                title="View conversation"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const [owner, repo] = event.repository.split('/');
+                                  const number = event.metadata?.prNumber || event.metadata?.issueNumber;
+                                  if (number) {
+                                    events.emit({
+                                      type: 'issue:selected',
+                                      source: 'user-activity-panel',
+                                      timestamp: Date.now(),
+                                      payload: {
+                                        issue: {
+                                          id: 0,
+                                          number,
+                                          title: event.title || '',
+                                          state: event.metadata?.isClosed || event.type === 'pr_merged' ? 'closed' : 'open',
+                                          body: null,
+                                          html_url: event.url || '',
+                                          created_at: event.timestamp,
+                                          updated_at: event.timestamp,
+                                          labels: [],
+                                          comments: 0,
+                                          user: { login: '', avatar_url: '' },
+                                          assignees: [],
+                                        },
+                                        owner,
+                                        repo,
+                                      },
+                                    });
+                                  }
+                                }}
+                              >
+                                <MessageSquare className="w-3 h-3" />
+                                <span>Conversation</span>
+                              </button>
                             )}
                             {event.url && (
                               <a
