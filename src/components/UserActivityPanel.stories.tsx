@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
 import { ThemeProvider } from '@principal-ade/industry-theme';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ResponsiveConfigurablePanelLayout } from '@principal-ade/panel-layouts';
 import { UserActivityPanel } from './UserActivityPanel';
 import {
   getMockPanelProps,
@@ -347,4 +348,105 @@ export const LongTitlesNarrow: Story = {
       </div>
     </StoryWrapper>
   ),
+};
+
+/**
+ * Timeline panel in a responsive layout with the panel in the middle
+ * Tests the panel in a three-column responsive layout setup
+ */
+export const ResponsiveLayoutMiddle: Story = {
+  render: () => {
+    const weeklyData = generateWeeklyActivity();
+
+    return (
+      <StoryWrapper activityData={weeklyData}>
+        <div style={{ height: '600px', width: '100%' }}>
+          <ResponsiveConfigurablePanelLayout
+            theme={{
+              colors: {
+                background: '#ffffff',
+                surface: '#f6f8fa',
+                border: '#d0d7de',
+                text: '#24292f',
+                textMuted: '#57606a',
+                primary: '#0969da',
+                textOnPrimary: '#ffffff',
+              },
+              fonts: {
+                body: 'system-ui, -apple-system, sans-serif',
+                monospace: 'ui-monospace, monospace',
+              },
+              fontSizes: [11, 12, 14, 16, 20, 24, 32, 48],
+              fontWeights: {
+                normal: 400,
+                medium: 500,
+                semibold: 600,
+                bold: 700,
+              },
+            }}
+            panels={[
+              {
+                id: 'left-panel',
+                label: 'Left',
+                content: (
+                  <div style={{ padding: '16px', height: '100%', overflow: 'auto' }}>
+                    <h3 style={{ marginBottom: '8px' }}>Left Panel</h3>
+                    <p style={{ color: '#57606a', fontSize: '14px' }}>
+                      This is a placeholder for the left panel content.
+                    </p>
+                  </div>
+                ),
+              },
+              {
+                id: 'activity-timeline',
+                label: 'Timeline',
+                content: (
+                  <div className="h-full w-full overflow-hidden">
+                    <UserActivityPanel {...mockProps} username="octocat" />
+                  </div>
+                ),
+              },
+              {
+                id: 'right-panel',
+                label: 'Right',
+                content: (
+                  <div style={{ padding: '16px', height: '100%', overflow: 'auto' }}>
+                    <h3 style={{ marginBottom: '8px' }}>Right Panel</h3>
+                    <p style={{ color: '#57606a', fontSize: '14px' }}>
+                      This is a placeholder for the right panel content.
+                    </p>
+                  </div>
+                ),
+              },
+            ]}
+            layout={{
+              left: 'left-panel',
+              middle: 'activity-timeline',
+              right: 'right-panel',
+            }}
+            defaultSizes={{
+              left: 25,
+              middle: 50,
+              right: 25,
+            }}
+            minSizes={{
+              left: 15,
+              middle: 30,
+              right: 15,
+            }}
+            collapsiblePanels={{
+              left: true,
+              right: true,
+            }}
+            collapsed={{
+              left: false,
+              right: false,
+            }}
+            showCollapseButtons={true}
+            mobileBreakpoint="(max-width: 768px)"
+          />
+        </div>
+      </StoryWrapper>
+    );
+  },
 };

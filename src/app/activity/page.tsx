@@ -198,10 +198,18 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
     return () => unsubscribe();
   }, [events, router]);
 
-  // Listen for issue/PR selection to show messages panel
+  // Listen for issue/PR selection to show messages panel and focus it
   useEffect(() => {
     const unsubscribe = events.on('issue:selected', () => {
       setHasMessagesSelected(true);
+
+      // Focus the messages panel when an issue/PR is selected
+      events.emit({
+        type: 'panel:focus',
+        source: 'activity-page',
+        timestamp: Date.now(),
+        payload: { panelId: 'github-messages', panelSlot: 'right' },
+      });
     });
 
     return () => unsubscribe();

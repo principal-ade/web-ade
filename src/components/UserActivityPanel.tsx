@@ -1255,7 +1255,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                       {/* Expanded commit details */}
                       {event.type === 'commit' && expandedCommits.has(event.id) && (
                         <div
-                          className="mt-2 pl-5 border-l-2 space-y-1"
+                          className="mt-2 pl-5 border-l-2 space-y-1 min-w-0"
                           style={{ borderColor: theme.colors.border }}
                         >
                           {loadingCommits.has(event.id) ? (
@@ -1289,7 +1289,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                                       },
                                     });
                                   }}
-                                  className="flex items-start gap-2 py-1 px-2 rounded transition-all w-full text-left"
+                                  className="flex items-start gap-2 py-1 px-2 rounded transition-all w-full text-left min-w-0 overflow-hidden"
                                   style={{
                                     background: isSelected ? theme.colors.primary + '20' : 'transparent',
                                     border: isSelected ? `1px solid ${theme.colors.primary}` : '1px solid transparent',
@@ -1302,17 +1302,18 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                                       fontFamily: theme.fonts.monospace,
                                       color: isSelected ? theme.colors.primary : theme.colors.info,
                                     }}
+                                    title={commit.sha}
                                   >
-                                    {commit.sha}
+                                    {commit.sha.substring(0, 7)}
                                   </code>
                                   <span
-                                    className="truncate"
+                                    className="break-words min-w-0"
                                     style={{
                                       fontSize: `${theme.fontSizes[2]}px`,
                                       fontFamily: theme.fonts.body,
                                       color: isSelected ? theme.colors.primary : theme.colors.text,
+                                      wordBreak: 'break-word',
                                     }}
-                                    title={commit.message}
                                   >
                                     {commit.message}
                                   </span>
