@@ -1048,7 +1048,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                               : getEventLabel(event.type)}
                           </span>
                           <span
-                            className="truncate min-w-0"
+                            className="truncate min-w-0 flex-shrink"
                             style={{
                               fontSize: `${theme.fontSizes[1]}px`,
                               fontFamily: theme.fonts.body,
