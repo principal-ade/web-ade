@@ -1302,6 +1302,19 @@ function EditorLayoutContent({
           });
         }
       }),
+      // Handle task selection - focus TaskDetailPanel
+      events.on('task:selected', (event) => {
+        // Emit focus event to the task detail panel
+        events.emit({
+          type: 'panel:focus',
+          source: 'web-ade',
+          timestamp: Date.now(),
+          payload: {
+            panelId: 'task-detail',
+            panelSlot: 'middle', // or wherever the task detail panel is located
+          },
+        });
+      }),
       // Handle task deletion from TaskDetailPanel
       events.on('task:delete-requested', async (event) => {
         const payload = event.payload as {
