@@ -20,12 +20,27 @@ export function ViewportHeightManager() {
         // excluding keyboard, toolbars, and safe areas. Fall back to window.innerHeight.
         const height = window.visualViewport?.height ?? window.innerHeight;
         const vh = height * 0.01;
-        // Set the value in the --vh custom property
-        document.documentElement.style.setProperty('--vh', `${vh}px`);
 
-        // Force immediate reflow to apply the change
-        // This helps prevent white space flash on Safari
-        void document.documentElement.offsetHeight;
+        // Get current value to check if it actually changed
+        const currentVh = document.documentElement.style.getPropertyValue('--vh');
+        const newVh = `${vh}px`;
+
+        // Only update if value changed
+        if (currentVh !== newVh) {
+          // Set the value in the --vh custom property
+          document.documentElement.style.setProperty('--vh', newVh);
+
+          // Force FULL repaint by triggering style recalculation
+          // Reading offsetHeight forces reflow
+          void document.documentElement.offsetHeight;
+
+          // Trigger a second requestAnimationFrame to ensure the browser
+          // fully repaints and recalculates all calc() expressions using --vh
+          requestAnimationFrame(() => {
+            // Force style recalc on body
+            void document.body.offsetHeight;
+          });
+        }
       });
     };
 
@@ -55,14 +70,15 @@ export function ViewportHeightManager() {
     // This catches the address bar appearing/disappearing
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', updateVH);
-      window.visualViewport.addEventListener('scroll', updateVH);
     }
 
-    // Update on scroll (Safari sometimes adjusts on scroll)
-    window.addEventListener('scroll', updateVH, { passive: true });
-
-    // Update on focus (when user interacts with page)
-    window.addEventListener('focus', updateVH);
+    // Update when page becomes visible (after redirects, tab switches)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        updateVH();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Update on pageshow (fires after navigation/redirects)
     // This catches viewport changes after login redirects
@@ -73,12 +89,10 @@ export function ViewportHeightManager() {
       timeouts.forEach(clearTimeout);
       window.removeEventListener('resize', updateVH);
       window.removeEventListener('orientationchange', updateVH);
-      window.removeEventListener('scroll', updateVH);
-      window.removeEventListener('focus', updateVH);
       window.removeEventListener('pageshow', updateVH);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (window.visualViewport) {
         window.visualViewport.removeEventListener('resize', updateVH);
-        window.visualViewport.removeEventListener('scroll', updateVH);
       }
     };
   }, []);
