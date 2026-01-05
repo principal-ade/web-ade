@@ -1,7 +1,42 @@
 {
   "pv": {
     "name": "Quality Metrics Caching Architecture",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "nodeTypes": {
+      "client": {
+        "label": "Client Component",
+        "description": "Client-side React components"
+      },
+      "api-route": {
+        "label": "API Route",
+        "description": "Next.js API route handlers"
+      },
+      "external": {
+        "label": "External API",
+        "description": "External service API calls"
+      },
+      "cache": {
+        "label": "Cache",
+        "description": "Caching layer"
+      }
+    },
+    "edgeTypes": {
+      "request": {
+        "label": "HTTP Request"
+      },
+      "api-call": {
+        "label": "API Call"
+      },
+      "data-flow": {
+        "label": "Data Flow"
+      },
+      "cache-check": {
+        "label": "Cache Check"
+      },
+      "cache-miss": {
+        "label": "Cache Miss"
+      }
+    }
   },
   "nodes": [
     {
@@ -258,7 +293,10 @@
       "toNode": "tree-route-current",
       "fromSide": "right",
       "toSide": "left",
-      "label": "parallel"
+      "label": "parallel",
+      "pv": {
+        "edgeType": "request"
+      }
     },
     {
       "id": "e2",
@@ -266,14 +304,20 @@
       "toNode": "quality-route-current",
       "fromSide": "right",
       "toSide": "left",
-      "label": "parallel"
+      "label": "parallel",
+      "pv": {
+        "edgeType": "request"
+      }
     },
     {
       "id": "e3",
       "fromNode": "tree-route-current",
       "toNode": "github-api-1",
       "fromSide": "right",
-      "toSide": "left"
+      "toSide": "left",
+      "pv": {
+        "edgeType": "api-call"
+      }
     },
     {
       "id": "e4",
@@ -281,21 +325,30 @@
       "toNode": "github-api-2",
       "fromSide": "right",
       "toSide": "left",
-      "label": "REDUNDANT"
+      "label": "REDUNDANT",
+      "pv": {
+        "edgeType": "api-call"
+      }
     },
     {
       "id": "e5",
       "fromNode": "quality-route-current",
       "toNode": "github-api-3",
       "fromSide": "right",
-      "toSide": "left"
+      "toSide": "left",
+      "pv": {
+        "edgeType": "api-call"
+      }
     },
     {
       "id": "e6",
       "fromNode": "quality-route-current",
       "toNode": "github-api-4",
       "fromSide": "right",
-      "toSide": "left"
+      "toSide": "left",
+      "pv": {
+        "edgeType": "api-call"
+      }
     },
     {
       "id": "e10",
@@ -303,14 +356,20 @@
       "toNode": "tree-route-ideal",
       "fromSide": "right",
       "toSide": "left",
-      "label": "1. fetch tree"
+      "label": "1. fetch tree",
+      "pv": {
+        "edgeType": "request"
+      }
     },
     {
       "id": "e11",
       "fromNode": "tree-route-ideal",
       "toNode": "github-resolve",
       "fromSide": "right",
-      "toSide": "left"
+      "toSide": "left",
+      "pv": {
+        "edgeType": "api-call"
+      }
     },
     {
       "id": "e12",
@@ -318,7 +377,10 @@
       "toNode": "sha-cache",
       "fromSide": "bottom",
       "toSide": "top",
-      "label": "returns sha"
+      "label": "returns sha",
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "e13",
@@ -326,7 +388,10 @@
       "toNode": "quality-route-ideal",
       "fromSide": "bottom",
       "toSide": "top",
-      "label": "2. use sha"
+      "label": "2. use sha",
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "e14",
@@ -334,7 +399,10 @@
       "toNode": "next-cache",
       "fromSide": "right",
       "toSide": "left",
-      "label": "check cache"
+      "label": "check cache",
+      "pv": {
+        "edgeType": "cache-check"
+      }
     },
     {
       "id": "e15",
@@ -342,14 +410,20 @@
       "toNode": "github-artifacts",
       "fromSide": "bottom",
       "toSide": "top",
-      "label": "miss"
+      "label": "miss",
+      "pv": {
+        "edgeType": "cache-miss"
+      }
     },
     {
       "id": "e16",
       "fromNode": "github-artifacts",
       "toNode": "github-download",
       "fromSide": "bottom",
-      "toSide": "top"
+      "toSide": "top",
+      "pv": {
+        "edgeType": "api-call"
+      }
     }
   ]
 }

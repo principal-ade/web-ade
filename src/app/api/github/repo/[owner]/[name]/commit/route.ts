@@ -4,7 +4,7 @@ import { getGitHubToken } from '@/lib/auth/cookies';
 
 interface FileChange {
   path: string;
-  content: string;
+  content: string | null;  // null indicates file deletion
   sha?: string;  // Current file SHA for conflict detection (undefined for new files)
 }
 
@@ -135,6 +135,32 @@ async function commitSingleFile(
   file: FileChange,
   message: string
 ): Promise<CommitResponse> {
+  // Handle file deletion when content is null
+  if (file.content === null) {
+    if (!file.sha) {
+      throw new Error('SHA is required to delete a file');
+    }
+
+    const { data } = await octokit.rest.repos.deleteFile({
+      owner,
+      repo,
+      path: file.path,
+      message,
+      sha: file.sha,
+      branch,
+    });
+
+    return {
+      success: true,
+      commitSha: data.commit.sha!,
+      commitUrl: data.commit.html_url!,
+      files: [{
+        path: file.path,
+        sha: '', // File is deleted, no sha
+      }],
+    };
+  }
+
   // Build request options - only include sha if file is being updated (not new)
   const requestOptions: Parameters<typeof octokit.rest.repos.createOrUpdateFileContents>[0] = {
     owner,
@@ -187,17 +213,32 @@ async function commitMultipleFiles(
   });
   const baseTreeSha = commitData.tree.sha;
 
-  // Step 3: Create blobs for each file
+  // Step 3: Create blobs for each file (or mark for deletion)
   const treeItems: Array<{
     path: string;
-    mode: '100644';
-    type: 'blob';
-    sha: string;
+    mode?: '100644';
+    type?: 'blob';
+    sha: string | null;
   }> = [];
 
   const fileResults: Array<{ path: string; sha: string }> = [];
 
   for (const file of files) {
+    // Handle file deletion (content is null)
+    if (file.content === null) {
+      treeItems.push({
+        path: file.path,
+        sha: null, // null sha means delete the file
+      });
+
+      fileResults.push({
+        path: file.path,
+        sha: '', // Deleted file has no sha
+      });
+      continue;
+    }
+
+    // Create blob for file creation/update
     const { data: blobData } = await octokit.rest.git.createBlob({
       owner,
       repo,
