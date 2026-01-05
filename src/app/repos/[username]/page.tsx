@@ -796,7 +796,7 @@ function SharedCollectionsWrapper() {
   if (loading) {
     return (
       <div
-        className="h-screen w-screen flex items-center justify-center"
+        className="h-screen-safe w-screen flex items-center justify-center"
         style={{ background: theme.colors.background, color: theme.colors.text }}
       >
         <Loader2 size={32} className="animate-spin" style={{ color: theme.colors.primary }} />
@@ -808,7 +808,7 @@ function SharedCollectionsWrapper() {
   if (error) {
     return (
       <div
-        className="h-screen w-screen flex flex-col items-center justify-center gap-4"
+        className="h-screen-safe w-screen flex flex-col items-center justify-center gap-4"
         style={{ background: theme.colors.background }}
       >
         <AlertCircle size={48} style={{ color: '#ef4444' }} />
@@ -854,7 +854,7 @@ function SharedCollectionsWrapper() {
   if (collectionsData && !collectionsData.exists) {
     return (
       <div
-        className="h-screen w-screen flex flex-col items-center justify-center gap-4"
+        className="h-screen-safe w-screen flex flex-col items-center justify-center gap-4"
         style={{ background: theme.colors.background }}
       >
         <div className="flex items-center gap-4 mb-4">
@@ -924,7 +924,7 @@ function SharedCollectionsWrapper() {
   if (!collections.length) {
     return (
       <div
-        className="h-screen w-screen flex flex-col items-center justify-center gap-4"
+        className="h-screen-safe w-screen flex flex-col items-center justify-center gap-4"
         style={{ background: theme.colors.background }}
       >
         <Layers size={48} style={{ opacity: 0.5, color: theme.colors.textSecondary }} />
@@ -960,10 +960,10 @@ function SharedCollectionsWrapper() {
 
   return (
     <div
-      className="h-screen w-screen overflow-hidden"
+      className="h-screen-safe w-screen overflow-hidden"
       style={{ background: theme.colors.background, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      <div style={{ height: '100vh' }}>
+      <div style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
         <PanelProvider
           key={selectedCollectionId}
           workspace={{
@@ -1042,7 +1042,7 @@ function SharedCollectionsLoading() {
   const { theme } = useTheme();
   return (
     <div
-      className="h-screen w-screen flex items-center justify-center"
+      className="h-screen-safe w-screen flex items-center justify-center"
       style={{ background: theme.colors.background, color: theme.colors.text }}
     >
       <Loader2 size={32} className="animate-spin" style={{ color: theme.colors.primary }} />

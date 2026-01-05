@@ -3,6 +3,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* Dynamic viewport height for Safari mobile support */
+  --vh: 1vh;
 }
 
 @theme inline {
@@ -21,6 +23,9 @@
 
 html {
   background: var(--background);
+  /* Fix Safari viewport height issue */
+  height: 100%;
+  height: -webkit-fill-available;
 }
 
 html,
@@ -35,9 +40,32 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  /* Fix Safari viewport height issue */
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  min-height: calc(var(--vh, 1vh) * 100);
 }
 
 /* Hide scrollbar but keep scroll functionality */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Dynamic viewport height utilities for Safari mobile support */
+.h-screen-safe {
+  height: 100vh; /* Fallback */
+  height: -webkit-fill-available; /* Safari specific */
+  height: calc(var(--vh, 1vh) * 100); /* Dynamic height */
+}
+
+.min-h-screen-safe {
+  min-height: 100vh; /* Fallback */
+  min-height: -webkit-fill-available; /* Safari specific */
+  min-height: calc(var(--vh, 1vh) * 100); /* Dynamic height */
+}
+
+.max-h-screen-safe {
+  max-height: 100vh; /* Fallback */
+  max-height: -webkit-fill-available; /* Safari specific */
+  max-height: calc(var(--vh, 1vh) * 100); /* Dynamic height */
 }

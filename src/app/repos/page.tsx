@@ -127,7 +127,7 @@ function CollectionsPageWrapper() {
   if (userCollections.loading) {
     return (
       <div
-        className="h-screen w-screen flex items-center justify-center"
+        className="h-screen-safe w-screen flex items-center justify-center"
         style={{ background: theme.colors.background, color: theme.colors.text }}
       >
         Loading collections...
@@ -137,12 +137,12 @@ function CollectionsPageWrapper() {
 
   return (
     <div
-      className="h-screen w-screen overflow-hidden"
+      className="h-screen-safe w-screen overflow-hidden"
       style={{ background: theme.colors.background, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       {/* Main Content */}
       {selectedCollection ? (
-        <div style={{ height: '100vh' }}>
+        <div style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
           <PanelProvider
             key={selectedCollectionId}
             workspace={{
@@ -182,7 +182,7 @@ function CollectionsPageWrapper() {
       ) : (
         <div
           style={{
-            height: '100vh',
+            height: 'calc(var(--vh, 1vh) * 100)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -264,7 +264,7 @@ function CollectionsPageLoading() {
   const { theme } = useTheme();
   return (
     <div
-      className="h-screen w-screen flex items-center justify-center"
+      className="h-screen-safe w-screen flex items-center justify-center"
       style={{ background: theme.colors.background, color: theme.colors.text }}
     >
       Loading collections...

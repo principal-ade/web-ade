@@ -36,19 +36,24 @@ import {
   Users,
 } from 'lucide-react';
 
-const RECENT_OWNERS_KEY = 'recent-owners';
-const RECENT_REPOSITORIES_KEY = 'recent-repositories';
-const MAX_RECENT_ITEMS = 10;
-
-interface RecentOwner {
-  owner: string;
-  visitedAt: string;
+interface LibraryRecentRepository {
+  type: 'repository';
+  id: number;
+  name: string;
+  full_name: string;
+  owner: {
+    login: string;
+    avatar_url: string;
+  };
+  visitedAt: number;
 }
 
-interface RecentRepository {
-  owner: string;
-  repo: string;
-  visitedAt: string;
+interface LibraryRecentOwner {
+  type: 'owner';
+  id: number;
+  login: string;
+  avatar_url: string;
+  visitedAt: number;
 }
 
 interface StarredRepo {
@@ -69,32 +74,6 @@ interface FollowingUser {
   avatar_url: string;
   name: string | null;
   bio: string | null;
-}
-
-// Legacy function for backward compatibility
-function saveRecentOwnerLegacy(owner: string) {
-  if (typeof window === 'undefined') return;
-
-  try {
-    const stored = localStorage.getItem(RECENT_OWNERS_KEY);
-    const owners: RecentOwner[] = stored ? JSON.parse(stored) : [];
-
-    // Remove existing entry for this owner if present
-    const filtered = owners.filter(o => o.owner !== owner);
-
-    // Add to front with current timestamp
-    filtered.unshift({
-      owner,
-      visitedAt: new Date().toISOString(),
-    });
-
-    // Keep only the most recent items
-    const trimmed = filtered.slice(0, MAX_RECENT_ITEMS);
-
-    localStorage.setItem(RECENT_OWNERS_KEY, JSON.stringify(trimmed));
-  } catch (err) {
-    console.error('Failed to save recent owner:', err);
-  }
 }
 
 // Save owner with full GitHub metadata
@@ -120,7 +99,7 @@ async function saveRecentOwnerWithMetadata(owner: string) {
     }
 
     if (ownerData) {
-      // Use the panel's helper function with full metadata
+      // Save to recent owners panel
       const ownerInfo: OwnerInfo = {
         id: ownerData.id,
         login: ownerData.login,
@@ -134,13 +113,8 @@ async function saveRecentOwnerWithMetadata(owner: string) {
 
       addRecentOwner(ownerInfo);
     }
-
-    // Also save to legacy storage for backward compatibility
-    saveRecentOwnerLegacy(owner);
   } catch (err) {
     console.error('Failed to save recent owner with metadata:', err);
-    // Fallback to legacy save if API call fails
-    saveRecentOwnerLegacy(owner);
   }
 }
 
@@ -207,8 +181,8 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
   // Sidebar state
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<'recent' | 'collections' | 'following' | 'starred'>('recent');
-  const [recentRepos, setRecentRepos] = useState<RecentRepository[]>([]);
-  const [recentOwners, setRecentOwners] = useState<RecentOwner[]>([]);
+  const [recentRepos, setRecentRepos] = useState<LibraryRecentRepository[]>([]);
+  const [recentOwners, setRecentOwners] = useState<LibraryRecentOwner[]>([]);
   const [starredRepos, setStarredRepos] = useState<StarredRepo[]>([]);
   const [followingUsers, setFollowingUsers] = useState<FollowingUser[]>([]);
 
@@ -224,17 +198,33 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
     },
   });
 
-  // Load recent items from localStorage
+  // Load recent items from library's localStorage format
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    try {
-      const storedRepos = localStorage.getItem(RECENT_REPOSITORIES_KEY);
-      if (storedRepos) setRecentRepos(JSON.parse(storedRepos));
-      const storedOwners = localStorage.getItem(RECENT_OWNERS_KEY);
-      if (storedOwners) setRecentOwners(JSON.parse(storedOwners));
-    } catch (err) {
-      console.error('Failed to load recent items:', err);
-    }
+
+    const loadRecentItems = () => {
+      try {
+        const storedRepos = localStorage.getItem('recent-repositories');
+        if (storedRepos) {
+          const repos: LibraryRecentRepository[] = JSON.parse(storedRepos);
+          setRecentRepos(repos);
+        }
+
+        const storedOwners = localStorage.getItem('recent-owners');
+        if (storedOwners) {
+          const owners: LibraryRecentOwner[] = JSON.parse(storedOwners);
+          setRecentOwners(owners);
+        }
+      } catch (err) {
+        console.error('Failed to load recent items:', err);
+      }
+    };
+
+    loadRecentItems();
+
+    // Listen for updates from the library
+    window.addEventListener('recent-items-updated', loadRecentItems);
+    return () => window.removeEventListener('recent-items-updated', loadRecentItems);
   }, []);
 
   // Fetch starred repos and following users when sidebar opens
@@ -816,8 +806,8 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                         </div>
                         {recentRepos.slice(0, 5).map((repo) => (
                           <Link
-                            key={`${repo.owner}/${repo.repo}`}
-                            href={`/${repo.owner}/${repo.repo}`}
+                            key={repo.full_name}
+                            href={`/${repo.full_name}`}
                             onClick={() => setSidebarOpen(false)}
                             style={{
                               display: 'flex',
@@ -833,17 +823,17 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                           >
                             <img
-                              src={`https://avatars.githubusercontent.com/${repo.owner}?size=64`}
-                              alt={repo.owner}
+                              src={repo.owner.avatar_url}
+                              alt={repo.owner.login}
                               style={{ width: 28, height: 28, borderRadius: '6px' }}
                             />
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {repo.owner}/{repo.repo}
+                                {repo.full_name}
                               </div>
                               <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 <GitFork size={10} />
-                                {formatTimeAgo(repo.visitedAt)}
+                                {formatTimeAgo(new Date(repo.visitedAt).toISOString())}
                               </div>
                             </div>
                           </Link>
@@ -867,8 +857,8 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                         </div>
                         {recentOwners.slice(0, 5).map((recentOwner) => (
                           <Link
-                            key={recentOwner.owner}
-                            href={`/${recentOwner.owner}`}
+                            key={recentOwner.login}
+                            href={`/${recentOwner.login}`}
                             onClick={() => setSidebarOpen(false)}
                             style={{
                               display: 'flex',
@@ -884,15 +874,15 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                           >
                             <img
-                              src={`https://avatars.githubusercontent.com/${recentOwner.owner}?size=64`}
-                              alt={recentOwner.owner}
+                              src={recentOwner.avatar_url}
+                              alt={recentOwner.login}
                               style={{ width: 28, height: 28, borderRadius: '6px' }}
                             />
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: `${theme.fontSizes[1]}px` }}>{recentOwner.owner}</div>
+                              <div style={{ fontSize: `${theme.fontSizes[1]}px` }}>{recentOwner.login}</div>
                               <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 <User size={10} />
-                                {formatTimeAgo(recentOwner.visitedAt)}
+                                {formatTimeAgo(new Date(recentOwner.visitedAt).toISOString())}
                               </div>
                             </div>
                           </Link>

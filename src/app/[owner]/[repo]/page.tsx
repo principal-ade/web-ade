@@ -9,54 +9,33 @@ import { useLocalFileSystem } from "@/contexts/LocalFileSystemContext";
 import { LocalFileSystemAdapter } from "@/lib/client/LocalFileSystemAdapter";
 import { addRecentRepository } from "@industry-theme/github-panels";
 
-const RECENT_REPOSITORIES_KEY = 'recent-repositories';
-const MAX_RECENT_ITEMS = 10;
+const REPO_LAYOUT_CONFIGS_KEY = 'repo-layout-configs';
 
-interface RecentRepository {
-  owner: string;
-  repo: string;
-  visitedAt: string;
-  configId?: string;
-}
-
-// Legacy function for backward compatibility with config ID tracking
-function saveRecentRepositoryConfigId(owner: string, repo: string, configId?: string) {
+// Store and retrieve layout configuration for each repository
+function saveRepositoryLayoutConfig(owner: string, repo: string, configId: string) {
   if (typeof window === 'undefined') return;
 
   try {
-    const stored = localStorage.getItem(RECENT_REPOSITORIES_KEY);
-    const repositories: RecentRepository[] = stored ? JSON.parse(stored) : [];
+    const stored = localStorage.getItem(REPO_LAYOUT_CONFIGS_KEY);
+    const configs: Record<string, string> = stored ? JSON.parse(stored) : {};
 
-    // Remove existing entry for this repo if present
-    const filtered = repositories.filter(r => !(r.owner === owner && r.repo === repo));
+    configs[`${owner}/${repo}`] = configId;
 
-    // Add to front with current timestamp and configId
-    filtered.unshift({
-      owner,
-      repo,
-      visitedAt: new Date().toISOString(),
-      configId,
-    });
-
-    // Keep only the most recent items
-    const trimmed = filtered.slice(0, MAX_RECENT_ITEMS);
-
-    localStorage.setItem(RECENT_REPOSITORIES_KEY, JSON.stringify(trimmed));
+    localStorage.setItem(REPO_LAYOUT_CONFIGS_KEY, JSON.stringify(configs));
   } catch (err) {
-    console.error('Failed to save recent repository:', err);
+    console.error('Failed to save repository layout config:', err);
   }
 }
 
-function getRecentRepositoryConfig(owner: string, repo: string): string | undefined {
+function getRepositoryLayoutConfig(owner: string, repo: string): string | undefined {
   if (typeof window === 'undefined') return undefined;
 
   try {
-    const stored = localStorage.getItem(RECENT_REPOSITORIES_KEY);
+    const stored = localStorage.getItem(REPO_LAYOUT_CONFIGS_KEY);
     if (!stored) return undefined;
 
-    const repositories: RecentRepository[] = JSON.parse(stored);
-    const found = repositories.find(r => r.owner === owner && r.repo === repo);
-    return found?.configId;
+    const configs: Record<string, string> = JSON.parse(stored);
+    return configs[`${owner}/${repo}`];
   } catch {
     return undefined;
   }
@@ -73,16 +52,16 @@ async function saveRecentRepositoryWithMetadata(owner: string, repo: string, con
     if (response.ok) {
       const repoData = await response.json();
 
-      // Use the panel's helper function with full metadata
+      // Save to recent repositories panel
       addRecentRepository(repoData);
     }
 
-    // Also save config ID to legacy storage for backward compatibility
-    saveRecentRepositoryConfigId(owner, repo, configId);
+    // Save layout config separately
+    if (configId) {
+      saveRepositoryLayoutConfig(owner, repo, configId);
+    }
   } catch (err) {
     console.error('Failed to save recent repository with metadata:', err);
-    // Fallback to legacy save if API call fails
-    saveRecentRepositoryConfigId(owner, repo, configId);
   }
 }
 
@@ -124,7 +103,7 @@ function RepoPageContent() {
   const initialConfigId = useMemo(() => {
     const urlConfig = searchParams.get('config');
     if (urlConfig) return urlConfig;
-    return getRecentRepositoryConfig(owner, repo) || 'documentation';
+    return getRepositoryLayoutConfig(owner, repo) || 'documentation';
   }, [searchParams, owner, repo]);
 
   // Connect to presence system for this repository
@@ -159,7 +138,7 @@ function RepoPageContent() {
   if (!localModeChecked) {
     return (
       <div
-        className="h-screen w-screen overflow-hidden"
+        className="h-screen-safe w-screen overflow-hidden"
         style={{ background: theme.colors.background }}
       />
     );
@@ -167,7 +146,7 @@ function RepoPageContent() {
 
   return (
     <div
-      className="h-screen w-screen overflow-hidden"
+      className="h-screen-safe w-screen overflow-hidden"
       style={{ background: theme.colors.background, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <EditorLayout
@@ -182,7 +161,7 @@ function RepoPageContent() {
 
 export default function RepoPage() {
   return (
-    <Suspense fallback={<div className="h-screen w-screen" />}>
+    <Suspense fallback={<div className="h-screen-safe w-screen" />}>
       <RepoPageContent />
     </Suspense>
   );

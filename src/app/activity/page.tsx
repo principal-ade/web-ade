@@ -441,7 +441,7 @@ function ActivityPageWrapper({ username }: { username: string }) {
 
   return (
     <div
-      className="h-screen w-screen overflow-hidden"
+      className="h-screen-safe w-screen overflow-hidden"
       style={{ background: theme.colors.background, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <PanelProvider
@@ -473,7 +473,7 @@ export default function ActivityPage() {
   if (isLoading) {
     return (
       <div
-        className="h-screen w-screen flex items-center justify-center"
+        className="h-screen-safe w-screen flex items-center justify-center"
         style={{ background: theme.colors.background, color: theme.colors.textMuted }}
       >
         <div className="text-center">
@@ -492,7 +492,7 @@ export default function ActivityPage() {
   // Not authenticated, show prompt
   return (
     <div
-      className="h-screen w-screen flex items-center justify-center"
+      className="h-screen-safe w-screen flex items-center justify-center"
       style={{ background: theme.colors.background }}
     >
       <div className="text-center max-w-md px-4">

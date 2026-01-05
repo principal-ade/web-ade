@@ -8,6 +8,7 @@ import { LocalFileSystemProvider } from '@/contexts/LocalFileSystemContext';
 import { VFSProvider } from '@/contexts/VFSContext';
 import { GlobalThemeProvider, useGlobalTheme } from '@/contexts/ThemeContext';
 import { MermaidInitializer } from './MermaidInitializer';
+import { ViewportHeightManager } from './ViewportHeightManager';
 import { ReactNode } from 'react';
 
 function ThemeProviderWrapper({ children }: { children: ReactNode }) {
@@ -16,6 +17,7 @@ function ThemeProviderWrapper({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider theme={currentTheme}>
       <MermaidInitializer />
+      <ViewportHeightManager />
       <AuthProvider>
         <ControlTowerProvider>
           <UserCollectionsProvider>
