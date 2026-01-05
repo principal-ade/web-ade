@@ -47,11 +47,18 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { owner, repo, issue } = body;
+    const { owner, repo, issue, taskType, additionalInstructions } = body;
 
-    if (!owner || !repo || !issue) {
+    if (!owner || !repo || !issue || !taskType) {
       return NextResponse.json(
-        { error: 'Missing required fields: owner, repo, issue' },
+        { error: 'Missing required fields: owner, repo, issue, taskType' },
+        { status: 400 }
+      );
+    }
+
+    if (taskType !== 'investigate' && taskType !== 'fix') {
+      return NextResponse.json(
+        { error: 'Invalid taskType - must be "investigate" or "fix"' },
         { status: 400 }
       );
     }
@@ -100,10 +107,19 @@ export async function POST(request: NextRequest) {
       priority = 'low';
     }
 
+    // Build description with additional instructions
+    let description = issue.body?.trim() || '_From GitHub issue - no description provided._';
+    if (additionalInstructions?.trim()) {
+      description += `\n\n## Additional Instructions\n\n${additionalInstructions.trim()}`;
+    }
+
+    // Set status based on task type
+    const status = taskType === 'investigate' ? 'To Do' : 'In Progress';
+
     const taskInput: TaskCreateInput = {
       title: issue.title,
-      description: issue.body?.trim() || '_From GitHub issue - no description provided._',
-      status: 'To Do',
+      description,
+      status,
       priority,
       labels: issue.labels.map((l: { name: string }) => l.name),
       references: [
@@ -188,6 +204,42 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>`;
       ref: `heads/${defaultBranch}`,
       sha: newCommit.sha,
     });
+
+    // Add GitHub label to the issue to mark it as having a task
+    const labelName = `backlog-task:${taskType}`;
+    try {
+      // Check if label exists in repo, create if it doesn't
+      try {
+        await octokit.issues.getLabel({
+          owner,
+          repo,
+          name: labelName,
+        });
+      } catch (labelError: unknown) {
+        const error = labelError as { status?: number };
+        // Label doesn't exist, create it
+        if (error?.status === 404) {
+          await octokit.issues.createLabel({
+            owner,
+            repo,
+            name: labelName,
+            color: '0e8a16', // green color
+            description: `Task created from this issue (type: ${taskType})`,
+          });
+        }
+      }
+
+      // Add label to issue
+      await octokit.issues.addLabels({
+        owner,
+        repo,
+        issue_number: issue.number,
+        labels: [labelName],
+      });
+    } catch (labelError) {
+      console.error('[API] Failed to add label to issue:', labelError);
+      // Don't fail the whole request if labeling fails
+    }
 
     // Return success with task details
     return NextResponse.json({

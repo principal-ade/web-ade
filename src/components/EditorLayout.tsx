@@ -774,6 +774,40 @@ function EditorLayoutContent({
           });
         }
       }),
+      // Focus back to issues panel when an issue is deselected
+      events.on('issue:deselected', () => {
+        // Emit focus event back to the issues panel
+        events.emit({
+          type: 'panel:focus',
+          source: 'editor-layout',
+          timestamp: Date.now(),
+          payload: {
+            panelId: 'github-issues',
+            panelSlot: 'left',
+          },
+        });
+      }),
+      // Focus messages panel when view discussion is clicked
+      events.on('issue:view-discussion', (event) => {
+        const payload = event.payload as {
+          issue?: unknown;
+          owner?: string;
+          repo?: string;
+        };
+
+        if (payload?.issue) {
+          // Emit focus event to the messages panel
+          events.emit({
+            type: 'panel:focus',
+            source: 'editor-layout',
+            timestamp: Date.now(),
+            payload: {
+              panelId: 'github-messages',
+              panelSlot: 'right',
+            },
+          });
+        }
+      }),
       events.on('panel:switch', (event) => {
         const payload = event.payload as { slot?: string; panel?: string };
         if (payload.slot && payload.panel) {
@@ -1237,6 +1271,8 @@ function EditorLayoutContent({
           };
           owner: string;
           repo: string;
+          taskType: 'investigate' | 'fix';
+          additionalInstructions?: string;
         };
 
         if (!payload?.issue || !githubRepo || !githubRepo.includes('/')) {
@@ -1266,6 +1302,8 @@ function EditorLayoutContent({
               owner,
               repo: name,
               issue,
+              taskType: payload.taskType,
+              additionalInstructions: payload.additionalInstructions,
             }),
           });
 
@@ -1278,6 +1316,15 @@ function EditorLayoutContent({
 
           console.log(`[EditorLayout] Created task ${data.taskId} from issue #${issue.number}`);
 
+          // Update the issue with the new label
+          const labelName = `backlog-task:${payload.taskType}`;
+          if (!issue.labels.some(l => l.name === labelName)) {
+            issue.labels.push({
+              name: labelName,
+              color: '0e8a16',
+            });
+          }
+
           // Emit success event
           events.emit({
             type: 'issue:task-created',
@@ -1286,6 +1333,18 @@ function EditorLayoutContent({
             payload: {
               issueNumber: issue.number,
               taskId: data.taskId,
+            },
+          });
+
+          // Re-emit issue:selected to refresh the panel with updated labels
+          events.emit({
+            type: 'issue:selected',
+            source: 'web-ade',
+            timestamp: Date.now(),
+            payload: {
+              issue,
+              owner,
+              repo: name,
             },
           });
 

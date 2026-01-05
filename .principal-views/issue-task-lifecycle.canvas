@@ -53,8 +53,8 @@
     {
       "id": "github-issues-panel",
       "type": "text",
-      "x": 50,
-      "y": 50,
+      "x": -204,
+      "y": 107,
       "width": 200,
       "height": 60,
       "color": "#3b82f6",
@@ -67,8 +67,8 @@
     {
       "id": "issue-selected-event",
       "type": "text",
-      "x": 50,
-      "y": 150,
+      "x": -204,
+      "y": 254,
       "width": 200,
       "height": 50,
       "color": "#f59e0b",
@@ -81,8 +81,8 @@
     {
       "id": "panel-context",
       "type": "text",
-      "x": 330,
-      "y": 150,
+      "x": 240,
+      "y": 117,
       "width": 180,
       "height": 60,
       "color": "#8b5cf6",
@@ -109,8 +109,8 @@
     {
       "id": "timeline-api",
       "type": "text",
-      "x": 330,
-      "y": 270,
+      "x": 207,
+      "y": 281,
       "width": 250,
       "height": 50,
       "color": "#06b6d4",
@@ -123,8 +123,8 @@
     {
       "id": "github-api-timeline",
       "type": "text",
-      "x": 330,
-      "y": 370,
+      "x": 206,
+      "y": 379,
       "width": 250,
       "height": 50,
       "color": "#f97316",
@@ -151,8 +151,8 @@
     {
       "id": "messages-panel",
       "type": "text",
-      "x": 330,
-      "y": 470,
+      "x": 230,
+      "y": 482,
       "width": 200,
       "height": 60,
       "color": "#3b82f6",
@@ -165,8 +165,8 @@
     {
       "id": "push-to-backlog-event",
       "type": "text",
-      "x": 50,
-      "y": 570,
+      "x": 544,
+      "y": 409,
       "width": 220,
       "height": 50,
       "color": "#f59e0b",
@@ -179,8 +179,8 @@
     {
       "id": "build-task-markdown",
       "type": "text",
-      "x": 330,
-      "y": 570,
+      "x": 337,
+      "y": 561,
       "width": 200,
       "height": 80,
       "color": "#8b5cf6",
@@ -398,16 +398,6 @@
       }
     },
     {
-      "id": "e9",
-      "fromNode": "push-to-backlog-event",
-      "toNode": "build-task-markdown",
-      "fromSide": "right",
-      "toSide": "left",
-      "pv": {
-        "edgeType": "event"
-      }
-    },
-    {
       "id": "e10",
       "fromNode": "build-task-markdown",
       "toNode": "backlog-file",
@@ -480,6 +470,16 @@
       "label": "update task",
       "pv": {
         "edgeType": "file-op"
+      }
+    },
+    {
+      "id": "edge-push-to-backlog-event-build-task-markdown-1767575693353",
+      "fromNode": "push-to-backlog-event",
+      "toNode": "build-task-markdown",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "event"
       }
     }
   ]
