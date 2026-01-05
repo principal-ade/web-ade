@@ -43,3 +43,9 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Dynamic viewport height with fallback */
+.h-dvh-fallback {
+  height: 100vh; /* Fallback for older browsers */
+  height: 100dvh; /* Dynamic viewport height - adjusts when Safari bars show/hide */
+}

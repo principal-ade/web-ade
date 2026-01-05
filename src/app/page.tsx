@@ -329,11 +329,9 @@ function HomePageContent() {
 
   return (
     <div
-      className="w-screen overflow-hidden flex flex-col"
+      className="w-screen overflow-hidden flex flex-col h-dvh-fallback"
       style={{
-        background: theme.colors.background,
-        height: '100vh',
-        height: '100dvh'
+        background: theme.colors.background
       }}
     >
       <EditorHeader
