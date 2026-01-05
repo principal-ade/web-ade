@@ -1303,7 +1303,7 @@ function EditorLayoutContent({
         }
       }),
       // Handle task selection - focus TaskDetailPanel
-      events.on('task:selected', (event) => {
+      events.on('task:selected', () => {
         // Emit focus event to the task detail panel
         events.emit({
           type: 'panel:focus',
