@@ -23,11 +23,17 @@ export function ViewportHeightManager() {
       void document.documentElement.offsetHeight;
     };
 
-    // Set initial value
+    // Set initial value immediately
     updateVH();
 
-    // Also update after a brief delay to catch any late Safari adjustments
-    const timeoutId = setTimeout(updateVH, 100);
+    // Multiple updates to catch Safari's various adjustment phases
+    const timeouts = [
+      setTimeout(updateVH, 0),
+      setTimeout(updateVH, 50),
+      setTimeout(updateVH, 100),
+      setTimeout(updateVH, 250),
+      setTimeout(updateVH, 500),
+    ];
 
     // Update on resize (handles both width and height changes)
     window.addEventListener('resize', updateVH);
@@ -39,15 +45,25 @@ export function ViewportHeightManager() {
     // This catches the address bar appearing/disappearing
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', updateVH);
+      window.visualViewport.addEventListener('scroll', updateVH);
     }
+
+    // Update on scroll (Safari sometimes adjusts on scroll)
+    window.addEventListener('scroll', updateVH, { passive: true });
+
+    // Update on focus (when user interacts with page)
+    window.addEventListener('focus', updateVH);
 
     // Cleanup
     return () => {
-      clearTimeout(timeoutId);
+      timeouts.forEach(clearTimeout);
       window.removeEventListener('resize', updateVH);
       window.removeEventListener('orientationchange', updateVH);
+      window.removeEventListener('scroll', updateVH);
+      window.removeEventListener('focus', updateVH);
       if (window.visualViewport) {
         window.visualViewport.removeEventListener('resize', updateVH);
+        window.visualViewport.removeEventListener('scroll', updateVH);
       }
     };
   }, []);
