@@ -329,8 +329,11 @@ function HomePageContent() {
 
   return (
     <div
-      className="h-screen-safe w-screen overflow-hidden flex flex-col"
-      style={{ background: theme.colors.background, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      className="w-screen overflow-hidden flex flex-col"
+      style={{
+        background: theme.colors.background,
+        height: 'calc(var(--vh, 1vh) * 100)'
+      }}
     >
       <EditorHeader
         showGallery={showGallery}

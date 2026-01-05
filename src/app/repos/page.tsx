@@ -127,8 +127,12 @@ function CollectionsPageWrapper() {
   if (userCollections.loading) {
     return (
       <div
-        className="h-screen-safe w-screen flex items-center justify-center"
-        style={{ background: theme.colors.background, color: theme.colors.text }}
+        className="w-screen flex items-center justify-center"
+        style={{
+          background: theme.colors.background,
+          color: theme.colors.text,
+          height: 'calc(var(--vh, 1vh) * 100)'
+        }}
       >
         Loading collections...
       </div>
@@ -137,8 +141,11 @@ function CollectionsPageWrapper() {
 
   return (
     <div
-      className="h-screen-safe w-screen overflow-hidden"
-      style={{ background: theme.colors.background, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      className="w-screen overflow-hidden"
+      style={{
+        background: theme.colors.background,
+        height: 'calc(var(--vh, 1vh) * 100)'
+      }}
     >
       {/* Main Content */}
       {selectedCollection ? (
@@ -264,8 +271,12 @@ function CollectionsPageLoading() {
   const { theme } = useTheme();
   return (
     <div
-      className="h-screen-safe w-screen flex items-center justify-center"
-      style={{ background: theme.colors.background, color: theme.colors.text }}
+      className="w-screen flex items-center justify-center"
+      style={{
+        background: theme.colors.background,
+        color: theme.colors.text,
+        height: 'calc(var(--vh, 1vh) * 100)'
+      }}
     >
       Loading collections...
     </div>

@@ -441,8 +441,11 @@ function ActivityPageWrapper({ username }: { username: string }) {
 
   return (
     <div
-      className="h-screen-safe w-screen overflow-hidden"
-      style={{ background: theme.colors.background, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      className="w-screen overflow-hidden"
+      style={{
+        background: theme.colors.background,
+        height: 'calc(var(--vh, 1vh) * 100)'
+      }}
     >
       <PanelProvider
         workspace={{
@@ -473,8 +476,12 @@ export default function ActivityPage() {
   if (isLoading) {
     return (
       <div
-        className="h-screen-safe w-screen flex items-center justify-center"
-        style={{ background: theme.colors.background, color: theme.colors.textMuted }}
+        className="w-screen flex items-center justify-center"
+        style={{
+          background: theme.colors.background,
+          color: theme.colors.textMuted,
+          height: 'calc(var(--vh, 1vh) * 100)'
+        }}
       >
         <div className="text-center">
           <Calendar className="h-12 w-12 mx-auto mb-3 animate-pulse" />
@@ -492,8 +499,11 @@ export default function ActivityPage() {
   // Not authenticated, show prompt
   return (
     <div
-      className="h-screen-safe w-screen flex items-center justify-center"
-      style={{ background: theme.colors.background }}
+      className="w-screen flex items-center justify-center"
+      style={{
+        background: theme.colors.background,
+        height: 'calc(var(--vh, 1vh) * 100)'
+      }}
     >
       <div className="text-center max-w-md px-4">
         <Calendar className="h-16 w-16 mx-auto mb-4" style={{ color: theme.colors.textMuted }} />

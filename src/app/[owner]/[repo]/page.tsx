@@ -138,16 +138,22 @@ function RepoPageContent() {
   if (!localModeChecked) {
     return (
       <div
-        className="h-screen-safe w-screen overflow-hidden"
-        style={{ background: theme.colors.background }}
+        className="w-screen overflow-hidden"
+        style={{
+          background: theme.colors.background,
+          height: 'calc(var(--vh, 1vh) * 100)'
+        }}
       />
     );
   }
 
   return (
     <div
-      className="h-screen-safe w-screen overflow-hidden"
-      style={{ background: theme.colors.background, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      className="w-screen overflow-hidden"
+      style={{
+        background: theme.colors.background,
+        height: 'calc(var(--vh, 1vh) * 100)'
+      }}
     >
       <EditorLayout
         githubRepo={githubRepo}
@@ -161,7 +167,7 @@ function RepoPageContent() {
 
 export default function RepoPage() {
   return (
-    <Suspense fallback={<div className="h-screen-safe w-screen" />}>
+    <Suspense fallback={<div className="w-screen" style={{ height: 'calc(var(--vh, 1vh) * 100)' }} />}>
       <RepoPageContent />
     </Suspense>
   );

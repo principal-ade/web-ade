@@ -14,7 +14,10 @@ export function ViewportHeightManager() {
     // Function to update the vh custom property
     const updateVH = () => {
       // Get the actual viewport height
-      const vh = window.innerHeight * 0.01;
+      // Use visualViewport.height when available (iOS Safari) to get the visible area
+      // excluding keyboard, toolbars, and safe areas. Fall back to window.innerHeight.
+      const height = window.visualViewport?.height ?? window.innerHeight;
+      const vh = height * 0.01;
       // Set the value in the --vh custom property
       document.documentElement.style.setProperty('--vh', `${vh}px`);
 
