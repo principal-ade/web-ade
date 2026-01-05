@@ -131,7 +131,7 @@ function CollectionsPageWrapper() {
         style={{
           background: theme.colors.background,
           color: theme.colors.text,
-          height: 'calc(var(--vh, 1vh) * 100)'
+          height: '100vh'
         }}
       >
         Loading collections...
@@ -144,12 +144,12 @@ function CollectionsPageWrapper() {
       className="w-screen overflow-hidden"
       style={{
         background: theme.colors.background,
-        height: 'calc(var(--vh, 1vh) * 100)'
+        height: '100vh'
       }}
     >
       {/* Main Content */}
       {selectedCollection ? (
-        <div style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
+        <div style={{ height: '100vh' }}>
           <PanelProvider
             key={selectedCollectionId}
             workspace={{
@@ -189,7 +189,7 @@ function CollectionsPageWrapper() {
       ) : (
         <div
           style={{
-            height: 'calc(var(--vh, 1vh) * 100)',
+            height: '100vh',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -275,7 +275,7 @@ function CollectionsPageLoading() {
       style={{
         background: theme.colors.background,
         color: theme.colors.text,
-        height: 'calc(var(--vh, 1vh) * 100)'
+        height: '100vh'
       }}
     >
       Loading collections...

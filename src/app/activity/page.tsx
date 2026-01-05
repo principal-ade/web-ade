@@ -444,7 +444,7 @@ function ActivityPageWrapper({ username }: { username: string }) {
       className="w-screen overflow-hidden"
       style={{
         background: theme.colors.background,
-        height: 'calc(var(--vh, 1vh) * 100)'
+        height: '100vh'
       }}
     >
       <PanelProvider
@@ -480,7 +480,7 @@ export default function ActivityPage() {
         style={{
           background: theme.colors.background,
           color: theme.colors.textMuted,
-          height: 'calc(var(--vh, 1vh) * 100)'
+          height: '100vh'
         }}
       >
         <div className="text-center">
@@ -502,7 +502,7 @@ export default function ActivityPage() {
       className="w-screen flex items-center justify-center"
       style={{
         background: theme.colors.background,
-        height: 'calc(var(--vh, 1vh) * 100)'
+        height: '100vh'
       }}
     >
       <div className="text-center max-w-md px-4">

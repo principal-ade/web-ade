@@ -800,7 +800,7 @@ function SharedCollectionsWrapper() {
         style={{
           background: theme.colors.background,
           color: theme.colors.text,
-          height: 'calc(var(--vh, 1vh) * 100)'
+          height: '100vh'
         }}
       >
         <Loader2 size={32} className="animate-spin" style={{ color: theme.colors.primary }} />
@@ -815,7 +815,7 @@ function SharedCollectionsWrapper() {
         className="w-screen flex flex-col items-center justify-center gap-4"
         style={{
           background: theme.colors.background,
-          height: 'calc(var(--vh, 1vh) * 100)'
+          height: '100vh'
         }}
       >
         <AlertCircle size={48} style={{ color: '#ef4444' }} />
@@ -864,7 +864,7 @@ function SharedCollectionsWrapper() {
         className="w-screen flex flex-col items-center justify-center gap-4"
         style={{
           background: theme.colors.background,
-          height: 'calc(var(--vh, 1vh) * 100)'
+          height: '100vh'
         }}
       >
         <div className="flex items-center gap-4 mb-4">
@@ -937,7 +937,7 @@ function SharedCollectionsWrapper() {
         className="w-screen flex flex-col items-center justify-center gap-4"
         style={{
           background: theme.colors.background,
-          height: 'calc(var(--vh, 1vh) * 100)'
+          height: '100vh'
         }}
       >
         <Layers size={48} style={{ opacity: 0.5, color: theme.colors.textSecondary }} />
@@ -976,10 +976,10 @@ function SharedCollectionsWrapper() {
       className="w-screen overflow-hidden"
       style={{
         background: theme.colors.background,
-        height: 'calc(var(--vh, 1vh) * 100)'
+        height: '100vh'
       }}
     >
-      <div style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
+      <div style={{ height: '100vh' }}>
         <PanelProvider
           key={selectedCollectionId}
           workspace={{
@@ -1062,7 +1062,7 @@ function SharedCollectionsLoading() {
       style={{
         background: theme.colors.background,
         color: theme.colors.text,
-        height: 'calc(var(--vh, 1vh) * 100)'
+        height: '100vh'
       }}
     >
       <Loader2 size={32} className="animate-spin" style={{ color: theme.colors.primary }} />

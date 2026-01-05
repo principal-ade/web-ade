@@ -141,7 +141,7 @@ function RepoPageContent() {
         className="w-screen overflow-hidden"
         style={{
           background: theme.colors.background,
-          height: 'calc(var(--vh, 1vh) * 100)'
+          height: '100vh'
         }}
       />
     );
@@ -152,7 +152,7 @@ function RepoPageContent() {
       className="w-screen overflow-hidden"
       style={{
         background: theme.colors.background,
-        height: 'calc(var(--vh, 1vh) * 100)'
+        height: '100vh'
       }}
     >
       <EditorLayout
@@ -167,7 +167,7 @@ function RepoPageContent() {
 
 export default function RepoPage() {
   return (
-    <Suspense fallback={<div className="w-screen" style={{ height: 'calc(var(--vh, 1vh) * 100)' }} />}>
+    <Suspense fallback={<div className="w-screen" style={{ height: '100vh' }} />}>
       <RepoPageContent />
     </Suspense>
   );

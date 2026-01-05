@@ -33,7 +33,7 @@ function OwnerPageWrapper({ owner }: { owner: string }) {
       className="w-screen overflow-hidden"
       style={{
         background: theme.colors.background,
-        height: 'calc(var(--vh, 1vh) * 100)'
+        height: '100vh'
       }}
     >
       <PanelProvider
