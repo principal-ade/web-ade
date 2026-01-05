@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, User, Home, FolderOpen, Calendar } from 'lucide-react';
+import { LogOut, Home, FolderOpen, Calendar, User } from 'lucide-react';
 import Link from 'next/link';
 
 export function UserAvatarMenu() {
@@ -75,15 +75,15 @@ export function UserAvatarMenu() {
             borderColor: theme.colors.border,
           }}
         >
-          {/* Feed */}
+          {/* Home */}
           <Link
-            href="/activity"
+            href="/"
             className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
             style={{ color: theme.colors.text }}
             onClick={() => setUserMenuOpen(false)}
           >
-            <Calendar className="w-4 h-4" />
-            Feed
+            <Home className="w-4 h-4" />
+            Home
           </Link>
           {/* Repos */}
           <Link
@@ -95,29 +95,15 @@ export function UserAvatarMenu() {
             <FolderOpen className="w-4 h-4" />
             Repos
           </Link>
-          {/* Search */}
+          {/* Feed */}
           <Link
-            href="/"
+            href="/activity"
             className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
             style={{ color: theme.colors.text }}
             onClick={() => setUserMenuOpen(false)}
           >
-            <Home className="w-4 h-4" />
-            Search
-          </Link>
-          <div
-            className="my-1 h-px"
-            style={{ background: theme.colors.border }}
-          />
-          {/* Profile */}
-          <Link
-            href={`/${user.login}`}
-            className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
-            style={{ color: theme.colors.text }}
-            onClick={() => setUserMenuOpen(false)}
-          >
-            <User className="w-4 h-4" />
-            Profile
+            <Calendar className="w-4 h-4" />
+            Feed
           </Link>
           <div
             className="my-1 h-px"

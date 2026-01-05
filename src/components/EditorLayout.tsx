@@ -311,7 +311,6 @@ function buildClaudeIssueBody(task: {
   return lines.join('\n');
 }
 
-
 interface EditorLayoutContentProps {
   layout: PanelLayout;
   setLayout: React.Dispatch<React.SetStateAction<PanelLayout>>;
@@ -1221,6 +1220,195 @@ function EditorLayoutContent({
             payload: {
               taskId: task.id,
               error: err instanceof Error ? err.message : 'Failed to assign to Claude',
+            },
+          });
+        }
+      }),
+      // Handle "Create Task from Issue" from GitHub issue detail panel
+      events.on('issue:create-task', async (event) => {
+        const payload = event.payload as {
+          issue: {
+            number: number;
+            title: string;
+            body: string | null;
+            html_url: string;
+            labels: Array<{ name: string; color: string }>;
+            state: string;
+          };
+          owner: string;
+          repo: string;
+        };
+
+        if (!payload?.issue || !githubRepo || !githubRepo.includes('/')) {
+          console.error('[EditorLayout] Cannot create task: missing issue or repo');
+          events.emit({
+            type: 'issue:create-task:error',
+            source: 'web-ade',
+            timestamp: Date.now(),
+            payload: {
+              issueNumber: payload?.issue?.number,
+              error: 'Missing issue data or repository context',
+            },
+          });
+          return;
+        }
+
+        const [owner, name] = githubRepo.split('/');
+        const issue = payload.issue;
+
+        try {
+          // Call the backlog task creation API
+          const response = await fetch('/api/backlog/tasks/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              owner,
+              repo: name,
+              issue,
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to create task: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+
+          console.log(`[EditorLayout] Created task ${data.taskId} from issue #${issue.number}`);
+
+          // Emit success event
+          events.emit({
+            type: 'issue:task-created',
+            source: 'web-ade',
+            timestamp: Date.now(),
+            payload: {
+              issueNumber: issue.number,
+              taskId: data.taskId,
+            },
+          });
+
+        } catch (err) {
+          console.error('[EditorLayout] Failed to create task from issue:', err);
+          events.emit({
+            type: 'issue:create-task:error',
+            source: 'web-ade',
+            timestamp: Date.now(),
+            payload: {
+              issueNumber: issue.number,
+              error: err instanceof Error ? err.message : 'Failed to create task',
+            },
+          });
+        }
+      }),
+      // Handle task deletion from TaskDetailPanel
+      events.on('task:delete-requested', async (event) => {
+        const payload = event.payload as {
+          taskId: string;
+          task: {
+            id: string;
+            title: string;
+            filePath?: string;
+          };
+        };
+
+        if (!payload?.task || !githubRepo || !githubRepo.includes('/')) {
+          console.error('[EditorLayout] Cannot delete task: missing task or repo');
+          events.emit({
+            type: 'task:deleted:error',
+            source: 'web-ade',
+            timestamp: Date.now(),
+            payload: {
+              taskId: payload?.taskId,
+              error: 'Missing task data or repository context',
+            },
+          });
+          return;
+        }
+
+        const [owner, name] = githubRepo.split('/');
+        const task = payload.task;
+
+        if (!task.filePath) {
+          console.error('[EditorLayout] Cannot delete task: missing file path');
+          events.emit({
+            type: 'task:deleted:error',
+            source: 'web-ade',
+            timestamp: Date.now(),
+            payload: {
+              taskId: task.id,
+              error: 'Task file path is missing',
+            },
+          });
+          return;
+        }
+
+        try {
+          // Read the file to get its SHA
+          const fileResponse = await fetch(
+            `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(task.filePath)}`,
+            { credentials: 'include' }
+          );
+
+          if (!fileResponse.ok) {
+            throw new Error(`Failed to read task file: ${fileResponse.statusText}`);
+          }
+
+          const fileData = await fileResponse.json();
+
+          // Delete the file by committing with empty content and sha
+          const deleteResponse = await fetch(`/api/github/repo/${owner}/${name}/commit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              files: [{
+                path: task.filePath,
+                content: null, // null indicates deletion
+                sha: fileData.sha,
+              }],
+              message: `Delete task: ${task.title}`,
+            }),
+          });
+
+          if (!deleteResponse.ok) {
+            const errorData = await deleteResponse.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to delete task: ${deleteResponse.statusText}`);
+          }
+
+          console.log(`[EditorLayout] Successfully deleted task ${task.id}`);
+
+          // Emit success event
+          events.emit({
+            type: 'task:deleted:success',
+            source: 'web-ade',
+            timestamp: Date.now(),
+            payload: { taskId: task.id },
+          });
+
+          // Emit focus event to return focus to kanban panel
+          setTimeout(() => {
+            events.emit({
+              type: 'panel:focus',
+              source: 'web-ade',
+              timestamp: Date.now(),
+              payload: {
+                panelId: 'backlog-kanban',
+                panelSlot: 'left',
+              },
+            });
+          }, 2100); // Slightly after the 2s success display
+
+        } catch (err) {
+          console.error('[EditorLayout] Failed to delete task:', err);
+          events.emit({
+            type: 'task:deleted:error',
+            source: 'web-ade',
+            timestamp: Date.now(),
+            payload: {
+              taskId: task.id,
+              error: err instanceof Error ? err.message : 'Failed to delete task',
             },
           });
         }
