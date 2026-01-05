@@ -17,10 +17,17 @@ export function ViewportHeightManager() {
       const vh = window.innerHeight * 0.01;
       // Set the value in the --vh custom property
       document.documentElement.style.setProperty('--vh', `${vh}px`);
+
+      // Force immediate reflow to apply the change
+      // This helps prevent white space flash on Safari
+      void document.documentElement.offsetHeight;
     };
 
     // Set initial value
     updateVH();
+
+    // Also update after a brief delay to catch any late Safari adjustments
+    const timeoutId = setTimeout(updateVH, 100);
 
     // Update on resize (handles both width and height changes)
     window.addEventListener('resize', updateVH);
@@ -36,6 +43,7 @@ export function ViewportHeightManager() {
 
     // Cleanup
     return () => {
+      clearTimeout(timeoutId);
       window.removeEventListener('resize', updateVH);
       window.removeEventListener('orientationchange', updateVH);
       if (window.visualViewport) {
