@@ -696,7 +696,10 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '16px 20px',
+                  paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)',
+                  paddingLeft: '20px',
+                  paddingRight: '20px',
+                  paddingBottom: '16px',
                   borderBottom: `1px solid ${theme.colors.border}`,
                 }}
               >
@@ -794,7 +797,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
               </div>
 
               {/* Tab Content */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px' }}>
+              <div style={{ flex: 1, overflowY: 'auto', paddingTop: '0', paddingLeft: '20px', paddingRight: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}>
                 {sidebarTab === 'recent' && (
                   <>
                     {recentRepos.length > 0 && (

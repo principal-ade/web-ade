@@ -1872,6 +1872,29 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         },
       ],
       [
+        'repoCapabilities',
+        {
+          scope: 'repository',
+          name: 'repoCapabilities',
+          data: {
+            hasClaudeWorkflow: !!fileTree?.allFiles?.some(
+              file => file.path.match(/\.github\/workflows\/.*claude.*\.ya?ml/i)
+            ),
+            claudeWorkflowPath: fileTree?.allFiles?.find(
+              file => file.path.match(/\.github\/workflows\/.*claude.*\.ya?ml/i)
+            )?.path,
+          },
+          loading: false,
+          error: null,
+          refresh: async () => {
+            // Re-check workflow files when file tree changes
+            if (githubRepo) {
+              await fetchFileTree(githubRepo);
+            }
+          },
+        },
+      ],
+      [
         'workspace',
         {
           scope: 'global',
