@@ -331,7 +331,8 @@ function HomePageContent() {
     <div
       className="w-screen overflow-hidden flex flex-col h-screen"
       style={{
-        background: theme.colors.background
+        background: theme.colors.background,
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)'
       }}
     >
       <EditorHeader
