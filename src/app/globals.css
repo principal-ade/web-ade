@@ -51,7 +51,5 @@ body {
   height: 100vh; /* Fallback for non-webkit browsers */
   height: -webkit-fill-available; /* Safari/WebKit specific - fills available space */
   width: 100%;
-  /* Account for bottom safe area (home indicator) */
-  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: blue; /* DEBUG: Should cover the red body if container is working */
 }
