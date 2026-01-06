@@ -32,7 +32,7 @@ body {
 }
 
 body {
-  background: var(--background);
+  background: red; /* DEBUG: Changed from var(--background) to confirm it's showing through */
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
   min-height: 100vh;
