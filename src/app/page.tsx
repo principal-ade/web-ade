@@ -341,7 +341,8 @@ function HomePageContent() {
       />
 
       {/* Panel Layout */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative">
+        <div className="absolute inset-0">
         {mounted ? (
           <ResponsiveConfigurablePanelLayout
             theme={theme}
@@ -381,6 +382,7 @@ function HomePageContent() {
             Loading...
           </div>
         )}
+        </div>
       </div>
 
       {/* Global Command Palette (Cmd+Shift+P) */}
