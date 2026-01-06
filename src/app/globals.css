@@ -48,7 +48,8 @@ body {
 /* Relative positioning like body - most reliable on Safari iOS */
 .h-viewport-fixed {
   position: relative;
-  height: 100vh; /* Explicit height instead of min-height */
+  height: 100vh; /* Fallback for non-webkit browsers */
+  height: -webkit-fill-available; /* Safari/WebKit specific - fills available space */
   width: 100%;
   background: blue; /* DEBUG: Should cover the red body if container is working */
 }
