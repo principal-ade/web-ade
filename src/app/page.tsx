@@ -341,7 +341,7 @@ function HomePageContent() {
       />
 
       {/* Panel Layout */}
-      <div className="flex-1 overflow-hidden relative">
+      <div style={{ flex: 1, overflow: 'hidden', position: 'relative', minHeight: 0 }}>
         <div className="absolute inset-0">
         {mounted ? (
           <ResponsiveConfigurablePanelLayout
