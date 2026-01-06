@@ -47,13 +47,10 @@ body {
 
 /* Fixed viewport height - more reliable than dvh on Safari iOS */
 .h-viewport-fixed {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  /* Pull bottom down into safe area to cover the 34px gap */
-  bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
-  /* Add padding so flex children can fill the extended space */
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
   background: blue; /* DEBUG: Should cover the red body if container is working */
 }
