@@ -20,7 +20,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  viewportFit: "cover",
+  // viewportFit: "cover", // DEBUG: Temporarily disabled to see if this causes the shrinking
 };
 
 export const metadata: Metadata = {

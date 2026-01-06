@@ -52,5 +52,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
+  min-height: 100vh; /* Prevent shrinking below viewport height */
+  min-height: 100dvh; /* Use dynamic viewport on supported browsers */
   background: blue; /* DEBUG: Should cover the red body if container is working */
 }
