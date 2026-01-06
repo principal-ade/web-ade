@@ -341,8 +341,8 @@ function HomePageContent() {
       />
 
       {/* Panel Layout */}
-      <div style={{ flex: 1, overflow: 'hidden', position: 'relative', minHeight: 0, background: 'green' /* DEBUG: flex child */ }}>
-        <div className="absolute inset-0" style={{ background: 'yellow' /* DEBUG: absolute wrapper */ }}>
+      <div style={{ flex: 1, overflow: 'hidden', position: 'relative', minHeight: 0 }}>
+        <div className="absolute inset-0">
         {mounted ? (
           <ResponsiveConfigurablePanelLayout
             theme={theme}

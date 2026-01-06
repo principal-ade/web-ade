@@ -32,7 +32,7 @@ body {
 }
 
 body {
-  background: red; /* DEBUG: Changed from var(--background) to confirm it's showing through */
+  background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
   min-height: 100vh;
@@ -48,8 +48,6 @@ body {
 /* Relative positioning like body - most reliable on Safari iOS */
 .h-viewport-fixed {
   position: relative;
-  height: 100vh; /* Fallback for non-webkit browsers */
-  height: -webkit-fill-available; /* Safari/WebKit specific - fills available space */
+  height: 100vh;
   width: 100%;
-  background: blue; /* DEBUG: Should cover the red body if container is working */
 }
