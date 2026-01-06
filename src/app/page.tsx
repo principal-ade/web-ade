@@ -342,6 +342,7 @@ function HomePageContent() {
 
       {/* Panel Layout */}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative', minHeight: 0, background: 'green' /* DEBUG: flex child */ }}>
+        <div className="absolute inset-0" style={{ background: 'yellow' /* DEBUG: absolute wrapper */ }}>
         {mounted ? (
           <ResponsiveConfigurablePanelLayout
             theme={theme}
@@ -381,6 +382,7 @@ function HomePageContent() {
             Loading...
           </div>
         )}
+        </div>
       </div>
 
       {/* Global Command Palette (Cmd+Shift+P) */}
