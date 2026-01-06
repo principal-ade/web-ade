@@ -329,7 +329,7 @@ function HomePageContent() {
 
   return (
     <div
-      className="h-viewport-fixed overflow-auto flex flex-col"
+      className="h-viewport-fixed overflow-hidden flex flex-col"
       style={{
         background: theme.colors.background
       }}
