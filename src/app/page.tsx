@@ -341,7 +341,7 @@ function HomePageContent() {
       />
 
       {/* Panel Layout */}
-      <div style={{ flex: 1, overflow: 'hidden', position: 'relative', minHeight: 0, height: 0, background: 'green' /* DEBUG: flex child */ }}>
+      <div style={{ flex: 1, overflow: 'hidden', position: 'relative', minHeight: 0, background: 'green' /* DEBUG: flex child */ }}>
         {mounted ? (
           <ResponsiveConfigurablePanelLayout
             theme={theme}
