@@ -44,8 +44,11 @@ body {
   display: none;
 }
 
-/* Dynamic viewport height with fallback */
-.h-dvh-fallback {
-  height: 100vh; /* Fallback for older browsers */
-  height: 100dvh; /* Dynamic viewport height - adjusts when Safari bars show/hide */
+/* Fixed viewport height - more reliable than dvh on Safari iOS */
+.h-viewport-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }

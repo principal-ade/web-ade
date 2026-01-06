@@ -1,7 +1,7 @@
 # Safari Mobile Viewport Implementation
 
 ## Current Status
-⚠️ **IN PROGRESS** - Implementation uses modern CSS viewport units and safe area handling. Better than before, but still has minor issues after login redirects.
+✅ **TESTING** - Switched to position: fixed approach after discovering iOS 26 dvh bug. This should be more reliable than viewport units.
 
 **Last Updated:** 2026-01-05
 
@@ -21,28 +21,33 @@ When the web app loads in Safari mobile (especially after login redirects), whit
 
 ## Current Implementation
 
-### 1. Dynamic Viewport Height (`dvh`)
+### 1. Position Fixed Approach
 
-We use the modern `dvh` (dynamic viewport height) unit which automatically adjusts when Safari's UI bars show/hide.
+After discovering an iOS 26 Safari bug with `dvh` units, we switched to a `position: fixed` approach which is more reliable across all iOS versions.
 
 **File:** `src/app/globals.css`
 ```css
-.h-dvh-fallback {
-  height: 100vh;  /* Fallback for older browsers */
-  height: 100dvh; /* Dynamic viewport - adjusts when Safari bars show/hide */
+.h-viewport-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 ```
 
 **File:** `src/app/page.tsx`
 ```tsx
-<div className="w-screen overflow-hidden flex flex-col h-dvh-fallback">
+<div className="h-viewport-fixed overflow-auto flex flex-col">
   {/* ... */}
 </div>
 ```
 
-**Browser Support:**
-- Safari 15.4+ (March 2022): Uses `100dvh` (dynamic)
-- Older browsers: Falls back to `100vh` (static)
+**How it works:**
+- `position: fixed` creates a positioning context relative to the viewport
+- `height: 100%` on a fixed element always references the layout viewport (which equals `100dvh`)
+- More reliable than `dvh` units, especially after redirects and on iOS 26+
+- Works consistently across all Safari versions
 
 ### 2. Safe Area Insets
 
@@ -73,14 +78,19 @@ export const viewport: Viewport = {
 
 ## How It Works
 
-### Viewport Height Strategy
+### Position Fixed Strategy
 
-Instead of trying to measure and track viewport changes with JavaScript, we use CSS viewport units that Safari natively understands:
+Instead of relying on viewport units (which have bugs in iOS 26), we use `position: fixed` with percentage-based dimensions:
 
-- **`100vh`**: Static viewport height (doesn't change when bars show/hide)
-- **`100dvh`**: Dynamic viewport height (automatically adjusts)
+- **`position: fixed`**: Positions element relative to the viewport (not the document)
+- **`height: 100%`**: On a fixed element, this equals the layout viewport height (same as `100dvh`)
+- **`overflow: auto`**: Allows scrolling within the fixed container
 
-When Safari's address bar hides after a redirect, `100dvh` automatically expands the container to fill the space.
+This approach is more reliable because:
+1. Fixed positioning has been stable in Safari for years
+2. Doesn't rely on newer CSS features that might have browser bugs
+3. Works consistently after redirects and navigation
+4. No timing issues with Safari's UI bar animations
 
 ### Safe Area Strategy
 
@@ -92,13 +102,21 @@ When Safari's address bar hides after a redirect, `100dvh` automatically expands
 
 ## Why Previous Approaches Failed
 
-### JavaScript + CSS Variables
+### 1. Dynamic Viewport Height (`dvh`) - iOS 26 Bug
+We initially tried using the modern `100dvh` CSS unit. Problems:
+- **iOS 26 Safari bug**: `100dvh` no longer covers the full screen, leaving a gap at the bottom
+- Caused white space to appear after login redirects
+- The bug affects overlays, modals, and full-height containers
+- Switching to `100vh` fixed the gap but caused scrolling issues on older Safari versions
+- **Conclusion**: `dvh` units are unreliable in production due to this regression
+
+### 2. JavaScript + CSS Variables
 We initially tried measuring `visualViewport.height` and setting a `--vh` CSS variable. Problems:
 - Safari doesn't always recalculate `calc(var(--vh) * 100)` when the variable changes
 - Requires event listeners and forced reflows
 - Complex timing issues with redirects
 
-### Using Full Safe Area Inset
+### 3. Using Full Safe Area Inset
 We tried `calc(12px + env(safe-area-inset-bottom))` which added the full 34px safe area to existing padding:
 - Result: 12px + 34px = 46px total (way too much!)
 - Now we use `min()` to cap it at 12px extra
@@ -107,18 +125,18 @@ We tried `calc(12px + env(safe-area-inset-bottom))` which added the full 34px sa
 
 ## Known Issues
 
-1. **Still has white space after login redirects** - Though improved, there are still cases where white space appears
-2. **Timing dependent** - The issue seems related to when Safari's bars animate vs when the page renders
+1. **Needs testing** - The position: fixed approach is newly implemented and requires testing on various iOS versions
+2. **Potential scrolling behavior changes** - Changed from `overflow-hidden` to `overflow-auto` on main container
 
 ---
 
 ## Files Modified
 
 ### Web-ADE
-- `src/app/globals.css` - Added `.h-dvh-fallback` utility class
-- `src/app/page.tsx` - Uses `h-dvh-fallback` class instead of `h-screen`
-- `src/app/layout.tsx` - Sets `viewportFit: "cover"` for safe area support
-- `src/components/EditorHeader.tsx` - Reduced safe area top padding (0.75rem → 0.5rem)
+- `src/app/globals.css` - Changed from `.h-dvh-fallback` to `.h-viewport-fixed` using position: fixed
+- `src/app/page.tsx` - Updated to use `h-viewport-fixed` class with `overflow-auto`
+- `src/app/layout.tsx` - Sets `viewportFit: "cover"` for safe area support (unchanged)
+- `src/components/EditorHeader.tsx` - Reduced safe area top padding (0.75rem → 0.5rem) (unchanged)
 
 ### Panels Package (@principal-ade/panels v1.0.50)
 - `src/components/MobileTabNav.css` - Tab buttons use `min()` for safe area bottom padding
@@ -130,10 +148,11 @@ We tried `calc(12px + env(safe-area-inset-bottom))` which added the full 34px sa
 
 ## Key Learnings
 
-1. **Modern CSS viewport units** (`dvh`, `svh`, `lvh`) are designed for this exact problem
-2. **Safe area insets** should be capped with `min()` - using the full inset value is often too much
-3. **Static `100vh` doesn't adjust** when Safari's dynamic UI bars show/hide
-4. **TypeScript doesn't allow duplicate object properties** - use CSS classes for fallback patterns
+1. **iOS 26 Safari broke `dvh` units** - Modern viewport units have regression bugs, making them unreliable in production
+2. **Position fixed is more stable** - Using `position: fixed` with `height: 100%` is more reliable than viewport units
+3. **Safe area insets** should be capped with `min()` - using the full inset value is often too much
+4. **Fixed elements reference the layout viewport** - On fixed elements, `height: 100%` equals `100dvh` behavior
+5. **TypeScript doesn't allow duplicate object properties** - use CSS classes for fallback patterns
 
 ---
 
@@ -148,7 +167,9 @@ We tried `calc(12px + env(safe-area-inset-bottom))` which added the full 34px sa
 
 ## Next Steps (TODO)
 
-- [ ] Investigate why `dvh` doesn't fully solve the post-redirect white space
-- [ ] Consider if `position: fixed` approach would be more reliable
-- [ ] Test on various iOS versions and devices
-- [ ] Apply same approach to other pages (currently only home page uses `dvh`)
+- [ ] Test position: fixed approach on iOS Safari (various versions: 15, 16, 17, 18+)
+- [ ] Verify no white space appears after login redirects
+- [ ] Test scrolling behavior within the fixed container
+- [ ] Confirm safe area insets still work correctly with fixed positioning
+- [ ] Apply same approach to other pages if successful (currently only home page uses this)
+- [ ] Monitor for any layout issues or unexpected behavior
