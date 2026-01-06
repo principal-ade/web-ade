@@ -48,7 +48,7 @@ body {
 /* Relative positioning like body - most reliable on Safari iOS */
 .h-viewport-fixed {
   position: relative;
-  min-height: 100vh; /* Same as body - prevents shrinking on Safari recalculation */
+  height: 100vh; /* Explicit height instead of min-height */
   width: 100%;
   background: blue; /* DEBUG: Should cover the red body if container is working */
 }
