@@ -52,5 +52,6 @@ body {
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
+  min-height: 100vh; /* Same as body - prevents shrinking on Safari recalculation */
   background: blue; /* DEBUG: Should cover the red body if container is working */
 }
