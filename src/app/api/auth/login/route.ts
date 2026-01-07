@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generatePKCE, generateState } from '@/lib/auth/pkce';
+import { generatePKCE, generateState, decodeState } from '@/lib/auth/pkce';
 import { setAuthSession } from '@/lib/auth/session';
 
 async function handleLogin(request: NextRequest) {
@@ -17,12 +17,14 @@ async function handleLogin(request: NextRequest) {
     // Get redirect URL from query params
     const redirectTo = request.nextUrl.searchParams.get('redirect') || undefined;
 
-    // Generate PKCE challenge and state
+    // Generate PKCE challenge and state (state now contains CSRF + redirect)
     const { codeVerifier, codeChallenge } = await generatePKCE();
-    const state = generateState();
+    const state = generateState(redirectTo); // Encode redirect in state parameter
+    const { csrf } = decodeState(state); // Extract CSRF for session storage
 
-    // Store verifier, state, and redirect URL in server session (5 min TTL)
-    await setAuthSession(codeVerifier, state, redirectTo);
+    // Store verifier and CSRF token in server session (5 min TTL)
+    // No need to store redirect separately - it's in the state parameter
+    await setAuthSession(codeVerifier, csrf);
 
     // Call auth server to initiate OAuth
     const authServerUrl = process.env.AUTH_SERVER_URL;
@@ -31,16 +33,15 @@ async function handleLogin(request: NextRequest) {
     }
 
     const appUrl = 'https://app.principal-ade.com';
-    // Include redirectTo as query param so it survives the OAuth flow
-    const returnUrl = redirectTo
-      ? `${appUrl}/api/auth/callback?redirect=${encodeURIComponent(redirectTo)}`
-      : `${appUrl}/api/auth/callback`;
+    // No need to add redirect to return_url - it's encoded in the state parameter
+    const returnUrl = `${appUrl}/api/auth/callback`;
 
     console.log('Calling auth server:', {
       url: `${authServerUrl}/api/auth/workos/start`,
       state,
       returnUrl,
       redirectTo,
+      stateContainsRedirect: !!redirectTo,
     });
 
     const response = await fetch(`${authServerUrl}/api/auth/workos/start`, {

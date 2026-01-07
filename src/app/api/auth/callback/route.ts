@@ -10,8 +10,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAndValidateSession, clearAuthSession, getAuthSession } from '@/lib/auth/session';
+import { getAndValidateSession, clearAuthSession } from '@/lib/auth/session';
 import { setAuthCookies, TokenData } from '@/lib/auth/cookies';
+import { decodeState } from '@/lib/auth/pkce';
 
 /**
  * Aggressively validates and sanitizes redirect values to prevent [object Object] bug
@@ -91,43 +92,38 @@ export async function GET(request: NextRequest) {
         // Determine where to send the user after landing-page auth
         const appUrl = 'https://app.principal-ade.com';
 
-        // Check all possible redirect sources with aggressive validation
-        const redirectPathFromQuery = sanitizeRedirect(
-          request.nextUrl.searchParams.get('redirect') || request.nextUrl.searchParams.get('redirect_path'),
-          'query_params'
-        );
-
-        // Check iron-session (where login route stores it)
-        let redirectPathFromIronSession: string | undefined;
+        // Try to decode state parameter for redirect (primary source)
+        let redirectPath = '/';
         try {
-          const ironSession = await getAuthSession();
-          redirectPathFromIronSession = sanitizeRedirect(ironSession.redirectTo, 'iron_session');
+          const returnedState = request.nextUrl.searchParams.get('state');
+          if (returnedState) {
+            const decoded = decodeState(returnedState);
+            if (decoded.redirect) {
+              redirectPath = sanitizeRedirect(decoded.redirect, 'state_parameter') || '/';
+            }
+          }
         } catch (e) {
-          console.error('Failed to get iron session for redirect:', e);
+          console.error('Failed to decode state from workos callback:', e);
         }
 
-        // Check workos_session (from auth server)
-        const redirectPathFromWorkosSession = sanitizeRedirect(
-          sessionData.redirect_path || sessionData.redirectPath || sessionData.redirect_to || sessionData.redirectTo,
-          'workos_session'
-        );
-
-        // Priority order: query params > iron session > workos session > default
-        const redirectPath = redirectPathFromQuery || redirectPathFromIronSession || redirectPathFromWorkosSession || '/';
+        // Fallback: check workos_session or query params (legacy support)
+        if (redirectPath === '/') {
+          const redirectFromQuery = sanitizeRedirect(
+            request.nextUrl.searchParams.get('redirect') || request.nextUrl.searchParams.get('redirect_path'),
+            'query_params'
+          );
+          const redirectFromWorkosSession = sanitizeRedirect(
+            sessionData.redirect_path || sessionData.redirectPath || sessionData.redirect_to || sessionData.redirectTo,
+            'workos_session'
+          );
+          redirectPath = redirectFromQuery || redirectFromWorkosSession || '/';
+        }
         const normalizedRedirectPath = redirectPath.startsWith('/')
           ? redirectPath
           : `/${redirectPath}`;
 
-        console.log('Redirect resolution:', {
-          fromQuery: redirectPathFromQuery,
-          fromIronSession: redirectPathFromIronSession,
-          fromWorkosSession: redirectPathFromWorkosSession,
-          rawWorkosValues: {
-            redirect_path: sessionData.redirect_path,
-            redirectPath: sessionData.redirectPath,
-            redirect_to: sessionData.redirect_to,
-            redirectTo: sessionData.redirectTo,
-          },
+        console.log('Workos_session redirect resolution:', {
+          fromState: redirectPath !== '/' ? 'decoded from state' : 'not in state',
           final: normalizedRedirectPath,
         });
 
@@ -160,8 +156,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Retrieve and validate session
-    const sessionData = await getAndValidateSession(state);
+    // Decode state parameter to extract CSRF and redirect
+    let decodedState: { csrf: string; redirect?: string };
+    try {
+      decodedState = decodeState(state);
+      console.log('Decoded state:', decodedState);
+    } catch (e) {
+      return NextResponse.json(
+        { error: 'Invalid state parameter format' },
+        { status: 400 }
+      );
+    }
+
+    // Retrieve and validate session using CSRF token
+    const sessionData = await getAndValidateSession(decodedState.csrf);
 
     if (!sessionData) {
       return NextResponse.json(
@@ -170,7 +178,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { codeVerifier, redirectTo } = sessionData;
+    const { codeVerifier } = sessionData;
+    const redirectTo = decodedState.redirect; // Get redirect from state parameter
 
     // Exchange PKCE verifier for tokens
     const authServerUrl = process.env.AUTH_SERVER_URL;

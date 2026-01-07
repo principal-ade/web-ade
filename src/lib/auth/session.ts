@@ -13,9 +13,8 @@ import { cookies } from 'next/headers';
  */
 export interface AuthSessionData {
   codeVerifier?: string;
-  state?: string;
+  csrf?: string; // CSRF token extracted from state parameter
   createdAt?: number;
-  redirectTo?: string;
 }
 
 /**
@@ -57,42 +56,39 @@ export async function getAuthSession(): Promise<
 }
 
 /**
- * Stores PKCE verifier and state in session
+ * Stores PKCE verifier and CSRF token in session
  * @param verifier - PKCE code verifier
- * @param state - OAuth state parameter
- * @param redirectTo - URL to redirect to after login
+ * @param csrf - CSRF token (extracted from state parameter)
  */
 export async function setAuthSession(
   verifier: string,
-  state: string,
-  redirectTo?: string
+  csrf: string
 ): Promise<void> {
   const session = await getAuthSession();
   session.codeVerifier = verifier;
-  session.state = state;
+  session.csrf = csrf;
   session.createdAt = Date.now();
-  session.redirectTo = redirectTo;
   await session.save();
 }
 
 /**
  * Retrieves and validates session data
- * @param expectedState - Expected state parameter
+ * @param csrf - CSRF token from state parameter to validate
  * @returns Session data or null if invalid/expired
  */
 export async function getAndValidateSession(
-  expectedState: string
-): Promise<{ codeVerifier: string; redirectTo?: string } | null> {
+  csrf: string
+): Promise<{ codeVerifier: string } | null> {
   const session = await getAuthSession();
 
   // Check if session exists
-  if (!session.codeVerifier || !session.state || !session.createdAt) {
+  if (!session.codeVerifier || !session.csrf || !session.createdAt) {
     return null;
   }
 
-  // Validate state parameter
-  if (session.state !== expectedState) {
-    console.error('State mismatch in session validation');
+  // Validate CSRF token
+  if (session.csrf !== csrf) {
+    console.error('CSRF mismatch in session validation');
     return null;
   }
 
@@ -103,7 +99,7 @@ export async function getAndValidateSession(
     return null;
   }
 
-  return { codeVerifier: session.codeVerifier, redirectTo: session.redirectTo };
+  return { codeVerifier: session.codeVerifier };
 }
 
 /**
