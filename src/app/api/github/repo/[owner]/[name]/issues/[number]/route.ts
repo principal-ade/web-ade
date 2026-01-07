@@ -153,3 +153,95 @@ export async function POST(
     );
   }
 }
+
+/**
+ * Update an issue (close/reopen, update labels, etc.)
+ * PATCH /api/github/repo/{owner}/{name}/issues/{number}
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: RouteParams
+) {
+  try {
+    const { owner, name, number } = await params;
+    const userToken = await getGitHubToken();
+
+    if (!userToken) {
+      return NextResponse.json(
+        { error: "Authentication required to update issues" },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+
+    // Build update payload - only include fields that are provided
+    const updatePayload: {
+      state?: 'open' | 'closed';
+      title?: string;
+      body?: string;
+      labels?: string[];
+      assignees?: string[];
+    } = {};
+
+    if (body.state) updatePayload.state = body.state;
+    if (body.title) updatePayload.title = body.title;
+    if (body.body !== undefined) updatePayload.body = body.body;
+    if (body.labels) updatePayload.labels = body.labels;
+    if (body.assignees) updatePayload.assignees = body.assignees;
+
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${name}/issues/${number}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${userToken}`,
+          Accept: "application/vnd.github.v3+json",
+          "Content-Type": "application/json",
+          "User-Agent": "WebADE/1.0",
+        },
+        body: JSON.stringify(updatePayload),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return NextResponse.json(
+        { error: errorData.message || `GitHub API Error: ${response.status}` },
+        { status: response.status }
+      );
+    }
+
+    const data = await response.json();
+
+    return NextResponse.json({
+      success: true,
+      issue: {
+        number: data.number,
+        title: data.title,
+        state: data.state,
+        html_url: data.html_url,
+        updated_at: data.updated_at,
+      },
+    });
+  } catch (error) {
+    console.error("[issue] Error updating issue:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Unknown error" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Delete an issue (not supported by GitHub API - use PATCH to close instead)
+ * DELETE /api/github/repo/{owner}/{name}/issues/{number}
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: RouteParams
+) {
+  // GitHub doesn't support deleting issues via API
+  // We'll close the issue instead
+  return PATCH(request, { params });
+}

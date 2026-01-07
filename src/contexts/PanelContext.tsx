@@ -292,6 +292,8 @@ interface GitHubMessagesTarget {
   merged?: boolean;
   merged_at?: string | null;
   draft?: boolean;
+  labels?: GitHubIssueLabel[];
+  assignees?: GitHubIssueUser[];
 }
 
 interface GitHubMessagesSliceData {
@@ -2518,6 +2520,346 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       unsubscribeDeselect();
     };
   }, [events, fetchMessages]);
+
+  // Listen for GitHub messages panel interactive events (reactions, comments, delete)
+  useEffect(() => {
+    // Handle reaction add
+    const unsubscribeReactionAdd = events.on('github-messages:reaction:add', async (event) => {
+      const payload = event.payload as {
+        owner: string;
+        repo: string;
+        targetType: 'issue' | 'pull_request';
+        targetNumber: number;
+        itemType: 'comment' | 'review' | 'review_comment';
+        itemId: number | string;
+        reactionType: string;
+      };
+
+      console.log('[PanelContext] Adding reaction:', payload);
+
+      try {
+        let endpoint = '';
+
+        // Determine the correct endpoint based on item type
+        if (payload.itemType === 'comment') {
+          // Issue/PR comment reaction
+          endpoint = `/api/github/repo/${payload.owner}/${payload.repo}/issues/comments/${payload.itemId}/reactions`;
+        } else if (payload.itemType === 'review_comment') {
+          // PR review comment reaction
+          endpoint = `/api/github/repo/${payload.owner}/${payload.repo}/pull-requests/comments/${payload.itemId}/reactions`;
+        } else {
+          // For reviews, we don't support reactions yet
+          console.warn('[PanelContext] Reactions on review summaries not yet supported');
+          return;
+        }
+
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: payload.reactionType }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to add reaction');
+        }
+
+        const data = await response.json();
+        console.log('[PanelContext] Reaction added:', data);
+
+        // Refresh messages to get updated reactions
+        if (messagesData?.target) {
+          await fetchMessages(payload.owner, payload.repo, payload.targetNumber, {
+            id: 0, // Temporary ID for refresh
+            number: payload.targetNumber,
+            title: messagesData.target.title,
+            state: messagesData.target.state,
+            body: null,
+            html_url: messagesData.target.html_url,
+            created_at: messagesData.target.created_at,
+            updated_at: messagesData.target.created_at,
+            labels: messagesData.target.labels || [],
+            comments: 0,
+            user: messagesData.target.user,
+            assignees: messagesData.target.assignees || [],
+          });
+        }
+      } catch (error) {
+        console.error('[PanelContext] Error adding reaction:', error);
+      }
+    });
+
+    // Handle reaction remove
+    const unsubscribeReactionRemove = events.on('github-messages:reaction:remove', async (event) => {
+      const payload = event.payload as {
+        owner: string;
+        repo: string;
+        targetType: 'issue' | 'pull_request';
+        targetNumber: number;
+        itemType: 'comment' | 'review' | 'review_comment';
+        itemId: number | string;
+        reactionId: number;
+      };
+
+      console.log('[PanelContext] Removing reaction:', payload);
+
+      try {
+        let endpoint = '';
+
+        // Determine the correct endpoint based on item type
+        if (payload.itemType === 'comment') {
+          // Issue/PR comment reaction
+          endpoint = `/api/github/repo/${payload.owner}/${payload.repo}/issues/comments/${payload.itemId}/reactions?reactionId=${payload.reactionId}`;
+        } else if (payload.itemType === 'review_comment') {
+          // PR review comment reaction
+          endpoint = `/api/github/repo/${payload.owner}/${payload.repo}/pull-requests/comments/${payload.itemId}/reactions?reactionId=${payload.reactionId}`;
+        } else {
+          console.warn('[PanelContext] Reactions on review summaries not yet supported');
+          return;
+        }
+
+        const response = await fetch(endpoint, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to remove reaction');
+        }
+
+        console.log('[PanelContext] Reaction removed');
+
+        // Refresh messages to get updated reactions
+        if (messagesData?.target) {
+          await fetchMessages(payload.owner, payload.repo, payload.targetNumber, {
+            id: 0, // Temporary ID for refresh
+            number: payload.targetNumber,
+            title: messagesData.target.title,
+            state: messagesData.target.state,
+            body: null,
+            html_url: messagesData.target.html_url,
+            created_at: messagesData.target.created_at,
+            updated_at: messagesData.target.created_at,
+            labels: messagesData.target.labels || [],
+            comments: 0,
+            user: messagesData.target.user,
+            assignees: messagesData.target.assignees || [],
+          });
+        }
+      } catch (error) {
+        console.error('[PanelContext] Error removing reaction:', error);
+      }
+    });
+
+    // Handle comment creation
+    const unsubscribeCommentCreate = events.on('github-messages:comment:create', async (event) => {
+      const payload = event.payload as {
+        owner: string;
+        repo: string;
+        targetType: 'issue' | 'pull_request';
+        targetNumber: number;
+        body: string;
+      };
+
+      console.log('[PanelContext] Creating comment:', payload);
+
+      try {
+        const endpoint = payload.targetType === 'pull_request'
+          ? `/api/github/repo/${payload.owner}/${payload.repo}/pull-requests/${payload.targetNumber}`
+          : `/api/github/repo/${payload.owner}/${payload.repo}/issues/${payload.targetNumber}`;
+
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ comment: payload.body }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to create comment');
+        }
+
+        const data = await response.json();
+        console.log('[PanelContext] Comment created:', data);
+
+        // Emit success event
+        events.emit({
+          type: 'github-messages:comment:created',
+          source: 'panel-context',
+          timestamp: Date.now(),
+          payload: {
+            targetNumber: payload.targetNumber,
+            comment: data.comment,
+          },
+        });
+
+        // Refresh messages to show new comment
+        if (messagesData?.target) {
+          await fetchMessages(payload.owner, payload.repo, payload.targetNumber, {
+            id: 0, // Temporary ID for refresh
+            number: payload.targetNumber,
+            title: messagesData.target.title,
+            state: messagesData.target.state,
+            body: null,
+            html_url: messagesData.target.html_url,
+            created_at: messagesData.target.created_at,
+            updated_at: messagesData.target.created_at,
+            labels: messagesData.target.labels || [],
+            comments: 0,
+            user: messagesData.target.user,
+            assignees: messagesData.target.assignees || [],
+          });
+        }
+      } catch (error) {
+        console.error('[PanelContext] Error creating comment:', error);
+
+        // Emit error event
+        events.emit({
+          type: 'github-messages:comment:error',
+          source: 'panel-context',
+          timestamp: Date.now(),
+          payload: {
+            targetNumber: payload.targetNumber,
+            error: error instanceof Error ? error.message : 'Failed to create comment',
+          },
+        });
+      }
+    });
+
+    // Handle issue delete/close
+    const unsubscribeIssueDelete = events.on('github-issue:delete', async (event) => {
+      const payload = event.payload as {
+        owner: string;
+        repo: string;
+        number: number;
+      };
+
+      console.log('[PanelContext] Closing issue:', payload);
+
+      try {
+        const response = await fetch(
+          `/api/github/repo/${payload.owner}/${payload.repo}/issues/${payload.number}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ state: 'closed' }),
+          }
+        );
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to close issue');
+        }
+
+        console.log('[PanelContext] Issue closed');
+
+        // Clear messages data
+        setMessagesData(null);
+
+        // Emit success event
+        events.emit({
+          type: 'github-issue:deleted',
+          source: 'panel-context',
+          timestamp: Date.now(),
+          payload: {
+            owner: payload.owner,
+            repo: payload.repo,
+            number: payload.number,
+          },
+        });
+
+        // Optionally refresh issues list
+        if (githubRepo) {
+          await fetchIssues(githubRepo);
+        }
+      } catch (error) {
+        console.error('[PanelContext] Error closing issue:', error);
+
+        events.emit({
+          type: 'github-issue:delete-error',
+          source: 'panel-context',
+          timestamp: Date.now(),
+          payload: {
+            owner: payload.owner,
+            repo: payload.repo,
+            number: payload.number,
+            error: error instanceof Error ? error.message : 'Failed to close issue',
+          },
+        });
+      }
+    });
+
+    // Handle PR delete/close
+    const unsubscribePRDelete = events.on('github-pr:delete', async (event) => {
+      const payload = event.payload as {
+        owner: string;
+        repo: string;
+        number: number;
+      };
+
+      console.log('[PanelContext] Closing PR:', payload);
+
+      try {
+        const response = await fetch(
+          `/api/github/repo/${payload.owner}/${payload.repo}/pull-requests/${payload.number}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ state: 'closed' }),
+          }
+        );
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to close PR');
+        }
+
+        console.log('[PanelContext] PR closed');
+
+        // Clear messages data
+        setMessagesData(null);
+
+        // Emit success event
+        events.emit({
+          type: 'github-pr:deleted',
+          source: 'panel-context',
+          timestamp: Date.now(),
+          payload: {
+            owner: payload.owner,
+            repo: payload.repo,
+            number: payload.number,
+          },
+        });
+
+        // Optionally refresh PRs list
+        if (githubRepo) {
+          await fetchPullRequests(githubRepo);
+        }
+      } catch (error) {
+        console.error('[PanelContext] Error closing PR:', error);
+
+        events.emit({
+          type: 'github-pr:delete-error',
+          source: 'panel-context',
+          timestamp: Date.now(),
+          payload: {
+            owner: payload.owner,
+            repo: payload.repo,
+            number: payload.number,
+            error: error instanceof Error ? error.message : 'Failed to close PR',
+          },
+        });
+      }
+    });
+
+    return () => {
+      unsubscribeReactionAdd();
+      unsubscribeReactionRemove();
+      unsubscribeCommentCreate();
+      unsubscribeIssueDelete();
+      unsubscribePRDelete();
+    };
+  }, [events, messagesData, fetchMessages, githubRepo, fetchIssues, fetchPullRequests]);
 
   // Listen for commit-detail:loaded events to update commit files for File-City visualization
   useEffect(() => {
