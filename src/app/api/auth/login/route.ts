@@ -31,12 +31,16 @@ async function handleLogin(request: NextRequest) {
     }
 
     const appUrl = 'https://app.principal-ade.com';
-    const returnUrl = `${appUrl}/api/auth/callback`;
+    // Include redirectTo as query param so it survives the OAuth flow
+    const returnUrl = redirectTo
+      ? `${appUrl}/api/auth/callback?redirect=${encodeURIComponent(redirectTo)}`
+      : `${appUrl}/api/auth/callback`;
 
     console.log('Calling auth server:', {
       url: `${authServerUrl}/api/auth/workos/start`,
       state,
       returnUrl,
+      redirectTo,
     });
 
     const response = await fetch(`${authServerUrl}/api/auth/workos/start`, {
