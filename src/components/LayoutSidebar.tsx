@@ -107,9 +107,11 @@ export function LayoutSidebar({
           <div
             className="flex items-center justify-between w-full"
             style={{
-              height: `${SIDEBAR_COLLAPSED_WIDTH}px`,
               borderBottom: `1px solid ${theme.colors.border}`,
-              padding: '0 16px',
+              paddingLeft: '16px',
+              paddingRight: '16px',
+              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
+              paddingBottom: '0.5rem',
             }}
           >
             {owner ? (
@@ -273,9 +275,10 @@ export function LayoutSidebar({
       <div
         className="flex items-center w-full"
         style={{
-          height: `${SIDEBAR_COLLAPSED_WIDTH}px`,
           minWidth: `${SIDEBAR_EXPANDED_WIDTH}px`,
           borderBottom: `1px solid ${theme.colors.border}`,
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
+          paddingBottom: '0.5rem',
         }}
       >
         {owner ? (
