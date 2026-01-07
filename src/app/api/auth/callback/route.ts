@@ -13,6 +13,37 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAndValidateSession, clearAuthSession, getAuthSession } from '@/lib/auth/session';
 import { setAuthCookies, TokenData } from '@/lib/auth/cookies';
 
+/**
+ * Aggressively validates and sanitizes redirect values to prevent [object Object] bug
+ * Returns a valid path string or undefined
+ */
+function sanitizeRedirect(value: unknown, source: string): string | undefined {
+  // Reject anything that's not a string
+  if (typeof value !== 'string') {
+    if (value !== undefined && value !== null) {
+      console.warn(`[REDIRECT BUG] Non-string redirect from ${source}:`, {
+        type: typeof value,
+        value,
+        stringified: String(value),
+      });
+    }
+    return undefined;
+  }
+
+  // Reject empty strings
+  if (!value || value.trim() === '') {
+    return undefined;
+  }
+
+  // Reject if it looks like stringified object
+  if (value.includes('[object') || value.includes('Object]')) {
+    console.error(`[REDIRECT BUG] Detected stringified object from ${source}:`, value);
+    return undefined;
+  }
+
+  return value;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -28,6 +59,9 @@ export async function GET(request: NextRequest) {
       allParams: Object.fromEntries(searchParams.entries()),
       cookieNames: request.cookies.getAll().map(c => c.name),
       url: request.url,
+      fullUrl: request.nextUrl.toString(),
+      pathname: request.nextUrl.pathname,
+      search: request.nextUrl.search,
     });
 
     // Check if landing page handled auth and set cookie
@@ -56,31 +90,29 @@ export async function GET(request: NextRequest) {
 
         // Determine where to send the user after landing-page auth
         const appUrl = 'https://app.principal-ade.com';
-        const redirectPathFromQuery =
-          request.nextUrl.searchParams.get('redirect') ||
-          request.nextUrl.searchParams.get('redirect_path');
 
-        // Helper to safely get string value (prevents [object Object] bug)
-        const ensureString = (value: unknown): string | undefined => {
-          return typeof value === 'string' ? value : undefined;
-        };
-
-        const redirectPathFromWorkosSession = ensureString(
-          sessionData.redirect_path ||
-          sessionData.redirectPath ||
-          sessionData.redirect_to ||
-          sessionData.redirectTo
+        // Check all possible redirect sources with aggressive validation
+        const redirectPathFromQuery = sanitizeRedirect(
+          request.nextUrl.searchParams.get('redirect') || request.nextUrl.searchParams.get('redirect_path'),
+          'query_params'
         );
 
-        // Also check our iron-session for the redirect (where login route stores it)
+        // Check iron-session (where login route stores it)
         let redirectPathFromIronSession: string | undefined;
         try {
           const ironSession = await getAuthSession();
-          redirectPathFromIronSession = ensureString(ironSession.redirectTo);
+          redirectPathFromIronSession = sanitizeRedirect(ironSession.redirectTo, 'iron_session');
         } catch (e) {
           console.error('Failed to get iron session for redirect:', e);
         }
 
+        // Check workos_session (from auth server)
+        const redirectPathFromWorkosSession = sanitizeRedirect(
+          sessionData.redirect_path || sessionData.redirectPath || sessionData.redirect_to || sessionData.redirectTo,
+          'workos_session'
+        );
+
+        // Priority order: query params > iron session > workos session > default
         const redirectPath = redirectPathFromQuery || redirectPathFromIronSession || redirectPathFromWorkosSession || '/';
         const normalizedRedirectPath = redirectPath.startsWith('/')
           ? redirectPath
@@ -182,8 +214,9 @@ export async function GET(request: NextRequest) {
 
     // Redirect to original page or home
     const appUrl = 'https://app.principal-ade.com';
-    // Ensure redirectTo is a string (prevents [object Object] bug)
-    const finalRedirect = (typeof redirectTo === 'string' ? redirectTo : null) || '/';
+    // Aggressively validate redirect (prevents [object Object] bug)
+    const finalRedirect = sanitizeRedirect(redirectTo, 'pkce_session') || '/';
+    console.log('PKCE flow redirect:', { redirectTo, finalRedirect });
     return NextResponse.redirect(new URL(finalRedirect, appUrl));
   } catch (error) {
     console.error('Callback error:', {
