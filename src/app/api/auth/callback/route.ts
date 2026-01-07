@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
           request.nextUrl.searchParams.get('redirect_path');
 
         // Helper to safely get string value (prevents [object Object] bug)
-        const ensureString = (value: any): string | undefined => {
+        const ensureString = (value: unknown): string | undefined => {
           return typeof value === 'string' ? value : undefined;
         };
 
