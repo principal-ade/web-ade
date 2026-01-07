@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGitHubToken } from '@/lib/auth/cookies';
-import { Core, type TaskCreateInput } from '@backlog-md/core';
+import { Core, type TaskCreateInput, DEFAULT_TASK_STATUSES } from '@backlog-md/core';
 import { GitHubBacklogAdapter } from '@/lib/server/GitHubBacklogAdapter';
 import { Octokit } from '@octokit/rest';
 
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Set status based on task type
-    const status = taskType === 'investigate' ? 'To Do' : 'In Progress';
+    const status = taskType === 'investigate' ? DEFAULT_TASK_STATUSES.TODO : DEFAULT_TASK_STATUSES.IN_PROGRESS;
 
     const taskInput: TaskCreateInput = {
       title: issue.title,

@@ -59,17 +59,24 @@ export async function GET(request: NextRequest) {
         const redirectPathFromQuery =
           request.nextUrl.searchParams.get('redirect') ||
           request.nextUrl.searchParams.get('redirect_path');
-        const redirectPathFromWorkosSession =
+
+        // Helper to safely get string value (prevents [object Object] bug)
+        const ensureString = (value: any): string | undefined => {
+          return typeof value === 'string' ? value : undefined;
+        };
+
+        const redirectPathFromWorkosSession = ensureString(
           sessionData.redirect_path ||
           sessionData.redirectPath ||
           sessionData.redirect_to ||
-          sessionData.redirectTo;
+          sessionData.redirectTo
+        );
 
         // Also check our iron-session for the redirect (where login route stores it)
         let redirectPathFromIronSession: string | undefined;
         try {
           const ironSession = await getAuthSession();
-          redirectPathFromIronSession = ironSession.redirectTo;
+          redirectPathFromIronSession = ensureString(ironSession.redirectTo);
         } catch (e) {
           console.error('Failed to get iron session for redirect:', e);
         }
@@ -83,6 +90,12 @@ export async function GET(request: NextRequest) {
           fromQuery: redirectPathFromQuery,
           fromIronSession: redirectPathFromIronSession,
           fromWorkosSession: redirectPathFromWorkosSession,
+          rawWorkosValues: {
+            redirect_path: sessionData.redirect_path,
+            redirectPath: sessionData.redirectPath,
+            redirect_to: sessionData.redirect_to,
+            redirectTo: sessionData.redirectTo,
+          },
           final: normalizedRedirectPath,
         });
 
@@ -169,7 +182,8 @@ export async function GET(request: NextRequest) {
 
     // Redirect to original page or home
     const appUrl = 'https://app.principal-ade.com';
-    const finalRedirect = redirectTo || '/';
+    // Ensure redirectTo is a string (prevents [object Object] bug)
+    const finalRedirect = (typeof redirectTo === 'string' ? redirectTo : null) || '/';
     return NextResponse.redirect(new URL(finalRedirect, appUrl));
   } catch (error) {
     console.error('Callback error:', {

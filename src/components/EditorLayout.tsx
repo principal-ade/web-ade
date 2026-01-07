@@ -35,7 +35,7 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import type { Theme } from '@principal-ade/industry-theme';
 import type { LocalFileSystemAdapter } from '@/lib/client/LocalFileSystemAdapter';
 import { useLocalFileSystem } from '@/contexts/LocalFileSystemContext';
-import { parseTaskMarkdown, serializeTaskMarkdown } from '@backlog-md/core';
+import { parseTaskMarkdown, serializeTaskMarkdown, DEFAULT_TASK_STATUSES } from '@backlog-md/core';
 
 // Dynamically import the MarkdownPanel with SSR disabled
 const MarkdownPanelLoader = dynamic(
@@ -1183,8 +1183,8 @@ function EditorLayoutContent({
                 if (!existingRefs.includes(issueUrl)) {
                   parsedTask.references = [...existingRefs, issueUrl];
                 }
-                // Set status to in-progress when assigning to Claude
-                parsedTask.status = 'in-progress';
+                // Set status to "In Progress" when assigning to Claude
+                parsedTask.status = DEFAULT_TASK_STATUSES.IN_PROGRESS;
                 const updatedContent = serializeTaskMarkdown(parsedTask);
 
                 // Commit the updated file

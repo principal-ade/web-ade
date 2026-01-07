@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^2.0.109",
-    "@backlog-md/core": "^0.3.4",
+    "@backlog-md/core": "^0.3.6",
     "@industry-theme/agent-driven-ui-panels": "^0.1.0",
     "@industry-theme/alexandria-docs-panel": "^0.4.25",
     "@industry-theme/alexandria-panels": "0.1.30",
@@ -30,7 +30,7 @@
     "@industry-theme/git-panels": "^0.1.18",
     "@industry-theme/git-sync-panels": "^0.1.4",
     "@industry-theme/github-panels": "^0.1.56",
-    "@industry-theme/markdown-panels": "^0.2.19",
+    "@industry-theme/markdown-panels": "^0.2.20",
     "@industry-theme/principal-view-panels": "^0.1.46",
     "@industry-theme/repository-composition-panels": "^0.2.37",
     "@industry-theme/theme-editor-panel": "^0.1.4",
