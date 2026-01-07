@@ -56,6 +56,19 @@ export const layoutConfigs: LayoutConfig[] = [
     },
   },
   {
+    id: 'skills',
+    name: 'Skills',
+    layout: {
+      left: 'skills-list',
+      middle: 'skill-detail',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
+  {
     id: 'pull-requests',
     name: 'Pull Requests',
     layout: {

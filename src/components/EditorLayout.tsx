@@ -260,6 +260,24 @@ const MDXEditorPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the SkillsListPanel with SSR disabled
+const SkillsListPanelLoader = dynamic(
+  () => import('@industry-theme/agent-panels').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
+// Dynamically import the SkillDetailPanel with SSR disabled
+const SkillDetailPanelLoader = dynamic(
+  () => import('@industry-theme/agent-panels').then((mod) => {
+    const Component = mod.panels[1]!.component;
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 /**
  * Build the GitHub issue body for a backlog task (without @claude tag)
  * The @claude tag will be added in a separate comment after the task file is updated
@@ -1814,6 +1832,24 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitPullRequestDetailPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'skills-list',
+      label: 'Skills',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <SkillsListPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'skill-detail',
+      label: 'Skill Detail',
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <SkillDetailPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },

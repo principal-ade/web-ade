@@ -15,6 +15,7 @@ import {
   Home,
   Palette,
   X,
+  Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@principal-ai/logo-component';
@@ -29,6 +30,7 @@ const layoutIcons: Record<string, React.ComponentType<{ className?: string }>> =
   'quality-debug': Hexagon,
   'file-city': LineChart,
   'pull-requests': GitPullRequest,
+  skills: Zap,
 };
 
 // Match header height (h-14 = 56px)
