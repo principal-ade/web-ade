@@ -31,7 +31,7 @@
     "@industry-theme/git-panels": "^0.1.19",
     "@industry-theme/git-sync-panels": "^0.1.4",
     "@industry-theme/github-panels": "^0.1.58",
-    "@industry-theme/markdown-panels": "^0.2.20",
+    "@industry-theme/markdown-panels": "^0.2.21",
     "@industry-theme/principal-view-panels": "^0.1.46",
     "@industry-theme/repository-composition-panels": "^0.2.37",
     "@industry-theme/theme-editor-panel": "^0.1.4",
@@ -72,7 +72,7 @@
     "react-dom": "19.2.0",
     "react-markdown": "^10.1.0",
     "tailwindcss": "^4",
-    "themed-markdown": "^0.1.77",
+    "themed-markdown": "^0.1.80",
     "typescript": "^5"
   },
   "devDependencies": {
