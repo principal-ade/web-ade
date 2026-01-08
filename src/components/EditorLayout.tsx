@@ -1509,6 +1509,19 @@ function EditorLayoutContent({
           });
         }
       }),
+      // Handle skill selection - focus SkillDetailPanel
+      events.on('skill:selected', () => {
+        // Emit focus event to the skill detail panel
+        events.emit({
+          type: 'panel:focus',
+          source: 'web-ade',
+          timestamp: Date.now(),
+          payload: {
+            panelId: 'skill-detail',
+            panelSlot: 'middle', // or wherever the skill detail panel is located
+          },
+        });
+      }),
     ];
 
     return () => {
