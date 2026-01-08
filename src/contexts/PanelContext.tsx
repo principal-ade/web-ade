@@ -2756,6 +2756,15 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         // Clear messages data
         setMessagesData(null);
 
+        // Remove the closed issue from local state immediately
+        setIssuesData((prevData) => {
+          if (!prevData) return prevData;
+          return {
+            ...prevData,
+            issues: prevData.issues.filter((issue) => issue.number !== payload.number),
+          };
+        });
+
         // Emit success event
         events.emit({
           type: 'github-issue:deleted',
@@ -2767,11 +2776,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
             number: payload.number,
           },
         });
-
-        // Optionally refresh issues list
-        if (githubRepo) {
-          await fetchIssues(githubRepo);
-        }
       } catch (error) {
         console.error('[PanelContext] Error closing issue:', error);
 
