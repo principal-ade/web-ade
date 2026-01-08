@@ -2793,6 +2793,28 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       }
     });
 
+    // Handle issue creation (from task assignment)
+    const unsubscribeIssueCreate = events.on('task:assigned-to-claude', (event) => {
+      const payload = event.payload as {
+        taskId: string;
+        issueNumber: number;
+        issueUrl: string;
+        issue: any; // GitHub issue object
+      };
+
+      console.log('[PanelContext] Issue created:', payload.issueNumber);
+
+      // Add the new issue to local state immediately
+      setIssuesData((prevData) => {
+        if (!prevData) return prevData;
+        // Add to the beginning of the array (most recent first)
+        return {
+          ...prevData,
+          issues: [payload.issue, ...prevData.issues],
+        };
+      });
+    });
+
     // Handle PR delete/close
     const unsubscribePRDelete = events.on('github-pr:delete', async (event) => {
       const payload = event.payload as {
@@ -2861,6 +2883,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       unsubscribeReactionRemove();
       unsubscribeCommentCreate();
       unsubscribeIssueDelete();
+      unsubscribeIssueCreate();
       unsubscribePRDelete();
     };
   }, [events, messagesData, fetchMessages, githubRepo, fetchIssues, fetchPullRequests]);

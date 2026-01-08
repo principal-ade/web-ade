@@ -1266,6 +1266,7 @@ function EditorLayoutContent({
               taskId: task.id,
               issueNumber,
               issueUrl,
+              issue, // Include full issue object for state updates
             },
           });
 
