@@ -8,6 +8,7 @@ import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import type { CommandPaletteData } from "@/components/GlobalCommandPalette";
 import { PanelProvider, usePanelProvider } from "@/contexts/PanelContext";
+import { Clock, Search } from 'lucide-react';
 import {
   ResponsiveConfigurablePanelLayout,
   PanelLayout,
@@ -275,6 +276,7 @@ function HomePageContent() {
     {
       id: 'recent',
       label: 'Recent',
+      icon: <Clock size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <RecentRepositoriesPanelLoader
@@ -289,6 +291,7 @@ function HomePageContent() {
     {
       id: 'welcome',
       label: 'Search',
+      icon: <Search size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           {showGallery ? (

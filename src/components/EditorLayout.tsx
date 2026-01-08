@@ -36,6 +36,12 @@ import type { Theme } from '@principal-ade/industry-theme';
 import type { LocalFileSystemAdapter } from '@/lib/client/LocalFileSystemAdapter';
 import { useLocalFileSystem } from '@/contexts/LocalFileSystemContext';
 import { parseTaskMarkdown, serializeTaskMarkdown, DEFAULT_TASK_STATUSES } from '@backlog-md/core';
+import {
+  BookOpen, MessageSquare, FileText, Map, Activity, LayoutGrid,
+  CheckSquare, Terminal, Users, Compass, Shield, Bug, Palette,
+  Radio, Wrench, GitBranch, History, GitCommit, Package, AlertCircle,
+  GitPullRequest, Zap, File, GitCompare, Edit
+} from 'lucide-react';
 
 // Dynamically import the MarkdownPanel with SSR disabled
 const MarkdownPanelLoader = dynamic(
@@ -1605,6 +1611,7 @@ function EditorLayoutContent({
     {
       id: 'docs',
       label: 'Docs',
+      icon: <BookOpen size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <AlexandriaDocsPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1614,6 +1621,7 @@ function EditorLayoutContent({
     {
       id: 'ai-chat',
       label: 'AI Chat',
+      icon: <MessageSquare size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <AIChatPanel
@@ -1628,6 +1636,7 @@ function EditorLayoutContent({
     {
       id: 'markdown-viewer',
       label: 'Markdown',
+      icon: <FileText size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <MarkdownPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1637,6 +1646,7 @@ function EditorLayoutContent({
     {
       id: 'file-city',
       label: 'File City',
+      icon: <Map size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <FileCityPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1646,6 +1656,7 @@ function EditorLayoutContent({
     {
       id: 'telemetry-coverage',
       label: 'Telemetry Coverage',
+      icon: <Activity size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <TelemetryCoveragePanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1655,6 +1666,7 @@ function EditorLayoutContent({
     {
       id: 'kanban',
       label: 'Kanban',
+      icon: <LayoutGrid size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <KanbanPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1664,6 +1676,7 @@ function EditorLayoutContent({
     {
       id: 'task-detail',
       label: 'Task Detail',
+      icon: <CheckSquare size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <TaskDetailPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1673,6 +1686,7 @@ function EditorLayoutContent({
     {
       id: 'terminal',
       label: 'Terminal',
+      icon: <Terminal size={16} />,
       content: (
         <div className="flex h-full w-full items-center justify-center p-4 text-sm">
           <div className="text-center">
@@ -1685,6 +1699,7 @@ function EditorLayoutContent({
     {
       id: 'sessions',
       label: 'Sessions',
+      icon: <Users size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <SessionsPanel />
@@ -1694,6 +1709,7 @@ function EditorLayoutContent({
     {
       id: 'visual-validation',
       label: 'Principal View',
+      icon: <Compass size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <PrincipalViewPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1703,6 +1719,7 @@ function EditorLayoutContent({
     {
       id: 'trace-viewer',
       label: 'Trace Viewer',
+      icon: <Activity size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <TraceViewerPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1712,6 +1729,7 @@ function EditorLayoutContent({
     {
       id: 'quality-hexagon',
       label: 'Code Quality',
+      icon: <Shield size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <QualityHexagonPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1721,6 +1739,7 @@ function EditorLayoutContent({
     {
       id: 'lens-debug',
       label: 'Lens Debug',
+      icon: <Bug size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <LensDataDebugPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1730,6 +1749,7 @@ function EditorLayoutContent({
     {
       id: 'theme-editor',
       label: 'Theme Editor',
+      icon: <Palette size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <ThemeEditorPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1739,6 +1759,7 @@ function EditorLayoutContent({
     {
       id: 'event-bus',
       label: 'Event Bus',
+      icon: <Radio size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <EventBusPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1748,6 +1769,7 @@ function EditorLayoutContent({
     {
       id: 'agent-tools',
       label: 'Agent Tools',
+      icon: <Wrench size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <AgentToolsPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1757,6 +1779,7 @@ function EditorLayoutContent({
     {
       id: 'git-changes',
       label: 'Git Changes',
+      icon: <GitBranch size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitChangesPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1766,6 +1789,7 @@ function EditorLayoutContent({
     {
       id: 'commit-history',
       label: 'Commit History',
+      icon: <History size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitCommitHistoryPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1775,6 +1799,7 @@ function EditorLayoutContent({
     {
       id: 'commit-detail',
       label: 'Commit Detail',
+      icon: <GitCommit size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitCommitDetailPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1784,6 +1809,7 @@ function EditorLayoutContent({
     {
       id: 'packages',
       label: 'Packages',
+      icon: <Package size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <PackageCompositionPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1793,6 +1819,7 @@ function EditorLayoutContent({
     {
       id: 'github-issues',
       label: 'Issues',
+      icon: <AlertCircle size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitHubIssuesPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1802,6 +1829,7 @@ function EditorLayoutContent({
     {
       id: 'github-issue-detail',
       label: 'Issue Detail',
+      icon: <AlertCircle size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitHubIssueDetailPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1811,6 +1839,7 @@ function EditorLayoutContent({
     {
       id: 'github-messages',
       label: 'Conversation',
+      icon: <MessageSquare size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitHubMessagesPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1820,6 +1849,7 @@ function EditorLayoutContent({
     {
       id: 'pull-requests',
       label: 'Pull Requests',
+      icon: <GitPullRequest size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitPullRequestsPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1829,6 +1859,7 @@ function EditorLayoutContent({
     {
       id: 'pull-request-detail',
       label: 'Pull Request Detail',
+      icon: <GitPullRequest size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitPullRequestDetailPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1838,6 +1869,7 @@ function EditorLayoutContent({
     {
       id: 'skills-list',
       label: 'Skills',
+      icon: <Zap size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <SkillsListPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1847,6 +1879,7 @@ function EditorLayoutContent({
     {
       id: 'skill-detail',
       label: 'Skill Detail',
+      icon: <Zap size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <SkillDetailPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1860,6 +1893,7 @@ function EditorLayoutContent({
     {
       id: 'file-editor',
       label: 'Files',
+      icon: <File size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <FileEditorPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1869,6 +1903,7 @@ function EditorLayoutContent({
     {
       id: 'git-diff',
       label: 'Git Diff',
+      icon: <GitCompare size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitDiffPanelLoader context={context} actions={enhancedActions} events={events} />
@@ -1878,6 +1913,7 @@ function EditorLayoutContent({
     {
       id: 'mdx-editor',
       label: 'MDX Editor',
+      icon: <Edit size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <MDXEditorPanelLoader context={context} actions={enhancedActions} events={events} />

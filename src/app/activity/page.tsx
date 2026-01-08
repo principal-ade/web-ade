@@ -19,6 +19,8 @@ import {
   Calendar,
   Home,
   Map,
+  Users,
+  MessageSquare,
 } from 'lucide-react';
 
 import { UserActivityPanel } from '@/components/UserActivityPanel';
@@ -258,6 +260,7 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
     {
       id: 'following-users',
       label: 'Following',
+      icon: <Users size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <FollowingUsersPanel
@@ -273,6 +276,7 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
     {
       id: 'activity-timeline',
       label: 'Timeline',
+      icon: <Calendar size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <UserActivityPanel
@@ -287,6 +291,7 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
     {
       id: 'file-city',
       label: 'Map',
+      icon: <Map size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           {selectedRepo ? (
@@ -314,6 +319,7 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
     {
       id: 'github-messages',
       label: 'Conversation',
+      icon: <MessageSquare size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitHubMessagesPanelLoader

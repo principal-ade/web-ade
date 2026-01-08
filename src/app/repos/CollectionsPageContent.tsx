@@ -16,7 +16,7 @@ import {
   PanelLayout,
 } from "@principal-ade/panel-layouts";
 import '@principal-ade/panel-layouts/styles.css';
-import { Plus, FolderOpen, Edit2, Cloud, CloudOff, Share2, Check, Settings, Compass, Clock, GitFork, User, Library, ArrowRight, X, Home, Star, Users } from 'lucide-react';
+import { Plus, FolderOpen, Edit2, Cloud, CloudOff, Share2, Check, Settings, Compass, Clock, GitFork, User, Library, ArrowRight, X, Home, Star, Users, Search, Map, Network, Shield, Package } from 'lucide-react';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { iconMap } from '@/components/collections/CollectionModal';
 import type { Collection } from '@principal-ai/alexandria-collections';
@@ -352,6 +352,7 @@ export function CollectionsPageContent({
     {
       id: 'workspace-collection',
       label: 'Collection',
+      icon: <Library size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <WorkspaceCollectionPanelLoader
@@ -384,6 +385,7 @@ export function CollectionsPageContent({
     {
       id: 'github-starred',
       label: 'Starred',
+      icon: <Star size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitHubStarredPanelLoader
@@ -398,6 +400,7 @@ export function CollectionsPageContent({
     {
       id: 'github-projects',
       label: 'Your Repos',
+      icon: <User size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitHubProjectsPanelLoader
@@ -412,6 +415,7 @@ export function CollectionsPageContent({
     {
       id: 'github-search',
       label: 'Search',
+      icon: <Search size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <GitHubSearchPanelLoader
@@ -426,6 +430,7 @@ export function CollectionsPageContent({
     {
       id: 'file-city',
       label: 'File City',
+      icon: <Map size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <FileCityPanelLoader context={context} actions={actions} events={events} />
@@ -435,6 +440,7 @@ export function CollectionsPageContent({
     {
       id: 'visual-validation',
       label: 'Architecture',
+      icon: <Compass size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <PrincipalViewPanelLoader context={context} actions={actions} events={events} />
@@ -444,6 +450,7 @@ export function CollectionsPageContent({
     {
       id: 'dependency-graph',
       label: 'Dependencies',
+      icon: <Network size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <DependencyGraphPanelLoader context={context} actions={actions} events={events} />
@@ -453,6 +460,7 @@ export function CollectionsPageContent({
     {
       id: 'code-quality',
       label: 'Quality',
+      icon: <Shield size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <CodeQualityPanelLoader context={context} actions={actions} events={events} />
@@ -462,6 +470,7 @@ export function CollectionsPageContent({
     {
       id: 'package-composition',
       label: 'Packages',
+      icon: <Package size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <PackageCompositionPanelLoader context={context} actions={actions} events={events} />

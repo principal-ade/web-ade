@@ -34,6 +34,10 @@ import {
   Home,
   Star,
   Users,
+  Compass,
+  Shield,
+  Package,
+  Map,
 } from 'lucide-react';
 
 interface LibraryRecentRepository {
@@ -404,6 +408,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
     {
       id: 'owner-repositories',
       label: 'Repositories',
+      icon: <GitFork size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <OwnerRepositoriesPanelLoader
@@ -420,6 +425,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
     {
       id: 'visual-validation',
       label: 'Architecture',
+      icon: <Compass size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <PrincipalViewPanelLoader context={context} actions={actions} events={events} />
@@ -429,6 +435,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
     {
       id: 'code-quality',
       label: 'Quality',
+      icon: <Shield size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <CodeQualityPanelLoader context={context} actions={actions} events={events} />
@@ -438,6 +445,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
     {
       id: 'package-composition',
       label: 'Packages',
+      icon: <Package size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <PackageCompositionPanelLoader context={context} actions={actions} events={events} />
@@ -447,6 +455,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
     {
       id: 'file-city',
       label: 'File City',
+      icon: <Map size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <FileCityPanelLoader context={context} actions={actions} events={events} />
