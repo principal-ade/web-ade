@@ -2799,7 +2799,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         taskId: string;
         issueNumber: number;
         issueUrl: string;
-        issue: any; // GitHub issue object
+        issue: GitHubIssue; // GitHub issue object
       };
 
       console.log('[PanelContext] Issue created:', payload.issueNumber);
