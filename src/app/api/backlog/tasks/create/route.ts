@@ -95,8 +95,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize Core with lazy loading
-    await core.initializeLazy([]);
+    // Get existing task file paths for proper initialization
+    let existingTaskPaths: string[] = [];
+    try {
+      // Check if tasks directory exists
+      const tasksDir = 'backlog/tasks';
+      const tasksDirExists = await fs.exists(tasksDir);
+
+      if (tasksDirExists) {
+        // Read all files in the tasks directory
+        const taskFiles = await fs.readDir(tasksDir);
+
+        // Filter for markdown files and build full paths
+        existingTaskPaths = taskFiles
+          .filter(file => file.endsWith('.md'))
+          .map(file => fs.join(tasksDir, file));
+      }
+    } catch (error) {
+      console.warn('[API] Failed to read existing task files:', error);
+      // Continue with empty array - initialization will still work but IDs may not be sequential
+    }
+
+    // Initialize Core with lazy loading using existing task paths
+    // This allows Core to build a proper task index for unique ID generation
+    await core.initializeLazy(existingTaskPaths);
 
     // Convert GitHub issue to TaskCreateInput
     const labelNames = issue.labels.map((l: { name: string }) => l.name.toLowerCase());
