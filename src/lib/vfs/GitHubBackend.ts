@@ -90,7 +90,7 @@ export class GitHubBackend {
     try {
       await this.fetchFromGitHub(normalPath);
       return true;
-    } catch (e) {
+    } catch {
       return false;
     }
   }

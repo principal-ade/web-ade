@@ -207,7 +207,7 @@ export function useSpeechRecognition(
 
     try {
       recognition.start();
-    } catch (error) {
+    } catch {
       setIsListening(false);
       onError?.('Failed to start speech recognition');
     }

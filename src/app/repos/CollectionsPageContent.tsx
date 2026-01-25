@@ -169,8 +169,8 @@ export function CollectionsPageContent({
   const [isMobile, setIsMobile] = useState(false);
   const [previewedRepo, setPreviewedRepo] = useState<string | null>(initialPreviewedRepo ?? null);
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
-  const [leftCollapsed, _setLeftCollapsed] = useState(false);
-  const [rightCollapsed, _setRightCollapsed] = useState(false);
+  const leftCollapsed = false;
+  const rightCollapsed = false;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<'recent' | 'collections' | 'following' | 'starred'>('recent');
   const [collectionDropdownOpen, setCollectionDropdownOpen] = useState(false);

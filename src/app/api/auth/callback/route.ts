@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
     try {
       decodedState = decodeState(state);
       console.log('Decoded state:', decodedState);
-    } catch (e) {
+    } catch {
       return NextResponse.json(
         { error: 'Invalid state parameter format' },
         { status: 400 }

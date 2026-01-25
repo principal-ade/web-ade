@@ -16,10 +16,30 @@ const eslintConfig = [
       ".next/**",
       "out/**",
       "build/**",
+      "coverage/**",
+      "dist/**",
+      "storybook-static/**",
+      "*.min.js",
+      "**/*.min.js",
       "next-env.d.ts",
       "**/*.stories.ts",
       "**/*.stories.tsx",
+      "**/*.generated.*",
+      ".storybook/**",
+      "public/**/*.js",
     ],
+  },
+  {
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
   },
 ];
 

@@ -87,7 +87,7 @@ export function decodeState(state: string): { csrf: string; redirect?: string } 
     }
     const decoded = Buffer.from(base64, 'base64').toString('utf-8');
     return JSON.parse(decoded);
-  } catch (e) {
+  } catch {
     throw new Error('Invalid state parameter');
   }
 }
