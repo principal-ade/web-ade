@@ -273,42 +273,6 @@
         "shape": "rectangle"
       },
       "text": "backlog/tasks/*.md"
-    },
-    {
-      "id": "note-lifecycle",
-      "type": "text",
-      "x": 850,
-      "y": 50,
-      "width": 400,
-      "height": 180,
-      "text": "LIFECYCLE FLOW:\n\n1. User clicks issue → issue:selected event\n2. PanelContext fetches timeline + updates state\n3. EditorLayout focuses issue-detail panel\n4. User clicks 'Push to Backlog' → issue:push-to-backlog\n5. Build task markdown from issue metadata\n6. Append to backlog.md + commit\n7. Emit issue:task-created\n8. Task appears in Kanban panel\n9. User manages task (status, priority, deps)\n10. Updates persist to backlog/tasks/*.md"
-    },
-    {
-      "id": "note-api-routes",
-      "type": "text",
-      "x": 850,
-      "y": 270,
-      "width": 400,
-      "height": 140,
-      "text": "API ROUTES:\n\n• GET /api/.../issues\n  → List issues (paginated, filtered)\n\n• GET /api/.../issues/[number]\n  → Issue details\n\n• GET /api/.../issues/[number]/timeline\n  → Timeline events + review comments\n\n• POST /api/.../issues/[number]\n  → Add comment"
-    },
-    {
-      "id": "note-state",
-      "type": "text",
-      "x": 850,
-      "y": 450,
-      "width": 400,
-      "height": 120,
-      "text": "STATE SLICES (PanelContext):\n\n• issuesData: owner, repo, issues[], authStatus\n• messagesData: target, timeline[], reviewComments[]\n• Backlog: Managed via @backlog-md/core\n  - parseTaskMarkdown()\n  - serializeTaskMarkdown()"
-    },
-    {
-      "id": "note-task-format",
-      "type": "text",
-      "x": 850,
-      "y": 610,
-      "width": 400,
-      "height": 140,
-      "text": "TASK METADATA:\n\n• Status: triage/todo/in-progress/done/blocked\n• Priority: high/medium/low (from issue labels)\n• Labels: Inherited from issue\n• Dependencies: Task relationships\n• References: GitHub issue URL, owner/repo#number\n• Anchor: gh-issue-{number}"
     }
   ],
   "edges": [

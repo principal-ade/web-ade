@@ -13,6 +13,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAndValidateSession, clearAuthSession } from '@/lib/auth/session';
 import { setAuthCookies, TokenData } from '@/lib/auth/cookies';
 import { decodeState } from '@/lib/auth/pkce';
+import { trace } from '@opentelemetry/api';
+
+// Get tracer for authentication flow
+const tracer = trace.getTracer('auth-callback', '1.0.0');
 
 /**
  * Aggressively validates and sanitizes redirect values to prevent [object Object] bug
@@ -46,11 +50,25 @@ function sanitizeRedirect(value: unknown, source: string): string | undefined {
 }
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  const span = tracer.startSpan('auth.callback');
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const state = searchParams.get('state');
     const code = searchParams.get('code');
     const authError = searchParams.get('auth_error');
+
+    // Check for workos_session cookie
+    const workosSession = request.cookies.get('workos_session');
+
+    // Emit: auth.callback.started
+    span.addEvent('auth.callback.started', {
+      'request.has_state': !!state,
+      'request.has_code': !!code,
+      'request.has_workos_cookie': !!workosSession,
+      'request.has_auth_error': !!authError,
+    });
 
     // Debug: Log all parameters and cookies received
     console.log('Callback received:', {
@@ -65,8 +83,7 @@ export async function GET(request: NextRequest) {
       search: request.nextUrl.search,
     });
 
-    // Check if landing page handled auth and set cookie
-    const workosSession = request.cookies.get('workos_session');
+    // Check if landing page handled auth and set cookie (already captured above)
     if (workosSession) {
       console.log('Found workos_session cookie from landing page');
 
@@ -87,7 +104,21 @@ export async function GET(request: NextRequest) {
           },
         };
 
+        // Emit: auth.tokens.received (WorkOS cookie flow)
+        span.addEvent('auth.tokens.received', {
+          'tokens.source': 'workos_cookie',
+          'tokens.has_github_token': !!tokenData.github_access_token,
+          'tokens.has_workos_token': !!tokenData.workos_access_token,
+          'tokens.has_refresh_token': !!tokenData.refresh_token,
+          'user.id': tokenData.user.id,
+        });
+
         await setAuthCookies(tokenData);
+
+        // Emit: auth.cookies.set
+        span.addEvent('auth.cookies.set', {
+          'cookies.count': 3, // github_access_token, workos_access_token, refresh_token
+        });
 
         // Determine where to send the user after landing-page auth
         const appUrl = 'https://app.principal-ade.com';
@@ -127,14 +158,29 @@ export async function GET(request: NextRequest) {
           final: normalizedRedirectPath,
         });
 
+        // Emit: auth.callback.complete (WorkOS flow)
+        const redirectSource = redirectPath !== '/' ? 'state' : 'default';
+        span.addEvent('auth.callback.complete', {
+          'redirect.path': normalizedRedirectPath,
+          'redirect.source': redirectSource,
+          'duration.ms': Date.now() - startTime,
+        });
+
         // Clear the landing page cookie and redirect to intended destination
         const response = NextResponse.redirect(new URL(normalizedRedirectPath, appUrl));
         response.cookies.delete('workos_session');
 
+        span.end();
         console.log('Successfully authenticated via workos_session cookie, redirecting to:', normalizedRedirectPath);
         return response;
       } catch (e) {
         console.error('Failed to parse workos_session cookie:', e);
+        // Emit error but continue to other auth flows (not fatal)
+        span.addEvent('auth.callback.error', {
+          'error.type': 'parse',
+          'error.message': e instanceof Error ? e.message : String(e),
+          'error.stage': 'workos_cookie_parse',
+        });
         // Continue to other auth flows
       }
     }
@@ -143,10 +189,26 @@ export async function GET(request: NextRequest) {
     if (authError) {
       const errorMessage = searchParams.get('error_message') || 'Authentication failed';
       console.error('Auth error from landing page:', authError, errorMessage);
+
+      span.addEvent('auth.callback.error', {
+        'error.type': 'validation',
+        'error.message': errorMessage,
+        'error.stage': 'landing_page_auth',
+      });
+      span.end();
+
       return NextResponse.redirect(new URL(`/?error=${authError}`, request.url));
     }
 
     if (!state) {
+      span.addEvent('auth.callback.error', {
+        'error.type': 'validation',
+        'error.message': 'Missing state parameter',
+        'error.stage': 'state_parameter',
+        'error.status_code': 400,
+      });
+      span.end();
+
       return NextResponse.json(
         {
           error: 'Missing state parameter',
@@ -162,6 +224,14 @@ export async function GET(request: NextRequest) {
       decodedState = decodeState(state);
       console.log('Decoded state:', decodedState);
     } catch {
+      span.addEvent('auth.callback.error', {
+        'error.type': 'validation',
+        'error.message': 'Invalid state parameter format',
+        'error.stage': 'state_decode',
+        'error.status_code': 400,
+      });
+      span.end();
+
       return NextResponse.json(
         { error: 'Invalid state parameter format' },
         { status: 400 }
@@ -172,11 +242,26 @@ export async function GET(request: NextRequest) {
     const sessionData = await getAndValidateSession(decodedState.csrf);
 
     if (!sessionData) {
+      span.addEvent('auth.callback.error', {
+        'error.type': 'validation',
+        'error.message': 'Invalid or expired session',
+        'error.stage': 'session_validation',
+        'error.status_code': 400,
+      });
+      span.end();
+
       return NextResponse.json(
         { error: 'Invalid or expired session' },
         { status: 400 }
       );
     }
+
+    // Emit: auth.state.validated (PKCE flow)
+    span.addEvent('auth.state.validated', {
+      'state.csrf': decodedState.csrf,
+      'state.has_redirect': !!decodedState.redirect,
+      'flow.type': 'pkce',
+    });
 
     const { codeVerifier } = sessionData;
     const redirectTo = decodedState.redirect; // Get redirect from state parameter
@@ -215,8 +300,22 @@ export async function GET(request: NextRequest) {
       throw new Error('Invalid token response from landing-page');
     }
 
+    // Emit: auth.tokens.received (PKCE flow)
+    span.addEvent('auth.tokens.received', {
+      'tokens.source': 'pkce_exchange',
+      'tokens.has_github_token': !!data.github_access_token,
+      'tokens.has_workos_token': !!data.workos_access_token,
+      'tokens.has_refresh_token': !!data.refresh_token,
+      'user.id': data.user?.id || 'unknown',
+    });
+
     // Set HTTP-only cookies with tokens
     await setAuthCookies(data as TokenData);
+
+    // Emit: auth.cookies.set
+    span.addEvent('auth.cookies.set', {
+      'cookies.count': 3, // github_access_token, workos_access_token, refresh_token
+    });
 
     // Clear temporary session
     await clearAuthSession();
@@ -225,14 +324,35 @@ export async function GET(request: NextRequest) {
     const appUrl = 'https://app.principal-ade.com';
     // Aggressively validate redirect (prevents [object Object] bug)
     const finalRedirect = sanitizeRedirect(redirectTo, 'pkce_session') || '/';
+    const redirectSource = redirectTo ? 'state' : 'default';
     console.log('PKCE flow redirect:', { redirectTo, finalRedirect });
+
+    // Emit: auth.callback.complete (PKCE flow)
+    span.addEvent('auth.callback.complete', {
+      'redirect.path': finalRedirect,
+      'redirect.source': redirectSource,
+      'duration.ms': Date.now() - startTime,
+    });
+
+    span.end();
     return NextResponse.redirect(new URL(finalRedirect, appUrl));
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isTokenExchangeError = errorMessage.includes('Token exchange failed');
+
     console.error('Callback error:', {
-      error: error instanceof Error ? error.message : error,
+      error: errorMessage,
       stack: error instanceof Error ? error.stack : undefined,
       type: error?.constructor?.name,
     });
+
+    // Emit: auth.callback.error
+    span.addEvent('auth.callback.error', {
+      'error.type': isTokenExchangeError ? 'token_exchange' : 'unknown',
+      'error.message': errorMessage,
+      'error.stage': isTokenExchangeError ? 'token_exchange' : 'unknown',
+    });
+    span.end();
 
     // Clear session on error
     try {

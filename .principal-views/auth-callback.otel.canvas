@@ -1,0 +1,303 @@
+{
+  "pv": {
+    "name": "Authentication Callback",
+    "version": "1.0.0",
+    "edgeTypes": {
+      "flow": {
+        "label": "Flow"
+      },
+      "error": {
+        "label": "Error Path"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "auth-started",
+      "type": "text",
+      "text": "# auth.callback.started\n\nOAuth callback request received",
+      "x": 100,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "event": "auth.callback.started",
+        "sources": ["src/app/api/auth/callback/route.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a",
+        "dataSchema": {
+          "request.has_state": {
+            "type": "boolean",
+            "required": true
+          },
+          "request.has_code": {
+            "type": "boolean",
+            "required": true
+          },
+          "request.has_workos_cookie": {
+            "type": "boolean",
+            "required": true
+          },
+          "request.has_auth_error": {
+            "type": "boolean",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "state-validated",
+      "type": "text",
+      "text": "# auth.state.validated\n\nState parameter decoded and validated",
+      "x": 100,
+      "y": 250,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "event": "auth.state.validated",
+        "sources": ["src/app/api/auth/callback/route.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "operation"
+        },
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "stroke": "#1d4ed8",
+        "dataSchema": {
+          "state.csrf": {
+            "type": "string",
+            "required": true
+          },
+          "state.has_redirect": {
+            "type": "boolean",
+            "required": true
+          },
+          "flow.type": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "tokens-received",
+      "type": "text",
+      "text": "# auth.tokens.received\n\nAuthentication tokens obtained",
+      "x": 100,
+      "y": 450,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "event": "auth.tokens.received",
+        "sources": ["src/app/api/auth/callback/route.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "operation"
+        },
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "stroke": "#1d4ed8",
+        "dataSchema": {
+          "tokens.source": {
+            "type": "string",
+            "required": true
+          },
+          "tokens.has_github_token": {
+            "type": "boolean",
+            "required": true
+          },
+          "tokens.has_workos_token": {
+            "type": "boolean",
+            "required": true
+          },
+          "tokens.has_refresh_token": {
+            "type": "boolean",
+            "required": true
+          },
+          "user.id": {
+            "type": "string",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "cookies-set",
+      "type": "text",
+      "text": "# auth.cookies.set\n\nHTTP-only auth cookies created",
+      "x": 100,
+      "y": 650,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "event": "auth.cookies.set",
+        "sources": ["src/app/api/auth/callback/route.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "operation"
+        },
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "stroke": "#1d4ed8",
+        "dataSchema": {
+          "cookies.count": {
+            "type": "number",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "callback-complete",
+      "type": "text",
+      "text": "# auth.callback.complete\n\nAuthentication successful",
+      "x": 100,
+      "y": 850,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "event": "auth.callback.complete",
+        "sources": ["src/app/api/auth/callback/route.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a",
+        "dataSchema": {
+          "redirect.path": {
+            "type": "string",
+            "required": true
+          },
+          "redirect.source": {
+            "type": "string",
+            "required": true
+          },
+          "duration.ms": {
+            "type": "number",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "callback-error",
+      "type": "text",
+      "text": "# auth.callback.error\n\nAuthentication failed",
+      "x": 450,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "event": "auth.callback.error",
+        "sources": ["src/app/api/auth/callback/route.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "error"
+        },
+        "shape": "rectangle",
+        "fill": "#ef4444",
+        "stroke": "#dc2626",
+        "dataSchema": {
+          "error.type": {
+            "type": "string",
+            "required": true
+          },
+          "error.message": {
+            "type": "string",
+            "required": true
+          },
+          "error.stage": {
+            "type": "string",
+            "required": true
+          },
+          "error.status_code": {
+            "type": "number",
+            "required": false
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-start-to-validate",
+      "fromNode": "auth-started",
+      "fromSide": "bottom",
+      "toNode": "state-validated",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-validate-to-tokens",
+      "fromNode": "state-validated",
+      "fromSide": "bottom",
+      "toNode": "tokens-received",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-tokens-to-cookies",
+      "fromNode": "tokens-received",
+      "fromSide": "bottom",
+      "toNode": "cookies-set",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-cookies-to-complete",
+      "fromNode": "cookies-set",
+      "fromSide": "bottom",
+      "toNode": "callback-complete",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-start-to-error",
+      "fromNode": "auth-started",
+      "fromSide": "right",
+      "toNode": "callback-error",
+      "toSide": "left",
+      "label": "validation error",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-validate-to-error",
+      "fromNode": "state-validated",
+      "fromSide": "right",
+      "toNode": "callback-error",
+      "toSide": "left",
+      "label": "session error",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-tokens-to-error",
+      "fromNode": "tokens-received",
+      "fromSide": "right",
+      "toNode": "callback-error",
+      "toSide": "left",
+      "label": "cookie error",
+      "pv": {
+        "edgeType": "error"
+      }
+    }
+  ]
+}

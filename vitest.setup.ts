@@ -1,9 +1,12 @@
 import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { clearSpans } from './src/__tests__/otel-setup';
 
 // Cleanup after each test case (React Testing Library)
 afterEach(() => {
   cleanup();
+  // Clear OTEL spans between tests to prevent cross-contamination
+  clearSpans();
 });
 
 // Mock window.setTimeout and window.setInterval to use numbers instead of NodeJS.Timeout
