@@ -468,6 +468,22 @@ function EditorLayoutContent({
   const [repoCounts, setRepoCounts] = useState<{ openIssues: number; openPullRequests: number } | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
+  // State for selected canvas and workflow (for Stories view)
+  const [selectedCanvasData, setSelectedCanvasData] = useState<{
+    canvasId?: string;
+    canvasPath?: string;
+    canvasName?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    canvasFileInfo?: any;
+  } | null>(null);
+
+  const [selectedWorkflowData, setSelectedWorkflowData] = useState<{
+    workflowId?: string;
+    workflowPath?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    workflow?: any;
+  } | null>(null);
+
   // Persist layout sidebar collapsed state
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1589,18 +1605,39 @@ function EditorLayoutContent({
       }),
       // Handle storyboard canvas/workflow selection - switch middle panel based on openMode
       events.on('custom', (event) => {
-        const payload = event.payload as { action?: string; openMode?: 'editor' | 'detail'; canvas?: unknown; workflow?: unknown };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const payload = event.payload as any;
 
         // Check if this is an openCanvas action from storyboard-list-panel
         if (event.source === 'storyboard-list-panel' && payload?.action === 'openCanvas') {
+          console.log('[EditorLayout] openCanvas event received:', payload);
+
+          // Store canvas data
+          if (payload.canvas) {
+            setSelectedCanvasData({
+              canvasId: payload.canvasId || payload.canvas.id,
+              canvasPath: payload.canvas.path,
+              canvasName: payload.canvas.name || payload.canvas.id,
+              canvasFileInfo: payload.canvasFileInfo,
+            });
+          }
+
           if (payload.openMode === 'editor') {
             // Open canvas editor for canvas editing
+            console.log('[EditorLayout] Switching to canvas-editor');
+            setSelectedWorkflowData(null); // Clear workflow when opening canvas editor
             setLayout((prev) => ({
               ...prev,
               middle: 'canvas-editor',
             }));
           } else if (payload.openMode === 'detail' && payload.workflow) {
-            // Open workflow scenarios panel for workflow detail
+            // Store workflow data and open workflow scenarios panel
+            console.log('[EditorLayout] Switching to workflow-scenarios with workflow:', payload.workflow);
+            setSelectedWorkflowData({
+              workflowId: payload.workflowId,
+              workflowPath: payload.workflow.path || payload.workflow.file?.path,
+              workflow: payload.workflow,
+            });
             setLayout((prev) => ({
               ...prev,
               middle: 'workflow-scenarios',
@@ -2001,7 +2038,17 @@ function EditorLayoutContent({
       icon: <Edit size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
-          <CanvasEditorPanelLoader context={context} actions={enhancedActions} events={events} />
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <CanvasEditorPanelLoader
+            context={context}
+            actions={enhancedActions}
+            events={events}
+            {...(selectedCanvasData && {
+              canvasPath: selectedCanvasData.canvasPath,
+              canvasName: selectedCanvasData.canvasName,
+              canvasFileInfo: selectedCanvasData.canvasFileInfo,
+            })}
+          />
         </div>
       ),
     },
@@ -2011,11 +2058,26 @@ function EditorLayoutContent({
       icon: <FileText size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
-          <WorkflowScenariosPanelLoader context={context} actions={enhancedActions} events={events} />
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <WorkflowScenariosPanelLoader
+            context={context}
+            actions={enhancedActions}
+            events={events}
+            {...(selectedCanvasData && {
+              selectedCanvasId: selectedCanvasData.canvasId,
+              canvasPath: selectedCanvasData.canvasPath,
+              canvasName: selectedCanvasData.canvasName,
+              canvasFileInfo: selectedCanvasData.canvasFileInfo,
+            })}
+            {...(selectedWorkflowData && {
+              selectedWorkflowId: selectedWorkflowData.workflowId,
+              workflowPath: selectedWorkflowData.workflowPath,
+            })}
+          />
         </div>
       ),
     },
-  ], [context, enhancedActions, events, theme.colors.textMuted]);
+  ], [context, enhancedActions, events, theme.colors.textMuted, selectedCanvasData, selectedWorkflowData]);
 
   // File editing panels - now use the standard panel framework pattern
   const fileEditingPanels = useMemo(() => [
