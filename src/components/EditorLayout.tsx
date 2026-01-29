@@ -286,24 +286,30 @@ const SkillDetailPanelLoader = dynamic(
 
 // Dynamically import the StoryboardListPanel with SSR disabled
 const StoryboardListPanelLoader = dynamic(
-  () => import('@industry-theme/principal-view-panels').then((mod) => mod.StoryboardListPanel),
+  () => import('@industry-theme/principal-view-panels').then((mod) => {
+    const Component = mod.panels[2]!.component;
+    return { default: Component };
+  }),
   { ssr: false }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-) as React.ComponentType<any>;
+);
 
 // Dynamically import the CanvasEditorPanel with SSR disabled
 const CanvasEditorPanelLoader = dynamic(
-  () => import('@industry-theme/principal-view-panels').then((mod) => mod.CanvasEditorPanel),
+  () => import('@industry-theme/principal-view-panels').then((mod) => {
+    const Component = mod.panels[0]!.component;
+    return { default: Component };
+  }),
   { ssr: false }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-) as React.ComponentType<any>;
+);
 
 // Dynamically import the WorkflowScenariosPanel with SSR disabled
 const WorkflowScenariosPanelLoader = dynamic(
-  () => import('@industry-theme/principal-view-panels').then((mod) => mod.WorkflowScenariosPanel),
+  () => import('@industry-theme/principal-view-panels').then((mod) => {
+    const Component = mod.panels[1]!.component;
+    return { default: Component };
+  }),
   { ssr: false }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-) as React.ComponentType<any>;
+);
 
 /**
  * Build the GitHub issue body for a backlog task (without @claude tag)
