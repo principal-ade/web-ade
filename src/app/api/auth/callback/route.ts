@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
           'tokens.has_github_token': !!tokenData.github_access_token,
           'tokens.has_workos_token': !!tokenData.workos_access_token,
           'tokens.has_refresh_token': !!tokenData.refresh_token,
-          'user.id': tokenData.user.id,
+          'user.id': tokenData.user?.id,
         });
 
         await setAuthCookies(tokenData);

@@ -695,21 +695,21 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)',
-                  paddingLeft: '20px',
-                  paddingRight: '20px',
-                  paddingBottom: '16px',
+                  paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
+                  paddingLeft: '16px',
+                  paddingRight: '16px',
+                  paddingBottom: '0.5rem',
                   borderBottom: `1px solid ${theme.colors.border}`,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {user?.avatar_url && (
                     <img
                       src={user.avatar_url}
                       alt={user.name || user.login}
                       style={{
-                        width: 40,
-                        height: 40,
+                        width: 32,
+                        height: 32,
                         borderRadius: '50%',
                         border: `2px solid ${theme.colors.border}`,
                       }}
@@ -749,7 +749,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  padding: '12px 20px',
+                  padding: '12px 16px',
                   color: theme.colors.text,
                   textDecoration: 'none',
                   borderBottom: `1px solid ${theme.colors.border}`,
@@ -760,7 +760,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
               </Link>
 
               {/* Tab Header */}
-              <div style={{ display: 'flex', gap: '4px', padding: '16px 20px 12px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '4px', padding: '16px 16px 12px', flexWrap: 'wrap' }}>
                 {(['recent', 'collections', 'following', 'starred'] as const).map((tab) => {
                   const tabConfig = {
                     recent: { icon: Clock, label: 'Recent' },
@@ -796,7 +796,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
               </div>
 
               {/* Tab Content */}
-              <div style={{ flex: 1, overflowY: 'auto', paddingTop: '0', paddingLeft: '20px', paddingRight: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}>
+              <div style={{ flex: 1, overflowY: 'auto', paddingTop: '0', paddingLeft: '16px', paddingRight: '16px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
                 {sidebarTab === 'recent' && (
                   <>
                     {recentRepos.length > 0 && (
@@ -821,20 +821,20 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                             style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '10px',
+                              gap: '8px',
                               padding: '8px 12px',
-                              borderRadius: '8px',
+                              borderRadius: '4px',
                               textDecoration: 'none',
                               color: theme.colors.text,
                               marginBottom: '2px',
                             }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.surface; }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
                             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                           >
                             <img
                               src={repo.owner.avatar_url}
                               alt={repo.owner.login}
-                              style={{ width: 28, height: 28, borderRadius: '6px' }}
+                              style={{ width: 28, height: 28, borderRadius: '4px' }}
                             />
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -872,20 +872,20 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                             style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '10px',
+                              gap: '8px',
                               padding: '8px 12px',
-                              borderRadius: '8px',
+                              borderRadius: '4px',
                               textDecoration: 'none',
                               color: theme.colors.text,
                               marginBottom: '2px',
                             }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.surface; }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
                             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                           >
                             <img
                               src={recentOwner.avatar_url}
                               alt={recentOwner.login}
-                              style={{ width: 28, height: 28, borderRadius: '6px' }}
+                              style={{ width: 28, height: 28, borderRadius: '4px' }}
                             />
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontSize: `${theme.fontSizes[1]}px` }}>{recentOwner.login}</div>
@@ -922,21 +922,21 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                             style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '10px',
+                              gap: '8px',
                               padding: '8px 12px',
-                              borderRadius: '8px',
+                              borderRadius: '4px',
                               textDecoration: 'none',
                               color: theme.colors.text,
                               marginBottom: '2px',
                             }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.surface; }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
                             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                           >
                             <div
                               style={{
                                 width: 28,
                                 height: 28,
-                                borderRadius: '6px',
+                                borderRadius: '4px',
                                 backgroundColor: theme.colors.surface,
                                 border: `1px solid ${theme.colors.border}`,
                                 display: 'flex',
@@ -1000,14 +1000,14 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                           style={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '10px',
+                            gap: '8px',
                             padding: '8px 12px',
-                            borderRadius: '8px',
+                            borderRadius: '4px',
                             textDecoration: 'none',
                             color: theme.colors.text,
                             marginBottom: '2px',
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.surface; }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
                           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                         >
                           <img
@@ -1045,20 +1045,20 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                           style={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '10px',
+                            gap: '8px',
                             padding: '8px 12px',
-                            borderRadius: '8px',
+                            borderRadius: '4px',
                             textDecoration: 'none',
                             color: theme.colors.text,
                             marginBottom: '2px',
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.surface; }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
                           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                         >
                           <img
                             src={repo.owner.avatar_url}
                             alt={repo.owner.login}
-                            style={{ width: 28, height: 28, borderRadius: '6px' }}
+                            style={{ width: 28, height: 28, borderRadius: '4px' }}
                           />
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

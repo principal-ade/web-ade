@@ -6,12 +6,12 @@
  * schemas and exported to __executions__/ directory.
  */
 
-import { trace, context, SpanStatusCode } from '@opentelemetry/api';
+import { trace, SpanStatusCode, AttributeValue } from '@opentelemetry/api';
 import {
-  BasicTracerProvider,
   InMemorySpanExporter,
   SimpleSpanProcessor,
 } from '@opentelemetry/sdk-trace-base';
+import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
 import { writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
@@ -19,8 +19,9 @@ import { join } from 'path';
 const spanExporter = new InMemorySpanExporter();
 
 // Tracer provider with simple span processor
-const provider = new BasicTracerProvider();
-provider.addSpanProcessor(new SimpleSpanProcessor(spanExporter));
+const provider = new NodeTracerProvider({
+  spanProcessors: [new SimpleSpanProcessor(spanExporter)],
+});
 provider.register();
 
 // Get tracer instance
@@ -114,7 +115,7 @@ export function exportSpansToOTLP(testName: string) {
 /**
  * Convert attribute values to OTLP format
  */
-function convertAttributeValue(value: any) {
+function convertAttributeValue(value: AttributeValue) {
   if (typeof value === 'string') {
     return { stringValue: value };
   } else if (typeof value === 'number') {
@@ -135,7 +136,7 @@ function convertAttributeValue(value: any) {
 export function withSpan<T>(
   name: string,
   fn: () => T | Promise<T>,
-  attributes?: Record<string, any>
+  attributes?: Record<string, AttributeValue>
 ): Promise<T> {
   return tracer.startActiveSpan(name, { attributes }, async (span) => {
     try {
@@ -163,7 +164,7 @@ export function createValidatedSpanEmitter(spanName: string) {
   const span = tracer.startSpan(spanName);
 
   return {
-    emitEvent(eventName: string, attributes: Record<string, any>) {
+    emitEvent(eventName: string, attributes: Record<string, AttributeValue>) {
       // In strict mode, you would validate attributes against canvas dataSchema here
       // For now, we just emit the event
       span.addEvent(eventName, attributes);
