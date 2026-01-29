@@ -287,10 +287,22 @@ const SkillDetailPanelLoader = dynamic(
 // Dynamically import the StoryboardListPanel with SSR disabled
 const StoryboardListPanelLoader = dynamic(
   () => import('@industry-theme/principal-view-panels').then((mod) => {
-    const Component = mod.panels.find(
-      (p) => p.metadata?.id === 'principal-ai.storyboard-list'
-    )!.component;
-    return { default: Component };
+    console.log('[StoryboardListPanel] Module keys:', Object.keys(mod));
+    console.log('[StoryboardListPanel] panels array:', mod.panels);
+    console.log('[StoryboardListPanel] panels length:', mod.panels?.length);
+    if (mod.panels) {
+      console.log('[StoryboardListPanel] Available panel IDs:',
+        mod.panels.map((p: any) => p.metadata?.id));
+    }
+    const panel = mod.panels?.find(
+      (p: any) => p.metadata?.id === 'principal-ai.storyboard-list'
+    );
+    if (!panel) {
+      console.error('[StoryboardListPanel] Panel not found!');
+      throw new Error('StoryboardListPanel not found');
+    }
+    console.log('[StoryboardListPanel] Found panel:', panel.metadata?.name);
+    return { default: panel.component };
   }),
   { ssr: false }
 );
@@ -298,10 +310,15 @@ const StoryboardListPanelLoader = dynamic(
 // Dynamically import the CanvasEditorPanel with SSR disabled
 const CanvasEditorPanelLoader = dynamic(
   () => import('@industry-theme/principal-view-panels').then((mod) => {
-    const Component = mod.panels.find(
+    const panel = mod.panels.find(
       (p) => p.metadata?.id === 'principal-ai.canvas-editor'
-    )!.component;
-    return { default: Component };
+    );
+    if (!panel) {
+      console.error('CanvasEditorPanel not found in panels array. Available panels:',
+        mod.panels.map(p => p.metadata?.id));
+      throw new Error('CanvasEditorPanel not found');
+    }
+    return { default: panel.component };
   }),
   { ssr: false }
 );
@@ -309,10 +326,15 @@ const CanvasEditorPanelLoader = dynamic(
 // Dynamically import the WorkflowScenariosPanel with SSR disabled
 const WorkflowScenariosPanelLoader = dynamic(
   () => import('@industry-theme/principal-view-panels').then((mod) => {
-    const Component = mod.panels.find(
+    const panel = mod.panels.find(
       (p) => p.metadata?.id === 'principal-ai.workflow-scenarios'
-    )!.component;
-    return { default: Component };
+    );
+    if (!panel) {
+      console.error('WorkflowScenariosPanel not found in panels array. Available panels:',
+        mod.panels.map(p => p.metadata?.id));
+      throw new Error('WorkflowScenariosPanel not found');
+    }
+    return { default: panel.component };
   }),
   { ssr: false }
 );
