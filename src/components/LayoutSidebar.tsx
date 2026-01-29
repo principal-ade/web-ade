@@ -31,6 +31,7 @@ const layoutIcons: Record<string, React.ComponentType<{ className?: string }>> =
   'file-city': LineChart,
   'pull-requests': GitPullRequest,
   skills: Zap,
+  stories: BookOpen,
 };
 
 // Match header height (h-14 = 56px)

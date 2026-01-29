@@ -284,6 +284,27 @@ const SkillDetailPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the StoryboardListPanel with SSR disabled
+const StoryboardListPanelLoader = dynamic(
+  () => import('@industry-theme/principal-view-panels').then((mod) => mod.StoryboardListPanel),
+  { ssr: false }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) as React.ComponentType<any>;
+
+// Dynamically import the CanvasEditorPanel with SSR disabled
+const CanvasEditorPanelLoader = dynamic(
+  () => import('@industry-theme/principal-view-panels').then((mod) => mod.CanvasEditorPanel),
+  { ssr: false }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) as React.ComponentType<any>;
+
+// Dynamically import the WorkflowScenariosPanel with SSR disabled
+const WorkflowScenariosPanelLoader = dynamic(
+  () => import('@industry-theme/principal-view-panels').then((mod) => mod.WorkflowScenariosPanel),
+  { ssr: false }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) as React.ComponentType<any>;
+
 /**
  * Build the GitHub issue body for a backlog task (without @claude tag)
  * The @claude tag will be added in a separate comment after the task file is updated
@@ -1523,6 +1544,27 @@ function EditorLayoutContent({
           },
         });
       }),
+      // Handle storyboard canvas/workflow selection - switch middle panel based on openMode
+      events.on('custom', (event) => {
+        const payload = event.payload as { action?: string; openMode?: 'editor' | 'detail'; canvas?: unknown; workflow?: unknown };
+
+        // Check if this is an openCanvas action from storyboard-list-panel
+        if (event.source === 'storyboard-list-panel' && payload?.action === 'openCanvas') {
+          if (payload.openMode === 'editor') {
+            // Open canvas editor for canvas editing
+            setLayout((prev) => ({
+              ...prev,
+              middle: 'canvas-editor',
+            }));
+          } else if (payload.openMode === 'detail' && payload.workflow) {
+            // Open workflow scenarios panel for workflow detail
+            setLayout((prev) => ({
+              ...prev,
+              middle: 'workflow-scenarios',
+            }));
+          }
+        }
+      }),
     ];
 
     return () => {
@@ -1897,6 +1939,36 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <SkillDetailPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'storyboard-list',
+      label: 'Storyboards',
+      icon: <BookOpen size={16} />,
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <StoryboardListPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'canvas-editor',
+      label: 'Canvas Editor',
+      icon: <Edit size={16} />,
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <CanvasEditorPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'workflow-scenarios',
+      label: 'Workflow Scenarios',
+      icon: <FileText size={16} />,
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <WorkflowScenariosPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },

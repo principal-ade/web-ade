@@ -146,6 +146,19 @@ export const layoutConfigs: LayoutConfig[] = [
       right: false,
     },
   },
+  {
+    id: 'stories',
+    name: 'Stories',
+    layout: {
+      left: 'storyboard-list',
+      middle: 'workflow-scenarios',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
 ];
 
 interface LayoutConfigDropdownProps {
