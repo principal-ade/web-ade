@@ -292,9 +292,12 @@ const StoryboardListPanelLoader = dynamic(
     console.log('[StoryboardListPanel] panels length:', mod.panels?.length);
     if (mod.panels) {
       console.log('[StoryboardListPanel] Available panel IDs:',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mod.panels.map((p: any) => p.metadata?.id));
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const panel = mod.panels?.find(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (p: any) => p.metadata?.id === 'principal-ai.storyboard-list'
     );
     if (!panel) {
@@ -310,12 +313,15 @@ const StoryboardListPanelLoader = dynamic(
 // Dynamically import the CanvasEditorPanel with SSR disabled
 const CanvasEditorPanelLoader = dynamic(
   () => import('@industry-theme/principal-view-panels').then((mod) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const panel = mod.panels.find(
-      (p) => p.metadata?.id === 'principal-ai.canvas-editor'
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (p: any) => p.metadata?.id === 'principal-ai.canvas-editor'
     );
     if (!panel) {
       console.error('CanvasEditorPanel not found in panels array. Available panels:',
-        mod.panels.map(p => p.metadata?.id));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        mod.panels.map((p: any) => p.metadata?.id));
       throw new Error('CanvasEditorPanel not found');
     }
     return { default: panel.component };
@@ -326,12 +332,15 @@ const CanvasEditorPanelLoader = dynamic(
 // Dynamically import the WorkflowScenariosPanel with SSR disabled
 const WorkflowScenariosPanelLoader = dynamic(
   () => import('@industry-theme/principal-view-panels').then((mod) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const panel = mod.panels.find(
-      (p) => p.metadata?.id === 'principal-ai.workflow-scenarios'
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (p: any) => p.metadata?.id === 'principal-ai.workflow-scenarios'
     );
     if (!panel) {
       console.error('WorkflowScenariosPanel not found in panels array. Available panels:',
-        mod.panels.map(p => p.metadata?.id));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        mod.panels.map((p: any) => p.metadata?.id));
       throw new Error('WorkflowScenariosPanel not found');
     }
     return { default: panel.component };
