@@ -287,7 +287,9 @@ const SkillDetailPanelLoader = dynamic(
 // Dynamically import the StoryboardListPanel with SSR disabled
 const StoryboardListPanelLoader = dynamic(
   () => import('@industry-theme/principal-view-panels').then((mod) => {
-    const Component = mod.panels[2]!.component;
+    const Component = mod.panels.find(
+      (p) => p.metadata?.id === 'principal-ai.storyboard-list'
+    )!.component;
     return { default: Component };
   }),
   { ssr: false }
@@ -296,7 +298,9 @@ const StoryboardListPanelLoader = dynamic(
 // Dynamically import the CanvasEditorPanel with SSR disabled
 const CanvasEditorPanelLoader = dynamic(
   () => import('@industry-theme/principal-view-panels').then((mod) => {
-    const Component = mod.panels[0]!.component;
+    const Component = mod.panels.find(
+      (p) => p.metadata?.id === 'principal-ai.canvas-editor'
+    )!.component;
     return { default: Component };
   }),
   { ssr: false }
@@ -305,7 +309,9 @@ const CanvasEditorPanelLoader = dynamic(
 // Dynamically import the WorkflowScenariosPanel with SSR disabled
 const WorkflowScenariosPanelLoader = dynamic(
   () => import('@industry-theme/principal-view-panels').then((mod) => {
-    const Component = mod.panels[1]!.component;
+    const Component = mod.panels.find(
+      (p) => p.metadata?.id === 'principal-ai.workflow-scenarios'
+    )!.component;
     return { default: Component };
   }),
   { ssr: false }
