@@ -7,7 +7,7 @@ frontend:
         - nvm install 20
         - nvm use 20
         - npm cache clean --force
-        - rm -rf node_modules package-lock.json .next
+        - rm -rf node_modules .next
         - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
         - echo "@industry-theme:registry=https://registry.npmjs.org/" >> .npmrc
         - echo "@principal-ade:registry=https://registry.npmjs.org/" >> .npmrc
