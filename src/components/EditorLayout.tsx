@@ -485,6 +485,9 @@ function EditorLayoutContent({
     workflowFileInfo?: FileInfo | null;
   } | null>(null);
 
+  // State for selected file path (for file editor)
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
+
   // Persist layout sidebar collapsed state
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1052,12 +1055,31 @@ function EditorLayoutContent({
         const payload = event.payload as { path?: string; filePath?: string };
         const filePath = payload.path || payload.filePath;
         if (filePath) {
-          // If the file-editor panel is not currently visible, switch to it
-          if (layout.middle !== 'file-editor') {
-            setLayout((prev) => ({
-              ...prev,
-              middle: 'file-editor',
-            }));
+          // Check if this is a markdown file
+          const isMarkdown = /\.(md|mdx|markdown)$/i.test(filePath);
+
+          if (isMarkdown) {
+            // For markdown files, use actions.openFile which updates the markdown panel state
+            if (actions.openFile) {
+              actions.openFile(filePath);
+            }
+            // Switch to markdown-viewer panel
+            if (layout.middle !== 'markdown-viewer') {
+              setLayout((prev) => ({
+                ...prev,
+                middle: 'markdown-viewer',
+              }));
+            }
+          } else {
+            // For non-markdown files, set the file path for the file editor
+            setSelectedFilePath(filePath);
+            // Switch to file-editor panel
+            if (layout.middle !== 'file-editor') {
+              setLayout((prev) => ({
+                ...prev,
+                middle: 'file-editor',
+              }));
+            }
           }
         }
       }),
@@ -2110,7 +2132,15 @@ function EditorLayoutContent({
       icon: <File size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
-          <FileEditorPanelLoader context={context} actions={enhancedActions} events={events} />
+          <FileEditorPanelLoader
+            {...({
+              context,
+              actions: enhancedActions,
+              events,
+              filePath: selectedFilePath,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } as any)}
+          />
         </div>
       ),
     },
@@ -2134,7 +2164,7 @@ function EditorLayoutContent({
         </div>
       ),
     },
-  ], [context, enhancedActions, events]);
+  ], [context, enhancedActions, events, selectedFilePath]);
 
   // Combine stable panels with file editing panels
   const panels = useMemo(() => [...stablePanels, ...fileEditingPanels], [stablePanels, fileEditingPanels]);
