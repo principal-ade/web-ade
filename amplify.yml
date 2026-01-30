@@ -1,18 +1,19 @@
 version: 1
-# Force rebuild to clear package cache - 2026-01-29
+# Force rebuild to clear package cache - 2026-01-30 - Updated to latest packages
 frontend:
   phases:
     preBuild:
       commands:
         - nvm install 20
         - nvm use 20
-        - rm -rf node_modules .next
+        - npm cache clean --force
+        - rm -rf node_modules package-lock.json .next
         - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
         - echo "@industry-theme:registry=https://registry.npmjs.org/" >> .npmrc
         - echo "@principal-ade:registry=https://registry.npmjs.org/" >> .npmrc
         - echo "@principal-ai:registry=https://registry.npmjs.org/" >> .npmrc
         - echo "legacy-peer-deps=true" >> .npmrc
-        - npm install
+        - npm ci
         - npm list @tailwindcss/postcss tailwindcss
     build:
       commands:
