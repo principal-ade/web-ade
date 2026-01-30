@@ -18,6 +18,7 @@ frontend:
     build:
       commands:
         - env | grep -e SESSION_SECRET -e APP_URL -e AUTH_SERVER_URL -e MESSAGING_SERVER_URL -e NODE_ENV -e GITHUB_TOKEN -e NPM_TOKEN -e GOOGLE_AI_API_KEY -e NEXT_PUBLIC_GA_ID -e NEXT_PUBLIC_TRAFFIC_CONTROLLER_URL >> .env.production
+        - export NODE_OPTIONS="--max_old_space_size=4096"
         - npm run build
   artifacts:
     baseDirectory: .next
