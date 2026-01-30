@@ -485,9 +485,6 @@ function EditorLayoutContent({
     workflowFileInfo?: FileInfo | null;
   } | null>(null);
 
-  // State for selected file path (for file editor)
-  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
-
   // Persist layout sidebar collapsed state
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1050,36 +1047,26 @@ function EditorLayoutContent({
           }
         }
       }),
-      // File editor events - switch to file-editor panel when file is opened
+      // File editor events - switch to appropriate panel when file is opened
       events.on('file:open', (event) => {
         const payload = event.payload as { path?: string; filePath?: string };
         const filePath = payload.path || payload.filePath;
         if (filePath) {
-          // Check if this is a markdown file
-          const isMarkdown = /\.(md|mdx|markdown)$/i.test(filePath);
+          // Use actions.openFile for ALL files - it updates the active-file slice
+          // which both markdown-viewer and file-editor panels use
+          if (actions.openFile) {
+            actions.openFile(filePath);
+          }
 
-          if (isMarkdown) {
-            // For markdown files, use actions.openFile which updates the markdown panel state
-            if (actions.openFile) {
-              actions.openFile(filePath);
-            }
-            // Switch to markdown-viewer panel
-            if (layout.middle !== 'markdown-viewer') {
-              setLayout((prev) => ({
-                ...prev,
-                middle: 'markdown-viewer',
-              }));
-            }
-          } else {
-            // For non-markdown files, set the file path for the file editor
-            setSelectedFilePath(filePath);
-            // Switch to file-editor panel
-            if (layout.middle !== 'file-editor') {
-              setLayout((prev) => ({
-                ...prev,
-                middle: 'file-editor',
-              }));
-            }
+          // Switch to the appropriate panel based on file type
+          const isMarkdown = /\.(md|mdx|markdown)$/i.test(filePath);
+          const targetPanel = isMarkdown ? 'markdown-viewer' : 'file-editor';
+
+          if (layout.middle !== targetPanel) {
+            setLayout((prev) => ({
+              ...prev,
+              middle: targetPanel,
+            }));
           }
         }
       }),
@@ -2137,7 +2124,7 @@ function EditorLayoutContent({
               context,
               actions: enhancedActions,
               events,
-              filePath: selectedFilePath,
+              // FileEditorPanel will use the active-file slice from context
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } as any)}
           />
@@ -2164,7 +2151,7 @@ function EditorLayoutContent({
         </div>
       ),
     },
-  ], [context, enhancedActions, events, selectedFilePath]);
+  ], [context, enhancedActions, events]);
 
   // Combine stable panels with file editing panels
   const panels = useMemo(() => [...stablePanels, ...fileEditingPanels], [stablePanels, fileEditingPanels]);

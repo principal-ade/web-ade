@@ -3364,57 +3364,62 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           // Use readFileFromGitHub which handles VFS (checks pending layer first)
           const content = await readFileFromGitHub(cleanPath);
 
-          // If this is a markdown file, update the active-file slice and markdownContent
+          // Always update activeFilePath so FileEditorPanel and other panels know which file is active
+          setActiveFilePath(cleanPath);
+
+          // Determine file type for the slice data
+          const isMarkdown = /\.(md|mdx|markdown)$/i.test(cleanPath);
+          const [owner, name] = (githubRepo || '').split('/');
+
+          // Build active file data structure
+          const activeFileData = {
+            path: cleanPath,
+            content: content,
+            type: isMarkdown ? 'markdown' : 'code',
+            size: content.length,
+            lastModified: new Date(),
+            encoding: 'utf-8',
+            source: isLocalMode ? {
+              type: 'local' as const,
+              provider: 'filesystem',
+              location: cleanPath,
+            } : {
+              type: 'remote' as const,
+              provider: 'github',
+              owner,
+              name,
+              branch: 'main',
+              location: cleanPath,
+              url: `https://github.com/${githubRepo}/blob/main/${cleanPath}`,
+            },
+          };
+
+          // Update the active-file slice for ALL file types
+          const activeFileSlice = slicesRef.current.get('active-file');
+          if (activeFileSlice) {
+            slicesRef.current.set('active-file', {
+              ...activeFileSlice,
+              data: activeFileData,
+              loading: false,
+              error: null,
+            });
+          }
+
+          // Emit file:opened event for all file types
+          events.emit({
+            type: 'file:opened',
+            source: 'web-ade',
+            timestamp: Date.now(),
+            payload: activeFileData,
+          });
+
+          // If this is a markdown file, also update markdownContent
           // so the markdown panel displays the new file
-          if (/\.(md|mdx|markdown)$/i.test(cleanPath)) {
-            const [owner, name] = (githubRepo || '').split('/');
-            const activeFileData = {
-              path: cleanPath,
-              content: content,
-              type: 'markdown',
-              size: content.length,
-              lastModified: new Date(),
-              encoding: 'utf-8',
-              source: isLocalMode ? {
-                type: 'local' as const,
-                provider: 'filesystem',
-                location: cleanPath,
-              } : {
-                type: 'remote' as const,
-                provider: 'github',
-                owner,
-                name,
-                branch: 'main',
-                location: cleanPath,
-                url: `https://github.com/${githubRepo}/blob/main/${cleanPath}`,
-              },
-            };
-
-            // Update the active-file slice
-            const activeFileSlice = slicesRef.current.get('active-file');
-            if (activeFileSlice) {
-              slicesRef.current.set('active-file', {
-                ...activeFileSlice,
-                data: activeFileData,
-                loading: false,
-                error: null,
-              });
-            }
-
-            // Update state to trigger re-render with new file
+          if (isMarkdown) {
             // Clear any previous error (e.g., from failed README fetch) so the slice
             // update during re-render doesn't overwrite our error: null with stale error state
             setMarkdownError(null);
-            setActiveFilePath(cleanPath);
             setMarkdownContent(content);
-
-            // Emit file:opened event
-            events.emit({
-              type: 'file:opened',
-              source: 'web-ade',
-              timestamp: Date.now(),
-              payload: activeFileData,
-            });
           }
 
           // Return content directly for programmatic access (e.g., kanban panel)
