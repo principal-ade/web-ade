@@ -35,6 +35,8 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import type { Theme } from '@principal-ade/industry-theme';
 import type { LocalFileSystemAdapter } from '@/lib/client/LocalFileSystemAdapter';
 import { useLocalFileSystem } from '@/contexts/LocalFileSystemContext';
+import type { FileInfo } from '@principal-ai/repository-abstraction';
+import type { WorkflowTemplate } from '@principal-ai/principal-view-core';
 import { parseTaskMarkdown, serializeTaskMarkdown, DEFAULT_TASK_STATUSES } from '@backlog-md/core';
 import {
   BookOpen, MessageSquare, FileText, Map, Activity, LayoutGrid,
@@ -473,15 +475,14 @@ function EditorLayoutContent({
     canvasId?: string;
     canvasPath?: string;
     canvasName?: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    canvasFileInfo?: any;
+    canvasFileInfo?: FileInfo | null;
   } | null>(null);
 
   const [selectedWorkflowData, setSelectedWorkflowData] = useState<{
     workflowId?: string;
     workflowPath?: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    workflow?: any;
+    workflow?: WorkflowTemplate | null;
+    workflowFileInfo?: FileInfo | null;
   } | null>(null);
 
   // Persist layout sidebar collapsed state
@@ -1637,6 +1638,7 @@ function EditorLayoutContent({
               workflowId: payload.workflowId,
               workflowPath: payload.workflow.path || payload.workflow.file?.path,
               workflow: payload.workflow,
+              workflowFileInfo: payload.workflowFileInfo || null,
             });
             setLayout((prev) => ({
               ...prev,
@@ -2058,22 +2060,43 @@ function EditorLayoutContent({
       icon: <FileText size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <WorkflowScenariosPanelLoader
-            context={context}
-            actions={enhancedActions}
-            events={events}
-            {...(selectedCanvasData && {
-              selectedCanvasId: selectedCanvasData.canvasId,
-              canvasPath: selectedCanvasData.canvasPath,
-              canvasName: selectedCanvasData.canvasName,
-              canvasFileInfo: selectedCanvasData.canvasFileInfo,
-            })}
-            {...(selectedWorkflowData && {
-              selectedWorkflowId: selectedWorkflowData.workflowId,
-              workflowPath: selectedWorkflowData.workflowPath,
-            })}
-          />
+          {selectedCanvasData ? (
+            <WorkflowScenariosPanelLoader
+              {...({
+                context,
+                actions: enhancedActions,
+                events,
+                selectedCanvasId: selectedCanvasData.canvasId,
+                canvasPath: selectedCanvasData.canvasPath,
+                canvasName: selectedCanvasData.canvasName,
+                canvasFileInfo: selectedCanvasData.canvasFileInfo,
+                ...(selectedWorkflowData && {
+                  selectedWorkflowId: selectedWorkflowData.workflowId,
+                  workflowPath: selectedWorkflowData.workflowPath,
+                  workflowTemplate: selectedWorkflowData.workflow,
+                  workflowFileInfo: selectedWorkflowData.workflowFileInfo,
+                }),
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              } as any)}
+            />
+          ) : (
+            <div
+              className="h-full w-full flex flex-col items-center justify-center p-8 text-center"
+              style={{ color: theme.colors.textMuted }}
+            >
+              <FileText size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+              <h3 style={{
+                fontSize: theme.fontSizes[4],
+                marginBottom: '0.5rem',
+                color: theme.colors.text
+              }}>
+                No Canvas Selected
+              </h3>
+              <p style={{ fontSize: theme.fontSizes[2], maxWidth: '400px' }}>
+                Select a canvas and workflow from the Storyboard List to view scenarios
+              </p>
+            </div>
+          )}
         </div>
       ),
     },
