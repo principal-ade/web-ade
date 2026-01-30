@@ -3360,6 +3360,38 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         const cleanPath = cleanFilePath(filePath);
         console.log('Opening file:', cleanPath, isLocalMode ? '(local mode)' : '(GitHub mode)');
 
+        // Check if file exists in the fileTree (unless it's a new file in VFS pending layer)
+        const fileExistsInTree = fileTreeRef.current?.allFiles?.some(f => f.path === cleanPath);
+        const fileExistsInVFS = vfsRef.current?.hasPendingChange(cleanPath);
+
+        if (!fileExistsInTree && !fileExistsInVFS) {
+          console.warn('File not found in repository:', cleanPath);
+
+          // Update activeFilePath so panels know which file was requested
+          setActiveFilePath(cleanPath);
+
+          // Update the active-file slice with error state
+          const activeFileSlice = slicesRef.current.get('active-file');
+          if (activeFileSlice) {
+            slicesRef.current.set('active-file', {
+              ...activeFileSlice,
+              data: { path: cleanPath, content: null, error: 'File not found' },
+              loading: false,
+              error: new Error(`File not found: ${cleanPath}`),
+            });
+          }
+
+          // Emit file:not-found event
+          events.emit({
+            type: 'file:not-found',
+            source: 'web-ade',
+            timestamp: Date.now(),
+            payload: { path: cleanPath },
+          });
+
+          throw new Error(`File not found: ${cleanPath}`);
+        }
+
         try {
           // Use readFileFromGitHub which handles VFS (checks pending layer first)
           const content = await readFileFromGitHub(cleanPath);

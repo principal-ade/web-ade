@@ -485,6 +485,9 @@ function EditorLayoutContent({
     workflowFileInfo?: FileInfo | null;
   } | null>(null);
 
+  // Toast notification state
+  const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
+
   // Persist layout sidebar collapsed state
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1047,26 +1050,42 @@ function EditorLayoutContent({
           }
         }
       }),
+      // Toast notification events
+      events.on('toast:show', (event) => {
+        const payload = event.payload as { message: string; type?: 'error' | 'success' | 'info' };
+        if (payload?.message) {
+          setToast({ message: payload.message, type: payload.type || 'info' });
+          // Auto-dismiss after 4 seconds
+          setTimeout(() => setToast(null), 4000);
+        }
+      }),
       // File editor events - switch to appropriate panel when file is opened
-      events.on('file:open', (event) => {
+      events.on('file:open', async (event) => {
         const payload = event.payload as { path?: string; filePath?: string };
         const filePath = payload.path || payload.filePath;
         if (filePath) {
           // Use actions.openFile for ALL files - it updates the active-file slice
           // which both markdown-viewer and file-editor panels use
           if (actions.openFile) {
-            actions.openFile(filePath);
-          }
+            try {
+              await actions.openFile(filePath);
 
-          // Switch to the appropriate panel based on file type
-          const isMarkdown = /\.(md|mdx|markdown)$/i.test(filePath);
-          const targetPanel = isMarkdown ? 'markdown-viewer' : 'file-editor';
+              // Switch to the appropriate panel based on file type
+              const isMarkdown = /\.(md|mdx|markdown)$/i.test(filePath);
+              const targetPanel = isMarkdown ? 'markdown-viewer' : 'file-editor';
 
-          if (layout.middle !== targetPanel) {
-            setLayout((prev) => ({
-              ...prev,
-              middle: targetPanel,
-            }));
+              if (layout.middle !== targetPanel) {
+                setLayout((prev) => ({
+                  ...prev,
+                  middle: targetPanel,
+                }));
+              }
+            } catch (error) {
+              // Show toast for file not found or other errors
+              const message = error instanceof Error ? error.message : 'Failed to open file';
+              setToast({ message, type: 'error' });
+              setTimeout(() => setToast(null), 4000);
+            }
           }
         }
       }),
@@ -2284,6 +2303,36 @@ function EditorLayoutContent({
           isOpen={isRepoModalOpen}
           onClose={() => setIsRepoModalOpen(false)}
         />
+
+        {/* Toast Notification */}
+        {toast && (
+          <div
+            className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-in slide-in-from-bottom-2"
+            style={{
+              background: toast.type === 'error' ? theme.colors.error :
+                         toast.type === 'success' ? theme.colors.success :
+                         theme.colors.backgroundSecondary,
+              color: toast.type === 'error' || toast.type === 'success' ? '#fff' : theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            {toast.type === 'error' && (
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1ZM7 4.5a1 1 0 1 1 2 0v3a1 1 0 1 1-2 0v-3Zm1 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/>
+              </svg>
+            )}
+            <span style={{ fontSize: theme.fontSizes[1] }}>{toast.message}</span>
+            <button
+              onClick={() => setToast(null)}
+              className="ml-2 opacity-70 hover:opacity-100"
+              style={{ color: 'inherit' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                <path d="M4.646 4.646a.5.5 0 0 1 .708 0L7 6.293l1.646-1.647a.5.5 0 0 1 .708.708L7.707 7l1.647 1.646a.5.5 0 0 1-.708.708L7 7.707l-1.646 1.647a.5.5 0 0 1-.708-.708L6.293 7 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
