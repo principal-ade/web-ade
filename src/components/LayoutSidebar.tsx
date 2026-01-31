@@ -128,8 +128,8 @@ export function LayoutSidebar({
                 <Image
                   src={`https://github.com/${owner}.png?size=64`}
                   alt={owner}
-                  width={28}
-                  height={28}
+                  width={32}
+                  height={32}
                   className="flex-shrink-0"
                   style={{ borderRadius: '6px' }}
                 />
@@ -299,7 +299,7 @@ export function LayoutSidebar({
               <img
                 src={`https://github.com/${owner}.png?size=64`}
                 alt={owner}
-                className="w-7 h-7 flex-shrink-0"
+                className="w-8 h-8 flex-shrink-0"
                 style={{ borderRadius: '6px' }}
               />
             </button>
