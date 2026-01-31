@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "canvas": "auth-callback.otel.canvas",
+  "canvas": ".principal-views/auth-callback/auth-callback.otel.canvas",
   "mode": "span-tree",
   "name": "Authentication Callback",
   "description": "OAuth callback handling with PKCE and WorkOS cookie flows",

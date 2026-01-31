@@ -2,6 +2,7 @@
   "pv": {
     "name": "Authentication Callback",
     "version": "1.0.0",
+    "markdown": ".principal-views/auth-callback/auth-callback.md",
     "edgeTypes": {
       "flow": {
         "label": "Flow"
@@ -21,7 +22,10 @@
       "width": 200,
       "height": 100,
       "pv": {
-        "event": "auth.callback.started",
+        "event": {
+          "name": "auth.callback.started",
+          "attributes": {}
+        },
         "sources": ["src/app/api/auth/callback/route.ts"],
         "otel": {
           "kind": "event",
@@ -59,7 +63,10 @@
       "width": 200,
       "height": 100,
       "pv": {
-        "event": "auth.state.validated",
+        "event": {
+          "name": "auth.state.validated",
+          "attributes": {}
+        },
         "sources": ["src/app/api/auth/callback/route.ts"],
         "otel": {
           "kind": "event",
@@ -93,7 +100,10 @@
       "width": 200,
       "height": 100,
       "pv": {
-        "event": "auth.tokens.received",
+        "event": {
+          "name": "auth.tokens.received",
+          "attributes": {}
+        },
         "sources": ["src/app/api/auth/callback/route.ts"],
         "otel": {
           "kind": "event",
@@ -135,7 +145,10 @@
       "width": 200,
       "height": 100,
       "pv": {
-        "event": "auth.cookies.set",
+        "event": {
+          "name": "auth.cookies.set",
+          "attributes": {}
+        },
         "sources": ["src/app/api/auth/callback/route.ts"],
         "otel": {
           "kind": "event",
@@ -161,7 +174,10 @@
       "width": 200,
       "height": 100,
       "pv": {
-        "event": "auth.callback.complete",
+        "event": {
+          "name": "auth.callback.complete",
+          "attributes": {}
+        },
         "sources": ["src/app/api/auth/callback/route.ts"],
         "otel": {
           "kind": "event",
@@ -195,7 +211,10 @@
       "width": 200,
       "height": 100,
       "pv": {
-        "event": "auth.callback.error",
+        "event": {
+          "name": "auth.callback.error",
+          "attributes": {}
+        },
         "sources": ["src/app/api/auth/callback/route.ts"],
         "otel": {
           "kind": "event",
