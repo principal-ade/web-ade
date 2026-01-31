@@ -1121,6 +1121,24 @@ function EditorLayoutContent({
           }
         }
       }),
+      // Storyboard focus event - switch to canvas list panel
+      events.on('storyboard:focus', (event) => {
+        const payload = event.payload as { id: string; name: string; path: string };
+        console.log('[EditorLayout] Storyboard focus requested:', payload);
+        setLayout((prev) => ({
+          ...prev,
+          middle: 'canvas-list',
+        }));
+      }),
+      // Workflow focus event - switch to workflow scenarios panel
+      events.on('workflow:focus', (event) => {
+        const payload = event.payload as { id: string; name: string; path: string };
+        console.log('[EditorLayout] Workflow focus requested:', payload);
+        setLayout((prev) => ({
+          ...prev,
+          middle: 'workflow-scenarios',
+        }));
+      }),
       // Markdown panel preference events
       events.on('markdown-panel:request-preferences', () => {
         try {
