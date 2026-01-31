@@ -974,7 +974,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                         <div className={`flex gap-3 w-full ${hasSecondRow ? 'items-start' : 'items-center'}`}>
                           <Image
                             src={`https://github.com/${event.repository.split('/')[0]}.png?size=64`}
-                            alt={event.repository.split('/')[0]}
+                            alt={event.repository.split('/')[0] ?? ''}
                             width={40}
                             height={40}
                             className={`flex-shrink-0 ${event.ownerType === 'Organization' ? 'rounded-lg' : 'rounded-full'}`}
