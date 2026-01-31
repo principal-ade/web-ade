@@ -1828,7 +1828,8 @@ function EditorLayoutContent({
     };
 
     buildAndEmitStoryboardContext();
-  }, [selectedCanvasData, selectedWorkflowData, enhancedActions, events]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCanvasData, selectedWorkflowData]);
 
   // Memoize panels that use stable props to prevent unnecessary re-renders
   const stablePanels = useMemo(() => [
