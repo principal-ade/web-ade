@@ -1660,9 +1660,12 @@ function EditorLayoutContent({
           } else if (payload.openMode === 'detail' && payload.workflow) {
             // Store workflow data and open workflow scenarios panel
             console.log('[EditorLayout] Switching to workflow-scenarios with workflow:', payload.workflow);
+            // Get workflow path from workflowFileInfo (the file info for the workflow.json file)
+            const workflowPath = payload.workflowFileInfo?.path;
+            console.log('[EditorLayout] Workflow path extracted:', workflowPath);
             setSelectedWorkflowData({
               workflowId: payload.workflowId,
-              workflowPath: payload.workflow.path || payload.workflow.file?.path,
+              workflowPath,
               workflow: payload.workflow,
               workflowFileInfo: payload.workflowFileInfo || null,
             });
