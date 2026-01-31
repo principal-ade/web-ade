@@ -2416,6 +2416,15 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     });
   }
 
+  // Update storyboardContext slice with event-driven data
+  const storyboardContextSlice = slicesRef.current.get('storyboardContext');
+  if (storyboardContextSlice) {
+    slicesRef.current.set('storyboardContext', {
+      ...storyboardContextSlice,
+      data: storyboardContextData,
+    });
+  }
+
   // Update githubStarred slice with fetched data
   const starredSlice = slicesRef.current.get('githubStarred');
   if (starredSlice) {
