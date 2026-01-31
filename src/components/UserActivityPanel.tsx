@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
 import type { PanelContextValue, PanelActions, PanelEventEmitter } from '@principal-ade/panel-framework-core';
@@ -971,10 +972,12 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                       const hasSecondRow = (event.type === 'pr_merged' && event.metadata?.additions !== undefined) || (event.type === 'issue_opened' && event.metadata?.isClosed);
                       return (
                         <div className={`flex gap-3 w-full ${hasSecondRow ? 'items-start' : 'items-center'}`}>
-                          <img
+                          <Image
                             src={`https://github.com/${event.repository.split('/')[0]}.png?size=64`}
                             alt={event.repository.split('/')[0]}
-                            className={`flex-shrink-0 w-10 h-10 ${event.ownerType === 'Organization' ? 'rounded-lg' : 'rounded-full'}`}
+                            width={40}
+                            height={40}
+                            className={`flex-shrink-0 ${event.ownerType === 'Organization' ? 'rounded-lg' : 'rounded-full'}`}
                           />
                           <div className="flex-1 flex flex-col gap-0.5 min-w-0 overflow-hidden">
                             {/* First row: badge, repo, time */}

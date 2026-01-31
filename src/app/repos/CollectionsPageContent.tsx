@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { usePanelProvider } from "@/contexts/PanelContext";
@@ -500,12 +501,12 @@ export function CollectionsPageContent({
               title="Open recent activity"
               style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
             >
-              <img
+              <Image
                 src={user.avatar_url}
                 alt={user.name || user.login}
+                width={32}
+                height={32}
                 style={{
-                  width: 32,
-                  height: 32,
                   borderRadius: '50%',
                   border: `2px solid ${theme.colors.border}`,
                 }}
@@ -767,12 +768,12 @@ export function CollectionsPageContent({
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {user?.avatar_url && (
-                  <img
+                  <Image
                     src={user.avatar_url}
                     alt={user.name || user.login}
+                    width={40}
+                    height={40}
                     style={{
-                      width: 40,
-                      height: 40,
                       borderRadius: '50%',
                       border: `2px solid ${theme.colors.border}`,
                     }}
@@ -894,10 +895,12 @@ export function CollectionsPageContent({
                           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.surface; }}
                           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                         >
-                          <img
+                          <Image
                             src={`https://avatars.githubusercontent.com/${repo.owner}?size=64`}
                             alt={repo.owner}
-                            style={{ width: 28, height: 28, borderRadius: '6px' }}
+                            width={28}
+                            height={28}
+                            style={{ borderRadius: '6px' }}
                           />
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -945,10 +948,12 @@ export function CollectionsPageContent({
                           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.surface; }}
                           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                         >
-                          <img
+                          <Image
                             src={`https://avatars.githubusercontent.com/${owner.owner}?size=64`}
                             alt={owner.owner}
-                            style={{ width: 28, height: 28, borderRadius: '6px' }}
+                            width={28}
+                            height={28}
+                            style={{ borderRadius: '6px' }}
                           />
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: `${theme.fontSizes[1]}px` }}>{owner.owner}</div>
@@ -1080,10 +1085,12 @@ export function CollectionsPageContent({
                         onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.surface; }}
                         onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                       >
-                        <img
+                        <Image
                           src={followedUser.avatar_url}
                           alt={followedUser.login}
-                          style={{ width: 28, height: 28, borderRadius: '50%' }}
+                          width={28}
+                          height={28}
+                          style={{ borderRadius: '50%' }}
                         />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1125,10 +1132,12 @@ export function CollectionsPageContent({
                         onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.surface; }}
                         onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                       >
-                        <img
+                        <Image
                           src={repo.owner.avatar_url}
                           alt={repo.owner.login}
-                          style={{ width: 28, height: 28, borderRadius: '6px' }}
+                          width={28}
+                          height={28}
+                          style={{ borderRadius: '6px' }}
                         />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

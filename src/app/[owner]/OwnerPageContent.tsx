@@ -1,6 +1,7 @@
 'use client';
 
 import Link from "next/link";
+import Image from "next/image";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePanelProvider } from "@/contexts/PanelContext";
@@ -498,10 +499,12 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                 title="Open navigation"
                 style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
               >
-                <img
+                <Image
                   src={`https://github.com/${owner}.png?size=64`}
                   alt={owner}
-                  className="w-6 h-6 rounded-full"
+                  width={24}
+                  height={24}
+                  className="rounded-full"
                 />
               </button>
               <a
@@ -704,12 +707,12 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {user?.avatar_url && (
-                    <img
+                    <Image
                       src={user.avatar_url}
                       alt={user.name || user.login}
+                      width={32}
+                      height={32}
                       style={{
-                        width: 32,
-                        height: 32,
                         borderRadius: '50%',
                         border: `2px solid ${theme.colors.border}`,
                       }}
@@ -831,10 +834,12 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                             onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
                             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                           >
-                            <img
+                            <Image
                               src={repo.owner.avatar_url}
                               alt={repo.owner.login}
-                              style={{ width: 28, height: 28, borderRadius: '4px' }}
+                              width={28}
+                              height={28}
+                              style={{ borderRadius: '4px' }}
                             />
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -882,10 +887,12 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                             onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
                             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                           >
-                            <img
+                            <Image
                               src={recentOwner.avatar_url}
                               alt={recentOwner.login}
-                              style={{ width: 28, height: 28, borderRadius: '4px' }}
+                              width={28}
+                              height={28}
+                              style={{ borderRadius: '4px' }}
                             />
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontSize: `${theme.fontSizes[1]}px` }}>{recentOwner.login}</div>
@@ -1010,10 +1017,12 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
                           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                         >
-                          <img
+                          <Image
                             src={followedUser.avatar_url}
                             alt={followedUser.login}
-                            style={{ width: 28, height: 28, borderRadius: '50%' }}
+                            width={28}
+                            height={28}
+                            style={{ borderRadius: '50%' }}
                           />
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1055,10 +1064,12 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
                           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                         >
-                          <img
+                          <Image
                             src={repo.owner.avatar_url}
                             alt={repo.owner.login}
-                            style={{ width: 28, height: 28, borderRadius: '4px' }}
+                            width={28}
+                            height={28}
+                            style={{ borderRadius: '4px' }}
                           />
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { PanelContextValue, PanelActions, PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { Users, Loader2, ExternalLink } from 'lucide-react';
@@ -296,10 +297,12 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
               background: viewedUser === selfInfo.login ? theme.colors.surface : 'transparent',
             }}
           >
-            <img
+            <Image
               src={selfInfo.avatarUrl}
               alt={selfInfo.login}
-              className="w-8 h-8 rounded-full flex-shrink-0"
+              width={32}
+              height={32}
+              className="rounded-full flex-shrink-0"
               style={{
                 boxShadow: viewedUser === selfInfo.login ? `0 0 0 2px ${theme.colors.primary}` : 'none',
               }}
@@ -410,10 +413,12 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
                     background: isViewing ? theme.colors.surface : 'transparent',
                   }}
                 >
-                  <img
+                  <Image
                     src={user.avatarUrl}
                     alt={user.login}
-                    className="w-8 h-8 rounded-full flex-shrink-0"
+                    width={32}
+                    height={32}
+                    className="rounded-full flex-shrink-0"
                     style={{
                       boxShadow: isViewing ? `0 0 0 2px ${theme.colors.primary}` : 'none',
                     }}

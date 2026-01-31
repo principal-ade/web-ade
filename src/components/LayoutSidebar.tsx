@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import {
@@ -124,10 +125,12 @@ export function LayoutSidebar({
                 className="flex items-center gap-3 transition-opacity hover:opacity-80"
                 style={{ textDecoration: 'none' }}
               >
-                <img
+                <Image
                   src={`https://github.com/${owner}.png?size=64`}
                   alt={owner}
-                  className="w-7 h-7 flex-shrink-0"
+                  width={28}
+                  height={28}
+                  className="flex-shrink-0"
                   style={{ borderRadius: '6px' }}
                 />
                 <span

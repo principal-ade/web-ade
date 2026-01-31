@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { useTheme } from '@principal-ade/industry-theme';
 import { User } from 'lucide-react';
 
@@ -81,15 +82,11 @@ const Avatar: React.FC<{
 
   return (
     <div style={containerStyle}>
-      <img
+      <Image
         src={url}
         alt="Repository owner"
-        referrerPolicy="no-referrer"
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-        }}
+        fill
+        style={{ objectFit: 'cover' }}
         onError={() => setHasError(true)}
       />
     </div>

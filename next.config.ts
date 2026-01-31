@@ -2,7 +2,22 @@ import type { NextConfig } from "next";
 import MonacoWebpackPlugin from "monaco-editor-webpack-plugin";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'github.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.githubusercontent.com',
+      },
+    ],
+  },
   webpack: (config, { isServer }) => {
     // Exclude test and storybook config files
     config.externals = config.externals || [];

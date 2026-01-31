@@ -297,7 +297,6 @@ const StoryboardListPanelLoader = dynamic(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mod.panels.map((p: any) => p.metadata?.id));
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const panel = mod.panels?.find(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (p: any) => p.metadata?.id === 'principal-ai.storyboard-list'
@@ -315,7 +314,6 @@ const StoryboardListPanelLoader = dynamic(
 // Dynamically import the CanvasEditorPanel with SSR disabled
 const CanvasEditorPanelLoader = dynamic(
   () => import('@industry-theme/principal-view-panels').then((mod) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const panel = mod.panels.find(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (p: any) => p.metadata?.id === 'principal-ai.canvas-editor'
@@ -334,7 +332,6 @@ const CanvasEditorPanelLoader = dynamic(
 // Dynamically import the WorkflowScenariosPanel with SSR disabled
 const WorkflowScenariosPanelLoader = dynamic(
   () => import('@industry-theme/principal-view-panels').then((mod) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const panel = mod.panels.find(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (p: any) => p.metadata?.id === 'principal-ai.workflow-scenarios'
@@ -2068,7 +2065,6 @@ function EditorLayoutContent({
       icon: <Edit size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <CanvasEditorPanelLoader
             context={context}
             actions={enhancedActions}
