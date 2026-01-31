@@ -3035,6 +3035,30 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     }
   }, [commitFilesData, selectedColorMode, events]);
 
+  // Track previous color mode for restoring when storyboard context is cleared
+  const previousStoryboardColorModeRef = useRef<string | null>(null);
+
+  // Auto-switch to 'storyboard' color mode when storyboard context has data
+  useEffect(() => {
+    // Only auto-switch if storyboard context has a storyboard selected
+    if (storyboardContextData?.storyboard) {
+      // Save current color mode before switching (if not already in storyboard mode)
+      if (selectedColorMode !== 'storyboard') {
+        previousStoryboardColorModeRef.current = selectedColorMode;
+      }
+      // Switch to storyboard color mode
+      console.log('[PanelContext] Storyboard context loaded, switching to storyboard color mode');
+      setEnabledColorModes(['storyboard']);
+      setSelectedColorMode('storyboard');
+    } else if (previousStoryboardColorModeRef.current !== null && selectedColorMode === 'storyboard') {
+      // Storyboard context cleared - restore previous color mode
+      console.log('[PanelContext] Storyboard context cleared, restoring color mode to:', previousStoryboardColorModeRef.current);
+      setEnabledColorModes([previousStoryboardColorModeRef.current]);
+      setSelectedColorMode(previousStoryboardColorModeRef.current);
+      previousStoryboardColorModeRef.current = null;
+    }
+  }, [storyboardContextData, selectedColorMode]);
+
   // Refresh function - use slicesRef instead of slices state
   const refresh = useCallback(
     async (scope?: 'workspace' | 'repository', sliceName?: string) => {
