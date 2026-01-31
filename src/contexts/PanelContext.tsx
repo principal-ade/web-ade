@@ -26,6 +26,7 @@ import type { CodebaseView } from '@principal-ai/alexandria-core-library/types';
 import type { FormattedResults } from '@principal-ai/codebase-quality-lenses';
 import { minimatch } from 'minimatch';
 import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
+import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
 import { useAuth } from './AuthContext';
 import { useLocalFileSystem } from './LocalFileSystemContext';
 import { useVFS } from './VFSContext';
@@ -664,6 +665,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const [enabledColorModes, setEnabledColorModes] = useState<string[]>([]);
   // State for the currently selected color mode (updated via events, consumed by File City)
   const [selectedColorMode, setSelectedColorMode] = useState<string | null>(null);
+
+  // State for storyboard context (updated via events from EditorLayout, consumed by File City)
+  const [storyboardContextData, setStoryboardContextData] = useState<StoryboardContextSliceData | null>(null);
 
   // State for packages (for PackageCompositionPanel)
   const [packagesData, setPackagesData] = useState<PackagesSliceData | null>(null);
@@ -1805,6 +1809,21 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
             if (githubRepo && !collectionId) {
               await fetchQualityMetrics(githubRepo, fileTree?.metadata?.sourceSha);
             }
+          },
+        },
+      ],
+      [
+        'storyboardContext',
+        {
+          scope: 'repository',
+          name: 'storyboardContext',
+          // Populated by EditorLayout when a storyboard/workflow is selected
+          // Used by file-city-panel to highlight source files
+          data: storyboardContextData,
+          loading: false,
+          error: null,
+          refresh: async () => {
+            // Storyboard context is updated via events, not refresh
           },
         },
       ],
@@ -3706,6 +3725,18 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
 
     return () => {
       unsubColorMode();
+    };
+  }, [events]);
+
+  // Listen for storyboard context update events from EditorLayout
+  useEffect(() => {
+    const unsubStoryboard = events.on<StoryboardContextSliceData | null>('storyboard:context:update', (event) => {
+      console.log('[PanelContext] Received storyboard:context:update:', event.payload);
+      setStoryboardContextData(event.payload);
+    });
+
+    return () => {
+      unsubStoryboard();
     };
   }, [events]);
 

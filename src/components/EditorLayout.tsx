@@ -36,7 +36,8 @@ import type { Theme } from '@principal-ade/industry-theme';
 import type { LocalFileSystemAdapter } from '@/lib/client/LocalFileSystemAdapter';
 import { useLocalFileSystem } from '@/contexts/LocalFileSystemContext';
 import type { FileInfo } from '@principal-ai/repository-abstraction';
-import type { WorkflowTemplate } from '@principal-ai/principal-view-core';
+import type { WorkflowTemplate, ExtendedCanvas } from '@principal-ai/principal-view-core';
+import { buildStoryboardContext, type StoryboardReference } from '@principal-ai/principal-view-core';
 import { parseTaskMarkdown, serializeTaskMarkdown, DEFAULT_TASK_STATUSES } from '@backlog-md/core';
 import {
   BookOpen, MessageSquare, FileText, Map, Activity, LayoutGrid,
@@ -1768,6 +1769,66 @@ function EditorLayoutContent({
       }
     },
   }), [actions, githubRepo, setFileMetadata, addPendingChangeFromWrite, isLocalMode, localAdapter]);
+
+  // Build and emit storyboard context when canvas/workflow selection changes
+  useEffect(() => {
+    const buildAndEmitStoryboardContext = async () => {
+      // If no canvas selected, clear the context
+      if (!selectedCanvasData?.canvasPath) {
+        events.emit({
+          type: 'storyboard:context:update',
+          source: 'editor-layout',
+          timestamp: Date.now(),
+          payload: null,
+        });
+        return;
+      }
+
+      try {
+        // Load canvas content
+        const canvasContent = await enhancedActions.readFile(selectedCanvasData.canvasPath);
+        const canvas: ExtendedCanvas = JSON.parse(canvasContent);
+
+        // Build storyboard reference
+        const storyboardRef: StoryboardReference = {
+          id: selectedCanvasData.canvasId || selectedCanvasData.canvasPath,
+          name: selectedCanvasData.canvasName || selectedCanvasData.canvasId || 'Unknown',
+          path: selectedCanvasData.canvasPath,
+        };
+
+        // Build storyboard context (with or without workflow)
+        const storyboardContext = buildStoryboardContext({
+          canvas,
+          storyboard: storyboardRef,
+          workflow: (selectedWorkflowData?.workflow && selectedWorkflowData?.workflowPath) ? {
+            template: selectedWorkflowData.workflow,
+            path: selectedWorkflowData.workflowPath,
+          } : undefined,
+        });
+
+        console.log('[EditorLayout] Built storyboard context:', storyboardContext);
+
+        // Emit the context update
+        events.emit({
+          type: 'storyboard:context:update',
+          source: 'editor-layout',
+          timestamp: Date.now(),
+          payload: storyboardContext,
+        });
+      } catch (error) {
+        console.error('[EditorLayout] Failed to build storyboard context:', error);
+        // Clear context on error
+        events.emit({
+          type: 'storyboard:context:update',
+          source: 'editor-layout',
+          timestamp: Date.now(),
+          payload: null,
+        });
+      }
+    };
+
+    buildAndEmitStoryboardContext();
+  }, [selectedCanvasData, selectedWorkflowData, enhancedActions, events]);
 
   // Memoize panels that use stable props to prevent unnecessary re-renders
   const stablePanels = useMemo(() => [
