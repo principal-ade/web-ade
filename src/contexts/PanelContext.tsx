@@ -3641,9 +3641,11 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     setPrFilesData(null);
     setSelectedPrNumber(null);
     setCommitFilesData(null);
+    setStoryboardContextData(null);
     // Clear the refs so we don't try to restore old state
     previousColorModeRef.current = null;
     previousCommitColorModeRef.current = null;
+    previousStoryboardColorModeRef.current = null;
     // Emit events so visualizations can react
     events.emit({
       type: 'prFiles:cleared',
