@@ -72,9 +72,9 @@ export async function register() {
     const { metrics } = await import('@opentelemetry/api');
     const { MeterProvider, PeriodicExportingMetricReader } = await import('@opentelemetry/sdk-metrics');
     const { OTLPMetricExporter } = await import('@opentelemetry/exporter-metrics-otlp-http');
-    const { Resource } = await import('@opentelemetry/resources');
+    const { resourceFromAttributes } = await import('@opentelemetry/resources');
 
-    const metricsResource = new Resource({
+    const metricsResource = resourceFromAttributes({
       'service.name': serviceName,
       ...otherResources
     });
