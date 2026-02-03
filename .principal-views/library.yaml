@@ -3,13 +3,17 @@ version: "1.0.0"
 name: "Web ADE"
 description: "Principal ADE web application"
 
-# Project-level OTEL resource attributes
-# These are automatically attached to all telemetry from this project
-# and used for trace routing in dev tools
+# Service resource registry
+# Define all services in this repository with their OTEL resource attributes
+# Each service configures its own resources at runtime, but declaring them here provides:
+# - Service documentation/registry
+# - Expected resource schema for validation
+# - Dev workspace trace routing
 resources:
-  service.name: "web-ade"
-  service.version: "0.1.0"
-  deployment.environment: "development"
+  web-ade:
+    service.name: "web-ade"
+    service.version: "0.1.0"
+    deployment.environment: "development"
 
 nodeComponents: {}
 edgeComponents: {}
