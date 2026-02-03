@@ -9,8 +9,7 @@ description: "Principal ADE web application"
 resources:
   service.name: "web-ade"
   service.version: "0.1.0"
-  dev.server.url: "/Users/griever/Developer/web-ade/web-ade"
   deployment.environment: "development"
 
-nodeComponents: []
-edgeComponents: []
+nodeComponents: {}
+edgeComponents: {}
