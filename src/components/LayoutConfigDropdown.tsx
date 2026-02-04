@@ -29,6 +29,7 @@ export const layoutConfigs: LayoutConfig[] = [
       left: false,
       right: false,
     },
+    hidden: true,
   },
   {
     id: 'kanban',
@@ -42,6 +43,7 @@ export const layoutConfigs: LayoutConfig[] = [
       left: false,
       right: true,
     },
+    hidden: true,
   },
   {
     id: 'skills',
