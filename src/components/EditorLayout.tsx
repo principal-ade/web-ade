@@ -433,6 +433,9 @@ function EditorLayoutContent({
   // Toast notification state
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
 
+  // Overlay panel state for single-panel mode - shows panel on top without losing base panel state
+  const [overlayPanelId, setOverlayPanelId] = useState<string | null>(null);
+
   // Persist layout sidebar collapsed state
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -674,6 +677,18 @@ function EditorLayoutContent({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Handle Escape key to close overlay panel in single-panel mode
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && overlayPanelId) {
+        setOverlayPanelId(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [overlayPanelId]);
 
   // Handle file:write-requested events from PanelContext's fileSystem adapter
   // This enables features like backlog init to create new files
@@ -935,11 +950,21 @@ function EditorLayoutContent({
               const isMarkdown = /\.(md|mdx|markdown)$/i.test(filePath);
               const targetPanel = isMarkdown ? 'markdown-viewer' : 'file-editor';
 
-              if (layout.middle !== targetPanel) {
-                setLayout((prev) => ({
-                  ...prev,
-                  middle: targetPanel,
-                }));
+              // Check if we're in single-panel mode
+              const currentConfig = layoutConfigs.find((c) => c.id === currentLayoutConfigId);
+              const isSinglePanelMode = currentConfig?.singlePanelMode ?? false;
+
+              if (isSinglePanelMode) {
+                // In single-panel mode, show file viewer as overlay instead of switching
+                setOverlayPanelId(targetPanel);
+              } else {
+                // Normal mode - switch the middle panel
+                if (layout.middle !== targetPanel) {
+                  setLayout((prev) => ({
+                    ...prev,
+                    middle: targetPanel,
+                  }));
+                }
               }
             } catch (error) {
               // Show toast for file not found or other errors
@@ -1562,7 +1587,7 @@ function EditorLayoutContent({
     return () => {
       unsubscribers.forEach((unsub) => unsub());
     };
-  }, [events, login, actions, layout, leftSidebarCollapsed, rightSidebarCollapsed, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed, setTheme, setColor, resetColor, resetAllColors, githubRepo]);
+  }, [events, login, actions, layout, leftSidebarCollapsed, rightSidebarCollapsed, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed, setTheme, setColor, resetColor, resetAllColors, githubRepo, currentLayoutConfigId]);
 
   // Create enhanced actions that add writeFile and capture file metadata on read
   const enhancedActions = useMemo(() => ({
@@ -2109,12 +2134,68 @@ function EditorLayoutContent({
           />
 
           {/* Single Panel Content */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden relative">
+            {/* Base panel (always rendered to maintain state) */}
             {middlePanel ? middlePanel.content : (
               <div className="h-full w-full flex items-center justify-center">
                 <p style={{ color: theme.colors.textMuted }}>Panel not found</p>
               </div>
             )}
+
+            {/* Overlay panel (shown on top when file is opened) */}
+            {overlayPanelId && (() => {
+              const overlayPanel = panels.find((p) => p.id === overlayPanelId);
+              return overlayPanel ? (
+                <div
+                  className="absolute inset-0 flex flex-col"
+                  style={{
+                    background: theme.colors.background,
+                    zIndex: 10,
+                  }}
+                >
+                  {/* Overlay header with close button */}
+                  <div
+                    className="flex items-center justify-between px-4 py-2 border-b"
+                    style={{
+                      background: theme.colors.surface,
+                      borderColor: theme.colors.border,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: theme.fonts.body,
+                        fontSize: theme.fontSizes[2],
+                        color: theme.colors.text,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {overlayPanel.label}
+                    </span>
+                    <button
+                      onClick={() => setOverlayPanelId(null)}
+                      className="flex items-center justify-center hover:opacity-70 transition-opacity"
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: theme.colors.textMuted,
+                        padding: '4px',
+                      }}
+                      title="Close and return to base view"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L10 9.293l4.646-4.647a.5.5 0 0 1 .708.708L10.707 10l4.647 4.646a.5.5 0 0 1-.708.708L10 10.707l-4.646 4.647a.5.5 0 0 1-.708-.708L9.293 10 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Overlay panel content */}
+                  <div className="flex-1 overflow-hidden">
+                    {overlayPanel.content}
+                  </div>
+                </div>
+              ) : null;
+            })()}
           </div>
 
           {/* Agent Command Palette (Cmd+Shift+P) - AI-driven natural language commands */}

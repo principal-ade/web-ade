@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Palette, GitCommit, ArrowLeftRight, Sparkles, X, Star, Rss, Mic, Menu } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Palette, GitCommit, ArrowLeftRight, Sparkles, X, Star, Rss, Menu } from 'lucide-react';
 import { UserAvatarMenu } from './UserAvatarMenu';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
@@ -61,7 +61,7 @@ export function EditorHeader({
   selectedColorMode,
   onClearColorMode,
   onOpenMobileSidebar,
-  onOpenWithMic,
+  onOpenWithMic: _onOpenWithMic,
 }: EditorHeaderProps = {}) {
   const { theme } = useTheme();
   const { cycleTheme, currentThemeName } = useGlobalTheme();
@@ -504,8 +504,8 @@ export function EditorHeader({
           </button>
         )}
 
-        {/* Voice Input Button */}
-        {onOpenWithMic && (
+        {/* Voice Input Button - TODO: Re-enable later */}
+        {/* {onOpenWithMic && (
           <button
             onClick={onOpenWithMic}
             className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
@@ -517,7 +517,7 @@ export function EditorHeader({
           >
             <Mic className="w-4 h-4" />
           </button>
-        )}
+        )} */}
 
         {/* User Avatar Menu */}
         <UserAvatarMenu />
