@@ -18,6 +18,45 @@ export interface LayoutConfig {
 
 export const layoutConfigs: LayoutConfig[] = [
   {
+    id: 'stories',
+    name: 'Stories',
+    layout: {
+      left: 'storyboard-list',
+      middle: 'workflow-scenarios',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
+  {
+    id: 'skills',
+    name: 'Skills',
+    layout: {
+      left: 'skills-list',
+      middle: 'skill-detail',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
+  {
+    id: 'quality-debug',
+    name: 'Quality Views',
+    layout: {
+      left: 'quality-hexagon',
+      middle: 'lens-debug',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+  },
+  {
     id: 'documentation',
     name: 'Documentation',
     layout: {
@@ -44,19 +83,6 @@ export const layoutConfigs: LayoutConfig[] = [
       right: true,
     },
     hidden: true,
-  },
-  {
-    id: 'skills',
-    name: 'Skills',
-    layout: {
-      left: 'skills-list',
-      middle: 'skill-detail',
-      right: 'file-city',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
   },
   {
     id: 'git-history',
@@ -99,32 +125,6 @@ export const layoutConfigs: LayoutConfig[] = [
       right: false,
     },
     hidden: true,
-  },
-  {
-    id: 'quality-debug',
-    name: 'Quality Views',
-    layout: {
-      left: 'quality-hexagon',
-      middle: 'lens-debug',
-      right: 'file-city',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
-  },
-  {
-    id: 'stories',
-    name: 'Stories',
-    layout: {
-      left: 'storyboard-list',
-      middle: 'workflow-scenarios',
-      right: 'file-city',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
   },
 ];
 
