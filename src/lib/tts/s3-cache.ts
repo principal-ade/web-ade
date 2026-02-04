@@ -36,7 +36,7 @@ export async function checkS3Cache(key: string): Promise<boolean> {
       })
     );
     return true;
-  } catch (error) {
+  } catch {
     // Object doesn't exist (NoSuchKey error)
     return false;
   }

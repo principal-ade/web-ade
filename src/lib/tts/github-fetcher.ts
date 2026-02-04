@@ -7,7 +7,7 @@
  */
 
 import { getGitHubToken } from '@/lib/auth/cookies';
-import { IntroductionTour, TTSErrorCode } from './types';
+import { IntroductionTour, TTSErrorCode, TTSError } from './types';
 
 /**
  * Fetches and validates tour from GitHub
@@ -121,7 +121,8 @@ export function getStepDescription(tour: IntroductionTour, stepId: string): stri
   const step = tour.steps.find((s) => s.id === stepId);
 
   if (!step) {
-    const error: any = new Error(TTSErrorCode.STEP_NOT_FOUND);
+    const error = new Error(TTSErrorCode.STEP_NOT_FOUND) as TTSError;
+    error.code = TTSErrorCode.STEP_NOT_FOUND;
     error.stepId = stepId;
     throw error;
   }

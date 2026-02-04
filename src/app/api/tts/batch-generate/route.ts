@@ -99,12 +99,13 @@ export async function POST(request: NextRequest) {
 
       const cached = await checkS3Cache(s3Key);
       const audioUrl = getS3Url(s3Key);
+      const status: 'ready' | 'generating' = cached ? 'ready' : 'generating';
 
       return {
         stepId: step.id,
         audioUrl,
         cached,
-        status: (cached ? 'ready' : 'generating') as const,
+        status,
       };
     });
 

@@ -4,7 +4,7 @@
  * Integrates with ElevenLabs Text-to-Speech API for audio generation.
  */
 
-import { TTSOptions, TTSErrorCode } from './types';
+import { TTSOptions, TTSErrorCode, TTSError } from './types';
 
 const ELEVENLABS_API_BASE = 'https://api.elevenlabs.io/v1';
 
@@ -49,7 +49,8 @@ export async function generateAudio(text: string, options: TTSOptions): Promise<
     // Handle rate limiting
     if (response.status === 429) {
       const retryAfter = response.headers.get('retry-after');
-      const error: any = new Error(TTSErrorCode.RATE_LIMIT_EXCEEDED);
+      const error = new Error(TTSErrorCode.RATE_LIMIT_EXCEEDED) as TTSError;
+      error.code = TTSErrorCode.RATE_LIMIT_EXCEEDED;
       error.retryAfter = retryAfter ? parseInt(retryAfter) : 60;
       console.error('[ElevenLabs] Rate limit exceeded', {
         retryAfter: error.retryAfter,
