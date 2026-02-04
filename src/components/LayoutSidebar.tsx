@@ -14,12 +14,14 @@ import {
   Palette,
   X,
   Zap,
+  Map,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@principal-ai/logo-component';
 import { layoutConfigs, LayoutConfig } from './LayoutConfigDropdown';
 
 const layoutIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  tour: Map,
   default: Blocks,
   kanban: KanbanSquare,
   documentation: BookOpen,

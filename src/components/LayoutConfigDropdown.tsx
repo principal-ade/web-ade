@@ -18,6 +18,19 @@ export interface LayoutConfig {
 
 export const layoutConfigs: LayoutConfig[] = [
   {
+    id: 'tour',
+    name: 'Tour',
+    layout: {
+      left: 'packages',
+      middle: 'file-city',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: true,
+      right: true,
+    },
+  },
+  {
     id: 'stories',
     name: 'Stories',
     layout: {
