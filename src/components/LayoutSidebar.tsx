@@ -9,7 +9,6 @@ import {
   KanbanSquare,
   BookOpen,
   FileCode,
-  CircleDot,
   Hexagon,
   LineChart,
   GitPullRequest,
@@ -27,7 +26,6 @@ const layoutIcons: Record<string, React.ComponentType<{ className?: string }>> =
   kanban: KanbanSquare,
   documentation: BookOpen,
   'file-editor': FileCode,
-  'github-issues': CircleDot,
   'quality-debug': Hexagon,
   'file-city': LineChart,
   'pull-requests': GitPullRequest,
@@ -47,7 +45,7 @@ interface LayoutSidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   owner?: string; // When provided, shows owner avatar/name instead of Principal AI logo
-  badges?: Record<string, number>; // Badge counts for specific layout config IDs (e.g., { 'github-issues': 12, 'pull-requests': 5 })
+  badges?: Record<string, number>; // Badge counts for specific layout config IDs (e.g., { 'pull-requests': 5, 'kanban': 3 })
   mobileOpen?: boolean; // When true, renders as slide-in overlay on mobile
   onMobileClose?: () => void; // Callback to close mobile overlay
 }

@@ -246,39 +246,16 @@ interface RepoCapabilitiesSliceData {
   claudeWorkflowPath?: string;
 }
 
-// GitHub Issues types for GitHubIssuesPanel
-interface GitHubIssueLabel {
-  id: number;
-  name: string;
-  color: string;
-}
-
-interface GitHubIssueUser {
+// Shared GitHub user/label types (used by messages/PRs)
+interface GitHubUser {
   login: string;
   avatar_url: string;
 }
 
-interface GitHubIssue {
+interface GitHubLabel {
   id: number;
-  number: number;
-  title: string;
-  state: 'open' | 'closed';
-  body: string | null;
-  html_url: string;
-  created_at: string;
-  updated_at: string;
-  labels: GitHubIssueLabel[];
-  comments: number;
-  user: GitHubIssueUser;
-  assignees: GitHubIssueUser[];
-}
-
-interface GitHubIssuesSliceData {
-  issues: GitHubIssue[];
-  owner: string;
-  repo: string;
-  isAuthenticated: boolean;
-  error?: string;
+  name: string;
+  color: string;
 }
 
 // GitHub Messages types for GitHubMessagesPanel
@@ -287,14 +264,14 @@ interface GitHubMessagesTarget {
   number: number;
   title: string;
   state: 'open' | 'closed';
-  user: GitHubIssueUser;
+  user: GitHubUser;
   created_at: string;
   html_url: string;
   merged?: boolean;
   merged_at?: string | null;
   draft?: boolean;
-  labels?: GitHubIssueLabel[];
-  assignees?: GitHubIssueUser[];
+  labels?: GitHubLabel[];
+  assignees?: GitHubUser[];
 }
 
 interface GitHubMessagesSliceData {
@@ -699,11 +676,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const [commitsLoading, setCommitsLoading] = useState(false);
   const [commitsError, setCommitsError] = useState<Error | null>(null);
 
-  // State for GitHub issues (for GitHubIssuesPanel)
-  const [issuesData, setIssuesData] = useState<GitHubIssuesSliceData | null>(null);
-  const [issuesLoading, setIssuesLoading] = useState(false);
-  const [issuesError, setIssuesError] = useState<Error | null>(null);
-
   // State for GitHub pull requests (for GitPullRequestsPanel)
   const [pullRequestsData, setPullRequestsData] = useState<PullRequestsSliceData | null>(null);
   const [pullRequestsLoading, setPullRequestsLoading] = useState(false);
@@ -976,48 +948,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     }
   }, []);
 
-  // Fetch issues from GitHub API
-  const fetchIssues = useCallback(async (repo: string) => {
-    setIssuesLoading(true);
-    setIssuesError(null);
-    console.log('[PanelContext] Fetching issues for:', repo);
-
-    try {
-      const [owner, name] = repo.split('/');
-      const response = await fetch(
-        `/api/github/repo/${owner}/${name}/issues?per_page=50`,
-        { credentials: 'include' }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        setIssuesData({
-          issues: [],
-          owner: owner || '',
-          repo: name || '',
-          isAuthenticated: errorData.isAuthenticated ?? false,
-          error: errorData.error || `Failed to fetch issues: ${response.statusText}`,
-        });
-        return;
-      }
-
-      const data = await response.json();
-
-      setIssuesData({
-        issues: data.issues || [],
-        owner: data.owner || owner || '',
-        repo: data.repo || name || '',
-        isAuthenticated: data.isAuthenticated ?? false,
-      });
-      console.log('[PanelContext] Issues loaded:', data.issues?.length || 0);
-    } catch (err) {
-      console.error('[PanelContext] Failed to fetch issues:', err);
-      setIssuesError(err instanceof Error ? err : new Error('Failed to fetch issues'));
-    } finally {
-      setIssuesLoading(false);
-    }
-  }, []);
-
   // Fetch pull requests from GitHub API
   const fetchPullRequests = useCallback(async (repo: string) => {
     setPullRequestsLoading(true);
@@ -1065,7 +995,16 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     owner: string,
     repo: string,
     number: number,
-    issue: GitHubIssue
+    issue: {
+      number: number;
+      title: string;
+      state: 'open' | 'closed';
+      user: GitHubUser;
+      created_at: string;
+      html_url: string;
+      labels?: GitHubLabel[];
+      assignees?: GitHubUser[];
+    }
   ) => {
     console.log('[PanelContext] Fetching messages for:', owner, repo, '#', number);
 
@@ -1986,21 +1925,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         },
       ],
       [
-        'github-issues',
-        {
-          scope: 'repository',
-          name: 'github-issues',
-          data: issuesData,
-          loading: issuesLoading,
-          error: issuesError,
-          refresh: async () => {
-            if (githubRepo) {
-              await fetchIssues(githubRepo);
-            }
-          },
-        },
-      ],
-      [
         'pullRequests',
         {
           scope: 'repository',
@@ -2363,17 +2287,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     });
   }
 
-  // Update github-issues slice with fetched data
-  const issuesSlice = slicesRef.current.get('github-issues');
-  if (issuesSlice) {
-    slicesRef.current.set('github-issues', {
-      ...issuesSlice,
-      data: issuesData,
-      loading: issuesLoading,
-      error: issuesError,
-    });
-  }
-
   // Update pullRequests slice with fetched data
   const pullRequestsSlice = slicesRef.current.get('pullRequests');
   if (pullRequestsSlice) {
@@ -2509,24 +2422,20 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     };
   }, [events, githubRepo, fetchPrFiles, clearPrFiles]);
 
-  // Listen for issue:selected and pr:selected events to fetch messages/timeline
+  // Listen for pr:selected events to fetch messages/timeline
   useEffect(() => {
-    const unsubscribeIssue = events.on('issue:selected', (event) => {
-      const payload = event.payload as {
-        issue?: GitHubIssue;
-        owner?: string;
-        repo?: string;
-      };
-      const { issue, owner, repo } = payload;
-      if (issue && owner && repo) {
-        console.log('[PanelContext] Issue selected, fetching messages for #', issue.number);
-        fetchMessages(owner, repo, issue.number, issue);
-      }
-    });
-
     const unsubscribePR = events.on('pr:selected', (event) => {
       const payload = event.payload as {
-        pullRequest?: GitHubIssue; // GitHubPullRequest has same structure as GitHubIssue
+        pullRequest?: {
+          number: number;
+          title: string;
+          state: 'open' | 'closed';
+          user: GitHubUser;
+          created_at: string;
+          html_url: string;
+          labels?: GitHubLabel[];
+          assignees?: GitHubUser[];
+        };
         owner?: string;
         repo?: string;
       };
@@ -2537,15 +2446,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       }
     });
 
-    const unsubscribeDeselect = events.on('issue:deselected', () => {
-      console.log('[PanelContext] Issue deselected, clearing messages');
-      setMessagesData(null);
-    });
-
     return () => {
-      unsubscribeIssue();
       unsubscribePR();
-      unsubscribeDeselect();
     };
   }, [events, fetchMessages]);
 
@@ -2598,16 +2500,12 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         // Refresh messages to get updated reactions
         if (messagesData?.target) {
           await fetchMessages(payload.owner, payload.repo, payload.targetNumber, {
-            id: 0, // Temporary ID for refresh
             number: payload.targetNumber,
             title: messagesData.target.title,
             state: messagesData.target.state,
-            body: null,
             html_url: messagesData.target.html_url,
             created_at: messagesData.target.created_at,
-            updated_at: messagesData.target.created_at,
             labels: messagesData.target.labels || [],
-            comments: 0,
             user: messagesData.target.user,
             assignees: messagesData.target.assignees || [],
           });
@@ -2660,16 +2558,12 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         // Refresh messages to get updated reactions
         if (messagesData?.target) {
           await fetchMessages(payload.owner, payload.repo, payload.targetNumber, {
-            id: 0, // Temporary ID for refresh
             number: payload.targetNumber,
             title: messagesData.target.title,
             state: messagesData.target.state,
-            body: null,
             html_url: messagesData.target.html_url,
             created_at: messagesData.target.created_at,
-            updated_at: messagesData.target.created_at,
             labels: messagesData.target.labels || [],
-            comments: 0,
             user: messagesData.target.user,
             assignees: messagesData.target.assignees || [],
           });
@@ -2724,16 +2618,12 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         // Refresh messages to show new comment
         if (messagesData?.target) {
           await fetchMessages(payload.owner, payload.repo, payload.targetNumber, {
-            id: 0, // Temporary ID for refresh
             number: payload.targetNumber,
             title: messagesData.target.title,
             state: messagesData.target.state,
-            body: null,
             html_url: messagesData.target.html_url,
             created_at: messagesData.target.created_at,
-            updated_at: messagesData.target.created_at,
             labels: messagesData.target.labels || [],
-            comments: 0,
             user: messagesData.target.user,
             assignees: messagesData.target.assignees || [],
           });
@@ -2752,95 +2642,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           },
         });
       }
-    });
-
-    // Handle issue delete/close
-    const unsubscribeIssueDelete = events.on('github-issue:delete', async (event) => {
-      const payload = event.payload as {
-        owner: string;
-        repo: string;
-        number: number;
-      };
-
-      console.log('[PanelContext] Closing issue:', payload);
-
-      try {
-        const response = await fetch(
-          `/api/github/repo/${payload.owner}/${payload.repo}/issues/${payload.number}`,
-          {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ state: 'closed' }),
-          }
-        );
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Failed to close issue');
-        }
-
-        console.log('[PanelContext] Issue closed');
-
-        // Clear messages data
-        setMessagesData(null);
-
-        // Remove the closed issue from local state immediately
-        setIssuesData((prevData) => {
-          if (!prevData) return prevData;
-          return {
-            ...prevData,
-            issues: prevData.issues.filter((issue) => issue.number !== payload.number),
-          };
-        });
-
-        // Emit success event
-        events.emit({
-          type: 'github-issue:deleted',
-          source: 'panel-context',
-          timestamp: Date.now(),
-          payload: {
-            owner: payload.owner,
-            repo: payload.repo,
-            number: payload.number,
-          },
-        });
-      } catch (error) {
-        console.error('[PanelContext] Error closing issue:', error);
-
-        events.emit({
-          type: 'github-issue:delete-error',
-          source: 'panel-context',
-          timestamp: Date.now(),
-          payload: {
-            owner: payload.owner,
-            repo: payload.repo,
-            number: payload.number,
-            error: error instanceof Error ? error.message : 'Failed to close issue',
-          },
-        });
-      }
-    });
-
-    // Handle issue creation (from task assignment)
-    const unsubscribeIssueCreate = events.on('task:assigned-to-claude', (event) => {
-      const payload = event.payload as {
-        taskId: string;
-        issueNumber: number;
-        issueUrl: string;
-        issue: GitHubIssue; // GitHub issue object
-      };
-
-      console.log('[PanelContext] Issue created:', payload.issueNumber);
-
-      // Add the new issue to local state immediately
-      setIssuesData((prevData) => {
-        if (!prevData) return prevData;
-        // Add to the beginning of the array (most recent first)
-        return {
-          ...prevData,
-          issues: [payload.issue, ...prevData.issues],
-        };
-      });
     });
 
     // Handle PR delete/close
@@ -2910,11 +2711,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       unsubscribeReactionAdd();
       unsubscribeReactionRemove();
       unsubscribeCommentCreate();
-      unsubscribeIssueDelete();
-      unsubscribeIssueCreate();
       unsubscribePRDelete();
     };
-  }, [events, messagesData, fetchMessages, githubRepo, fetchIssues, fetchPullRequests]);
+  }, [events, messagesData, fetchMessages, githubRepo, fetchPullRequests]);
 
   // Listen for commit-detail:loaded events to update commit files for File-City visualization
   useEffect(() => {
@@ -3402,7 +3201,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, userGitHubData, userGitHubLoading, qualityData, qualityLoading, qualityError, lensResults, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading, issuesData, issuesLoading, issuesError, pullRequestsData, pullRequestsLoading, pullRequestsError, messagesData]
+    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, userGitHubData, userGitHubLoading, qualityData, qualityLoading, qualityError, lensResults, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading, pullRequestsData, pullRequestsLoading, pullRequestsError, messagesData]
   );
 
   // Actions
@@ -3696,7 +3495,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     fetchCodebaseViews(githubRepo);
     fetchPackages(githubRepo);
     fetchCommits(githubRepo);
-    fetchIssues(githubRepo);
     fetchPullRequests(githubRepo);
     fetchFeedProject(githubRepo);
 
@@ -3709,7 +3507,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       fetchQualityMetrics(githubRepo, commitSha ?? undefined);
     };
     fetchTreeThenQuality();
-  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics, fetchPackages, fetchCommits, fetchIssues, fetchPullRequests, fetchFeedProject]);
+  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics, fetchPackages, fetchCommits, fetchPullRequests, fetchFeedProject]);
 
   // Fetch owner repositories when initialOwner prop is provided (handles client-side navigation)
   useEffect(() => {

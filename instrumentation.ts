@@ -25,7 +25,7 @@ export async function register() {
         // Matches: resources:\n  key: "value" or key: value
         const resourcesMatch = content.match(/resources:\s*\n((?:\s+[\w.]+:\s*[^\n]+\n?)+)/);
 
-        if (!resourcesMatch) {
+        if (!resourcesMatch || !resourcesMatch[1]) {
           return {};
         }
 
@@ -34,8 +34,9 @@ export async function register() {
 
         for (const line of resourceLines) {
           const match = line.match(/^\s+([\w.]+):\s*["']?([^"'\n]+)["']?$/);
-          if (match) {
-            const [, key, value] = match;
+          if (match && match[1] && match[2]) {
+            const key = match[1];
+            const value = match[2];
             resources[key] = value.trim();
           }
         }

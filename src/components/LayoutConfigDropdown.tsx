@@ -30,19 +30,6 @@ export const layoutConfigs: LayoutConfig[] = [
     },
   },
   {
-    id: 'github-issues',
-    name: 'Issues',
-    layout: {
-      left: 'github-issues',
-      middle: 'github-issue-detail',
-      right: 'github-messages',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
-  },
-  {
     id: 'kanban',
     name: 'Triaged',
     layout: {

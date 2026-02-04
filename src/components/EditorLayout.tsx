@@ -42,7 +42,7 @@ import { parseTaskMarkdown, serializeTaskMarkdown, DEFAULT_TASK_STATUSES } from 
 import {
   BookOpen, MessageSquare, FileText, Map, Activity, LayoutGrid,
   CheckSquare, Terminal, Users, Compass, Shield, Bug, Palette,
-  Radio, Wrench, GitBranch, History, GitCommit, Package, AlertCircle,
+  Radio, Wrench, GitBranch, History, GitCommit, Package,
   GitPullRequest, Zap, File, GitCompare, Edit
 } from 'lucide-react';
 
@@ -200,24 +200,6 @@ const GitPullRequestsPanelLoader = dynamic(
 // Dynamically import the GitPullRequestDetailPanel with SSR disabled
 const GitPullRequestDetailPanelLoader = dynamic(
   () => import('@industry-theme/git-panels').then((mod) => {
-    const Component = mod.panels[3]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the GitHubIssuesPanel with SSR disabled
-const GitHubIssuesPanelLoader = dynamic(
-  () => import('@industry-theme/github-panels').then((mod) => {
-    const Component = mod.panels[2]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the GitHubIssueDetailPanel with SSR disabled
-const GitHubIssueDetailPanelLoader = dynamic(
-  () => import('@industry-theme/github-panels').then((mod) => {
     const Component = mod.panels[3]!.component;
     return { default: Component };
   }),
@@ -858,61 +840,6 @@ function EditorLayoutContent({
       }),
       events.on('github:login-requested', () => {
         login();
-      }),
-      // Focus issue detail panel when an issue is selected
-      events.on('issue:selected', (event) => {
-        const payload = event.payload as {
-          issue?: unknown;
-          owner?: string;
-          repo?: string;
-        };
-
-        if (payload?.issue) {
-          // Emit focus event to the issue detail panel
-          events.emit({
-            type: 'panel:focus',
-            source: 'editor-layout',
-            timestamp: Date.now(),
-            payload: {
-              panelId: 'github-issue-detail',
-              panelSlot: 'middle',
-            },
-          });
-        }
-      }),
-      // Focus back to issues panel when an issue is deselected
-      events.on('issue:deselected', () => {
-        // Emit focus event back to the issues panel
-        events.emit({
-          type: 'panel:focus',
-          source: 'editor-layout',
-          timestamp: Date.now(),
-          payload: {
-            panelId: 'github-issues',
-            panelSlot: 'left',
-          },
-        });
-      }),
-      // Focus messages panel when view discussion is clicked
-      events.on('issue:view-discussion', (event) => {
-        const payload = event.payload as {
-          issue?: unknown;
-          owner?: string;
-          repo?: string;
-        };
-
-        if (payload?.issue) {
-          // Emit focus event to the messages panel
-          events.emit({
-            type: 'panel:focus',
-            source: 'editor-layout',
-            timestamp: Date.now(),
-            payload: {
-              panelId: 'github-messages',
-              panelSlot: 'right',
-            },
-          });
-        }
       }),
       events.on('panel:switch', (event) => {
         const payload = event.payload as { slot?: string; panel?: string };
@@ -2063,26 +1990,6 @@ function EditorLayoutContent({
       ),
     },
     {
-      id: 'github-issues',
-      label: 'Issues',
-      icon: <AlertCircle size={16} />,
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <GitHubIssuesPanelLoader context={context} actions={enhancedActions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'github-issue-detail',
-      label: 'Issue Detail',
-      icon: <AlertCircle size={16} />,
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <GitHubIssueDetailPanelLoader context={context} actions={enhancedActions} events={events} />
-        </div>
-      ),
-    },
-    {
       id: 'github-messages',
       label: 'Conversation',
       icon: <MessageSquare size={16} />,
@@ -2272,7 +2179,6 @@ function EditorLayoutContent({
         owner={repositoryInfo?.owner}
         badges={(repoCounts || triagedCount > 0) ? {
           ...(repoCounts ? {
-            'github-issues': repoCounts.openIssues,
             'pull-requests': repoCounts.openPullRequests,
           } : {}),
           ...(triagedCount > 0 ? { 'kanban': triagedCount } : {}),
