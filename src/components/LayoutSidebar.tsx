@@ -10,7 +10,6 @@ import {
   BookOpen,
   FileCode,
   Hexagon,
-  LineChart,
   Home,
   Palette,
   X,
@@ -26,7 +25,6 @@ const layoutIcons: Record<string, React.ComponentType<{ className?: string }>> =
   documentation: BookOpen,
   'file-editor': FileCode,
   'quality-debug': Hexagon,
-  'file-city': LineChart,
   skills: Zap,
   stories: BookOpen,
 };

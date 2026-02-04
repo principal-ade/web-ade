@@ -108,19 +108,6 @@ export const layoutConfigs: LayoutConfig[] = [
     },
   },
   {
-    id: 'file-city',
-    name: 'Test Telemetry',
-    layout: {
-      left: 'telemetry-coverage',
-      middle: 'trace-viewer',
-      right: 'file-city',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
-  },
-  {
     id: 'stories',
     name: 'Stories',
     layout: {

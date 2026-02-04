@@ -40,7 +40,7 @@ import type { WorkflowTemplate, ExtendedCanvas } from '@principal-ai/principal-v
 import { buildStoryboardContext, type StoryboardReference } from '@principal-ai/principal-view-core';
 import { parseTaskMarkdown, serializeTaskMarkdown, DEFAULT_TASK_STATUSES } from '@backlog-md/core';
 import {
-  BookOpen, MessageSquare, FileText, Map, Activity, LayoutGrid,
+  BookOpen, MessageSquare, FileText, Map, LayoutGrid,
   CheckSquare, Terminal, Users, Compass, Shield, Bug, Palette,
   Radio, Wrench, GitBranch, History, GitCommit, Package,
   Zap, File, GitCompare, Edit
@@ -100,15 +100,6 @@ const PrincipalViewPanelLoader = dynamic(
   { ssr: false }
 );
 
-// Dynamically import the TraceViewerPanel with SSR disabled
-const TraceViewerPanelLoader = dynamic(
-  () => import('@industry-theme/principal-view-panels').then((mod) => {
-    const Component = mod.panels[1]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
 // Dynamically import the QualityHexagonPanel with SSR disabled
 const QualityHexagonPanelLoader = dynamic(
   () => import('@principal-ade/code-quality-panels').then((mod) => {
@@ -162,13 +153,6 @@ const PackageCompositionPanelLoader = dynamic(
   }),
   { ssr: false }
 );
-
-// Dynamically import the TelemetryCoveragePanel with SSR disabled
-const TelemetryCoveragePanelLoader = dynamic(
-  () => import('@industry-theme/repository-composition-panels').then((mod) => mod.TelemetryCoveragePanel),
-  { ssr: false }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-) as React.ComponentType<any>;
 
 // Dynamically import the GitCommitHistoryPanel with SSR disabled
 const GitCommitHistoryPanelLoader = dynamic(
@@ -1779,16 +1763,6 @@ function EditorLayoutContent({
       ),
     },
     {
-      id: 'telemetry-coverage',
-      label: 'Telemetry Coverage',
-      icon: <Activity size={16} />,
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <TelemetryCoveragePanelLoader context={context} actions={enhancedActions} events={events} />
-        </div>
-      ),
-    },
-    {
       id: 'kanban',
       label: 'Kanban',
       icon: <LayoutGrid size={16} />,
@@ -1838,16 +1812,6 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <PrincipalViewPanelLoader context={context} actions={enhancedActions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'trace-viewer',
-      label: 'Trace Viewer',
-      icon: <Activity size={16} />,
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <TraceViewerPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
