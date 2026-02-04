@@ -1,0 +1,401 @@
+{
+  "pv": {
+    "name": "Text-to-Speech with S3 Caching Architecture",
+    "version": "1.0.0",
+    "description": "Architecture flow for generating TTS audio for tour steps using ElevenLabs API with S3-based caching",
+    "markdown": ".principal-views/tts-s3-architecture.md",
+    "edgeTypes": {
+      "flow": {
+        "label": "Flow",
+        "color": "#3b82f6"
+      },
+      "cache-hit": {
+        "label": "Cache Hit",
+        "color": "#22c55e"
+      },
+      "cache-miss": {
+        "label": "Cache Miss",
+        "color": "#f59e0b"
+      },
+      "error": {
+        "label": "Error Path",
+        "color": "#ef4444"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "client-request",
+      "type": "text",
+      "text": "# Client Request\n\nTour player requests audio\n\n**Input:**\n- owner\n- repo\n- path\n- commitSha\n- stepId",
+      "x": 100,
+      "y": 50,
+      "width": 250,
+      "height": 150,
+      "pv": {
+        "description": "Tour player component that initiates TTS requests",
+        "shape": "rectangle",
+        "fill": "#dbeafe",
+        "stroke": "#3b82f6"
+      }
+    },
+    {
+      "id": "api-endpoint",
+      "type": "text",
+      "text": "# API Endpoint\n\n`POST /api/tts/generate`\n\nValidates request parameters",
+      "x": 100,
+      "y": 250,
+      "width": 250,
+      "height": 120,
+      "pv": {
+        "description": "API endpoint for TTS generation",
+        "shape": "rectangle",
+        "fill": "#e0e7ff",
+        "stroke": "#6366f1"
+      }
+    },
+    {
+      "id": "github-fetch",
+      "type": "text",
+      "text": "# Fetch Tour from GitHub\n\nFetch tour file content from GitHub\n\n`raw.githubusercontent.com/\n{owner}/{repo}/{sha}/{path}`",
+      "x": 100,
+      "y": 420,
+      "width": 250,
+      "height": 140,
+      "pv": {
+        "description": "API endpoint for TTS generation",
+        "shape": "rectangle",
+        "fill": "#e0e7ff",
+        "stroke": "#6366f1"
+      }
+    },
+    {
+      "id": "tour-validation",
+      "type": "text",
+      "text": "# Validate Tour & Step\n\nParse tour JSON\nValidate stepId exists\nExtract step.description",
+      "x": 100,
+      "y": 610,
+      "width": 250,
+      "height": 130,
+      "pv": {
+        "description": "API endpoint for TTS generation",
+        "shape": "rectangle",
+        "fill": "#e0e7ff",
+        "stroke": "#6366f1"
+      }
+    },
+    {
+      "id": "s3-cache-check",
+      "type": "text",
+      "text": "# S3 Cache Check\n\nCheck if audio exists\n\n**Key:** `/tts-audio/{owner}/\n{repo}/{file-hash}/\n{step-id}-{options}.mp3`",
+      "x": 100,
+      "y": 790,
+      "width": 250,
+      "height": 140,
+      "pv": {
+        "description": "S3 cache check decision point",
+        "shape": "diamond",
+        "fill": "#fef3c7",
+        "stroke": "#f59e0b"
+      }
+    },
+    {
+      "id": "cache-hit",
+      "type": "text",
+      "text": "# Cache Hit ✓\n\nAudio exists in S3\nReturn cached URL immediately\n\n**cached:** true",
+      "x": 500,
+      "y": 790,
+      "width": 250,
+      "height": 140,
+      "pv": {
+        "description": "Cached audio found in S3",
+        "shape": "rectangle",
+        "fill": "#d1fae5",
+        "stroke": "#22c55e"
+      }
+    },
+    {
+      "id": "elevenlabs-generate",
+      "type": "text",
+      "text": "# Generate Audio\n\nCall ElevenLabs API\n\n`POST /v1/text-to-speech/\n{voiceId}`\n\n**Input:** step.description",
+      "x": 100,
+      "y": 980,
+      "width": 250,
+      "height": 150,
+      "pv": {
+        "description": "ElevenLabs API call to generate audio",
+        "shape": "rectangle",
+        "fill": "#fce7f3",
+        "stroke": "#ec4899"
+      }
+    },
+    {
+      "id": "s3-upload",
+      "type": "text",
+      "text": "# Upload to S3\n\nStore generated audio\n\n**ContentType:** audio/mpeg\n**CacheControl:** 1 year",
+      "x": 100,
+      "y": 1180,
+      "width": 250,
+      "height": 130,
+      "pv": {
+        "description": "Upload generated audio to S3",
+        "shape": "rectangle",
+        "fill": "#fef3c7",
+        "stroke": "#f59e0b"
+      }
+    },
+    {
+      "id": "return-response",
+      "type": "text",
+      "text": "# Return Response\n\nReturn audio URL to client\n\n**Response:**\n- audioUrl\n- cached\n- duration\n- generatedAt",
+      "x": 500,
+      "y": 1050,
+      "width": 250,
+      "height": 150,
+      "pv": {
+        "description": "Return audio URL response to client",
+        "shape": "rectangle",
+        "fill": "#d1fae5",
+        "stroke": "#22c55e"
+      }
+    },
+    {
+      "id": "client-playback",
+      "type": "text",
+      "text": "# Audio Playback\n\nClient plays audio\n\n**Adapter:** S3BackedTTSAdapter\n**Element:** HTMLAudioElement",
+      "x": 500,
+      "y": 50,
+      "width": 250,
+      "height": 130,
+      "pv": {
+        "description": "Client-side audio playback using HTMLAudioElement",
+        "shape": "rectangle",
+        "fill": "#d1fae5",
+        "stroke": "#22c55e"
+      }
+    },
+    {
+      "id": "error-tour-not-found",
+      "type": "text",
+      "text": "# Error: Tour Not Found\n\nGitHub fetch failed\n\n**Status:** 404\n**Error:** TOUR_NOT_FOUND",
+      "x": 900,
+      "y": 420,
+      "width": 250,
+      "height": 130,
+      "pv": {
+        "description": "Error handling for API failures",
+        "shape": "rectangle",
+        "fill": "#fee2e2",
+        "stroke": "#ef4444"
+      }
+    },
+    {
+      "id": "error-step-not-found",
+      "type": "text",
+      "text": "# Error: Step Not Found\n\nStep ID doesn't exist in tour\n\n**Status:** 404\n**Error:** STEP_NOT_FOUND",
+      "x": 900,
+      "y": 610,
+      "width": 250,
+      "height": 130,
+      "pv": {
+        "description": "Error handling for API failures",
+        "shape": "rectangle",
+        "fill": "#fee2e2",
+        "stroke": "#ef4444"
+      }
+    },
+    {
+      "id": "error-elevenlabs",
+      "type": "text",
+      "text": "# Error: ElevenLabs Failed\n\nAPI rate limit or error\n\n**Status:** 429/500\n**Error:** RATE_LIMIT_EXCEEDED",
+      "x": 900,
+      "y": 980,
+      "width": 250,
+      "height": 140,
+      "pv": {
+        "description": "Error handling for API failures",
+        "shape": "rectangle",
+        "fill": "#fee2e2",
+        "stroke": "#ef4444"
+      }
+    },
+    {
+      "id": "batch-endpoint",
+      "type": "text",
+      "text": "# Batch Generate Endpoint\n\n`POST /api/tts/batch-generate`\n\nPre-fetch all tour steps\nReturns array of audio URLs",
+      "x": 100,
+      "y": 1380,
+      "width": 250,
+      "height": 140,
+      "pv": {
+        "description": "Batch endpoint for pre-fetching all tour steps",
+        "shape": "rectangle",
+        "fill": "#e0e7ff",
+        "stroke": "#6366f1"
+      }
+    },
+    {
+      "id": "s3-bucket",
+      "type": "text",
+      "text": "# S3 Bucket Structure\n\n```\n/tts-audio/\n  /{owner}/\n    /{repo}/\n      /{file-hash}/\n        /{step-id}-\n        {options}.mp3\n```",
+      "x": 500,
+      "y": 1380,
+      "width": 250,
+      "height": 180,
+      "pv": {
+        "description": "S3 bucket storage organization structure",
+        "shape": "cylinder",
+        "fill": "#fef3c7",
+        "stroke": "#f59e0b"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-client-to-api",
+      "fromNode": "client-request",
+      "fromSide": "bottom",
+      "toNode": "api-endpoint",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-api-to-github",
+      "fromNode": "api-endpoint",
+      "fromSide": "bottom",
+      "toNode": "github-fetch",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-github-to-validation",
+      "fromNode": "github-fetch",
+      "fromSide": "bottom",
+      "toNode": "tour-validation",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-validation-to-cache",
+      "fromNode": "tour-validation",
+      "fromSide": "bottom",
+      "toNode": "s3-cache-check",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-cache-hit-path",
+      "fromNode": "s3-cache-check",
+      "fromSide": "right",
+      "toNode": "cache-hit",
+      "toSide": "left",
+      "label": "exists",
+      "pv": {
+        "edgeType": "cache-hit"
+      }
+    },
+    {
+      "id": "edge-cache-miss-path",
+      "fromNode": "s3-cache-check",
+      "fromSide": "bottom",
+      "toNode": "elevenlabs-generate",
+      "toSide": "top",
+      "label": "not exists",
+      "pv": {
+        "edgeType": "cache-miss"
+      }
+    },
+    {
+      "id": "edge-generate-to-upload",
+      "fromNode": "elevenlabs-generate",
+      "fromSide": "bottom",
+      "toNode": "s3-upload",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-upload-to-response",
+      "fromNode": "s3-upload",
+      "fromSide": "right",
+      "toNode": "return-response",
+      "toSide": "bottom",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-cache-hit-to-response",
+      "fromNode": "cache-hit",
+      "fromSide": "top",
+      "toNode": "return-response",
+      "toSide": "bottom",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-response-to-playback",
+      "fromNode": "return-response",
+      "fromSide": "top",
+      "toNode": "client-playback",
+      "toSide": "bottom",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-github-error",
+      "fromNode": "github-fetch",
+      "fromSide": "right",
+      "toNode": "error-tour-not-found",
+      "toSide": "left",
+      "label": "404",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-validation-error",
+      "fromNode": "tour-validation",
+      "fromSide": "right",
+      "toNode": "error-step-not-found",
+      "toSide": "left",
+      "label": "invalid stepId",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-elevenlabs-error",
+      "fromNode": "elevenlabs-generate",
+      "fromSide": "right",
+      "toNode": "error-elevenlabs",
+      "toSide": "left",
+      "label": "API error",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-batch-context",
+      "fromNode": "batch-endpoint",
+      "fromSide": "right",
+      "toNode": "s3-bucket",
+      "toSide": "left",
+      "label": "uses",
+      "pv": {
+        "edgeType": "flow"
+      }
+    }
+  ]
+}
