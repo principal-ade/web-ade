@@ -12,6 +12,7 @@ import {
   TTSGenerateRequest,
   TTSGenerateResponse,
   TTSErrorCode,
+  TTSError,
 } from '@/lib/tts/types';
 import { validateTTSRequest, generateS3Key } from '@/lib/tts/key-generator';
 import {
@@ -177,11 +178,12 @@ export async function POST(request: NextRequest) {
       }
 
       if (errorCode === TTSErrorCode.STEP_NOT_FOUND) {
+        const ttsError = error as TTSError;
         return addCorsHeaders(
           NextResponse.json(
             {
               error: errorCode,
-              message: `Step ${(error as any).stepId || 'unknown'} not found in tour`,
+              message: `Step ${ttsError.stepId || 'unknown'} not found in tour`,
             },
             { status: 404 }
           )
@@ -189,12 +191,13 @@ export async function POST(request: NextRequest) {
       }
 
       if (errorCode === TTSErrorCode.RATE_LIMIT_EXCEEDED) {
+        const ttsError = error as TTSError;
         return addCorsHeaders(
           NextResponse.json(
             {
               error: errorCode,
               message: 'ElevenLabs API rate limit exceeded',
-              retryAfter: (error as any).retryAfter || 60,
+              retryAfter: ttsError.retryAfter || 60,
             },
             { status: 429 }
           )
