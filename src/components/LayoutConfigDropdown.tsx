@@ -13,6 +13,7 @@ export interface LayoutConfig {
     left: boolean;
     right: boolean;
   };
+  hidden?: boolean; // If true, layout is hidden from sidebar but still functional
 }
 
 export const layoutConfigs: LayoutConfig[] = [
@@ -67,6 +68,7 @@ export const layoutConfigs: LayoutConfig[] = [
       left: false,
       right: false,
     },
+    hidden: true,
   },
   {
     id: 'file-editor',
@@ -80,6 +82,7 @@ export const layoutConfigs: LayoutConfig[] = [
       left: false,
       right: false,
     },
+    hidden: true,
   },
   {
     id: 'default',
@@ -93,6 +96,7 @@ export const layoutConfigs: LayoutConfig[] = [
       left: false,
       right: false,
     },
+    hidden: true,
   },
   {
     id: 'quality-debug',
@@ -202,7 +206,7 @@ export function LayoutConfigDropdown({
             border: `1px solid ${theme.colors.border}`,
           }}
         >
-          {layoutConfigs.map((config) => (
+          {layoutConfigs.filter(config => !config.hidden).map((config) => (
             <button
               key={config.id}
               onClick={() => {

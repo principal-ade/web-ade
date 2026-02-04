@@ -187,7 +187,7 @@ export function LayoutSidebar({
 
           {/* Layout Items */}
           <nav className="flex-1 py-2 overflow-y-auto overflow-x-hidden">
-            {layoutConfigs.map((config) => {
+            {layoutConfigs.filter(config => !config.hidden).map((config) => {
               const Icon = layoutIcons[config.id] || Blocks;
               const isActive = config.id === currentConfigId;
               const badgeCount = badges?.[config.id];
@@ -353,7 +353,7 @@ export function LayoutSidebar({
 
       {/* Layout Items */}
       <nav className="flex-1 pb-2 overflow-y-auto overflow-x-hidden">
-        {layoutConfigs.map((config) => {
+        {layoutConfigs.filter(config => !config.hidden).map((config) => {
           const Icon = layoutIcons[config.id] || Blocks;
           const isActive = config.id === currentConfigId;
 
