@@ -11,7 +11,6 @@ import {
   FileCode,
   Hexagon,
   LineChart,
-  GitPullRequest,
   Home,
   Palette,
   X,
@@ -28,7 +27,6 @@ const layoutIcons: Record<string, React.ComponentType<{ className?: string }>> =
   'file-editor': FileCode,
   'quality-debug': Hexagon,
   'file-city': LineChart,
-  'pull-requests': GitPullRequest,
   skills: Zap,
   stories: BookOpen,
 };
@@ -45,7 +43,7 @@ interface LayoutSidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   owner?: string; // When provided, shows owner avatar/name instead of Principal AI logo
-  badges?: Record<string, number>; // Badge counts for specific layout config IDs (e.g., { 'pull-requests': 5, 'kanban': 3 })
+  badges?: Record<string, number>; // Badge counts for specific layout config IDs (e.g., { 'kanban': 3 })
   mobileOpen?: boolean; // When true, renders as slide-in overlay on mobile
   onMobileClose?: () => void; // Callback to close mobile overlay
 }

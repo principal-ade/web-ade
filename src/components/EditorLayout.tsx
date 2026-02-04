@@ -43,7 +43,7 @@ import {
   BookOpen, MessageSquare, FileText, Map, Activity, LayoutGrid,
   CheckSquare, Terminal, Users, Compass, Shield, Bug, Palette,
   Radio, Wrench, GitBranch, History, GitCommit, Package,
-  GitPullRequest, Zap, File, GitCompare, Edit
+  Zap, File, GitCompare, Edit
 } from 'lucide-react';
 
 // Dynamically import the MarkdownPanel with SSR disabled
@@ -183,24 +183,6 @@ const GitCommitHistoryPanelLoader = dynamic(
 const GitCommitDetailPanelLoader = dynamic(
   () => import('@industry-theme/git-panels').then((mod) => {
     const Component = mod.panels[1]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the GitPullRequestsPanel with SSR disabled
-const GitPullRequestsPanelLoader = dynamic(
-  () => import('@industry-theme/git-panels').then((mod) => {
-    const Component = mod.panels[2]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the GitPullRequestDetailPanel with SSR disabled
-const GitPullRequestDetailPanelLoader = dynamic(
-  () => import('@industry-theme/git-panels').then((mod) => {
-    const Component = mod.panels[3]!.component;
     return { default: Component };
   }),
   { ssr: false }
@@ -447,7 +429,6 @@ function EditorLayoutContent({
     }
     return false;
   });
-  const [repoCounts, setRepoCounts] = useState<{ openIssues: number; openPullRequests: number } | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // State for selected canvas and workflow (for Stories view)
@@ -512,35 +493,6 @@ function EditorLayoutContent({
   // Get repository info for file fetching
   const githubRepo = (context.currentScope.repository as { githubRepo?: string })?.githubRepo
     || context.currentScope.repository?.path;
-
-  // Fetch PR and issue counts for sidebar badges
-  useEffect(() => {
-    if (!githubRepo || !githubRepo.includes('/')) {
-      setRepoCounts(null);
-      return;
-    }
-
-    const [owner, name] = githubRepo.split('/');
-    const controller = new AbortController();
-
-    fetch(`/api/github/repo/${owner}/${name}?action=counts`, {
-      signal: controller.signal,
-      credentials: 'include',
-    })
-      .then(async (response) => {
-        if (controller.signal.aborted) return;
-        if (response.ok) {
-          const data = await response.json();
-          setRepoCounts(data);
-        }
-      })
-      .catch((error) => {
-        if (controller.signal.aborted) return;
-        console.warn('[EditorLayout] Failed to fetch repo counts:', error);
-      });
-
-    return () => controller.abort();
-  }, [githubRepo]);
 
   // Handle layout configuration change
   const handleLayoutConfigChange = useCallback((config: LayoutConfig) => {
@@ -2000,26 +1952,6 @@ function EditorLayoutContent({
       ),
     },
     {
-      id: 'pull-requests',
-      label: 'Pull Requests',
-      icon: <GitPullRequest size={16} />,
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <GitPullRequestsPanelLoader context={context} actions={enhancedActions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'pull-request-detail',
-      label: 'Pull Request Detail',
-      icon: <GitPullRequest size={16} />,
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <GitPullRequestDetailPanelLoader context={context} actions={enhancedActions} events={events} />
-        </div>
-      ),
-    },
-    {
       id: 'skills-list',
       label: 'Skills',
       icon: <Zap size={16} />,
@@ -2177,11 +2109,8 @@ function EditorLayoutContent({
         collapsed={layoutSidebarCollapsed}
         onToggleCollapse={() => setLayoutSidebarCollapsed((prev: boolean) => !prev)}
         owner={repositoryInfo?.owner}
-        badges={(repoCounts || triagedCount > 0) ? {
-          ...(repoCounts ? {
-            'pull-requests': repoCounts.openPullRequests,
-          } : {}),
-          ...(triagedCount > 0 ? { 'kanban': triagedCount } : {}),
+        badges={(triagedCount > 0) ? {
+          'kanban': triagedCount,
         } : undefined}
         mobileOpen={mobileSidebarOpen}
         onMobileClose={() => setMobileSidebarOpen(false)}

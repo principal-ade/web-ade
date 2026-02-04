@@ -285,72 +285,6 @@ interface GitHubMessagesSliceData {
   error?: string;
 }
 
-// GitHub Pull Requests types for GitPullRequestsPanel
-interface PullRequestUser {
-  login: string;
-  avatar_url?: string;
-  html_url?: string;
-}
-
-interface PullRequestRef {
-  ref: string;
-  sha?: string;
-}
-
-interface PullRequestInfo {
-  id: number;
-  number: number;
-  title: string;
-  body?: string | null;
-  state: 'open' | 'closed';
-  draft?: boolean;
-  html_url: string;
-  user?: PullRequestUser | null;
-  created_at: string;
-  updated_at: string;
-  closed_at?: string | null;
-  merged_at?: string | null;
-  base?: PullRequestRef | null;
-  head?: PullRequestRef | null;
-  comments?: number;
-  review_comments?: number;
-}
-
-interface PullRequestsSliceData {
-  pullRequests: PullRequestInfo[];
-  owner?: string;
-  repo?: string;
-  isAuthenticated?: boolean;
-  error?: string;
-}
-
-// PR Files slice data (files changed in a selected pull request)
-interface PullRequestFile {
-  sha: string;
-  filename: string;
-  status: 'added' | 'removed' | 'modified' | 'renamed' | 'copied' | 'changed' | 'unchanged';
-  additions: number;
-  deletions: number;
-  changes: number;
-  patch?: string;
-  previous_filename?: string;
-}
-
-interface PrFilesSliceData {
-  files: PullRequestFile[];
-  filesByStatus: {
-    added: string[];
-    modified: string[];
-    removed: string[];
-    renamed: { filename: string; previous_filename?: string }[];
-  };
-  pullNumber: number | null;
-  owner?: string;
-  repo?: string;
-  isAuthenticated?: boolean;
-  error?: string;
-}
-
 interface CommitFilesSliceData {
   filesByStatus: {
     added: string[];
@@ -676,19 +610,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const [commitsLoading, setCommitsLoading] = useState(false);
   const [commitsError, setCommitsError] = useState<Error | null>(null);
 
-  // State for GitHub pull requests (for GitPullRequestsPanel)
-  const [pullRequestsData, setPullRequestsData] = useState<PullRequestsSliceData | null>(null);
-  const [pullRequestsLoading, setPullRequestsLoading] = useState(false);
-  const [pullRequestsError, setPullRequestsError] = useState<Error | null>(null);
-
   // State for GitHub messages/timeline (for GitHubMessagesPanel)
   const [messagesData, setMessagesData] = useState<GitHubMessagesSliceData | null>(null);
-
-  // State for PR files (files changed in selected pull request - for File-City visualization)
-  const [prFilesData, setPrFilesData] = useState<PrFilesSliceData | null>(null);
-  const [prFilesLoading, setPrFilesLoading] = useState(false);
-  const [prFilesError, setPrFilesError] = useState<Error | null>(null);
-  const [selectedPrNumber, setSelectedPrNumber] = useState<number | null>(null);
 
   // State for commit files (files changed in selected commit - for File-City visualization)
   const [commitFilesData, setCommitFilesData] = useState<CommitFilesSliceData | null>(null);
@@ -948,48 +871,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     }
   }, []);
 
-  // Fetch pull requests from GitHub API
-  const fetchPullRequests = useCallback(async (repo: string) => {
-    setPullRequestsLoading(true);
-    setPullRequestsError(null);
-    console.log('[PanelContext] Fetching pull requests for:', repo);
-
-    try {
-      const [owner, name] = repo.split('/');
-      const response = await fetch(
-        `/api/github/repo/${owner}/${name}/pull-requests?per_page=50`,
-        { credentials: 'include' }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        setPullRequestsData({
-          pullRequests: [],
-          owner: owner || '',
-          repo: name || '',
-          isAuthenticated: errorData.isAuthenticated ?? false,
-          error: errorData.error || `Failed to fetch pull requests: ${response.statusText}`,
-        });
-        return;
-      }
-
-      const data = await response.json();
-
-      setPullRequestsData({
-        pullRequests: data.pullRequests || [],
-        owner: data.owner || owner || '',
-        repo: data.repo || name || '',
-        isAuthenticated: data.isAuthenticated ?? false,
-      });
-      console.log('[PanelContext] Pull requests loaded:', data.pullRequests?.length || 0);
-    } catch (err) {
-      console.error('[PanelContext] Failed to fetch pull requests:', err);
-      setPullRequestsError(err instanceof Error ? err : new Error('Failed to fetch pull requests'));
-    } finally {
-      setPullRequestsLoading(false);
-    }
-  }, []);
-
   // Fetch messages/timeline for an issue or PR
   const fetchMessages = useCallback(async (
     owner: string,
@@ -1090,60 +971,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       } : null);
     }
   }, [events]);
-
-  // Fetch files for a specific pull request (for File-City visualization)
-  const fetchPrFiles = useCallback(async (repo: string, prNumber: number) => {
-    setPrFilesLoading(true);
-    setPrFilesError(null);
-    setSelectedPrNumber(prNumber);
-    console.log('[PanelContext] Fetching PR files for:', repo, 'PR #', prNumber);
-
-    try {
-      const [owner, name] = repo.split('/');
-      const response = await fetch(
-        `/api/github/repo/${owner}/${name}/pull-requests/${prNumber}/files`,
-        { credentials: 'include' }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        setPrFilesData({
-          files: [],
-          filesByStatus: { added: [], modified: [], removed: [], renamed: [] },
-          pullNumber: prNumber,
-          owner: owner || '',
-          repo: name || '',
-          isAuthenticated: errorData.isAuthenticated ?? false,
-          error: errorData.error || `Failed to fetch PR files: ${response.statusText}`,
-        });
-        return;
-      }
-
-      const data = await response.json();
-
-      setPrFilesData({
-        files: data.files || [],
-        filesByStatus: data.filesByStatus || { added: [], modified: [], removed: [], renamed: [] },
-        pullNumber: prNumber,
-        owner: data.owner || owner || '',
-        repo: data.repo || name || '',
-        isAuthenticated: data.isAuthenticated ?? false,
-      });
-      console.log('[PanelContext] PR files loaded:', data.files?.length || 0, 'files');
-    } catch (err) {
-      console.error('[PanelContext] Failed to fetch PR files:', err);
-      setPrFilesError(err instanceof Error ? err : new Error('Failed to fetch PR files'));
-    } finally {
-      setPrFilesLoading(false);
-    }
-  }, []);
-
-  // Clear PR files when deselecting a PR
-  const clearPrFiles = useCallback(() => {
-    setPrFilesData(null);
-    setSelectedPrNumber(null);
-    setPrFilesError(null);
-  }, []);
 
   // Fetch user's GitHub repositories
   const fetchGithubRepos = useCallback(async () => {
@@ -1925,36 +1752,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         },
       ],
       [
-        'pullRequests',
-        {
-          scope: 'repository',
-          name: 'pullRequests',
-          data: pullRequestsData,
-          loading: pullRequestsLoading,
-          error: pullRequestsError,
-          refresh: async () => {
-            if (githubRepo) {
-              await fetchPullRequests(githubRepo);
-            }
-          },
-        },
-      ],
-      [
-        'prFiles',
-        {
-          scope: 'repository',
-          name: 'prFiles',
-          data: prFilesData,
-          loading: prFilesLoading,
-          error: prFilesError,
-          refresh: async () => {
-            if (githubRepo && selectedPrNumber) {
-              await fetchPrFiles(githubRepo, selectedPrNumber);
-            }
-          },
-        },
-      ],
-      [
         'github-messages',
         {
           scope: 'repository',
@@ -2287,17 +2084,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     });
   }
 
-  // Update pullRequests slice with fetched data
-  const pullRequestsSlice = slicesRef.current.get('pullRequests');
-  if (pullRequestsSlice) {
-    slicesRef.current.set('pullRequests', {
-      ...pullRequestsSlice,
-      data: pullRequestsData,
-      loading: pullRequestsLoading,
-      error: pullRequestsError,
-    });
-  }
-
   // Update github-messages slice with fetched data
   const messagesSlice = slicesRef.current.get('github-messages');
   if (messagesSlice) {
@@ -2306,17 +2092,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       data: messagesData,
       loading: messagesData?.loading ?? false,
       error: messagesData?.error ? new Error(messagesData.error) : null,
-    });
-  }
-
-  // Update prFiles slice with fetched data (for File-City PR visualization)
-  const prFilesSlice = slicesRef.current.get('prFiles');
-  if (prFilesSlice) {
-    slicesRef.current.set('prFiles', {
-      ...prFilesSlice,
-      data: prFilesData,
-      loading: prFilesLoading,
-      error: prFilesError,
     });
   }
 
@@ -2399,57 +2174,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     });
     return unsubscribe;
   }, [events]);
-
-  // Listen for pull-request:selected events to fetch PR files for File-City visualization
-  useEffect(() => {
-    const unsubscribeSelect = events.on('git-panels.pull-request:selected', (event) => {
-      const payload = event.payload as { pr?: { number?: number } };
-      const prNumber = payload.pr?.number;
-      if (githubRepo && prNumber) {
-        console.log('[PanelContext] PR selected, fetching files for PR #', prNumber);
-        fetchPrFiles(githubRepo, prNumber);
-      }
-    });
-
-    const unsubscribeDeselect = events.on('git-panels.pull-request:deselected', () => {
-      console.log('[PanelContext] PR deselected, clearing files');
-      clearPrFiles();
-    });
-
-    return () => {
-      unsubscribeSelect();
-      unsubscribeDeselect();
-    };
-  }, [events, githubRepo, fetchPrFiles, clearPrFiles]);
-
-  // Listen for pr:selected events to fetch messages/timeline
-  useEffect(() => {
-    const unsubscribePR = events.on('pr:selected', (event) => {
-      const payload = event.payload as {
-        pullRequest?: {
-          number: number;
-          title: string;
-          state: 'open' | 'closed';
-          user: GitHubUser;
-          created_at: string;
-          html_url: string;
-          labels?: GitHubLabel[];
-          assignees?: GitHubUser[];
-        };
-        owner?: string;
-        repo?: string;
-      };
-      const { pullRequest, owner, repo } = payload;
-      if (pullRequest && owner && repo) {
-        console.log('[PanelContext] PR selected, fetching messages for #', pullRequest.number);
-        fetchMessages(owner, repo, pullRequest.number, pullRequest);
-      }
-    });
-
-    return () => {
-      unsubscribePR();
-    };
-  }, [events, fetchMessages]);
 
   // Listen for GitHub messages panel interactive events (reactions, comments, delete)
   useEffect(() => {
@@ -2644,76 +2368,12 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       }
     });
 
-    // Handle PR delete/close
-    const unsubscribePRDelete = events.on('github-pr:delete', async (event) => {
-      const payload = event.payload as {
-        owner: string;
-        repo: string;
-        number: number;
-      };
-
-      console.log('[PanelContext] Closing PR:', payload);
-
-      try {
-        const response = await fetch(
-          `/api/github/repo/${payload.owner}/${payload.repo}/pull-requests/${payload.number}`,
-          {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ state: 'closed' }),
-          }
-        );
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Failed to close PR');
-        }
-
-        console.log('[PanelContext] PR closed');
-
-        // Clear messages data
-        setMessagesData(null);
-
-        // Emit success event
-        events.emit({
-          type: 'github-pr:deleted',
-          source: 'panel-context',
-          timestamp: Date.now(),
-          payload: {
-            owner: payload.owner,
-            repo: payload.repo,
-            number: payload.number,
-          },
-        });
-
-        // Optionally refresh PRs list
-        if (githubRepo) {
-          await fetchPullRequests(githubRepo);
-        }
-      } catch (error) {
-        console.error('[PanelContext] Error closing PR:', error);
-
-        events.emit({
-          type: 'github-pr:delete-error',
-          source: 'panel-context',
-          timestamp: Date.now(),
-          payload: {
-            owner: payload.owner,
-            repo: payload.repo,
-            number: payload.number,
-            error: error instanceof Error ? error.message : 'Failed to close PR',
-          },
-        });
-      }
-    });
-
     return () => {
       unsubscribeReactionAdd();
       unsubscribeReactionRemove();
       unsubscribeCommentCreate();
-      unsubscribePRDelete();
     };
-  }, [events, messagesData, fetchMessages, githubRepo, fetchPullRequests]);
+  }, [events, messagesData, fetchMessages, githubRepo]);
 
   // Listen for commit-detail:loaded events to update commit files for File-City visualization
   useEffect(() => {
@@ -2752,43 +2412,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       unsubscribeDeselect();
     };
   }, [events]);
-
-  // Track previous color mode for restoring when PR is deselected
-  const previousColorModeRef = useRef<string | null>(null);
-
-  // Auto-switch to 'pr' color mode when PR files are loaded
-  useEffect(() => {
-    if (prFilesData && prFilesData.files.length > 0) {
-      // Save current color mode before switching
-      if (selectedColorMode !== 'pr') {
-        previousColorModeRef.current = selectedColorMode;
-      }
-      // Switch to PR color mode
-      console.log('[PanelContext] PR files loaded, switching to PR color mode');
-      setEnabledColorModes(['pr']);
-      setSelectedColorMode('pr');
-      // Emit event so File-City can react to PR files change
-      events.emit({
-        type: 'prFiles:updated',
-        source: 'panel-context',
-        timestamp: Date.now(),
-        payload: { files: prFilesData.filesByStatus, pullNumber: prFilesData.pullNumber },
-      });
-    } else if (!prFilesData && previousColorModeRef.current) {
-      // PR deselected - restore previous color mode
-      console.log('[PanelContext] PR deselected, restoring color mode to:', previousColorModeRef.current);
-      setEnabledColorModes([previousColorModeRef.current]);
-      setSelectedColorMode(previousColorModeRef.current);
-      previousColorModeRef.current = null;
-      // Emit event so File-City can clear PR highlights
-      events.emit({
-        type: 'prFiles:cleared',
-        source: 'panel-context',
-        timestamp: Date.now(),
-        payload: {},
-      });
-    }
-  }, [prFilesData, selectedColorMode, events]);
 
   // Track previous color mode for restoring when commit is deselected
   const previousCommitColorModeRef = useRef<string | null>(null);
@@ -3201,7 +2824,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, userGitHubData, userGitHubLoading, qualityData, qualityLoading, qualityError, lensResults, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading, pullRequestsData, pullRequestsLoading, pullRequestsError, messagesData]
+    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, userGitHubData, userGitHubLoading, qualityData, qualityLoading, qualityError, lensResults, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading, messagesData]
   );
 
   // Actions
@@ -3437,23 +3060,20 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     setEnabledColorModes([]);
     setSelectedColorMode(null);
     // Also clear underlying data to prevent useEffect from re-enabling
-    setPrFilesData(null);
-    setSelectedPrNumber(null);
     setCommitFilesData(null);
     setStoryboardContextData(null);
     // Clear the refs so we don't try to restore old state
-    previousColorModeRef.current = null;
     previousCommitColorModeRef.current = null;
     previousStoryboardColorModeRef.current = null;
     // Emit events so visualizations can react
     events.emit({
-      type: 'prFiles:cleared',
+      type: 'commitFiles:cleared',
       source: 'panel-context',
       timestamp: Date.now(),
       payload: {},
     });
     events.emit({
-      type: 'commitFiles:cleared',
+      type: 'storyboardContext:cleared',
       source: 'panel-context',
       timestamp: Date.now(),
       payload: {},
@@ -3495,7 +3115,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     fetchCodebaseViews(githubRepo);
     fetchPackages(githubRepo);
     fetchCommits(githubRepo);
-    fetchPullRequests(githubRepo);
     fetchFeedProject(githubRepo);
 
     // Sequence tree → quality metrics to reuse SHA (saves GitHub API calls)
@@ -3507,7 +3126,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       fetchQualityMetrics(githubRepo, commitSha ?? undefined);
     };
     fetchTreeThenQuality();
-  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics, fetchPackages, fetchCommits, fetchPullRequests, fetchFeedProject]);
+  }, [githubRepo, fetchReadme, fetchCodebaseViews, fetchFileTree, fetchQualityMetrics, fetchPackages, fetchCommits, fetchFeedProject]);
 
   // Fetch owner repositories when initialOwner prop is provided (handles client-side navigation)
   useEffect(() => {

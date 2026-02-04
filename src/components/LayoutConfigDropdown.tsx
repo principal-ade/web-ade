@@ -56,19 +56,6 @@ export const layoutConfigs: LayoutConfig[] = [
     },
   },
   {
-    id: 'pull-requests',
-    name: 'Pull Requests',
-    layout: {
-      left: 'pull-requests',
-      middle: 'pull-request-detail',
-      right: 'file-city',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
-  },
-  {
     id: 'git-history',
     name: 'Change Log',
     layout: {
