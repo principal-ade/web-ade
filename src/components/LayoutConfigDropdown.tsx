@@ -14,6 +14,7 @@ export interface LayoutConfig {
     right: boolean;
   };
   hidden?: boolean; // If true, layout is hidden from sidebar but still functional
+  singlePanelMode?: boolean; // If true, only renders the middle panel without the panel layout framework
 }
 
 export const layoutConfigs: LayoutConfig[] = [
@@ -29,6 +30,7 @@ export const layoutConfigs: LayoutConfig[] = [
       left: true,
       right: true,
     },
+    singlePanelMode: true,
   },
   {
     id: 'stories',

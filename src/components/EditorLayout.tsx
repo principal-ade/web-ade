@@ -2064,6 +2064,107 @@ function EditorLayoutContent({
     return { owner: owner!, repo: repo! };
   }, [githubRepo]);
 
+  // Check if current layout is in single-panel mode
+  const currentConfig = layoutConfigs.find((c) => c.id === currentLayoutConfigId);
+  const isSinglePanelMode = currentConfig?.singlePanelMode ?? false;
+
+  // If in single-panel mode, render only the middle panel
+  if (isSinglePanelMode) {
+    const middlePanel = panels.find((p) => p.id === layout.middle);
+
+    return (
+      <div className="h-full w-full flex">
+        {/* Layout Sidebar - Far Left */}
+        <LayoutSidebar
+          currentConfigId={currentLayoutConfigId}
+          onConfigChange={handleLayoutConfigChange}
+          collapsed={layoutSidebarCollapsed}
+          onToggleCollapse={() => setLayoutSidebarCollapsed((prev: boolean) => !prev)}
+          owner={repositoryInfo?.owner}
+          badges={(triagedCount > 0) ? {
+            'kanban': triagedCount,
+          } : undefined}
+          mobileOpen={mobileSidebarOpen}
+          onMobileClose={() => setMobileSidebarOpen(false)}
+        />
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
+          <EditorHeader
+            currentLayoutConfigId={currentLayoutConfigId}
+            leftCollapsed={leftSidebarCollapsed}
+            rightCollapsed={rightSidebarCollapsed}
+            onToggleLeft={() => setLeftSidebarCollapsed(prev => !prev)}
+            onToggleRight={() => setRightSidebarCollapsed(prev => !prev)}
+            onSwapRightPanels={() => setLayout(prev => ({ ...prev, middle: prev.right, right: prev.middle }))}
+            pendingChangesCount={isLocalMode ? 0 : effectivePendingChangesCount}
+            onCommitClick={() => setIsCommitModalOpen(true)}
+            vimMode={vimMode}
+            onVimModeToggle={handleVimModeToggle}
+            currentRepoId={githubRepo}
+            selectedColorMode={selectedColorMode}
+            onClearColorMode={clearColorMode}
+            onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
+            onOpenWithMic={isSpeechSupported ? handleOpenWithMic : undefined}
+          />
+
+          {/* Single Panel Content */}
+          <div className="flex-1 overflow-hidden">
+            {middlePanel ? middlePanel.content : (
+              <div className="h-full w-full flex items-center justify-center">
+                <p style={{ color: theme.colors.textMuted }}>Panel not found</p>
+              </div>
+            )}
+          </div>
+
+          {/* Agent Command Palette (Cmd+Shift+P) - AI-driven natural language commands */}
+          <AgentCommandPalette
+            palette={agentPalette}
+            config={{
+              placeholder: 'What would you like to do?',
+            }}
+          />
+
+          {/* Repository Selection Modal */}
+          <RepoSelectionModal
+            isOpen={isRepoModalOpen}
+            onClose={() => setIsRepoModalOpen(false)}
+          />
+
+          {/* Toast Notification */}
+          {toast && (
+            <div
+              className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-in slide-in-from-bottom-2"
+              style={{
+                background: toast.type === 'error' ? theme.colors.error :
+                           toast.type === 'success' ? theme.colors.success :
+                           theme.colors.backgroundSecondary,
+                color: toast.type === 'error' || toast.type === 'success' ? '#fff' : theme.colors.text,
+                border: `1px solid ${theme.colors.border}`,
+              }}
+            >
+              {toast.type === 'error' && (
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1ZM7 4.5a1 1 0 1 1 2 0v3a1 1 0 1 1-2 0v-3Zm1 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/>
+                </svg>
+              )}
+              <span style={{ fontSize: theme.fontSizes[1] }}>{toast.message}</span>
+              <button
+                onClick={() => setToast(null)}
+                className="ml-2 opacity-70 hover:opacity-100"
+                style={{ color: 'inherit' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                  <path d="M4.646 4.646a.5.5 0 0 1 .708 0L7 6.293l1.646-1.647a.5.5 0 0 1 .708.708L7.707 7l1.647 1.646a.5.5 0 0 1-.708.708L7 7.707l-1.646 1.647a.5.5 0 0 1-.708-.708L6.293 7 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                </svg>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full w-full flex">
       {/* Layout Sidebar - Far Left */}
