@@ -311,6 +311,8 @@ interface PanelProviderProps {
   collectionId?: string;
   /** Repository IDs in the collection (owner/repo format) */
   collectionRepositories?: string[];
+  /** Whether to auto-show File City tour on first visit */
+  autoShowTour?: boolean;
 }
 
 interface PanelProviderValue {
@@ -323,6 +325,8 @@ interface PanelProviderValue {
   selectedColorMode: string | null;
   /** Clear the current color mode selection */
   clearColorMode: () => void;
+  /** Whether to auto-show File City tour on first visit */
+  autoShowTour: boolean;
 }
 
 const PanelContext = createContext<PanelProviderValue | null>(null);
@@ -444,7 +448,7 @@ const hostTools: PanelTool[] = [
   },
 ];
 
-export function PanelProvider({ children, workspace, repository, githubRepo, initialOwner, collectionId, collectionRepositories }: PanelProviderProps) {
+export function PanelProvider({ children, workspace, repository, githubRepo, initialOwner, collectionId, collectionRepositories, autoShowTour = false }: PanelProviderProps) {
   // Initialize event bus once
   const events = useMemo(() => new PanelEventBus(), []);
 
@@ -2822,9 +2826,10 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         return slice.loading;
       },
       refresh,
-    }),
+      autoShowTour, // Add autoShowTour to context
+    } as any),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, userGitHubData, userGitHubLoading, qualityData, qualityLoading, qualityError, lensResults, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading, messagesData]
+    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, userGitHubData, userGitHubLoading, qualityData, qualityLoading, qualityError, lensResults, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading, messagesData, autoShowTour]
   );
 
   // Actions
@@ -3119,8 +3124,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       presenceConnected,
       selectedColorMode,
       clearColorMode,
+      autoShowTour,
     }),
-    [context, actions, events, presenceConnected, selectedColorMode, clearColorMode]
+    [context, actions, events, presenceConnected, selectedColorMode, clearColorMode, autoShowTour]
   );
 
   // Fetch GitHub repositories when authentication state changes

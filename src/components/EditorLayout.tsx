@@ -39,6 +39,7 @@ import type { FileInfo } from '@principal-ai/repository-abstraction';
 import type { WorkflowTemplate, ExtendedCanvas } from '@principal-ai/principal-view-core';
 import { buildStoryboardContext, type StoryboardReference } from '@principal-ai/principal-view-core';
 import { parseTaskMarkdown, serializeTaskMarkdown, DEFAULT_TASK_STATUSES } from '@backlog-md/core';
+import { hasTourBeenShown, markTourAsShown } from '@/lib/tourStorage';
 import {
   BookOpen, MessageSquare, FileText, Map, LayoutGrid,
   CheckSquare, Terminal, Users, Compass, Shield, Bug, Palette,
@@ -480,6 +481,20 @@ function EditorLayoutContent({
   // Get repository info for file fetching
   const githubRepo = (context.currentScope.repository as { githubRepo?: string })?.githubRepo
     || context.currentScope.repository?.path;
+
+  // Listen for tour:exit event to mark tour as shown
+  useEffect(() => {
+    if (!events || !githubRepo || !githubRepo.includes('/')) return;
+
+    const cleanup = events.on('tour:exit', () => {
+      const [owner, repo] = githubRepo.split('/');
+      if (owner && repo) {
+        markTourAsShown(owner, repo);
+      }
+    });
+
+    return cleanup;
+  }, [events, githubRepo]);
 
   // Handle layout configuration change
   const handleLayoutConfigChange = useCallback((config: LayoutConfig) => {
@@ -2414,6 +2429,15 @@ export function EditorLayout({ githubRepo, localAdapter: _localAdapter, initialC
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [checkAttempt, setCheckAttempt] = useState(0);
 
+  // Calculate whether to auto-show tour for first-time visitors
+  const autoShowTour = useMemo(() => {
+    if (!githubRepo || !githubRepo.includes('/')) {
+      return false;
+    }
+    const [owner, repo] = githubRepo.split('/');
+    return !hasTourBeenShown(owner!, repo!);
+  }, [githubRepo]);
+
   useEffect(() => {
     if (!githubRepo) {
       setAccessStatus('granted');
@@ -2511,6 +2535,7 @@ export function EditorLayout({ githubRepo, localAdapter: _localAdapter, initialC
           path: '/workspace/web-ade',
         }}
         githubRepo={githubRepo}
+        autoShowTour={autoShowTour}
       >
         <EditorContextWrapper
           initialConfigId={initialConfigId}
