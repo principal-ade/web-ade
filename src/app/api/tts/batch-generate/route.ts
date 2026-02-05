@@ -74,8 +74,6 @@ export async function POST(request: NextRequest) {
       speed: body.speed,
     });
 
-    console.log('[TTS Batch] Using options:', options);
-
     // Fetch tour from GitHub
     const tour = await fetchTourFromGitHub(
       body.owner,

@@ -3051,8 +3051,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         }
       },
       fetchAudioUrls: async (context: { owner: string; repo: string; path: string; commitSha: string }) => {
-        console.log('[PanelContext] Fetching audio URLs for tour:', context);
-
         try {
           const response = await fetch('/api/tts/batch-generate', {
             method: 'POST',
@@ -3077,7 +3075,6 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
             }
           });
 
-          console.log('[PanelContext] Fetched audio URLs:', urls.size, 'ready,', data.steps.length - urls.size, 'need generation');
           return urls;
         } catch (error) {
           console.error('[PanelContext] Error fetching audio URLs:', error);

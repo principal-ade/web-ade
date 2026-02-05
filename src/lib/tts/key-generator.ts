@@ -52,23 +52,7 @@ export async function generateS3Key(
   const optionsString = `${options.voice}-${options.speed}-${options.model}`;
   const optionsHash = await generateContentHash(optionsString);
 
-  const s3Key = `tts-audio/${owner}/${repo}/${fileHash}/${stepId}-${optionsHash}.mp3`;
-
-  console.log('[S3 Key] Generated:', {
-    owner,
-    repo,
-    path,
-    commitSha,
-    stepId,
-    voice: options.voice,
-    speed: options.speed,
-    model: options.model,
-    fileHash,
-    optionsHash,
-    s3Key,
-  });
-
-  return s3Key;
+  return `tts-audio/${owner}/${repo}/${fileHash}/${stepId}-${optionsHash}.mp3`;
 }
 
 /**
