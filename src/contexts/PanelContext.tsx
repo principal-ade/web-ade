@@ -3050,6 +3050,37 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           throw error;
         }
       },
+      fetchAudioUrls: async (context: { owner: string; repo: string; path: string; commitSha: string }) => {
+        console.log('[PanelContext] Fetching audio URLs for tour:', context);
+
+        try {
+          const response = await fetch('/api/tts/batch-generate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(context),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch audio URLs: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+
+          // Convert array of steps to Map<stepId, audioUrl>
+          const urls = new Map<string, string>();
+          data.steps.forEach((step: { stepId: string; audioUrl: string }) => {
+            urls.set(step.stepId, step.audioUrl);
+          });
+
+          console.log('[PanelContext] Fetched audio URLs:', urls.size, 'steps');
+          return urls;
+        } catch (error) {
+          console.error('[PanelContext] Error fetching audio URLs:', error);
+          throw error;
+        }
+      },
     }),
     [events, githubRepo, isLocalMode, localAdapter, cleanFilePath, readFileFromGitHub]
   );
