@@ -27,7 +27,7 @@ export async function generateContentHash(content: string): Promise<string> {
  * Pattern: /tts-audio/{owner}/{repo}/{file-hash}/{step-id}-{options-hash}.mp3
  *
  * - file-hash: First 12 chars of SHA-256(path:commitSha) - ensures cache invalidation
- * - options-hash: First 12 chars of SHA-256(voice-speed) - separates different audio variants
+ * - options-hash: First 12 chars of SHA-256(voice-speed-model) - separates different audio variants
  *
  * @param owner - Repository owner
  * @param repo - Repository name
@@ -48,11 +48,27 @@ export async function generateS3Key(
   // Hash file location (path + commitSha) for cache invalidation when content changes
   const fileHash = await generateContentHash(`${path}:${commitSha}`);
 
-  // Hash options (voice + speed) for different audio variants
-  const optionsString = `${options.voice}-${options.speed}`;
+  // Hash options (voice + speed + model) for different audio variants
+  const optionsString = `${options.voice}-${options.speed}-${options.model}`;
   const optionsHash = await generateContentHash(optionsString);
 
-  return `tts-audio/${owner}/${repo}/${fileHash}/${stepId}-${optionsHash}.mp3`;
+  const s3Key = `tts-audio/${owner}/${repo}/${fileHash}/${stepId}-${optionsHash}.mp3`;
+
+  console.log('[S3 Key] Generated:', {
+    owner,
+    repo,
+    path,
+    commitSha,
+    stepId,
+    voice: options.voice,
+    speed: options.speed,
+    model: options.model,
+    fileHash,
+    optionsHash,
+    s3Key,
+  });
+
+  return s3Key;
 }
 
 /**
