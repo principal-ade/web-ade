@@ -18,7 +18,7 @@ import {
 import { validateTTSRequest, generateS3Key } from '@/lib/tts/key-generator';
 import { fetchTourFromGitHub } from '@/lib/tts/github-fetcher';
 import { checkS3Cache, getS3Url, uploadToS3 } from '@/lib/tts/s3-cache';
-import { mergeTTSOptions, generateSpeech } from '@/lib/tts/elevenlabs-client';
+import { mergeTTSOptions, generateAudio } from '@/lib/tts/elevenlabs-client';
 
 /**
  * Add CORS headers to response
@@ -103,16 +103,24 @@ export async function POST(request: NextRequest) {
 
       // If not cached, generate the audio
       if (!cached) {
-        console.log('[TTS Batch] Generating audio for step:', step.id);
+        // Use narration if available, otherwise fall back to content or description
+        const text = step.narration || step.content || step.description || '';
 
-        try {
-          const audioBuffer = await generateSpeech(step.narration, options);
-          await uploadToS3(s3Key, audioBuffer);
-          cached = true;
-          console.log('[TTS Batch] Generated and cached:', step.id);
-        } catch (error) {
-          console.error('[TTS Batch] Failed to generate step:', step.id, error);
-          // Continue with other steps even if one fails
+        if (!text.trim()) {
+          console.warn('[TTS Batch] Skipping step with no text:', step.id);
+          // Keep cached=false so status will be 'generating'
+        } else {
+          console.log('[TTS Batch] Generating audio for step:', step.id);
+
+          try {
+            const audioBuffer = await generateAudio(text, options);
+            await uploadToS3(s3Key, audioBuffer);
+            cached = true;
+            console.log('[TTS Batch] Generated and cached:', step.id);
+          } catch (error) {
+            console.error('[TTS Batch] Failed to generate step:', step.id, error);
+            // Continue with other steps even if one fails
+          }
         }
       }
 

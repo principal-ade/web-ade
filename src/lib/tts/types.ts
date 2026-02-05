@@ -75,6 +75,7 @@ export interface IntroductionTourStep {
   title: string;
   description?: string;
   content?: string;
+  narration?: string; // Text to be converted to speech
   [key: string]: unknown;
 }
 
