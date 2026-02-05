@@ -2,10 +2,11 @@
  * POST /api/tts/batch-generate
  *
  * Pre-fetches audio URLs for all steps in a tour.
- * Used by TourPlayer on mount to check cache status for all steps.
+ * Used by TourPlayer on mount to check cache status and generate missing audio.
  *
- * Does NOT generate audio - only checks cache and returns URLs.
- * Client can then call /api/tts/generate for uncached steps as needed.
+ * - Checks cache for all steps
+ * - Generates audio for uncached steps
+ * - Returns URLs once all audio is ready
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -16,8 +17,8 @@ import {
 } from '@/lib/tts/types';
 import { validateTTSRequest, generateS3Key } from '@/lib/tts/key-generator';
 import { fetchTourFromGitHub } from '@/lib/tts/github-fetcher';
-import { checkS3Cache, getS3Url } from '@/lib/tts/s3-cache';
-import { mergeTTSOptions } from '@/lib/tts/elevenlabs-client';
+import { checkS3Cache, getS3Url, uploadToS3 } from '@/lib/tts/s3-cache';
+import { mergeTTSOptions, generateSpeech } from '@/lib/tts/elevenlabs-client';
 
 /**
  * Add CORS headers to response
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
       body.commitSha
     );
 
-    console.log('[TTS Batch] Checking cache for tour:', {
+    console.log('[TTS Batch] Processing tour:', {
       tourId: tour.id,
       totalSteps: tour.steps.length,
     });
@@ -97,8 +98,24 @@ export async function POST(request: NextRequest) {
         options
       );
 
-      const cached = await checkS3Cache(s3Key);
+      let cached = await checkS3Cache(s3Key);
       const audioUrl = getS3Url(s3Key);
+
+      // If not cached, generate the audio
+      if (!cached) {
+        console.log('[TTS Batch] Generating audio for step:', step.id);
+
+        try {
+          const audioBuffer = await generateSpeech(step.narration, options);
+          await uploadToS3(s3Key, audioBuffer);
+          cached = true;
+          console.log('[TTS Batch] Generated and cached:', step.id);
+        } catch (error) {
+          console.error('[TTS Batch] Failed to generate step:', step.id, error);
+          // Continue with other steps even if one fails
+        }
+      }
+
       const status: 'ready' | 'generating' = cached ? 'ready' : 'generating';
 
       return {
@@ -114,7 +131,7 @@ export async function POST(request: NextRequest) {
     const cachedSteps = steps.filter((s) => s.cached).length;
     const generatingSteps = steps.filter((s) => !s.cached).length;
 
-    console.log('[TTS Batch] Cache status:', {
+    console.log('[TTS Batch] Generation complete:', {
       tourId: tour.id,
       totalSteps: steps.length,
       cachedSteps,

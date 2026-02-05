@@ -3069,12 +3069,15 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           const data = await response.json();
 
           // Convert array of steps to Map<stepId, audioUrl>
+          // Only include URLs where status='ready' (cached files that exist)
           const urls = new Map<string, string>();
-          data.steps.forEach((step: { stepId: string; audioUrl: string }) => {
-            urls.set(step.stepId, step.audioUrl);
+          data.steps.forEach((step: { stepId: string; audioUrl: string; status: 'ready' | 'generating' }) => {
+            if (step.status === 'ready') {
+              urls.set(step.stepId, step.audioUrl);
+            }
           });
 
-          console.log('[PanelContext] Fetched audio URLs:', urls.size, 'steps');
+          console.log('[PanelContext] Fetched audio URLs:', urls.size, 'ready,', data.steps.length - urls.size, 'need generation');
           return urls;
         } catch (error) {
           console.error('[PanelContext] Error fetching audio URLs:', error);
