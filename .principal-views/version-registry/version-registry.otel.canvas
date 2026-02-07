@@ -137,11 +137,130 @@
       }
     },
     {
+      "id": "schematic-fetching",
+      "type": "text",
+      "text": "# version.registration.schematic.fetching\n\nFetching schematic from GitHub at commit SHA",
+      "x": 100,
+      "y": 550,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "event": {
+          "name": "version.registration.schematic.fetching",
+          "attributes": {}
+        },
+        "sources": ["src/lib/version-registry/version-manager.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "operation"
+        },
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "stroke": "#1d4ed8",
+        "dataSchema": {
+          "repository.url": {
+            "type": "string",
+            "required": true
+          },
+          "git.sha": {
+            "type": "string",
+            "required": true
+          },
+          "schematic.cached": {
+            "type": "boolean",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "schematic-fetched",
+      "type": "text",
+      "text": "# version.registration.schematic.fetched\n\nSchematic fetched from GitHub successfully",
+      "x": 100,
+      "y": 650,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "event": {
+          "name": "version.registration.schematic.fetched",
+          "attributes": {}
+        },
+        "sources": ["src/lib/version-registry/schematic-fetcher.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "operation"
+        },
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "stroke": "#1d4ed8",
+        "dataSchema": {
+          "schematic.id": {
+            "type": "string",
+            "required": true
+          },
+          "canvases.count": {
+            "type": "number",
+            "required": true
+          },
+          "storyboards.count": {
+            "type": "number",
+            "required": true
+          },
+          "workflows.count": {
+            "type": "number",
+            "required": true
+          },
+          "errors.count": {
+            "type": "number",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "schematic-stored",
+      "type": "text",
+      "text": "# version.registration.schematic.stored\n\nSchematic stored to S3",
+      "x": 100,
+      "y": 750,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "event": {
+          "name": "version.registration.schematic.stored",
+          "attributes": {}
+        },
+        "sources": ["src/lib/version-registry/s3-storage.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "operation"
+        },
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "stroke": "#1d4ed8",
+        "dataSchema": {
+          "s3.key": {
+            "type": "string",
+            "required": true
+          },
+          "s3.bucket": {
+            "type": "string",
+            "required": true
+          },
+          "schematic.id": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
       "id": "registration-complete",
       "type": "text",
       "text": "# version.registration.complete\n\nVersion registered successfully",
       "x": 100,
-      "y": 650,
+      "y": 850,
       "width": 200,
       "height": 100,
       "pv": {
@@ -162,9 +281,9 @@
             "type": "string",
             "required": true
           },
-          "schematic.loaded": {
-            "type": "boolean",
-            "required": false
+          "schematic.id": {
+            "type": "string",
+            "required": true
           },
           "duration.ms": {
             "type": "number",
@@ -439,13 +558,65 @@
       }
     },
     {
-      "id": "edge-reg-s3-to-complete",
+      "id": "edge-reg-s3-to-schematic-fetching",
       "fromNode": "registration-s3-stored",
+      "fromSide": "bottom",
+      "toNode": "schematic-fetching",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-schematic-fetching-to-fetched",
+      "fromNode": "schematic-fetching",
+      "fromSide": "bottom",
+      "toNode": "schematic-fetched",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-schematic-fetched-to-stored",
+      "fromNode": "schematic-fetched",
+      "fromSide": "bottom",
+      "toNode": "schematic-stored",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-schematic-stored-to-complete",
+      "fromNode": "schematic-stored",
       "fromSide": "bottom",
       "toNode": "registration-complete",
       "toSide": "top",
       "pv": {
         "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-schematic-fetching-to-error",
+      "fromNode": "schematic-fetching",
+      "fromSide": "right",
+      "toNode": "registration-error",
+      "toSide": "left",
+      "label": "schematic fetch failed",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-schematic-stored-to-error",
+      "fromNode": "schematic-stored",
+      "fromSide": "right",
+      "toNode": "registration-error",
+      "toSide": "left",
+      "label": "storage failed",
+      "pv": {
+        "edgeType": "error"
       }
     },
     {

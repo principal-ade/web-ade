@@ -131,53 +131,41 @@ export async function registerVersion(
     // Store to S3 (overwrites if exists)
     const s3Key = await storeVersionRegistration(registration);
 
-    // Fetch and store schematic from GitHub at this SHA
-    let schematicLoaded = false;
-    let schematicId: string | undefined;
+    // Fetch and store schematic from GitHub at this SHA (BLOCKING - registration fails if this fails)
+    // Check if schematic already exists in S3 (cache)
+    const schematicExists = await checkSchematicExists(
+      registration.repositoryUrl,
+      registration.gitSHA
+    );
 
-    try {
-      // Check if schematic already exists in S3 (cache)
-      const schematicExists = await checkSchematicExists(
+    let schematicId: string;
+
+    if (schematicExists) {
+      console.log('[Version Manager] Schematic already cached in S3');
+      schematicId = generateSchematicId(registration.repositoryUrl, registration.gitSHA);
+    } else {
+      // Fetch schematic from GitHub (this will throw if it fails)
+      console.log('[Version Manager] Fetching schematic from GitHub...');
+      const schematic = await fetchSchematicFromGitHub(
         registration.repositoryUrl,
         registration.gitSHA
       );
 
-      if (schematicExists) {
-        console.log('[Version Manager] Schematic already cached in S3');
-        schematicLoaded = true;
-        schematicId = generateSchematicId(registration.repositoryUrl, registration.gitSHA);
-      } else {
-        // Fetch schematic from GitHub
-        console.log('[Version Manager] Fetching schematic from GitHub...');
-        const schematic = await fetchSchematicFromGitHub(
-          registration.repositoryUrl,
-          registration.gitSHA
-        );
+      // Store schematic in S3
+      await storeSchematic(registration.repositoryUrl, registration.gitSHA, schematic);
+      schematicId = generateSchematicId(registration.repositoryUrl, registration.gitSHA);
 
-        // Store schematic in S3
-        await storeSchematic(registration.repositoryUrl, registration.gitSHA, schematic);
-        schematicLoaded = true;
-        schematicId = generateSchematicId(registration.repositoryUrl, registration.gitSHA);
-
-        console.log('[Version Manager] Schematic fetched and stored:', {
-          schematicId,
-          canvases: schematic.canvases.length,
-          storyboards: schematic.storyboards.length,
-        });
-      }
-    } catch (error) {
-      // Schematic fetch failed - log but don't fail registration
-      console.error('[Version Manager] Schematic fetch failed:', {
-        error: error instanceof Error ? error.message : String(error),
-        gitSHA: registration.gitSHA.substring(0, 12),
+      console.log('[Version Manager] Schematic fetched and stored:', {
+        schematicId,
+        canvases: schematic.canvases.length,
+        storyboards: schematic.storyboards.length,
       });
-      // Continue without schematic - it can be fetched later on-demand
     }
 
     return {
       success: true,
       registrationId: s3Key,
-      schematicLoaded,
+      schematicLoaded: true,
       schematicId,
       message: exists
         ? 'Version already registered (idempotent)'
