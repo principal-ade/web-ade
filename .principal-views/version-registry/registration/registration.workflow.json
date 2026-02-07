@@ -1,0 +1,108 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/version-registry/version-registry.otel.canvas",
+  "mode": "span-tree",
+  "name": "Version Registration",
+  "description": "Register a new version-to-commit mapping for deployment tracking",
+  "scenarios": [
+    {
+      "id": "registration-success",
+      "priority": 1,
+      "condition": {
+        "requires": [
+          "version.registration.started",
+          "version.registration.validated",
+          "version.registration.s3.stored",
+          "version.registration.complete"
+        ]
+      },
+      "template": {
+        "summary": "✅ Registered {service.name}@{version} → {git.sha} (completed in {duration.ms}ms)",
+        "events": {
+          "version.registration.started": "Registration request for {{service.name}}@{{version}} in {{environment}} environment",
+          "version.registration.validated": "Validated request for {{customer.id}}/{{service.name}}@{{version}}",
+          "version.registration.s3.stored": "Stored mapping to {{s3.bucket}}/{{s3.key}}{{#if already.exists}} (version already existed){{/if}}",
+          "version.registration.complete": "Registration completed → {{registration.id}}{{#if schematic.loaded}} (schematic loaded){{/if}}"
+        }
+      }
+    },
+    {
+      "id": "registration-validation-failed",
+      "priority": 2,
+      "condition": {
+        "requires": [
+          "version.registration.started",
+          "version.registration.error"
+        ],
+        "assertions": {
+          "error.stage": "validation"
+        }
+      },
+      "template": {
+        "summary": "❌ Registration validation failed: {error.message}",
+        "events": {
+          "version.registration.started": "Registration request for {{service.name}}@{{version}}",
+          "version.registration.error": "Validation failed ({{error.type}}): {{error.message}}"
+        }
+      }
+    },
+    {
+      "id": "registration-storage-failed",
+      "priority": 3,
+      "condition": {
+        "requires": [
+          "version.registration.started",
+          "version.registration.validated",
+          "version.registration.error"
+        ],
+        "assertions": {
+          "error.stage": "storage"
+        }
+      },
+      "template": {
+        "summary": "❌ S3 storage failed: {error.message}",
+        "events": {
+          "version.registration.started": "Registration request for {{service.name}}@{{version}}",
+          "version.registration.validated": "Validation passed for {{customer.id}}/{{service.name}}",
+          "version.registration.error": "S3 storage failed ({{error.type}}): {{error.message}}"
+        }
+      }
+    },
+    {
+      "id": "registration-generic-error",
+      "priority": 4,
+      "condition": {
+        "requires": [
+          "version.registration.started",
+          "version.registration.error"
+        ]
+      },
+      "template": {
+        "summary": "❌ Registration failed: {error.message}",
+        "events": {
+          "version.registration.started": "Registration request{{#if service.name}} for {{service.name}}@{{version}}{{/if}}",
+          "version.registration.validated": "Request validated",
+          "version.registration.s3.stored": "Stored to S3",
+          "version.registration.error": "Error at {{error.stage}} ({{error.type}}): {{error.message}}"
+        }
+      }
+    },
+    {
+      "id": "registration-fallback",
+      "priority": 999,
+      "condition": {
+        "default": true
+      },
+      "template": {
+        "summary": "📋 Version registration execution captured",
+        "events": {
+          "version.registration.started": "Started registration for {{service.name}}@{{version}}",
+          "version.registration.validated": "Validation complete",
+          "version.registration.s3.stored": "Stored to S3: {{s3.key}}",
+          "version.registration.complete": "Registration complete",
+          "version.registration.error": "Error occurred"
+        }
+      }
+    }
+  ]
+}

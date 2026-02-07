@@ -1,0 +1,217 @@
+/**
+ * S3 Storage Manager for Version Registry
+ *
+ * Handles storing and retrieving version-to-commit mappings in S3.
+ * Each version registration is stored as a JSON file in S3.
+ *
+ * customerId format: "owner/repo" (e.g., "acme/backend-monorepo")
+ * S3 key format: version-registry/{owner}/{repo}/{serviceName}/{version}/{environment}.json
+ */
+
+import {
+  S3Client,
+  HeadObjectCommand,
+  PutObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
+import type {
+  VersionRegistration,
+  VersionRegistryKey,
+} from './types';
+
+// Initialize S3 client with IAM role credentials
+const s3Client = new S3Client({
+  region: process.env.VERSION_REGISTRY_AWS_REGION || 'us-east-1',
+  // Credentials auto-detected from Amplify IAM role - no keys needed
+});
+
+const BUCKET_NAME =
+  process.env.VERSION_REGISTRY_S3_BUCKET || 'principal-view-data';
+
+/**
+ * Parses GitHub repository URL to extract owner/repo
+ *
+ * @param repositoryUrl - GitHub repository URL
+ * @returns customerId in format "owner/repo"
+ * @throws Error if URL format is invalid
+ */
+export function parseGitHubUrl(repositoryUrl: string): string {
+  try {
+    // Remove trailing slashes and .git extension
+    const cleanUrl = repositoryUrl.replace(/\.git$/, '').replace(/\/$/, '');
+
+    // Handle both https://github.com/owner/repo and git@github.com:owner/repo
+    const match = cleanUrl.match(/github\.com[/:]([\w-]+)\/([\w-]+)/);
+
+    if (!match) {
+      throw new Error(`Invalid GitHub URL format: ${repositoryUrl}`);
+    }
+
+    const owner = match[1];
+    const repo = match[2];
+
+    return `${owner}/${repo}`;
+  } catch (error) {
+    throw new Error(`Failed to parse GitHub URL: ${repositoryUrl}`);
+  }
+}
+
+/**
+ * Builds S3 key for a version registration
+ *
+ * Pattern: version-registry/{owner}/{repo}/{serviceName}/{version}/{environment}.json
+ * where customerId = "owner/repo"
+ *
+ * @param key - Version registry key components
+ * @returns S3 object key
+ */
+export function buildS3Key(key: VersionRegistryKey): string {
+  const { customerId, serviceName, version, environment } = key;
+  // customerId already contains "owner/repo", so just insert it directly
+  return `version-registry/${customerId}/${serviceName}/${version}/${environment}.json`;
+}
+
+/**
+ * Checks if a version registration exists in S3
+ *
+ * Uses HEAD request to check existence without downloading the file.
+ *
+ * @param key - Version registry key components
+ * @returns true if registration exists, false otherwise
+ */
+export async function checkVersionExists(
+  key: VersionRegistryKey
+): Promise<boolean> {
+  try {
+    const s3Key = buildS3Key(key);
+    await s3Client.send(
+      new HeadObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: s3Key,
+      })
+    );
+    return true;
+  } catch {
+    // Object doesn't exist (NoSuchKey error)
+    return false;
+  }
+}
+
+/**
+ * Stores a version registration to S3
+ *
+ * Stores as immutable JSON file with long cache TTL.
+ *
+ * @param registration - Version registration data
+ * @returns S3 key where registration was stored
+ * @throws Error if upload fails
+ */
+export async function storeVersionRegistration(
+  registration: VersionRegistration
+): Promise<string> {
+  try {
+    const s3Key = buildS3Key({
+      customerId: registration.customerId,
+      serviceName: registration.serviceName,
+      version: registration.version,
+      environment: registration.environment,
+    });
+
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: s3Key,
+        Body: JSON.stringify(registration, null, 2),
+        ContentType: 'application/json',
+        CacheControl: 'max-age=31536000', // 1 year - versions are immutable
+        Metadata: {
+          'registered-at': registration.deployedAt,
+          'service-name': registration.serviceName,
+          'version': registration.version,
+          'environment': registration.environment,
+        },
+      })
+    );
+
+    console.log('[Version Registry] Stored registration:', {
+      s3Key,
+      serviceName: registration.serviceName,
+      version: registration.version,
+      environment: registration.environment,
+    });
+
+    return s3Key;
+  } catch (error) {
+    console.error('[Version Registry] Storage failed:', {
+      serviceName: registration.serviceName,
+      version: registration.version,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new Error('S3_ERROR');
+  }
+}
+
+/**
+ * Retrieves a version registration from S3
+ *
+ * @param key - Version registry key components
+ * @returns Version registration data or null if not found
+ */
+export async function getVersionRegistration(
+  key: VersionRegistryKey
+): Promise<VersionRegistration | null> {
+  try {
+    const s3Key = buildS3Key(key);
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: s3Key,
+      })
+    );
+
+    const data = await response.Body?.transformToString();
+    if (!data) {
+      return null;
+    }
+
+    const registration = JSON.parse(data) as VersionRegistration;
+
+    console.log('[Version Registry] Retrieved registration:', {
+      s3Key,
+      serviceName: registration.serviceName,
+      version: registration.version,
+      gitSHA: registration.gitSHA,
+    });
+
+    return registration;
+  } catch (error: any) {
+    if (error.name === 'NoSuchKey') {
+      console.log('[Version Registry] Version not found:', {
+        key: buildS3Key(key),
+      });
+      return null;
+    }
+
+    console.error('[Version Registry] Retrieval failed:', {
+      key: buildS3Key(key),
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new Error('S3_ERROR');
+  }
+}
+
+/**
+ * Lists all versions for a service (useful for debugging/admin)
+ *
+ * Note: Not implemented in MVP - would require S3 ListObjectsV2
+ * Add this later if needed for admin dashboard.
+ */
+export async function listServiceVersions(
+  customerId: string,
+  serviceName: string,
+  environment?: string
+): Promise<string[]> {
+  // TODO: Implement using ListObjectsV2 if needed for admin features
+  console.warn('[Version Registry] listServiceVersions not yet implemented');
+  return [];
+}
