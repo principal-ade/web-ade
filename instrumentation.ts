@@ -84,6 +84,14 @@ export async function register() {
       url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT
         ? `${process.env.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/metrics`
         : 'http://localhost:4318/v1/metrics',
+      headers: process.env.OTEL_EXPORTER_OTLP_HEADERS
+        ? Object.fromEntries(
+            process.env.OTEL_EXPORTER_OTLP_HEADERS.split(',').map(pair => {
+              const [key, value] = pair.split('=');
+              return [key.trim(), value.trim()];
+            })
+          )
+        : {},
     });
 
     const metricReader = new PeriodicExportingMetricReader({
