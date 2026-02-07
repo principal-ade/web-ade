@@ -51,7 +51,7 @@ export function parseGitHubUrl(repositoryUrl: string): string {
     const repo = match[2];
 
     return `${owner}/${repo}`;
-  } catch (error) {
+  } catch {
     throw new Error(`Failed to parse GitHub URL: ${repositoryUrl}`);
   }
 }
@@ -184,8 +184,8 @@ export async function getVersionRegistration(
     });
 
     return registration;
-  } catch (error: any) {
-    if (error.name === 'NoSuchKey') {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'name' in error && error.name === 'NoSuchKey') {
       console.log('[Version Registry] Version not found:', {
         key: buildS3Key(key),
       });
@@ -207,9 +207,9 @@ export async function getVersionRegistration(
  * Add this later if needed for admin dashboard.
  */
 export async function listServiceVersions(
-  customerId: string,
-  serviceName: string,
-  environment?: string
+  _customerId: string,
+  _serviceName: string,
+  _environment?: string
 ): Promise<string[]> {
   // TODO: Implement using ListObjectsV2 if needed for admin features
   console.warn('[Version Registry] listServiceVersions not yet implemented');

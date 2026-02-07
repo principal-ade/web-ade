@@ -17,7 +17,6 @@ import type {
   VersionRegistrationResponse,
   VersionLookupRequest,
   VersionLookupResponse,
-  VersionRegistryErrorCode,
 } from './types';
 
 /**
@@ -53,7 +52,7 @@ export async function registerVersion(
   if (!resolvedCustomerId) {
     try {
       resolvedCustomerId = parseGitHubUrl(request.repositoryUrl);
-    } catch (error) {
+    } catch {
       return {
         success: false,
         registrationId: '',
