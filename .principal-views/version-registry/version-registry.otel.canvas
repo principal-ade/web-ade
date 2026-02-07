@@ -30,7 +30,9 @@
           "name": "version.registration.started",
           "attributes": {}
         },
-        "sources": ["src/app/api/versions/route.ts"],
+        "sources": [
+          "src/app/api/versions/route.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "lifecycle"
@@ -66,8 +68,8 @@
       "id": "registration-validated",
       "type": "text",
       "text": "# version.registration.validated\n\nRequest validated successfully",
-      "x": 100,
-      "y": 250,
+      "x": 89,
+      "y": 199,
       "width": 200,
       "height": 100,
       "pv": {
@@ -75,7 +77,9 @@
           "name": "version.registration.validated",
           "attributes": {}
         },
-        "sources": ["src/lib/version-registry/version-manager.ts"],
+        "sources": [
+          "src/lib/version-registry/version-manager.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "operation"
@@ -103,8 +107,8 @@
       "id": "registration-s3-stored",
       "type": "text",
       "text": "# version.registration.s3.stored\n\nVersion mapping stored to S3",
-      "x": 100,
-      "y": 450,
+      "x": 92,
+      "y": 350,
       "width": 200,
       "height": 100,
       "pv": {
@@ -112,7 +116,9 @@
           "name": "version.registration.s3.stored",
           "attributes": {}
         },
-        "sources": ["src/lib/version-registry/s3-storage.ts"],
+        "sources": [
+          "src/lib/version-registry/s3-storage.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "operation"
@@ -140,8 +146,8 @@
       "id": "schematic-fetching",
       "type": "text",
       "text": "# version.registration.schematic.fetching\n\nFetching schematic from GitHub at commit SHA",
-      "x": 100,
-      "y": 550,
+      "x": 91,
+      "y": 498,
       "width": 200,
       "height": 100,
       "pv": {
@@ -149,7 +155,9 @@
           "name": "version.registration.schematic.fetching",
           "attributes": {}
         },
-        "sources": ["src/lib/version-registry/version-manager.ts"],
+        "sources": [
+          "src/lib/version-registry/version-manager.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "operation"
@@ -177,8 +185,8 @@
       "id": "schematic-fetched",
       "type": "text",
       "text": "# version.registration.schematic.fetched\n\nSchematic fetched from GitHub successfully",
-      "x": 100,
-      "y": 650,
+      "x": 91,
+      "y": 649,
       "width": 200,
       "height": 100,
       "pv": {
@@ -186,7 +194,9 @@
           "name": "version.registration.schematic.fetched",
           "attributes": {}
         },
-        "sources": ["src/lib/version-registry/schematic-fetcher.ts"],
+        "sources": [
+          "src/lib/version-registry/schematic-fetcher.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "operation"
@@ -222,8 +232,8 @@
       "id": "schematic-stored",
       "type": "text",
       "text": "# version.registration.schematic.stored\n\nSchematic stored to S3",
-      "x": 100,
-      "y": 750,
+      "x": 86,
+      "y": 801,
       "width": 200,
       "height": 100,
       "pv": {
@@ -231,7 +241,9 @@
           "name": "version.registration.schematic.stored",
           "attributes": {}
         },
-        "sources": ["src/lib/version-registry/s3-storage.ts"],
+        "sources": [
+          "src/lib/version-registry/s3-storage.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "operation"
@@ -259,8 +271,8 @@
       "id": "registration-complete",
       "type": "text",
       "text": "# version.registration.complete\n\nVersion registered successfully",
-      "x": 100,
-      "y": 850,
+      "x": 97,
+      "y": 954,
       "width": 200,
       "height": 100,
       "pv": {
@@ -268,7 +280,9 @@
           "name": "version.registration.complete",
           "attributes": {}
         },
-        "sources": ["src/app/api/versions/route.ts"],
+        "sources": [
+          "src/app/api/versions/route.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "lifecycle"
@@ -296,8 +310,8 @@
       "id": "registration-error",
       "type": "text",
       "text": "# version.registration.error\n\nVersion registration failed",
-      "x": 450,
-      "y": 50,
+      "x": 524,
+      "y": 370,
       "width": 200,
       "height": 100,
       "pv": {
@@ -353,7 +367,9 @@
           "name": "version.lookup.started",
           "attributes": {}
         },
-        "sources": ["src/app/api/versions/lookup/route.ts"],
+        "sources": [
+          "src/app/api/versions/lookup/route.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "lifecycle"
@@ -394,7 +410,9 @@
           "name": "version.lookup.s3.retrieved",
           "attributes": {}
         },
-        "sources": ["src/lib/version-registry/s3-storage.ts"],
+        "sources": [
+          "src/lib/version-registry/s3-storage.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "operation"
@@ -435,7 +453,9 @@
           "name": "version.lookup.complete",
           "attributes": {}
         },
-        "sources": ["src/app/api/versions/lookup/route.ts"],
+        "sources": [
+          "src/app/api/versions/lookup/route.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "lifecycle"
@@ -511,6 +531,147 @@
         "sources": [
           "src/app/api/versions/lookup/route.ts",
           "src/lib/version-registry/version-manager.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error"
+        },
+        "shape": "rectangle",
+        "fill": "#ef4444",
+        "stroke": "#dc2626",
+        "dataSchema": {
+          "error.type": {
+            "type": "string",
+            "required": true
+          },
+          "error.message": {
+            "type": "string",
+            "required": true
+          },
+          "error.stage": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "list-started",
+      "type": "text",
+      "text": "# version.list.started\n\nVersion list request received",
+      "x": 800,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "event": {
+          "name": "version.list.started",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/versions/list/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a",
+        "dataSchema": {
+          "customer.id": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "list-s3-retrieved",
+      "type": "text",
+      "text": "# version.list.s3.retrieved\n\nAll registrations fetched from S3",
+      "x": 800,
+      "y": 200,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "event": {
+          "name": "version.list.s3.retrieved",
+          "attributes": {}
+        },
+        "sources": [
+          "src/lib/version-registry/s3-storage.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "operation"
+        },
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "stroke": "#2563eb",
+        "dataSchema": {
+          "customer.id": {
+            "type": "string",
+            "required": true
+          },
+          "registration.count": {
+            "type": "number",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "list-complete",
+      "type": "text",
+      "text": "# version.list.complete\n\nVersion list successful",
+      "x": 800,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "event": {
+          "name": "version.list.complete",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/versions/list/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a",
+        "dataSchema": {
+          "customer.id": {
+            "type": "string",
+            "required": true
+          },
+          "registration.count": {
+            "type": "number",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "list-error",
+      "type": "text",
+      "text": "# version.list.error\n\nVersion list failed",
+      "x": 1050,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "event": {
+          "name": "version.list.error",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/versions/list/route.ts",
+          "src/lib/version-registry/s3-storage.ts"
         ],
         "otel": {
           "kind": "event",
@@ -677,6 +838,37 @@
       "fromNode": "lookup-started",
       "fromSide": "right",
       "toNode": "lookup-error",
+      "toSide": "left",
+      "label": "storage error",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-list-start-to-s3",
+      "fromNode": "list-started",
+      "fromSide": "bottom",
+      "toNode": "list-s3-retrieved",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-list-s3-to-complete",
+      "fromNode": "list-s3-retrieved",
+      "fromSide": "bottom",
+      "toNode": "list-complete",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-list-start-to-error",
+      "fromNode": "list-started",
+      "fromSide": "right",
+      "toNode": "list-error",
       "toSide": "left",
       "label": "storage error",
       "pv": {
