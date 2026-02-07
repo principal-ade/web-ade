@@ -91,8 +91,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Register the version
-    const result: VersionRegistrationResponse = await registerVersion(body);
+    // Extract GitHub token from Authorization header (for GitHub Actions / CI)
+    const authHeader = request.headers.get('authorization');
+    const githubToken = authHeader?.replace(/^Bearer\s+/i, '');
+
+    // Register the version (pass githubToken for schematic fetching)
+    const result: VersionRegistrationResponse = await registerVersion(body, undefined, githubToken);
 
     if (!result.success) {
       return addCorsHeaders(

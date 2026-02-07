@@ -23,9 +23,12 @@ jobs:
 
       - name: Register version schematic
         id: register
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RESPONSE=$(curl -X POST "https://app.principal-ade.com/api/versions" \
             -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
             -d "{
               \"serviceName\": \"web-ade\",
               \"version\": \"${{ steps.package-version.outputs.version }}\",

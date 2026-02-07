@@ -29,12 +29,14 @@ import { getGitHubToken } from '@/lib/auth/cookies';
  *
  * @param repositoryUrl - GitHub repository URL
  * @param commitSha - Git commit SHA (40-char hex)
+ * @param providedToken - GitHub token (optional, from Authorization header)
  * @returns Complete schematic (CanvasDiscoveryResult with content)
  * @throws Error if repository not found or schematic fetch fails
  */
 export async function fetchSchematicFromGitHub(
   repositoryUrl: string,
-  commitSha: string
+  commitSha: string,
+  providedToken?: string
 ): Promise<CanvasDiscoveryResult> {
   // Parse owner/repo from URL
   const match = repositoryUrl.match(/github\.com[/:]([\w.-]+)\/([\w.-]+)/);
@@ -51,8 +53,8 @@ export async function fetchSchematicFromGitHub(
     commitSha: commitSha.substring(0, 12),
   });
 
-  // Get GitHub token
-  const userToken = await getGitHubToken();
+  // Get GitHub token (use provided token from Authorization header, or fall back to cookies/env)
+  const userToken = providedToken || (await getGitHubToken());
   const token = userToken || process.env.GITHUB_PUBLIC_PAT || process.env.GITHUB_TOKEN;
 
   const octokit = new Octokit({ auth: token });

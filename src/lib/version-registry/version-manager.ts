@@ -47,11 +47,13 @@ function isValidVersion(version: string): boolean {
  *
  * @param request - Version registration request
  * @param customerId - Customer ID (owner/repo format)
+ * @param githubToken - GitHub token for fetching schematics (optional, from Authorization header)
  * @returns Registration response
  */
 export async function registerVersion(
   request: VersionRegistrationRequest,
-  customerId?: string
+  customerId?: string,
+  githubToken?: string
 ): Promise<VersionRegistrationResponse> {
   // Extract customerId from repositoryUrl if not provided
   let resolvedCustomerId = customerId;
@@ -148,7 +150,8 @@ export async function registerVersion(
       console.log('[Version Manager] Fetching schematic from GitHub...');
       const schematic = await fetchSchematicFromGitHub(
         registration.repositoryUrl,
-        registration.gitSHA
+        registration.gitSHA,
+        githubToken
       );
 
       // Store schematic in S3
