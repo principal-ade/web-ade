@@ -1,0 +1,125 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/version-registry/version-registry.otel.canvas",
+  "mode": "span-tree",
+  "name": "Version List",
+  "description": "List all registered versions for a repository",
+  "scenarios": [
+    {
+      "id": "list-success",
+      "priority": 1,
+      "condition": {
+        "requires": [
+          "version.list.started",
+          "version.list.s3.retrieved",
+          "version.list.complete"
+        ]
+      },
+      "template": {
+        "summary": "✅ Listed {registration.count} version(s) for {customer.id} (completed in {duration.ms}ms)",
+        "events": {
+          "version.list.started": "List request for {{customer.id}}",
+          "version.list.s3.retrieved": "Retrieved {{registration.count}} registration(s) from S3",
+          "version.list.complete": "List complete with {{registration.count}} version(s)"
+        }
+      }
+    },
+    {
+      "id": "list-success-empty",
+      "priority": 2,
+      "condition": {
+        "requires": [
+          "version.list.started",
+          "version.list.s3.retrieved",
+          "version.list.complete"
+        ],
+        "assertions": {
+          "registration.count": 0
+        }
+      },
+      "template": {
+        "summary": "✅ No versions registered for {customer.id}",
+        "events": {
+          "version.list.started": "List request for {{customer.id}}",
+          "version.list.s3.retrieved": "No registrations found in S3",
+          "version.list.complete": "List complete - repository has no registered versions"
+        }
+      }
+    },
+    {
+      "id": "list-storage-error",
+      "priority": 3,
+      "condition": {
+        "requires": [
+          "version.list.started",
+          "version.list.error"
+        ],
+        "assertions": {
+          "error.stage": "storage"
+        }
+      },
+      "template": {
+        "summary": "❌ S3 list failed for {customer.id}: {error.message}",
+        "events": {
+          "version.list.started": "List request for {{customer.id}}",
+          "version.list.error": "S3 storage error ({{error.type}}): {{error.message}}"
+        }
+      }
+    },
+    {
+      "id": "list-validation-error",
+      "priority": 4,
+      "condition": {
+        "requires": [
+          "version.list.started",
+          "version.list.error"
+        ],
+        "assertions": {
+          "error.stage": "validation"
+        }
+      },
+      "template": {
+        "summary": "❌ List validation failed: {error.message}",
+        "events": {
+          "version.list.started": "List request received",
+          "version.list.error": "Validation failed ({{error.type}}): {{error.message}}"
+        }
+      }
+    },
+    {
+      "id": "list-generic-error",
+      "priority": 5,
+      "condition": {
+        "requires": [
+          "version.list.started",
+          "version.list.error"
+        ]
+      },
+      "template": {
+        "summary": "❌ List failed for {customer.id}: {error.message}",
+        "events": {
+          "version.list.started": "List request for {{customer.id}}",
+          "version.list.s3.retrieved": "Retrieved from S3",
+          "version.list.complete": "List complete",
+          "version.list.error": "Error at {{error.stage}} ({{error.type}}): {{error.message}}"
+        }
+      }
+    },
+    {
+      "id": "list-fallback",
+      "priority": 999,
+      "condition": {
+        "default": true
+      },
+      "template": {
+        "summary": "📋 Version list execution captured for {customer.id}",
+        "events": {
+          "version.list.started": "Started list for {{customer.id}}",
+          "version.list.s3.retrieved": "Retrieved {{registration.count}} registrations from S3",
+          "version.list.complete": "List complete",
+          "version.list.error": "Error occurred"
+        }
+      }
+    }
+  ]
+}
