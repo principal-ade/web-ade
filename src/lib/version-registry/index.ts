@@ -11,6 +11,8 @@ export type {
   VersionRegistrationResponse,
   VersionLookupRequest,
   VersionLookupResponse,
+  VersionListRequest,
+  VersionListResponse,
   VersionRegistryKey,
   VersionRegistryError,
 } from './types';
@@ -29,6 +31,7 @@ export {
   storeVersionRegistration,
   getVersionRegistration,
   checkVersionExists,
+  listRepoRegistrations,
   buildS3Key,
   parseGitHubUrl,
   storeSchematic,

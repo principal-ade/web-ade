@@ -13,6 +13,7 @@ import {
   HeadObjectCommand,
   PutObjectCommand,
   GetObjectCommand,
+  ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
 import type {
   VersionRegistration,
@@ -194,6 +195,82 @@ export async function getVersionRegistration(
 
     console.error('[Version Registry] Retrieval failed:', {
       key: buildS3Key(key),
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new Error('S3_ERROR');
+  }
+}
+
+/**
+ * Lists all version registrations for a repository
+ *
+ * Returns all services, versions, and environments registered for the given repo.
+ *
+ * @param customerId - Repository in format "owner/repo"
+ * @returns Array of version registrations
+ */
+export async function listRepoRegistrations(
+  customerId: string
+): Promise<VersionRegistration[]> {
+  try {
+    const prefix = `version-registry/${customerId}/`;
+    const registrations: VersionRegistration[] = [];
+    let continuationToken: string | undefined;
+
+    console.log('[Version Registry] Listing registrations for:', { customerId, prefix });
+
+    // S3 ListObjectsV2 may return paginated results
+    do {
+      const command = new ListObjectsV2Command({
+        Bucket: BUCKET_NAME,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      });
+
+      const response = await s3Client.send(command);
+
+      if (response.Contents) {
+        // Fetch each registration object
+        for (const object of response.Contents) {
+          if (!object.Key || !object.Key.endsWith('.json')) {
+            continue;
+          }
+
+          try {
+            const getCommand = new GetObjectCommand({
+              Bucket: BUCKET_NAME,
+              Key: object.Key,
+            });
+
+            const getResponse = await s3Client.send(getCommand);
+            const data = await getResponse.Body?.transformToString();
+
+            if (data) {
+              const registration = JSON.parse(data) as VersionRegistration;
+              registrations.push(registration);
+            }
+          } catch (error) {
+            console.error('[Version Registry] Failed to fetch registration:', {
+              key: object.Key,
+              error: error instanceof Error ? error.message : String(error),
+            });
+            // Continue with other registrations even if one fails
+          }
+        }
+      }
+
+      continuationToken = response.NextContinuationToken;
+    } while (continuationToken);
+
+    console.log('[Version Registry] Found registrations:', {
+      customerId,
+      count: registrations.length,
+    });
+
+    return registrations;
+  } catch (error) {
+    console.error('[Version Registry] List failed:', {
+      customerId,
       error: error instanceof Error ? error.message : String(error),
     });
     throw new Error('S3_ERROR');

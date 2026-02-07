@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Palette, GitCommit, ArrowLeftRight, Sparkles, X, Star, Rss, Menu } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Palette, GitCommit, ArrowLeftRight, Sparkles, X, Star, Rss, Menu, Package } from 'lucide-react';
 import { UserAvatarMenu } from './UserAvatarMenu';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
@@ -11,6 +11,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { LocalFolderButton } from './LocalFolderButton';
 import { GitHubAppStatus } from './GitHubAppStatus';
+import { useVersionRegistry } from '@/hooks/useVersionRegistry';
+import { VersionRegistryModal } from './VersionRegistryModal';
 
 interface EditorHeaderProps {
   currentLayoutConfigId?: string;
@@ -72,6 +74,11 @@ export function EditorHeader({
   const [isStarred, setIsStarred] = useState(false);
   const [isStarLoading, setIsStarLoading] = useState(false);
   const [canInstallApp, setCanInstallApp] = useState(false);
+  const [showRegistryModal, setShowRegistryModal] = useState(false);
+
+  // Fetch version registry data
+  const customerId = repositoryName ? `${repositoryName.owner}/${repositoryName.repo}` : null;
+  const { registrations, loading: registryLoading, error: registryError, count: registryCount } = useVersionRegistry(customerId);
 
   // Extract repository name or owner from URL
   useEffect(() => {
@@ -166,15 +173,16 @@ export function EditorHeader({
   }, [repositoryName, isStarred, isStarLoading]);
 
   return (
-    <header
-      className="flex items-center justify-between px-4 border-b relative z-50"
-      style={{
-        background: theme.colors.surface,
-        borderColor: theme.colors.border,
-        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
-        paddingBottom: '0.5rem',
-      }}
-    >
+    <>
+      <header
+        className="flex items-center justify-between px-4 border-b relative z-50"
+        style={{
+          background: theme.colors.surface,
+          borderColor: theme.colors.border,
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
+          paddingBottom: '0.5rem',
+        }}
+      >
       {/* Left section: Logo/Avatar and Repository info */}
       <div className="flex items-center gap-3 flex-shrink-0 flex-1">
         {/* Show repo name on repo pages */}
@@ -224,6 +232,21 @@ export function EditorHeader({
                   fill={isStarred ? '#f59e0b' : 'none'}
                   strokeWidth={isStarred ? 0 : 2}
                 />
+              </button>
+            )}
+            {/* Version Registry indicator - show if there are registered versions */}
+            {registryCount > 0 && (
+              <button
+                onClick={() => setShowRegistryModal(true)}
+                className="flex items-center gap-1 px-2 py-1 rounded-md transition-all hover:opacity-80"
+                style={{
+                  background: theme.colors.primary,
+                  color: theme.colors.textOnPrimary,
+                }}
+                title={`${registryCount} version${registryCount !== 1 ? 's' : ''} registered`}
+              >
+                <Package className="w-3.5 h-3.5" />
+                <span className="text-xs font-medium">{registryCount}</span>
               </button>
             )}
             {/* GitHub App sync status - hidden on mobile */}
@@ -522,6 +545,19 @@ export function EditorHeader({
         {/* User Avatar Menu */}
         <UserAvatarMenu />
       </div>
-    </header>
+      </header>
+
+      {/* Version Registry Modal */}
+      {repositoryName && (
+        <VersionRegistryModal
+          isOpen={showRegistryModal}
+          onClose={() => setShowRegistryModal(false)}
+          registrations={registrations}
+          loading={registryLoading}
+          error={registryError}
+          repositoryName={`${repositoryName.owner}/${repositoryName.repo}`}
+        />
+      )}
+    </>
   );
 }

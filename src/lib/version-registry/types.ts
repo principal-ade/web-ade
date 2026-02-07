@@ -105,3 +105,20 @@ export interface VersionRegistryKey {
   version: string;
   environment: string;
 }
+
+/**
+ * Request to list all registrations for a repository
+ */
+export interface VersionListRequest {
+  customerId: string;
+}
+
+/**
+ * Response from listing all registrations for a repository
+ */
+export interface VersionListResponse {
+  success: boolean;
+  registrations: VersionRegistration[];
+  count: number;
+  error?: string;
+}
