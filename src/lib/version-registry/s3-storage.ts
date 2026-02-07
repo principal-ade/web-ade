@@ -215,3 +215,141 @@ export async function listServiceVersions(
   console.warn('[Version Registry] listServiceVersions not yet implemented');
   return [];
 }
+
+/**
+ * Builds S3 key for a schematic
+ *
+ * Pattern: schematics/{owner}/{repo}/{commitSha}/schematic.json
+ *
+ * Schematics are stored by commit SHA, not by version, since multiple
+ * versions (v1.0.0, v1.0.1, etc.) may point to the same commit and share
+ * the same schematic.
+ */
+export function buildSchematicS3Key(repositoryUrl: string, commitSha: string): string {
+  const customerId = parseGitHubUrl(repositoryUrl); // Returns "owner/repo"
+  return `schematics/${customerId}/${commitSha}/schematic.json`;
+}
+
+/**
+ * Stores a schematic to S3
+ *
+ * Schematics are immutable and cached with long TTL.
+ * Multiple versions that share the same commit SHA will reference the same schematic.
+ *
+ * @param repositoryUrl - GitHub repository URL
+ * @param commitSha - Git commit SHA
+ * @param schematic - Complete CanvasDiscoveryResult
+ * @returns S3 key where schematic was stored
+ */
+export async function storeSchematic(
+  repositoryUrl: string,
+  commitSha: string,
+  schematic: unknown
+): Promise<string> {
+  try {
+    const s3Key = buildSchematicS3Key(repositoryUrl, commitSha);
+
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: s3Key,
+        Body: JSON.stringify(schematic, null, 2),
+        ContentType: 'application/json',
+        CacheControl: 'max-age=31536000', // 1 year - schematics are immutable
+        Metadata: {
+          'commit-sha': commitSha,
+          'repository-url': repositoryUrl,
+        },
+      })
+    );
+
+    console.log('[Version Registry] Stored schematic:', {
+      s3Key,
+      commitSha: commitSha.substring(0, 12),
+    });
+
+    return s3Key;
+  } catch (error) {
+    console.error('[Version Registry] Schematic storage failed:', {
+      repositoryUrl,
+      commitSha: commitSha.substring(0, 12),
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new Error('S3_ERROR');
+  }
+}
+
+/**
+ * Retrieves a schematic from S3
+ *
+ * @param repositoryUrl - GitHub repository URL
+ * @param commitSha - Git commit SHA
+ * @returns Schematic (CanvasDiscoveryResult) or null if not found
+ */
+export async function getSchematic(
+  repositoryUrl: string,
+  commitSha: string
+): Promise<unknown | null> {
+  try {
+    const s3Key = buildSchematicS3Key(repositoryUrl, commitSha);
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: s3Key,
+      })
+    );
+
+    const data = await response.Body?.transformToString();
+    if (!data) {
+      return null;
+    }
+
+    const schematic = JSON.parse(data);
+
+    console.log('[Version Registry] Retrieved schematic:', {
+      s3Key,
+      commitSha: commitSha.substring(0, 12),
+    });
+
+    return schematic;
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'name' in error && error.name === 'NoSuchKey') {
+      console.log('[Version Registry] Schematic not found in S3:', {
+        key: buildSchematicS3Key(repositoryUrl, commitSha),
+      });
+      return null;
+    }
+
+    console.error('[Version Registry] Schematic retrieval failed:', {
+      repositoryUrl,
+      commitSha: commitSha.substring(0, 12),
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new Error('S3_ERROR');
+  }
+}
+
+/**
+ * Checks if a schematic exists in S3
+ *
+ * @param repositoryUrl - GitHub repository URL
+ * @param commitSha - Git commit SHA
+ * @returns true if schematic exists, false otherwise
+ */
+export async function checkSchematicExists(
+  repositoryUrl: string,
+  commitSha: string
+): Promise<boolean> {
+  try {
+    const s3Key = buildSchematicS3Key(repositoryUrl, commitSha);
+    await s3Client.send(
+      new HeadObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: s3Key,
+      })
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}

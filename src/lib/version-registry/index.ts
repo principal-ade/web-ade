@@ -31,4 +31,14 @@ export {
   checkVersionExists,
   buildS3Key,
   parseGitHubUrl,
+  storeSchematic,
+  getSchematic,
+  checkSchematicExists,
+  buildSchematicS3Key,
 } from './s3-storage';
+
+// Schematic fetching
+export {
+  fetchSchematicFromGitHub,
+  generateSchematicId,
+} from './schematic-fetcher';
