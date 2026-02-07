@@ -37,7 +37,7 @@ export async function fetchSchematicFromGitHub(
   commitSha: string
 ): Promise<CanvasDiscoveryResult> {
   // Parse owner/repo from URL
-  const match = repositoryUrl.match(/github\.com[/:]([\w-]+)\/([\w-]+)/);
+  const match = repositoryUrl.match(/github\.com[/:]([\w.-]+)\/([\w.-]+)/);
   if (!match) {
     throw new Error('Invalid GitHub repository URL');
   }
@@ -136,7 +136,7 @@ export async function fetchSchematicFromGitHub(
  * Example: "acme/backend-monorepo@abc123def456"
  */
 export function generateSchematicId(repositoryUrl: string, commitSha: string): string {
-  const match = repositoryUrl.match(/github\.com[/:]([\w-]+)\/([\w-]+)/);
+  const match = repositoryUrl.match(/github\.com[/:]([\w.-]+)\/([\w.-]+)/);
   if (!match) {
     throw new Error('Invalid repository URL');
   }

@@ -41,7 +41,7 @@ export function parseGitHubUrl(repositoryUrl: string): string {
     const cleanUrl = repositoryUrl.replace(/\.git$/, '').replace(/\/$/, '');
 
     // Handle both https://github.com/owner/repo and git@github.com:owner/repo
-    const match = cleanUrl.match(/github\.com[/:]([\w-]+)\/([\w-]+)/);
+    const match = cleanUrl.match(/github\.com[/:]([\w.-]+)\/([\w.-]+)/);
 
     if (!match) {
       throw new Error(`Invalid GitHub URL format: ${repositoryUrl}`);
