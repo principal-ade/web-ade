@@ -62,11 +62,30 @@ export async function register() {
       attributes: otherResources
     });
 
+    // Configure trace exporter with custom endpoint and headers
+    const { OTLPTraceExporter } = await import('@opentelemetry/exporter-trace-otlp-http');
+
+    const traceExporterConfig: any = {};
+
+    if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT) {
+      traceExporterConfig.url = `${process.env.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/traces`;
+    }
+
+    if (process.env.OTEL_EXPORTER_OTLP_HEADERS) {
+      traceExporterConfig.headers = Object.fromEntries(
+        process.env.OTEL_EXPORTER_OTLP_HEADERS.split(',').map(pair => {
+          const [key, value] = pair.split('=');
+          return [key.trim(), value.trim()];
+        })
+      );
+    }
+
+    const traceExporter = new OTLPTraceExporter(traceExporterConfig);
+
     registerOTel({
       serviceName,
       attributes: otherResources,
-      // Additional configuration will be picked up from environment variables
-      // OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4319
+      traceExporter, // Explicitly provide custom exporter
     });
 
     // Set up metrics exporter (push-based)
