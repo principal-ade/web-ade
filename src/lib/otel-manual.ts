@@ -8,6 +8,7 @@
 import { trace, context, SpanStatusCode, Span } from '@opentelemetry/api';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { NodeSDK } from '@opentelemetry/sdk-node';
+import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base';
 
 let sdk: NodeSDK | null = null;
 
@@ -43,10 +44,13 @@ export function initializeTracer() {
 
   const exporter = new OTLPTraceExporter(exporterConfig);
 
-  // Create SDK with exporter - use just serviceName for simplicity
-  // Additional resource attributes can be added via environment variables
+  // Use SimpleSpanProcessor for Lambda - exports immediately instead of batching
+  // This ensures spans are sent before Lambda execution environment freezes
+  const spanProcessor = new SimpleSpanProcessor(exporter);
+
+  // Create SDK with custom span processor
   sdk = new NodeSDK({
-    traceExporter: exporter,
+    spanProcessors: [spanProcessor],
     serviceName: 'web-ade',
   });
 
