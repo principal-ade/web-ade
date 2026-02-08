@@ -673,6 +673,11 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   });
   const [userGitHubLoading, setUserGitHubLoading] = useState(false);
 
+  // Telemetry (OTEL traces) state
+  const [telemetryData, setTelemetryData] = useState<unknown[]>([]);
+  const [telemetryLoading, setTelemetryLoading] = useState(false);
+  const [telemetryError, setTelemetryError] = useState<Error | null>(null);
+
   // Fetch user's GitHub data (starred, owned, orgs)
   const fetchUserGitHubData = useCallback(async () => {
     setUserGitHubLoading(true);
@@ -824,6 +829,26 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       console.error('[PanelContext] Failed to fetch collection repo details:', err);
     } finally {
       setCollectionRepoDetailsLoading(false);
+    }
+  }, []);
+
+  // Fetch telemetry traces from OTEL Collection Server
+  const fetchTelemetry = useCallback(async (serviceName: string, limit: number = 50) => {
+    setTelemetryLoading(true);
+    setTelemetryError(null);
+    console.log('[PanelContext] Fetching telemetry for service:', serviceName);
+
+    try {
+      const { fetchTracesSafe } = await import('@/lib/otel-traces');
+      const traces = await fetchTracesSafe(serviceName, limit);
+      setTelemetryData(traces);
+      console.log('[PanelContext] Telemetry loaded:', traces.length, 'traces');
+    } catch (err) {
+      console.error('[PanelContext] Failed to fetch telemetry:', err);
+      setTelemetryError(err instanceof Error ? err : new Error('Failed to fetch telemetry'));
+      setTelemetryData([]);
+    } finally {
+      setTelemetryLoading(false);
     }
   }, []);
 
@@ -1782,6 +1807,25 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         },
       ],
       [
+        'telemetry',
+        {
+          scope: 'repository',
+          name: 'telemetry',
+          data: telemetryData,
+          loading: telemetryLoading,
+          error: telemetryError,
+          refresh: async () => {
+            if (githubRepo) {
+              // Extract service name from githubRepo (owner/repo -> repo)
+              const serviceName = githubRepo.split('/')[1];
+              if (serviceName) {
+                await fetchTelemetry(serviceName);
+              }
+            }
+          },
+        },
+      ],
+      [
         'githubStarred',
         {
           scope: 'global',
@@ -2030,6 +2074,17 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       data: ownerRepos,
       loading: ownerReposLoading,
       error: ownerRepos.error ? new Error(ownerRepos.error) : null,
+    });
+  }
+
+  // Update telemetry slice with fetched data
+  const telemetrySlice = slicesRef.current.get('telemetry');
+  if (telemetrySlice) {
+    slicesRef.current.set('telemetry', {
+      ...telemetrySlice,
+      data: telemetryData,
+      loading: telemetryLoading,
+      error: telemetryError,
     });
   }
 
@@ -2828,7 +2883,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, userGitHubData, userGitHubLoading, qualityData, qualityLoading, qualityError, lensResults, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading, messagesData, autoShowTour]
+    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, userGitHubData, userGitHubLoading, qualityData, qualityLoading, qualityError, lensResults, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading, messagesData, autoShowTour, telemetryData, telemetryLoading, telemetryError]
   );
 
   // Actions
@@ -3245,6 +3300,16 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       fetchUserGitHubData();
     }
   }, [collectionId, fetchUserGitHubData]);
+
+  // Fetch telemetry traces when repository changes
+  useEffect(() => {
+    if (githubRepo && githubRepo.includes('/')) {
+      const serviceName = githubRepo.split('/')[1];
+      if (serviceName) {
+        fetchTelemetry(serviceName);
+      }
+    }
+  }, [githubRepo, fetchTelemetry]);
 
   return <PanelContext.Provider value={value}>{children}</PanelContext.Provider>;
 }
