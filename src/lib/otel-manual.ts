@@ -123,10 +123,13 @@ export async function withSpan<T>(
 /**
  * Force flush all pending spans
  * Call this at the end of Lambda execution to ensure spans are sent
+ *
+ * Note: We don't call shutdown() because the SDK instance is reused across Lambda invocations.
+ * Instead, we just wait a moment for the BatchSpanProcessor to flush automatically.
  */
 export async function flushSpans() {
-  if (sdk) {
-    await sdk.shutdown();
-    console.log('[OTEL Manual] Spans flushed');
-  }
+  // Give the BatchSpanProcessor time to flush
+  // The default batch timeout is 5 seconds, but we'll wait a bit
+  await new Promise(resolve => setTimeout(resolve, 100));
+  console.log('[OTEL Manual] Waiting for automatic span flush');
 }

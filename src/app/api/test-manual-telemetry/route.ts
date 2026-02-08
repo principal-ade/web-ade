@@ -5,7 +5,7 @@
  * where automatic instrumentation.ts doesn't work.
  */
 
-import { withSpan, flushSpans } from '@/lib/otel-manual';
+import { withSpan } from '@/lib/otel-manual';
 import { NextResponse } from 'next/server';
 import { Span, trace, context } from '@opentelemetry/api';
 
@@ -22,8 +22,8 @@ export async function GET() {
         // Simulate some work with nested spans
         await simulateWork(span);
 
-        // Flush spans before Lambda terminates
-        await flushSpans();
+        // Note: Spans are sent automatically by BatchSpanProcessor
+        // No need to manually flush - the SDK handles it
 
         return NextResponse.json({
           success: true,

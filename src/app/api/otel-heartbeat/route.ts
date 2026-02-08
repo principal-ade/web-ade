@@ -10,7 +10,7 @@
  * Call this endpoint periodically or manually to ensure tracing is working.
  */
 
-import { withSpan, flushSpans } from '@/lib/otel-manual';
+import { withSpan } from '@/lib/otel-manual';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
@@ -35,8 +35,8 @@ export async function GET() {
         span.setAttribute('collector.url', collectorUrl);
         span.setAttribute('collector.auth_configured', hasAuth);
 
-        // Flush spans to ensure delivery in Lambda environment
-        await flushSpans();
+        // Note: Spans are sent automatically by BatchSpanProcessor
+        // No need to manually flush - the SDK handles it
 
         return NextResponse.json({
           success: true,
