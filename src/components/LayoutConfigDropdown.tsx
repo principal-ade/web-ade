@@ -141,6 +141,20 @@ export const layoutConfigs: LayoutConfig[] = [
     },
     hidden: true,
   },
+  {
+    id: 'traces',
+    name: 'Telemetry',
+    layout: {
+      left: 'trace-list',
+      middle: 'trace-details',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+    hidden: true, // Will be conditionally shown based on OTEL heartbeat status
+  },
 ];
 
 interface LayoutConfigDropdownProps {

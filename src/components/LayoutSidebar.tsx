@@ -15,6 +15,7 @@ import {
   X,
   Zap,
   Map,
+  Activity,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@principal-ai/logo-component';
@@ -30,6 +31,7 @@ const layoutIcons: Record<string, React.ComponentType<{ className?: string }>> =
   'quality-debug': Hexagon,
   skills: Zap,
   stories: BookOpen,
+  traces: Activity,
 };
 
 // Match header height (h-14 = 56px)
@@ -48,6 +50,7 @@ interface LayoutSidebarProps {
   mobileOpen?: boolean; // When true, renders as slide-in overlay on mobile
   onMobileClose?: () => void; // Callback to close mobile overlay
   currentRepoId?: string; // GitHub repo ID for GitHub/Local toggle
+  layoutConfigs?: LayoutConfig[]; // Optional filtered layout configs (defaults to all configs)
 }
 
 export function LayoutSidebar({
@@ -60,10 +63,14 @@ export function LayoutSidebar({
   mobileOpen,
   onMobileClose,
   currentRepoId,
+  layoutConfigs: propLayoutConfigs,
 }: LayoutSidebarProps) {
   const { theme } = useTheme();
   const { currentThemeName, cycleTheme } = useGlobalTheme();
   const [isMobile, setIsMobile] = useState(false);
+
+  // Use provided layoutConfigs or default to all configs
+  const configs = propLayoutConfigs || layoutConfigs;
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -169,7 +176,7 @@ export function LayoutSidebar({
 
           {/* Layout Items */}
           <nav className="flex-1 py-2 overflow-y-auto overflow-x-hidden">
-            {layoutConfigs.filter(config => !config.hidden).map((config) => {
+            {configs.filter(config => !config.hidden).map((config) => {
               const Icon = layoutIcons[config.id] || Blocks;
               const isActive = config.id === currentConfigId;
               const badgeCount = badges?.[config.id];
@@ -336,7 +343,7 @@ export function LayoutSidebar({
 
       {/* Layout Items */}
       <nav className="flex-1 pb-2 overflow-y-auto overflow-x-hidden">
-        {layoutConfigs.filter(config => !config.hidden).map((config) => {
+        {configs.filter(config => !config.hidden).map((config) => {
           const Icon = layoutIcons[config.id] || Blocks;
           const isActive = config.id === currentConfigId;
 

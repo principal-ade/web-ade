@@ -32,6 +32,7 @@ import { useGemini } from '@/contexts/GeminiContext';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import { useNavigationCommands } from '@/hooks/useNavigationCommands';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { useServiceStatus } from '@/hooks/useServiceStatus';
 import type { Theme } from '@principal-ade/industry-theme';
 import type { LocalFileSystemAdapter } from '@/lib/client/LocalFileSystemAdapter';
 import { useLocalFileSystem } from '@/contexts/LocalFileSystemContext';
@@ -44,7 +45,7 @@ import {
   BookOpen, MessageSquare, FileText, Map, LayoutGrid,
   CheckSquare, Terminal, Users, Compass, Shield, Bug, Palette,
   Radio, Wrench, GitBranch, History, GitCommit, Package,
-  Zap, File, GitCompare, Edit
+  Zap, File, GitCompare, Edit, Activity
 } from 'lucide-react';
 
 // Dynamically import the MarkdownPanel with SSR disabled
@@ -297,6 +298,37 @@ const WorkflowScenariosPanelLoader = dynamic(
   { ssr: false }
 );
 
+// Dynamically import the TraceListPanel with SSR disabled
+const TraceListPanelLoader = dynamic(
+  () => import('@industry-theme/principal-view-panels').then((mod) => {
+    const panel = mod.panels.find(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (p: any) => p.metadata?.id === 'principal-ai.trace-list'
+    );
+    if (!panel) {
+      console.error('TraceListPanel not found in panels array. Available panels:',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        mod.panels.map((p: any) => p.metadata?.id));
+      throw new Error('TraceListPanel not found');
+    }
+    return { default: panel.component };
+  }),
+  { ssr: false }
+);
+
+// Dynamically import the TraceDetailsPanel with SSR disabled
+const TraceDetailsPanelLoader = dynamic(
+  () => import('@industry-theme/principal-view-panels').then((mod) => {
+    const Component = mod.TraceDetailsPanel;
+    if (!Component) {
+      console.error('TraceDetailsPanel not found in module exports');
+      throw new Error('TraceDetailsPanel not found');
+    }
+    return { default: Component };
+  }),
+  { ssr: false }
+);
+
 /**
  * Build the GitHub issue body for a backlog task (without @claude tag)
  * The @claude tag will be added in a separate comment after the task file is updated
@@ -481,6 +513,27 @@ function EditorLayoutContent({
   // Get repository info for file fetching
   const githubRepo = (context.currentScope.repository as { githubRepo?: string })?.githubRepo
     || context.currentScope.repository?.path;
+
+  // Extract service name for OTEL status (use repo name from owner/repo)
+  const serviceName = useMemo(() => {
+    if (!githubRepo || !githubRepo.includes('/')) return null;
+    const parts = githubRepo.split('/');
+    return parts[1] || null; // Return repo name (second part)
+  }, [githubRepo]);
+
+  // Check OTEL service status to conditionally show traces layout
+  const { isAlive: serviceIsAlive } = useServiceStatus(serviceName);
+
+  // Filter layout configs based on service status
+  // Show traces layout only when OTEL heartbeat is successful
+  const filteredLayoutConfigs = useMemo(() => {
+    return layoutConfigs.map(config => {
+      if (config.id === 'traces') {
+        return { ...config, hidden: !serviceIsAlive };
+      }
+      return config;
+    });
+  }, [serviceIsAlive]);
 
   // Listen for tour:exit event to mark tour as shown
   useEffect(() => {
@@ -2050,6 +2103,26 @@ function EditorLayoutContent({
         </div>
       ),
     },
+    {
+      id: 'trace-list',
+      label: 'Traces',
+      icon: <Activity size={16} />,
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <TraceListPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'trace-details',
+      label: 'Trace Details',
+      icon: <Activity size={16} />,
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <TraceDetailsPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
   ], [context, enhancedActions, events, theme.colors.textMuted, selectedCanvasData, selectedWorkflowData]);
 
   // File editing panels - now use the standard panel framework pattern
@@ -2127,6 +2200,7 @@ function EditorLayoutContent({
           mobileOpen={mobileSidebarOpen}
           onMobileClose={() => setMobileSidebarOpen(false)}
           currentRepoId={githubRepo}
+          layoutConfigs={filteredLayoutConfigs}
         />
 
         {/* Main Content Area */}
@@ -2276,6 +2350,7 @@ function EditorLayoutContent({
         mobileOpen={mobileSidebarOpen}
         onMobileClose={() => setMobileSidebarOpen(false)}
         currentRepoId={githubRepo}
+        layoutConfigs={filteredLayoutConfigs}
       />
 
       {/* Main Content Area */}

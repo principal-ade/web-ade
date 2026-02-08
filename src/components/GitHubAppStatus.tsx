@@ -149,32 +149,9 @@ export function GitHubAppStatus({
       );
     }
 
-    // Hide the button if user doesn't have admin access to install the app
-    if (!canInstall) {
-      return null;
-    }
-
-    return (
-      <button
-        onClick={handleInstallClick}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '4px',
-          padding: '4px 8px',
-          borderRadius: '4px',
-          backgroundColor: theme.colors.backgroundTertiary,
-          border: 'none',
-          fontSize: `${theme.fontSizes[0]}px`,
-          color: theme.colors.textSecondary,
-          cursor: 'pointer',
-        }}
-        title="Click to enable real-time sync"
-      >
-        <Github size={12} />
-        Enable Sync
-      </button>
-    );
+    // Hide the "Enable Sync" button in compact mode
+    // Only show the "Sync Active" badge when already installed
+    return null;
   }
 
   // Full mode - card display
