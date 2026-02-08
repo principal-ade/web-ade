@@ -21,23 +21,21 @@ export async function register() {
         const libraryPath = join(process.cwd(), '.principal-views', 'library.yaml');
         const content = readFileSync(libraryPath, 'utf-8');
 
-        // Simple YAML parser for the resources section
-        // Matches: resources:\n  key: "value" or key: value
-        const resourcesMatch = content.match(/resources:\s*\n((?:\s+[\w.]+:\s*[^\n]+\n?)+)/);
+        // Simple YAML parser for the nested resources section
+        // Match: resources:\n  web-ade:\n    key: value
+        const nestedMatch = content.match(/resources:\s*\n\s+web-ade:\s*\n((?:\s+[\w.]+:\s*[^\n]+\n?)+)/);
 
-        if (!resourcesMatch || !resourcesMatch[1]) {
+        if (!nestedMatch || !nestedMatch[1]) {
           return {};
         }
 
         const resources: Record<string, string> = {};
-        const resourceLines = resourcesMatch[1].split('\n').filter(line => line.trim());
+        const resourceLines = nestedMatch[1].split('\n').filter(line => line.trim());
 
         for (const line of resourceLines) {
           const match = line.match(/^\s+([\w.]+):\s*["']?([^"'\n]+)["']?$/);
           if (match && match[1] && match[2]) {
-            const key = match[1];
-            const value = match[2];
-            resources[key] = value.trim();
+            resources[match[1]] = match[2].trim();
           }
         }
 
@@ -48,24 +46,48 @@ export async function register() {
       }
     }
 
-    // Load resources from library.yaml
+    // Load resources from library.yaml (local dev)
     const libraryResources = loadResourcesFromLibrary();
 
-    // Merge with environment variable overrides
-    const serviceName = process.env.OTEL_SERVICE_NAME || libraryResources['service.name'] || 'web-ade';
+    // Parse OTEL_RESOURCE_ATTRIBUTES from environment (production)
+    // Format: key1=value1,key2=value2
+    const envResources: Record<string, string> = {};
+    if (process.env.OTEL_RESOURCE_ATTRIBUTES) {
+      process.env.OTEL_RESOURCE_ATTRIBUTES.split(',').forEach(pair => {
+        const [key, value] = pair.split('=');
+        if (key && value) {
+          envResources[key.trim()] = value.trim();
+        }
+      });
+    }
+
+    // Merge resources: library.yaml < OTEL_RESOURCE_ATTRIBUTES < individual env vars
+    const mergedResources = { ...libraryResources, ...envResources };
+
+    // Individual env vars take highest priority
+    const serviceName = process.env.OTEL_SERVICE_NAME || mergedResources['service.name'] || 'web-ade';
+    const serviceVersion = process.env.OTEL_SERVICE_VERSION || mergedResources['service.version'];
 
     // Extract service.name and service.version separately, pass others as attributes
-    const { 'service.name': _, 'service.version': __, ...otherResources } = libraryResources;
+    const { 'service.name': _, 'service.version': __, ...otherResources } = mergedResources;
+
+    // Add service.version to attributes if present
+    const attributes = serviceVersion
+      ? { ...otherResources, 'service.version': serviceVersion }
+      : otherResources;
 
     console.log('[OTEL] Registering with resources:', {
       serviceName,
-      attributes: otherResources
+      attributes
     });
 
     // Configure trace exporter with custom endpoint and headers
     const { OTLPTraceExporter } = await import('@opentelemetry/exporter-trace-otlp-http');
 
-    const traceExporterConfig: any = {};
+    const traceExporterConfig: {
+      url?: string;
+      headers?: Record<string, string>;
+    } = {};
 
     if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT) {
       traceExporterConfig.url = `${process.env.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/traces`;
@@ -73,10 +95,14 @@ export async function register() {
 
     if (process.env.OTEL_EXPORTER_OTLP_HEADERS) {
       traceExporterConfig.headers = Object.fromEntries(
-        process.env.OTEL_EXPORTER_OTLP_HEADERS.split(',').map(pair => {
-          const [key, value] = pair.split('=');
-          return [key.trim(), value.trim()];
-        })
+        process.env.OTEL_EXPORTER_OTLP_HEADERS.split(',')
+          .map(pair => {
+            const [key, value] = pair.split('=');
+            return [key?.trim(), value?.trim()];
+          })
+          .filter((pair): pair is [string, string] => {
+            return typeof pair[0] === 'string' && typeof pair[1] === 'string' && pair[0] !== '' && pair[1] !== '';
+          })
       );
     }
 
@@ -84,7 +110,7 @@ export async function register() {
 
     registerOTel({
       serviceName,
-      attributes: otherResources,
+      attributes,
       traceExporter, // Explicitly provide custom exporter
     });
 
@@ -105,10 +131,14 @@ export async function register() {
         : 'http://localhost:4318/v1/metrics',
       headers: process.env.OTEL_EXPORTER_OTLP_HEADERS
         ? Object.fromEntries(
-            process.env.OTEL_EXPORTER_OTLP_HEADERS.split(',').map(pair => {
-              const [key, value] = pair.split('=');
-              return [key.trim(), value.trim()];
-            })
+            process.env.OTEL_EXPORTER_OTLP_HEADERS.split(',')
+              .map(pair => {
+                const [key, value] = pair.split('=');
+                return [key?.trim(), value?.trim()];
+              })
+              .filter((pair): pair is [string, string] => {
+                return typeof pair[0] === 'string' && typeof pair[1] === 'string' && pair[0] !== '' && pair[1] !== '';
+              })
           )
         : {},
     });

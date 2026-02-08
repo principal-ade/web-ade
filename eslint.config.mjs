@@ -39,6 +39,7 @@ const eslintConfig = [
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      "import/first": "error",
     },
   },
 ];
