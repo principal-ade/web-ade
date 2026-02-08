@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Palette, GitCommit, ArrowLeftRight, Sparkles, X, Star, Rss, Menu, Package } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Palette, GitCommit, ArrowLeftRight, Sparkles, X, Star, Rss, Menu, Package, Activity } from 'lucide-react';
 import { UserAvatarMenu } from './UserAvatarMenu';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
@@ -13,6 +13,7 @@ import { LocalFolderButton } from './LocalFolderButton';
 import { GitHubAppStatus } from './GitHubAppStatus';
 import { useVersionRegistry } from '@/hooks/useVersionRegistry';
 import { VersionRegistryModal } from './VersionRegistryModal';
+import { useServiceStatus } from '@/hooks/useServiceStatus';
 
 interface EditorHeaderProps {
   currentLayoutConfigId?: string;
@@ -79,6 +80,10 @@ export function EditorHeader({
   // Fetch version registry data
   const customerId = repositoryName ? `${repositoryName.owner}/${repositoryName.repo}` : null;
   const { registrations, loading: registryLoading, error: registryError, count: registryCount } = useVersionRegistry(customerId);
+
+  // Fetch OTEL service status (use repo name as service name)
+  const serviceName = repositoryName ? repositoryName.repo : null;
+  const { isAlive: serviceIsAlive, status: serviceStatus } = useServiceStatus(serviceName);
 
   // Extract repository name or owner from URL
   useEffect(() => {
@@ -248,6 +253,25 @@ export function EditorHeader({
                 <Package className="w-3.5 h-3.5" />
                 <span className="text-xs font-medium">{registryCount}</span>
               </button>
+            )}
+            {/* OTEL Service Status indicator - show if service has status */}
+            {serviceStatus && (
+              <div
+                className="flex items-center gap-1 px-2 py-1 rounded-md"
+                style={{
+                  background: serviceIsAlive ? '#22c55e' : '#f59e0b',
+                  color: '#ffffff',
+                }}
+                title={serviceIsAlive
+                  ? `Service active - Last trace: ${new Date(serviceStatus.lastSeen).toLocaleString()}`
+                  : `Service inactive - Last trace: ${new Date(serviceStatus.lastSeen).toLocaleString()}`
+                }
+              >
+                <Activity className="w-3.5 h-3.5" />
+                <span className="text-xs font-medium">
+                  {serviceIsAlive ? 'Live' : 'Stale'}
+                </span>
+              </div>
             )}
             {/* GitHub App sync status - hidden on mobile */}
             <div className="hidden md:inline-flex">
