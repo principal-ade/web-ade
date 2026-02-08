@@ -2126,6 +2126,7 @@ function EditorLayoutContent({
           } : undefined}
           mobileOpen={mobileSidebarOpen}
           onMobileClose={() => setMobileSidebarOpen(false)}
+          currentRepoId={githubRepo}
         />
 
         {/* Main Content Area */}
@@ -2141,7 +2142,6 @@ function EditorLayoutContent({
             onCommitClick={() => setIsCommitModalOpen(true)}
             vimMode={vimMode}
             onVimModeToggle={handleVimModeToggle}
-            currentRepoId={githubRepo}
             selectedColorMode={selectedColorMode}
             onClearColorMode={clearColorMode}
             onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
@@ -2275,6 +2275,7 @@ function EditorLayoutContent({
         } : undefined}
         mobileOpen={mobileSidebarOpen}
         onMobileClose={() => setMobileSidebarOpen(false)}
+        currentRepoId={githubRepo}
       />
 
       {/* Main Content Area */}
@@ -2290,7 +2291,6 @@ function EditorLayoutContent({
           onCommitClick={() => setIsCommitModalOpen(true)}
           vimMode={vimMode}
           onVimModeToggle={handleVimModeToggle}
-          currentRepoId={githubRepo}
           selectedColorMode={selectedColorMode}
           onClearColorMode={clearColorMode}
           onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
@@ -2506,7 +2506,7 @@ export function EditorLayout({ githubRepo, localAdapter: _localAdapter, initialC
         className="h-full w-full flex flex-col"
         style={{ background: theme.colors.background }}
       >
-        <EditorHeader />
+        {accessStatus !== 'not-found' && accessStatus !== 'loading' && <EditorHeader />}
         <div className="flex-1 overflow-hidden">
           <AccessNotice
             status={accessStatus}

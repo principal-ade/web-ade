@@ -19,6 +19,7 @@ import {
 import Link from 'next/link';
 import { Logo } from '@principal-ai/logo-component';
 import { layoutConfigs, LayoutConfig } from './LayoutConfigDropdown';
+import { LocalFolderButton } from './LocalFolderButton';
 
 const layoutIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   tour: Map,
@@ -46,6 +47,7 @@ interface LayoutSidebarProps {
   badges?: Record<string, number>; // Badge counts for specific layout config IDs (e.g., { 'kanban': 3 })
   mobileOpen?: boolean; // When true, renders as slide-in overlay on mobile
   onMobileClose?: () => void; // Callback to close mobile overlay
+  currentRepoId?: string; // GitHub repo ID for GitHub/Local toggle
 }
 
 export function LayoutSidebar({
@@ -57,6 +59,7 @@ export function LayoutSidebar({
   badges,
   mobileOpen,
   onMobileClose,
+  currentRepoId,
 }: LayoutSidebarProps) {
   const { theme } = useTheme();
   const { currentThemeName, cycleTheme } = useGlobalTheme();
@@ -141,18 +144,13 @@ export function LayoutSidebar({
                 </span>
               </Link>
             ) : (
-              <Link
-                href="/"
-                onClick={onMobileClose}
-                className="flex items-center gap-3 transition-opacity hover:opacity-80"
-                style={{ textDecoration: 'none' }}
-              >
+              <div className="flex items-center gap-3">
                 <Logo width={28} height={28} color={theme.colors.primary} />
                 <span style={{ fontFamily: theme.fonts.heading, fontSize: theme.fontSizes[3], fontWeight: 600 }}>
                   <span style={{ color: theme.colors.text }}>Principal</span>{' '}
                   <span style={{ color: theme.colors.primary }}>AI</span>
                 </span>
-              </Link>
+              </div>
             )}
             <button
               onClick={onMobileClose}
@@ -168,24 +166,6 @@ export function LayoutSidebar({
               <X size={20} />
             </button>
           </div>
-
-          {/* Home Link */}
-          <Link
-            href="/"
-            onClick={onMobileClose}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '12px 16px',
-              color: theme.colors.text,
-              textDecoration: 'none',
-              borderBottom: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            <Home size={16} />
-            <span style={{ fontSize: `${theme.fontSizes[1]}px` }}>Home</span>
-          </Link>
 
           {/* Layout Items */}
           <nav className="flex-1 py-2 overflow-y-auto overflow-x-hidden">
@@ -234,6 +214,18 @@ export function LayoutSidebar({
               );
             })}
           </nav>
+
+          {/* GitHub/Local Toggle */}
+          {currentRepoId && (
+            <div
+              style={{
+                borderTop: `1px solid ${theme.colors.border}`,
+              }}
+              className="flex items-center justify-center py-2"
+            >
+              <LocalFolderButton currentRepoId={currentRepoId} />
+            </div>
+          )}
 
           {/* Theme Toggle */}
           <div style={{ borderTop: `1px solid ${theme.colors.border}` }}>
@@ -314,14 +306,6 @@ export function LayoutSidebar({
             >
               {owner}
             </Link>
-            <Link
-              href="/"
-              className="flex items-center justify-center ml-auto mr-2 transition-opacity hover:opacity-80"
-              style={{ color: theme.colors.textMuted }}
-              title="Go to home page"
-            >
-              <Home className="w-4 h-4" />
-            </Link>
           </>
         ) : (
           <>
@@ -333,22 +317,19 @@ export function LayoutSidebar({
             >
               <Logo width={28} height={28} color={theme.colors.primary} />
             </button>
-            <Link
-              href="/"
-              className="flex items-center transition-opacity hover:opacity-80"
+            <div
+              className="flex items-center"
               style={{
-                textDecoration: 'none',
                 whiteSpace: 'nowrap',
                 fontFamily: theme.fonts.heading,
                 fontSize: theme.fontSizes[3],
                 fontWeight: 600,
               }}
-              title="Go to home page"
             >
               <span style={{ color: theme.colors.text }}>Principal</span>
               {' '}
               <span style={{ color: theme.colors.primary }}>AI</span>
-            </Link>
+            </div>
           </>
         )}
       </div>
@@ -431,6 +412,59 @@ export function LayoutSidebar({
           );
         })}
       </nav>
+
+      {/* Home Link */}
+      <div
+        style={{
+          borderTop: `1px solid ${theme.colors.border}`,
+        }}
+      >
+        <Link
+          href="/"
+          className="w-full flex items-center h-10 transition-colors"
+          style={{
+            minWidth: `${SIDEBAR_EXPANDED_WIDTH}px`,
+            background: 'transparent',
+            color: theme.colors.text,
+            textDecoration: 'none',
+          }}
+          title={collapsed ? 'Home' : undefined}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = theme.colors.backgroundSecondary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+          }}
+        >
+          <div
+            className="flex items-center justify-center flex-shrink-0"
+            style={{ width: `${ICON_CONTAINER_WIDTH}px` }}
+          >
+            <Home className="w-5 h-5" />
+          </div>
+          <span
+            style={{
+              whiteSpace: 'nowrap',
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[2],
+            }}
+          >
+            Home
+          </span>
+        </Link>
+      </div>
+
+      {/* GitHub/Local Toggle */}
+      {currentRepoId && (
+        <div
+          style={{
+            borderTop: `1px solid ${theme.colors.border}`,
+          }}
+          className="flex items-center justify-center py-2"
+        >
+          <LocalFolderButton currentRepoId={currentRepoId} />
+        </div>
+      )}
 
       {/* Theme Toggle */}
       <div

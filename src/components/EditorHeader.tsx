@@ -9,7 +9,6 @@ import { usePathname } from 'next/navigation';
 import { usePresenceData } from '@/hooks/usePresenceData';
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { LocalFolderButton } from './LocalFolderButton';
 import { GitHubAppStatus } from './GitHubAppStatus';
 import { useVersionRegistry } from '@/hooks/useVersionRegistry';
 import { VersionRegistryModal } from './VersionRegistryModal';
@@ -34,8 +33,6 @@ interface EditorHeaderProps {
   // Vim mode toggle
   vimMode?: boolean;
   onVimModeToggle?: () => void;
-  // Local folder button
-  currentRepoId?: string;
   // Color mode selection (for clear button)
   selectedColorMode?: string | null;
   onClearColorMode?: () => void;
@@ -60,7 +57,6 @@ export function EditorHeader({
   onToggleGallery,
   vimMode = false,
   onVimModeToggle,
-  currentRepoId,
   selectedColorMode,
   onClearColorMode,
   onOpenMobileSidebar,
@@ -376,11 +372,6 @@ export function EditorHeader({
         )}
       </div>
 
-      {/* Center section - hidden on mobile since local file access isn't available */}
-      <div className="absolute left-1/2 transform -translate-x-1/2 hidden md:flex items-center">
-        {/* GitHub/Local toggle on repo pages */}
-        {repositoryName && currentRepoId && <LocalFolderButton currentRepoId={currentRepoId} />}
-      </div>
 
       <div className="flex items-center gap-3 flex-shrink-0 flex-1 justify-end">
         {/* TODO: Open in Desktop App button - temporarily hidden, will be added back later */}
