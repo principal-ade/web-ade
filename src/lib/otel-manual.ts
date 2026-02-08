@@ -8,7 +8,6 @@
 import { trace, context, SpanStatusCode, Span } from '@opentelemetry/api';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { NodeSDK } from '@opentelemetry/sdk-node';
-import type { OTLPExporterNodeConfigBase } from '@opentelemetry/otlp-exporter-base';
 
 let sdk: NodeSDK | null = null;
 
@@ -22,7 +21,7 @@ export function initializeTracer() {
   }
 
   // Configure OTLP exporter
-  const exporterConfig: Partial<OTLPExporterNodeConfigBase> = {
+  const exporterConfig: { url: string; headers?: Record<string, string> } = {
     url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT
       ? `${process.env.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/traces`
       : 'http://localhost:4318/v1/traces',
@@ -44,17 +43,11 @@ export function initializeTracer() {
 
   const exporter = new OTLPTraceExporter(exporterConfig);
 
-  // Create SDK with exporter and resource attributes
+  // Create SDK with exporter - use just serviceName for simplicity
+  // Additional resource attributes can be added via environment variables
   sdk = new NodeSDK({
     traceExporter: exporter,
     serviceName: 'web-ade',
-    resource: {
-      attributes: {
-        'service.version': '0.1.0',
-        'deployment.environment': process.env.NODE_ENV || 'development',
-      },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any,
   });
 
   // Start the SDK
