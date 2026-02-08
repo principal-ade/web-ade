@@ -4,6 +4,15 @@ import { Providers } from "@/components/Providers";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import "./globals.css";
 
+// Initialize OTEL on server startup (fallback for when instrumentation.ts doesn't run)
+// This must be imported at the top level to run on server initialization
+import { initializeOTEL } from "@/lib/otel-server-init";
+
+// Call OTEL initialization immediately on server (only runs once)
+if (typeof window === 'undefined') {
+  initializeOTEL();
+}
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

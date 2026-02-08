@@ -1,16 +1,29 @@
 /**
- * OpenTelemetry Instrumentation
+ * Server-side OTEL Initialization (Fallback)
  *
- * This file is automatically loaded by Next.js during server startup.
- * Uses @vercel/otel for simplified OpenTelemetry setup that works with Turbopack.
+ * This module provides a fallback initialization mechanism for OpenTelemetry
+ * when instrumentation.ts is not called by the deployment platform (e.g., AWS Amplify).
+ *
+ * This is called from the root layout on server startup to ensure OTEL is always initialized.
  */
 
-export async function register() {
-  console.log('[OTEL INSTRUMENTATION] register() called - initializing from instrumentation.ts');
-  console.log('[OTEL INSTRUMENTATION] NEXT_RUNTIME:', process.env.NEXT_RUNTIME);
-  console.log('[OTEL INSTRUMENTATION] NODE_ENV:', process.env.NODE_ENV);
+let initialized = false;
 
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
+export async function initializeOTEL() {
+  // Only run on server, only once
+  if (typeof window !== 'undefined' || initialized) {
+    return;
+  }
+
+  // Only in Node.js runtime (not Edge)
+  if (process.env.NEXT_RUNTIME === 'edge') {
+    return;
+  }
+
+  console.log('[OTEL FALLBACK] Starting initialization from layout.tsx fallback method');
+  initialized = true;
+
+  try {
     // Import Node.js APIs only in Node.js runtime to avoid Edge Runtime errors
     const { readFileSync } = await import('fs');
     const { join } = await import('path');
@@ -45,7 +58,7 @@ export async function register() {
 
         return resources;
       } catch (error) {
-        console.warn('[OTEL INSTRUMENTATION] Could not load resources from library.yaml:', error);
+        console.warn('[OTEL FALLBACK] Could not load resources from library.yaml:', error);
         return {};
       }
     }
@@ -80,7 +93,7 @@ export async function register() {
       ? { ...otherResources, 'service.version': serviceVersion }
       : otherResources;
 
-    console.log('[OTEL INSTRUMENTATION] Registering with resources:', {
+    console.log('[OTEL FALLBACK] Registering with resources:', {
       serviceName,
       attributes
     });
@@ -117,6 +130,8 @@ export async function register() {
       attributes,
       traceExporter, // Explicitly provide custom exporter
     });
+
+    console.log('[OTEL FALLBACK] Trace exporter registered');
 
     // Set up metrics exporter (push-based)
     const { metrics } = await import('@opentelemetry/api');
@@ -159,7 +174,7 @@ export async function register() {
 
     metrics.setGlobalMeterProvider(meterProvider);
 
-    console.log('[OTEL INSTRUMENTATION] Metrics exporter configured');
+    console.log('[OTEL FALLBACK] Metrics exporter configured');
 
     // Set up heartbeat metric
     const meter = metrics.getMeter('web-ade-heartbeat', '1.0.0');
@@ -186,12 +201,14 @@ export async function register() {
       heartbeatCounter.add(1, {
         'service.name': serviceName,
         'runtime': 'nodejs',
-        'init.method': 'instrumentation' // Distinguish from fallback init
+        'init.method': 'fallback' // Distinguish from instrumentation.ts init
       });
-      console.log('[OTEL INSTRUMENTATION] Heartbeat sent');
+      console.log('[OTEL FALLBACK] Heartbeat sent');
     }, 30000); // Every 30 seconds
 
-    console.log('[OTEL INSTRUMENTATION] Heartbeat metrics configured');
-    console.log('[OTEL INSTRUMENTATION] ✅ Initialization complete - first heartbeat in 30 seconds');
+    console.log('[OTEL FALLBACK] Heartbeat metrics configured');
+    console.log('[OTEL FALLBACK] ✅ Initialization complete - first heartbeat in 30 seconds');
+  } catch (error) {
+    console.error('[OTEL FALLBACK] ❌ Failed to initialize:', error);
   }
 }
