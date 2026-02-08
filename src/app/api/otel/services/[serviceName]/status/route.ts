@@ -58,10 +58,10 @@ export async function OPTIONS() {
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { serviceName: string } }
+  { params }: { params: Promise<{ serviceName: string }> }
 ) {
   try {
-    const { serviceName } = params;
+    const { serviceName } = await params;
 
     console.log('[OTEL Service Status] Request for:', serviceName);
 
