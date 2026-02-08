@@ -6,6 +6,10 @@
  */
 
 export async function register() {
+  console.log('[OTEL DEBUG] register() called');
+  console.log('[OTEL DEBUG] NEXT_RUNTIME:', process.env.NEXT_RUNTIME);
+  console.log('[OTEL DEBUG] NODE_ENV:', process.env.NODE_ENV);
+
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     // Import Node.js APIs only in Node.js runtime to avoid Edge Runtime errors
     const { readFileSync } = await import('fs');
