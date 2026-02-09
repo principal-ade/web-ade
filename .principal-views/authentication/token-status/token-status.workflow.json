@@ -1,0 +1,73 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/authentication/authentication.otel.canvas",
+  "mode": "span-tree",
+  "name": "Token Status Check",
+  "description": "JWT token expiry information for proactive refresh",
+  "scenarios": [
+    {
+      "id": "authenticated",
+      "priority": 1,
+      "condition": {
+        "requires": ["token.check.authenticated"],
+        "assertions": {
+          "authenticated": true
+        }
+      },
+      "template": {
+        "summary": "✅ Token validated - expires in {expiresIn}ms",
+        "events": {
+          "token.check.started": "Token status request received",
+          "token.check.authenticated": "Token is valid (expires at {{expiresAt}}, {{expiresIn}}ms remaining){{#if shouldRefresh}} - ⚠️ Refresh recommended{{/if}}"
+        }
+      }
+    },
+    {
+      "id": "unauthenticated",
+      "priority": 2,
+      "condition": {
+        "requires": ["token.check.unauthenticated"],
+        "assertions": {
+          "authenticated": false
+        }
+      },
+      "template": {
+        "summary": "🔓 No valid token found - user not authenticated",
+        "events": {
+          "token.check.started": "Token status request received",
+          "token.check.unauthenticated": "No valid token in cookies - user not authenticated"
+        }
+      }
+    },
+    {
+      "id": "error",
+      "priority": 3,
+      "condition": {
+        "requires": ["token.check.error"]
+      },
+      "template": {
+        "summary": "❌ Token check failed: {error.message}",
+        "events": {
+          "token.check.started": "Token status request received",
+          "token.check.error": "Error during token validation: {{error.type}} - {{error.message}}"
+        }
+      }
+    },
+    {
+      "id": "fallback",
+      "priority": 999,
+      "condition": {
+        "default": true
+      },
+      "template": {
+        "summary": "📋 Token status check captured",
+        "events": {
+          "token.check.started": "Request received at {{request.timestamp}}",
+          "token.check.authenticated": "Token validated (authenticated: {{authenticated}})",
+          "token.check.unauthenticated": "No token (authenticated: {{authenticated}})",
+          "token.check.error": "Error occurred: {{error.message}}"
+        }
+      }
+    }
+  ]
+}

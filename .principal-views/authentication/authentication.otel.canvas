@@ -1,0 +1,184 @@
+{
+  "pv": {
+    "name": "Token Status Check",
+    "version": "1.0.0",
+    "markdown": ".principal-views/authentication/authentication.md",
+    "edgeTypes": {
+      "flow": {
+        "label": "Flow"
+      },
+      "error": {
+        "label": "Error Path"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "token-check-started",
+      "type": "text",
+      "text": "# token.check.started\n\nToken status request received",
+      "x": 100,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "event": {
+          "name": "token.check.started",
+          "attributes": {}
+        },
+        "sources": ["src/app/api/auth/token-status/route.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a",
+        "dataSchema": {
+          "request.timestamp": {
+            "type": "number",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "token-check-authenticated",
+      "type": "text",
+      "text": "# token.check.authenticated\n\nValid token found - authenticated",
+      "x": 100,
+      "y": 250,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "event": {
+          "name": "token.check.authenticated",
+          "attributes": {}
+        },
+        "sources": ["src/app/api/auth/token-status/route.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a",
+        "dataSchema": {
+          "authenticated": {
+            "type": "boolean",
+            "required": true
+          },
+          "expiresAt": {
+            "type": "number",
+            "required": true
+          },
+          "expiresIn": {
+            "type": "number",
+            "required": true
+          },
+          "shouldRefresh": {
+            "type": "boolean",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "token-check-unauthenticated",
+      "type": "text",
+      "text": "# token.check.unauthenticated\n\nNo valid token - unauthenticated",
+      "x": 450,
+      "y": 250,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "event": {
+          "name": "token.check.unauthenticated",
+          "attributes": {}
+        },
+        "sources": ["src/app/api/auth/token-status/route.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "stroke": "#1d4ed8",
+        "dataSchema": {
+          "authenticated": {
+            "type": "boolean",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "token-check-error",
+      "type": "text",
+      "text": "# token.check.error\n\nError during token check",
+      "x": 450,
+      "y": 450,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "event": {
+          "name": "token.check.error",
+          "attributes": {}
+        },
+        "sources": ["src/app/api/auth/token-status/route.ts"],
+        "otel": {
+          "kind": "event",
+          "category": "error"
+        },
+        "shape": "rectangle",
+        "fill": "#ef4444",
+        "stroke": "#dc2626",
+        "dataSchema": {
+          "error.type": {
+            "type": "string",
+            "required": true
+          },
+          "error.message": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "started-to-authenticated",
+      "fromNode": "token-check-started",
+      "fromSide": "bottom",
+      "toNode": "token-check-authenticated",
+      "toSide": "top",
+      "label": "valid token",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "started-to-unauthenticated",
+      "fromNode": "token-check-started",
+      "fromSide": "right",
+      "toNode": "token-check-unauthenticated",
+      "toSide": "left",
+      "label": "no token",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "started-to-error",
+      "fromNode": "token-check-started",
+      "fromSide": "right",
+      "toNode": "token-check-error",
+      "toSide": "left",
+      "label": "exception",
+      "pv": {
+        "edgeType": "error"
+      }
+    }
+  ]
+}
