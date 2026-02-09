@@ -463,6 +463,9 @@ function EditorLayoutContent({
     workflowFileInfo?: FileInfo | null;
   } | null>(null);
 
+  // State for selected trace (for Telemetry view)
+  const [selectedTrace, setSelectedTrace] = useState<unknown | null>(null);
+
   // Toast notification state
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
 
@@ -1094,6 +1097,12 @@ function EditorLayoutContent({
           ...prev,
           middle: 'workflow-scenarios',
         }));
+      }),
+      // Trace selection event - update selected trace for trace details panel
+      events.on('trace:selected', (event) => {
+        const payload = event.payload as { trace: unknown; traceId: string };
+        console.log('[EditorLayout] Trace selected:', payload.traceId);
+        setSelectedTrace(payload.trace);
       }),
       // Markdown panel preference events
       events.on('markdown-panel:request-preferences', () => {
@@ -2119,11 +2128,11 @@ function EditorLayoutContent({
       icon: <Activity size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
-          <TraceDetailsPanelLoader context={context} actions={enhancedActions} events={events} />
+          <TraceDetailsPanelLoader context={context} actions={enhancedActions} events={events} selectedTrace={selectedTrace} />
         </div>
       ),
     },
-  ], [context, enhancedActions, events, theme.colors.textMuted, selectedCanvasData, selectedWorkflowData]);
+  ], [context, enhancedActions, events, theme.colors.textMuted, selectedCanvasData, selectedWorkflowData, selectedTrace]);
 
   // File editing panels - now use the standard panel framework pattern
   const fileEditingPanels = useMemo(() => [
