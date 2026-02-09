@@ -678,6 +678,11 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const [telemetryLoading, setTelemetryLoading] = useState(false);
   const [telemetryError, setTelemetryError] = useState<Error | null>(null);
 
+  // Schematics state (versioned workflows from version registry)
+  const [schematicsData, setSchematicsData] = useState<unknown[]>([]);
+  const [schematicsLoading, setSchematicsLoading] = useState(false);
+  const [schematicsError, setSchematicsError] = useState<Error | null>(null);
+
   // Fetch user's GitHub data (starred, owned, orgs)
   const fetchUserGitHubData = useCallback(async () => {
     setUserGitHubLoading(true);
@@ -850,12 +855,87 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       console.log('[PanelContext] Telemetry enriched with workflow matching');
 
       setTelemetryData(enrichedTraces);
+
+      // Fetch schematics for versions found in traces
+      fetchSchematicsFromTraces(enrichedTraces).catch(err => {
+        console.error('[PanelContext] Failed to fetch schematics:', err);
+      });
     } catch (err) {
       console.error('[PanelContext] Failed to fetch telemetry:', err);
       setTelemetryError(err instanceof Error ? err : new Error('Failed to fetch telemetry'));
       setTelemetryData([]);
     } finally {
       setTelemetryLoading(false);
+    }
+  }, []);
+
+  // Fetch schematics from version registry based on trace versions
+  const fetchSchematicsFromTraces = useCallback(async (traces: unknown[]) => {
+    try {
+      setSchematicsLoading(true);
+      setSchematicsError(null);
+
+      // Extract unique versions from traces
+      const versions = new Map<string, { repositoryUrl: string; commitSha: string }>();
+
+      for (const trace of traces) {
+        const t = trace as { repositoryUrl?: string; commitSha?: string };
+        if (t.repositoryUrl && t.commitSha) {
+          const key = `${t.repositoryUrl}@${t.commitSha}`;
+          if (!versions.has(key)) {
+            versions.set(key, {
+              repositoryUrl: t.repositoryUrl,
+              commitSha: t.commitSha,
+            });
+          }
+        }
+      }
+
+      if (versions.size === 0) {
+        console.log('[PanelContext] No versions found in traces, skipping schematic fetch');
+        setSchematicsData([]);
+        setSchematicsLoading(false);
+        return;
+      }
+
+      console.log('[PanelContext] Fetching schematics for versions:', Array.from(versions.keys()));
+
+      // Fetch schematics for each version
+      const schematics = [];
+
+      for (const [_key, { repositoryUrl, commitSha }] of versions) {
+        try {
+          const url = new URL('/api/versions/schematic', window.location.origin);
+          url.searchParams.set('repositoryUrl', repositoryUrl);
+          url.searchParams.set('commitSha', commitSha);
+
+          const response = await fetch(url.toString());
+
+          if (response.ok) {
+            const schematic = await response.json();
+            schematics.push({
+              repositoryUrl,
+              commitSha,
+              ...schematic,
+            });
+          } else if (response.status === 404) {
+            console.warn('[PanelContext] No schematic found for:', { repositoryUrl, commitSha });
+          } else {
+            console.error('[PanelContext] Failed to fetch schematic:', response.statusText);
+          }
+        } catch (err) {
+          console.error('[PanelContext] Error fetching schematic:', err);
+        }
+      }
+
+      setSchematicsData(schematics);
+      console.log('[PanelContext] Schematics loaded:', schematics.length);
+    } catch (err) {
+      console.error('[PanelContext] Failed to fetch schematics:', err);
+      setSchematicsError(err instanceof Error ? err : new Error('Failed to fetch schematics'));
+      setSchematicsData([]);
+    } finally {
+      setSchematicsLoading(false);
     }
   }, []);
 
@@ -1833,6 +1913,21 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         },
       ],
       [
+        'schematics',
+        {
+          scope: 'repository',
+          name: 'schematics',
+          data: schematicsData,
+          loading: schematicsLoading,
+          error: schematicsError,
+          refresh: async () => {
+            if (telemetryData.length > 0) {
+              await fetchSchematicsFromTraces(telemetryData);
+            }
+          },
+        },
+      ],
+      [
         'githubStarred',
         {
           scope: 'global',
@@ -2092,6 +2187,17 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       data: telemetryData,
       loading: telemetryLoading,
       error: telemetryError,
+    });
+  }
+
+  // Update schematics slice with fetched data
+  const schematicsSlice = slicesRef.current.get('schematics');
+  if (schematicsSlice) {
+    slicesRef.current.set('schematics', {
+      ...schematicsSlice,
+      data: schematicsData,
+      loading: schematicsLoading,
+      error: schematicsError,
     });
   }
 
