@@ -27,6 +27,7 @@ export async function initializeOTEL() {
     // Import Node.js APIs only in Node.js runtime to avoid Edge Runtime errors
     const { readFileSync } = await import('fs');
     const { join } = await import('path');
+    const { execSync } = await import('child_process');
     const { registerOTel } = await import('@vercel/otel');
 
     /**
@@ -86,7 +87,6 @@ export async function initializeOTEL() {
      */
     function getRepositoryUrl(): string | undefined {
       try {
-        const { execSync } = require('child_process');
         const url = execSync('git config --get remote.origin.url')
           .toString()
           .trim()
@@ -100,7 +100,6 @@ export async function initializeOTEL() {
 
     function getCommitSha(): string | undefined {
       try {
-        const { execSync } = require('child_process');
         return execSync('git rev-parse HEAD').toString().trim();
       } catch {
         return undefined;
