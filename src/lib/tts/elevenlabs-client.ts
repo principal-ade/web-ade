@@ -106,7 +106,7 @@ export function getDefaultOptions(): TTSOptions {
   return {
     voice: process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM', // Rachel
     speed: 1.0,
-    model: process.env.ELEVENLABS_MODEL_ID || 'eleven_turbo_v2',
+    model: process.env.ELEVENLABS_MODEL_ID || 'eleven_v3', // v3 for highest quality and emotional range
   };
 }
 

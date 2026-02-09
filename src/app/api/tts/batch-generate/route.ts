@@ -22,6 +22,16 @@ import { mergeTTSOptions, generateAudio } from '@/lib/tts/elevenlabs-client';
 import removeMd from 'remove-markdown';
 
 /**
+ * Normalizes text for TTS by removing problematic characters
+ */
+function normalizeTextForTTS(text: string): string {
+  return text
+    .replace(/(\w+)\/+/g, '$1 ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Add CORS headers to response
  */
 function addCorsHeaders(response: NextResponse): NextResponse {
@@ -126,7 +136,11 @@ export async function POST(request: NextRequest) {
 
           try {
             // Strip markdown syntax for TTS (unless using pre-written narration)
-            const text = step.narration ? rawText : removeMd(rawText);
+            let text = step.narration ? rawText : removeMd(rawText);
+
+            // Normalize text for TTS (remove trailing slashes, clean up paths)
+            text = normalizeTextForTTS(text);
+
             const trimmedText = text.trim();
 
             // Pass previous step's text for contextual continuity
@@ -147,7 +161,8 @@ export async function POST(request: NextRequest) {
         // Even if cached, we should load the text for context continuity
         const rawText = step.narration || step.description || step.content || '';
         if (rawText.trim()) {
-          const text = step.narration ? rawText : removeMd(rawText);
+          let text = step.narration ? rawText : removeMd(rawText);
+          text = normalizeTextForTTS(text);
           previousText = text.trim();
         }
       }

@@ -11,6 +11,25 @@ import { IntroductionTour, TTSErrorCode, TTSError } from './types';
 import removeMd from 'remove-markdown';
 
 /**
+ * Normalizes text for TTS by removing problematic characters
+ *
+ * - Removes trailing slashes from directory paths (e.g., "src/components/" → "src components")
+ * - Replaces forward slashes in paths with spaces for better pronunciation
+ *
+ * @param text - Text to normalize
+ * @returns Normalized text suitable for TTS
+ */
+function normalizeTextForTTS(text: string): string {
+  return text
+    // Replace path-like structures (word/word/) with spaces
+    // This handles cases like "src/components/" → "src components"
+    .replace(/(\w+)\/+/g, '$1 ')
+    // Clean up multiple spaces
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Fetches and validates tour from GitHub
  *
  * Implements zero-trust security model by fetching tour content directly
@@ -140,7 +159,11 @@ export function getStepDescription(tour: IntroductionTour, stepId: string): stri
   }
 
   // Strip markdown syntax for TTS (unless using pre-written narration)
-  const plainText = step.narration ? rawText : removeMd(rawText);
+  let plainText = step.narration ? rawText : removeMd(rawText);
+
+  // Normalize text for TTS (remove trailing slashes, clean up paths)
+  plainText = normalizeTextForTTS(plainText);
+
   const trimmedDescription = plainText.trim();
 
   // Validate content length (max 5000 characters per spec)
