@@ -94,6 +94,13 @@ function matchTraceAgainstWorkflows(
     }
   }
 
+  console.log('[WorkflowMatcher] Matching trace:', {
+    traceId: trace.traceId.substring(0, 8),
+    rootSpan: trace.rootSpan?.name,
+    eventNames: Array.from(traceEventNames),
+    workflowCount: workflows.length,
+  });
+
   // Try to match against each workflow
   for (const workflow of workflows) {
     if (!workflow.scenarios || workflow.scenarios.length === 0) {
@@ -112,8 +119,17 @@ function matchTraceAgainstWorkflows(
         traceEventNames.has(eventName)
       );
 
+      console.log('[WorkflowMatcher] Checking scenario:', {
+        workflow: workflow.name,
+        scenarioId: scenario.id,
+        requiredEvents,
+        traceEvents: Array.from(traceEventNames),
+        matched: allRequiredPresent,
+      });
+
       if (allRequiredPresent) {
         // Found a match!
+        console.log('[WorkflowMatcher] ✓ Match found!');
         return {
           storyboardId: workflow.canvasPath || '',
           storyboardName: workflow.name || 'Unknown Workflow',
@@ -148,6 +164,17 @@ export async function enrichTracesWithWorkflowMatching(
     return traces;
   }
 
+  console.log('[WorkflowMatcher] Starting enrichment:', {
+    totalTraces: traces.length,
+    sampleTrace: traces[0] ? {
+      traceId: traces[0].traceId.substring(0, 8),
+      serviceName: traces[0].serviceName,
+      serviceVersion: traces[0].serviceVersion,
+      repositoryUrl: traces[0].repositoryUrl,
+      commitSha: traces[0].commitSha,
+    } : null,
+  });
+
   // Group traces by version (repositoryUrl + commitSha)
   const tracesByVersion = new Map<string, TraceInfo[]>();
   const tracesWithoutVersion: TraceInfo[] = [];
@@ -164,6 +191,12 @@ export async function enrichTracesWithWorkflowMatching(
       tracesWithoutVersion.push(trace);
     }
   }
+
+  console.log('[WorkflowMatcher] Grouped traces:', {
+    withVersion: tracesByVersion.size,
+    withoutVersion: tracesWithoutVersion.length,
+    versions: Array.from(tracesByVersion.keys()),
+  });
 
   // Fetch schematics and match traces for each version
   const enrichedTraces: TraceInfo[] = [...tracesWithoutVersion];
