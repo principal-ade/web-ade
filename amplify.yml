@@ -18,7 +18,7 @@ frontend:
         - echo "@principal-ade:registry=https://registry.npmjs.org/" >> .npmrc
         - echo "@principal-ai:registry=https://registry.npmjs.org/" >> .npmrc
         - echo "legacy-peer-deps=true" >> .npmrc
-        - npm ci
+        - npm install
         - npm list @tailwindcss/postcss tailwindcss
     build:
       commands:
