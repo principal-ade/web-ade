@@ -71,18 +71,26 @@ export async function register() {
     // Individual env vars take highest priority
     const serviceName = process.env.OTEL_SERVICE_NAME || mergedResources['service.name'] || 'web-ade';
     const serviceVersion = process.env.OTEL_SERVICE_VERSION || mergedResources['service.version'];
+    const repositoryUrl = process.env.SERVICE_REPOSITORY_URL || mergedResources['service.repository.url'];
+    const commitSha = process.env.SERVICE_COMMIT_SHA || mergedResources['service.commit.sha'];
 
     // Extract service.name and service.version separately, pass others as attributes
-    const { 'service.name': _, 'service.version': __, ...otherResources } = mergedResources;
+    const { 'service.name': _, 'service.version': __, 'service.repository.url': ___, 'service.commit.sha': ____, ...otherResources } = mergedResources;
 
-    // Add service.version to attributes if present
-    const attributes = serviceVersion
-      ? { ...otherResources, 'service.version': serviceVersion }
-      : otherResources;
+    // Build attributes object with all version registry info
+    const attributes = {
+      ...otherResources,
+      ...(serviceVersion && { 'service.version': serviceVersion }),
+      ...(repositoryUrl && { 'service.repository.url': repositoryUrl }),
+      ...(commitSha && { 'service.commit.sha': commitSha }),
+    };
 
     console.log('[OTEL INSTRUMENTATION] Registering with resources:', {
       serviceName,
-      attributes
+      serviceVersion,
+      repositoryUrl,
+      commitSha,
+      otherAttributes: Object.keys(otherResources)
     });
 
     // Configure trace exporter with custom endpoint and headers

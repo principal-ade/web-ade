@@ -1,0 +1,224 @@
+/**
+ * Workflow Matching Utility
+ *
+ * Matches OTEL traces against versioned workflows from the version registry.
+ * Fetches schematics for the trace's service version and matches trace events
+ * against workflow scenario conditions.
+ */
+
+import type { TraceInfo } from '@industry-theme/principal-view-panels';
+
+// Workflow types (extracted from CanvasDiscoveryResult structure)
+interface WorkflowScenario {
+  id: string;
+  priority?: number;
+  condition?: {
+    requires?: string[];
+    assertions?: Record<string, unknown>;
+    default?: boolean;
+  };
+  template?: {
+    summary?: string;
+    events?: Record<string, string>;
+  };
+}
+
+interface WorkflowData {
+  id?: string;
+  name?: string;
+  canvasPath?: string;
+  scenarios?: WorkflowScenario[];
+}
+
+// Schematic type with workflows (CanvasDiscoveryResult structure)
+interface Schematic {
+  canvases?: unknown[];
+  workflows?: WorkflowData[];
+  [key: string]: unknown;
+}
+
+/**
+ * Fetch schematic from version registry for a specific version
+ */
+async function fetchSchematic(
+  repositoryUrl: string,
+  commitSha: string
+): Promise<Schematic | null> {
+  try {
+    const url = new URL('/api/versions/schematic', window.location.origin);
+    url.searchParams.set('repositoryUrl', repositoryUrl);
+    url.searchParams.set('commitSha', commitSha);
+
+    const response = await fetch(url.toString());
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        console.log('[WorkflowMatcher] No schematic found for:', {
+          repositoryUrl,
+          commitSha,
+        });
+        return null;
+      }
+      throw new Error(`Failed to fetch schematic: ${response.statusText}`);
+    }
+
+    const schematic = await response.json();
+    return schematic as Schematic;
+  } catch (error) {
+    console.error('[WorkflowMatcher] Error fetching schematic:', error);
+    return null;
+  }
+}
+
+/**
+ * Match a trace against workflow scenarios
+ *
+ * For now, this is a simple implementation that:
+ * 1. Finds workflows in the schematic
+ * 2. Matches trace events against scenario required events
+ * 3. Returns the first matching workflow/scenario
+ *
+ * TODO: Implement full scenario condition matching (assertions, etc.)
+ */
+function matchTraceAgainstWorkflows(
+  trace: TraceInfo,
+  workflows: WorkflowData[]
+): TraceInfo['matchedWorkflow'] {
+  // Get all events from trace spans
+  const traceEventNames = new Set<string>();
+  for (const span of trace.spans) {
+    if (span.events) {
+      for (const event of span.events) {
+        traceEventNames.add(event.name);
+      }
+    }
+  }
+
+  // Try to match against each workflow
+  for (const workflow of workflows) {
+    if (!workflow.scenarios || workflow.scenarios.length === 0) {
+      continue;
+    }
+
+    // Try each scenario in priority order
+    const sortedScenarios = [...workflow.scenarios].sort(
+      (a, b) => (a.priority || 999) - (b.priority || 999)
+    );
+
+    for (const scenario of sortedScenarios) {
+      // Check if all required events are present
+      const requiredEvents = scenario.condition?.requires || [];
+      const allRequiredPresent = requiredEvents.every((eventName) =>
+        traceEventNames.has(eventName)
+      );
+
+      if (allRequiredPresent) {
+        // Found a match!
+        return {
+          storyboardId: workflow.canvasPath || '',
+          storyboardName: workflow.name || 'Unknown Workflow',
+          workflowId: workflow.id,
+          workflowName: workflow.name,
+          scenarioId: scenario.id,
+          scenarioName: scenario.id, // TODO: get scenario name from template
+        };
+      }
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Enrich traces with workflow matching from version registry
+ *
+ * For each trace:
+ * 1. Check if it has version info (repositoryUrl, commitSha)
+ * 2. Fetch schematic for that version from version registry
+ * 3. Match trace against workflows in schematic
+ * 4. Add matchedWorkflow info to trace
+ *
+ * Traces without version info are returned unchanged.
+ * Caches schematics to avoid redundant fetches.
+ */
+export async function enrichTracesWithWorkflowMatching(
+  traces: TraceInfo[]
+): Promise<TraceInfo[]> {
+  if (traces.length === 0) {
+    return traces;
+  }
+
+  // Group traces by version (repositoryUrl + commitSha)
+  const tracesByVersion = new Map<string, TraceInfo[]>();
+  const tracesWithoutVersion: TraceInfo[] = [];
+
+  for (const trace of traces) {
+    if (trace.repositoryUrl && trace.commitSha) {
+      const versionKey = `${trace.repositoryUrl}@${trace.commitSha}`;
+      if (!tracesByVersion.has(versionKey)) {
+        tracesByVersion.set(versionKey, []);
+      }
+      tracesByVersion.get(versionKey)!.push(trace);
+    } else {
+      // Trace doesn't have version info - keep as is
+      tracesWithoutVersion.push(trace);
+    }
+  }
+
+  // Fetch schematics and match traces for each version
+  const enrichedTraces: TraceInfo[] = [...tracesWithoutVersion];
+
+  for (const [versionKey, versionTraces] of tracesByVersion) {
+    const parts = versionKey.split('@');
+    const repositoryUrl = parts[0];
+    const commitSha = parts[1];
+
+    // Safety check - should never happen given how we build versionKey
+    if (!repositoryUrl || !commitSha) {
+      console.warn('[WorkflowMatcher] Invalid version key:', versionKey);
+      enrichedTraces.push(...versionTraces);
+      continue;
+    }
+
+    console.log('[WorkflowMatcher] Fetching schematic for version:', {
+      repositoryUrl,
+      commitSha,
+      traceCount: versionTraces.length,
+    });
+
+    // Fetch schematic for this version
+    const schematic = await fetchSchematic(repositoryUrl, commitSha);
+
+    if (!schematic || !schematic.workflows || schematic.workflows.length === 0) {
+      console.log('[WorkflowMatcher] No workflows found in schematic, skipping matching');
+      enrichedTraces.push(...versionTraces);
+      continue;
+    }
+
+    console.log('[WorkflowMatcher] Found workflows:', {
+      count: schematic.workflows.length,
+      workflows: schematic.workflows.map((w) => w.name),
+    });
+
+    // Match each trace against workflows
+    for (const trace of versionTraces) {
+      const matchedWorkflow = matchTraceAgainstWorkflows(trace, schematic.workflows);
+
+      if (matchedWorkflow) {
+        console.log('[WorkflowMatcher] Matched trace to workflow:', {
+          traceId: trace.traceId.substring(0, 8),
+          workflow: matchedWorkflow.workflowName,
+          scenario: matchedWorkflow.scenarioId,
+        });
+      }
+
+      // Add matchedWorkflow to trace (or keep existing if already set)
+      enrichedTraces.push({
+        ...trace,
+        matchedWorkflow: matchedWorkflow || trace.matchedWorkflow,
+      });
+    }
+  }
+
+  return enrichedTraces;
+}

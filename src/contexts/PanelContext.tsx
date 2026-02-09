@@ -840,9 +840,16 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
 
     try {
       const { fetchTracesSafe } = await import('@/lib/otel-traces');
+      const { enrichTracesWithWorkflowMatching } = await import('@/lib/workflow-matcher');
+
       const traces = await fetchTracesSafe(serviceName, limit);
-      setTelemetryData(traces);
-      console.log('[PanelContext] Telemetry loaded:', traces.length, 'traces');
+      console.log('[PanelContext] Telemetry fetched:', traces.length, 'traces');
+
+      // Enrich traces with workflow matching from version registry
+      const enrichedTraces = await enrichTracesWithWorkflowMatching(traces);
+      console.log('[PanelContext] Telemetry enriched with workflow matching');
+
+      setTelemetryData(enrichedTraces);
     } catch (err) {
       console.error('[PanelContext] Failed to fetch telemetry:', err);
       setTelemetryError(err instanceof Error ? err : new Error('Failed to fetch telemetry'));
