@@ -28,12 +28,33 @@ interface WorkflowData {
   name?: string;
   canvasPath?: string;
   scenarios?: WorkflowScenario[];
+  // Scenarios may be in content field (DiscoveredWorkflowWithContent)
+  content?: {
+    canvas?: string;
+    scenarios?: WorkflowScenario[];
+    [key: string]: unknown;
+  };
 }
 
-// Schematic type with workflows (CanvasDiscoveryResult structure)
+// Storyboard type from CanvasDiscoveryResult
+interface Storyboard {
+  id: string;
+  name: string;
+  path: string;
+  canvas: {
+    path: string;
+    [key: string]: unknown;
+  };
+  workflows: WorkflowData[];
+}
+
+// Schematic type (CanvasDiscoveryResult structure)
 interface Schematic {
   canvases?: unknown[];
-  workflows?: WorkflowData[];
+  storyboards?: Storyboard[];
+  testTraces?: unknown[];
+  errors?: Array<{ path: string; error: string }>;
+  warnings?: Array<{ path: string; message: string; type: string }>;
   [key: string]: unknown;
 }
 
@@ -103,12 +124,15 @@ function matchTraceAgainstWorkflows(
 
   // Try to match against each workflow
   for (const workflow of workflows) {
-    if (!workflow.scenarios || workflow.scenarios.length === 0) {
+    // Scenarios may be at top level or in content field
+    const scenarios = workflow.scenarios || workflow.content?.scenarios;
+
+    if (!scenarios || scenarios.length === 0) {
       continue;
     }
 
     // Try each scenario in priority order
-    const sortedScenarios = [...workflow.scenarios].sort(
+    const sortedScenarios = [...scenarios].sort(
       (a, b) => (a.priority || 999) - (b.priority || 999)
     );
 
@@ -222,20 +246,45 @@ export async function enrichTracesWithWorkflowMatching(
     // Fetch schematic for this version
     const schematic = await fetchSchematic(repositoryUrl, commitSha);
 
-    if (!schematic || !schematic.workflows || schematic.workflows.length === 0) {
-      console.log('[WorkflowMatcher] No workflows found in schematic, skipping matching');
+    if (!schematic || !schematic.storyboards || schematic.storyboards.length === 0) {
+      console.log('[WorkflowMatcher] No storyboards found in schematic, skipping matching');
+      enrichedTraces.push(...versionTraces);
+      continue;
+    }
+
+    // Extract all workflows from all storyboards
+    const allWorkflows: WorkflowData[] = [];
+    for (const storyboard of schematic.storyboards) {
+      if (storyboard.workflows && storyboard.workflows.length > 0) {
+        // Add storyboard context to each workflow
+        for (const workflow of storyboard.workflows) {
+          allWorkflows.push({
+            ...workflow,
+            // Preserve canvasPath from workflow.content, workflow top-level, or fallback to storyboard canvas
+            canvasPath:
+              workflow.content?.canvas ||
+              workflow.canvasPath ||
+              storyboard.canvas.path,
+          });
+        }
+      }
+    }
+
+    if (allWorkflows.length === 0) {
+      console.log('[WorkflowMatcher] No workflows found in storyboards, skipping matching');
       enrichedTraces.push(...versionTraces);
       continue;
     }
 
     console.log('[WorkflowMatcher] Found workflows:', {
-      count: schematic.workflows.length,
-      workflows: schematic.workflows.map((w) => w.name),
+      storyboardCount: schematic.storyboards.length,
+      workflowCount: allWorkflows.length,
+      workflows: allWorkflows.map((w) => w.name || w.id),
     });
 
     // Match each trace against workflows
     for (const trace of versionTraces) {
-      const matchedWorkflow = matchTraceAgainstWorkflows(trace, schematic.workflows);
+      const matchedWorkflow = matchTraceAgainstWorkflows(trace, allWorkflows);
 
       if (matchedWorkflow) {
         console.log('[WorkflowMatcher] Matched trace to workflow:', {

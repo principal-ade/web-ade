@@ -47,10 +47,17 @@ export async function OPTIONS() {
  * Example:
  * GET /api/versions/schematic?repositoryUrl=https://github.com/acme/backend&commitSha=abc123
  *
- * Response:
+ * Response (CanvasDiscoveryResult):
  * {
  *   "canvases": [...],
- *   "workflows": [...],
+ *   "storyboards": [
+ *     {
+ *       "id": "checkout-flow",
+ *       "name": "Checkout Flow",
+ *       "canvas": {...},
+ *       "workflows": [...]
+ *     }
+ *   ],
  *   "testTraces": [...]
  * }
  */
@@ -113,12 +120,20 @@ export async function GET(request: NextRequest) {
     }
 
     // Log schematic info (schematic is typed as unknown from storage)
-    const schematicData = schematic as { canvases?: unknown[]; workflows?: unknown[] } | null;
+    const schematicData = schematic as {
+      canvases?: unknown[];
+      storyboards?: Array<{ workflows?: unknown[] }>;
+    } | null;
+    const workflowCount = schematicData?.storyboards?.reduce(
+      (sum, sb) => sum + (sb.workflows?.length || 0),
+      0
+    ) || 0;
     console.log('[Schematic API] Schematic found:', {
       repositoryUrl,
       commitSha,
       canvasCount: schematicData?.canvases?.length || 0,
-      workflowCount: schematicData?.workflows?.length || 0,
+      storyboardCount: schematicData?.storyboards?.length || 0,
+      workflowCount,
     });
 
     // Return the schematic with caching headers
