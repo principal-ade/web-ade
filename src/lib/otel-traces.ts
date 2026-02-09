@@ -51,24 +51,26 @@ export async function fetchTraces(
 
     // Transform OTLP traces to TraceInfo format
     // The API returns: { service, count, traces: [...] }
-    // Where traces is an array of OTLP trace objects
+    // Each trace has the structure: { timestamp, source, payload: { resourceSpans: [...] } }
+    // We need to extract the payload which contains the actual OTLP data
     const traceInfos: TraceInfo[] = [];
 
-    for (const otlpTrace of data.traces || []) {
-      // Each OTLP trace has the structure: { resourceSpans: [...] }
-      // groupSpansByTrace expects this exact structure
+    for (const traceEnvelope of data.traces || []) {
       try {
-        console.log('[OTEL Traces] Processing trace:', {
-          hasResourceSpans: 'resourceSpans' in otlpTrace,
-          resourceSpansType: typeof otlpTrace.resourceSpans,
-          resourceSpansIsArray: Array.isArray(otlpTrace.resourceSpans),
-        });
+        // Extract the OTLP payload from the envelope
+        const otlpTrace = traceEnvelope.payload;
 
+        if (!otlpTrace || !otlpTrace.resourceSpans) {
+          console.warn('[OTEL Traces] Trace missing payload.resourceSpans:', traceEnvelope);
+          continue;
+        }
+
+        // groupSpansByTrace expects: { resourceSpans: [...] }
         const traces = groupSpansByTrace(otlpTrace);
         traceInfos.push(...traces);
       } catch (error) {
         console.error('[OTEL Traces] Error processing trace:', error);
-        console.error('[OTEL Traces] Problematic trace:', JSON.stringify(otlpTrace).substring(0, 1000));
+        console.error('[OTEL Traces] Problematic trace envelope:', traceEnvelope);
       }
     }
 
