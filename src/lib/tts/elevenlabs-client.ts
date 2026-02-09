@@ -13,10 +13,15 @@ const ELEVENLABS_API_BASE = 'https://api.elevenlabs.io/v1';
  *
  * @param text - Text to convert to speech
  * @param options - TTS options (voice, speed, model)
+ * @param previousText - Optional previous text for contextual continuity
  * @returns MP3 audio as Buffer
  * @throws Error with TTSErrorCode on failure
  */
-export async function generateAudio(text: string, options: TTSOptions): Promise<Buffer> {
+export async function generateAudio(
+  text: string,
+  options: TTSOptions,
+  _previousText?: string
+): Promise<Buffer> {
   const apiKey = process.env.ELEVENLABS_API_KEY;
 
   if (!apiKey) {

@@ -131,14 +131,24 @@ function matchTraceAgainstWorkflows(
       continue;
     }
 
-    // Try each scenario in priority order
-    const sortedScenarios = [...scenarios].sort(
+    // Separate default/fallback scenarios from regular scenarios
+    const regularScenarios = scenarios.filter((s) => !s.condition?.default);
+    const defaultScenarios = scenarios.filter((s) => s.condition?.default);
+
+    // Try regular scenarios first, in priority order
+    const sortedRegularScenarios = [...regularScenarios].sort(
       (a, b) => (a.priority || 999) - (b.priority || 999)
     );
 
-    for (const scenario of sortedScenarios) {
+    for (const scenario of sortedRegularScenarios) {
       // Check if all required events are present
       const requiredEvents = scenario.condition?.requires || [];
+
+      // Skip scenarios with no required events (should use default instead)
+      if (requiredEvents.length === 0) {
+        continue;
+      }
+
       const allRequiredPresent = requiredEvents.every((eventName) =>
         traceEventNames.has(eventName)
       );
@@ -161,6 +171,44 @@ function matchTraceAgainstWorkflows(
           workflowName: workflow.name,
           scenarioId: scenario.id,
           scenarioName: scenario.id, // TODO: get scenario name from template
+        };
+      }
+    }
+
+    // If no regular scenario matched, try default scenarios
+    // But only if trace has at least one event from this workflow's domain
+    if (defaultScenarios.length > 0) {
+      // Collect all possible events from regular scenarios to determine workflow domain
+      const workflowDomainEvents = new Set<string>();
+      for (const scenario of regularScenarios) {
+        const requiredEvents = scenario.condition?.requires || [];
+        requiredEvents.forEach((event) => workflowDomainEvents.add(event));
+      }
+
+      // Check if trace has ANY event from this workflow's domain
+      const hasWorkflowEvents = Array.from(workflowDomainEvents).some((event) =>
+        traceEventNames.has(event)
+      );
+
+      if (hasWorkflowEvents) {
+        const sortedDefaultScenarios = [...defaultScenarios].sort(
+          (a, b) => (a.priority || 999) - (b.priority || 999)
+        );
+
+        console.log('[WorkflowMatcher] No specific scenario matched, using default:', {
+          workflow: workflow.name,
+          scenarioId: sortedDefaultScenarios[0]?.id,
+          workflowDomainEvents: Array.from(workflowDomainEvents),
+          traceEvents: Array.from(traceEventNames),
+        });
+
+        return {
+          storyboardId: workflow.canvasPath || '',
+          storyboardName: workflow.name || 'Unknown Workflow',
+          workflowId: workflow.id,
+          workflowName: workflow.name,
+          scenarioId: sortedDefaultScenarios[0]!.id,
+          scenarioName: sortedDefaultScenarios[0]!.id,
         };
       }
     }
