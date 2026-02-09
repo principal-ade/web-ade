@@ -17,6 +17,7 @@
     "test:coverage": "vitest run --coverage --project=unit",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
+    "tts:create-dictionary": "tsx scripts/create-pronunciation-dictionary.ts",
     "prepare": "husky || true"
   },
   "dependencies": {

@@ -49,6 +49,17 @@ export async function generateAudio(
       requestBody.previous_text = previousText.trim();
     }
 
+    // Add pronunciation dictionary for code terms if configured
+    const dictionaryId = process.env.ELEVENLABS_PRONUNCIATION_DICTIONARY_ID;
+    if (dictionaryId) {
+      requestBody.pronunciation_dictionary_locators = [
+        {
+          pronunciation_dictionary_id: dictionaryId,
+          // version_id omitted = use latest version
+        },
+      ];
+    }
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
