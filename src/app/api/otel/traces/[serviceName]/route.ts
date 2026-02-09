@@ -135,6 +135,13 @@ export async function GET(
     console.log('[OTEL Traces] Success:', {
       service: data.service,
       count: data.count,
+      tracesLength: data.traces?.length,
+      firstTraceStructure: data.traces?.[0] ? {
+        hasResourceSpans: 'resourceSpans' in data.traces[0],
+        resourceSpansType: typeof data.traces[0].resourceSpans,
+        resourceSpansIsArray: Array.isArray(data.traces[0].resourceSpans),
+        keys: Object.keys(data.traces[0]),
+      } : null
     });
 
     return addCorsHeaders(

@@ -38,6 +38,17 @@ export async function fetchTraces(
 
     const data = await response.json();
 
+    // Log full response for debugging
+    console.log('[OTEL Traces] Full API response:', data);
+    console.log('[OTEL Traces] Number of traces:', data.traces?.length);
+
+    if (data.traces?.[0]) {
+      console.log('[OTEL Traces] First trace object:', data.traces[0]);
+      console.log('[OTEL Traces] First trace keys:', Object.keys(data.traces[0]));
+      console.log('[OTEL Traces] Has resourceSpans?', 'resourceSpans' in data.traces[0]);
+      console.log('[OTEL Traces] resourceSpans value:', data.traces[0].resourceSpans);
+    }
+
     // Transform OTLP traces to TraceInfo format
     // The API returns: { service, count, traces: [...] }
     // Where traces is an array of OTLP trace objects
@@ -46,8 +57,19 @@ export async function fetchTraces(
     for (const otlpTrace of data.traces || []) {
       // Each OTLP trace has the structure: { resourceSpans: [...] }
       // groupSpansByTrace expects this exact structure
-      const traces = groupSpansByTrace(otlpTrace);
-      traceInfos.push(...traces);
+      try {
+        console.log('[OTEL Traces] Processing trace:', {
+          hasResourceSpans: 'resourceSpans' in otlpTrace,
+          resourceSpansType: typeof otlpTrace.resourceSpans,
+          resourceSpansIsArray: Array.isArray(otlpTrace.resourceSpans),
+        });
+
+        const traces = groupSpansByTrace(otlpTrace);
+        traceInfos.push(...traces);
+      } catch (error) {
+        console.error('[OTEL Traces] Error processing trace:', error);
+        console.error('[OTEL Traces] Problematic trace:', JSON.stringify(otlpTrace).substring(0, 1000));
+      }
     }
 
     console.log(`[OTEL Traces] Fetched ${traceInfos.length} traces for ${serviceName}`);
