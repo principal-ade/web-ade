@@ -14,8 +14,8 @@ resources:
     service.name: "web-ade"
     service.version: "0.1.0"
     deployment.environment: "development"
-    service.repository.url: "https://github.com/griever/web-ade"
-    service.commit.sha: "local-dev"
+    # service.repository.url and service.commit.sha are auto-detected from git locally
+    # and set via environment variables in production (see amplify.yml)
 
 nodeComponents: {}
 edgeComponents: {}

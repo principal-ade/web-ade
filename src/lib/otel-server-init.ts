@@ -81,21 +81,61 @@ export async function initializeOTEL() {
     // Merge resources: library.yaml < OTEL_RESOURCE_ATTRIBUTES < individual env vars
     const mergedResources = { ...libraryResources, ...envResources };
 
+    /**
+     * Auto-detect repository URL and commit SHA from git (local dev)
+     */
+    function getRepositoryUrl(): string | undefined {
+      try {
+        const { execSync } = require('child_process');
+        const url = execSync('git config --get remote.origin.url')
+          .toString()
+          .trim()
+          .replace(/\.git$/, '')
+          .replace(/^git@github\.com:/, 'https://github.com/');
+        return url;
+      } catch {
+        return undefined;
+      }
+    }
+
+    function getCommitSha(): string | undefined {
+      try {
+        const { execSync } = require('child_process');
+        return execSync('git rev-parse HEAD').toString().trim();
+      } catch {
+        return undefined;
+      }
+    }
+
     // Individual env vars take highest priority
     const serviceName = process.env.OTEL_SERVICE_NAME || mergedResources['service.name'] || 'web-ade';
     const serviceVersion = process.env.OTEL_SERVICE_VERSION || mergedResources['service.version'];
+    const repositoryUrl =
+      process.env.SERVICE_REPOSITORY_URL ||
+      mergedResources['service.repository.url'] ||
+      getRepositoryUrl();  // Auto-detect from git
+    const commitSha =
+      process.env.SERVICE_COMMIT_SHA ||
+      mergedResources['service.commit.sha'] ||
+      getCommitSha();  // Auto-detect from git
 
     // Extract service.name and service.version separately, pass others as attributes
-    const { 'service.name': _, 'service.version': __, ...otherResources } = mergedResources;
+    const { 'service.name': _, 'service.version': __, 'service.repository.url': ___, 'service.commit.sha': ____, ...otherResources } = mergedResources;
 
-    // Add service.version to attributes if present
-    const attributes = serviceVersion
-      ? { ...otherResources, 'service.version': serviceVersion }
-      : otherResources;
+    // Build attributes object with all version registry info
+    const attributes = {
+      ...otherResources,
+      ...(serviceVersion && { 'service.version': serviceVersion }),
+      ...(repositoryUrl && { 'service.repository.url': repositoryUrl }),
+      ...(commitSha && { 'service.commit.sha': commitSha }),
+    };
 
     console.log('[OTEL FALLBACK] Registering with resources:', {
       serviceName,
-      attributes
+      serviceVersion,
+      repositoryUrl,
+      commitSha,
+      otherAttributes: Object.keys(otherResources)
     });
 
     // Configure trace exporter with custom endpoint and headers
@@ -141,7 +181,7 @@ export async function initializeOTEL() {
 
     const metricsResource = resourceFromAttributes({
       'service.name': serviceName,
-      ...otherResources
+      ...attributes
     });
 
     const metricExporter = new OTLPMetricExporter({
