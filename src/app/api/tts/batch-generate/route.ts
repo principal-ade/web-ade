@@ -19,6 +19,7 @@ import { validateTTSRequest, generateS3Key } from '@/lib/tts/key-generator';
 import { fetchTourFromGitHub } from '@/lib/tts/github-fetcher';
 import { checkS3Cache, getS3Url, uploadToS3 } from '@/lib/tts/s3-cache';
 import { mergeTTSOptions, generateAudio } from '@/lib/tts/elevenlabs-client';
+import removeMd from 'remove-markdown';
 
 /**
  * Add CORS headers to response
@@ -103,17 +104,19 @@ export async function POST(request: NextRequest) {
 
       // If not cached, generate the audio
       if (!cached) {
-        // Use narration if available, otherwise fall back to content or description
-        const text = step.narration || step.content || step.description || '';
+        // Use narration if available (pre-written TTS-friendly), otherwise fall back to description or content
+        const rawText = step.narration || step.description || step.content || '';
 
-        if (!text.trim()) {
+        if (!rawText.trim()) {
           console.warn('[TTS Batch] Skipping step with no text:', step.id);
           // Keep cached=false so status will be 'generating'
         } else {
           console.log('[TTS Batch] Generating audio for step:', step.id);
 
           try {
-            const audioBuffer = await generateAudio(text, options);
+            // Strip markdown syntax for TTS (unless using pre-written narration)
+            const text = step.narration ? rawText : removeMd(rawText);
+            const audioBuffer = await generateAudio(text.trim(), options);
             await uploadToS3(s3Key, audioBuffer);
             cached = true;
             console.log('[TTS Batch] Generated and cached:', step.id);

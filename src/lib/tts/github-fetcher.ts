@@ -8,6 +8,7 @@
 
 import { getGitHubToken } from '@/lib/auth/cookies';
 import { IntroductionTour, TTSErrorCode, TTSError } from './types';
+import removeMd from 'remove-markdown';
 
 /**
  * Fetches and validates tour from GitHub
@@ -127,10 +128,10 @@ export function getStepDescription(tour: IntroductionTour, stepId: string): stri
     throw error;
   }
 
-  // Try description field first, fallback to content
-  const description = step.description || step.content || '';
+  // Try narration first (pre-written TTS-friendly), then description, then content
+  const rawText = step.narration || step.description || step.content || '';
 
-  if (!description || description.trim().length === 0) {
+  if (!rawText || rawText.trim().length === 0) {
     console.error('[GitHub Fetcher] Step has no description:', {
       tourId: tour.id,
       stepId,
@@ -138,7 +139,9 @@ export function getStepDescription(tour: IntroductionTour, stepId: string): stri
     throw new Error('Step has no description or content');
   }
 
-  const trimmedDescription = description.trim();
+  // Strip markdown syntax for TTS (unless using pre-written narration)
+  const plainText = step.narration ? rawText : removeMd(rawText);
+  const trimmedDescription = plainText.trim();
 
   // Validate content length (max 5000 characters per spec)
   if (trimmedDescription.length > 5000) {
