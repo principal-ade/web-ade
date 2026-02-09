@@ -20,7 +20,7 @@ const ELEVENLABS_API_BASE = 'https://api.elevenlabs.io/v1';
 export async function generateAudio(
   text: string,
   options: TTSOptions,
-  _previousText?: string
+  previousText?: string
 ): Promise<Buffer> {
   const apiKey = process.env.ELEVENLABS_API_KEY;
 
@@ -32,6 +32,23 @@ export async function generateAudio(
   const url = `${ELEVENLABS_API_BASE}/text-to-speech/${options.voice}`;
 
   try {
+    // Build request body with optional previous_text for contextual continuity
+    const requestBody: Record<string, unknown> = {
+      text,
+      model_id: options.model,
+      voice_settings: {
+        stability: 0.5,
+        similarity_boost: 0.75,
+        style: 0.0,
+        use_speaker_boost: true,
+      },
+    };
+
+    // Add previous_text for better continuity between sequential generations
+    if (previousText && previousText.trim()) {
+      requestBody.previous_text = previousText.trim();
+    }
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -39,16 +56,7 @@ export async function generateAudio(
         'Content-Type': 'application/json',
         Accept: 'audio/mpeg',
       },
-      body: JSON.stringify({
-        text,
-        model_id: options.model,
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
-          style: 0.0,
-          use_speaker_boost: true,
-        },
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     // Handle rate limiting

@@ -88,8 +88,17 @@ export async function POST(request: NextRequest) {
       totalSteps: tour.steps.length,
     });
 
-    // Check cache status for all steps in parallel
-    const stepPromises = tour.steps.map(async (step) => {
+    // Generate audio for steps sequentially to maintain context continuity
+    const steps: {
+      stepId: string;
+      audioUrl: string;
+      cached: boolean;
+      status: 'ready' | 'generating';
+    }[] = [];
+
+    let previousText: string | undefined;
+
+    for (const step of tour.steps) {
       const s3Key = await generateS3Key(
         body.owner,
         body.repo,
@@ -111,33 +120,47 @@ export async function POST(request: NextRequest) {
           console.warn('[TTS Batch] Skipping step with no text:', step.id);
           // Keep cached=false so status will be 'generating'
         } else {
-          console.log('[TTS Batch] Generating audio for step:', step.id);
+          console.log('[TTS Batch] Generating audio for step:', step.id, {
+            withContext: !!previousText,
+          });
 
           try {
             // Strip markdown syntax for TTS (unless using pre-written narration)
             const text = step.narration ? rawText : removeMd(rawText);
-            const audioBuffer = await generateAudio(text.trim(), options);
+            const trimmedText = text.trim();
+
+            // Pass previous step's text for contextual continuity
+            const audioBuffer = await generateAudio(trimmedText, options, previousText);
             await uploadToS3(s3Key, audioBuffer);
             cached = true;
+
+            // Store this text for the next step's context
+            previousText = trimmedText;
+
             console.log('[TTS Batch] Generated and cached:', step.id);
           } catch (error) {
             console.error('[TTS Batch] Failed to generate step:', step.id, error);
             // Continue with other steps even if one fails
           }
         }
+      } else {
+        // Even if cached, we should load the text for context continuity
+        const rawText = step.narration || step.description || step.content || '';
+        if (rawText.trim()) {
+          const text = step.narration ? rawText : removeMd(rawText);
+          previousText = text.trim();
+        }
       }
 
       const status: 'ready' | 'generating' = cached ? 'ready' : 'generating';
 
-      return {
+      steps.push({
         stepId: step.id,
         audioUrl,
         cached,
         status,
-      };
-    });
-
-    const steps = await Promise.all(stepPromises);
+      });
+    }
 
     const cachedSteps = steps.filter((s) => s.cached).length;
     const generatingSteps = steps.filter((s) => !s.cached).length;
