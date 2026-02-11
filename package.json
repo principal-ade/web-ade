@@ -64,7 +64,7 @@
     "@principal-ai/codebase-quality-lenses": "^0.1.58",
     "@principal-ai/control-tower-core": "^0.2.1",
     "@principal-ai/logo-component": "^0.1.4",
-    "@principal-ai/principal-view-core": "^0.20.0",
+    "@principal-ai/principal-view-core": "^0.22.1",
     "@principal-ai/quality-lens-registry": "^0.3.3",
     "@principal-ai/repository-abstraction": "^0.4.0",
     "@tailwindcss/postcss": "^4",

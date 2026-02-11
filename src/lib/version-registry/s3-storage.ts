@@ -15,6 +15,7 @@ import {
   GetObjectCommand,
   ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
+import type { VersionSnapshot } from '@principal-ai/principal-view-core';
 import type {
   VersionRegistration,
   VersionRegistryKey,
@@ -315,13 +316,13 @@ export function buildSchematicS3Key(repositoryUrl: string, commitSha: string): s
  *
  * @param repositoryUrl - GitHub repository URL
  * @param commitSha - Git commit SHA
- * @param schematic - Complete CanvasDiscoveryResult
+ * @param schematic - Complete VersionSnapshot
  * @returns S3 key where schematic was stored
  */
 export async function storeSchematic(
   repositoryUrl: string,
   commitSha: string,
-  schematic: unknown
+  schematic: VersionSnapshot
 ): Promise<string> {
   try {
     const s3Key = buildSchematicS3Key(repositoryUrl, commitSha);
@@ -361,12 +362,12 @@ export async function storeSchematic(
  *
  * @param repositoryUrl - GitHub repository URL
  * @param commitSha - Git commit SHA
- * @returns Schematic (CanvasDiscoveryResult) or null if not found
+ * @returns Schematic (VersionSnapshot) or null if not found
  */
 export async function getSchematic(
   repositoryUrl: string,
   commitSha: string
-): Promise<unknown | null> {
+): Promise<VersionSnapshot | null> {
   try {
     const s3Key = buildSchematicS3Key(repositoryUrl, commitSha);
     const response = await s3Client.send(
@@ -381,11 +382,12 @@ export async function getSchematic(
       return null;
     }
 
-    const schematic = JSON.parse(data);
+    const schematic = JSON.parse(data) as VersionSnapshot;
 
     console.log('[Version Registry] Retrieved schematic:', {
       s3Key,
       commitSha: commitSha.substring(0, 12),
+      storyboardCount: schematic.storyboards?.length || 0,
     });
 
     return schematic;

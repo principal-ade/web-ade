@@ -17,6 +17,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import type { VersionSnapshot } from '@principal-ai/principal-view-core';
 import { getSchematic } from '@/lib/version-registry/s3-storage';
 
 /**
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Fetch schematic from S3
-    const schematic = await getSchematic(repositoryUrl, commitSha);
+    const schematic: VersionSnapshot | null = await getSchematic(repositoryUrl, commitSha);
 
     if (!schematic) {
       console.log('[Schematic API] Schematic not found:', {
@@ -119,26 +120,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Log schematic info (schematic is typed as unknown from storage)
-    const schematicData = schematic as {
-      canvases?: unknown[];
-      storyboards?: Array<{ workflows?: unknown[] }>;
-    } | null;
-    const workflowCount = schematicData?.storyboards?.reduce(
-      (sum, sb) => sum + (sb.workflows?.length || 0),
-      0
-    ) || 0;
+    // Log schematic info with proper typing
     console.log('[Schematic API] Schematic found:', {
       repositoryUrl,
       commitSha,
-      canvasCount: schematicData?.canvases?.length || 0,
-      storyboardCount: schematicData?.storyboards?.length || 0,
-      workflowCount,
+      storyboardCount: schematic.storyboards.length,
+      workflowCount: schematic.storyboards.reduce(
+        (sum: number, sb) => sum + sb.workflows.length,
+        0
+      ),
     });
 
-    // Return the schematic with caching headers
+    // Return properly typed response
     return addCorsHeaders(
-      NextResponse.json(schematic, {
+      NextResponse.json<VersionSnapshot>(schematic, {
         status: 200,
         headers: {
           'Cache-Control': 'public, max-age=3600, immutable', // Cache for 1 hour - schematics are immutable by commit

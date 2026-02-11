@@ -160,7 +160,6 @@ export async function registerVersion(
 
       console.log('[Version Manager] Schematic fetched and stored:', {
         schematicId,
-        canvases: schematic.canvases.length,
         storyboards: schematic.storyboards.length,
       });
     }

@@ -13,7 +13,7 @@
 
 import { Octokit } from '@octokit/rest';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
-import { CanvasDiscovery, type CanvasDiscoveryResult } from '@principal-ai/principal-view-core';
+import { CanvasDiscovery, type VersionSnapshot } from '@principal-ai/principal-view-core';
 import { GitHubFileSystemAdapter } from '@/lib/server/GitHubFileSystemAdapter';
 import { getGitHubToken } from '@/lib/auth/cookies';
 
@@ -25,19 +25,19 @@ import { getGitHubToken } from '@/lib/auth/cookies';
  * 2. Build FileTree from paths
  * 3. Create GitHubFileSystemAdapter for file content fetching
  * 4. Use CanvasDiscovery to find and parse all canvas/workflow files
- * 5. Return complete CanvasDiscoveryResult (the schematic)
+ * 5. Return complete VersionSnapshot (the schematic)
  *
  * @param repositoryUrl - GitHub repository URL
  * @param commitSha - Git commit SHA (40-char hex)
  * @param providedToken - GitHub token (optional, from Authorization header)
- * @returns Complete schematic (CanvasDiscoveryResult with content)
+ * @returns Complete schematic (VersionSnapshot with content)
  * @throws Error if repository not found or schematic fetch fails
  */
 export async function fetchSchematicFromGitHub(
   repositoryUrl: string,
   commitSha: string,
   providedToken?: string
-): Promise<CanvasDiscoveryResult> {
+): Promise<VersionSnapshot> {
   // Parse owner/repo from URL
   const match = repositoryUrl.match(/github\.com[/:]([\w.-]+)\/([\w.-]+)/);
   if (!match) {
@@ -118,7 +118,13 @@ export async function fetchSchematicFromGitHub(
       console.warn('[Schematic Fetcher] Discovery errors:', schematic.errors);
     }
 
-    return schematic;
+    // Return as VersionSnapshot format
+    return {
+      repositoryUrl,
+      commitSha,
+      storyboards: schematic.storyboards,
+      registeredAt: new Date().toISOString(),
+    };
   } catch (error) {
     console.error('[Schematic Fetcher] Failed to fetch schematic:', {
       owner,

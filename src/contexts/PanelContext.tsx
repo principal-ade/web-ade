@@ -26,7 +26,7 @@ import type { CodebaseView } from '@principal-ai/alexandria-core-library/types';
 import type { FormattedResults } from '@principal-ai/codebase-quality-lenses';
 import { minimatch } from 'minimatch';
 import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
-import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
+import type { StoryboardContextSliceData, VersionSnapshot } from '@principal-ai/principal-view-core';
 import { useAuth } from './AuthContext';
 import { useLocalFileSystem } from './LocalFileSystemContext';
 import { useVFS } from './VFSContext';
@@ -679,7 +679,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const [telemetryError, setTelemetryError] = useState<Error | null>(null);
 
   // Schematics state (versioned workflows from version registry)
-  const [schematicsData, setSchematicsData] = useState<unknown[]>([]);
+  const [schematicsData, setSchematicsData] = useState<VersionSnapshot[]>([]);
   const [schematicsLoading, setSchematicsLoading] = useState(false);
   const [schematicsError, setSchematicsError] = useState<Error | null>(null);
 
@@ -912,12 +912,8 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           const response = await fetch(url.toString());
 
           if (response.ok) {
-            const schematic = await response.json();
-            schematics.push({
-              repositoryUrl,
-              commitSha,
-              ...schematic,
-            });
+            const schematic: VersionSnapshot = await response.json();
+            schematics.push(schematic);
           } else if (response.status === 404) {
             console.warn('[PanelContext] No schematic found for:', { repositoryUrl, commitSha });
           } else {
