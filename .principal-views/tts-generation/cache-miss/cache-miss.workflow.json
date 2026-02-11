@@ -1,0 +1,57 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/tts-generation/tts-generation.otel.canvas",
+  "mode": "span-tree",
+  "name": "TTS Cache Miss",
+  "description": "Full generation path when audio needs to be created",
+  "scenarios": [
+    {
+      "id": "generation-success",
+      "priority": 1,
+      "condition": {
+        "requires": [
+          "tts.request.started",
+          "tts.cache.miss",
+          "tts.tour.fetched",
+          "tts.audio.generated",
+          "tts.audio.uploaded",
+          "tts.request.complete"
+        ],
+        "assertions": {
+          "tts.cached": {
+            "$eq": false
+          }
+        }
+      },
+      "template": {
+        "summary": "✅ Generated TTS audio for {{tts.owner}}/{{tts.repo}}:{{tts.stepId}} ({{tts.textLength}} chars) in {{tts.generationTimeMs}}ms",
+        "events": {
+          "tts.request.started": "📥 Request received for step {{tts.stepId}} in {{tts.owner}}/{{tts.repo}} (commit: {{tts.commitSha}})",
+          "tts.cache.miss": "💭 Cache miss at {{tts.s3Key}}, proceeding to generation",
+          "tts.tour.fetched": "📄 Tour fetched (ID: {{tts.tourId}}), step description: {{tts.textLength}} characters",
+          "tts.audio.generated": "🎙️  Audio generated using {{tts.voice}} in {{tts.generationTimeMs}}ms ({{tts.audioSizeBytes}} bytes)",
+          "tts.audio.uploaded": "☁️  Uploaded to S3: {{tts.audioUrl}}",
+          "tts.request.complete": "✅ Audio URL returned (total duration: {{tts.durationMs}}ms)"
+        }
+      }
+    },
+    {
+      "id": "fallback",
+      "priority": 999,
+      "condition": {
+        "default": true
+      },
+      "template": {
+        "summary": "📋 TTS generation execution captured",
+        "events": {
+          "tts.request.started": "Request started",
+          "tts.cache.miss": "Cache miss, generating audio",
+          "tts.tour.fetched": "Tour fetched from GitHub",
+          "tts.audio.generated": "Audio generated",
+          "tts.audio.uploaded": "Audio uploaded to S3",
+          "tts.request.complete": "Request completed"
+        }
+      }
+    }
+  ]
+}

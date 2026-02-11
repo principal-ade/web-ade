@@ -1,0 +1,44 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/tts-generation/tts-generation.otel.canvas",
+  "mode": "span-tree",
+  "name": "TTS Tour Not Found",
+  "description": "Error when tour file cannot be fetched from GitHub",
+  "scenarios": [
+    {
+      "id": "tour-not-found-error",
+      "priority": 1,
+      "condition": {
+        "requires": ["tts.request.started", "tts.cache.miss", "tts.error.tour_not_found"],
+        "assertions": {
+          "tts.errorCode": {
+            "$eq": "TOUR_NOT_FOUND"
+          }
+        }
+      },
+      "template": {
+        "summary": "❌ Tour not found: {{tts.owner}}/{{tts.repo}}:{{tts.path}}",
+        "events": {
+          "tts.request.started": "📥 Request received for {{tts.owner}}/{{tts.repo}}:{{tts.stepId}}",
+          "tts.cache.miss": "💭 Cache miss, attempting to fetch tour",
+          "tts.error.tour_not_found": "❌ GitHub returned 404: {{tts.errorMessage}}"
+        }
+      }
+    },
+    {
+      "id": "fallback",
+      "priority": 999,
+      "condition": {
+        "default": true
+      },
+      "template": {
+        "summary": "📋 Tour not found error captured",
+        "events": {
+          "tts.request.started": "Request started",
+          "tts.cache.miss": "Cache miss",
+          "tts.error.tour_not_found": "Tour file not found"
+        }
+      }
+    }
+  ]
+}

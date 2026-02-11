@@ -44,8 +44,12 @@ export function clearSpans() {
 /**
  * Export captured spans to OTLP JSON format
  * Format matches OpenTelemetry Protocol specification
+ *
+ * @param testName - Name of the test (used as filename)
+ * @param workflowPath - Optional workflow path (e.g., 'tts-generation/cache-hit')
+ *                       If not provided, exports to __executions__ (deprecated)
  */
-export function exportSpansToOTLP(testName: string) {
+export function exportSpansToOTLP(testName: string, workflowPath?: string) {
   const spans = getCapturedSpans();
 
   if (spans.length === 0) {
@@ -100,13 +104,21 @@ export function exportSpansToOTLP(testName: string) {
     ],
   };
 
-  // Ensure __executions__ directory exists
-  const executionsDir = join(process.cwd(), '.principal-views', '__executions__');
-  mkdirSync(executionsDir, { recursive: true });
+  // Determine export directory
+  let exportDir: string;
+  if (workflowPath) {
+    // Export to workflow folder (new storyboard structure)
+    exportDir = join(process.cwd(), '.principal-views', workflowPath);
+  } else {
+    // Export to __executions__ (deprecated, for backward compatibility)
+    exportDir = join(process.cwd(), '.principal-views', '__executions__');
+  }
+
+  mkdirSync(exportDir, { recursive: true });
 
   // Write to file
   const filename = `${testName.replace(/[^a-z0-9-]/gi, '-').toLowerCase()}.otel.json`;
-  const filepath = join(executionsDir, filename);
+  const filepath = join(exportDir, filename);
 
   writeFileSync(filepath, JSON.stringify(otlpData, null, 2));
   console.log(`✅ Exported ${spans.length} spans to ${filepath}`);

@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { trace } from '@opentelemetry/api';
 import {
   TTSGenerateRequest,
   TTSGenerateResponse,
@@ -21,6 +22,9 @@ import {
 } from '@/lib/tts/github-fetcher';
 import { checkS3Cache, uploadToS3, getS3Url } from '@/lib/tts/s3-cache';
 import { generateAudio, mergeTTSOptions } from '@/lib/tts/elevenlabs-client';
+
+// Get tracer for TTS operations
+const tracer = trace.getTracer('tts-generation', '1.0.0');
 
 /**
  * Add CORS headers to response
@@ -55,19 +59,34 @@ export async function OPTIONS() {
  *    - Return URL
  */
 export async function POST(request: NextRequest) {
-  try {
-    const body = (await request.json()) as TTSGenerateRequest;
+  const startTime = Date.now();
 
-    // Validate request parameters
-    const validationError = validateTTSRequest(body);
-    if (validationError) {
-      return addCorsHeaders(
-        NextResponse.json(
-          { error: TTSErrorCode.INVALID_REQUEST, message: validationError },
-          { status: 400 }
-        )
-      );
-    }
+  return tracer.startActiveSpan('tts.generation', async (span) => {
+    try {
+      const body = (await request.json()) as TTSGenerateRequest;
+
+      // Emit request started event
+      span.addEvent('tts.request.started', {
+        'tts.owner': body.owner,
+        'tts.repo': body.repo,
+        'tts.path': body.path,
+        'tts.stepId': body.stepId,
+        'tts.commitSha': body.commitSha,
+        ...(body.voice && { 'tts.voice': body.voice }),
+        ...(body.speed && { 'tts.speed': body.speed }),
+      });
+
+      // Validate request parameters
+      const validationError = validateTTSRequest(body);
+      if (validationError) {
+        span.end();
+        return addCorsHeaders(
+          NextResponse.json(
+            { error: TTSErrorCode.INVALID_REQUEST, message: validationError },
+            { status: 400 }
+          )
+        );
+      }
 
     // Merge user options with defaults
     const options = mergeTTSOptions({
@@ -91,6 +110,25 @@ export async function POST(request: NextRequest) {
     if (isCached) {
       // Cache hit - return immediately
       const audioUrl = getS3Url(s3Key);
+
+      // Emit cache hit event
+      span.addEvent('tts.cache.hit', {
+        'tts.s3Key': s3Key,
+        'tts.audioUrl': audioUrl,
+        'tts.cached': true,
+      });
+
+      const durationMs = Date.now() - startTime;
+
+      // Emit request complete event
+      span.addEvent('tts.request.complete', {
+        'tts.audioUrl': audioUrl,
+        'tts.cached': true,
+        'tts.durationMs': durationMs,
+      });
+
+      span.end();
+
       const response: TTSGenerateResponse = {
         audioUrl,
         cached: true,
@@ -114,6 +152,12 @@ export async function POST(request: NextRequest) {
       stepId: body.stepId,
     });
 
+    // Emit cache miss event
+    span.addEvent('tts.cache.miss', {
+      'tts.s3Key': s3Key,
+      'tts.cached': false,
+    });
+
     // Fetch tour from GitHub (security layer)
     const tour = await fetchTourFromGitHub(
       body.owner,
@@ -125,16 +169,32 @@ export async function POST(request: NextRequest) {
     // Extract and validate step description
     const stepDescription = getStepDescription(tour, body.stepId);
 
+    // Emit tour fetched event
+    span.addEvent('tts.tour.fetched', {
+      'tts.tourId': tour.id,
+      'tts.stepDescription': stepDescription,
+      'tts.textLength': stepDescription.length,
+    });
+
     // Generate audio using ElevenLabs
-    const startTime = Date.now();
+    const genStartTime = Date.now();
     const audioBuffer = await generateAudio(stepDescription, options);
-    const generationTime = Date.now() - startTime;
+    const generationTime = Date.now() - genStartTime;
 
     console.log('[TTS Generate] Audio generated:', {
       tourId: tour.id,
       stepId: body.stepId,
       textLength: stepDescription.length,
       generationTimeMs: generationTime,
+    });
+
+    // Emit audio generated event
+    span.addEvent('tts.audio.generated', {
+      'tts.generationTimeMs': generationTime,
+      'tts.textLength': stepDescription.length,
+      'tts.audioSizeBytes': audioBuffer.length,
+      'tts.voice': options.voice,
+      'tts.model': options.model,
     });
 
     // Upload to S3 for caching
@@ -144,6 +204,24 @@ export async function POST(request: NextRequest) {
       'generation-time-ms': generationTime.toString(),
       'text-length': stepDescription.length.toString(),
     });
+
+    // Emit audio uploaded event
+    span.addEvent('tts.audio.uploaded', {
+      'tts.s3Key': s3Key,
+      'tts.audioUrl': audioUrl,
+      'tts.audioSizeBytes': audioBuffer.length,
+    });
+
+    const durationMs = Date.now() - startTime;
+
+    // Emit request complete event
+    span.addEvent('tts.request.complete', {
+      'tts.audioUrl': audioUrl,
+      'tts.cached': false,
+      'tts.durationMs': durationMs,
+    });
+
+    span.end();
 
     const response: TTSGenerateResponse = {
       audioUrl,
@@ -159,6 +237,7 @@ export async function POST(request: NextRequest) {
       })
     );
   } catch (error) {
+    span.end();
     console.error('[TTS Generate] Error:', error);
 
     // Handle specific TTS errors
@@ -166,6 +245,16 @@ export async function POST(request: NextRequest) {
       const errorCode = error.message as TTSErrorCode;
 
       if (errorCode === TTSErrorCode.TOUR_NOT_FOUND) {
+        // Emit tour not found error event
+        span.addEvent('tts.error.tour_not_found', {
+          'tts.errorCode': errorCode,
+          'tts.errorMessage': 'Tour file not found at specified path',
+          'tts.httpStatus': 404,
+          'tts.owner': (error as any).owner || '',
+          'tts.repo': (error as any).repo || '',
+          'tts.path': (error as any).path || '',
+        });
+
         return addCorsHeaders(
           NextResponse.json(
             {
@@ -179,6 +268,15 @@ export async function POST(request: NextRequest) {
 
       if (errorCode === TTSErrorCode.STEP_NOT_FOUND) {
         const ttsError = error as TTSError;
+
+        // Emit step not found error event
+        span.addEvent('tts.error.step_not_found', {
+          'tts.errorCode': errorCode,
+          'tts.errorMessage': `Step ${ttsError.stepId || 'unknown'} not found in tour`,
+          'tts.stepId': ttsError.stepId || 'unknown',
+          'tts.httpStatus': 404,
+        });
+
         return addCorsHeaders(
           NextResponse.json(
             {
@@ -192,6 +290,15 @@ export async function POST(request: NextRequest) {
 
       if (errorCode === TTSErrorCode.RATE_LIMIT_EXCEEDED) {
         const ttsError = error as TTSError;
+
+        // Emit rate limit error event
+        span.addEvent('tts.error.rate_limit', {
+          'tts.errorCode': errorCode,
+          'tts.errorMessage': 'ElevenLabs API rate limit exceeded',
+          'tts.retryAfter': ttsError.retryAfter || 60,
+          'tts.httpStatus': 429,
+        });
+
         return addCorsHeaders(
           NextResponse.json(
             {
@@ -224,5 +331,5 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     );
-  }
+  });
 }

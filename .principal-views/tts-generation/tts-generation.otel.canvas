@@ -1,0 +1,616 @@
+{
+  "pv": {
+    "name": "Text-to-Speech Generation",
+    "version": "1.0.0",
+    "description": "TTS audio generation for tour steps using ElevenLabs API with S3 caching",
+    "markdown": ".principal-views/tts-generation/tts-generation.md",
+    "scope": {
+      "service.name": "web-ade",
+      "service.version": "0.1.0",
+      "deployment.environment": "development"
+    },
+    "edgeTypes": {
+      "flow": {
+        "label": "Flow",
+        "style": "solid"
+      },
+      "cache-path": {
+        "label": "Cache Path",
+        "style": "solid"
+      },
+      "error": {
+        "label": "Error Path",
+        "style": "dashed"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "tts-request-started",
+      "type": "text",
+      "text": "# TTS Request Started\n\nTTS generation request initiated\n\n**Attributes:**\n- owner\n- repo\n- path\n- stepId\n- commitSha",
+      "x": 100,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "name": "TTS Request Started",
+        "description": "TTS generation request initiated by client",
+        "shape": "rectangle",
+        "fill": "#dbeafe",
+        "stroke": "#3b82f6",
+        "sources": ["src/app/api/tts/generate/route.ts"],
+        "event": {
+          "name": "tts.request.started",
+          "description": "Emitted when a TTS generation request is received",
+          "attributes": {
+            "tts.owner": {
+              "type": "string",
+              "description": "GitHub repository owner",
+              "required": true
+            },
+            "tts.repo": {
+              "type": "string",
+              "description": "GitHub repository name",
+              "required": true
+            },
+            "tts.path": {
+              "type": "string",
+              "description": "Path to tour file in repository",
+              "required": true
+            },
+            "tts.stepId": {
+              "type": "string",
+              "description": "Tour step ID to generate audio for",
+              "required": true
+            },
+            "tts.commitSha": {
+              "type": "string",
+              "description": "Git commit SHA for cache key",
+              "required": true
+            },
+            "tts.voice": {
+              "type": "string",
+              "description": "ElevenLabs voice ID",
+              "required": false
+            },
+            "tts.speed": {
+              "type": "number",
+              "description": "Playback speed (0.5-2.0)",
+              "required": false
+            }
+          }
+        },
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        }
+      }
+    },
+    {
+      "id": "tts-cache-hit",
+      "type": "text",
+      "text": "# TTS Cache Hit\n\nAudio found in S3 cache\n\n**Attributes:**\n- s3Key\n- audioUrl\n- cached: true",
+      "x": 450,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "name": "TTS Cache Hit",
+        "description": "Audio found in S3 cache, returning immediately",
+        "shape": "rectangle",
+        "fill": "#d1fae5",
+        "stroke": "#22c55e",
+        "sources": ["src/app/api/tts/generate/route.ts"],
+        "event": {
+          "name": "tts.cache.hit",
+          "description": "Emitted when cached audio is found in S3",
+          "attributes": {
+            "tts.s3Key": {
+              "type": "string",
+              "description": "S3 key for the cached audio file",
+              "required": true
+            },
+            "tts.audioUrl": {
+              "type": "string",
+              "description": "Public URL to cached audio",
+              "required": true
+            },
+            "tts.cached": {
+              "type": "boolean",
+              "description": "Always true for cache hits",
+              "required": true
+            }
+          }
+        },
+        "otel": {
+          "kind": "event",
+          "category": "cache"
+        }
+      }
+    },
+    {
+      "id": "tts-cache-miss",
+      "type": "text",
+      "text": "# TTS Cache Miss\n\nAudio not in cache, need to generate\n\n**Attributes:**\n- s3Key\n- cached: false",
+      "x": 100,
+      "y": 200,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "name": "TTS Cache Miss",
+        "description": "Audio not found in cache, proceeding to generation",
+        "shape": "rectangle",
+        "fill": "#fef3c7",
+        "stroke": "#f59e0b",
+        "sources": ["src/app/api/tts/generate/route.ts"],
+        "event": {
+          "name": "tts.cache.miss",
+          "description": "Emitted when audio is not found in S3 cache",
+          "attributes": {
+            "tts.s3Key": {
+              "type": "string",
+              "description": "S3 key that was checked",
+              "required": true
+            },
+            "tts.cached": {
+              "type": "boolean",
+              "description": "Always false for cache misses",
+              "required": true
+            }
+          }
+        },
+        "otel": {
+          "kind": "event",
+          "category": "cache"
+        }
+      }
+    },
+    {
+      "id": "tts-tour-fetched",
+      "type": "text",
+      "text": "# Tour Fetched\n\nTour file fetched from GitHub\n\n**Attributes:**\n- tourId\n- stepDescription\n- textLength",
+      "x": 100,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "name": "Tour Fetched",
+        "description": "Tour file successfully fetched from GitHub",
+        "shape": "rectangle",
+        "fill": "#e0e7ff",
+        "stroke": "#6366f1",
+        "sources": ["src/lib/tts/github-fetcher.ts"],
+        "event": {
+          "name": "tts.tour.fetched",
+          "description": "Emitted when tour file is successfully fetched from GitHub",
+          "attributes": {
+            "tts.tourId": {
+              "type": "string",
+              "description": "Tour file identifier",
+              "required": true
+            },
+            "tts.stepDescription": {
+              "type": "string",
+              "description": "Text content of the step to convert to speech",
+              "required": true
+            },
+            "tts.textLength": {
+              "type": "number",
+              "description": "Character count of step description",
+              "required": true
+            }
+          }
+        },
+        "otel": {
+          "kind": "event",
+          "category": "data"
+        }
+      }
+    },
+    {
+      "id": "tts-audio-generated",
+      "type": "text",
+      "text": "# Audio Generated\n\nAudio generated by ElevenLabs\n\n**Attributes:**\n- generationTimeMs\n- textLength\n- audioSizeBytes",
+      "x": 100,
+      "y": 500,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "name": "Audio Generated",
+        "description": "Audio successfully generated by ElevenLabs API",
+        "shape": "rectangle",
+        "fill": "#fce7f3",
+        "stroke": "#ec4899",
+        "sources": ["src/lib/tts/elevenlabs-client.ts"],
+        "event": {
+          "name": "tts.audio.generated",
+          "description": "Emitted when ElevenLabs successfully generates audio",
+          "attributes": {
+            "tts.generationTimeMs": {
+              "type": "number",
+              "description": "Time taken to generate audio in milliseconds",
+              "required": true
+            },
+            "tts.textLength": {
+              "type": "number",
+              "description": "Character count of input text",
+              "required": true
+            },
+            "tts.audioSizeBytes": {
+              "type": "number",
+              "description": "Size of generated audio buffer in bytes",
+              "required": true
+            },
+            "tts.voice": {
+              "type": "string",
+              "description": "Voice ID used for generation",
+              "required": false
+            },
+            "tts.model": {
+              "type": "string",
+              "description": "ElevenLabs model ID used",
+              "required": false
+            }
+          }
+        },
+        "otel": {
+          "kind": "event",
+          "category": "processing"
+        }
+      }
+    },
+    {
+      "id": "tts-audio-uploaded",
+      "type": "text",
+      "text": "# Audio Uploaded to S3\n\nGenerated audio uploaded to S3\n\n**Attributes:**\n- s3Key\n- audioUrl\n- audioSizeBytes",
+      "x": 100,
+      "y": 650,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "name": "Audio Uploaded to S3",
+        "description": "Generated audio successfully uploaded to S3 cache",
+        "shape": "rectangle",
+        "fill": "#fef3c7",
+        "stroke": "#f59e0b",
+        "sources": ["src/lib/tts/s3-cache.ts"],
+        "event": {
+          "name": "tts.audio.uploaded",
+          "description": "Emitted when generated audio is uploaded to S3",
+          "attributes": {
+            "tts.s3Key": {
+              "type": "string",
+              "description": "S3 key where audio was stored",
+              "required": true
+            },
+            "tts.audioUrl": {
+              "type": "string",
+              "description": "Public URL to uploaded audio",
+              "required": true
+            },
+            "tts.audioSizeBytes": {
+              "type": "number",
+              "description": "Size of uploaded audio in bytes",
+              "required": true
+            }
+          }
+        },
+        "otel": {
+          "kind": "event",
+          "category": "storage"
+        }
+      }
+    },
+    {
+      "id": "tts-request-complete",
+      "type": "text",
+      "text": "# TTS Request Complete\n\nTTS generation completed successfully\n\n**Attributes:**\n- audioUrl\n- cached\n- durationMs",
+      "x": 450,
+      "y": 650,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "name": "TTS Request Complete",
+        "description": "TTS generation request completed successfully",
+        "shape": "rectangle",
+        "fill": "#d1fae5",
+        "stroke": "#22c55e",
+        "sources": ["src/app/api/tts/generate/route.ts"],
+        "event": {
+          "name": "tts.request.complete",
+          "description": "Emitted when TTS request completes successfully",
+          "attributes": {
+            "tts.audioUrl": {
+              "type": "string",
+              "description": "Final audio URL returned to client",
+              "required": true
+            },
+            "tts.cached": {
+              "type": "boolean",
+              "description": "Whether audio was served from cache",
+              "required": true
+            },
+            "tts.durationMs": {
+              "type": "number",
+              "description": "Total request duration in milliseconds",
+              "required": true
+            }
+          }
+        },
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        }
+      }
+    },
+    {
+      "id": "tts-error-tour-not-found",
+      "type": "text",
+      "text": "# Error: Tour Not Found\n\nTour file not found on GitHub\n\n**Attributes:**\n- errorCode\n- errorMessage\n- httpStatus: 404",
+      "x": 450,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "name": "Error: Tour Not Found",
+        "description": "Tour file could not be fetched from GitHub",
+        "shape": "rectangle",
+        "fill": "#fee2e2",
+        "stroke": "#ef4444",
+        "sources": ["src/lib/tts/github-fetcher.ts"],
+        "event": {
+          "name": "tts.error.tour_not_found",
+          "description": "Emitted when tour file is not found on GitHub",
+          "attributes": {
+            "tts.errorCode": {
+              "type": "string",
+              "description": "Error code (TOUR_NOT_FOUND)",
+              "required": true
+            },
+            "tts.errorMessage": {
+              "type": "string",
+              "description": "Human-readable error message",
+              "required": true
+            },
+            "tts.httpStatus": {
+              "type": "number",
+              "description": "HTTP status code (404)",
+              "required": true
+            },
+            "tts.owner": {
+              "type": "string",
+              "description": "GitHub repository owner",
+              "required": true
+            },
+            "tts.repo": {
+              "type": "string",
+              "description": "GitHub repository name",
+              "required": true
+            },
+            "tts.path": {
+              "type": "string",
+              "description": "Path that was not found",
+              "required": true
+            }
+          }
+        },
+        "otel": {
+          "kind": "event",
+          "category": "error"
+        }
+      }
+    },
+    {
+      "id": "tts-error-step-not-found",
+      "type": "text",
+      "text": "# Error: Step Not Found\n\nStep ID not found in tour\n\n**Attributes:**\n- errorCode\n- errorMessage\n- stepId\n- httpStatus: 404",
+      "x": 450,
+      "y": 200,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "name": "Error: Step Not Found",
+        "description": "Requested step ID does not exist in tour file",
+        "shape": "rectangle",
+        "fill": "#fee2e2",
+        "stroke": "#ef4444",
+        "sources": ["src/lib/tts/github-fetcher.ts"],
+        "event": {
+          "name": "tts.error.step_not_found",
+          "description": "Emitted when requested step ID is not found in tour",
+          "attributes": {
+            "tts.errorCode": {
+              "type": "string",
+              "description": "Error code (STEP_NOT_FOUND)",
+              "required": true
+            },
+            "tts.errorMessage": {
+              "type": "string",
+              "description": "Human-readable error message",
+              "required": true
+            },
+            "tts.stepId": {
+              "type": "string",
+              "description": "Step ID that was not found",
+              "required": true
+            },
+            "tts.httpStatus": {
+              "type": "number",
+              "description": "HTTP status code (404)",
+              "required": true
+            }
+          }
+        },
+        "otel": {
+          "kind": "event",
+          "category": "error"
+        }
+      }
+    },
+    {
+      "id": "tts-error-rate-limit",
+      "type": "text",
+      "text": "# Error: Rate Limit\n\nElevenLabs API rate limit exceeded\n\n**Attributes:**\n- errorCode\n- errorMessage\n- retryAfter\n- httpStatus: 429",
+      "x": 450,
+      "y": 500,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "name": "Error: Rate Limit Exceeded",
+        "description": "ElevenLabs API rate limit exceeded",
+        "shape": "rectangle",
+        "fill": "#fee2e2",
+        "stroke": "#ef4444",
+        "sources": ["src/lib/tts/elevenlabs-client.ts"],
+        "event": {
+          "name": "tts.error.rate_limit",
+          "description": "Emitted when ElevenLabs API rate limit is exceeded",
+          "attributes": {
+            "tts.errorCode": {
+              "type": "string",
+              "description": "Error code (RATE_LIMIT_EXCEEDED)",
+              "required": true
+            },
+            "tts.errorMessage": {
+              "type": "string",
+              "description": "Human-readable error message",
+              "required": true
+            },
+            "tts.retryAfter": {
+              "type": "number",
+              "description": "Seconds to wait before retrying",
+              "required": true
+            },
+            "tts.httpStatus": {
+              "type": "number",
+              "description": "HTTP status code (429)",
+              "required": true
+            }
+          }
+        },
+        "otel": {
+          "kind": "event",
+          "category": "error"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-started-to-cache-hit",
+      "fromNode": "tts-request-started",
+      "fromSide": "right",
+      "toNode": "tts-cache-hit",
+      "toSide": "left",
+      "label": "cache exists",
+      "color": "#22c55e",
+      "pv": {
+        "edgeType": "cache-path"
+      }
+    },
+    {
+      "id": "edge-started-to-cache-miss",
+      "fromNode": "tts-request-started",
+      "fromSide": "bottom",
+      "toNode": "tts-cache-miss",
+      "toSide": "top",
+      "label": "cache not found",
+      "color": "#f59e0b",
+      "pv": {
+        "edgeType": "cache-path"
+      }
+    },
+    {
+      "id": "edge-cache-hit-to-complete",
+      "fromNode": "tts-cache-hit",
+      "fromSide": "bottom",
+      "toNode": "tts-request-complete",
+      "toSide": "top",
+      "color": "#22c55e",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-cache-miss-to-tour-fetched",
+      "fromNode": "tts-cache-miss",
+      "fromSide": "bottom",
+      "toNode": "tts-tour-fetched",
+      "toSide": "top",
+      "color": "#3b82f6",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-cache-miss-to-step-error",
+      "fromNode": "tts-cache-miss",
+      "fromSide": "right",
+      "toNode": "tts-error-step-not-found",
+      "toSide": "left",
+      "label": "invalid step",
+      "color": "#ef4444",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-tour-fetched-to-generated",
+      "fromNode": "tts-tour-fetched",
+      "fromSide": "bottom",
+      "toNode": "tts-audio-generated",
+      "toSide": "top",
+      "color": "#3b82f6",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-tour-fetched-to-tour-error",
+      "fromNode": "tts-tour-fetched",
+      "fromSide": "right",
+      "toNode": "tts-error-tour-not-found",
+      "toSide": "bottom",
+      "label": "404",
+      "color": "#ef4444",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-generated-to-uploaded",
+      "fromNode": "tts-audio-generated",
+      "fromSide": "bottom",
+      "toNode": "tts-audio-uploaded",
+      "toSide": "top",
+      "color": "#3b82f6",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-generated-to-rate-limit",
+      "fromNode": "tts-audio-generated",
+      "fromSide": "right",
+      "toNode": "tts-error-rate-limit",
+      "toSide": "bottom",
+      "label": "429",
+      "color": "#ef4444",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-uploaded-to-complete",
+      "fromNode": "tts-audio-uploaded",
+      "fromSide": "right",
+      "toNode": "tts-request-complete",
+      "toSide": "left",
+      "color": "#22c55e",
+      "pv": {
+        "edgeType": "flow"
+      }
+    }
+  ]
+}
