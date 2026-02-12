@@ -13,6 +13,7 @@ import { GitHubAppStatus } from './GitHubAppStatus';
 import { useVersionRegistry } from '@/hooks/useVersionRegistry';
 import { VersionRegistryModal } from './VersionRegistryModal';
 import { useServiceStatus } from '@/hooks/useServiceStatus';
+import { useLiveVersions } from '@/hooks/useLiveVersions';
 
 interface EditorHeaderProps {
   currentLayoutConfigId?: string;
@@ -84,6 +85,9 @@ export function EditorHeader({
 
   // Fetch OTEL service status
   const { isAlive: serviceIsAlive, status: serviceStatus } = useServiceStatus(serviceName);
+
+  // Fetch live versions for the modal
+  const { liveVersions } = useLiveVersions(serviceName);
 
   // Extract repository name or owner from URL
   useEffect(() => {
@@ -575,6 +579,7 @@ export function EditorHeader({
           loading={registryLoading}
           error={registryError}
           repositoryName={`${repositoryName.owner}/${repositoryName.repo}`}
+          liveVersions={liveVersions}
         />
       )}
     </>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from '@principal-ade/industry-theme';
-import { X, Package, GitCommit, Calendar, Globe } from 'lucide-react';
+import { X, Package, GitCommit, Calendar, Globe, Activity } from 'lucide-react';
 import type { VersionRegistration } from '@/lib/version-registry/types';
 
 interface VersionRegistryModalProps {
@@ -11,6 +11,7 @@ interface VersionRegistryModalProps {
   loading: boolean;
   error: string | null;
   repositoryName: string;
+  liveVersions?: string[];
 }
 
 export function VersionRegistryModal({
@@ -20,8 +21,12 @@ export function VersionRegistryModal({
   loading,
   error,
   repositoryName,
+  liveVersions = [],
 }: VersionRegistryModalProps) {
   const { theme } = useTheme();
+
+  // Create a Set for faster lookup
+  const liveVersionsSet = new Set(liveVersions);
 
   if (!isOpen) return null;
 
@@ -196,7 +201,7 @@ export function VersionRegistryModal({
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-2">
+                              <div className="flex items-center gap-2 mb-2 flex-wrap">
                                 <span
                                   className="font-mono text-sm font-semibold"
                                   style={{ color: theme.colors.text }}
@@ -212,6 +217,20 @@ export function VersionRegistryModal({
                                 >
                                   {reg.environment}
                                 </span>
+                                {liveVersionsSet.has(reg.version) && (
+                                  <span
+                                    className="px-2 py-0.5 text-xs rounded-full flex items-center gap-1 font-medium"
+                                    style={{
+                                      background: 'rgba(34, 197, 94, 0.1)',
+                                      color: '#22c55e',
+                                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                                    }}
+                                    title="Currently sending traces (seen in last 5 minutes)"
+                                  >
+                                    <Activity className="w-3 h-3" />
+                                    Live
+                                  </span>
+                                )}
                               </div>
 
                               <div className="space-y-1">
@@ -278,6 +297,14 @@ export function VersionRegistryModal({
               style={{ color: theme.colors.textMuted }}
             >
               {registrations.length} version{registrations.length !== 1 ? 's' : ''} registered
+              {liveVersions.length > 0 && (
+                <>
+                  {' · '}
+                  <span style={{ color: '#22c55e' }}>
+                    {liveVersions.length} live
+                  </span>
+                </>
+              )}
             </p>
           </div>
         )}
