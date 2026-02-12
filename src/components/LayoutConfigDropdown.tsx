@@ -19,6 +19,20 @@ export interface LayoutConfig {
 
 export const layoutConfigs: LayoutConfig[] = [
   {
+    id: 'documentation',
+    name: 'Overview',
+    layout: {
+      left: 'docs',
+      middle: 'markdown-viewer',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+    hidden: false,
+  },
+  {
     id: 'tour',
     name: 'Tour',
     layout: {
@@ -70,20 +84,6 @@ export const layoutConfigs: LayoutConfig[] = [
       left: false,
       right: false,
     },
-  },
-  {
-    id: 'documentation',
-    name: 'Documentation',
-    layout: {
-      left: 'docs',
-      middle: 'markdown-viewer',
-      right: 'file-city',
-    },
-    collapsed: {
-      left: false,
-      right: false,
-    },
-    hidden: true,
   },
   {
     id: 'kanban',

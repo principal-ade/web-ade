@@ -250,9 +250,9 @@ export async function POST(request: NextRequest) {
           'tts.errorCode': errorCode,
           'tts.errorMessage': 'Tour file not found at specified path',
           'tts.httpStatus': 404,
-          'tts.owner': (error as any).owner || '',
-          'tts.repo': (error as any).repo || '',
-          'tts.path': (error as any).path || '',
+          'tts.owner': (error as { owner?: string }).owner || '',
+          'tts.repo': (error as { repo?: string }).repo || '',
+          'tts.path': (error as { path?: string }).path || '',
         });
 
         return addCorsHeaders(
@@ -331,5 +331,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     );
+  }
   });
 }

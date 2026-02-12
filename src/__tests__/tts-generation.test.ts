@@ -11,6 +11,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { clearSpans, exportSpansToOTLP } from './otel-setup';
 import { POST } from '@/app/api/tts/generate/route';
 import { NextRequest } from 'next/server';
+import type { IntroductionTour, TTSOptions } from '@/lib/tts/types';
 
 // Mock dependencies
 import * as s3Cache from '@/lib/tts/s3-cache';
@@ -72,6 +73,7 @@ describe('TTS Generation with OTEL', () => {
     vi.mocked(githubFetcher.fetchTourFromGitHub).mockResolvedValue({
       id: 'test-tour-123',
       title: 'Test Tour',
+      description: 'Test tour description',
       steps: [
         {
           id: 'step-1',
@@ -79,7 +81,7 @@ describe('TTS Generation with OTEL', () => {
           description: 'This is a test step description for audio generation.',
         },
       ],
-    } as any);
+    } satisfies IntroductionTour);
 
     vi.mocked(githubFetcher.getStepDescription).mockReturnValue(
       'This is a test step description for audio generation.'
@@ -137,10 +139,11 @@ describe('TTS Generation with OTEL', () => {
     vi.mocked(s3Cache.checkS3Cache).mockResolvedValue(false);
 
     // Mock GitHub 404 error
-    const error = new Error('TOUR_NOT_FOUND');
-    (error as any).owner = 'test-owner';
-    (error as any).repo = 'test-repo';
-    (error as any).path = 'tours/missing-tour.json';
+    const error = Object.assign(new Error('TOUR_NOT_FOUND'), {
+      owner: 'test-owner',
+      repo: 'test-repo',
+      path: 'tours/missing-tour.json',
+    });
     vi.mocked(githubFetcher.fetchTourFromGitHub).mockRejectedValue(error);
 
     // Create request
@@ -175,6 +178,7 @@ describe('TTS Generation with OTEL', () => {
     vi.mocked(githubFetcher.fetchTourFromGitHub).mockResolvedValue({
       id: 'test-tour-123',
       title: 'Test Tour',
+      description: 'Test tour description',
       steps: [
         {
           id: 'step-1',
@@ -182,11 +186,12 @@ describe('TTS Generation with OTEL', () => {
           description: 'This is step 1',
         },
       ],
-    } as any);
+    } satisfies IntroductionTour);
 
     // Mock step validation error
-    const error = new Error('STEP_NOT_FOUND');
-    (error as any).stepId = 'invalid-step';
+    const error = Object.assign(new Error('STEP_NOT_FOUND'), {
+      stepId: 'invalid-step',
+    });
     vi.mocked(githubFetcher.getStepDescription).mockImplementation(() => {
       throw error;
     });
@@ -223,6 +228,7 @@ describe('TTS Generation with OTEL', () => {
     vi.mocked(githubFetcher.fetchTourFromGitHub).mockResolvedValue({
       id: 'test-tour-123',
       title: 'Test Tour',
+      description: 'Test tour description',
       steps: [
         {
           id: 'step-1',
@@ -230,7 +236,7 @@ describe('TTS Generation with OTEL', () => {
           description: 'This is a test step',
         },
       ],
-    } as any);
+    } satisfies IntroductionTour);
 
     vi.mocked(githubFetcher.getStepDescription).mockReturnValue('This is a test step');
 
@@ -239,12 +245,13 @@ describe('TTS Generation with OTEL', () => {
       voice: '21m00Tcm4TlvDq8ikWAM',
       speed: 1.0,
       model: 'eleven_v3',
-    });
+    } satisfies TTSOptions);
 
     // Mock ElevenLabs rate limit error
-    const error = new Error('RATE_LIMIT_EXCEEDED');
-    (error as any).code = 'RATE_LIMIT_EXCEEDED';
-    (error as any).retryAfter = 60;
+    const error = Object.assign(new Error('RATE_LIMIT_EXCEEDED'), {
+      code: 'RATE_LIMIT_EXCEEDED',
+      retryAfter: 60,
+    });
     vi.mocked(elevenlabsClient.generateAudio).mockRejectedValue(error);
 
     // Create request
