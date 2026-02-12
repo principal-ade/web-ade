@@ -327,11 +327,18 @@ export async function storeSchematic(
   try {
     const s3Key = buildSchematicS3Key(repositoryUrl, commitSha);
 
+    // Ensure required VersionIdentifier fields are present
+    const completeSchematic: VersionSnapshot = {
+      ...schematic,
+      repositoryUrl,
+      commitSha,
+    };
+
     await s3Client.send(
       new PutObjectCommand({
         Bucket: BUCKET_NAME,
         Key: s3Key,
-        Body: JSON.stringify(schematic, null, 2),
+        Body: JSON.stringify(completeSchematic, null, 2),
         ContentType: 'application/json',
         CacheControl: 'max-age=31536000', // 1 year - schematics are immutable
         Metadata: {
@@ -383,6 +390,15 @@ export async function getSchematic(
     }
 
     const schematic = JSON.parse(data) as VersionSnapshot;
+
+    // Ensure required fields are present (for backward compatibility with old data)
+    // These fields are required by VersionIdentifier but might be missing from old S3 data
+    if (!schematic.repositoryUrl) {
+      schematic.repositoryUrl = repositoryUrl;
+    }
+    if (!schematic.commitSha) {
+      schematic.commitSha = commitSha;
+    }
 
     console.log('[Version Registry] Retrieved schematic:', {
       s3Key,
