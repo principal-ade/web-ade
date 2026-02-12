@@ -1091,7 +1091,7 @@ function EditorLayoutContent({
           setSelectedWorkflowData({
             workflowId: workflowPayload.workflowId,
             workflowPath: workflowPayload.workflowPath,
-            workflow: workflowPayload.workflow,
+            workflow: workflowPayload.workflowTemplate || workflowPayload.workflow, // Use workflowTemplate (full template with scenarios)
           });
 
           // Update selected canvas data
