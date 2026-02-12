@@ -1,8 +1,9 @@
 'use client';
 
 import { useTheme } from '@principal-ade/industry-theme';
-import { X, Package, GitCommit, Calendar, Globe, Activity } from 'lucide-react';
+import { X, Package, GitCommit, Calendar, Globe, Activity, ListTree } from 'lucide-react';
 import type { VersionRegistration } from '@/lib/version-registry/types';
+import { useState, useEffect } from 'react';
 
 interface VersionRegistryModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface VersionRegistryModalProps {
   error: string | null;
   repositoryName: string;
   liveVersions?: string[];
+  onViewTraces?: (serviceName: string, version: string) => void;
 }
 
 export function VersionRegistryModal({
@@ -22,11 +24,53 @@ export function VersionRegistryModal({
   error,
   repositoryName,
   liveVersions = [],
+  onViewTraces,
 }: VersionRegistryModalProps) {
   const { theme } = useTheme();
 
   // Create a Set for faster lookup
   const liveVersionsSet = new Set(liveVersions);
+
+  // Track trace counts for each version
+  const [traceCounts, setTraceCounts] = useState<Record<string, number>>({});
+
+  // Fetch trace counts when modal opens
+  useEffect(() => {
+    if (!isOpen || registrations.length === 0) {
+      return;
+    }
+
+    const fetchTraceCounts = async () => {
+      const counts: Record<string, number> = {};
+
+      // Fetch trace count for each unique version
+      const uniqueVersions = new Map<string, string>(); // version -> serviceName
+      registrations.forEach((reg) => {
+        uniqueVersions.set(reg.version, reg.serviceName);
+      });
+
+      await Promise.all(
+        Array.from(uniqueVersions.entries()).map(async ([version, serviceName]) => {
+          try {
+            const response = await fetch(
+              `/api/otel/traces/${encodeURIComponent(serviceName)}/versions/${encodeURIComponent(version)}?limit=1`
+            );
+
+            if (response.ok) {
+              const data = await response.json();
+              counts[version] = data.count || 0;
+            }
+          } catch (err) {
+            console.warn(`Failed to fetch trace count for ${serviceName}:${version}`, err);
+          }
+        })
+      );
+
+      setTraceCounts(counts);
+    };
+
+    fetchTraceCounts();
+  }, [isOpen, registrations]);
 
   if (!isOpen) return null;
 
@@ -271,8 +315,35 @@ export function VersionRegistryModal({
                                     </span>
                                   </div>
                                 )}
+
+                                {traceCounts[reg.version] !== undefined && (
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <ListTree
+                                      className="w-3.5 h-3.5 flex-shrink-0"
+                                      style={{ color: theme.colors.textMuted }}
+                                    />
+                                    <span style={{ color: theme.colors.textMuted }}>
+                                      {traceCounts[reg.version]} trace{traceCounts[reg.version] !== 1 ? 's' : ''} stored
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             </div>
+
+                            {/* View Traces Button */}
+                            {(traceCounts[reg.version] ?? 0) > 0 && onViewTraces && (
+                              <button
+                                onClick={() => onViewTraces(reg.serviceName, reg.version)}
+                                className="px-3 py-1.5 rounded-md text-xs font-medium transition-all hover:opacity-80 whitespace-nowrap"
+                                style={{
+                                  background: theme.colors.primary,
+                                  color: theme.colors.textOnPrimary,
+                                }}
+                                title={`View ${traceCounts[reg.version]} trace${traceCounts[reg.version] !== 1 ? 's' : ''}`}
+                              >
+                                View Traces
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}

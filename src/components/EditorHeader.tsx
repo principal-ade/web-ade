@@ -580,6 +580,11 @@ export function EditorHeader({
           error={registryError}
           repositoryName={`${repositoryName.owner}/${repositoryName.repo}`}
           liveVersions={liveVersions}
+          onViewTraces={(serviceName, version) => {
+            // TODO: Open trace viewer panel or navigate to traces page
+            console.log('View traces for:', { serviceName, version });
+            alert(`Viewing traces for ${serviceName}:${version}\n\nTrace viewer coming soon!`);
+          }}
         />
       )}
     </>
