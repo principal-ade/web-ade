@@ -47,9 +47,10 @@ export function useVersionRegistry(
     setError(null);
 
     try {
-      // Fetch all version registrations
+      // Fetch all version registrations (with cache-busting timestamp)
       const response = await fetch(
-        `/api/versions/list?customerId=${encodeURIComponent(customerId)}`
+        `/api/versions/list?customerId=${encodeURIComponent(customerId)}&_t=${Date.now()}`,
+        { cache: 'no-store' }
       );
 
       if (!response.ok) {
@@ -71,7 +72,8 @@ export function useVersionRegistry(
       if (shouldFilterLive && options?.serviceName) {
         try {
           const liveResponse = await fetch(
-            `/api/otel/services/${encodeURIComponent(options.serviceName)}/versions/live`
+            `/api/otel/services/${encodeURIComponent(options.serviceName)}/versions/live?_t=${Date.now()}`,
+            { cache: 'no-store' }
           );
 
           if (liveResponse.ok) {

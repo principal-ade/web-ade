@@ -109,8 +109,8 @@ export async function GET(request: NextRequest) {
       NextResponse.json(response, {
         status: 200,
         headers: {
-          // Cache for 5 minutes (registrations can be added over time)
-          'Cache-Control': 'public, max-age=300',
+          // No caching - versions can be added/deleted frequently
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
         },
       })
     );
