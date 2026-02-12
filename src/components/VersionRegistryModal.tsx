@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from '@principal-ade/industry-theme';
-import { X, Package, GitCommit, Calendar, Globe, Activity, ListTree } from 'lucide-react';
+import { X, Package, GitCommit, Calendar, Globe, Activity, ListTree, Trash2 } from 'lucide-react';
 import type { VersionRegistration } from '@/lib/version-registry/types';
 import { useState, useEffect } from 'react';
 
@@ -14,6 +14,7 @@ interface VersionRegistryModalProps {
   repositoryName: string;
   liveVersions?: string[];
   onViewTraces?: (serviceName: string, version: string) => void;
+  onRefresh?: () => Promise<void>;
 }
 
 export function VersionRegistryModal({
@@ -25,6 +26,7 @@ export function VersionRegistryModal({
   repositoryName,
   liveVersions = [],
   onViewTraces,
+  onRefresh,
 }: VersionRegistryModalProps) {
   const { theme } = useTheme();
 
@@ -33,6 +35,9 @@ export function VersionRegistryModal({
 
   // Track trace counts for each version
   const [traceCounts, setTraceCounts] = useState<Record<string, number>>({});
+
+  // Track deleting state
+  const [deletingVersion, setDeletingVersion] = useState<string | null>(null);
 
   // Fetch trace counts when modal opens
   useEffect(() => {
@@ -71,6 +76,57 @@ export function VersionRegistryModal({
 
     fetchTraceCounts();
   }, [isOpen, registrations]);
+
+  // Handle version deletion
+  const handleDeleteVersion = async (reg: VersionRegistration) => {
+    const versionKey = `${reg.serviceName}:${reg.version}`;
+
+    // Confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to delete version ${reg.version} of ${reg.serviceName}?\n\n` +
+      `This will remove the version registration but will not delete any traces.\n\n` +
+      `Environment: ${reg.environment}\n` +
+      `Deployed: ${formatDate(reg.deployedAt)}`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingVersion(versionKey);
+
+    try {
+      const response = await fetch(
+        `/api/versions/delete?${new URLSearchParams({
+          customerId: reg.customerId,
+          serviceName: reg.serviceName,
+          version: reg.version,
+          environment: reg.environment,
+        })}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to delete version');
+      }
+
+      // Refresh the list
+      if (onRefresh) {
+        await onRefresh();
+      }
+
+      alert(`Successfully deleted ${reg.serviceName}:${reg.version}`);
+    } catch (err) {
+      console.error('Failed to delete version:', err);
+      alert(`Failed to delete version: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setDeletingVersion(null);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -330,20 +386,43 @@ export function VersionRegistryModal({
                               </div>
                             </div>
 
-                            {/* View Traces Button */}
-                            {(traceCounts[reg.version] ?? 0) > 0 && onViewTraces && (
-                              <button
-                                onClick={() => onViewTraces(reg.serviceName, reg.version)}
-                                className="px-3 py-1.5 rounded-md text-xs font-medium transition-all hover:opacity-80 whitespace-nowrap"
-                                style={{
-                                  background: theme.colors.primary,
-                                  color: theme.colors.textOnPrimary,
-                                }}
-                                title={`View ${traceCounts[reg.version]} trace${traceCounts[reg.version] !== 1 ? 's' : ''}`}
-                              >
-                                View Traces
-                              </button>
-                            )}
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-2">
+                              {/* View Traces Button */}
+                              {(traceCounts[reg.version] ?? 0) > 0 && onViewTraces && (
+                                <button
+                                  onClick={() => onViewTraces(reg.serviceName, reg.version)}
+                                  className="px-3 py-1.5 rounded-md text-xs font-medium transition-all hover:opacity-80 whitespace-nowrap"
+                                  style={{
+                                    background: theme.colors.primary,
+                                    color: theme.colors.textOnPrimary,
+                                  }}
+                                  title={`View ${traceCounts[reg.version]} trace${traceCounts[reg.version] !== 1 ? 's' : ''}`}
+                                >
+                                  View Traces
+                                </button>
+                              )}
+
+                              {/* Delete Button - only show if no traces */}
+                              {traceCounts[reg.version] === 0 && (
+                                <button
+                                  onClick={() => handleDeleteVersion(reg)}
+                                  disabled={deletingVersion === `${reg.serviceName}:${reg.version}`}
+                                  className="px-3 py-1.5 rounded-md text-xs font-medium transition-all hover:opacity-80 whitespace-nowrap flex items-center gap-1"
+                                  style={{
+                                    background: 'rgba(239, 68, 68, 0.1)',
+                                    color: '#ef4444',
+                                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                                    opacity: deletingVersion === `${reg.serviceName}:${reg.version}` ? 0.5 : 1,
+                                    cursor: deletingVersion === `${reg.serviceName}:${reg.version}` ? 'wait' : 'pointer',
+                                  }}
+                                  title="Delete version registration (no traces stored)"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  {deletingVersion === `${reg.serviceName}:${reg.version}` ? 'Deleting...' : 'Delete'}
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}

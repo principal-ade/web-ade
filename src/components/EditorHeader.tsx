@@ -79,7 +79,7 @@ export function EditorHeader({
   const serviceName = repositoryName ? repositoryName.repo : null;
 
   // Fetch version registry with live filtering (default behavior)
-  const { registrations, loading: registryLoading, error: registryError, count: registryCount } = useVersionRegistry(customerId, {
+  const { registrations, loading: registryLoading, error: registryError, count: registryCount, refetch: refetchVersionRegistry } = useVersionRegistry(customerId, {
     serviceName: serviceName || undefined,
   });
 
@@ -585,6 +585,7 @@ export function EditorHeader({
             console.log('View traces for:', { serviceName, version });
             alert(`Viewing traces for ${serviceName}:${version}\n\nTrace viewer coming soon!`);
           }}
+          onRefresh={refetchVersionRegistry}
         />
       )}
     </>

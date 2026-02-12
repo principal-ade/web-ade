@@ -14,6 +14,7 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   ListObjectsV2Command,
+  DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import type { VersionSnapshot } from '@principal-ai/principal-view-core';
 import type {
@@ -195,6 +196,50 @@ export async function getVersionRegistration(
     }
 
     console.error('[Version Registry] Retrieval failed:', {
+      key: buildS3Key(key),
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new Error('S3_ERROR');
+  }
+}
+
+/**
+ * Deletes a version registration from S3
+ *
+ * @param key - Version registry key components
+ * @returns true if deleted successfully, false if not found
+ * @throws Error if deletion fails
+ */
+export async function deleteVersionRegistration(
+  key: VersionRegistryKey
+): Promise<boolean> {
+  try {
+    const s3Key = buildS3Key(key);
+
+    // Check if it exists first
+    const exists = await checkVersionExists(key);
+    if (!exists) {
+      console.log('[Version Registry] Version not found for deletion:', { s3Key });
+      return false;
+    }
+
+    await s3Client.send(
+      new DeleteObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: s3Key,
+      })
+    );
+
+    console.log('[Version Registry] Deleted registration:', {
+      s3Key,
+      serviceName: key.serviceName,
+      version: key.version,
+      environment: key.environment,
+    });
+
+    return true;
+  } catch (error) {
+    console.error('[Version Registry] Deletion failed:', {
       key: buildS3Key(key),
       error: error instanceof Error ? error.message : String(error),
     });
