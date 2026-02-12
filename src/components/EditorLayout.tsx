@@ -1080,6 +1080,33 @@ function EditorLayoutContent({
             }
           }
         }
+
+        // Listen for openWorkflowScenarios action from TraceListPanel
+        if (payload?.action === 'openWorkflowScenarios') {
+          console.log('[EditorLayout] Opening workflow scenarios:', payload);
+
+          // Update selected workflow data
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const workflowPayload = payload as any;
+          setSelectedWorkflowData({
+            workflowId: workflowPayload.workflowId,
+            workflowPath: workflowPayload.workflowPath,
+            workflow: workflowPayload.workflow,
+          });
+
+          // Update selected canvas data
+          setSelectedCanvasData({
+            canvasId: workflowPayload.canvasId,
+            canvasPath: workflowPayload.canvasPath,
+            canvasName: workflowPayload.canvasName,
+          });
+
+          // Switch to workflow-scenarios panel in the middle slot
+          setLayout((prev) => ({
+            ...prev,
+            middle: 'workflow-scenarios',
+          }));
+        }
       }),
       // Storyboard focus event - switch to canvas list panel
       events.on('storyboard:focus', (event) => {
