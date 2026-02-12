@@ -75,10 +75,14 @@ export function EditorHeader({
 
   // Fetch version registry data
   const customerId = repositoryName ? `${repositoryName.owner}/${repositoryName.repo}` : null;
-  const { registrations, loading: registryLoading, error: registryError, count: registryCount } = useVersionRegistry(customerId);
-
-  // Fetch OTEL service status (use repo name as service name)
   const serviceName = repositoryName ? repositoryName.repo : null;
+
+  // Fetch version registry with live filtering (default behavior)
+  const { registrations, loading: registryLoading, error: registryError, count: registryCount } = useVersionRegistry(customerId, {
+    serviceName: serviceName || undefined,
+  });
+
+  // Fetch OTEL service status
   const { isAlive: serviceIsAlive, status: serviceStatus } = useServiceStatus(serviceName);
 
   // Extract repository name or owner from URL

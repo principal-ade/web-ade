@@ -9,10 +9,29 @@ interface UseVersionRegistryResult {
   refetch: () => Promise<void>;
 }
 
+interface UseVersionRegistryOptions {
+  /**
+   * If true, only return versions that are currently "live" (sending traces in last 5 minutes)
+   * Requires serviceName to be set
+   * @default true
+   */
+  liveOnly?: boolean;
+  /**
+   * Service name to check for live versions (required if liveOnly is true)
+   */
+  serviceName?: string;
+}
+
 /**
  * Hook to fetch version registry data for a repository
+ *
+ * @param customerId - Repository identifier in "owner/repo" format
+ * @param options - Optional filtering options
  */
-export function useVersionRegistry(customerId: string | null): UseVersionRegistryResult {
+export function useVersionRegistry(
+  customerId: string | null,
+  options?: UseVersionRegistryOptions
+): UseVersionRegistryResult {
   const [registrations, setRegistrations] = useState<VersionRegistration[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +47,7 @@ export function useVersionRegistry(customerId: string | null): UseVersionRegistr
     setError(null);
 
     try {
+      // Fetch all version registrations
       const response = await fetch(
         `/api/versions/list?customerId=${encodeURIComponent(customerId)}`
       );
@@ -38,11 +58,46 @@ export function useVersionRegistry(customerId: string | null): UseVersionRegistr
 
       const data = await response.json();
 
-      if (data.success) {
-        setRegistrations(data.registrations || []);
-      } else {
+      if (!data.success) {
         throw new Error(data.error || 'Failed to fetch registrations');
       }
+
+      let allRegistrations: VersionRegistration[] = data.registrations || [];
+
+      // Default liveOnly to true unless explicitly set to false
+      const shouldFilterLive = options?.liveOnly !== false;
+
+      // If liveOnly is requested (default), filter by live versions from OTEL server
+      if (shouldFilterLive && options?.serviceName) {
+        try {
+          const liveResponse = await fetch(
+            `/api/otel/services/${encodeURIComponent(options.serviceName)}/versions/live`
+          );
+
+          if (liveResponse.ok) {
+            const liveData = await liveResponse.json();
+            const liveVersions = new Set(liveData.liveVersions || []);
+
+            // Filter registrations to only include live versions
+            allRegistrations = allRegistrations.filter((reg) =>
+              liveVersions.has(reg.version)
+            );
+
+            console.log('[useVersionRegistry] Filtered to live versions:', {
+              total: data.registrations?.length || 0,
+              live: allRegistrations.length,
+              liveVersions: Array.from(liveVersions),
+            });
+          } else {
+            console.warn('[useVersionRegistry] Failed to fetch live versions, showing all');
+          }
+        } catch (liveErr) {
+          console.warn('[useVersionRegistry] Error fetching live versions:', liveErr);
+          // Continue with all registrations if live filtering fails
+        }
+      }
+
+      setRegistrations(allRegistrations);
     } catch (err) {
       console.error('Failed to fetch version registry:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -55,7 +110,7 @@ export function useVersionRegistry(customerId: string | null): UseVersionRegistr
   useEffect(() => {
     fetchRegistrations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [customerId]);
+  }, [customerId, options?.liveOnly, options?.serviceName]);
 
   return {
     registrations,
