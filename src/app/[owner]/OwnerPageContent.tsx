@@ -165,9 +165,9 @@ const PackageCompositionPanelLoader = dynamic(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as React.ComponentType<any>;
 
-// Dynamically import the CollectionMapPanel with SSR disabled
+// Dynamically import the CollectionMapPanelContent with SSR disabled
 const CollectionMapPanelLoader = dynamic(
-  () => import('@industry-theme/repository-composition-panels').then((mod) => mod.CollectionMapPanel),
+  () => import('@industry-theme/repository-composition-panels').then((mod) => mod.CollectionMapPanelContent),
   { ssr: false }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as React.ComponentType<any>;
