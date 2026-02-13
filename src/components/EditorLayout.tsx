@@ -42,6 +42,7 @@ import { buildStoryboardContext, type StoryboardReference } from '@principal-ai/
 import type { TraceInfo } from '@industry-theme/principal-view-panels';
 import { parseTaskMarkdown, serializeTaskMarkdown, DEFAULT_TASK_STATUSES } from '@backlog-md/core';
 import { hasTourBeenShown, markTourAsShown } from '@/lib/tourStorage';
+import type { OpenWorkflowScenariosPayload } from '@/types/panel-events';
 import {
   BookOpen, MessageSquare, FileText, Map, LayoutGrid,
   CheckSquare, Terminal, Users, Compass, Shield, Bug, Palette,
@@ -1085,20 +1086,39 @@ function EditorLayoutContent({
         if (payload?.action === 'openWorkflowScenarios') {
           console.log('[EditorLayout] Opening workflow scenarios:', payload);
 
-          // Update selected workflow data
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const workflowPayload = payload as any;
+          // Type guard: ensure payload is OpenWorkflowScenariosPayload
+          const isValidPayload = (p: unknown): p is OpenWorkflowScenariosPayload => {
+            const candidate = p as Partial<OpenWorkflowScenariosPayload>;
+            return (
+              candidate.action === 'openWorkflowScenarios' &&
+              typeof candidate.workflowId === 'string' &&
+              typeof candidate.workflowPath === 'string' &&
+              typeof candidate.canvasId === 'string' &&
+              candidate.workflowTemplate !== undefined &&
+              candidate.workflowTemplate !== null &&
+              typeof candidate.workflowTemplate === 'object' &&
+              'scenarios' in candidate.workflowTemplate &&
+              Array.isArray(candidate.workflowTemplate.scenarios)
+            );
+          };
+
+          if (!isValidPayload(payload)) {
+            console.error('[EditorLayout] Invalid openWorkflowScenarios payload - missing required workflowTemplate with scenarios:', payload);
+            return;
+          }
+
+          // Now TypeScript knows payload is OpenWorkflowScenariosPayload
           setSelectedWorkflowData({
-            workflowId: workflowPayload.workflowId,
-            workflowPath: workflowPayload.workflowPath,
-            workflow: workflowPayload.workflowTemplate || workflowPayload.workflow, // Use workflowTemplate (full template with scenarios)
+            workflowId: payload.workflowId,
+            workflowPath: payload.workflowPath,
+            workflow: payload.workflowTemplate, // Guaranteed to have scenarios[]
           });
 
           // Update selected canvas data
           setSelectedCanvasData({
-            canvasId: workflowPayload.canvasId,
-            canvasPath: workflowPayload.canvasPath,
-            canvasName: workflowPayload.canvasName,
+            canvasId: payload.canvasId,
+            canvasPath: payload.canvasPath,
+            canvasName: payload.canvasName,
           });
 
           // Switch to workflow-scenarios panel in the middle slot
