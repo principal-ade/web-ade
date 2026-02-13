@@ -39,6 +39,7 @@ import {
   Shield,
   Package,
   Map,
+  Settings,
 } from 'lucide-react';
 
 interface LibraryRecentRepository {
@@ -164,6 +165,15 @@ const PackageCompositionPanelLoader = dynamic(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as React.ComponentType<any>;
 
+// Dynamically import the CollectionMapPanel with SSR disabled
+const CollectionMapPanelLoader = dynamic(
+  () => import('@industry-theme/repository-composition-panels').then((mod) => mod.CollectionMapPanel),
+  { ssr: false }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) as React.ComponentType<any>;
+
+export type ViewMode = 'default' | 'world';
+
 export interface OwnerPageContentProps {
   owner: string;
   onPreviewChange?: (repo: string | null) => void;
@@ -182,6 +192,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
   const canvasLoadedRef = useRef(false);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('default');
 
   // Sidebar state
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -191,7 +202,8 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
   const [starredRepos, setStarredRepos] = useState<StarredRepo[]>([]);
   const [followingUsers, setFollowingUsers] = useState<FollowingUser[]>([]);
 
-  const [layout, setLayout] = useState<PanelLayout>({
+  // Layout configurations for each mode
+  const defaultLayout: PanelLayout = {
     left: 'owner-repositories',
     middle: {
       type: 'tabs',
@@ -201,7 +213,23 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
       type: 'tabs',
       panels: ['code-quality', 'package-composition'],
     },
-  });
+  };
+
+  const worldLayout: PanelLayout = {
+    left: 'owner-repositories',
+    middle: 'collection-map',
+    right: {
+      type: 'tabs',
+      panels: ['file-city', 'visual-validation'],
+    },
+  };
+
+  const [layout, setLayout] = useState<PanelLayout>(defaultLayout);
+
+  // Update layout when view mode changes
+  useEffect(() => {
+    setLayout(viewMode === 'world' ? worldLayout : defaultLayout);
+  }, [viewMode]);
 
   // Load recent items from library's localStorage format
   useEffect(() => {
@@ -464,6 +492,73 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
       ),
     },
     {
+      id: 'collection-map',
+      label: 'World Map',
+      icon: <Compass size={16} />,
+      content: (() => {
+        // Get repositories from the owner-repositories slice
+        const ownerReposData = ownerReposSlice?.data as {
+          repositories?: Array<{
+            id: number;
+            name: string;
+            full_name: string;
+            owner: { login: string };
+            language: string | null;
+            stargazers_count: number;
+            fork: boolean;
+          }>;
+          owner?: { login: string; name?: string };
+        } | undefined;
+
+        const repositories = ownerReposData?.repositories || [];
+        const ownerInfo = ownerReposData?.owner || { login: owner };
+
+        // Convert GitHub repos to Alexandria format
+        const alexandriaRepos = repositories.map((repo) => ({
+          name: repo.full_name,
+          registeredAt: new Date().toISOString(),
+          provider: {
+            type: 'github' as const,
+            url: `https://github.com/${repo.full_name}`,
+          },
+          theme: repo.language || 'git-repo',
+        }));
+
+        // Create memberships
+        const memberships = repositories.map((repo) => ({
+          repositoryId: repo.full_name,
+          collectionId: owner,
+          addedAt: Date.now(),
+          metadata: {
+            pinned: !repo.fork && repo.stargazers_count > 100,
+          },
+        }));
+
+        // Create virtual collection
+        const virtualCollection = {
+          id: owner,
+          name: ownerInfo.name || owner,
+          description: `All repositories by ${owner}`,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+
+        return (
+          <div className="h-full w-full overflow-hidden">
+            <CollectionMapPanelLoader
+              collection={virtualCollection}
+              memberships={memberships}
+              repositories={alexandriaRepos}
+              dependencies={{}}
+              width={800}
+              height={600}
+              isLoading={ownerReposLoading}
+            />
+          </div>
+        );
+      })(),
+    },
+    {
       id: 'empty',
       label: '',
       content: <div />,
@@ -474,7 +569,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
     <div className="h-full w-full flex flex-col overflow-hidden">
         {/* Custom header with avatar button for sidebar */}
         <header
-          className="flex items-center justify-between px-4 border-b relative z-50"
+          className="grid grid-cols-3 items-center px-4 border-b relative z-50"
           style={{
             background: theme.colors.surface,
             borderColor: theme.colors.border,
@@ -483,7 +578,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
           }}
         >
           {/* Left section: Logo and Owner info */}
-          <div className="flex items-center gap-3 flex-shrink-0 flex-1">
+          <div className="flex items-center gap-3 flex-shrink-0">
             <Link
               href="/"
               className="flex items-center transition-all hover:opacity-80"
@@ -551,8 +646,48 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
             )}
           </div>
 
+          {/* Center: Mode Switch */}
+          {!isMobile && (
+            <div className="flex items-center justify-center">
+              <div
+                className="flex items-center rounded-lg p-0.5"
+                style={{
+                  background: theme.colors.backgroundTertiary,
+                  border: `1px solid ${theme.colors.border}`,
+                }}
+              >
+                <button
+                  onClick={() => setViewMode('default')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all"
+                  style={{
+                    background: viewMode === 'default' ? theme.colors.surface : 'transparent',
+                    color: viewMode === 'default' ? theme.colors.text : theme.colors.textSecondary,
+                    boxShadow: viewMode === 'default' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                  }}
+                  title="Default repository view"
+                >
+                  <Settings size={14} />
+                  <span className="hidden sm:inline">Default</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('world')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all"
+                  style={{
+                    background: viewMode === 'world' ? theme.colors.surface : 'transparent',
+                    color: viewMode === 'world' ? theme.colors.text : theme.colors.textSecondary,
+                    boxShadow: viewMode === 'world' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                  }}
+                  title="World map view of all repositories"
+                >
+                  <Compass size={14} />
+                  <span className="hidden sm:inline">World</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Right section: Panel controls and User menu */}
-          <div className="flex items-center gap-3 flex-shrink-0 flex-1 justify-end">
+          <div className="flex items-center gap-3 flex-shrink-0 justify-end">
             {/* Panel collapse toggles */}
             <div className="hidden md:flex items-center gap-1">
               <button
