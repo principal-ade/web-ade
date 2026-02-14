@@ -12,6 +12,7 @@
       "template": {
         "summary": "✅ Authentication successful{{#if flow.type}} via {{flow.type}}{{/if}} (completed in {duration.ms}ms)",
         "events": {
+          "auth.callback.started": "OAuth callback request received",
           "auth.state.validated": "Validated state and CSRF token for {{flow.type}} flow",
           "auth.tokens.received": "{{#if tokens.source}}{{#if (eq tokens.source 'pkce_exchange')}}Exchanged code verifier for tokens{{else}}Parsed session data from cookie{{/if}}{{else}}Tokens received{{/if}} (user: {{user.id}})",
           "auth.cookies.set": "Set {{cookies.count}} authentication cookies",
@@ -25,6 +26,7 @@
       "template": {
         "summary": "❌ Authentication {{#if error.type}}{{error.type}} {{/if}}failed: {error.message}",
         "events": {
+          "auth.callback.started": "OAuth callback request received",
           "auth.state.validated": "Validated state and CSRF token",
           "auth.callback.error": "Error at {{error.stage}}: {{error.message}}{{#if error.status_code}} (status {{error.status_code}}){{/if}}{{#if error.type}} (type: {{error.type}}){{/if}}"
         }

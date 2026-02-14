@@ -12,6 +12,7 @@
       "template": {
         "summary": "✅ Token validated - expires in {expiresIn}ms",
         "events": {
+          "token.check.started": "Token status request received",
           "token.check.authenticated": "Token is valid (expires at {{expiresAt}}, {{expiresIn}}ms remaining){{#if shouldRefresh}} - ⚠️ Refresh recommended{{/if}}"
         }
       }
@@ -22,6 +23,7 @@
       "template": {
         "summary": "🔓 No valid token found - user not authenticated",
         "events": {
+          "token.check.started": "Token status request received",
           "token.check.unauthenticated": "No valid token in cookies - user not authenticated"
         }
       }
@@ -32,6 +34,7 @@
       "template": {
         "summary": "❌ Token check failed: {error.message}",
         "events": {
+          "token.check.started": "Token status request received",
           "token.check.error": "Error during token validation: {{error.type}} - {{error.message}}"
         }
       }

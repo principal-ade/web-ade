@@ -12,6 +12,7 @@
       "template": {
         "summary": "✅ Listed {registration.count} version(s) for {customer.id} (completed in {duration.ms}ms)",
         "events": {
+          "version.list.started": "Version list request received",
           "version.list.s3.retrieved": "Retrieved {{registration.count}} registration(s) from S3",
           "version.list.complete": "List complete with {{registration.count}} version(s)"
         }
@@ -23,6 +24,7 @@
       "template": {
         "summary": "✅ No versions registered for {customer.id}",
         "events": {
+          "version.list.started": "Version list request received",
           "version.list.s3.retrieved": "No registrations found in S3",
           "version.list.complete": "List complete - repository has no registered versions"
         }
@@ -34,6 +36,7 @@
       "template": {
         "summary": "❌ S3 list failed for {customer.id}: {error.message}",
         "events": {
+          "version.list.started": "Version list request received",
           "version.list.error": "S3 storage error ({{error.type}}): {{error.message}}"
         }
       }
@@ -44,6 +47,7 @@
       "template": {
         "summary": "❌ List validation failed: {error.message}",
         "events": {
+          "version.list.started": "Version list request received",
           "version.list.error": "Validation failed ({{error.type}}): {{error.message}}"
         }
       }
@@ -54,6 +58,7 @@
       "template": {
         "summary": "❌ List failed for {customer.id}: {error.message}",
         "events": {
+          "version.list.started": "Version list request received",
           "version.list.error": "Error at {{error.stage}} ({{error.type}}): {{error.message}}"
         }
       }

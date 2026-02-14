@@ -12,6 +12,7 @@
       "template": {
         "summary": "✅ Registered {service.name}@{version} → {git.sha}{{#if schematic.id}} with schematic{{/if}} (completed in {duration.ms}ms)",
         "events": {
+          "version.registration.started": "Version registration request received",
           "version.registration.validated": "Validated request for {{customer.id}}/{{service.name}}@{{version}}",
           "version.registration.s3.stored": "Stored mapping to {{s3.bucket}}/{{s3.key}}",
           "version.registration.schematic.fetching": "Fetching schematic from {{repository.url}} at {{git.sha}}",
@@ -27,6 +28,7 @@
       "template": {
         "summary": "{{#if (eq error.stage 'schematic')}}⚠️ Registered {service.name}@{version} but schematic fetch failed{{else}}❌ Registration failed{{/if}}: {error.message}",
         "events": {
+          "version.registration.started": "Version registration request received",
           "version.registration.validated": "Validation passed for {{customer.id}}/{{service.name}}",
           "version.registration.s3.stored": "{{#if (eq error.stage 'schematic')}}Version mapping stored to S3{{else}}Stored to S3{{/if}}",
           "version.registration.schematic.fetching": "Attempting to fetch schematic from {{repository.url}}",
