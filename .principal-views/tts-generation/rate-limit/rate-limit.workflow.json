@@ -2,48 +2,19 @@
   "version": "1.0.0",
   "canvas": ".principal-views/tts-generation/tts-generation.otel.canvas",
   "mode": "span-tree",
+  "spanPattern": "api.tts.generate",
   "name": "TTS Rate Limit",
   "description": "Error when ElevenLabs API rate limit is exceeded",
   "scenarios": [
     {
       "id": "rate-limit-error",
       "priority": 1,
-      "condition": {
-        "requires": [
-          "tts.request.started",
-          "tts.cache.miss",
-          "tts.tour.fetched",
-          "tts.error.rate_limit"
-        ],
-        "assertions": {
-          "tts.errorCode": {
-            "$eq": "RATE_LIMIT_EXCEEDED"
-          }
-        }
-      },
       "template": {
         "summary": "⏱️  ElevenLabs rate limit exceeded for {{tts.owner}}/{{tts.repo}}:{{tts.stepId}}, retry after {{tts.retryAfter}}s",
         "events": {
-          "tts.request.started": "📥 Request received for step {{tts.stepId}}",
           "tts.cache.miss": "💭 Cache miss, proceeding to generation",
           "tts.tour.fetched": "📄 Tour fetched successfully ({{tts.textLength}} chars)",
           "tts.error.rate_limit": "⏱️  Rate limit hit: {{tts.errorMessage}} (retry after {{tts.retryAfter}}s)"
-        }
-      }
-    },
-    {
-      "id": "fallback",
-      "priority": 999,
-      "condition": {
-        "default": true
-      },
-      "template": {
-        "summary": "📋 Rate limit error captured",
-        "events": {
-          "tts.request.started": "Request started",
-          "tts.cache.miss": "Cache miss",
-          "tts.tour.fetched": "Tour fetched",
-          "tts.error.rate_limit": "ElevenLabs rate limit exceeded"
         }
       }
     }

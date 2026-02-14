@@ -12,6 +12,7 @@ import type {
   DiscoveredWorkflow,
   DiscoveredWorkflowWithContent,
 } from '@principal-ai/principal-view-core';
+import { getRequiredEvents } from '@principal-ai/principal-view-core';
 
 /**
  * Fetch schematic from version registry for a specific version
@@ -89,9 +90,9 @@ function matchTraceAgainstWorkflows(
       continue;
     }
 
-    // Separate default/fallback scenarios from regular scenarios
-    const regularScenarios = scenarios.filter((s) => !s.condition?.default);
-    const defaultScenarios = scenarios.filter((s) => s.condition?.default);
+    // Separate catch-all scenarios (no required events) from regular scenarios
+    const regularScenarios = scenarios.filter((s) => getRequiredEvents(s).length > 0);
+    const catchAllScenarios = scenarios.filter((s) => getRequiredEvents(s).length === 0);
 
     // Try regular scenarios first, in priority order
     const sortedRegularScenarios = [...regularScenarios].sort(
@@ -100,12 +101,7 @@ function matchTraceAgainstWorkflows(
 
     for (const scenario of sortedRegularScenarios) {
       // Check if all required events are present
-      const requiredEvents = scenario.condition?.requires || [];
-
-      // Skip scenarios with no required events (should use default instead)
-      if (requiredEvents.length === 0) {
-        continue;
-      }
+      const requiredEvents = getRequiredEvents(scenario);
 
       const allRequiredPresent = requiredEvents.every((eventName) =>
         traceEventNames.has(eventName)
@@ -133,13 +129,13 @@ function matchTraceAgainstWorkflows(
       }
     }
 
-    // If no regular scenario matched, try default scenarios
+    // If no regular scenario matched, try catch-all scenarios
     // But only if trace has at least one event from this workflow's domain
-    if (defaultScenarios.length > 0) {
+    if (catchAllScenarios.length > 0) {
       // Collect all possible events from regular scenarios to determine workflow domain
       const workflowDomainEvents = new Set<string>();
       for (const scenario of regularScenarios) {
-        const requiredEvents = scenario.condition?.requires || [];
+        const requiredEvents = getRequiredEvents(scenario);
         requiredEvents.forEach((event) => workflowDomainEvents.add(event));
       }
 
@@ -149,13 +145,13 @@ function matchTraceAgainstWorkflows(
       );
 
       if (hasWorkflowEvents) {
-        const sortedDefaultScenarios = [...defaultScenarios].sort(
+        const sortedCatchAllScenarios = [...catchAllScenarios].sort(
           (a, b) => (a.priority || 999) - (b.priority || 999)
         );
 
-        console.log('[WorkflowMatcher] No specific scenario matched, using default:', {
+        console.log('[WorkflowMatcher] No specific scenario matched, using catch-all:', {
           workflow: workflow.name,
-          scenarioId: sortedDefaultScenarios[0]?.id,
+          scenarioId: sortedCatchAllScenarios[0]?.id,
           workflowDomainEvents: Array.from(workflowDomainEvents),
           traceEvents: Array.from(traceEventNames),
         });
@@ -165,8 +161,8 @@ function matchTraceAgainstWorkflows(
           storyboardName: workflow.name || 'Unknown Workflow',
           workflowId: workflow.id,
           workflowName: workflow.name,
-          scenarioId: sortedDefaultScenarios[0]!.id,
-          scenarioName: sortedDefaultScenarios[0]!.id,
+          scenarioId: sortedCatchAllScenarios[0]!.id,
+          scenarioName: sortedCatchAllScenarios[0]!.id,
         };
       }
     }

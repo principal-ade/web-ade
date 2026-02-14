@@ -2,161 +2,35 @@
   "version": "1.0.0",
   "canvas": ".principal-views/version-registry/version-registry.otel.canvas",
   "mode": "span-tree",
+  "spanPattern": "api.version-registry.register",
   "name": "Version Registration",
   "description": "Register a new version-to-commit mapping for deployment tracking",
   "scenarios": [
     {
-      "id": "registration-success-with-schematic",
+      "id": "registration-success",
       "priority": 1,
-      "condition": {
-        "requires": [
-          "version.registration.started",
-          "version.registration.validated",
-          "version.registration.s3.stored",
-          "version.registration.schematic.fetching",
-          "version.registration.schematic.fetched",
-          "version.registration.schematic.stored",
-          "version.registration.complete"
-        ]
-      },
       "template": {
-        "summary": "✅ Registered {service.name}@{version} → {git.sha} with schematic (completed in {duration.ms}ms)",
+        "summary": "✅ Registered {service.name}@{version} → {git.sha}{{#if schematic.id}} with schematic{{/if}} (completed in {duration.ms}ms)",
         "events": {
-          "version.registration.started": "Registration request for {{service.name}}@{{version}} in {{environment}} environment",
           "version.registration.validated": "Validated request for {{customer.id}}/{{service.name}}@{{version}}",
           "version.registration.s3.stored": "Stored mapping to {{s3.bucket}}/{{s3.key}}",
           "version.registration.schematic.fetching": "Fetching schematic from {{repository.url}} at {{git.sha}}",
           "version.registration.schematic.fetched": "Schematic fetched successfully ({{schematic.size}} bytes)",
           "version.registration.schematic.stored": "Schematic stored to {{s3.bucket}}/{{schematic.key}}",
-          "version.registration.complete": "Registration completed → {{registration.id}} (schematic: {{schematic.id}})"
+          "version.registration.complete": "Registration completed → {{registration.id}}{{#if schematic.id}} (schematic: {{schematic.id}}){{else}} (no schematic){{/if}}"
         }
       }
     },
     {
-      "id": "registration-success-without-schematic",
+      "id": "registration-error",
       "priority": 2,
-      "condition": {
-        "requires": [
-          "version.registration.started",
-          "version.registration.validated",
-          "version.registration.s3.stored",
-          "version.registration.complete"
-        ]
-      },
       "template": {
-        "summary": "✅ Registered {service.name}@{version} → {git.sha} (completed in {duration.ms}ms)",
+        "summary": "{{#if (eq error.stage 'schematic')}}⚠️ Registered {service.name}@{version} but schematic fetch failed{{else}}❌ Registration failed{{/if}}: {error.message}",
         "events": {
-          "version.registration.started": "Registration request for {{service.name}}@{{version}} in {{environment}} environment",
-          "version.registration.validated": "Validated request for {{customer.id}}/{{service.name}}@{{version}}",
-          "version.registration.s3.stored": "Stored mapping to {{s3.bucket}}/{{s3.key}}",
-          "version.registration.complete": "Registration completed → {{registration.id}} (no schematic)"
-        }
-      }
-    },
-    {
-      "id": "registration-schematic-fetch-failed",
-      "priority": 3,
-      "condition": {
-        "requires": [
-          "version.registration.started",
-          "version.registration.validated",
-          "version.registration.s3.stored",
-          "version.registration.schematic.fetching",
-          "version.registration.error"
-        ],
-        "assertions": {
-          "error.stage": "schematic"
-        }
-      },
-      "template": {
-        "summary": "⚠️ Registered {service.name}@{version} but schematic fetch failed: {error.message}",
-        "events": {
-          "version.registration.started": "Registration request for {{service.name}}@{{version}}",
-          "version.registration.validated": "Validation passed",
-          "version.registration.s3.stored": "Version mapping stored to S3",
-          "version.registration.schematic.fetching": "Attempting to fetch schematic from {{repository.url}}",
-          "version.registration.error": "Schematic fetch failed ({{error.type}}): {{error.message}} - version mapping still valid"
-        }
-      }
-    },
-    {
-      "id": "registration-validation-failed",
-      "priority": 4,
-      "condition": {
-        "requires": [
-          "version.registration.started",
-          "version.registration.error"
-        ],
-        "assertions": {
-          "error.stage": "validation"
-        }
-      },
-      "template": {
-        "summary": "❌ Registration validation failed: {error.message}",
-        "events": {
-          "version.registration.started": "Registration request for {{service.name}}@{{version}}",
-          "version.registration.error": "Validation failed ({{error.type}}): {{error.message}}"
-        }
-      }
-    },
-    {
-      "id": "registration-storage-failed",
-      "priority": 5,
-      "condition": {
-        "requires": [
-          "version.registration.started",
-          "version.registration.validated",
-          "version.registration.error"
-        ],
-        "assertions": {
-          "error.stage": "storage"
-        }
-      },
-      "template": {
-        "summary": "❌ S3 storage failed: {error.message}",
-        "events": {
-          "version.registration.started": "Registration request for {{service.name}}@{{version}}",
           "version.registration.validated": "Validation passed for {{customer.id}}/{{service.name}}",
-          "version.registration.error": "S3 storage failed ({{error.type}}): {{error.message}}"
-        }
-      }
-    },
-    {
-      "id": "registration-generic-error",
-      "priority": 6,
-      "condition": {
-        "requires": [
-          "version.registration.started",
-          "version.registration.error"
-        ]
-      },
-      "template": {
-        "summary": "❌ Registration failed: {error.message}",
-        "events": {
-          "version.registration.started": "Registration request{{#if service.name}} for {{service.name}}@{{version}}{{/if}}",
-          "version.registration.validated": "Request validated",
-          "version.registration.s3.stored": "Stored to S3",
-          "version.registration.error": "Error at {{error.stage}} ({{error.type}}): {{error.message}}"
-        }
-      }
-    },
-    {
-      "id": "registration-fallback",
-      "priority": 999,
-      "condition": {
-        "default": true
-      },
-      "template": {
-        "summary": "📋 Version registration execution captured",
-        "events": {
-          "version.registration.started": "Started registration for {{service.name}}@{{version}}",
-          "version.registration.validated": "Validation complete",
-          "version.registration.s3.stored": "Stored to S3: {{s3.key}}",
-          "version.registration.schematic.fetching": "Fetching schematic from GitHub",
-          "version.registration.schematic.fetched": "Schematic fetched",
-          "version.registration.schematic.stored": "Schematic stored",
-          "version.registration.complete": "Registration complete",
-          "version.registration.error": "Error occurred"
+          "version.registration.s3.stored": "{{#if (eq error.stage 'schematic')}}Version mapping stored to S3{{else}}Stored to S3{{/if}}",
+          "version.registration.schematic.fetching": "Attempting to fetch schematic from {{repository.url}}",
+          "version.registration.error": "{{#if (eq error.stage 'schematic')}}Schematic fetch failed ({{error.type}}): {{error.message}} - version mapping still valid{{else}}Error at {{error.stage}} ({{error.type}}): {{error.message}}{{/if}}"
         }
       }
     }

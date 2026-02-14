@@ -2,23 +2,16 @@
   "version": "1.0.0",
   "canvas": ".principal-views/version-registry/version-registry.otel.canvas",
   "mode": "span-tree",
+  "spanPattern": "api.version-registry.lookup",
   "name": "Version Lookup",
   "description": "Look up git commit SHA for a registered version",
   "scenarios": [
     {
       "id": "lookup-success",
       "priority": 1,
-      "condition": {
-        "requires": [
-          "version.lookup.started",
-          "version.lookup.s3.retrieved",
-          "version.lookup.complete"
-        ]
-      },
       "template": {
         "summary": "✅ Found {service.name}@{version} → {git.sha} (completed in {duration.ms}ms)",
         "events": {
-          "version.lookup.started": "Lookup request for {{customer.id}}/{{service.name}}@{{version}} in {{environment}}",
           "version.lookup.s3.retrieved": "Retrieved mapping from {{s3.key}} (SHA: {{git.sha}}, deployed: {{deployed.at}})",
           "version.lookup.complete": "Lookup complete → {{git.sha}}"
         }
@@ -27,16 +20,9 @@
     {
       "id": "lookup-not-found",
       "priority": 2,
-      "condition": {
-        "requires": [
-          "version.lookup.started",
-          "version.lookup.not_found"
-        ]
-      },
       "template": {
         "summary": "⚠️ Version {service.name}@{version} not registered",
         "events": {
-          "version.lookup.started": "Lookup request for {{customer.id}}/{{service.name}}@{{version}}",
           "version.lookup.not_found": "Version not registered - deployment gate will reject traces from this version"
         }
       }
@@ -44,19 +30,9 @@
     {
       "id": "lookup-storage-error",
       "priority": 3,
-      "condition": {
-        "requires": [
-          "version.lookup.started",
-          "version.lookup.error"
-        ],
-        "assertions": {
-          "error.stage": "storage"
-        }
-      },
       "template": {
         "summary": "❌ S3 lookup failed: {error.message}",
         "events": {
-          "version.lookup.started": "Lookup request for {{customer.id}}/{{service.name}}@{{version}}",
           "version.lookup.error": "S3 storage error ({{error.type}}): {{error.message}}"
         }
       }
@@ -64,19 +40,9 @@
     {
       "id": "lookup-validation-error",
       "priority": 4,
-      "condition": {
-        "requires": [
-          "version.lookup.started",
-          "version.lookup.error"
-        ],
-        "assertions": {
-          "error.stage": "validation"
-        }
-      },
       "template": {
         "summary": "❌ Lookup validation failed: {error.message}",
         "events": {
-          "version.lookup.started": "Lookup request received",
           "version.lookup.error": "Validation failed ({{error.type}}): {{error.message}}"
         }
       }
@@ -84,37 +50,10 @@
     {
       "id": "lookup-generic-error",
       "priority": 5,
-      "condition": {
-        "requires": [
-          "version.lookup.started",
-          "version.lookup.error"
-        ]
-      },
       "template": {
         "summary": "❌ Lookup failed: {error.message}",
         "events": {
-          "version.lookup.started": "Lookup request for {{customer.id}}/{{service.name}}@{{version}}",
-          "version.lookup.s3.retrieved": "Retrieved from S3",
-          "version.lookup.complete": "Lookup complete",
-          "version.lookup.not_found": "Version not found",
           "version.lookup.error": "Error at {{error.stage}} ({{error.type}}): {{error.message}}"
-        }
-      }
-    },
-    {
-      "id": "lookup-fallback",
-      "priority": 999,
-      "condition": {
-        "default": true
-      },
-      "template": {
-        "summary": "📋 Version lookup execution captured",
-        "events": {
-          "version.lookup.started": "Started lookup for {{customer.id}}/{{service.name}}@{{version}}",
-          "version.lookup.s3.retrieved": "Retrieved from S3: {{s3.key}}",
-          "version.lookup.complete": "Lookup complete",
-          "version.lookup.not_found": "Version not found",
-          "version.lookup.error": "Error occurred"
         }
       }
     }

@@ -2,41 +2,18 @@
   "version": "1.0.0",
   "canvas": ".principal-views/tts-generation/tts-generation.otel.canvas",
   "mode": "span-tree",
+  "spanPattern": "api.tts.generate",
   "name": "TTS Step Not Found",
   "description": "Error when requested step ID doesn't exist in tour file",
   "scenarios": [
     {
       "id": "step-not-found-error",
       "priority": 1,
-      "condition": {
-        "requires": ["tts.request.started", "tts.cache.miss", "tts.error.step_not_found"],
-        "assertions": {
-          "tts.errorCode": {
-            "$eq": "STEP_NOT_FOUND"
-          }
-        }
-      },
       "template": {
         "summary": "❌ Step not found: {{tts.stepId}} in {{tts.owner}}/{{tts.repo}}",
         "events": {
-          "tts.request.started": "📥 Request received for step {{tts.stepId}}",
           "tts.cache.miss": "💭 Cache miss, fetching tour",
           "tts.error.step_not_found": "❌ Step validation failed: {{tts.errorMessage}}"
-        }
-      }
-    },
-    {
-      "id": "fallback",
-      "priority": 999,
-      "condition": {
-        "default": true
-      },
-      "template": {
-        "summary": "📋 Step not found error captured",
-        "events": {
-          "tts.request.started": "Request started",
-          "tts.cache.miss": "Cache miss",
-          "tts.error.step_not_found": "Step ID not found in tour"
         }
       }
     }

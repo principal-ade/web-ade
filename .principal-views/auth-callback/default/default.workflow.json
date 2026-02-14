@@ -2,113 +2,31 @@
   "version": "1.0.0",
   "canvas": ".principal-views/auth-callback/auth-callback.otel.canvas",
   "mode": "span-tree",
+  "spanPattern": "api.auth.callback",
   "name": "Authentication Callback",
   "description": "OAuth callback handling with PKCE and WorkOS cookie flows",
   "scenarios": [
     {
-      "id": "pkce-oauth-success",
+      "id": "authentication-success",
       "priority": 1,
-      "condition": {
-        "requires": ["auth.callback.complete", "auth.state.validated"],
-        "assertions": {
-          "tokens.source": "pkce_exchange"
-        }
-      },
       "template": {
-        "summary": "✅ Authentication successful via PKCE OAuth (completed in {duration.ms}ms)",
+        "summary": "✅ Authentication successful{{#if flow.type}} via {{flow.type}}{{/if}} (completed in {duration.ms}ms)",
         "events": {
-          "auth.callback.started": "Received OAuth callback request",
           "auth.state.validated": "Validated state and CSRF token for {{flow.type}} flow",
-          "auth.tokens.received": "Exchanged code verifier for tokens (user: {{user.id}})",
+          "auth.tokens.received": "{{#if tokens.source}}{{#if (eq tokens.source 'pkce_exchange')}}Exchanged code verifier for tokens{{else}}Parsed session data from cookie{{/if}}{{else}}Tokens received{{/if}} (user: {{user.id}})",
           "auth.cookies.set": "Set {{cookies.count}} authentication cookies",
           "auth.callback.complete": "Redirecting to {{redirect.path}} (from {{redirect.source}})"
         }
       }
     },
     {
-      "id": "workos-cookie-success",
+      "id": "authentication-error",
       "priority": 2,
-      "condition": {
-        "requires": ["auth.callback.complete"],
-        "assertions": {
-          "tokens.source": "workos_cookie",
-          "request.has_workos_cookie": true
-        }
-      },
       "template": {
-        "summary": "✅ Authentication successful via WorkOS cookie (completed in {duration.ms}ms)",
+        "summary": "❌ Authentication {{#if error.type}}{{error.type}} {{/if}}failed: {error.message}",
         "events": {
-          "auth.callback.started": "Received callback with workos_session cookie",
-          "auth.tokens.received": "Parsed session data from cookie (user: {{user.id}})",
-          "auth.cookies.set": "Set {{cookies.count}} authentication cookies",
-          "auth.callback.complete": "Redirecting to {{redirect.path}} (from {{redirect.source}})"
-        }
-      }
-    },
-    {
-      "id": "validation-failure",
-      "priority": 3,
-      "condition": {
-        "requires": ["auth.callback.error"],
-        "assertions": {
-          "error.type": "validation"
-        }
-      },
-      "template": {
-        "summary": "❌ Authentication failed: {error.message}",
-        "events": {
-          "auth.callback.started": "Received callback request",
-          "auth.callback.error": "Validation error at {{error.stage}}: {{error.message}} (status {{error.status_code}})"
-        }
-      }
-    },
-    {
-      "id": "token-exchange-failure",
-      "priority": 4,
-      "condition": {
-        "requires": ["auth.callback.error", "auth.state.validated"],
-        "assertions": {
-          "error.type": "token_exchange"
-        }
-      },
-      "template": {
-        "summary": "❌ Token exchange failed: {error.message}",
-        "events": {
-          "auth.callback.started": "Received OAuth callback request",
           "auth.state.validated": "Validated state and CSRF token",
-          "auth.callback.error": "Token exchange failed: {{error.message}} (status {{error.status_code}})"
-        }
-      }
-    },
-    {
-      "id": "general-error",
-      "priority": 5,
-      "condition": {
-        "requires": ["auth.callback.error"]
-      },
-      "template": {
-        "summary": "❌ Authentication error: {error.message}",
-        "events": {
-          "auth.callback.started": "Received callback request",
-          "auth.callback.error": "Error at {{error.stage}}: {{error.message}} (type: {{error.type}})"
-        }
-      }
-    },
-    {
-      "id": "fallback",
-      "priority": 999,
-      "condition": {
-        "default": true
-      },
-      "template": {
-        "summary": "📋 Authentication callback execution captured",
-        "events": {
-          "auth.callback.started": "Callback started (state: {{request.has_state}}, code: {{request.has_code}}, workos_cookie: {{request.has_workos_cookie}})",
-          "auth.state.validated": "State validated (CSRF: {{state.csrf}})",
-          "auth.tokens.received": "Tokens received from {{tokens.source}}",
-          "auth.cookies.set": "Cookies set",
-          "auth.callback.complete": "Callback complete",
-          "auth.callback.error": "Error occurred"
+          "auth.callback.error": "Error at {{error.stage}}: {{error.message}}{{#if error.status_code}} (status {{error.status_code}}){{/if}}{{#if error.type}} (type: {{error.type}}){{/if}}"
         }
       }
     }

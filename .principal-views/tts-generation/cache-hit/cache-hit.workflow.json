@@ -2,41 +2,18 @@
   "version": "1.0.0",
   "canvas": ".principal-views/tts-generation/tts-generation.otel.canvas",
   "mode": "span-tree",
+  "spanPattern": "api.tts.generate",
   "name": "TTS Cache Hit",
   "description": "Fast path when audio already exists in S3 cache",
   "scenarios": [
     {
       "id": "cache-hit-success",
       "priority": 1,
-      "condition": {
-        "requires": ["tts.request.started", "tts.cache.hit", "tts.request.complete"],
-        "assertions": {
-          "tts.cached": {
-            "$eq": true
-          }
-        }
-      },
       "template": {
         "summary": "✅ TTS audio served from cache for {{tts.owner}}/{{tts.repo}}:{{tts.stepId}} in {{tts.durationMs}}ms",
         "events": {
-          "tts.request.started": "📥 Request received for step {{tts.stepId}} in {{tts.owner}}/{{tts.repo}}",
           "tts.cache.hit": "⚡ Cache hit! Audio found at {{tts.s3Key}}",
           "tts.request.complete": "✅ Returned cached audio URL: {{tts.audioUrl}}"
-        }
-      }
-    },
-    {
-      "id": "fallback",
-      "priority": 999,
-      "condition": {
-        "default": true
-      },
-      "template": {
-        "summary": "📋 TTS cache hit execution captured",
-        "events": {
-          "tts.request.started": "Request started",
-          "tts.cache.hit": "Cache hit detected",
-          "tts.request.complete": "Request completed"
         }
       }
     }
