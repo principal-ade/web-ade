@@ -6,7 +6,7 @@
  * against workflow scenario conditions.
  */
 
-import type { TraceInfo } from '@industry-theme/principal-view-panels';
+import type { TraceInfo, WorkflowMatch } from '@industry-theme/principal-view-panels';
 import type {
   CanvasDiscoveryResultWithContent,
   DiscoveredWorkflow,
@@ -50,17 +50,17 @@ async function fetchSchematic(
 /**
  * Match a trace against workflow scenarios
  *
- * For now, this is a simple implementation that:
+ * This implementation:
  * 1. Finds workflows in the schematic
  * 2. Matches trace events against scenario required events
- * 3. Returns the first matching workflow/scenario
+ * 3. Returns ALL matching workflow/scenario combinations
  *
  * TODO: Implement full scenario condition matching (assertions, etc.)
  */
 function matchTraceAgainstWorkflows(
   trace: TraceInfo,
   workflows: (DiscoveredWorkflow | DiscoveredWorkflowWithContent)[]
-): TraceInfo['matchedWorkflow'] {
+): WorkflowMatch[] {
   // Get all events from trace spans
   const traceEventNames = new Set<string>();
   for (const span of trace.spans) {
@@ -77,6 +77,8 @@ function matchTraceAgainstWorkflows(
     eventNames: Array.from(traceEventNames),
     workflowCount: workflows.length,
   });
+
+  const matches: WorkflowMatch[] = [];
 
   // Try to match against each workflow
   for (const workflow of workflows) {
@@ -99,6 +101,8 @@ function matchTraceAgainstWorkflows(
       (a, b) => (a.priority || 999) - (b.priority || 999)
     );
 
+    let matchedInWorkflow = false;
+
     for (const scenario of sortedRegularScenarios) {
       // Check if all required events are present
       const requiredEvents = getRequiredEvents(scenario);
@@ -118,20 +122,24 @@ function matchTraceAgainstWorkflows(
       if (allRequiredPresent) {
         // Found a match!
         console.log('[WorkflowMatcher] ✓ Match found!');
-        return {
+        matches.push({
           storyboardId: workflow.content.canvas,
           storyboardName: workflow.name || 'Unknown Workflow',
           workflowId: workflow.id,
           workflowName: workflow.name,
           scenarioId: scenario.id,
           scenarioName: scenario.id, // TODO: get scenario name from template
-        };
+          matchedEventCount: requiredEvents.length,
+          matchedEventNames: requiredEvents,
+        });
+        matchedInWorkflow = true;
+        // Continue checking other scenarios in this workflow
       }
     }
 
     // If no regular scenario matched, try catch-all scenarios
     // But only if trace has at least one event from this workflow's domain
-    if (catchAllScenarios.length > 0) {
+    if (!matchedInWorkflow && catchAllScenarios.length > 0) {
       // Collect all possible events from regular scenarios to determine workflow domain
       const workflowDomainEvents = new Set<string>();
       for (const scenario of regularScenarios) {
@@ -156,19 +164,20 @@ function matchTraceAgainstWorkflows(
           traceEvents: Array.from(traceEventNames),
         });
 
-        return {
+        matches.push({
           storyboardId: workflow.content.canvas,
           storyboardName: workflow.name || 'Unknown Workflow',
           workflowId: workflow.id,
           workflowName: workflow.name,
           scenarioId: sortedCatchAllScenarios[0]!.id,
           scenarioName: sortedCatchAllScenarios[0]!.id,
-        };
+          matchedEventCount: 0,
+        });
       }
     }
   }
 
-  return undefined;
+  return matches;
 }
 
 /**
@@ -272,20 +281,20 @@ export async function enrichTracesWithWorkflowMatching(
 
     // Match each trace against workflows
     for (const trace of versionTraces) {
-      const matchedWorkflow = matchTraceAgainstWorkflows(trace, allWorkflows);
+      const matchedWorkflows = matchTraceAgainstWorkflows(trace, allWorkflows);
 
-      if (matchedWorkflow) {
-        console.log('[WorkflowMatcher] Matched trace to workflow:', {
+      if (matchedWorkflows.length > 0) {
+        console.log('[WorkflowMatcher] Matched trace to workflows:', {
           traceId: trace.traceId.substring(0, 8),
-          workflow: matchedWorkflow.workflowName,
-          scenario: matchedWorkflow.scenarioId,
+          matchCount: matchedWorkflows.length,
+          workflows: matchedWorkflows.map(m => `${m.workflowName}/${m.scenarioId}`),
         });
       }
 
-      // Add matchedWorkflow to trace (or keep existing if already set)
+      // Add matchedWorkflows to trace (or keep existing if already set)
       enrichedTraces.push({
         ...trace,
-        matchedWorkflow: matchedWorkflow || trace.matchedWorkflow,
+        matchedWorkflows: matchedWorkflows.length > 0 ? matchedWorkflows : trace.matchedWorkflows,
       });
     }
   }
