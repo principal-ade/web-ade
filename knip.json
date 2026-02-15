@@ -20,15 +20,9 @@
     "coverage/**",
     ".next/**"
   ],
-  "ignoreDependencies": [],
-  "next": {
-    "entry": [
-      "next.config.ts",
-      "src/app/layout.tsx",
-      "src/app/**/layout.tsx",
-      "src/app/**/page.tsx",
-      "src/app/**/route.ts",
-      "src/middleware.ts"
-    ]
-  }
+  "ignoreDependencies": [
+    "@monaco-editor/react",
+    "eslint-config-next",
+    "tailwindcss"
+  ]
 }
