@@ -1,0 +1,34 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": [
+    "src/app/**/*.{ts,tsx}",
+    "src/components/**/*.{ts,tsx}",
+    "src/lib/**/*.{ts,tsx}",
+    "src/contexts/**/*.{ts,tsx}",
+    "src/hooks/**/*.{ts,tsx}",
+    "scripts/**/*.ts"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "scripts/**/*.ts"
+  ],
+  "ignore": [
+    "**/*.stories.tsx",
+    "**/*.test.{ts,tsx}",
+    "**/*.spec.{ts,tsx}",
+    ".storybook/**",
+    "coverage/**",
+    ".next/**"
+  ],
+  "ignoreDependencies": [],
+  "next": {
+    "entry": [
+      "next.config.ts",
+      "src/app/layout.tsx",
+      "src/app/**/layout.tsx",
+      "src/app/**/page.tsx",
+      "src/app/**/route.ts",
+      "src/middleware.ts"
+    ]
+  }
+}

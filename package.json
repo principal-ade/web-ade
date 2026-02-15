@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit",
-    "check": "npm run type-check && npm run lint",
+    "knip": "knip",
+    "knip:fix": "knip --fix",
+    "check": "npm run type-check && npm run lint && npm run knip",
     "test": "vitest run --project=unit",
     "test:watch": "vitest --project=unit",
     "test:ui": "vitest --ui --project=unit",
@@ -23,7 +25,6 @@
   "dependencies": {
     "@ai-sdk/react": "^2.0.109",
     "@aws-sdk/client-s3": "^3.982.0",
-    "@aws-sdk/s3-request-presigner": "^3.982.0",
     "@backlog-md/core": "^0.3.6",
     "@industry-theme/agent-driven-ui-panels": "^0.1.0",
     "@industry-theme/agent-panels": "^0.2.44",
@@ -44,7 +45,6 @@
     "@octokit/rest": "^22.0.1",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/api-logs": "^0.211.0",
-    "@opentelemetry/auto-instrumentations-node": "^0.69.0",
     "@opentelemetry/exporter-metrics-otlp-http": "^0.211.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.211.0",
     "@opentelemetry/instrumentation": "^0.211.0",
@@ -53,7 +53,6 @@
     "@opentelemetry/sdk-metrics": "^2.5.0",
     "@opentelemetry/sdk-node": "^0.211.0",
     "@opentelemetry/sdk-trace-base": "^2.5.0",
-    "@opentelemetry/semantic-conventions": "^1.39.0",
     "@principal-ade/code-quality-panels": "^0.1.27",
     "@principal-ade/dynamic-file-tree": "^0.1.67",
     "@principal-ade/industry-theme": "^0.1.7",
@@ -93,8 +92,7 @@
     "remove-markdown": "^0.6.3",
     "tailwindcss": "^4",
     "themed-markdown": "^0.1.80",
-    "typescript": "^5",
-    "zod": "^4.3.6"
+    "typescript": "^5"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^4.1.2",
@@ -111,6 +109,7 @@
     "eslint-plugin-storybook": "^10.0.7",
     "husky": "^9.1.7",
     "jsdom": "^28.0.0",
+    "knip": "^5.83.1",
     "null-loader": "^4.0.1",
     "playwright": "^1.56.1",
     "storybook": "^10.0.7",
