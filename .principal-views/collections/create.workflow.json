@@ -1,0 +1,71 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/collections/collections.otel.canvas",
+  "mode": "span-tree",
+  "spanPattern": "api.github.collections.create",
+  "name": "Create Collection/World",
+  "description": "Create a new collection and save to GitHub",
+  "scenarios": [
+    {
+      "id": "success-existing-repo",
+      "priority": 1,
+      "template": {
+        "summary": "✅ Created collection '{collectionName}'",
+        "events": {
+          "collection.create.started": "Creating collection: {{collectionName}}",
+          "collection.create.validate": "Validating collection data (name: {{collectionName}}, icon: {{icon}})",
+          "collection.create.github.update": "Updating existing GitHub repo",
+          "collection.create.github.commit": "Committing collections.json",
+          "collection.create.success": "Collection created with ID {{collectionId}}"
+        }
+      }
+    },
+    {
+      "id": "success-new-repo",
+      "priority": 2,
+      "template": {
+        "summary": "✅ Created collection '{collectionName}' and initialized GitHub repo",
+        "events": {
+          "collection.create.started": "Creating collection: {{collectionName}}",
+          "collection.create.validate": "Validating collection data (name: {{collectionName}}, icon: {{icon}})",
+          "collection.create.github.init": "Initializing new GitHub repo: {{repoUrl}}",
+          "collection.create.github.commit": "Committing collections.json and collection-memberships.json",
+          "collection.create.success": "Collection created with ID {{collectionId}}"
+        }
+      }
+    },
+    {
+      "id": "validation-error",
+      "priority": 3,
+      "template": {
+        "summary": "⚠️ Invalid collection data: {error.field}",
+        "events": {
+          "collection.create.started": "Creating collection: {{collectionName}}",
+          "collection.create.validation-error": "Validation failed: {{error.field}} - {{error.message}}"
+        }
+      }
+    },
+    {
+      "id": "unauthorized",
+      "priority": 4,
+      "template": {
+        "summary": "🔒 Authentication required",
+        "events": {
+          "collection.create.started": "Creating collection: {{collectionName}}",
+          "collection.create.unauthorized": "User not authenticated (401)"
+        }
+      }
+    },
+    {
+      "id": "error",
+      "priority": 5,
+      "template": {
+        "summary": "❌ Failed to create collection: {error.message}",
+        "events": {
+          "collection.create.started": "Creating collection: {{collectionName}}",
+          "collection.create.error": "Error: {{error.message}}"
+        }
+      }
+    }
+  ]
+}

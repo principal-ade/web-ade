@@ -9,6 +9,7 @@ import { useUserCollections } from "@/contexts/UserCollectionsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import dynamic from "next/dynamic";
+import { withTelemetrySpan } from "@/lib/telemetry";
 import {
   EditableConfigurablePanelLayout,
   ResponsiveConfigurablePanelLayout,
@@ -655,30 +656,57 @@ function SharedCollectionsWrapper() {
 
   // Handle import collection
   const handleImportCollection = useCallback(async (collection: Collection, collectionMemberships: CollectionMembership[]) => {
-    try {
-      setImportingCollectionId(collection.id);
+    await withTelemetrySpan('api.collections.import', async (emit) => {
+      try {
+        setImportingCollectionId(collection.id);
 
-      // Create a new collection with the same name (maybe add "from @username")
-      const importedName = `${collection.name} (from @${username})`;
-      const newCollection = await userCollections.createCollection(
-        importedName,
-        collection.description,
-        collection.icon
-      );
+        emit('collection.import.started', {
+          sourceUsername: username,
+          collectionName: collection.name,
+        });
 
-      // Add all repositories from memberships
-      for (const membership of collectionMemberships) {
-        await userCollections.addRepository(newCollection.id, membership.repositoryId);
+        emit('collection.import.fetch-source');
+
+        // Create a new collection with the same name (maybe add "from @username")
+        const importedName = `${collection.name} (from @${username})`;
+
+        emit('collection.import.create-copy', {
+          newCollectionName: importedName,
+        });
+
+        const newCollection = await userCollections.createCollection(
+          importedName,
+          collection.description,
+          collection.icon
+        );
+
+        emit('collection.import.copy-memberships', {
+          membershipCount: collectionMemberships.length,
+        });
+
+        // Add all repositories from memberships
+        for (const membership of collectionMemberships) {
+          await userCollections.addRepository(newCollection.id, membership.repositoryId);
+        }
+
+        emit('collection.import.github.sync');
+
+        // Mark as imported
+        setImportedCollectionIds(prev => new Set([...prev, collection.id]));
+
+        emit('collection.import.success', {
+          newCollectionId: newCollection.id,
+        });
+      } catch (err) {
+        emit('collection.import.error', {
+          'error.message': err instanceof Error ? err.message : 'Unknown error',
+        });
+        // Could show an error toast here
+        throw err;
+      } finally {
+        setImportingCollectionId(null);
       }
-
-      // Mark as imported
-      setImportedCollectionIds(prev => new Set([...prev, collection.id]));
-    } catch (err) {
-      console.error('Failed to import collection:', err);
-      // Could show an error toast here
-    } finally {
-      setImportingCollectionId(null);
-    }
+    });
   }, [username, userCollections]);
 
   // Save collections and memberships to GitHub

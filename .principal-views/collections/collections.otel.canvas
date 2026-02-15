@@ -1,0 +1,979 @@
+{
+  "pv": {
+    "name": "Collections/Worlds Management",
+    "version": "1.0.0",
+    "markdown": ".principal-views/collections/collections.md",
+    "edgeTypes": {
+      "flow": {
+        "label": "Flow"
+      },
+      "error": {
+        "label": "Error Path"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "load-started",
+      "type": "text",
+      "text": "# collections.load.started\n\nLoad user's collections",
+      "x": -229,
+      "y": 732,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collections.load.started",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a"
+      }
+    },
+    {
+      "id": "load-github-fetch",
+      "type": "text",
+      "text": "# collections.load.github.fetch\n\nFetch from GitHub repo",
+      "x": -246,
+      "y": 900,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collections.load.github.fetch",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx",
+          "src/app/api/github/collections/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io"
+        },
+        "shape": "rectangle",
+        "fill": "#8b5cf6",
+        "stroke": "#6d28d9",
+        "dataSchema": {
+          "repoUrl": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "load-success",
+      "type": "text",
+      "text": "# collections.load.success\n\nCollections loaded",
+      "x": -398,
+      "y": 1092,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collections.load.success",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a",
+        "dataSchema": {
+          "collectionCount": {
+            "type": "number",
+            "required": true
+          },
+          "membershipCount": {
+            "type": "number",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "load-not-found",
+      "type": "text",
+      "text": "# collections.load.github.not-found\n\nRepo doesn't exist yet",
+      "x": -70,
+      "y": 1089,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collections.load.github.not-found",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/github/collections/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#6b7280",
+        "stroke": "#4b5563"
+      }
+    },
+    {
+      "id": "load-unauthorized",
+      "type": "text",
+      "text": "# collections.load.unauthorized\n\nNot authenticated",
+      "x": 85,
+      "y": 732,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collections.load.unauthorized",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/github/collections/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error"
+        },
+        "shape": "rectangle",
+        "fill": "#ef4444",
+        "stroke": "#dc2626"
+      }
+    },
+    {
+      "id": "load-error",
+      "type": "text",
+      "text": "# collections.load.error\n\nLoad failed",
+      "x": 81,
+      "y": 899,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collections.load.error",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error"
+        },
+        "shape": "rectangle",
+        "fill": "#ef4444",
+        "stroke": "#dc2626",
+        "dataSchema": {
+          "error.message": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "create-started",
+      "type": "text",
+      "text": "# collection.create.started\n\nCreate new collection",
+      "x": -531,
+      "y": -138,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.create.started",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a",
+        "dataSchema": {
+          "collectionName": {
+            "type": "string",
+            "required": true
+          },
+          "icon": {
+            "type": "string",
+            "required": false
+          },
+          "description": {
+            "type": "string",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "create-validate",
+      "type": "text",
+      "text": "# collection.create.validate\n\nValidate collection data",
+      "x": -541,
+      "y": 45,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.create.validate",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "operation"
+        },
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "stroke": "#1d4ed8"
+      }
+    },
+    {
+      "id": "create-github-update",
+      "type": "text",
+      "text": "# collection.create.github.update\n\nUpdate existing repo",
+      "x": -343,
+      "y": 197,
+      "width": 180,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.create.github.update",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io"
+        },
+        "shape": "rectangle",
+        "fill": "#8b5cf6",
+        "stroke": "#6d28d9"
+      }
+    },
+    {
+      "id": "create-github-init",
+      "type": "text",
+      "text": "# collection.create.github.init\n\nInitialize new repo",
+      "x": -752,
+      "y": 198,
+      "width": 180,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.create.github.init",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io"
+        },
+        "shape": "rectangle",
+        "fill": "#8b5cf6",
+        "stroke": "#6d28d9",
+        "dataSchema": {
+          "repoUrl": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "create-github-commit",
+      "type": "text",
+      "text": "# collection.create.github.commit\n\nCommit collections data",
+      "x": -547,
+      "y": 374,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.create.github.commit",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io"
+        },
+        "shape": "rectangle",
+        "fill": "#8b5cf6",
+        "stroke": "#6d28d9"
+      }
+    },
+    {
+      "id": "create-success",
+      "type": "text",
+      "text": "# collection.create.success\n\nCollection created",
+      "x": -527,
+      "y": 538,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.create.success",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a",
+        "dataSchema": {
+          "collectionId": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "create-validation-error",
+      "type": "text",
+      "text": "# collection.create.validation-error\n\nValidation failed",
+      "x": -205,
+      "y": 43,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.create.validation-error",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error"
+        },
+        "shape": "rectangle",
+        "fill": "#f59e0b",
+        "stroke": "#d97706",
+        "dataSchema": {
+          "error.field": {
+            "type": "string",
+            "required": true
+          },
+          "error.message": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "create-unauthorized",
+      "type": "text",
+      "text": "# collection.create.unauthorized\n\nNot authenticated",
+      "x": -205,
+      "y": -139,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.create.unauthorized",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error"
+        },
+        "shape": "rectangle",
+        "fill": "#ef4444",
+        "stroke": "#dc2626"
+      }
+    },
+    {
+      "id": "create-error",
+      "type": "text",
+      "text": "# collection.create.error\n\nOperation failed",
+      "x": -151,
+      "y": 373,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.create.error",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error"
+        },
+        "shape": "rectangle",
+        "fill": "#ef4444",
+        "stroke": "#dc2626",
+        "dataSchema": {
+          "error.message": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "import-started",
+      "type": "text",
+      "text": "# collection.import.started\n\nImport shared collection",
+      "x": 516,
+      "y": 16,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.import.started",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a",
+        "dataSchema": {
+          "sourceUsername": {
+            "type": "string",
+            "required": true
+          },
+          "collectionName": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "import-fetch-source",
+      "type": "text",
+      "text": "# collection.import.fetch-source\n\nFetch source collection",
+      "x": 499,
+      "y": 173,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.import.fetch-source",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io"
+        },
+        "shape": "rectangle",
+        "fill": "#8b5cf6",
+        "stroke": "#6d28d9"
+      }
+    },
+    {
+      "id": "import-create-copy",
+      "type": "text",
+      "text": "# collection.import.create-copy\n\nCreate collection copy",
+      "x": 503,
+      "y": 306,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.import.create-copy",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "operation"
+        },
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "stroke": "#1d4ed8",
+        "dataSchema": {
+          "newCollectionName": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "import-copy-memberships",
+      "type": "text",
+      "text": "# collection.import.copy-memberships\n\nCopy repository memberships",
+      "x": 492,
+      "y": 456,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.import.copy-memberships",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "operation"
+        },
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "stroke": "#1d4ed8",
+        "dataSchema": {
+          "membershipCount": {
+            "type": "number",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "import-github-sync",
+      "type": "text",
+      "text": "# collection.import.github.sync\n\nSync to user's GitHub",
+      "x": 508,
+      "y": 607,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.import.github.sync",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io"
+        },
+        "shape": "rectangle",
+        "fill": "#8b5cf6",
+        "stroke": "#6d28d9"
+      }
+    },
+    {
+      "id": "import-success",
+      "type": "text",
+      "text": "# collection.import.success\n\nImport completed",
+      "x": 529,
+      "y": 745,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.import.success",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a",
+        "dataSchema": {
+          "newCollectionId": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "import-duplicate-check",
+      "type": "text",
+      "text": "# collection.import.duplicate-check\n\nAlready imported",
+      "x": 799,
+      "y": 169,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.import.duplicate-check",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#6b7280",
+        "stroke": "#4b5563"
+      }
+    },
+    {
+      "id": "import-not-found",
+      "type": "text",
+      "text": "# collection.import.not-found\n\nSource not found",
+      "x": 823,
+      "y": 312,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.import.not-found",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error"
+        },
+        "shape": "rectangle",
+        "fill": "#f59e0b",
+        "stroke": "#d97706"
+      }
+    },
+    {
+      "id": "import-unauthorized",
+      "type": "text",
+      "text": "# collection.import.unauthorized\n\nNot authenticated",
+      "x": 808,
+      "y": 11,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.import.unauthorized",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error"
+        },
+        "shape": "rectangle",
+        "fill": "#ef4444",
+        "stroke": "#dc2626"
+      }
+    },
+    {
+      "id": "import-error",
+      "type": "text",
+      "text": "# collection.import.error\n\nImport failed",
+      "x": 834,
+      "y": 606,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "collection.import.error",
+          "attributes": {}
+        },
+        "sources": [
+          "src/contexts/UserCollectionsContext.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error"
+        },
+        "shape": "rectangle",
+        "fill": "#ef4444",
+        "stroke": "#dc2626",
+        "dataSchema": {
+          "error.message": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-1",
+      "fromNode": "load-started",
+      "fromSide": "bottom",
+      "toNode": "load-github-fetch",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "load-2",
+      "fromNode": "load-github-fetch",
+      "fromSide": "bottom",
+      "toNode": "load-success",
+      "toSide": "top",
+      "label": "found",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "create-1",
+      "fromNode": "create-started",
+      "fromSide": "bottom",
+      "toNode": "create-validate",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "create-2",
+      "fromNode": "create-validate",
+      "fromSide": "bottom",
+      "toNode": "create-github-update",
+      "toSide": "top",
+      "label": "existing",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "create-3",
+      "fromNode": "create-validate",
+      "fromSide": "bottom",
+      "toNode": "create-github-init",
+      "toSide": "top",
+      "label": "new",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "create-6",
+      "fromNode": "create-github-commit",
+      "fromSide": "bottom",
+      "toNode": "create-success",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "import-1",
+      "fromNode": "import-started",
+      "fromSide": "bottom",
+      "toNode": "import-fetch-source",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "import-2",
+      "fromNode": "import-fetch-source",
+      "fromSide": "bottom",
+      "toNode": "import-create-copy",
+      "toSide": "top",
+      "label": "found",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "import-3",
+      "fromNode": "import-create-copy",
+      "fromSide": "bottom",
+      "toNode": "import-copy-memberships",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "import-4",
+      "fromNode": "import-copy-memberships",
+      "fromSide": "bottom",
+      "toNode": "import-github-sync",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "import-5",
+      "fromNode": "import-github-sync",
+      "fromSide": "bottom",
+      "toNode": "import-success",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "import-6",
+      "fromNode": "import-started",
+      "fromSide": "bottom",
+      "toNode": "import-duplicate-check",
+      "toSide": "top",
+      "label": "check",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "import-7",
+      "fromNode": "import-fetch-source",
+      "fromSide": "bottom",
+      "toNode": "import-not-found",
+      "toSide": "top",
+      "label": "404",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-create-github-update-create-github-commit-1771182136513",
+      "fromNode": "create-github-update",
+      "toNode": "create-github-commit",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-create-started-create-unauthorized-1771182308239",
+      "fromNode": "create-started",
+      "toNode": "create-unauthorized",
+      "fromSide": "right",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-create-github-commit-create-error-1771182308239",
+      "fromNode": "create-github-commit",
+      "toNode": "create-error",
+      "fromSide": "right",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-create-validate-create-validation-error-1771182308239",
+      "fromNode": "create-validate",
+      "toNode": "create-validation-error",
+      "fromSide": "right",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-create-github-init-create-github-commit-1771182308239",
+      "fromNode": "create-github-init",
+      "toNode": "create-github-commit",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-load-started-load-unauthorized-1771182519807",
+      "fromNode": "load-started",
+      "toNode": "load-unauthorized",
+      "fromSide": "right",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-load-github-fetch-load-not-found-1771182519807",
+      "fromNode": "load-github-fetch",
+      "toNode": "load-not-found",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-load-github-fetch-load-error-1771182519807",
+      "fromNode": "load-github-fetch",
+      "toNode": "load-error",
+      "fromSide": "right",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-import-started-import-unauthorized-1771182767034",
+      "fromNode": "import-started",
+      "toNode": "import-unauthorized",
+      "fromSide": "right",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-import-github-sync-import-error-1771182767035",
+      "fromNode": "import-github-sync",
+      "toNode": "import-error",
+      "fromSide": "right",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "error"
+      }
+    }
+  ]
+}

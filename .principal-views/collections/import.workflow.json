@@ -1,0 +1,70 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/collections/collections.otel.canvas",
+  "mode": "span-tree",
+  "spanPattern": "api.collections.import",
+  "name": "Import Collection/World",
+  "description": "Import another user's collection into your own collections",
+  "scenarios": [
+    {
+      "id": "import-success",
+      "priority": 1,
+      "template": {
+        "summary": "✅ Imported '{collectionName}' from @{sourceUsername}",
+        "events": {
+          "collection.import.started": "Importing collection from @{{sourceUsername}}: {{collectionName}}",
+          "collection.import.fetch-source": "Fetching source collection data",
+          "collection.import.create-copy": "Creating copy: {{newCollectionName}}",
+          "collection.import.copy-memberships": "Copying {{membershipCount}} repository memberships",
+          "collection.import.github.sync": "Syncing to user's GitHub repo",
+          "collection.import.success": "Import completed, new collection ID: {{newCollectionId}}"
+        }
+      }
+    },
+    {
+      "id": "already-imported",
+      "priority": 2,
+      "template": {
+        "summary": "⚪ Collection already imported",
+        "events": {
+          "collection.import.started": "Importing collection from @{{sourceUsername}}: {{collectionName}}",
+          "collection.import.duplicate-check": "Collection already exists in user's collections"
+        }
+      }
+    },
+    {
+      "id": "source-not-found",
+      "priority": 3,
+      "template": {
+        "summary": "⚠️ Source collection not found",
+        "events": {
+          "collection.import.started": "Importing collection from @{{sourceUsername}}: {{collectionName}}",
+          "collection.import.fetch-source": "Fetching source collection data",
+          "collection.import.not-found": "Source collection or user not found (404)"
+        }
+      }
+    },
+    {
+      "id": "unauthorized",
+      "priority": 4,
+      "template": {
+        "summary": "🔒 Authentication required",
+        "events": {
+          "collection.import.started": "Importing collection from @{{sourceUsername}}",
+          "collection.import.unauthorized": "User not authenticated (401)"
+        }
+      }
+    },
+    {
+      "id": "error",
+      "priority": 5,
+      "template": {
+        "summary": "❌ Import failed: {error.message}",
+        "events": {
+          "collection.import.started": "Importing collection from @{{sourceUsername}}",
+          "collection.import.error": "Error during import: {{error.message}}"
+        }
+      }
+    }
+  ]
+}

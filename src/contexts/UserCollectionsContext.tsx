@@ -18,6 +18,7 @@ import {
 } from 'react';
 import type { Collection, CollectionMembership } from '@principal-ai/alexandria-collections';
 import { useAuth } from './AuthContext';
+import { withTelemetrySpan } from '@/lib/telemetry';
 
 /** Repository info with optional source repository for forks */
 interface RepositoryInfo {
@@ -125,34 +126,56 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    try {
-      setLoading(true);
-      setError(null);
+    await withTelemetrySpan('api.github.collections.load', async (emit) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const response = await fetch('/api/github/collections');
+        emit('collections.load.started');
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          setCollections([]);
-          setMemberships([]);
-          setGitHubRepoExists(false);
-          setGitHubRepoUrl(null);
-          return;
+        const response = await fetch('/api/github/collections');
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            emit('collections.load.unauthorized');
+            setCollections([]);
+            setMemberships([]);
+            setGitHubRepoExists(false);
+            setGitHubRepoUrl(null);
+            return;
+          }
+          throw new Error('Failed to load collections from GitHub');
         }
-        throw new Error('Failed to load collections from GitHub');
-      }
 
-      const data = await response.json();
-      setGitHubRepoExists(data.exists);
-      setGitHubRepoUrl(data.repoUrl || null);
-      setCollections(data.collections || []);
-      setMemberships(data.memberships || []);
-    } catch (err) {
-      console.error('Failed to load collections from GitHub:', err);
-      setError(err instanceof Error ? err : new Error('Failed to load collections'));
-    } finally {
-      setLoading(false);
-    }
+        const data = await response.json();
+
+        if (!data.exists) {
+          emit('collections.load.github.not-found');
+        } else {
+          emit('collections.load.github.fetch', {
+            repoUrl: data.repoUrl || 'unknown',
+          });
+        }
+
+        setGitHubRepoExists(data.exists);
+        setGitHubRepoUrl(data.repoUrl || null);
+        setCollections(data.collections || []);
+        setMemberships(data.memberships || []);
+
+        emit('collections.load.success', {
+          collectionCount: (data.collections || []).length,
+          membershipCount: (data.memberships || []).length,
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to load collections'));
+        emit('collections.load.error', {
+          'error.message': err instanceof Error ? err.message : 'Unknown error',
+        });
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    });
   }, [isAuthenticated]);
 
   // Load from GitHub when authenticated
@@ -163,31 +186,57 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
   // Create a new collection
   const createCollection = useCallback(
     async (name: string, description?: string, icon?: string): Promise<Collection> => {
-      const now = Date.now();
-      const newCollection: Collection = {
-        id: generateCollectionId(),
-        name,
-        description,
-        icon,
-        createdAt: now,
-        updatedAt: now,
-      };
+      return await withTelemetrySpan('api.github.collections.create', async (emit) => {
+        emit('collection.create.started', {
+          collectionName: name,
+          ...(icon && { icon }),
+          ...(description && { description }),
+        });
 
-      const newCollections = [...collections, newCollection];
+        emit('collection.create.validate');
 
-      // Save to GitHub first, then update state
-      const result = await saveToGitHub(newCollections, memberships, gitHubRepoExists);
-      setCollections(newCollections);
+        const now = Date.now();
+        const newCollection: Collection = {
+          id: generateCollectionId(),
+          name,
+          description,
+          icon,
+          createdAt: now,
+          updatedAt: now,
+        };
 
-      // If repo was just created, update state
-      if (result.repoUrl && !gitHubRepoExists) {
-        setGitHubRepoExists(true);
-        setGitHubRepoUrl(result.repoUrl);
-      }
+        const newCollections = [...collections, newCollection];
 
-      return newCollection;
+        // Emit appropriate GitHub event based on whether repo exists
+        if (gitHubRepoExists) {
+          emit('collection.create.github.update');
+        } else {
+          emit('collection.create.github.init', {
+            repoUrl: gitHubRepoUrl || 'creating',
+          });
+        }
+
+        // Save to GitHub first, then update state
+        const result = await saveToGitHub(newCollections, memberships, gitHubRepoExists);
+
+        emit('collection.create.github.commit');
+
+        setCollections(newCollections);
+
+        // If repo was just created, update state
+        if (result.repoUrl && !gitHubRepoExists) {
+          setGitHubRepoExists(true);
+          setGitHubRepoUrl(result.repoUrl);
+        }
+
+        emit('collection.create.success', {
+          collectionId: newCollection.id,
+        });
+
+        return newCollection;
+      });
     },
-    [collections, memberships, gitHubRepoExists, saveToGitHub]
+    [collections, memberships, gitHubRepoExists, gitHubRepoUrl, saveToGitHub]
   );
 
   // Update a collection
