@@ -40,6 +40,7 @@ const eslintConfig = [
         },
       ],
       "import/first": "error",
+      "max-lines": ["warn", { max: 1500, skipBlankLines: true, skipComments: true }],
     },
   },
 ];

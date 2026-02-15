@@ -31,6 +31,8 @@ import { useAuth } from './AuthContext';
 import { useLocalFileSystem } from './LocalFileSystemContext';
 import { useVFS } from './VFSContext';
 import { usePresenceData, type RepositorySession } from '@/hooks/usePresenceData';
+import { fetchTracesSafe } from '@/lib/otel-traces';
+import { enrichTracesWithWorkflowMatching } from '@/lib/workflow-matcher-api';
 
 // Current activity type for presence
 interface CurrentActivity {
@@ -844,15 +846,12 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     console.log('[PanelContext] Fetching telemetry for service:', serviceName);
 
     try {
-      const { fetchTracesSafe } = await import('@/lib/otel-traces');
-      const { enrichTracesWithWorkflowMatching } = await import('@/lib/workflow-matcher');
-
       const traces = await fetchTracesSafe(serviceName, limit);
       console.log('[PanelContext] Telemetry fetched:', traces.length, 'traces');
 
-      // Enrich traces with workflow matching from version registry
+      // Enrich traces with workflow matching using server-side API
       const enrichedTraces = await enrichTracesWithWorkflowMatching(traces);
-      console.log('[PanelContext] Telemetry enriched with workflow matching');
+      console.log('[PanelContext] Telemetry enriched with server-side workflow matching');
 
       setTelemetryData(enrichedTraces);
 

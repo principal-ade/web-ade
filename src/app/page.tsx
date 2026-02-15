@@ -14,11 +14,14 @@ import {
   PanelLayout,
 } from '@principal-ade/panel-layouts';
 import '@principal-ade/panel-layouts/styles.css';
-import dynamic from 'next/dynamic';
+import dynamicImport from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
+// Disable static generation to prevent SSR errors with client-side dependencies
+export const dynamic = 'force-dynamic';
+
 // Dynamic import for RecentRepositoriesPanel
-const RecentRepositoriesPanelLoader = dynamic(
+const RecentRepositoriesPanelLoader = dynamicImport(
   () => import('@industry-theme/github-panels').then((mod) => mod.RecentRepositoriesPanel),
   { ssr: false }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

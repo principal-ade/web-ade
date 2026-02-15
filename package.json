@@ -66,7 +66,7 @@
     "@principal-ai/codebase-quality-lenses": "^0.1.58",
     "@principal-ai/control-tower-core": "^0.2.1",
     "@principal-ai/logo-component": "^0.1.4",
-    "@principal-ai/principal-view-core": "^0.23.0",
+    "@principal-ai/principal-view-core": "^0.23.7",
     "@principal-ai/quality-lens-registry": "^0.3.3",
     "@principal-ai/repository-abstraction": "^0.5.7",
     "@tailwindcss/postcss": "^4",
@@ -92,7 +92,8 @@
     "remove-markdown": "^0.6.3",
     "tailwindcss": "^4",
     "themed-markdown": "^0.1.80",
-    "typescript": "^5"
+    "typescript": "^5",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^4.1.2",
