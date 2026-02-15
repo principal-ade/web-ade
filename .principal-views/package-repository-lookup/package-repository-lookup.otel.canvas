@@ -1,0 +1,571 @@
+{
+  "pv": {
+    "name": "Package Repository Lookup",
+    "version": "1.0.0",
+    "markdown": ".principal-views/package-repository-lookup/package-repository-lookup.md",
+    "edgeTypes": {
+      "flow": {
+        "label": "Flow"
+      },
+      "error": {
+        "label": "Error Path"
+      },
+      "fallback": {
+        "label": "Fallback"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "single-started",
+      "type": "text",
+      "text": "# Lookup Started\n\nLookup package repository",
+      "x": -500,
+      "y": 50,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "package.lookup.single.started",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/packages/repository-lookup/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a",
+        "dataSchema": {
+          "packageName": {
+            "type": "string",
+            "required": true
+          },
+          "system": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "single-npm-registry",
+      "type": "text",
+      "text": "# NPM Registry Fetch\n\nFetch from npm registry",
+      "x": -500,
+      "y": 180,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "package.lookup.npm-registry",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/packages/repository-lookup/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io"
+        },
+        "shape": "rectangle",
+        "fill": "#8b5cf6",
+        "stroke": "#6d28d9",
+        "dataSchema": {
+          "packageName": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "single-depsdev",
+      "type": "text",
+      "text": "# Deps.dev API Fetch\n\nFetch from deps.dev API",
+      "x": -230,
+      "y": 180,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "package.lookup.depsdev",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/packages/repository-lookup/route.ts",
+          "src/app/api/packages/repository-lookup/batch/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io"
+        },
+        "shape": "rectangle",
+        "fill": "#8b5cf6",
+        "stroke": "#6d28d9",
+        "dataSchema": {
+          "packageName": {
+            "type": "string",
+            "required": true
+          },
+          "system": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "single-success",
+      "type": "text",
+      "text": "# Repository Found\n\nRepository found",
+      "x": -365,
+      "y": 330,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "package.lookup.single.success",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/packages/repository-lookup/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a",
+        "dataSchema": {
+          "packageName": {
+            "type": "string",
+            "required": true
+          },
+          "repository": {
+            "type": "string",
+            "required": true
+          },
+          "source": {
+            "type": "string",
+            "required": true
+          },
+          "version": {
+            "type": "string",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "single-not-found",
+      "type": "text",
+      "text": "# Repository Not Found\n\nRepository not found",
+      "x": -135,
+      "y": 330,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "package.lookup.single.not-found",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/packages/repository-lookup/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#f59e0b",
+        "stroke": "#d97706",
+        "dataSchema": {
+          "packageName": {
+            "type": "string",
+            "required": true
+          },
+          "system": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "single-validation-error",
+      "type": "text",
+      "text": "# Validation Error\n\nInvalid parameters",
+      "x": -690,
+      "y": 50,
+      "width": 180,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "package.lookup.single.validation-error",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/packages/repository-lookup/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error"
+        },
+        "shape": "rectangle",
+        "fill": "#ef4444",
+        "stroke": "#dc2626",
+        "dataSchema": {
+          "error": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "single-error",
+      "type": "text",
+      "text": "# Lookup Failed\n\nLookup failed",
+      "x": -690,
+      "y": 330,
+      "width": 180,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "package.lookup.single.error",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/packages/repository-lookup/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error"
+        },
+        "shape": "rectangle",
+        "fill": "#ef4444",
+        "stroke": "#dc2626",
+        "dataSchema": {
+          "error.message": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "batch-started",
+      "type": "text",
+      "text": "# Batch Lookup Started\n\nBatch lookup packages",
+      "x": 150,
+      "y": 50,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "package.lookup.batch.started",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/packages/repository-lookup/batch/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a",
+        "dataSchema": {
+          "packageCount": {
+            "type": "number",
+            "required": true
+          },
+          "concurrency": {
+            "type": "number",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "batch-process",
+      "type": "text",
+      "text": "# Processing Batch\n\nProcessing batch",
+      "x": 150,
+      "y": 180,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "package.lookup.batch.process",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/packages/repository-lookup/batch/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "operation"
+        },
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "stroke": "#1d4ed8",
+        "dataSchema": {
+          "batchSize": {
+            "type": "number",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "batch-success",
+      "type": "text",
+      "text": "# Batch Completed\n\nBatch completed",
+      "x": 150,
+      "y": 330,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "package.lookup.batch.success",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/packages/repository-lookup/batch/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle"
+        },
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a",
+        "dataSchema": {
+          "total": {
+            "type": "number",
+            "required": true
+          },
+          "found": {
+            "type": "number",
+            "required": true
+          },
+          "notFound": {
+            "type": "number",
+            "required": true
+          },
+          "errors": {
+            "type": "number",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "batch-validation-error",
+      "type": "text",
+      "text": "# Batch Validation Error\n\nInvalid request",
+      "x": 380,
+      "y": 50,
+      "width": 180,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "package.lookup.batch.validation-error",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/packages/repository-lookup/batch/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error"
+        },
+        "shape": "rectangle",
+        "fill": "#ef4444",
+        "stroke": "#dc2626",
+        "dataSchema": {
+          "error": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "batch-error",
+      "type": "text",
+      "text": "# Batch Failed\n\nBatch failed",
+      "x": 380,
+      "y": 330,
+      "width": 180,
+      "height": 90,
+      "pv": {
+        "event": {
+          "name": "package.lookup.batch.error",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/packages/repository-lookup/batch/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error"
+        },
+        "shape": "rectangle",
+        "fill": "#ef4444",
+        "stroke": "#dc2626",
+        "dataSchema": {
+          "error.message": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "single-1",
+      "fromNode": "single-started",
+      "fromSide": "bottom",
+      "toNode": "single-npm-registry",
+      "toSide": "top",
+      "label": "npm package",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "single-2",
+      "fromNode": "single-started",
+      "fromSide": "bottom",
+      "toNode": "single-depsdev",
+      "toSide": "top",
+      "label": "other system",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "single-3",
+      "fromNode": "single-npm-registry",
+      "fromSide": "right",
+      "toNode": "single-depsdev",
+      "toSide": "left",
+      "label": "fallback",
+      "pv": {
+        "edgeType": "fallback"
+      }
+    },
+    {
+      "id": "single-4",
+      "fromNode": "single-npm-registry",
+      "fromSide": "bottom",
+      "toNode": "single-success",
+      "toSide": "top",
+      "label": "found",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "single-5",
+      "fromNode": "single-depsdev",
+      "fromSide": "bottom",
+      "toNode": "single-success",
+      "toSide": "top",
+      "label": "found",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "single-6",
+      "fromNode": "single-depsdev",
+      "fromSide": "bottom",
+      "toNode": "single-not-found",
+      "toSide": "top",
+      "label": "404",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "single-7",
+      "fromNode": "single-started",
+      "fromSide": "left",
+      "toNode": "single-validation-error",
+      "toSide": "right",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "single-8",
+      "fromNode": "single-npm-registry",
+      "fromSide": "left",
+      "toNode": "single-error",
+      "toSide": "right",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "single-9",
+      "fromNode": "single-depsdev",
+      "fromSide": "left",
+      "toNode": "single-error",
+      "toSide": "right",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "batch-1",
+      "fromNode": "batch-started",
+      "fromSide": "bottom",
+      "toNode": "batch-process",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "batch-2",
+      "fromNode": "batch-process",
+      "fromSide": "bottom",
+      "toNode": "batch-success",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "batch-3",
+      "fromNode": "batch-started",
+      "fromSide": "right",
+      "toNode": "batch-validation-error",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "batch-4",
+      "fromNode": "batch-process",
+      "fromSide": "right",
+      "toNode": "batch-error",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "error"
+      }
+    }
+  ]
+}

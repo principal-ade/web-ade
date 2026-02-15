@@ -1,0 +1,87 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/package-repository-lookup/package-repository-lookup.otel.canvas",
+  "mode": "span-tree",
+  "spanPattern": "api.packages.repository-lookup.batch",
+  "name": "Batch Package Repository Lookup",
+  "description": "Look up repository URLs for multiple packages in batch",
+  "scenarios": [
+    {
+      "id": "success-all-found",
+      "priority": 1,
+      "template": {
+        "summary": "✅ Batch lookup completed: {total} packages, all found",
+        "events": {
+          "package.lookup.batch.started": "Starting batch lookup for {{packageCount}} packages (concurrency: {{concurrency}})",
+          "package.lookup.batch.process": "Processing batch (size: {{batchSize}})",
+          "package.lookup.batch.success": "Batch completed: {{total}} total, {{found}} found, {{notFound}} not found, {{errors}} errors"
+        }
+      }
+    },
+    {
+      "id": "success-partial",
+      "priority": 2,
+      "template": {
+        "summary": "✅ Batch lookup completed: {found}/{total} packages found",
+        "events": {
+          "package.lookup.batch.started": "Starting batch lookup for {{packageCount}} packages (concurrency: {{concurrency}})",
+          "package.lookup.batch.process": "Processing batch (size: {{batchSize}})",
+          "package.lookup.batch.success": "Batch completed: {{total}} total, {{found}} found, {{notFound}} not found, {{errors}} errors"
+        }
+      }
+    },
+    {
+      "id": "success-with-errors",
+      "priority": 3,
+      "template": {
+        "summary": "⚠️ Batch lookup completed with errors: {found}/{total} found, {errors} errors",
+        "events": {
+          "package.lookup.batch.started": "Starting batch lookup for {{packageCount}} packages (concurrency: {{concurrency}})",
+          "package.lookup.batch.process": "Processing batch (size: {{batchSize}})",
+          "package.lookup.batch.success": "Batch completed with errors: {{total}} total, {{found}} found, {{notFound}} not found, {{errors}} errors"
+        }
+      }
+    },
+    {
+      "id": "validation-error-missing-packages",
+      "priority": 4,
+      "template": {
+        "summary": "❌ Invalid request: missing packages array",
+        "events": {
+          "package.lookup.batch.validation-error": "Validation failed: {{error}}"
+        }
+      }
+    },
+    {
+      "id": "validation-error-invalid-system",
+      "priority": 5,
+      "template": {
+        "summary": "❌ Invalid request: unsupported package system",
+        "events": {
+          "package.lookup.batch.validation-error": "Validation failed: {{error}}"
+        }
+      }
+    },
+    {
+      "id": "validation-error-batch-size",
+      "priority": 6,
+      "template": {
+        "summary": "❌ Invalid request: batch size exceeds limit",
+        "events": {
+          "package.lookup.batch.validation-error": "Validation failed: {{error}}"
+        }
+      }
+    },
+    {
+      "id": "error",
+      "priority": 7,
+      "template": {
+        "summary": "❌ Batch lookup failed: {error.message}",
+        "events": {
+          "package.lookup.batch.started": "Starting batch lookup for {{packageCount}} packages",
+          "package.lookup.batch.error": "Error: {{error.message}}"
+        }
+      }
+    }
+  ]
+}

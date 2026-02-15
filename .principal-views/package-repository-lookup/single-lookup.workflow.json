@@ -1,0 +1,59 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/package-repository-lookup/package-repository-lookup.otel.canvas",
+  "mode": "span-tree",
+  "spanPattern": "api.packages.repository-lookup.single",
+  "name": "Package Repository Lookup",
+  "description": "Look up repository URLs for packages across multiple ecosystems",
+  "scenarios": [
+    {
+      "id": "success",
+      "priority": 1,
+      "template": {
+        "summary": "✅ Found repository for '{packageName}' via {{source}}",
+        "events": {
+          "package.lookup.single.started": "Looking up repository for {{packageName}} (system: {{system}})",
+          "package.lookup.npm-registry": "{{#if package.lookup.npm-registry}}Fetching from npm registry: {{packageName}}{{/if}}",
+          "package.lookup.depsdev": "{{#if package.lookup.depsdev}}{{#if package.lookup.npm-registry}}Fallback to deps.dev: {{packageName}}{{else}}Fetching from deps.dev: {{packageName}} ({{system}}){{/if}}{{/if}}",
+          "package.lookup.single.success": "Repository found: {{repository}} (version: {{version}}, source: {{source}})"
+        }
+      }
+    },
+    {
+      "id": "not-found",
+      "priority": 2,
+      "template": {
+        "summary": "⚠️ Repository not found for '{packageName}'",
+        "events": {
+          "package.lookup.single.started": "Looking up repository for {{packageName}} (system: {{system}})",
+          "package.lookup.npm-registry": "{{#if package.lookup.npm-registry}}Fetching from npm registry: {{packageName}}{{/if}}",
+          "package.lookup.depsdev": "{{#if package.lookup.depsdev}}{{#if package.lookup.npm-registry}}Fallback to deps.dev: {{packageName}}{{else}}Fetching from deps.dev: {{packageName}} ({{system}}){{/if}}{{/if}}",
+          "package.lookup.single.not-found": "Repository not found for {{packageName}} ({{system}})"
+        }
+      }
+    },
+    {
+      "id": "validation-error",
+      "priority": 3,
+      "template": {
+        "summary": "❌ Invalid request parameters",
+        "events": {
+          "package.lookup.single.validation-error": "Validation failed: {{error}}"
+        }
+      }
+    },
+    {
+      "id": "error",
+      "priority": 4,
+      "template": {
+        "summary": "❌ Failed to lookup repository: {error.message}",
+        "events": {
+          "package.lookup.single.started": "Looking up repository for {{packageName}} (system: {{system}})",
+          "package.lookup.npm-registry": "{{#if package.lookup.npm-registry}}Fetching from npm registry: {{packageName}}{{/if}}",
+          "package.lookup.depsdev": "{{#if package.lookup.depsdev}}Fetching from deps.dev: {{packageName}} ({{system}}){{/if}}",
+          "package.lookup.single.error": "Error: {{error.message}}"
+        }
+      }
+    }
+  ]
+}
