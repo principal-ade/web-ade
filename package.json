@@ -60,7 +60,7 @@
     "@principal-ade/panel-framework-core": "^0.3.0",
     "@principal-ade/panel-layouts": "^0.3.20",
     "@principal-ade/utcp-panel-event": "^0.1.0",
-    "@principal-ai/alexandria-collections": "^0.1.0",
+    "@principal-ai/alexandria-collections": "^1.1.0",
     "@principal-ai/alexandria-core-library": "^0.3.2",
     "@principal-ai/codebase-composition": "^0.2.31",
     "@principal-ai/codebase-quality-lenses": "^0.1.58",

@@ -29,6 +29,7 @@ import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-ab
 import type { StoryboardContextSliceData, VersionSnapshot } from '@principal-ai/principal-view-core';
 import { useAuth } from './AuthContext';
 import { useUserCollections } from './UserCollectionsContext';
+import type { CustomRegion, RepositoryLayoutData } from '@principal-ai/alexandria-collections';
 import { useLocalFileSystem } from './LocalFileSystemContext';
 import { useVFS } from './VFSContext';
 import { usePresenceData, type RepositorySession } from '@/hooks/usePresenceData';
@@ -3298,8 +3299,135 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           throw error;
         }
       },
+      // Region management actions for CollectionMapPanel
+      onInitializeDefaultRegions: async (collectionId: string, regions: CustomRegion[]) => {
+        console.log('[PanelContext] Initializing default regions for collection:', collectionId, regions);
+        try {
+          await userCollections.updateCollection(collectionId, {
+            metadata: {
+              customRegions: regions,
+              layoutMode: 'auto',
+            },
+          });
+        } catch (error) {
+          console.error('[PanelContext] Error initializing default regions:', error);
+          throw error;
+        }
+      },
+      onSwitchLayoutMode: async (collectionId: string, mode: 'auto' | 'manual') => {
+        console.log('[PanelContext] Switching layout mode for collection:', collectionId, mode);
+        try {
+          const collection = userCollections.getCollection(collectionId);
+          if (collection) {
+            await userCollections.updateCollection(collectionId, {
+              metadata: {
+                ...collection.metadata,
+                layoutMode: mode,
+              },
+            });
+          }
+        } catch (error) {
+          console.error('[PanelContext] Error switching layout mode:', error);
+          throw error;
+        }
+      },
+      onRegionCreated: async (collectionId: string, region: Omit<CustomRegion, 'id' | 'createdAt'>): Promise<CustomRegion> => {
+        console.log('[PanelContext] Creating region for collection:', collectionId, region);
+        try {
+          const collection = userCollections.getCollection(collectionId);
+          if (!collection) {
+            throw new Error(`Collection not found: ${collectionId}`);
+          }
+
+          const customRegions = (collection.metadata?.customRegions as CustomRegion[]) || [];
+          const newRegion: CustomRegion = {
+            ...region,
+            id: `region-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            createdAt: Date.now(),
+          };
+          await userCollections.updateCollection(collectionId, {
+            metadata: {
+              ...collection.metadata,
+              customRegions: [...customRegions, newRegion],
+            },
+          });
+          return newRegion;
+        } catch (error) {
+          console.error('[PanelContext] Error creating region:', error);
+          throw error;
+        }
+      },
+      onRegionUpdated: async (collectionId: string, regionId: string, updates: Partial<CustomRegion>) => {
+        console.log('[PanelContext] Updating region:', collectionId, regionId, updates);
+        try {
+          const collection = userCollections.getCollection(collectionId);
+          if (collection) {
+            const customRegions = (collection.metadata?.customRegions as CustomRegion[]) || [];
+            const updatedRegions = customRegions.map(r =>
+              r.id === regionId ? { ...r, ...updates } : r
+            );
+            await userCollections.updateCollection(collectionId, {
+              metadata: {
+                ...collection.metadata,
+                customRegions: updatedRegions,
+              },
+            });
+          }
+        } catch (error) {
+          console.error('[PanelContext] Error updating region:', error);
+          throw error;
+        }
+      },
+      onRegionDeleted: async (collectionId: string, regionId: string) => {
+        console.log('[PanelContext] Deleting region:', collectionId, regionId);
+        try {
+          const collection = userCollections.getCollection(collectionId);
+          if (collection) {
+            const customRegions = (collection.metadata?.customRegions as CustomRegion[]) || [];
+            const filteredRegions = customRegions.filter(r => r.id !== regionId);
+            await userCollections.updateCollection(collectionId, {
+              metadata: {
+                ...collection.metadata,
+                customRegions: filteredRegions,
+              },
+            });
+          }
+        } catch (error) {
+          console.error('[PanelContext] Error deleting region:', error);
+          throw error;
+        }
+      },
+      onRepositoryAssigned: async (collectionId: string, repositoryId: string, regionId: string) => {
+        console.log('[PanelContext] Assigning repository to region:', { collectionId, repositoryId, regionId });
+        try {
+          // Find the membership for this repository in this collection
+          const membership = userCollections.memberships.find(
+            m => m.collectionId === collectionId && m.repositoryId === repositoryId
+          );
+
+          if (membership) {
+            // Update membership metadata with regionId
+            // Note: This requires extending UserCollectionsContext with updateMembershipMetadata
+            // For now, we'll log a warning
+            console.warn('[PanelContext] Repository assignment requires updateMembershipMetadata - not yet implemented');
+          }
+        } catch (error) {
+          console.error('[PanelContext] Error assigning repository to region:', error);
+          throw error;
+        }
+      },
+      onRepositoryPositionUpdated: async (collectionId: string, repositoryId: string, layout: RepositoryLayoutData) => {
+        console.log('[PanelContext] Updating repository position:', { collectionId, repositoryId, layout });
+        try {
+          // Similar to onRepositoryAssigned, this requires membership metadata updates
+          console.warn('[PanelContext] Repository position update requires updateMembershipMetadata - not yet implemented');
+        } catch (error) {
+          console.error('[PanelContext] Error updating repository position:', error);
+          throw error;
+        }
+      },
     }),
-    [events, githubRepo, isLocalMode, localAdapter, cleanFilePath, readFileFromGitHub]
+    [events, githubRepo, isLocalMode, localAdapter, cleanFilePath, readFileFromGitHub, userCollections]
   );
 
   // Clear color mode selection (for header clear button)
