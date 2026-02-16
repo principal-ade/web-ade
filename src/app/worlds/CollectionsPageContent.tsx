@@ -162,7 +162,7 @@ export function CollectionsPageContent({
   const [isMobile, setIsMobile] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
   const leftCollapsed = false;
-  const rightCollapsed = false;
+  const rightCollapsed = viewMode === 'explore';
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<'recent' | 'collections' | 'following' | 'starred'>('recent');
   const [collectionDropdownOpen, setCollectionDropdownOpen] = useState(false);

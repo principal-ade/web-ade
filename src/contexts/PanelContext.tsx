@@ -28,6 +28,7 @@ import { minimatch } from 'minimatch';
 import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData, VersionSnapshot } from '@principal-ai/principal-view-core';
 import { useAuth } from './AuthContext';
+import { useUserCollections } from './UserCollectionsContext';
 import { useLocalFileSystem } from './LocalFileSystemContext';
 import { useVFS } from './VFSContext';
 import { usePresenceData, type RepositorySession } from '@/hooks/usePresenceData';
@@ -488,6 +489,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   const { isAuthenticated } = useAuth();
   const { adapter: localAdapter } = useLocalFileSystem();
   const isLocalMode = !!localAdapter;
+
+  // Get user collections for userCollections slice
+  const userCollections = useUserCollections();
 
   // Get VFS for file operations (pending layer + GitHub fallback)
   // Use refs to avoid dependency on vfs object which changes on every render
@@ -2007,6 +2011,27 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           },
         },
       ],
+      [
+        'userCollections',
+        {
+          scope: 'global',
+          name: 'userCollections',
+          data: {
+            collections: [],
+            memberships: [],
+            loading: false,
+            saving: false,
+            gitHubRepoExists: false,
+            gitHubRepoUrl: null,
+            error: null,
+          },
+          loading: false,
+          error: null,
+          refresh: async () => {
+            // Refresh handled by UserCollectionsContext
+          },
+        },
+      ],
     ])
   );
 
@@ -2316,6 +2341,24 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         currentUser: userGitHubData.currentUser,
       },
       loading: userGitHubLoading,
+    });
+  }
+
+  // Update userCollections slice with user collections data
+  const userCollectionsSlice = slicesRef.current.get('userCollections');
+  if (userCollectionsSlice) {
+    slicesRef.current.set('userCollections', {
+      ...userCollectionsSlice,
+      data: {
+        collections: userCollections.collections,
+        memberships: userCollections.memberships,
+        loading: userCollections.loading,
+        saving: userCollections.saving,
+        gitHubRepoExists: userCollections.gitHubRepoExists,
+        gitHubRepoUrl: userCollections.gitHubRepoUrl,
+        error: undefined,
+      },
+      loading: userCollections.loading,
     });
   }
 
