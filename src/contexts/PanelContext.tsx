@@ -2995,6 +2995,12 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
   // Context value - include all data states to ensure proper re-renders
   // We include data states (markdownContent, markdownFiles, etc.) as dependencies to force
   // context updates when data loads, since slicesRef uses mutation and won't trigger updates
+  // Get selected collection from userCollections slice
+  const selectedCollection = useMemo(() => {
+    if (!collectionId) return undefined;
+    return userCollections.collections.find(c => c.id === collectionId);
+  }, [collectionId, userCollections.collections]);
+
   const context: PanelContextValue = useMemo(
     () => ({
       currentScope: {
@@ -3011,6 +3017,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       repositoryPath: githubRepo ? `/GitHub/${githubRepo}` : '',
       slices: slicesRef.current,
       adapters,
+      selectedCollection,
       getSlice: <T,>(name: string) => slicesRef.current.get(name) as DataSlice<T> | undefined,
       getWorkspaceSlice: <T,>(name: string) => {
         const slice = slicesRef.current.get(name);
@@ -3034,7 +3041,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, userGitHubData, userGitHubLoading, qualityData, qualityLoading, qualityError, lensResults, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading, messagesData, autoShowTour, telemetryData, telemetryLoading, telemetryError]
+    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, userGitHubData, userGitHubLoading, qualityData, qualityLoading, qualityError, lensResults, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading, messagesData, autoShowTour, telemetryData, telemetryLoading, telemetryError, selectedCollection]
   );
 
   // Actions
