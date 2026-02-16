@@ -8,6 +8,7 @@
   "scenarios": [
     {
       "id": "cache-hit-success",
+      "description": "TTS request completed immediately by serving cached audio from S3",
       "priority": 1,
       "template": {
         "summary": "✅ TTS audio served from cache for {{tts.owner}}/{{tts.repo}}:{{tts.stepId}} in {{tts.durationMs}}ms",
@@ -20,6 +21,7 @@
     },
     {
       "id": "generation-success",
+      "description": "TTS request completed by generating new audio via ElevenLabs and caching it to S3",
       "priority": 2,
       "template": {
         "summary": "✅ Generated TTS audio for {{tts.owner}}/{{tts.repo}}:{{tts.stepId}} ({{tts.textLength}} chars) in {{tts.generationTimeMs}}ms",
@@ -35,6 +37,7 @@
     },
     {
       "id": "rate-limit-error",
+      "description": "TTS generation failed because ElevenLabs API rate limit was exceeded",
       "priority": 3,
       "template": {
         "summary": "⏱️  ElevenLabs rate limit exceeded for {{tts.owner}}/{{tts.repo}}:{{tts.stepId}}, retry after {{tts.retryAfter}}s",
@@ -48,6 +51,7 @@
     },
     {
       "id": "step-not-found-error",
+      "description": "TTS generation failed because the requested step ID does not exist in the tour file",
       "priority": 4,
       "template": {
         "summary": "❌ Step not found: {{tts.stepId}} in {{tts.owner}}/{{tts.repo}}",
@@ -60,6 +64,7 @@
     },
     {
       "id": "tour-not-found-error",
+      "description": "TTS generation failed because the tour file could not be found on GitHub",
       "priority": 5,
       "template": {
         "summary": "❌ Tour not found: {{tts.owner}}/{{tts.repo}}:{{tts.path}}",

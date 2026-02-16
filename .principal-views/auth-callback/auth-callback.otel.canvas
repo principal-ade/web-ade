@@ -22,6 +22,7 @@
       "width": 200,
       "height": 100,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "auth.callback.started",
           "attributes": {}
@@ -65,6 +66,7 @@
       "width": 200,
       "height": 100,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "auth.state.validated",
           "attributes": {}
@@ -104,6 +106,7 @@
       "width": 200,
       "height": 100,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "auth.tokens.received",
           "attributes": {}
@@ -151,6 +154,7 @@
       "width": 200,
       "height": 100,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "auth.cookies.set",
           "attributes": {}
@@ -182,6 +186,7 @@
       "width": 200,
       "height": 100,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "auth.callback.complete",
           "attributes": {}
@@ -221,6 +226,7 @@
       "width": 200,
       "height": 100,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "auth.callback.error",
           "attributes": {}

@@ -8,6 +8,7 @@
   "scenarios": [
     {
       "id": "lookup-success",
+      "description": "Successfully retrieved the git commit SHA for the requested version",
       "priority": 1,
       "template": {
         "summary": "✅ Found {service.name}@{version} → {git.sha} (completed in {duration.ms}ms)",
@@ -20,6 +21,7 @@
     },
     {
       "id": "lookup-not-found",
+      "description": "Lookup completed but the version has not been registered",
       "priority": 2,
       "template": {
         "summary": "⚠️ Version {service.name}@{version} not registered",
@@ -31,6 +33,7 @@
     },
     {
       "id": "lookup-storage-error",
+      "description": "Lookup operation failed due to an S3 storage error",
       "priority": 3,
       "template": {
         "summary": "❌ S3 lookup failed: {error.message}",
@@ -42,6 +45,7 @@
     },
     {
       "id": "lookup-validation-error",
+      "description": "Lookup operation failed due to invalid request parameters",
       "priority": 4,
       "template": {
         "summary": "❌ Lookup validation failed: {error.message}",
@@ -53,6 +57,7 @@
     },
     {
       "id": "lookup-generic-error",
+      "description": "Lookup operation failed due to an unexpected error",
       "priority": 5,
       "template": {
         "summary": "❌ Lookup failed: {error.message}",

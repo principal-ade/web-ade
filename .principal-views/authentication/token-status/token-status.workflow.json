@@ -8,6 +8,7 @@
   "scenarios": [
     {
       "id": "authenticated",
+      "description": "Token is valid and user is authenticated (may need refresh if expiring soon)",
       "priority": 1,
       "template": {
         "summary": "✅ Token validated - expires in {expiresIn}ms",
@@ -19,6 +20,7 @@
     },
     {
       "id": "unauthenticated",
+      "description": "No valid token found and user is not authenticated",
       "priority": 2,
       "template": {
         "summary": "🔓 No valid token found - user not authenticated",
@@ -30,6 +32,7 @@
     },
     {
       "id": "error",
+      "description": "Token status check failed due to an unexpected error during validation",
       "priority": 3,
       "template": {
         "summary": "❌ Token check failed: {error.message}",

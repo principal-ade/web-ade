@@ -8,6 +8,7 @@
   "scenarios": [
     {
       "id": "import-success",
+      "description": "Successfully imported a shared collection from another user into the current user's collections",
       "priority": 1,
       "template": {
         "summary": "✅ Imported '{collectionName}' from @{sourceUsername}",
@@ -23,6 +24,7 @@
     },
     {
       "id": "already-imported",
+      "description": "Import skipped because the collection has already been imported by the user",
       "priority": 2,
       "template": {
         "summary": "⚪ Collection already imported",
@@ -34,6 +36,7 @@
     },
     {
       "id": "source-not-found",
+      "description": "Import failed because the source collection or user does not exist",
       "priority": 3,
       "template": {
         "summary": "⚠️ Source collection not found",
@@ -46,6 +49,7 @@
     },
     {
       "id": "unauthorized",
+      "description": "Import failed because the user is not authenticated",
       "priority": 4,
       "template": {
         "summary": "🔒 Authentication required",
@@ -57,6 +61,7 @@
     },
     {
       "id": "error",
+      "description": "Import failed due to an unexpected error (e.g., GitHub API error, network issue)",
       "priority": 5,
       "template": {
         "summary": "❌ Import failed: {error.message}",

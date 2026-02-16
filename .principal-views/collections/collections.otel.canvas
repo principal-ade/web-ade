@@ -22,6 +22,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collections.load.started",
           "attributes": {}
@@ -47,6 +48,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collections.load.github.fetch",
           "attributes": {}
@@ -79,6 +81,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collections.load.success",
           "attributes": {}
@@ -114,6 +117,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collections.load.github.not-found",
           "attributes": {}
@@ -139,6 +143,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collections.load.unauthorized",
           "attributes": {}
@@ -164,6 +169,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collections.load.error",
           "attributes": {}
@@ -195,6 +201,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.create.started",
           "attributes": {}
@@ -234,6 +241,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.create.validate",
           "attributes": {}
@@ -259,6 +267,7 @@
       "width": 180,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.create.github.update",
           "attributes": {}
@@ -284,6 +293,7 @@
       "width": 180,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.create.github.init",
           "attributes": {}
@@ -315,6 +325,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.create.github.commit",
           "attributes": {}
@@ -340,6 +351,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.create.success",
           "attributes": {}
@@ -371,6 +383,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.create.validation-error",
           "attributes": {}
@@ -406,6 +419,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.create.unauthorized",
           "attributes": {}
@@ -431,6 +445,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.create.error",
           "attributes": {}
@@ -462,6 +477,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.import.started",
           "attributes": {}
@@ -497,6 +513,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.import.fetch-source",
           "attributes": {}
@@ -522,6 +539,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.import.create-copy",
           "attributes": {}
@@ -553,6 +571,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.import.copy-memberships",
           "attributes": {}
@@ -584,6 +603,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.import.github.sync",
           "attributes": {}
@@ -609,6 +629,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.import.success",
           "attributes": {}
@@ -640,6 +661,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.import.duplicate-check",
           "attributes": {}
@@ -665,6 +687,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.import.not-found",
           "attributes": {}
@@ -690,6 +713,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.import.unauthorized",
           "attributes": {}
@@ -715,6 +739,7 @@
       "width": 200,
       "height": 90,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "collection.import.error",
           "attributes": {}

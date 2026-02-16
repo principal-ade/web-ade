@@ -8,6 +8,7 @@
   "scenarios": [
     {
       "id": "success",
+      "description": "Successfully found the repository URL for the requested package",
       "priority": 1,
       "template": {
         "summary": "✅ Found repository for '{packageName}' via {{source}}",
@@ -21,6 +22,7 @@
     },
     {
       "id": "not-found",
+      "description": "Lookup completed but the repository URL could not be found for the package",
       "priority": 2,
       "template": {
         "summary": "⚠️ Repository not found for '{packageName}'",
@@ -34,6 +36,7 @@
     },
     {
       "id": "validation-error",
+      "description": "Lookup failed because the request parameters are invalid or missing",
       "priority": 3,
       "template": {
         "summary": "❌ Invalid request parameters",
@@ -44,6 +47,7 @@
     },
     {
       "id": "error",
+      "description": "Lookup failed due to an unexpected error (e.g., network issue, API failure)",
       "priority": 4,
       "template": {
         "summary": "❌ Failed to lookup repository: {error.message}",

@@ -22,6 +22,7 @@
       "width": 200,
       "height": 100,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "token.check.started",
           "attributes": {}
@@ -53,6 +54,7 @@
       "width": 200,
       "height": 100,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "token.check.authenticated",
           "attributes": {}
@@ -96,6 +98,7 @@
       "width": 200,
       "height": 100,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "token.check.unauthenticated",
           "attributes": {}
@@ -127,6 +130,7 @@
       "width": 200,
       "height": 100,
       "pv": {
+        "status": "implemented",
         "event": {
           "name": "token.check.error",
           "attributes": {}

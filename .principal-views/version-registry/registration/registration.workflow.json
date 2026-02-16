@@ -8,6 +8,7 @@
   "scenarios": [
     {
       "id": "registration-success",
+      "description": "Successfully registered a version-to-commit mapping and fetched the schematic from GitHub",
       "priority": 1,
       "template": {
         "summary": "✅ Registered {service.name}@{version} → {git.sha}{{#if schematic.id}} with schematic{{/if}} (completed in {duration.ms}ms)",
@@ -24,6 +25,7 @@
     },
     {
       "id": "registration-error",
+      "description": "Registration failed or completed with errors (e.g., schematic fetch failed but mapping was stored)",
       "priority": 2,
       "template": {
         "summary": "{{#if (eq error.stage 'schematic')}}⚠️ Registered {service.name}@{version} but schematic fetch failed{{else}}❌ Registration failed{{/if}}: {error.message}",

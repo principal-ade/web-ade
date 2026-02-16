@@ -8,6 +8,7 @@
   "scenarios": [
     {
       "id": "success-existing-repo",
+      "description": "Successfully created a new collection in an existing GitHub repository",
       "priority": 1,
       "template": {
         "summary": "✅ Created collection '{collectionName}'",
@@ -22,6 +23,7 @@
     },
     {
       "id": "success-new-repo",
+      "description": "Successfully created a new collection and initialized a new GitHub repository",
       "priority": 2,
       "template": {
         "summary": "✅ Created collection '{collectionName}' and initialized GitHub repo",
@@ -36,6 +38,7 @@
     },
     {
       "id": "validation-error",
+      "description": "Collection creation failed due to invalid data (e.g., missing name, invalid characters)",
       "priority": 3,
       "template": {
         "summary": "⚠️ Invalid collection data: {error.field}",
@@ -47,6 +50,7 @@
     },
     {
       "id": "unauthorized",
+      "description": "Collection creation failed because user is not authenticated",
       "priority": 4,
       "template": {
         "summary": "🔒 Authentication required",
@@ -58,6 +62,7 @@
     },
     {
       "id": "error",
+      "description": "Collection creation failed due to an unexpected error (e.g., GitHub API error, network issue)",
       "priority": 5,
       "template": {
         "summary": "❌ Failed to create collection: {error.message}",

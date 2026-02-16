@@ -8,6 +8,7 @@
   "scenarios": [
     {
       "id": "authentication-success",
+      "description": "OAuth authentication completed successfully and user is now authenticated",
       "priority": 1,
       "template": {
         "summary": "✅ Authentication successful{{#if flow.type}} via {{flow.type}}{{/if}} (completed in {duration.ms}ms)",
@@ -22,6 +23,7 @@
     },
     {
       "id": "authentication-error",
+      "description": "OAuth authentication failed due to an error during the callback process",
       "priority": 2,
       "template": {
         "summary": "❌ Authentication {{#if error.type}}{{error.type}} {{/if}}failed: {error.message}",

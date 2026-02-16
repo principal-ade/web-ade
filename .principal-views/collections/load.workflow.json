@@ -8,6 +8,7 @@
   "scenarios": [
     {
       "id": "success-with-collections",
+      "description": "Successfully loaded the user's collections from their GitHub repository",
       "priority": 1,
       "template": {
         "summary": "✅ Loaded {collectionCount} collections",
@@ -20,6 +21,7 @@
     },
     {
       "id": "repo-not-found",
+      "description": "Load completed with no collections because the user's GitHub repository doesn't exist yet",
       "priority": 2,
       "template": {
         "summary": "⚪ No collections repo found",
@@ -31,6 +33,7 @@
     },
     {
       "id": "unauthorized",
+      "description": "Load failed because the user is not authenticated",
       "priority": 3,
       "template": {
         "summary": "🔒 Authentication required",
@@ -42,6 +45,7 @@
     },
     {
       "id": "error",
+      "description": "Load failed due to an unexpected error (e.g., GitHub API error, network issue)",
       "priority": 4,
       "template": {
         "summary": "❌ Failed to load collections: {error.message}",

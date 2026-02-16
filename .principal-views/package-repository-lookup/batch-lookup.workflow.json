@@ -8,6 +8,7 @@
   "scenarios": [
     {
       "id": "success-all-found",
+      "description": "Successfully looked up repositories for all packages in the batch",
       "priority": 1,
       "template": {
         "summary": "✅ Batch lookup completed: {total} packages, all found",
@@ -20,6 +21,7 @@
     },
     {
       "id": "success-partial",
+      "description": "Batch lookup completed but some packages were not found",
       "priority": 2,
       "template": {
         "summary": "✅ Batch lookup completed: {found}/{total} packages found",
@@ -32,6 +34,7 @@
     },
     {
       "id": "success-with-errors",
+      "description": "Batch lookup completed but some packages encountered errors during lookup",
       "priority": 3,
       "template": {
         "summary": "⚠️ Batch lookup completed with errors: {found}/{total} found, {errors} errors",
@@ -44,6 +47,7 @@
     },
     {
       "id": "validation-error-missing-packages",
+      "description": "Batch lookup failed because the packages array was not provided in the request",
       "priority": 4,
       "template": {
         "summary": "❌ Invalid request: missing packages array",
@@ -54,6 +58,7 @@
     },
     {
       "id": "validation-error-invalid-system",
+      "description": "Batch lookup failed because an unsupported package system was specified",
       "priority": 5,
       "template": {
         "summary": "❌ Invalid request: unsupported package system",
@@ -64,6 +69,7 @@
     },
     {
       "id": "validation-error-batch-size",
+      "description": "Batch lookup failed because the number of packages exceeds the maximum batch size limit",
       "priority": 6,
       "template": {
         "summary": "❌ Invalid request: batch size exceeds limit",
@@ -74,6 +80,7 @@
     },
     {
       "id": "error",
+      "description": "Batch lookup failed due to an unexpected error (e.g., network issue, API failure)",
       "priority": 7,
       "template": {
         "summary": "❌ Batch lookup failed: {error.message}",
