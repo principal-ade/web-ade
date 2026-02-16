@@ -19,7 +19,7 @@ function CollectionsPageWrapper() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const userCollections = useUserCollections();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(
     searchParams.get('collection')
@@ -135,6 +135,83 @@ function CollectionsPageWrapper() {
         }}
       >
         Loading collections...
+      </div>
+    );
+  }
+
+  // Show login prompt for unauthenticated users
+  if (!isAuthenticated) {
+    return (
+      <div
+        className="w-screen flex flex-col items-center justify-center gap-6"
+        style={{
+          background: theme.colors.background,
+          height: '100vh',
+          padding: '2rem',
+        }}
+      >
+        <Layers size={64} style={{ color: theme.colors.primary, opacity: 0.8 }} />
+        <div style={{ textAlign: 'center', maxWidth: '400px' }}>
+          <h1
+            style={{
+              margin: 0,
+              marginBottom: '12px',
+              fontSize: `${theme.fontSizes[5]}px`,
+              fontWeight: theme.fontWeights.semibold,
+              color: theme.colors.text,
+            }}
+          >
+            Sign in to manage your collections
+          </h1>
+          <p
+            style={{
+              margin: 0,
+              fontSize: `${theme.fontSizes[2]}px`,
+              color: theme.colors.textSecondary,
+              lineHeight: 1.6,
+            }}
+          >
+            Create and organize collections of repositories to streamline your development workflow.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            onClick={() => router.push('/api/auth/github')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 24px',
+              backgroundColor: theme.colors.primary,
+              color: theme.colors.textOnPrimary,
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: `${theme.fontSizes[2]}px`,
+              fontWeight: theme.fontWeights.medium,
+            }}
+          >
+            Sign in with GitHub
+          </button>
+          <button
+            onClick={() => router.push('/')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 24px',
+              backgroundColor: theme.colors.secondary,
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: `${theme.fontSizes[2]}px`,
+              fontWeight: theme.fontWeights.medium,
+            }}
+          >
+            Go Home
+          </button>
+        </div>
       </div>
     );
   }
