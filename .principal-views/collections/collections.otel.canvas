@@ -16,7 +16,7 @@
     {
       "id": "load-started",
       "type": "text",
-      "text": "# collections.load.started\n\nLoad user's collections",
+      "text": "# Load Started\n\nLoad user's collections",
       "x": -229,
       "y": 732,
       "width": 200,
@@ -41,7 +41,7 @@
     {
       "id": "load-github-fetch",
       "type": "text",
-      "text": "# collections.load.github.fetch\n\nFetch from GitHub repo",
+      "text": "# GitHub Fetch\n\nFetch from GitHub repo",
       "x": -246,
       "y": 900,
       "width": 200,
@@ -73,7 +73,7 @@
     {
       "id": "load-success",
       "type": "text",
-      "text": "# collections.load.success\n\nCollections loaded",
+      "text": "# Load Success\n\nCollections loaded",
       "x": -398,
       "y": 1092,
       "width": 200,
@@ -108,7 +108,7 @@
     {
       "id": "load-not-found",
       "type": "text",
-      "text": "# collections.load.github.not-found\n\nRepo doesn't exist yet",
+      "text": "# GitHub Not Found\n\nRepo doesn't exist yet",
       "x": -70,
       "y": 1089,
       "width": 200,
@@ -133,7 +133,7 @@
     {
       "id": "load-unauthorized",
       "type": "text",
-      "text": "# collections.load.unauthorized\n\nNot authenticated",
+      "text": "# Load Unauthorized\n\nNot authenticated",
       "x": 85,
       "y": 732,
       "width": 200,
@@ -158,7 +158,7 @@
     {
       "id": "load-error",
       "type": "text",
-      "text": "# collections.load.error\n\nLoad failed",
+      "text": "# Load Error\n\nLoad failed",
       "x": 81,
       "y": 899,
       "width": 200,
@@ -189,7 +189,7 @@
     {
       "id": "create-started",
       "type": "text",
-      "text": "# collection.create.started\n\nCreate new collection",
+      "text": "# Create Started\n\nCreate new collection",
       "x": -531,
       "y": -138,
       "width": 200,
@@ -228,7 +228,7 @@
     {
       "id": "create-validate",
       "type": "text",
-      "text": "# collection.create.validate\n\nValidate collection data",
+      "text": "# Validate Data\n\nValidate collection data",
       "x": -541,
       "y": 45,
       "width": 200,
@@ -253,7 +253,7 @@
     {
       "id": "create-github-update",
       "type": "text",
-      "text": "# collection.create.github.update\n\nUpdate existing repo",
+      "text": "# Update GitHub Repo\n\nUpdate existing repo",
       "x": -343,
       "y": 197,
       "width": 180,
@@ -278,7 +278,7 @@
     {
       "id": "create-github-init",
       "type": "text",
-      "text": "# collection.create.github.init\n\nInitialize new repo",
+      "text": "# Initialize GitHub Repo\n\nInitialize new repo",
       "x": -752,
       "y": 198,
       "width": 180,
@@ -309,7 +309,7 @@
     {
       "id": "create-github-commit",
       "type": "text",
-      "text": "# collection.create.github.commit\n\nCommit collections data",
+      "text": "# Commit to GitHub\n\nCommit collections data",
       "x": -547,
       "y": 374,
       "width": 200,
@@ -334,7 +334,7 @@
     {
       "id": "create-success",
       "type": "text",
-      "text": "# collection.create.success\n\nCollection created",
+      "text": "# Create Success\n\nCollection created",
       "x": -527,
       "y": 538,
       "width": 200,
@@ -365,7 +365,7 @@
     {
       "id": "create-validation-error",
       "type": "text",
-      "text": "# collection.create.validation-error\n\nValidation failed",
+      "text": "# Validation Error\n\nValidation failed",
       "x": -205,
       "y": 43,
       "width": 200,
@@ -400,7 +400,7 @@
     {
       "id": "create-unauthorized",
       "type": "text",
-      "text": "# collection.create.unauthorized\n\nNot authenticated",
+      "text": "# Create Unauthorized\n\nNot authenticated",
       "x": -205,
       "y": -139,
       "width": 200,
@@ -425,7 +425,7 @@
     {
       "id": "create-error",
       "type": "text",
-      "text": "# collection.create.error\n\nOperation failed",
+      "text": "# Create Error\n\nOperation failed",
       "x": -151,
       "y": 373,
       "width": 200,
@@ -456,7 +456,7 @@
     {
       "id": "import-started",
       "type": "text",
-      "text": "# collection.import.started\n\nImport shared collection",
+      "text": "# Import Started\n\nImport shared collection",
       "x": 516,
       "y": 16,
       "width": 200,
@@ -491,7 +491,7 @@
     {
       "id": "import-fetch-source",
       "type": "text",
-      "text": "# collection.import.fetch-source\n\nFetch source collection",
+      "text": "# Fetch Source\n\nFetch source collection",
       "x": 499,
       "y": 173,
       "width": 200,
@@ -516,7 +516,7 @@
     {
       "id": "import-create-copy",
       "type": "text",
-      "text": "# collection.import.create-copy\n\nCreate collection copy",
+      "text": "# Create Copy\n\nCreate collection copy",
       "x": 503,
       "y": 306,
       "width": 200,
@@ -547,7 +547,7 @@
     {
       "id": "import-copy-memberships",
       "type": "text",
-      "text": "# collection.import.copy-memberships\n\nCopy repository memberships",
+      "text": "# Copy Memberships\n\nCopy repository memberships",
       "x": 492,
       "y": 456,
       "width": 200,
@@ -578,7 +578,7 @@
     {
       "id": "import-github-sync",
       "type": "text",
-      "text": "# collection.import.github.sync\n\nSync to user's GitHub",
+      "text": "# Sync to GitHub\n\nSync to user's GitHub",
       "x": 508,
       "y": 607,
       "width": 200,
@@ -603,7 +603,7 @@
     {
       "id": "import-success",
       "type": "text",
-      "text": "# collection.import.success\n\nImport completed",
+      "text": "# Import Success\n\nImport completed",
       "x": 529,
       "y": 745,
       "width": 200,
@@ -634,7 +634,7 @@
     {
       "id": "import-duplicate-check",
       "type": "text",
-      "text": "# collection.import.duplicate-check\n\nAlready imported",
+      "text": "# Duplicate Check\n\nAlready imported",
       "x": 799,
       "y": 169,
       "width": 200,
@@ -659,7 +659,7 @@
     {
       "id": "import-not-found",
       "type": "text",
-      "text": "# collection.import.not-found\n\nSource not found",
+      "text": "# Import Not Found\n\nSource not found",
       "x": 823,
       "y": 312,
       "width": 200,
@@ -684,7 +684,7 @@
     {
       "id": "import-unauthorized",
       "type": "text",
-      "text": "# collection.import.unauthorized\n\nNot authenticated",
+      "text": "# Import Unauthorized\n\nNot authenticated",
       "x": 808,
       "y": 11,
       "width": 200,
@@ -709,7 +709,7 @@
     {
       "id": "import-error",
       "type": "text",
-      "text": "# collection.import.error\n\nImport failed",
+      "text": "# Import Error\n\nImport failed",
       "x": 834,
       "y": 606,
       "width": 200,

@@ -16,7 +16,7 @@
     {
       "id": "auth-started",
       "type": "text",
-      "text": "# auth.callback.started\n\nOAuth callback request received",
+      "text": "# Callback Started\n\nOAuth callback request received",
       "x": 100,
       "y": 50,
       "width": 200,
@@ -26,7 +26,9 @@
           "name": "auth.callback.started",
           "attributes": {}
         },
-        "sources": ["src/app/api/auth/callback/route.ts"],
+        "sources": [
+          "src/app/api/auth/callback/route.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "lifecycle"
@@ -57,7 +59,7 @@
     {
       "id": "state-validated",
       "type": "text",
-      "text": "# auth.state.validated\n\nState parameter decoded and validated",
+      "text": "# State Validated\n\nState parameter decoded and validated",
       "x": 100,
       "y": 250,
       "width": 200,
@@ -67,7 +69,9 @@
           "name": "auth.state.validated",
           "attributes": {}
         },
-        "sources": ["src/app/api/auth/callback/route.ts"],
+        "sources": [
+          "src/app/api/auth/callback/route.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "operation"
@@ -94,7 +98,7 @@
     {
       "id": "tokens-received",
       "type": "text",
-      "text": "# auth.tokens.received\n\nAuthentication tokens obtained",
+      "text": "# Tokens Received\n\nAuthentication tokens obtained",
       "x": 100,
       "y": 450,
       "width": 200,
@@ -104,7 +108,9 @@
           "name": "auth.tokens.received",
           "attributes": {}
         },
-        "sources": ["src/app/api/auth/callback/route.ts"],
+        "sources": [
+          "src/app/api/auth/callback/route.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "operation"
@@ -139,7 +145,7 @@
     {
       "id": "cookies-set",
       "type": "text",
-      "text": "# auth.cookies.set\n\nHTTP-only auth cookies created",
+      "text": "# Cookies Set\n\nHTTP-only auth cookies created",
       "x": 100,
       "y": 650,
       "width": 200,
@@ -149,7 +155,9 @@
           "name": "auth.cookies.set",
           "attributes": {}
         },
-        "sources": ["src/app/api/auth/callback/route.ts"],
+        "sources": [
+          "src/app/api/auth/callback/route.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "operation"
@@ -168,7 +176,7 @@
     {
       "id": "callback-complete",
       "type": "text",
-      "text": "# auth.callback.complete\n\nAuthentication successful",
+      "text": "# Callback Complete\n\nAuthentication successful",
       "x": 100,
       "y": 850,
       "width": 200,
@@ -178,7 +186,9 @@
           "name": "auth.callback.complete",
           "attributes": {}
         },
-        "sources": ["src/app/api/auth/callback/route.ts"],
+        "sources": [
+          "src/app/api/auth/callback/route.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "lifecycle"
@@ -205,7 +215,7 @@
     {
       "id": "callback-error",
       "type": "text",
-      "text": "# auth.callback.error\n\nAuthentication failed",
+      "text": "# Callback Error\n\nAuthentication failed",
       "x": 450,
       "y": 50,
       "width": 200,
@@ -215,7 +225,9 @@
           "name": "auth.callback.error",
           "attributes": {}
         },
-        "sources": ["src/app/api/auth/callback/route.ts"],
+        "sources": [
+          "src/app/api/auth/callback/route.ts"
+        ],
         "otel": {
           "kind": "event",
           "category": "error"

@@ -20,7 +20,7 @@
     {
       "id": "registration-started",
       "type": "text",
-      "text": "# version.registration.started\n\nVersion registration request received",
+      "text": "# Registration Started\n\nVersion registration request received",
       "x": 100,
       "y": 50,
       "width": 200,
@@ -67,7 +67,7 @@
     {
       "id": "registration-validated",
       "type": "text",
-      "text": "# version.registration.validated\n\nRequest validated successfully",
+      "text": "# Validated\n\nRequest validated successfully",
       "x": 89,
       "y": 199,
       "width": 200,
@@ -106,7 +106,7 @@
     {
       "id": "registration-s3-stored",
       "type": "text",
-      "text": "# version.registration.s3.stored\n\nVersion mapping stored to S3",
+      "text": "# Stored to S3\n\nVersion mapping stored to S3",
       "x": 92,
       "y": 350,
       "width": 200,
@@ -145,7 +145,7 @@
     {
       "id": "schematic-fetching",
       "type": "text",
-      "text": "# version.registration.schematic.fetching\n\nFetching schematic from GitHub at commit SHA",
+      "text": "# Fetching Schematic\n\nFetching schematic from GitHub at commit SHA",
       "x": 91,
       "y": 498,
       "width": 200,
@@ -184,7 +184,7 @@
     {
       "id": "schematic-fetched",
       "type": "text",
-      "text": "# version.registration.schematic.fetched\n\nSchematic fetched from GitHub successfully",
+      "text": "# Schematic Fetched\n\nSchematic fetched from GitHub successfully",
       "x": 91,
       "y": 649,
       "width": 200,
@@ -231,7 +231,7 @@
     {
       "id": "schematic-stored",
       "type": "text",
-      "text": "# version.registration.schematic.stored\n\nSchematic stored to S3",
+      "text": "# Schematic Stored\n\nSchematic stored to S3",
       "x": 86,
       "y": 801,
       "width": 200,
@@ -270,7 +270,7 @@
     {
       "id": "registration-complete",
       "type": "text",
-      "text": "# version.registration.complete\n\nVersion registered successfully",
+      "text": "# Registration Complete\n\nVersion registered successfully",
       "x": 97,
       "y": 954,
       "width": 200,
@@ -309,7 +309,7 @@
     {
       "id": "registration-error",
       "type": "text",
-      "text": "# version.registration.error\n\nVersion registration failed",
+      "text": "# Registration Error\n\nVersion registration failed",
       "x": 410,
       "y": 358,
       "width": 200,
@@ -357,7 +357,7 @@
     {
       "id": "lookup-started",
       "type": "text",
-      "text": "# version.lookup.started\n\nVersion lookup request received",
+      "text": "# Lookup Started\n\nVersion lookup request received",
       "x": 1137,
       "y": 172,
       "width": 200,
@@ -400,7 +400,7 @@
     {
       "id": "lookup-s3-retrieved",
       "type": "text",
-      "text": "# version.lookup.s3.retrieved\n\nVersion mapping retrieved from S3",
+      "text": "# Retrieved from S3\n\nVersion mapping retrieved from S3",
       "x": 1138,
       "y": 386,
       "width": 200,
@@ -443,7 +443,7 @@
     {
       "id": "lookup-complete",
       "type": "text",
-      "text": "# version.lookup.complete\n\nVersion lookup successful",
+      "text": "# Lookup Complete\n\nVersion lookup successful",
       "x": 1138,
       "y": 596,
       "width": 200,
@@ -478,7 +478,7 @@
     {
       "id": "lookup-not-found",
       "type": "text",
-      "text": "# version.lookup.not_found\n\nVersion not registered",
+      "text": "# Not Found\n\nVersion not registered",
       "x": 1470,
       "y": 262,
       "width": 200,
@@ -518,7 +518,7 @@
     {
       "id": "lookup-error",
       "type": "text",
-      "text": "# version.lookup.error\n\nVersion lookup failed",
+      "text": "# Lookup Error\n\nVersion lookup failed",
       "x": 1471,
       "y": 93,
       "width": 200,
@@ -558,7 +558,7 @@
     {
       "id": "list-started",
       "type": "text",
-      "text": "# version.list.started\n\nVersion list request received",
+      "text": "# List Started\n\nVersion list request received",
       "x": 678,
       "y": 292,
       "width": 200,
@@ -589,7 +589,7 @@
     {
       "id": "list-s3-retrieved",
       "type": "text",
-      "text": "# version.list.s3.retrieved\n\nAll registrations fetched from S3",
+      "text": "# Retrieved from S3\n\nAll registrations fetched from S3",
       "x": 678,
       "y": 465,
       "width": 200,
@@ -624,7 +624,7 @@
     {
       "id": "list-complete",
       "type": "text",
-      "text": "# version.list.complete\n\nVersion list successful",
+      "text": "# List Complete\n\nVersion list successful",
       "x": 678,
       "y": 675,
       "width": 200,
@@ -659,7 +659,7 @@
     {
       "id": "list-error",
       "type": "text",
-      "text": "# version.list.error\n\nVersion list failed",
+      "text": "# List Error\n\nVersion list failed",
       "x": 921,
       "y": 291,
       "width": 200,

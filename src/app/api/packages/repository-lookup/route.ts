@@ -86,6 +86,10 @@ async function fetchFromDepsdev(
     const defaultVersion = versions.find(v => v.isDefault);
     const latestVersion = defaultVersion || versions[versions.length - 1];
 
+    if (!latestVersion) {
+      return null;
+    }
+
     // Now fetch the specific version to get links
     const versionUrl = `https://api.deps.dev/v3/systems/${system}/packages/${encodedName}/versions/${encodeURIComponent(latestVersion.versionKey.version)}`;
     const versionResponse = await fetch(versionUrl, {
