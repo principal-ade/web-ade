@@ -28,7 +28,6 @@ export async function initializeOTEL() {
     const { readFileSync } = await import('fs');
     const { join } = await import('path');
     const { execSync } = await import('child_process');
-    const { registerOTel } = await import('@vercel/otel');
 
     /**
      * Load OTEL resources from library.yaml
@@ -137,8 +136,11 @@ export async function initializeOTEL() {
       otherAttributes: Object.keys(otherResources)
     });
 
-    // Configure trace exporter with custom endpoint and headers
+    // Manual SDK setup (no auto-instrumentation)
     const { OTLPTraceExporter } = await import('@opentelemetry/exporter-trace-otlp-http');
+    const { NodeSDK } = await import('@opentelemetry/sdk-node');
+    const resourcesModule = await import('@opentelemetry/resources');
+    const { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } = await import('@opentelemetry/semantic-conventions');
 
     const traceExporterConfig: {
       url?: string;
@@ -164,13 +166,26 @@ export async function initializeOTEL() {
 
     const traceExporter = new OTLPTraceExporter(traceExporterConfig);
 
-    registerOTel({
-      serviceName,
-      attributes,
-      traceExporter, // Explicitly provide custom exporter
+    // Build resource attributes
+    const resourceAttributes: Record<string, string> = {
+      [ATTR_SERVICE_NAME]: serviceName,
+      ...(serviceVersion && { [ATTR_SERVICE_VERSION]: serviceVersion }),
+      ...attributes,
+    };
+
+    // Create resource using helper function (handles ESM/CJS properly)
+    const resource = resourcesModule.resourceFromAttributes(resourceAttributes);
+
+    // Initialize SDK with manual configuration (NO auto-instrumentation)
+    const sdk = new NodeSDK({
+      resource,
+      traceExporter,
+      instrumentations: [], // Explicitly empty - no auto-instrumentation
     });
 
-    console.log('[OTEL FALLBACK] Trace exporter registered');
+    sdk.start();
+
+    console.log('[OTEL FALLBACK] Manual SDK initialized (no auto-instrumentation)');
 
     // Set up metrics exporter (push-based)
     const { metrics } = await import('@opentelemetry/api');

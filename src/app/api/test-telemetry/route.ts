@@ -1,10 +1,10 @@
 /**
- * Test API route to test OpenTelemetry instrumentation via @vercel/otel
+ * Test API route to test manual OpenTelemetry instrumentation
  *
  * Usage: GET http://localhost:3000/api/test-telemetry
  *
  * This route uses the standard OpenTelemetry API to create spans that are
- * automatically exported through @vercel/otel to the OTEL Collector.
+ * manually exported through the NodeSDK to the OTEL Collector.
  */
 
 import { NextResponse } from 'next/server';
@@ -35,8 +35,8 @@ export async function GET() {
 
       return NextResponse.json({
         success: true,
-        message: 'Telemetry sent successfully via @vercel/otel',
-        info: 'Spans are automatically exported to OTEL_EXPORTER_OTLP_ENDPOINT',
+        message: 'Telemetry sent successfully via manual instrumentation',
+        info: 'Spans are exported to OTEL_EXPORTER_OTLP_ENDPOINT (manual SDK only)',
         collectorUrl: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'not configured',
       });
     } catch (error) {
