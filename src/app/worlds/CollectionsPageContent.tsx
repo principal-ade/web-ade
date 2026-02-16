@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "@principal-ade/industry-theme";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { usePanelProvider } from "@/contexts/PanelContext";
 import { useUserCollections } from "@/contexts/UserCollectionsContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,7 +17,7 @@ import {
   PanelLayout,
 } from "@principal-ade/panel-layouts";
 import '@principal-ade/panel-layouts/styles.css';
-import { Plus, FolderOpen, Edit2, Cloud, CloudOff, Share2, Check, Settings, Compass, Clock, GitFork, User, Library, ArrowRight, X, Home, Star, Users, Search, Map, Network, Shield, Package } from 'lucide-react';
+import { Plus, FolderOpen, Edit2, Cloud, CloudOff, Share2, Check, Settings, Compass, Clock, GitFork, User, Library, ArrowRight, X, Home, Star, Users, Search, Map, Package } from 'lucide-react';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { iconMap } from '@/components/collections/CollectionModal';
 import type { Collection } from '@principal-ai/alexandria-collections';
@@ -57,8 +57,8 @@ interface FollowingUser {
 }
 
 // Dynamically import panels with SSR disabled
-const WorkspaceCollectionPanelLoader = dynamic(
-  () => import('@industry-theme/alexandria-panels').then((mod) => mod.WorkspaceCollectionPanel),
+const UserCollectionsPanelLoader = dynamic(
+  () => import('@industry-theme/alexandria-panels').then((mod) => mod.UserCollectionsPanel),
   { ssr: false }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as React.ComponentType<any>;
@@ -87,14 +87,6 @@ const PrincipalViewPanelLoader = dynamic(
   { ssr: false }
 );
 
-const CodeQualityPanelLoader = dynamic(
-  () => import('@principal-ade/code-quality-panels').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
 const FileCityPanelLoader = dynamic(
   () => import('@industry-theme/file-city-panel').then((mod) => mod.panels[0]!.component),
   { ssr: false }
@@ -106,8 +98,8 @@ const PackageCompositionPanelLoader = dynamic(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as React.ComponentType<any>;
 
-const DependencyGraphPanelLoader = dynamic(
-  () => import('@industry-theme/repository-composition-panels').then((mod) => mod.DependencyGraphPanel),
+const CollectionMapPanelLoader = dynamic(
+  () => import('@industry-theme/repository-composition-panels').then((mod) => mod.CollectionMapPanel),
   { ssr: false }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as React.ComponentType<any>;
@@ -151,15 +143,15 @@ export function CollectionsPageContent({
   onSelectCollection,
   onCreateNew,
   onAddToCollection,
-  onRemoveFromCollection,
+  onRemoveFromCollection: _onRemoveFromCollection,
   gitHubRepoExists,
   saving,
   gitHubRepoUrl,
   onOpenSyncModal,
   onShare,
   shareSuccess,
-  onPreviewChange,
-  initialPreviewedRepo,
+  onPreviewChange: _onPreviewChange,
+  initialPreviewedRepo: _initialPreviewedRepo,
   initialViewMode = 'manage',
 }: CollectionsPageContentProps) {
   const { theme } = useTheme();
@@ -168,7 +160,6 @@ export function CollectionsPageContent({
   const { isAuthenticated, user } = useAuth();
   const userCollections = useUserCollections();
   const [isMobile, setIsMobile] = useState(false);
-  const [previewedRepo, setPreviewedRepo] = useState<string | null>(initialPreviewedRepo ?? null);
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
   const leftCollapsed = false;
   const rightCollapsed = false;
@@ -227,53 +218,23 @@ export function CollectionsPageContent({
     return date.toLocaleDateString();
   };
 
-  // Sync previewed repo with parent
-  const handlePreviewChange = useCallback((repo: string | null) => {
-    setPreviewedRepo(repo);
-    onPreviewChange?.(repo);
-  }, [onPreviewChange]);
-
-  // Auto-select first repository when in explore mode and no repo is selected
-  const workspaceReposSlice = context.getSlice('workspaceRepositories');
-  const workspaceReposData = workspaceReposSlice?.data as { repositories?: Array<{ full_name: string; owner: { login: string }; name: string }> } | undefined;
-  const workspaceReposLoading = workspaceReposSlice?.loading ?? true;
-
-  useEffect(() => {
-    if (viewMode !== 'explore' || workspaceReposLoading || previewedRepo) return;
-
-    const repositories = workspaceReposData?.repositories;
-    if (repositories && repositories.length > 0) {
-      const sortedRepos = [...repositories].sort((a, b) => a.name.localeCompare(b.name));
-      const firstRepo = sortedRepos[0];
-      if (firstRepo?.full_name) {
-        handlePreviewChange(firstRepo.full_name);
-        (actions as { previewReadme?: (owner: string, repo: string) => Promise<string> }).previewReadme?.(
-          firstRepo.owner.login,
-          firstRepo.name
-        );
-      }
-    }
-  }, [viewMode, workspaceReposLoading, workspaceReposData?.repositories, previewedRepo, handlePreviewChange, actions]);
 
   // Layout configurations for each mode
   const manageLayout: PanelLayout = {
-    left: 'workspace-collection',
-    middle: {
+    left: 'user-collections',
+    middle: 'collection-map',
+    right: {
       type: 'tabs',
       panels: ['github-projects', 'github-starred', 'github-search'],
     },
-    right: 'empty',
   };
 
   const exploreLayout: PanelLayout = {
-    left: 'workspace-collection',
-    middle: {
-      type: 'tabs',
-      panels: ['file-city', 'visual-validation', 'dependency-graph'],
-    },
+    left: 'user-collections',
+    middle: 'collection-map',
     right: {
       type: 'tabs',
-      panels: ['code-quality', 'package-composition'],
+      panels: ['file-city', 'visual-validation', 'package-composition'],
     },
   };
 
@@ -317,32 +278,28 @@ export function CollectionsPageContent({
     };
   }, [actions, onAddToCollection]);
 
-  // Listen for repository events from panels
+  // Listen for repository and collection events from panels
   useEffect(() => {
     if (!events) return;
 
     const unsubscribers = [
-      events.on('repository:selected', (event) => {
-        const payload = event.payload as { repository?: { full_name?: string } };
-        if (payload?.repository?.full_name) {
-          const fullName = payload.repository.full_name;
-          handlePreviewChange(fullName);
-          const [owner, repo] = fullName.split('/');
-          if (owner && repo) {
-            (actions as { previewReadme?: (owner: string, repo: string) => Promise<string> }).previewReadme?.(owner, repo);
-          }
-        }
-      }),
       events.on('repository:navigate', (event) => {
         const payload = event.payload as { owner?: string; repo?: string };
         if (payload?.owner && payload?.repo) {
           router.push(`/${payload.owner}/${payload.repo}`);
         }
       }),
+      // Listen for collection selection from UserCollectionsPanel
+      events.on('industry-theme.user-collections:collection:selected', (event) => {
+        const payload = event.payload as { collection?: Collection; collectionId?: string };
+        if (payload?.collectionId) {
+          onSelectCollection(payload.collectionId);
+        }
+      }),
     ];
 
     return () => unsubscribers.forEach((unsub) => unsub());
-  }, [events, router, handlePreviewChange, actions]);
+  }, [events, router, onSelectCollection]);
 
   const panels = [
     {
@@ -351,34 +308,15 @@ export function CollectionsPageContent({
       content: <div />,
     },
     {
-      id: 'workspace-collection',
-      label: 'Collection',
+      id: 'user-collections',
+      label: 'Collections',
       icon: <Library size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
-          <WorkspaceCollectionPanelLoader
+          <UserCollectionsPanelLoader
             context={context}
-            actions={{
-              ...actions,
-              navigateToRepository: (owner: string, repo: string) => {
-                router.push(`/${owner}/${repo}`);
-              },
-              previewRepository: (repository: { full_name: string; owner: { login: string }; name: string }) => {
-                handlePreviewChange(repository.full_name);
-                (actions as { previewReadme?: (owner: string, repo: string) => Promise<string> }).previewReadme?.(
-                  repository.owner.login,
-                  repository.name
-                );
-              },
-              removeRepositoryFromWorkspace: onRemoveFromCollection
-                ? async (repoKey: string) => {
-                    await onRemoveFromCollection(repoKey);
-                  }
-                : undefined,
-            }}
+            actions={actions}
             events={events}
-            selectedRepository={previewedRepo}
-            defaultShowSearch
           />
         </div>
       ),
@@ -427,6 +365,20 @@ export function CollectionsPageContent({
         </div>
       ),
     },
+    {
+      id: 'collection-map',
+      label: 'Overworld Map',
+      icon: <Map size={16} />,
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <CollectionMapPanelLoader
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        </div>
+      ),
+    },
     // Explore mode panels
     {
       id: 'file-city',
@@ -445,26 +397,6 @@ export function CollectionsPageContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <PrincipalViewPanelLoader context={context} actions={actions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'dependency-graph',
-      label: 'Dependencies',
-      icon: <Network size={16} />,
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <DependencyGraphPanelLoader context={context} actions={actions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'code-quality',
-      label: 'Quality',
-      icon: <Shield size={16} />,
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <CodeQualityPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },
