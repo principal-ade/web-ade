@@ -3400,17 +3400,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       onRepositoryAssigned: async (collectionId: string, repositoryId: string, regionId: string) => {
         console.log('[PanelContext] Assigning repository to region:', { collectionId, repositoryId, regionId });
         try {
-          // Find the membership for this repository in this collection
-          const membership = userCollections.memberships.find(
-            m => m.collectionId === collectionId && m.repositoryId === repositoryId
-          );
-
-          if (membership) {
-            // Update membership metadata with regionId
-            // Note: This requires extending UserCollectionsContext with updateMembershipMetadata
-            // For now, we'll log a warning
-            console.warn('[PanelContext] Repository assignment requires updateMembershipMetadata - not yet implemented');
-          }
+          await userCollections.updateMembershipMetadata(collectionId, repositoryId, {
+            regionId,
+          });
         } catch (error) {
           console.error('[PanelContext] Error assigning repository to region:', error);
           throw error;
@@ -3419,10 +3411,72 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       onRepositoryPositionUpdated: async (collectionId: string, repositoryId: string, layout: RepositoryLayoutData) => {
         console.log('[PanelContext] Updating repository position:', { collectionId, repositoryId, layout });
         try {
-          // Similar to onRepositoryAssigned, this requires membership metadata updates
-          console.warn('[PanelContext] Repository position update requires updateMembershipMetadata - not yet implemented');
+          await userCollections.updateMembershipMetadata(collectionId, repositoryId, {
+            layout,
+          });
         } catch (error) {
           console.error('[PanelContext] Error updating repository position:', error);
+          throw error;
+        }
+      },
+      onBatchLayoutInitialized: async (
+        collectionId: string,
+        updates: {
+          regions?: CustomRegion[];
+          assignments?: Array<{ repositoryId: string; regionId: string }>;
+          positions?: Array<{ repositoryId: string; layout: RepositoryLayoutData }>;
+        }
+      ) => {
+        console.log('[PanelContext] Batch initializing layout:', { collectionId, updates });
+        try {
+          // Update collection with regions if provided
+          if (updates.regions && updates.regions.length > 0) {
+            const collection = userCollections.getCollection(collectionId);
+            if (collection) {
+              await userCollections.updateCollection(collectionId, {
+                metadata: {
+                  ...collection.metadata,
+                  customRegions: updates.regions,
+                },
+              });
+            }
+          }
+
+          // Batch update memberships with assignments and positions
+          if (updates.assignments || updates.positions) {
+            const membershipUpdates = userCollections.memberships
+              .filter((m) => m.collectionId === collectionId)
+              .map((m) => {
+                const assignment = updates.assignments?.find(
+                  (a) => a.repositoryId === m.repositoryId
+                );
+                const position = updates.positions?.find(
+                  (p) => p.repositoryId === m.repositoryId
+                );
+
+                if (!assignment && !position) return null;
+
+                return {
+                  repositoryId: m.repositoryId,
+                  metadata: {
+                    ...(assignment ? { regionId: assignment.regionId } : {}),
+                    ...(position ? { layout: position.layout } : {}),
+                  },
+                };
+              })
+              .filter((update): update is { repositoryId: string; metadata: Record<string, unknown> } => update !== null);
+
+            // Apply all membership updates
+            for (const update of membershipUpdates) {
+              await userCollections.updateMembershipMetadata(
+                collectionId,
+                update.repositoryId,
+                update.metadata
+              );
+            }
+          }
+        } catch (error) {
+          console.error('[PanelContext] Error batch initializing layout:', error);
           throw error;
         }
       },

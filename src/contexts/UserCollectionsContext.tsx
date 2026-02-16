@@ -56,6 +56,11 @@ interface UserCollectionsContextValue {
   // Membership management
   addRepository: (collectionId: string, repositoryId: string) => Promise<void>;
   removeRepository: (collectionId: string, repositoryId: string) => Promise<void>;
+  updateMembershipMetadata: (
+    collectionId: string,
+    repositoryId: string,
+    metadata: Record<string, unknown>
+  ) => Promise<void>;
 
   // Utility functions
   getCollectionRepositories: (collectionId: string) => string[];
@@ -338,6 +343,31 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
     [collections, memberships, gitHubRepoExists, saveToGitHub]
   );
 
+  // Update membership metadata (for region assignments, positions, etc.)
+  const updateMembershipMetadata = useCallback(
+    async (
+      collectionId: string,
+      repositoryId: string,
+      metadata: Record<string, unknown>
+    ): Promise<void> => {
+      const newMemberships = memberships.map((m) =>
+        m.collectionId === collectionId && m.repositoryId === repositoryId
+          ? { ...m, metadata: { ...m.metadata, ...metadata } }
+          : m
+      );
+
+      // Save to GitHub first, then update state
+      const result = await saveToGitHub(collections, newMemberships, gitHubRepoExists);
+      setMemberships(newMemberships);
+
+      if (result.repoUrl && !gitHubRepoExists) {
+        setGitHubRepoExists(true);
+        setGitHubRepoUrl(result.repoUrl);
+      }
+    },
+    [collections, memberships, gitHubRepoExists, saveToGitHub]
+  );
+
   // Get all repository IDs in a collection
   const getCollectionRepositories = useCallback(
     (collectionId: string): string[] => {
@@ -424,6 +454,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         deleteCollection,
         addRepository,
         removeRepository,
+        updateMembershipMetadata,
         getCollectionRepositories,
         getCollectionRepositoryInfos,
         getCollection,
