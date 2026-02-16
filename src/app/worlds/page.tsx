@@ -51,7 +51,7 @@ function CollectionsPageWrapper() {
       const firstId = allCollections[0]?.id;
       if (firstId) {
         setSelectedCollectionId(firstId);
-        router.replace(`/repos?collection=${firstId}`, { scroll: false });
+        router.replace(`/worlds?collection=${firstId}`, { scroll: false });
       }
     }
   }, [selectedCollectionId, allCollections, userCollections.loading, router]);
@@ -73,13 +73,13 @@ function CollectionsPageWrapper() {
   // Handlers
   const handleSelectCollection = useCallback((id: string) => {
     setSelectedCollectionId(id);
-    router.replace(`/repos?collection=${id}`, { scroll: false });
+    router.replace(`/worlds?collection=${id}`, { scroll: false });
   }, [router]);
 
   const handleCreateCollection = useCallback(async (name: string, description: string, icon: string) => {
     const newCollection = await userCollections.createCollection(name, description, icon);
     setSelectedCollectionId(newCollection.id);
-    router.replace(`/repos?collection=${newCollection.id}`, { scroll: false });
+    router.replace(`/worlds?collection=${newCollection.id}`, { scroll: false });
   }, [userCollections, router]);
 
   const handleUpdateCollection = useCallback(async (name: string, description: string, icon: string) => {
@@ -97,7 +97,7 @@ function CollectionsPageWrapper() {
         handleSelectCollection(remaining[0]!.id);
       } else {
         setSelectedCollectionId(null);
-        router.replace('/repos', { scroll: false });
+        router.replace('/worlds', { scroll: false });
       }
     }
   }, [userCollections, selectedCollectionId, allCollections, handleSelectCollection, router]);

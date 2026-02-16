@@ -1059,7 +1059,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                         return (
                           <Link
                             key={collection.id}
-                            href={`/repos?collection=${collection.id}`}
+                            href={`/worlds?collection=${collection.id}`}
                             onClick={() => setSidebarOpen(false)}
                             style={{
                               display: 'flex',
@@ -1108,7 +1108,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                         <Library size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
                         <p style={{ margin: 0, fontSize: `${theme.fontSizes[1]}px`, marginBottom: '16px' }}>No collections yet</p>
                         <Link
-                          href="/repos"
+                          href="/worlds"
                           onClick={() => setSidebarOpen(false)}
                           style={{
                             display: 'inline-flex',

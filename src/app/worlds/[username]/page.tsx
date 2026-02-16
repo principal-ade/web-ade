@@ -335,7 +335,7 @@ function SharedCollectionsContent({
               }}
             >
               <Link
-                href="/repos"
+                href="/worlds"
                 style={{ color: theme.colors.primary }}
               >
                 Login

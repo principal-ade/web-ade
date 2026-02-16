@@ -985,7 +985,7 @@ export function CollectionsPageContent({
                       return (
                         <Link
                           key={collection.id}
-                          href={`/repos?collection=${collection.id}`}
+                          href={`/worlds?collection=${collection.id}`}
                           onClick={() => {
                             setSidebarOpen(false);
                             onSelectCollection(collection.id);

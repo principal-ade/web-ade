@@ -156,9 +156,10 @@ export function useNavigationCommands(additionalOptions?: {
 
         case 'repos':
         case 'collections':
+        case 'worlds':
         case 'col':
         case 'c':
-          navigate('/repos');
+          navigate('/worlds');
           return { success: true };
 
         case 'repo':

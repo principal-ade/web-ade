@@ -124,15 +124,15 @@ export function UserAvatarMenu() {
             <Home className="w-4 h-4" />
             Home
           </Link>
-          {/* Repos */}
+          {/* Worlds */}
           <Link
-            href="/repos"
+            href="/worlds"
             className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
             style={{ color: theme.colors.text }}
             onClick={() => setUserMenuOpen(false)}
           >
             <FolderOpen className="w-4 h-4" />
-            Repos
+            Worlds
           </Link>
           {/* Feed */}
           <Link
