@@ -50,7 +50,7 @@ import { useUserCollections } from './UserCollectionsContext';
 import type { CustomRegion, RepositoryLayoutData } from '@principal-ai/alexandria-collections';
 import type {
   AlexandriaEntryWithMetrics,
-  CollectionMapPanelContext
+  SelectedCollectionView,
 } from '@industry-theme/repository-composition-panels';
 import { useVFS } from './VFSContext';
 
@@ -250,8 +250,8 @@ interface WorldsPagePanelActions extends PanelActions, CollectionMapPanelActions
 // Worlds page context type - includes only the slices needed for worlds page
 export interface WorldsPageContextType {
   userCollections?: DataSlice<UserCollectionsSliceData>;
-  // selectedCollectionView is always initialized, so it's not optional
-  selectedCollectionView: DataSlice<CollectionMapPanelContext['selectedCollectionView']>;
+  // selectedCollectionView is always initialized and managed as direct state (not wrapped in DataSlice)
+  selectedCollectionView: SelectedCollectionView;
   workspaceRepositories?: DataSlice<WorkspaceRepositoriesSliceData>;
   workspace?: DataSlice<WorkspaceSliceData>;
   githubStarred?: DataSlice<{ starred: GitHubRepository[]; isAuthenticated: boolean }>;
@@ -378,7 +378,20 @@ export function WorldsPageProvider({
   // State for enabled color modes
   const [enabledColorModes] = useState<string[]>([]);
 
-  // Slices ref
+  // Direct state for typed slices (always present and type-safe)
+  // These slices are managed as React state and synced to slicesRef for backward compatibility
+  const [selectedCollectionView, setSelectedCollectionView] = useState<SelectedCollectionView>({
+    data: {
+      collection: null,
+      memberships: [],
+      repositories: [],
+      dependencies: undefined,
+    },
+    loading: false,
+    error: null,
+  });
+
+  // Slices ref for dynamic/optional slices
   const slicesRef = useRef<Map<string, DataSlice>>(new Map());
 
   // Initialize slices on mount
@@ -395,14 +408,8 @@ export function WorldsPageProvider({
       refresh: async () => {},
     });
 
-    initialSlices.set('selectedCollectionView', {
-      scope: 'workspace',
-      name: 'selectedCollectionView',
-      data: null,
-      loading: true,
-      error: null,
-      refresh: async () => {},
-    });
+    // Note: selectedCollectionView is now managed as direct state (see useState above)
+    // It will be synced to the Map in a separate useEffect for backward compatibility
 
     initialSlices.set('workspaceRepositories', {
       scope: 'workspace',
@@ -666,53 +673,49 @@ export function WorldsPageProvider({
       });
     }
 
-    // Update selectedCollectionView slice
-    const selectedCollectionViewSlice = slicesRef.current.get('selectedCollectionView');
-    if (selectedCollectionViewSlice) {
-      const selectedCollection = collectionId
-        ? userCollections.collections.find(c => c.id === collectionId)
-        : null;
+    // Update selectedCollectionView slice (using direct state)
+    const selectedCollection = collectionId
+      ? userCollections.collections.find(c => c.id === collectionId)
+      : null;
 
-      const selectedMemberships = collectionId
-        ? userCollections.memberships.filter(m => m.collectionId === collectionId)
-        : [];
+    const selectedMemberships = collectionId
+      ? userCollections.memberships.filter(m => m.collectionId === collectionId)
+      : [];
 
-      const repositories: AlexandriaEntryWithMetrics[] = selectedMemberships.map(membership => ({
-        name: membership.repositoryId.split('/')[1] || membership.repositoryId,
-        path: membership.repositoryId as ValidatedRepositoryPath,
-        purl: undefined,
-        remoteUrl: `https://github.com/${membership.repositoryId}`,
-        registeredAt: new Date(membership.addedAt).toISOString(),
-        hasViews: false,
-        viewCount: 0,
-        views: [],
-        github: undefined,
-        lastChecked: undefined,
-        lastOpenedAt: undefined,
-        bookColor: undefined,
-        theme: undefined,
-        metrics: {
-          fileCount: undefined,
-          lineCount: undefined,
-          commitCount: undefined,
-          contributors: undefined,
-          lastEditedAt: new Date(membership.addedAt).toISOString(),
-          createdAt: new Date(membership.addedAt).toISOString(),
-        },
-      }));
+    const repositories: AlexandriaEntryWithMetrics[] = selectedMemberships.map(membership => ({
+      name: membership.repositoryId.split('/')[1] || membership.repositoryId,
+      path: membership.repositoryId as ValidatedRepositoryPath,
+      purl: undefined,
+      remoteUrl: `https://github.com/${membership.repositoryId}`,
+      registeredAt: new Date(membership.addedAt).toISOString(),
+      hasViews: false,
+      viewCount: 0,
+      views: [],
+      github: undefined,
+      lastChecked: undefined,
+      lastOpenedAt: undefined,
+      bookColor: undefined,
+      theme: undefined,
+      metrics: {
+        fileCount: undefined,
+        lineCount: undefined,
+        commitCount: undefined,
+        contributors: undefined,
+        lastEditedAt: new Date(membership.addedAt).toISOString(),
+        createdAt: new Date(membership.addedAt).toISOString(),
+      },
+    }));
 
-      slicesRef.current.set('selectedCollectionView', {
-        ...selectedCollectionViewSlice,
-        data: {
-          collection: selectedCollection || null,
-          memberships: selectedMemberships,
-          repositories,
-          dependencies: undefined,
-        },
-        loading: userCollections.loading || collectionRepoDetailsLoading,
-        error: userCollections.error || null,
-      });
-    }
+    setSelectedCollectionView({
+      data: {
+        collection: selectedCollection || null,
+        memberships: selectedMemberships,
+        repositories,
+        dependencies: undefined,
+      },
+      loading: userCollections.loading || collectionRepoDetailsLoading,
+      error: userCollections.error?.message || null,
+    });
 
     // Update workspace slice
     const workspaceSlice = slicesRef.current.get('workspace');
@@ -934,8 +937,8 @@ export function WorldsPageProvider({
       selectedCollection,
       // Typed slice properties
       userCollections: slicesRef.current.get('userCollections') as DataSlice<UserCollectionsSliceData> | undefined,
-      // selectedCollectionView is always initialized in initialSlices, so we can safely assert non-null
-      selectedCollectionView: slicesRef.current.get('selectedCollectionView')! as DataSlice<CollectionMapPanelContext['selectedCollectionView']>,
+      // selectedCollectionView is managed as direct state for type safety (not in Map)
+      selectedCollectionView: selectedCollectionView,
       workspaceRepositories: slicesRef.current.get('workspaceRepositories') as DataSlice<WorkspaceRepositoriesSliceData> | undefined,
       workspace: slicesRef.current.get('workspace') as DataSlice<WorkspaceSliceData> | undefined,
       githubStarred: slicesRef.current.get('githubStarred') as DataSlice<{ starred: GitHubRepository[]; isAuthenticated: boolean }> | undefined,
@@ -970,7 +973,7 @@ export function WorldsPageProvider({
       },
       refresh,
     }),
-    [workspace, repository, githubRepo, adapters, selectedCollection, refresh]
+    [workspace, repository, githubRepo, adapters, selectedCollection, selectedCollectionView, refresh]
   );
 
   // Actions
