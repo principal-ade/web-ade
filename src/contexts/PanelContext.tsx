@@ -41,6 +41,21 @@ import { usePresenceData, type RepositorySession } from '@/hooks/usePresenceData
 import { fetchTracesSafe } from '@/lib/otel-traces';
 import { enrichTracesWithWorkflowMatching } from '@/lib/workflow-matcher-api';
 
+/**
+ * Extended context type for web-ade that includes common typed slices
+ * This extends PanelContextValue with fileTree and activeFile for type-safe access
+ */
+export interface WebAdePanelContext {
+  fileTree: DataSlice<FileTree>;
+  activeFile: DataSlice<ActiveFileSlice>;
+  selectedCollectionView?: DataSlice<CollectionMapPanelContext['selectedCollectionView']>;
+}
+
+/**
+ * Full context type combining base PanelContextValue with web-ade specific slices
+ */
+export type WebAdePanelContextValue = PanelContextValue<WebAdePanelContext>;
+
 // Current activity type for presence
 interface CurrentActivity {
   type: 'editing' | 'reviewing' | 'debugging' | 'idle';
@@ -325,7 +340,7 @@ interface PanelProviderProps {
 }
 
 interface PanelProviderValue {
-  context: PanelContextValue;
+  context: WebAdePanelContextValue;
   actions: PanelActions;
   events: PanelEventEmitter;
   /** Whether connected to presence server (for showing current projects panel) */
