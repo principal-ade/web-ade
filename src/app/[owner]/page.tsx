@@ -3,7 +3,7 @@
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useCallback } from "react";
-import { PanelProvider } from "@/contexts/PanelContext";
+import { OwnerPageProvider } from "@/contexts/OwnerPageProvider";
 import '@principal-ade/panel-layouts/styles.css';
 import { OwnerPageContent } from './OwnerPageContent';
 
@@ -36,7 +36,7 @@ function OwnerPageWrapper({ owner }: { owner: string }) {
         height: '100vh'
       }}
     >
-      <PanelProvider
+      <OwnerPageProvider
         workspace={{
           name: 'web-ade',
           path: '/workspace',
@@ -49,7 +49,7 @@ function OwnerPageWrapper({ owner }: { owner: string }) {
         initialOwner={owner}
       >
         <OwnerPageContent owner={owner} onPreviewChange={handlePreviewChange} initialPreviewedRepo={previewedRepo} />
-      </PanelProvider>
+      </OwnerPageProvider>
     </div>
   );
 }

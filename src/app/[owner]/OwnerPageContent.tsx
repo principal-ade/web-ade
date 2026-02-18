@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { usePanelProvider } from "@/contexts/PanelContext";
+import { useOwnerPageProvider } from "@/contexts/OwnerPageProvider";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserCollections } from "@/contexts/UserCollectionsContext";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
@@ -182,7 +182,7 @@ export interface OwnerPageContentProps {
 
 export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: OwnerPageContentProps) {
   const { theme } = useTheme();
-  const { context, actions, events } = usePanelProvider();
+  const { context, actions, events } = useOwnerPageProvider();
   const { isAuthenticated, user } = useAuth();
   const userCollections = useUserCollections();
   const [isMobile, setIsMobile] = useState(false);

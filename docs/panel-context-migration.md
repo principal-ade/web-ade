@@ -87,13 +87,20 @@ Create **page-specific providers** that:
   - `fileCityColorModes` - Color modes
 - **Current:** Still using monolithic `PanelContext`
 
-#### OwnerPageProvider
+#### OwnerPageProvider (`src/contexts/OwnerPageProvider.tsx`)
+- **Created:** 2026-02-17
 - **Route:** `/[owner]`
-- **Estimated Slices Needed:**
-  - `owner-repositories` - Owner's repositories
-  - `fileTree` - File tree for previewed repo
-  - `github-repositories` - For navigation
-- **Current:** Still using monolithic `PanelContext`
+- **Slices:** 8 total
+  - `owner-repositories` - Owner's GitHub repositories
+  - `fileTree` - File tree (for previewed repo)
+  - `fileCityColorModes` - Color modes (for file-city panel)
+  - `quality` - Quality metrics (for quality panel and file-city)
+  - `active-file` - Active file (for file-city panel)
+  - `packages` - Packages (for package-composition panel)
+  - `commitFiles` - Commit files (for file-city panel)
+  - `storyboardContext` - Storyboard context (for visual-validation panel)
+- **Pages Using:** `/[owner]`
+- **Build Status:** ✅ Compiles successfully
 
 #### RepositoryPageProvider (EditorLayout)
 - **Route:** `/[owner]/[repo]`
@@ -226,9 +233,9 @@ The `WorldsPageProvider` is the reference implementation. Key files:
 | Date | Milestone |
 |------|-----------|
 | 2026-02-17 | ✅ WorldsPageProvider created and tested |
+| 2026-02-17 | ✅ OwnerPageProvider created and tested |
 | TBD | HomePageProvider |
 | TBD | ActivityPageProvider |
-| TBD | OwnerPageProvider |
 | TBD | RepositoryPageProvider (most complex) |
 | TBD | Remove monolithic PanelContext |
 
