@@ -22,7 +22,7 @@ import type {
   PanelAdapters,
 } from '@principal-ade/panel-framework-core';
 import { layoutTools } from '@principal-ade/utcp-panel-event';
-import type { CodebaseView } from '@principal-ai/alexandria-core-library/types';
+import type { CodebaseView, ValidatedRepositoryPath } from '@principal-ai/alexandria-core-library/types';
 import type { FormattedResults } from '@principal-ai/codebase-quality-lenses';
 import { minimatch } from 'minimatch';
 import { PathsFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
@@ -30,6 +30,10 @@ import type { StoryboardContextSliceData, VersionSnapshot } from '@principal-ai/
 import { useAuth } from './AuthContext';
 import { useUserCollections } from './UserCollectionsContext';
 import type { CustomRegion, RepositoryLayoutData } from '@principal-ai/alexandria-collections';
+import type {
+  AlexandriaEntryWithMetrics,
+  CollectionMapPanelContext
+} from '@industry-theme/repository-composition-panels';
 import { useLocalFileSystem } from './LocalFileSystemContext';
 import { useVFS } from './VFSContext';
 import { usePresenceData, type RepositorySession } from '@/hooks/usePresenceData';
@@ -2033,6 +2037,28 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
           },
         },
       ],
+      [
+        'selectedCollectionView',
+        {
+          scope: 'global',
+          name: 'selectedCollectionView',
+          data: {
+            collection: null,
+            memberships: [],
+            repositories: [],
+            dependencies: undefined,
+          },
+          loading: false,
+          error: null,
+          refresh: async () => {
+            // Data is derived from userCollections, refresh that instead
+            const userCollectionsSlice = slicesRef.current.get('userCollections');
+            if (userCollectionsSlice?.refresh) {
+              await userCollectionsSlice.refresh();
+            }
+          },
+        },
+      ],
     ])
   );
 
@@ -2360,6 +2386,57 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
         error: undefined,
       },
       loading: userCollections.loading,
+    });
+  }
+
+  // Update selectedCollectionView slice for CollectionMapPanel (typed slice approach)
+  const selectedCollectionViewSlice = slicesRef.current.get('selectedCollectionView');
+  if (selectedCollectionViewSlice) {
+    const selectedCollection = collectionId
+      ? userCollections.collections.find(c => c.id === collectionId)
+      : null;
+
+    const selectedMemberships = collectionId
+      ? userCollections.memberships.filter(m => m.collectionId === collectionId)
+      : [];
+
+    // Convert memberships to AlexandriaEntryWithMetrics format
+    // For now, we map from collection membership data to repository entries
+    const repositories: AlexandriaEntryWithMetrics[] = selectedMemberships.map(membership => ({
+      name: membership.repositoryId.split('/')[1] || membership.repositoryId,
+      path: membership.repositoryId as ValidatedRepositoryPath,
+      purl: undefined,
+      remoteUrl: `https://github.com/${membership.repositoryId}`,
+      registeredAt: new Date(membership.addedAt).toISOString(),
+      hasViews: false,
+      viewCount: 0,
+      views: [],
+      github: undefined, // Could be populated from collectionRepoDetails
+      lastChecked: undefined,
+      lastOpenedAt: undefined,
+      bookColor: undefined,
+      theme: undefined,
+      metrics: {
+        // Metrics will be populated from collectionRepoDetails when available
+        fileCount: undefined,
+        lineCount: undefined,
+        commitCount: undefined,
+        contributors: undefined,
+        lastEditedAt: new Date(membership.addedAt).toISOString(),
+        createdAt: new Date(membership.addedAt).toISOString(),
+      },
+    }));
+
+    slicesRef.current.set('selectedCollectionView', {
+      ...selectedCollectionViewSlice,
+      data: {
+        collection: selectedCollection || null,
+        memberships: selectedMemberships,
+        repositories,
+        dependencies: undefined, // TODO: Fetch dependency graph if needed
+      },
+      loading: userCollections.loading || collectionRepoDetailsLoading,
+      error: userCollections.error || null,
     });
   }
 
@@ -3019,6 +3096,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       slices: slicesRef.current,
       adapters,
       selectedCollection,
+      // Add typed slice properties for type-safe access
+      // CollectionMapPanel can now access context.selectedCollectionView directly
+      selectedCollectionView: slicesRef.current.get('selectedCollectionView') as DataSlice<CollectionMapPanelContext['selectedCollectionView']> | undefined,
       getSlice: <T,>(name: string) => slicesRef.current.get(name) as DataSlice<T> | undefined,
       getWorkspaceSlice: <T,>(name: string) => {
         const slice = slicesRef.current.get(name);
@@ -3042,7 +3122,7 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       refresh,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, userGitHubData, userGitHubLoading, qualityData, qualityLoading, qualityError, lensResults, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading, messagesData, autoShowTour, telemetryData, telemetryLoading, telemetryError, selectedCollection]
+    [workspace, repository, refresh, githubRepo, adapters, fileTreeLoading, codebaseViewsLoading, markdownLoading, markdownContent, activeFilePath, fileTree, codebaseViews, isAuthenticated, githubRepos, githubReposLoading, userGitHubData, userGitHubLoading, qualityData, qualityLoading, qualityError, lensResults, enabledColorModes, selectedColorMode, presenceSessions, presenceLoading, presenceConnected, packagesData, packagesLoading, packagesError, ownerRepos, ownerReposLoading, collectionId, collectionRepoDetails, collectionRepoDetailsLoading, messagesData, autoShowTour, telemetryData, telemetryLoading, telemetryError, selectedCollection, userCollections.collections, userCollections.memberships, userCollections.loading]
   );
 
   // Actions

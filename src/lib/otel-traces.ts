@@ -4,19 +4,19 @@
  * Fetches and transforms trace data from the OTEL Collection Server.
  */
 
-import { groupSpansByTrace, type TraceInfo } from '@industry-theme/principal-view-panels';
+import { type RegisteredTrace } from '@industry-theme/principal-view-panels';
 
 /**
  * Fetch traces for a specific service from the OTEL Collection Server
  *
  * @param serviceName - Name of the service (e.g., "web-ade")
  * @param limit - Maximum number of traces to return (optional)
- * @returns Array of TraceInfo objects
+ * @returns Array of RegisteredTrace objects
  */
 export async function fetchTraces(
   serviceName: string,
   limit?: number
-): Promise<TraceInfo[]> {
+): Promise<RegisteredTrace[]> {
   try {
     // Build API URL with optional limit parameter
     const url = new URL(`/api/otel/traces/${encodeURIComponent(serviceName)}`, window.location.origin);
@@ -49,33 +49,29 @@ export async function fetchTraces(
       console.log('[OTEL Traces] resourceSpans value:', data.traces[0].resourceSpans);
     }
 
-    // Transform OTLP traces to TraceInfo format
+    // Extract RegisteredTrace from API response
     // The API returns: { service, count, traces: [...] }
-    // Each trace has the structure: { timestamp, source, payload: { resourceSpans: [...] } }
-    // We need to extract the payload which contains the actual OTLP data
-    const traceInfos: TraceInfo[] = [];
+    // Each trace has the structure: { timestamp, source, payload, registeredTrace }
+    // The registeredTrace field contains the full RegisteredTrace object
+    const registeredTraces: RegisteredTrace[] = [];
 
     for (const traceEnvelope of data.traces || []) {
       try {
-        // Extract the OTLP payload from the envelope
-        const otlpTrace = traceEnvelope.payload;
-
-        if (!otlpTrace || !otlpTrace.resourceSpans) {
-          console.warn('[OTEL Traces] Trace missing payload.resourceSpans:', traceEnvelope);
-          continue;
+        // The updated otel-collection-server stores registeredTrace in the envelope
+        if (traceEnvelope.registeredTrace) {
+          registeredTraces.push(traceEnvelope.registeredTrace);
+        } else {
+          // Fallback: old format or missing registeredTrace
+          console.warn('[OTEL Traces] Trace envelope missing registeredTrace field:', traceEnvelope);
         }
-
-        // groupSpansByTrace expects: { resourceSpans: [...] }
-        const traces = groupSpansByTrace(otlpTrace);
-        traceInfos.push(...traces);
       } catch (error) {
         console.error('[OTEL Traces] Error processing trace:', error);
         console.error('[OTEL Traces] Problematic trace envelope:', traceEnvelope);
       }
     }
 
-    console.log(`[OTEL Traces] Fetched ${traceInfos.length} traces for ${serviceName}`);
-    return traceInfos;
+    console.log(`[OTEL Traces] Fetched ${registeredTraces.length} traces for ${serviceName}`);
+    return registeredTraces;
   } catch (error) {
     console.error('[OTEL Traces] Error fetching traces:', error);
     throw error;
@@ -89,7 +85,7 @@ export async function fetchTraces(
 export async function fetchTracesSafe(
   serviceName: string,
   limit?: number
-): Promise<TraceInfo[]> {
+): Promise<RegisteredTrace[]> {
   try {
     return await fetchTraces(serviceName, limit);
   } catch (error) {

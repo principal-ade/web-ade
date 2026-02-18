@@ -37,11 +37,10 @@ import type { Theme } from '@principal-ade/industry-theme';
 import type { LocalFileSystemAdapter } from '@/lib/client/LocalFileSystemAdapter';
 import { useLocalFileSystem } from '@/contexts/LocalFileSystemContext';
 import type { FileInfo } from '@principal-ai/repository-abstraction';
-import type { WorkflowTemplate, ExtendedCanvas } from '@principal-ai/principal-view-core';
+import type { WorkflowTemplate, ExtendedCanvas, RegisteredTrace } from '@principal-ai/principal-view-core';
 import { buildStoryboardContext, type StoryboardReference } from '@principal-ai/principal-view-core';
-import type { TraceInfo } from '@industry-theme/principal-view-panels';
 import { parseTaskMarkdown, serializeTaskMarkdown, DEFAULT_TASK_STATUSES } from '@backlog-md/core';
-import { hasTourBeenShown, markTourAsShown } from '@/lib/tourStorage';
+import { hasTourBeenShown, markTourAsShown} from '@/lib/tourStorage';
 import type { OpenWorkflowScenariosPayload } from '@/types/panel-events';
 import {
   BookOpen, MessageSquare, FileText, Map, LayoutGrid,
@@ -466,7 +465,7 @@ function EditorLayoutContent({
   } | null>(null);
 
   // State for selected trace (for Telemetry view)
-  const [selectedTrace, setSelectedTrace] = useState<TraceInfo | null>(null);
+  const [selectedTrace, setSelectedTrace] = useState<RegisteredTrace | null>(null);
 
   // Toast notification state
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
@@ -1148,7 +1147,7 @@ function EditorLayoutContent({
       }),
       // Trace selection event - update selected trace for trace details panel
       events.on('trace:selected', (event) => {
-        const payload = event.payload as { trace: TraceInfo; traceId: string };
+        const payload = event.payload as { trace: RegisteredTrace; traceId: string };
         console.log('[EditorLayout] Trace selected:', payload.traceId);
         setSelectedTrace(payload.trace);
       }),
