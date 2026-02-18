@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
-import { PanelProvider } from "@/contexts/PanelContext";
+import { WorldsPageProvider } from "@/contexts/WorldsPageProvider";
 import { useUserCollections } from "@/contexts/UserCollectionsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { CollectionModal } from "@/components/collections/CollectionModal";
@@ -227,7 +227,7 @@ function CollectionsPageWrapper() {
       {/* Main Content */}
       {selectedCollection ? (
         <div style={{ height: '100vh' }}>
-          <PanelProvider
+          <WorldsPageProvider
             key={selectedCollectionId}
             workspace={{
               name: selectedCollection.name,
@@ -261,7 +261,7 @@ function CollectionsPageWrapper() {
               initialPreviewedRepo={previewedRepo}
               initialViewMode={repositories.length > 0 ? 'explore' : 'manage'}
             />
-          </PanelProvider>
+          </WorldsPageProvider>
         </div>
       ) : (
         <div

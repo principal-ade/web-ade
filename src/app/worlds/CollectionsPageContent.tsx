@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useMemo } from "react";
-import { usePanelProvider } from "@/contexts/PanelContext";
+import { useWorldsPageProvider } from "@/contexts/WorldsPageProvider";
 import { useUserCollections } from "@/contexts/UserCollectionsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
@@ -156,7 +156,7 @@ export function CollectionsPageContent({
 }: CollectionsPageContentProps) {
   const { theme } = useTheme();
   const router = useRouter();
-  const { context, actions, events } = usePanelProvider();
+  const { context, actions, events } = useWorldsPageProvider();
   const { isAuthenticated, user } = useAuth();
   const userCollections = useUserCollections();
   const [isMobile, setIsMobile] = useState(false);
