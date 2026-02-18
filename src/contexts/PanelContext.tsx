@@ -48,7 +48,7 @@ import { enrichTracesWithWorkflowMatching } from '@/lib/workflow-matcher-api';
 export interface WebAdePanelContext {
   fileTree: DataSlice<FileTree>;
   activeFile: DataSlice<ActiveFileSlice>;
-  selectedCollectionView?: DataSlice<CollectionMapPanelContext['selectedCollectionView']>;
+  selectedCollectionView: DataSlice<CollectionMapPanelContext['selectedCollectionView']>;
 }
 
 /**
@@ -3113,12 +3113,10 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       adapters,
       selectedCollection,
       // Add typed slice properties for type-safe access
-      // CollectionMapPanel can now access context.selectedCollectionView directly
-      selectedCollectionView: slicesRef.current.get('selectedCollectionView') as DataSlice<CollectionMapPanelContext['selectedCollectionView']> | undefined,
-      // Add common context slices for panels that expect FileTreeContext and ActiveFileContext
       // These slices are always present in the initial slices array, so we can safely assert non-null
       fileTree: slicesRef.current.get('fileTree')! as DataSlice<FileTree>,
       activeFile: slicesRef.current.get('active-file')! as DataSlice<ActiveFileSlice>,
+      selectedCollectionView: slicesRef.current.get('selectedCollectionView')! as DataSlice<CollectionMapPanelContext['selectedCollectionView']>,
       getSlice: <T,>(name: string) => slicesRef.current.get(name) as DataSlice<T> | undefined,
       getWorkspaceSlice: <T,>(name: string) => {
         const slice = slicesRef.current.get(name);

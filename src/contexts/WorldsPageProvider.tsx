@@ -250,7 +250,8 @@ interface WorldsPagePanelActions extends PanelActions, CollectionMapPanelActions
 // Worlds page context type - includes only the slices needed for worlds page
 export interface WorldsPageContextType {
   userCollections?: DataSlice<UserCollectionsSliceData>;
-  selectedCollectionView?: DataSlice<CollectionMapPanelContext['selectedCollectionView']>;
+  // selectedCollectionView is always initialized, so it's not optional
+  selectedCollectionView: DataSlice<CollectionMapPanelContext['selectedCollectionView']>;
   workspaceRepositories?: DataSlice<WorkspaceRepositoriesSliceData>;
   workspace?: DataSlice<WorkspaceSliceData>;
   githubStarred?: DataSlice<{ starred: GitHubRepository[]; isAuthenticated: boolean }>;
@@ -933,7 +934,8 @@ export function WorldsPageProvider({
       selectedCollection,
       // Typed slice properties
       userCollections: slicesRef.current.get('userCollections') as DataSlice<UserCollectionsSliceData> | undefined,
-      selectedCollectionView: slicesRef.current.get('selectedCollectionView') as DataSlice<CollectionMapPanelContext['selectedCollectionView']> | undefined,
+      // selectedCollectionView is always initialized in initialSlices, so we can safely assert non-null
+      selectedCollectionView: slicesRef.current.get('selectedCollectionView')! as DataSlice<CollectionMapPanelContext['selectedCollectionView']>,
       workspaceRepositories: slicesRef.current.get('workspaceRepositories') as DataSlice<WorkspaceRepositoriesSliceData> | undefined,
       workspace: slicesRef.current.get('workspace') as DataSlice<WorkspaceSliceData> | undefined,
       githubStarred: slicesRef.current.get('githubStarred') as DataSlice<{ starred: GitHubRepository[]; isAuthenticated: boolean }> | undefined,
