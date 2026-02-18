@@ -3080,10 +3080,10 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
     return userCollections.collections.find(c => c.id === collectionId);
   }, [collectionId, userCollections.collections]);
 
-  const context: PanelContextValue = useMemo(
+  const context = useMemo(
     () => ({
       currentScope: {
-        type: repository ? 'repository' : 'workspace',
+        type: (repository ? 'repository' : 'workspace') as 'repository' | 'workspace',
         workspace,
         repository: githubRepo ? {
           ...repository,
