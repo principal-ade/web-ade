@@ -3101,8 +3101,9 @@ export function PanelProvider({ children, workspace, repository, githubRepo, ini
       // CollectionMapPanel can now access context.selectedCollectionView directly
       selectedCollectionView: slicesRef.current.get('selectedCollectionView') as DataSlice<CollectionMapPanelContext['selectedCollectionView']> | undefined,
       // Add common context slices for panels that expect FileTreeContext and ActiveFileContext
-      fileTree: slicesRef.current.get('fileTree') as DataSlice<FileTree> | undefined,
-      activeFile: slicesRef.current.get('active-file') as DataSlice<ActiveFileSlice> | undefined,
+      // These slices are always present in the initial slices array, so we can safely assert non-null
+      fileTree: slicesRef.current.get('fileTree')! as DataSlice<FileTree>,
+      activeFile: slicesRef.current.get('active-file')! as DataSlice<ActiveFileSlice>,
       getSlice: <T,>(name: string) => slicesRef.current.get(name) as DataSlice<T> | undefined,
       getWorkspaceSlice: <T,>(name: string) => {
         const slice = slicesRef.current.get(name);
