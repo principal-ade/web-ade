@@ -7,7 +7,7 @@ import { GalleryCarouselView } from "@/components/home/GalleryCarouselView";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import type { CommandPaletteData } from "@/components/GlobalCommandPalette";
-import { PanelProvider, usePanelProvider } from "@/contexts/PanelContext";
+import { HomePageProvider, useHomePageProvider } from "@/contexts/HomePageProvider";
 import { Clock, Search } from 'lucide-react';
 import {
   ResponsiveConfigurablePanelLayout,
@@ -80,7 +80,7 @@ function getRecentItems(key: string, max: number = 10): string[] {
 
 function HomePageContent() {
   const { theme } = useTheme();
-  const { context, actions, events } = usePanelProvider();
+  const { context, actions, events } = useHomePageProvider();
   const router = useRouter();
   const [recentRepos, setRecentRepos] = useState<string[]>([]);
   const [recentOwners, setRecentOwners] = useState<string[]>([]);
@@ -411,7 +411,7 @@ function HomePageContent() {
 
 export default function HomePage() {
   return (
-    <PanelProvider
+    <HomePageProvider
       workspace={{
         name: 'web-ade',
         path: '/workspace',
@@ -422,6 +422,6 @@ export default function HomePage() {
       }}
     >
       <HomePageContent />
-    </PanelProvider>
+    </HomePageProvider>
   );
 }

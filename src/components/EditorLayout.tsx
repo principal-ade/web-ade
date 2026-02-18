@@ -9,7 +9,7 @@ import {
 } from '@principal-ade/panel-layouts';
 import { globalPanelRegistry } from '@principal-ade/panel-framework-core';
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelProvider, usePanelProvider } from '@/contexts/PanelContext';
+import { RepositoryPageProvider, useRepositoryPageProvider } from '@/contexts/RepositoryPageProvider';
 import { WebLLMProvider } from '@/contexts/WebLLMContext';
 import { GeminiProvider } from '@/contexts/GeminiContext';
 import { useState, useCallback, useEffect, useMemo } from 'react';
@@ -40,7 +40,7 @@ import type { FileInfo } from '@principal-ai/repository-abstraction';
 import type { WorkflowTemplate, ExtendedCanvas, RegisteredTrace } from '@principal-ai/principal-view-core';
 import { buildStoryboardContext, type StoryboardReference } from '@principal-ai/principal-view-core';
 import { parseTaskMarkdown, serializeTaskMarkdown, DEFAULT_TASK_STATUSES } from '@backlog-md/core';
-import { hasTourBeenShown, markTourAsShown} from '@/lib/tourStorage';
+import { markTourAsShown } from '@/lib/tourStorage';
 import type { OpenWorkflowScenariosPayload } from '@/types/panel-events';
 import {
   BookOpen, MessageSquare, FileText, Map, LayoutGrid,
@@ -403,7 +403,7 @@ function EditorLayoutContent({
   onLayoutConfigIdChange,
 }: EditorLayoutContentProps) {
   const { theme } = useTheme();
-  const { context, actions, events, selectedColorMode, clearColorMode } = usePanelProvider();
+  const { context, actions, events, selectedColorMode, clearColorMode } = useRepositoryPageProvider();
 
   // Count triaged items from fileTree (files in backlog/tasks/)
   const fileTreeSlice = context.getSlice<{ allFiles?: Array<{ path: string }> }>('fileTree');
@@ -2561,13 +2561,15 @@ export function EditorLayout({ githubRepo, localAdapter: _localAdapter, initialC
   const [checkAttempt, setCheckAttempt] = useState(0);
 
   // Calculate whether to auto-show tour for first-time visitors
-  const autoShowTour = useMemo(() => {
-    if (!githubRepo || !githubRepo.includes('/')) {
-      return false;
-    }
-    const [owner, repo] = githubRepo.split('/');
-    return !hasTourBeenShown(owner!, repo!);
-  }, [githubRepo]);
+  // Note: autoShowTour was removed from RepositoryPageProvider
+  // Kept here for future implementation if needed
+  // const autoShowTour = useMemo(() => {
+  //   if (!githubRepo || !githubRepo.includes('/')) {
+  //     return false;
+  //   }
+  //   const [owner, repo] = githubRepo.split('/');
+  //   return !hasTourBeenShown(owner!, repo!);
+  // }, [githubRepo]);
 
   useEffect(() => {
     if (!githubRepo) {
@@ -2656,7 +2658,7 @@ export function EditorLayout({ githubRepo, localAdapter: _localAdapter, initialC
       className="h-full w-full"
       style={{ background: theme.colors.background }}
     >
-      <PanelProvider
+      <RepositoryPageProvider
         workspace={{
           name: 'web-ade',
           path: '/workspace',
@@ -2666,13 +2668,12 @@ export function EditorLayout({ githubRepo, localAdapter: _localAdapter, initialC
           path: '/workspace/web-ade',
         }}
         githubRepo={githubRepo}
-        autoShowTour={autoShowTour}
       >
         <EditorContextWrapper
           initialConfigId={initialConfigId}
           onConfigChange={onConfigChange}
         />
-      </PanelProvider>
+      </RepositoryPageProvider>
     </div>
   );
 }
@@ -2687,7 +2688,7 @@ interface EditorContextWrapperProps {
  * editor-level state including layout configuration.
  */
 function EditorContextWrapper({ initialConfigId, onConfigChange }: EditorContextWrapperProps) {
-  const { events, actions, context } = usePanelProvider();
+  const { events, actions, context } = useRepositoryPageProvider();
 
   // Layout state - lifted here so GeminiProvider can access it
   // Initialize from initialConfigId prop (from URL/localStorage) or default

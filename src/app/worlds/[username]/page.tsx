@@ -4,7 +4,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
-import { PanelProvider, usePanelProvider } from "@/contexts/PanelContext";
+import { WorldsPageProvider, useWorldsPageProvider } from "@/contexts/WorldsPageProvider";
 import { useUserCollections } from "@/contexts/UserCollectionsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
@@ -90,7 +90,7 @@ function SharedCollectionsContent({
 }: SharedCollectionsContentProps) {
   const { theme } = useTheme();
   const router = useRouter();
-  const { context, actions, events } = usePanelProvider();
+  const { context, actions, events } = useWorldsPageProvider();
   const { user, isAuthenticated } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
   const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
@@ -1008,7 +1008,7 @@ function SharedCollectionsWrapper() {
       }}
     >
       <div style={{ height: '100vh' }}>
-        <PanelProvider
+        <WorldsPageProvider
           key={selectedCollectionId}
           workspace={{
             name: selectedCollection?.name || 'Shared Collections',
@@ -1036,7 +1036,7 @@ function SharedCollectionsWrapper() {
             onCreateCollection={canEdit ? () => setCreateModalOpen(true) : undefined}
             onRemoveRepository={canEdit ? handleRemoveRepository : undefined}
           />
-        </PanelProvider>
+        </WorldsPageProvider>
       </div>
 
       {/* Modals (only when canEdit) */}

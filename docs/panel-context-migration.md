@@ -67,25 +67,22 @@ Create **page-specific providers** that:
 - **Pages Using:** `/worlds`, `/worlds/[username]`
 - **Build Status:** ✅ Compiles successfully
 
-### 🔲 Pending
-
-#### HomePage Provider
-- **Route:** `/`
-- **Estimated Slices Needed:**
-  - `github-repositories` - For showing user's repos
-  - `owner-repositories` - For recent owners
-  - `githubStarred` - For starred repos
-- **Current:** Still using monolithic `PanelContext`
-
-#### ActivityPageProvider
+#### ActivityPageProvider (`src/contexts/ActivityPageProvider.tsx`)
+- **Created:** 2026-02-18
 - **Route:** `/activity`
-- **Estimated Slices Needed:**
-  - `current-projects` - Presence data
-  - `telemetry` - OTEL traces
-  - `github-messages` - GitHub notifications/timeline
-  - `fileTree` - File tree for file-city panel
-  - `fileCityColorModes` - Color modes
-- **Current:** Still using monolithic `PanelContext`
+- **Slices:** 8 total
+  - `fileTree` - File tree (for file-city panel when viewing activity)
+  - `fileCityColorModes` - Color modes (for file-city panel)
+  - `quality` - Quality metrics (for quality panel and file-city)
+  - `active-file` - Active file (for file-city panel)
+  - `packages` - Packages (for package-composition panel)
+  - `commitFiles` - Commit files (for file-city commit highlighting)
+  - `storyboardContext` - Storyboard context (for visual-validation panel)
+  - `github-messages` - GitHub notifications/timeline/issues/PRs
+- **Pages Using:** `/activity` (activity feed page)
+- **Build Status:** ✅ Compiles successfully
+
+### 🔲 Pending
 
 #### OwnerPageProvider (`src/contexts/OwnerPageProvider.tsx`)
 - **Created:** 2026-02-17
@@ -102,9 +99,20 @@ Create **page-specific providers** that:
 - **Pages Using:** `/[owner]`
 - **Build Status:** ✅ Compiles successfully
 
-#### RepositoryPageProvider (EditorLayout)
+#### HomePageProvider (`src/contexts/HomePageProvider.tsx`)
+- **Created:** 2026-02-18
+- **Route:** `/`
+- **Slices:** 3 total
+  - `github-repositories` - User's GitHub repositories (owned, starred, organizations)
+  - `owner-repositories` - Repositories for a specific owner
+  - `githubStarred` - Starred repositories with loading state
+- **Pages Using:** `/` (home page)
+- **Build Status:** ✅ Compiles successfully
+
+#### RepositoryPageProvider (`src/contexts/RepositoryPageProvider.tsx`)
+- **Created:** 2026-02-18
 - **Route:** `/[owner]/[repo]`
-- **Estimated Slices Needed:**
+- **Slices:** 13 total
   - `active-file` - Currently open file
   - `fileTree` - Repository file tree
   - `commits` - Git commit history
@@ -116,8 +124,11 @@ Create **page-specific providers** that:
   - `storyboardContext` - Storyboard data
   - `telemetry` - OTEL traces
   - `schematics` - Versioned workflows
-- **Current:** Still using monolithic `PanelContext` via `EditorLayout`
-- **Note:** This is the most complex page with the most slices
+  - `fileCityColorModes` - File city color modes
+  - `commitFiles` - Commit file details
+- **Pages Using:** `/[owner]/[repo]` (repository editor via EditorLayout)
+- **Build Status:** ✅ Compiles successfully
+- **Note:** This is the most complex provider with the most slices
 
 ## How to Create a New Page-Specific Provider
 
@@ -228,16 +239,80 @@ The `WorldsPageProvider` is the reference implementation. Key files:
 - Clear, typed dependencies
 - Better performance (less data fetching)
 
+### For HomePageProvider
+
+**Before (Monolithic PanelContext):**
+- 25+ slices registered
+- ~3700 lines of code
+- All pages share the same massive context
+- Unclear dependencies
+
+**After (HomePageProvider):**
+- 3 slices (88% reduction)
+- ~437 lines of focused code
+- Clear, typed dependencies
+- Minimal data fetching (only what the home page needs)
+
+### For ActivityPageProvider
+
+**Before (Monolithic PanelContext):**
+- 25+ slices registered
+- ~3700 lines of code
+- All pages share the same massive context
+- Unclear dependencies
+
+**After (ActivityPageProvider):**
+- 8 slices (68% reduction)
+- ~690 lines of focused code
+- Clear, typed dependencies
+- Only fetches data for file-city and GitHub messages
+
+### For RepositoryPageProvider
+
+**Before (Monolithic PanelContext):**
+- 25+ slices registered
+- ~3700 lines of code
+- All pages share the same massive context
+- Unclear dependencies
+
+**After (RepositoryPageProvider):**
+- 13 slices (48% reduction)
+- ~955 lines of focused code
+- Clear, typed dependencies
+- Only repository-specific data fetching
+
 ## Timeline
 
 | Date | Milestone |
 |------|-----------|
 | 2026-02-17 | ✅ WorldsPageProvider created and tested |
 | 2026-02-17 | ✅ OwnerPageProvider created and tested |
-| TBD | HomePageProvider |
-| TBD | ActivityPageProvider |
-| TBD | RepositoryPageProvider (most complex) |
-| TBD | Remove monolithic PanelContext |
+| 2026-02-18 | ✅ HomePageProvider created and tested |
+| 2026-02-18 | ✅ ActivityPageProvider created and tested |
+| 2026-02-18 | ✅ RepositoryPageProvider created and tested (most complex) |
+| 2026-02-18 | ✅ Removed monolithic PanelContext.tsx |
+
+## Summary
+
+🎉 **Migration Complete!** All page-specific providers have been successfully created and the monolithic `PanelContext` has been removed:
+
+- ✅ **WorldsPageProvider** - 13 slices (48% reduction) - ~1200 lines
+- ✅ **OwnerPageProvider** - 8 slices (68% reduction) - Similar size
+- ✅ **HomePageProvider** - 3 slices (88% reduction) - 437 lines
+- ✅ **ActivityPageProvider** - 8 slices (68% reduction) - 690 lines
+- ✅ **RepositoryPageProvider** - 13 slices (48% reduction) - 955 lines
+
+**Old monolithic PanelContext** (~3700 lines, 25+ slices) has been **deleted** ✅
+
+### Files Deleted
+- `src/contexts/PanelContext.tsx` (3700+ lines)
+- `src/components/ProjectsPanel.tsx` (unused legacy component)
+
+### Total Impact
+- **Eliminated** ~3700 lines of monolithic context code
+- **Reduced** slice overhead by 48-88% per page
+- **Improved** performance with targeted data fetching
+- **Enhanced** type safety with page-specific context types
 
 ## Notes
 

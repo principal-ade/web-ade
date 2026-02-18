@@ -168,13 +168,17 @@ export async function initializeOTEL() {
 
     // Build resource attributes
     const resourceAttributes: Record<string, string> = {
-      [ATTR_SERVICE_NAME]: serviceName,
+      [ATTR_SERVICE_NAME]: serviceName, // ATTR_SERVICE_NAME = 'service.name'
       ...(serviceVersion && { [ATTR_SERVICE_VERSION]: serviceVersion }),
       ...attributes,
     };
 
+    console.log('[OTEL FALLBACK] Resource attributes:', resourceAttributes);
+
     // Create resource using helper function (handles ESM/CJS properly)
     const resource = resourcesModule.resourceFromAttributes(resourceAttributes);
+
+    console.log('[OTEL FALLBACK] Resource created, attributes:', resource.attributes);
 
     // Initialize SDK with manual configuration (NO auto-instrumentation)
     const sdk = new NodeSDK({

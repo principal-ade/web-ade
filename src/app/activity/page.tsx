@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { PanelProvider, usePanelProvider } from '@/contexts/PanelContext';
+import { ActivityPageProvider, useActivityPageProvider } from '@/contexts/ActivityPageProvider';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { Logo } from '@principal-ai/logo-component';
@@ -53,7 +53,7 @@ interface ActivityPageContentProps {
 
 function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: ActivityPageContentProps) {
   const { theme } = useTheme();
-  const { context, actions, events } = usePanelProvider();
+  const { context, actions, events } = useActivityPageProvider();
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   const [leftCollapsed] = useState(false);
@@ -453,7 +453,7 @@ function ActivityPageWrapper({ username }: { username: string }) {
         height: '100vh'
       }}
     >
-      <PanelProvider
+      <ActivityPageProvider
         workspace={{
           name: 'web-ade',
           path: '/workspace',
@@ -469,7 +469,7 @@ function ActivityPageWrapper({ username }: { username: string }) {
           selectedRepo={selectedRepo}
           onRepoSelect={handleRepoSelect}
         />
-      </PanelProvider>
+      </ActivityPageProvider>
     </div>
   );
 }
