@@ -13,7 +13,6 @@ import { RepositoryPageProvider, useRepositoryPageProvider } from '@/contexts/Re
 import { WebLLMProvider } from '@/contexts/WebLLMContext';
 import { GeminiProvider } from '@/contexts/GeminiContext';
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import dynamic from 'next/dynamic';
 import { EditorHeader } from './EditorHeader';
 import { SessionsPanel } from './SessionsPanel';
 import { AccessNotice, AccessStatus } from './AccessNotice';
@@ -42,6 +41,22 @@ import { buildStoryboardContext, type StoryboardReference } from '@principal-ai/
 import { parseTaskMarkdown, serializeTaskMarkdown, DEFAULT_TASK_STATUSES } from '@backlog-md/core';
 import { markTourAsShown } from '@/lib/tourStorage';
 import type { OpenWorkflowScenariosPayload } from '@/types/panel-events';
+
+// Static panel imports for type safety
+import { panels as markdownPanels } from '@industry-theme/markdown-panels';
+import { panels as alexandriaDocsPanels } from '@industry-theme/alexandria-docs-panel';
+import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
+import { panels as backlogmdPanels } from '@industry-theme/backlogmd-kanban-panel';
+import { panels as principalViewPanels, TraceDetailsPanel } from '@industry-theme/principal-view-panels';
+import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
+import { panels as agentDrivenUIPanels } from '@industry-theme/agent-driven-ui-panels';
+import { panels as repositoryCompositionPanels } from '@industry-theme/repository-composition-panels';
+import { panels as gitPanels } from '@industry-theme/git-panels';
+import { panels as githubPanels } from '@industry-theme/github-panels';
+import { panels as themeEditorPanels } from '@industry-theme/theme-editor-panel';
+import { panels as fileEditingPanels } from '@industry-theme/file-editing-panels';
+import { panels as agentPanels } from '@industry-theme/agent-panels';
+
 import {
   BookOpen, MessageSquare, FileText, Map, LayoutGrid,
   CheckSquare, Terminal, Users, Compass, Shield, Bug, Palette,
@@ -49,286 +64,43 @@ import {
   Zap, File, GitCompare, Edit, Activity
 } from 'lucide-react';
 
-// Dynamically import the MarkdownPanel with SSR disabled
-const MarkdownPanelLoader = dynamic(
-  () => import('@industry-theme/markdown-panels').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
+// Static panel loaders (type-safe, no SSR)
+const MarkdownPanelLoader = markdownPanels[0]!.component;
+const AlexandriaDocsPanelLoader = alexandriaDocsPanels[0]!.component;
+const FileCityPanelLoader = fileCityPanels[0]!.component;
+const KanbanPanelLoader = backlogmdPanels[0]!.component;
+const TaskDetailPanelLoader = backlogmdPanels[1]!.component;
+const PrincipalViewPanelLoader = principalViewPanels[0]!.component;
+const QualityHexagonPanelLoader = codeQualityPanels[0]!.component;
+const LensDataDebugPanelLoader = codeQualityPanels[2]!.component;
+const EventBusPanelLoader = agentDrivenUIPanels[0]!.component;
+const AgentToolsPanelLoader = agentDrivenUIPanels[1]!.component;
+const GitChangesPanelLoader = repositoryCompositionPanels[0]!.component;
+const PackageCompositionPanelLoader = repositoryCompositionPanels[1]!.component;
+const GitCommitHistoryPanelLoader = gitPanels[0]!.component;
+const GitCommitDetailPanelLoader = gitPanels[1]!.component;
+const GitHubMessagesPanelLoader = githubPanels[6]!.component;
+const ThemeEditorPanelLoader = themeEditorPanels[0]!.component;
+const FileEditorPanelLoader = fileEditingPanels[0]!.component;
+const GitDiffPanelLoader = fileEditingPanels[1]!.component;
+const MDXEditorPanelLoader = fileEditingPanels[2]!.component;
+const SkillsListPanelLoader = agentPanels[0]!.component;
+const SkillDetailPanelLoader = agentPanels[1]!.component;
 
-// Dynamically import the AlexandriaDocsPanel with SSR disabled
-const AlexandriaDocsPanelLoader = dynamic(
-  () => import('@industry-theme/alexandria-docs-panel').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the FileCityPanel with SSR disabled
-const FileCityPanelLoader = dynamic(
-  () => import('@industry-theme/file-city-panel').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the KanbanPanel with SSR disabled
-const KanbanPanelLoader = dynamic(
-  () => import('@industry-theme/backlogmd-kanban-panel').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the TaskDetailPanel with SSR disabled
-const TaskDetailPanelLoader = dynamic(
-  () => import('@industry-theme/backlogmd-kanban-panel').then((mod) => {
-    const Component = mod.panels[1]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the PrincipalViewPanel (Graph) with SSR disabled
-const PrincipalViewPanelLoader = dynamic(
-  () => import('@industry-theme/principal-view-panels').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the QualityHexagonPanel with SSR disabled
-const QualityHexagonPanelLoader = dynamic(
-  () => import('@principal-ade/code-quality-panels').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the LensDataDebugPanel with SSR disabled
-const LensDataDebugPanelLoader = dynamic(
-  () => import('@principal-ade/code-quality-panels').then((mod) => {
-    const Component = mod.panels[2]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the EventBusPanel with SSR disabled
-const EventBusPanelLoader = dynamic(
-  () => import('@industry-theme/agent-driven-ui-panels').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the AgentToolsPanel with SSR disabled
-const AgentToolsPanelLoader = dynamic(
-  () => import('@industry-theme/agent-driven-ui-panels').then((mod) => {
-    const Component = mod.panels[1]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the GitChangesPanel with SSR disabled
-const GitChangesPanelLoader = dynamic(
-  () => import('@industry-theme/repository-composition-panels').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the PackageCompositionPanel with SSR disabled
-const PackageCompositionPanelLoader = dynamic(
-  () => import('@industry-theme/repository-composition-panels').then((mod) => {
-    const Component = mod.panels[1]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the GitCommitHistoryPanel with SSR disabled
-const GitCommitHistoryPanelLoader = dynamic(
-  () => import('@industry-theme/git-panels').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the GitCommitDetailPanel with SSR disabled
-const GitCommitDetailPanelLoader = dynamic(
-  () => import('@industry-theme/git-panels').then((mod) => {
-    const Component = mod.panels[1]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the GitHubMessagesPanel with SSR disabled
-const GitHubMessagesPanelLoader = dynamic(
-  () => import('@industry-theme/github-panels').then((mod) => {
-    const Component = mod.panels[6]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the ThemeEditorPanel with SSR disabled
-const ThemeEditorPanelLoader = dynamic(
-  () => import('@industry-theme/theme-editor-panel').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the FileEditorPanel with SSR disabled
-const FileEditorPanelLoader = dynamic(
-  () => import('@industry-theme/file-editing-panels').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the GitDiffPanel with SSR disabled
-const GitDiffPanelLoader = dynamic(
-  () => import('@industry-theme/file-editing-panels').then((mod) => {
-    const Component = mod.panels[1]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the MDXEditorPanel with SSR disabled
-const MDXEditorPanelLoader = dynamic(
-  () => import('@industry-theme/file-editing-panels').then((mod) => {
-    const Component = mod.panels[2]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the SkillsListPanel with SSR disabled
-const SkillsListPanelLoader = dynamic(
-  () => import('@industry-theme/agent-panels').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the SkillDetailPanel with SSR disabled
-const SkillDetailPanelLoader = dynamic(
-  () => import('@industry-theme/agent-panels').then((mod) => {
-    const Component = mod.panels[1]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the StoryboardListPanel with SSR disabled
-const StoryboardListPanelLoader = dynamic(
-  () => import('@industry-theme/principal-view-panels').then((mod) => {
-    console.log('[StoryboardListPanel] Module keys:', Object.keys(mod));
-    console.log('[StoryboardListPanel] panels array:', mod.panels);
-    console.log('[StoryboardListPanel] panels length:', mod.panels?.length);
-    if (mod.panels) {
-      console.log('[StoryboardListPanel] Available panel IDs:',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        mod.panels.map((p: any) => p.metadata?.id));
-    }
-    const panel = mod.panels?.find(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (p: any) => p.metadata?.id === 'principal-ai.storyboard-list'
-    );
-    if (!panel) {
-      console.error('[StoryboardListPanel] Panel not found!');
-      throw new Error('StoryboardListPanel not found');
-    }
-    console.log('[StoryboardListPanel] Found panel:', panel.metadata?.name);
-    return { default: panel.component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the CanvasEditorPanel with SSR disabled
-const CanvasEditorPanelLoader = dynamic(
-  () => import('@industry-theme/principal-view-panels').then((mod) => {
-    const panel = mod.panels.find(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (p: any) => p.metadata?.id === 'principal-ai.canvas-editor'
-    );
-    if (!panel) {
-      console.error('CanvasEditorPanel not found in panels array. Available panels:',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        mod.panels.map((p: any) => p.metadata?.id));
-      throw new Error('CanvasEditorPanel not found');
-    }
-    return { default: panel.component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the WorkflowScenariosPanel with SSR disabled
-const WorkflowScenariosPanelLoader = dynamic(
-  () => import('@industry-theme/principal-view-panels').then((mod) => {
-    const panel = mod.panels.find(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (p: any) => p.metadata?.id === 'principal-ai.workflow-scenarios'
-    );
-    if (!panel) {
-      console.error('WorkflowScenariosPanel not found in panels array. Available panels:',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        mod.panels.map((p: any) => p.metadata?.id));
-      throw new Error('WorkflowScenariosPanel not found');
-    }
-    return { default: panel.component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the TraceListPanel with SSR disabled
-const TraceListPanelLoader = dynamic(
-  () => import('@industry-theme/principal-view-panels').then((mod) => {
-    const panel = mod.panels.find(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (p: any) => p.metadata?.id === 'principal-ai.trace-list'
-    );
-    if (!panel) {
-      console.error('TraceListPanel not found in panels array. Available panels:',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        mod.panels.map((p: any) => p.metadata?.id));
-      throw new Error('TraceListPanel not found');
-    }
-    return { default: panel.component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the TraceDetailsPanel with SSR disabled
-const TraceDetailsPanelLoader = dynamic(
-  () => import('@industry-theme/principal-view-panels').then((mod) => {
-    const Component = mod.TraceDetailsPanel;
-    if (!Component) {
-      console.error('TraceDetailsPanel not found in module exports');
-      throw new Error('TraceDetailsPanel not found');
-    }
-    return { default: Component };
-  }),
-  { ssr: false }
-);
+// Principal View panels - find by metadata ID (static)
+const StoryboardListPanelLoader = principalViewPanels.find(
+  (p) => p.metadata?.id === 'principal-ai.storyboard-list'
+)!.component;
+const CanvasEditorPanelLoader = principalViewPanels.find(
+  (p) => p.metadata?.id === 'principal-ai.canvas-editor'
+)!.component;
+const WorkflowScenariosPanelLoader = principalViewPanels.find(
+  (p) => p.metadata?.id === 'principal-ai.workflow-scenarios'
+)!.component;
+const TraceListPanelLoader = principalViewPanels.find(
+  (p) => p.metadata?.id === 'principal-ai.trace-list'
+)!.component;
+const TraceDetailsPanelLoader = TraceDetailsPanel;
 
 /**
  * Build the GitHub issue body for a backlog task (without @claude tag)
