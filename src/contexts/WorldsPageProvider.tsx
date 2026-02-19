@@ -221,8 +221,8 @@ export interface WorldsPageContextType {
   userCollections: DataSlice<UserCollectionsSlice>; // Required for UserCollectionsPanel
   // selectedCollectionView is always initialized and managed as direct state (not wrapped in DataSlice)
   selectedCollectionView: SelectedCollectionView;
-  workspaceRepositories?: DataSlice<WorkspaceRepositoriesSlice>;
-  workspace?: DataSlice<WorkspaceSlice>;
+  workspaceRepositories: DataSlice<WorkspaceRepositoriesSlice>; // Required for WorkspaceCollectionPanel
+  workspace: DataSlice<WorkspaceSlice>; // Required for WorkspaceCollectionPanel
   githubStarred: DataSlice<GitHubStarredSlice>; // Required for GitHubStarredPanel
   githubProjects: DataSlice<GitHubProjectsSlice>; // Required for GitHubProjectsPanel
   'github-repositories'?: DataSlice<GitHubRepositoriesData>;
@@ -908,8 +908,8 @@ export function WorldsPageProvider({
       userCollections: slicesRef.current.get('userCollections') as DataSlice<UserCollectionsSlice>,
       // selectedCollectionView is managed as direct state for type safety (not in Map)
       selectedCollectionView: selectedCollectionView,
-      workspaceRepositories: slicesRef.current.get('workspaceRepositories') as DataSlice<WorkspaceRepositoriesSlice> | undefined,
-      workspace: slicesRef.current.get('workspace') as DataSlice<WorkspaceSlice> | undefined,
+      workspaceRepositories: slicesRef.current.get('workspaceRepositories') as DataSlice<WorkspaceRepositoriesSlice>,
+      workspace: slicesRef.current.get('workspace') as DataSlice<WorkspaceSlice>,
       githubStarred: slicesRef.current.get('githubStarred') as DataSlice<GitHubStarredSlice>,
       githubProjects: slicesRef.current.get('githubProjects') as DataSlice<GitHubProjectsSlice>,
       'github-repositories': slicesRef.current.get('github-repositories') as DataSlice<GitHubRepositoriesData> | undefined,

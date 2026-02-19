@@ -8,8 +8,8 @@ import { WorldsPageProvider, useWorldsPageProvider } from "@/contexts/WorldsPage
 import { useUserCollections } from "@/contexts/UserCollectionsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
-import dynamic from "next/dynamic";
 import { withTelemetrySpan } from "@/lib/telemetry";
+import { WorkspaceCollectionPanel } from "@industry-theme/alexandria-panels";
 import {
   EditableConfigurablePanelLayout,
   ResponsiveConfigurablePanelLayout,
@@ -33,12 +33,8 @@ import { CollectionModal } from "@/components/collections/CollectionModal";
 import { AddRepositoryModal } from "@/components/collections/AddRepositoryModal";
 import type { Collection, CollectionMembership } from '@principal-ai/alexandria-collections';
 
-// Dynamically import panels with SSR disabled
-const WorkspaceCollectionPanelLoader = dynamic(
-  () => import('@industry-theme/alexandria-panels').then((mod) => mod.WorkspaceCollectionPanel),
-  { ssr: false }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-) as React.ComponentType<any>;
+// Static import for type safety
+const WorkspaceCollectionPanelLoader = WorkspaceCollectionPanel;
 
 interface UserInfo {
   login: string;
@@ -168,7 +164,7 @@ function SharedCollectionsContent({
                 : undefined,
             }}
             events={events}
-            selectedRepository={previewedRepo}
+            selectedRepository={previewedRepo ?? undefined}
             defaultShowSearch
           />
         </div>
