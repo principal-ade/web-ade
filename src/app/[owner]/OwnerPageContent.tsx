@@ -12,7 +12,11 @@ import { UserAvatarMenu } from "@/components/UserAvatarMenu";
 import { Logo } from "@principal-ai/logo-component";
 import { iconMap } from "@/components/collections/CollectionModal";
 import dynamic from "next/dynamic";
-import { addRecentOwner, type OwnerInfo } from "@industry-theme/github-panels";
+import { addRecentOwner, type OwnerInfo, OwnerRepositoriesPanel } from "@industry-theme/github-panels";
+import { panels as principalViewPanels } from "@industry-theme/principal-view-panels";
+import { panels as codeQualityPanels } from "@principal-ade/code-quality-panels";
+import { panels as fileCityPanels } from "@industry-theme/file-city-panel";
+import { PackageCompositionPanel } from "@industry-theme/repository-composition-panels";
 import {
   EditableConfigurablePanelLayout,
   ResponsiveConfigurablePanelLayout,
@@ -124,48 +128,14 @@ async function saveRecentOwnerWithMetadata(owner: string) {
   }
 }
 
-// Dynamically import the OwnerRepositoriesPanel with SSR disabled
-const OwnerRepositoriesPanelLoader = dynamic(
-  () => import('@industry-theme/github-panels').then((mod) => mod.OwnerRepositoriesPanel),
-  { ssr: false }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-) as React.ComponentType<any>;
+// Static imports for all panels (for type safety)
+const OwnerRepositoriesPanelLoader = OwnerRepositoriesPanel;
+const PrincipalViewPanelLoader = principalViewPanels[0]!.component;
+const CodeQualityPanelLoader = codeQualityPanels[0]!.component;
+const FileCityPanelLoader = fileCityPanels[0]!.component;
+const PackageCompositionPanelLoader = PackageCompositionPanel;
 
-// Dynamically import the PrincipalViewGraphPanel with SSR disabled
-const PrincipalViewPanelLoader = dynamic(
-  () => import('@industry-theme/principal-view-panels').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the QualityHexagonPanel with SSR disabled
-const CodeQualityPanelLoader = dynamic(
-  () => import('@principal-ade/code-quality-panels').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the FileCityPanel with SSR disabled
-const FileCityPanelLoader = dynamic(
-  () => import('@industry-theme/file-city-panel').then((mod) => {
-    const Component = mod.panels[0]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
-
-// Dynamically import the PackageCompositionPanel with SSR disabled
-const PackageCompositionPanelLoader = dynamic(
-  () => import('@industry-theme/repository-composition-panels').then((mod) => mod.PackageCompositionPanel),
-  { ssr: false }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-) as React.ComponentType<any>;
-
-// Dynamically import the CollectionMapPanelContent with SSR disabled
+// Keep CollectionMapPanel as dynamic for now - needs proper integration work
 const CollectionMapPanelLoader = dynamic(
   () => import('@industry-theme/repository-composition-panels').then((mod) => mod.CollectionMapPanelContent),
   { ssr: false }
@@ -445,7 +415,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
             actions={actions}
             events={events}
             owner={owner}
-            selectedRepository={previewedRepo}
+            selectedRepository={previewedRepo ?? undefined}
             defaultShowSearch
           />
         </div>
@@ -513,7 +483,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
         const repositories = ownerReposData?.repositories || [];
         const ownerInfo = ownerReposData?.owner || { login: owner };
 
-        // Convert GitHub repos to Alexandria format
+        // Convert GitHub repos to Alexandria format (simplified for now)
         const alexandriaRepos = repositories.map((repo) => ({
           name: repo.full_name,
           registeredAt: new Date().toISOString(),
