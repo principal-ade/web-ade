@@ -13,12 +13,12 @@ This document tracks the migration of ALL pages and components in web-ade from d
 | Page/Component | Panels Count | Status | Priority |
 |----------------|--------------|--------|----------|
 | ✅ Worlds Page (Collections) | 8 | **COMPLETED** | High |
+| 🟡 Owner Page | 5/6 | **MOSTLY DONE** | Medium |
 | 📋 EditorLayout | 26 | Todo | **CRITICAL** |
-| 📋 Owner Page | 4 | Todo | Medium |
 | 📋 Activity Page | 2 | Todo | Low |
 | 📋 Worlds/Username Page | 1 | Todo | Low |
 
-**Overall Progress**: 8/41 panels migrated (19.5%)
+**Overall Progress**: 13/42 panels migrated (31.0%)
 
 ---
 
@@ -118,44 +118,54 @@ This document tracks the migration of ALL pages and components in web-ade from d
 
 ---
 
-## 📋 TODO: Owner Page
+## 🟡 MOSTLY COMPLETE: Owner Page
 
 **File**: `src/app/[owner]/OwnerPageContent.tsx`
 
-**Status**: ⏳ Not Started
+**Status**: 🟡 5/6 panels migrated (2026-02-18)
 
 **Priority**: Medium
 
-**Panels to Migrate** (4):
+### ✅ Migrated Panels (5):
 
-1. **OwnerRepositoriesPanel** → `@industry-theme/github-panels`
-   - Context: Likely needs GitHub user data slice
-   - Type exports: Check if available
+| Panel | Package | Status | Issues Found |
+|-------|---------|--------|--------------|
+| OwnerRepositoriesPanel | `@industry-theme/github-panels` | ✅ **DONE** | Fixed null→undefined for selectedRepository |
+| PrincipalViewPanel | `@industry-theme/principal-view-panels` | ✅ **DONE** | None |
+| CodeQualityPanel | `@principal-ade/code-quality-panels` | ✅ **DONE** | None |
+| FileCityPanel | `@industry-theme/file-city-panel` | ✅ **DONE** | None |
+| PackageCompositionPanel | `@industry-theme/repository-composition-panels` | ✅ **DONE** | None |
 
-2. **PrincipalViewPanel** → `@industry-theme/principal-view-panels`
-   - Context: Generic panel context
-   - Type exports: Should be available
+### ⏸️ Deferred (1):
 
-3. **CodeQualityPanel** → `@principal-ade/code-quality-panels`
-   - Context: Quality data slice
-   - Type exports: Check availability
+| Panel | Package | Reason |
+|-------|---------|--------|
+| CollectionMapPanelContent | `@industry-theme/repository-composition-panels` | Needs proper integration - missing required RegionCallbacks, incorrect data types |
 
-4. **FileCityPanel** → `@industry-theme/file-city-panel`
-   - Context: File tree, quality data
-   - Type exports: Should be available
+**CollectionMapPanelContent Issues**:
+- Requires `AlexandriaEntryWithMetrics[]` with `ValidatedRepositoryPath` (branded type)
+- Needs complete `RegionCallbacks` implementation (6 callbacks)
+- Current mock data doesn't match expected types
+- Kept as dynamic import - will migrate in separate PR with proper implementation
 
-### Required Actions
-1. Identify the provider/context for owner page
-2. Check which slice types are needed
-3. Import types from panel packages
-4. Update context type definitions
-5. Migrate to static imports
-6. Test with real GitHub user data
+### Type Safety Issues Found
 
-### Estimated Impact
-- **Bundle size increase**: ~1-2 MB
-- **Type safety**: Will ensure owner context provides correct data
-- **Effort**: 30-45 minutes
+1. **OwnerRepositoriesPanel**: `selectedRepository` prop type mismatch
+   - Provider passed: `string | null`
+   - Panel expected: `string | undefined`
+   - **Fix**: Changed `{previewedRepo}` to `{previewedRepo ?? undefined}`
+
+2. **CollectionMapPanelContent**: Multiple integration issues
+   - Missing `path: ValidatedRepositoryPath` in repository objects
+   - Missing `hasViews`, `viewCount`, `views` fields
+   - Missing `regionCallbacks` prop with 6 required callbacks
+   - **Decision**: Defer to later (needs proper implementation)
+
+### Results
+- **Bundle size**: Minimal increase (panels already loaded elsewhere)
+- **Type safety**: 5/6 panels now have compile-time verification
+- **Bugs caught**: 1 type mismatch, 1 integration issue discovered
+- **Effort**: 45 minutes
 
 ---
 
@@ -386,9 +396,9 @@ For each page/component migrated:
 
 | Date | Component | Panels | Status |
 |------|-----------|--------|--------|
-| 2026-02-18 | Worlds Page | 8 | ✅ Complete |
+| 2026-02-18 | Worlds Page | 8/8 | ✅ Complete |
+| 2026-02-18 | Owner Page | 5/6 | 🟡 Mostly Complete (1 deferred) |
 | TBD | EditorLayout | 26 | ⏳ Planned |
-| TBD | Owner Page | 4 | ⏳ Planned |
 | TBD | Activity Page | 2 | ⏳ Planned |
 | TBD | Worlds/Username | 1 | ⏳ Planned |
 
