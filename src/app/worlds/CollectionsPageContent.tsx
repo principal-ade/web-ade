@@ -21,6 +21,7 @@ import { Plus, FolderOpen, Edit2, Cloud, CloudOff, Share2, Check, Settings, Comp
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { iconMap } from '@/components/collections/CollectionModal';
 import type { Collection } from '@principal-ai/alexandria-collections';
+import { UserCollectionsPanel } from '@industry-theme/alexandria-panels';
 
 const RECENT_REPOSITORIES_KEY = 'recent-repositories';
 const RECENT_OWNERS_KEY = 'recent-owners';
@@ -56,12 +57,10 @@ interface FollowingUser {
   bio: string | null;
 }
 
-// Dynamically import panels with SSR disabled
-const UserCollectionsPanelLoader = dynamic(
-  () => import('@industry-theme/alexandria-panels').then((mod) => mod.UserCollectionsPanel),
-  { ssr: false }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-) as React.ComponentType<any>;
+// Static import for UserCollectionsPanel (test for type safety)
+const UserCollectionsPanelLoader = UserCollectionsPanel;
+
+// Dynamically import other panels with SSR disabled
 
 const GitHubStarredPanelLoader = dynamic(
   () => import('@industry-theme/alexandria-panels').then((mod) => mod.GitHubStarredPanel),

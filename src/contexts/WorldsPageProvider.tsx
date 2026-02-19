@@ -49,6 +49,11 @@ import { useAuth } from './AuthContext';
 import { useUserCollections } from './UserCollectionsContext';
 import type { CustomRegion, RepositoryLayoutData } from '@principal-ai/alexandria-collections';
 import type {
+  UserCollectionsSlice,
+  WorkspaceSlice,
+  WorkspaceRepositoriesSlice,
+} from '@industry-theme/alexandria-panels';
+import type {
   AlexandriaEntryWithMetrics,
   SelectedCollectionView,
 } from '@industry-theme/repository-composition-panels';
@@ -200,46 +205,8 @@ interface PackagesSliceData {
   };
 }
 
-// User collections slice data
-interface UserCollectionsSliceData {
-  collections: Array<{
-    id: string;
-    name: string;
-    description?: string;
-    createdAt: string;
-    updatedAt: string;
-  }>;
-  memberships: Array<{
-    collectionId: string;
-    repositoryId: string;
-    addedAt: string;
-  }>;
-  loading: boolean;
-  saving: boolean;
-  gitHubRepoExists: boolean;
-  gitHubRepoUrl?: string;
-  error?: string;
-}
-
-// Workspace slice data
-interface WorkspaceSliceData {
-  workspace: {
-    id: string;
-    name: string;
-    description: string;
-    createdAt: number;
-    updatedAt: number;
-  };
-  loading: boolean;
-  error?: string;
-}
-
-// Workspace repositories slice data
-interface WorkspaceRepositoriesSliceData {
-  repositories: GitHubRepository[];
-  loading: boolean;
-  error?: string;
-}
+// Use slice types from alexandria-panels for type safety
+// UserCollectionsSlice, WorkspaceSlice, WorkspaceRepositoriesSlice imported above
 
 /**
  * Extended actions for WorldsPageProvider
@@ -249,11 +216,11 @@ interface WorldsPagePanelActions extends PanelActions, CollectionMapPanelActions
 
 // Worlds page context type - includes only the slices needed for worlds page
 export interface WorldsPageContextType {
-  userCollections?: DataSlice<UserCollectionsSliceData>;
+  userCollections: DataSlice<UserCollectionsSlice>; // Required for UserCollectionsPanel
   // selectedCollectionView is always initialized and managed as direct state (not wrapped in DataSlice)
   selectedCollectionView: SelectedCollectionView;
-  workspaceRepositories?: DataSlice<WorkspaceRepositoriesSliceData>;
-  workspace?: DataSlice<WorkspaceSliceData>;
+  workspaceRepositories?: DataSlice<WorkspaceRepositoriesSlice>;
+  workspace?: DataSlice<WorkspaceSlice>;
   githubStarred?: DataSlice<{ starred: GitHubRepository[]; isAuthenticated: boolean }>;
   githubProjects?: DataSlice<{ owned: GitHubRepository[]; organizations: Array<{ id: number; login: string; avatar_url: string; description: string | null; repositories: GitHubRepository[] }>; isAuthenticated: boolean }>;
   'github-repositories'?: DataSlice<GitHubRepositoriesData>;
@@ -936,11 +903,11 @@ export function WorldsPageProvider({
       adapters,
       selectedCollection,
       // Typed slice properties
-      userCollections: slicesRef.current.get('userCollections') as DataSlice<UserCollectionsSliceData> | undefined,
+      userCollections: slicesRef.current.get('userCollections') as DataSlice<UserCollectionsSlice>,
       // selectedCollectionView is managed as direct state for type safety (not in Map)
       selectedCollectionView: selectedCollectionView,
-      workspaceRepositories: slicesRef.current.get('workspaceRepositories') as DataSlice<WorkspaceRepositoriesSliceData> | undefined,
-      workspace: slicesRef.current.get('workspace') as DataSlice<WorkspaceSliceData> | undefined,
+      workspaceRepositories: slicesRef.current.get('workspaceRepositories') as DataSlice<WorkspaceRepositoriesSlice> | undefined,
+      workspace: slicesRef.current.get('workspace') as DataSlice<WorkspaceSlice> | undefined,
       githubStarred: slicesRef.current.get('githubStarred') as DataSlice<{ starred: GitHubRepository[]; isAuthenticated: boolean }> | undefined,
       githubProjects: slicesRef.current.get('githubProjects') as DataSlice<{ owned: GitHubRepository[]; organizations: Array<{ id: number; login: string; avatar_url: string; description: string | null; repositories: GitHubRepository[] }>; isAuthenticated: boolean }> | undefined,
       'github-repositories': slicesRef.current.get('github-repositories') as DataSlice<GitHubRepositoriesData> | undefined,
