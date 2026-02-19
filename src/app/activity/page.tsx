@@ -1,6 +1,5 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@principal-ade/industry-theme';
@@ -26,24 +25,15 @@ import {
 import { UserActivityPanel } from '@/components/UserActivityPanel';
 import { FollowingUsersPanel } from '@/components/FollowingUsersPanel';
 
-// Dynamic import for FeedCodeCityPanel (SSR disabled)
-const FeedCodeCityPanelLoader = dynamic(
-  () => import('@industry-theme/file-city-panel').then((mod) => {
-    // Use FeedCodeCityPanel (index 1) which includes project header
-    const Component = mod.panels[1]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
+// Static imports for type safety
+import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
+import { panels as githubPanels } from '@industry-theme/github-panels';
 
-// Dynamic import for GitHubMessagesPanel (SSR disabled)
-const GitHubMessagesPanelLoader = dynamic(
-  () => import('@industry-theme/github-panels').then((mod) => {
-    const Component = mod.panels[6]!.component;
-    return { default: Component };
-  }),
-  { ssr: false }
-);
+// FeedCodeCityPanel is panels[1] which includes project header
+const FeedCodeCityPanelLoader = fileCityPanels[1]!.component;
+
+// GitHubMessagesPanel is panels[6]
+const GitHubMessagesPanelLoader = githubPanels[6]!.component;
 
 interface ActivityPageContentProps {
   currentUser: string;
