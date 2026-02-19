@@ -52,6 +52,8 @@ import type {
   UserCollectionsSlice,
   WorkspaceSlice,
   WorkspaceRepositoriesSlice,
+  GitHubStarredSlice,
+  GitHubProjectsSlice,
 } from '@industry-theme/alexandria-panels';
 import type {
   AlexandriaEntryWithMetrics,
@@ -221,8 +223,8 @@ export interface WorldsPageContextType {
   selectedCollectionView: SelectedCollectionView;
   workspaceRepositories?: DataSlice<WorkspaceRepositoriesSlice>;
   workspace?: DataSlice<WorkspaceSlice>;
-  githubStarred?: DataSlice<{ starred: GitHubRepository[]; isAuthenticated: boolean }>;
-  githubProjects?: DataSlice<{ owned: GitHubRepository[]; organizations: Array<{ id: number; login: string; avatar_url: string; description: string | null; repositories: GitHubRepository[] }>; isAuthenticated: boolean }>;
+  githubStarred: DataSlice<GitHubStarredSlice>; // Required for GitHubStarredPanel
+  githubProjects: DataSlice<GitHubProjectsSlice>; // Required for GitHubProjectsPanel
   'github-repositories'?: DataSlice<GitHubRepositoriesData>;
   fileTree?: DataSlice<FileTree>;
   fileCityColorModes?: DataSlice<FileCityColorModesSliceData>;
@@ -908,8 +910,8 @@ export function WorldsPageProvider({
       selectedCollectionView: selectedCollectionView,
       workspaceRepositories: slicesRef.current.get('workspaceRepositories') as DataSlice<WorkspaceRepositoriesSlice> | undefined,
       workspace: slicesRef.current.get('workspace') as DataSlice<WorkspaceSlice> | undefined,
-      githubStarred: slicesRef.current.get('githubStarred') as DataSlice<{ starred: GitHubRepository[]; isAuthenticated: boolean }> | undefined,
-      githubProjects: slicesRef.current.get('githubProjects') as DataSlice<{ owned: GitHubRepository[]; organizations: Array<{ id: number; login: string; avatar_url: string; description: string | null; repositories: GitHubRepository[] }>; isAuthenticated: boolean }> | undefined,
+      githubStarred: slicesRef.current.get('githubStarred') as DataSlice<GitHubStarredSlice>,
+      githubProjects: slicesRef.current.get('githubProjects') as DataSlice<GitHubProjectsSlice>,
       'github-repositories': slicesRef.current.get('github-repositories') as DataSlice<GitHubRepositoriesData> | undefined,
       fileTree: slicesRef.current.get('fileTree') as DataSlice<FileTree> | undefined,
       fileCityColorModes: slicesRef.current.get('fileCityColorModes') as DataSlice<FileCityColorModesSliceData> | undefined,

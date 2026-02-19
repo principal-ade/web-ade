@@ -10,7 +10,6 @@ import { useUserCollections } from "@/contexts/UserCollectionsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import { Logo } from "@principal-ai/logo-component";
-import dynamic from "next/dynamic";
 import {
   EditableConfigurablePanelLayout,
   ResponsiveConfigurablePanelLayout,
@@ -21,7 +20,18 @@ import { Plus, FolderOpen, Edit2, Cloud, CloudOff, Share2, Check, Settings, Comp
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { iconMap } from '@/components/collections/CollectionModal';
 import type { Collection } from '@principal-ai/alexandria-collections';
-import { UserCollectionsPanel } from '@industry-theme/alexandria-panels';
+import {
+  UserCollectionsPanel,
+  GitHubStarredPanel,
+  GitHubProjectsPanel,
+} from '@industry-theme/alexandria-panels';
+import { GitHubSearchPanel } from '@industry-theme/github-panels';
+import { panels as principalViewPanels } from '@industry-theme/principal-view-panels';
+import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
+import {
+  PackageCompositionPanel,
+  CollectionMapPanel,
+} from '@industry-theme/repository-composition-panels';
 
 const RECENT_REPOSITORIES_KEY = 'recent-repositories';
 const RECENT_OWNERS_KEY = 'recent-owners';
@@ -57,51 +67,17 @@ interface FollowingUser {
   bio: string | null;
 }
 
-// Static import for UserCollectionsPanel (test for type safety)
+// Static imports for all panels (for type safety)
 const UserCollectionsPanelLoader = UserCollectionsPanel;
-
-// Dynamically import other panels with SSR disabled
-
-const GitHubStarredPanelLoader = dynamic(
-  () => import('@industry-theme/alexandria-panels').then((mod) => mod.GitHubStarredPanel),
-  { ssr: false }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-) as React.ComponentType<any>;
-
-const GitHubProjectsPanelLoader = dynamic(
-  () => import('@industry-theme/alexandria-panels').then((mod) => mod.GitHubProjectsPanel),
-  { ssr: false }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-) as React.ComponentType<any>;
-
-const GitHubSearchPanelLoader = dynamic(
-  () => import('@industry-theme/github-panels').then((mod) => mod.GitHubSearchPanel),
-  { ssr: false }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-) as React.ComponentType<any>;
+const GitHubStarredPanelLoader = GitHubStarredPanel;
+const GitHubProjectsPanelLoader = GitHubProjectsPanel;
+const GitHubSearchPanelLoader = GitHubSearchPanel;
 
 // Explore mode panels
-const PrincipalViewPanelLoader = dynamic(
-  () => import('@industry-theme/principal-view-panels').then((mod) => mod.panels[0]!.component),
-  { ssr: false }
-);
-
-const FileCityPanelLoader = dynamic(
-  () => import('@industry-theme/file-city-panel').then((mod) => mod.panels[0]!.component),
-  { ssr: false }
-);
-
-const PackageCompositionPanelLoader = dynamic(
-  () => import('@industry-theme/repository-composition-panels').then((mod) => mod.PackageCompositionPanel),
-  { ssr: false }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-) as React.ComponentType<any>;
-
-const CollectionMapPanelLoader = dynamic(
-  () => import('@industry-theme/repository-composition-panels').then((mod) => mod.CollectionMapPanel),
-  { ssr: false }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-) as React.ComponentType<any>;
+const PrincipalViewPanelLoader = principalViewPanels[0]!.component;
+const FileCityPanelLoader = fileCityPanels[0]!.component;
+const PackageCompositionPanelLoader = PackageCompositionPanel;
+const CollectionMapPanelLoader = CollectionMapPanel;
 
 export type ViewMode = 'manage' | 'explore';
 
