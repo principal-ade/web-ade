@@ -3,15 +3,13 @@ import MonacoWebpackPlugin from "monaco-editor-webpack-plugin";
 
 const nextConfig: NextConfig = {
   // Disable type checking and linting during production builds
-  // These should be handled in CI/pre-commit hooks to avoid OOM errors
+  // These are handled in pre-commit hooks for faster CI builds
   typescript: {
     ignoreBuildErrors: true,
   },
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Disable source maps in production to reduce memory usage during build
-  productionBrowserSourceMaps: false,
   images: {
     remotePatterns: [
       {
