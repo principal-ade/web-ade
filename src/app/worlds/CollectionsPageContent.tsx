@@ -137,7 +137,7 @@ export function CollectionsPageContent({
   const [isMobile, setIsMobile] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
   const leftCollapsed = false;
-  const rightCollapsed = viewMode === 'explore';
+  const [rightCollapsed, setRightCollapsed] = useState(initialViewMode === 'manage');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<'recent' | 'collections' | 'following' | 'starred'>('recent');
   const [collectionDropdownOpen, setCollectionDropdownOpen] = useState(false);
@@ -229,6 +229,15 @@ export function CollectionsPageContent({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Update right panel collapsed state when view mode changes
+  useEffect(() => {
+    // In manage mode, always collapse the right panel
+    // In explore mode, keep current state (user can toggle)
+    if (viewMode === 'manage') {
+      setRightCollapsed(true);
+    }
+  }, [viewMode]);
 
   // Extended actions for panels with addToCollection and searchRepositories
   const panelActions = useMemo(() => {
@@ -599,8 +608,10 @@ export function CollectionsPageContent({
               : { left: 15, middle: 30, right: 15 }
             }
             collapsiblePanels={{ left: true, right: viewMode === 'explore' }}
-            collapsed={{ left: leftCollapsed, right: viewMode === 'manage' ? true : rightCollapsed }}
-            showCollapseButtons={false}
+            collapsed={{ left: leftCollapsed, right: rightCollapsed }}
+            onRightCollapseComplete={() => setRightCollapsed(true)}
+            onRightExpandComplete={() => setRightCollapsed(false)}
+            showCollapseButtons={viewMode === 'explore'}
             mobileBreakpoint="(max-width: 768px)"
           />
         ) : (
@@ -619,8 +630,10 @@ export function CollectionsPageContent({
               : { left: 15, middle: 30, right: 15 }
             }
             collapsiblePanels={{ left: true, right: viewMode === 'explore' }}
-            collapsed={{ left: leftCollapsed, right: viewMode === 'manage' ? true : rightCollapsed }}
-            showCollapseButtons={false}
+            collapsed={{ left: leftCollapsed, right: rightCollapsed }}
+            onRightCollapseComplete={() => setRightCollapsed(true)}
+            onRightExpandComplete={() => setRightCollapsed(false)}
+            showCollapseButtons={viewMode === 'explore'}
           />
         )}
       </div>
