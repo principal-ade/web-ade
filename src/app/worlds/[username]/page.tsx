@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
@@ -345,6 +345,7 @@ function SharedCollectionsWrapper() {
   const { theme } = useTheme();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const username = params.username as string;
   const userCollections = useUserCollections();
   const { isAuthenticated } = useAuth();
@@ -379,9 +380,15 @@ function SharedCollectionsWrapper() {
       })
       .then((data: SharedCollectionsData) => {
         setCollectionsData(data);
-        // Auto-select first collection
+        // Auto-select collection from query param or first collection
         if (data.exists && data.collections?.length) {
-          setSelectedCollectionId(data.collections[0]!.id);
+          const collectionFromQuery = searchParams.get('collection');
+          const validCollection = collectionFromQuery &&
+            data.collections.find(c => c.id === collectionFromQuery);
+
+          setSelectedCollectionId(
+            validCollection ? collectionFromQuery : data.collections[0]!.id
+          );
         }
         setLoading(false);
       })
@@ -390,7 +397,7 @@ function SharedCollectionsWrapper() {
         setError(err.message);
         setLoading(false);
       });
-  }, [username]);
+  }, [username, searchParams]);
 
   // Check permissions when authenticated
   useEffect(() => {

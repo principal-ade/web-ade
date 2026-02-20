@@ -117,12 +117,14 @@ function CollectionsPageWrapper() {
   const handleShare = useCallback(() => {
     if (!user?.login) return;
 
-    const shareUrl = `${window.location.origin}/worlds/${user.login}`;
+    const shareUrl = selectedCollectionId
+      ? `${window.location.origin}/worlds/${user.login}?collection=${selectedCollectionId}`
+      : `${window.location.origin}/worlds/${user.login}`;
     navigator.clipboard.writeText(shareUrl).then(() => {
       setShareSuccess(true);
       setTimeout(() => setShareSuccess(false), 2000);
     });
-  }, [user?.login]);
+  }, [user?.login, selectedCollectionId]);
 
   if (userCollections.loading) {
     return (
