@@ -576,7 +576,7 @@ export function CollectionsPageContent({
             panels={panels}
             layout={layout}
             defaultSizes={viewMode === 'manage'
-              ? { left: 30, middle: 40, right: 30 }
+              ? { left: 20, middle: 60, right: 20 }
               : { left: 25, middle: 50, right: 25 }
             }
             minSizes={viewMode === 'manage'
@@ -598,7 +598,7 @@ export function CollectionsPageContent({
             layout={layout}
             isEditMode={false}
             defaultSizes={viewMode === 'manage'
-              ? { left: 30, middle: 40, right: 30 }
+              ? { left: 20, middle: 60, right: 20 }
               : { left: 25, middle: 50, right: 25 }
             }
             minSizes={viewMode === 'manage'
