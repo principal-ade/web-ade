@@ -1,10 +1,10 @@
 import { Octokit } from '@octokit/rest';
-import type { FileSystemAdapter } from '@principal-ai/alexandria-core-library';
+import type { FileSystemAdapter, FileStats } from '@principal-ai/repository-abstraction';
 
 /**
- * Server-side GitHub FileSystem Adapter for alexandria-core-library
+ * Server-side GitHub FileSystem Adapter for repository-abstraction
  * Uses Octokit to fetch files from GitHub repositories
- * All operations are async and work properly with the library
+ * All operations are async
  */
 export class GitHubFileSystemAdapter implements FileSystemAdapter {
   private octokit: Octokit;
@@ -22,8 +22,8 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
     });
   }
 
-  // File operations (synchronous interface, but backed by cache from async operations)
-  exists(path: string): boolean {
+  // Async file operations
+  async exists(path: string): Promise<boolean> {
     const normalizedPath = this.normalizePath(path);
     const cacheKey = `exists:${normalizedPath}`;
 
@@ -31,11 +31,26 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
       return this.cache.get(cacheKey) as boolean;
     }
 
-    // If not in cache, return false (must be pre-fetched)
-    return false;
+    try {
+      await this.octokit.repos.getContent({
+        owner: this.owner,
+        repo: this.repo,
+        path: normalizedPath,
+        ref: this.branch,
+      });
+
+      this.cache.set(cacheKey, true);
+      return true;
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
+        this.cache.set(cacheKey, false);
+        return false;
+      }
+      throw error;
+    }
   }
 
-  readFile(path: string): string {
+  async readFile(path: string): Promise<string> {
     const normalizedPath = this.normalizePath(path);
     const cacheKey = `file:${normalizedPath}`;
 
@@ -43,30 +58,129 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
       return this.cache.get(cacheKey) as string;
     }
 
-    throw new Error(`File not in cache: ${path}. Must be pre-fetched using async methods.`);
+    try {
+      const { data } = await this.octokit.repos.getContent({
+        owner: this.owner,
+        repo: this.repo,
+        path: normalizedPath,
+        ref: this.branch,
+      });
+
+      if ('content' in data && data.type === 'file') {
+        const content = Buffer.from(data.content, 'base64').toString('utf-8');
+        this.cache.set(cacheKey, content);
+        this.cache.set(`exists:${normalizedPath}`, true);
+        return content;
+      }
+
+      throw new Error(`Path ${path} is not a file`);
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
+        throw new Error(`File not found: ${path}`);
+      }
+      throw error;
+    }
   }
 
-  writeFile(): void {
-    throw new Error('GitHubFileSystemAdapter is read-only');
+  async writeFile(path: string, content: string): Promise<void> {
+    const normalizedPath = this.normalizePath(path);
+
+    try {
+      // Check if file exists to get SHA for update
+      let sha: string | undefined;
+      try {
+        const { data } = await this.octokit.repos.getContent({
+          owner: this.owner,
+          repo: this.repo,
+          path: normalizedPath,
+          ref: this.branch,
+        });
+
+        if ('sha' in data && data.type === 'file') {
+          sha = data.sha;
+        }
+      } catch (error: unknown) {
+        // File doesn't exist - will create new file
+        if (!(error && typeof error === 'object' && 'status' in error && error.status === 404)) {
+          throw error;
+        }
+      }
+
+      // Build request options
+      const requestOptions: Parameters<typeof this.octokit.repos.createOrUpdateFileContents>[0] = {
+        owner: this.owner,
+        repo: this.repo,
+        path: normalizedPath,
+        message: `Update ${normalizedPath}`,
+        content: Buffer.from(content, 'utf-8').toString('base64'),
+        branch: this.branch,
+      };
+
+      // Only include SHA for existing files
+      if (sha) {
+        requestOptions.sha = sha;
+      }
+
+      await this.octokit.repos.createOrUpdateFileContents(requestOptions);
+
+      // Update cache
+      this.cache.set(`file:${normalizedPath}`, content);
+      this.cache.set(`exists:${normalizedPath}`, true);
+    } catch (error: unknown) {
+      throw new Error(`Failed to write file ${path}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
-  deleteFile(): void {
-    throw new Error('GitHubFileSystemAdapter is read-only');
+  async deleteFile(path: string): Promise<void> {
+    const normalizedPath = this.normalizePath(path);
+
+    try {
+      // Get current file SHA (required for deletion)
+      const { data } = await this.octokit.repos.getContent({
+        owner: this.owner,
+        repo: this.repo,
+        path: normalizedPath,
+        ref: this.branch,
+      });
+
+      if (!('sha' in data) || data.type !== 'file') {
+        throw new Error(`Path ${path} is not a file`);
+      }
+
+      await this.octokit.repos.deleteFile({
+        owner: this.owner,
+        repo: this.repo,
+        path: normalizedPath,
+        message: `Delete ${normalizedPath}`,
+        sha: data.sha,
+        branch: this.branch,
+      });
+
+      // Update cache
+      this.cache.delete(`file:${normalizedPath}`);
+      this.cache.set(`exists:${normalizedPath}`, false);
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
+        throw new Error(`File not found: ${path}`);
+      }
+      throw new Error(`Failed to delete file ${path}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
-  readBinaryFile(): Uint8Array {
+  async readBinaryFile(_path: string): Promise<Uint8Array> {
     throw new Error('Binary file operations not implemented');
   }
 
-  writeBinaryFile(): void {
-    throw new Error('GitHubFileSystemAdapter is read-only');
+  async writeBinaryFile(_path: string, _content: Uint8Array): Promise<void> {
+    throw new Error('Binary file operations not implemented');
   }
 
-  createDir(): void {
-    throw new Error('GitHubFileSystemAdapter is read-only');
+  async createDir(_path: string, _options?: { recursive?: boolean }): Promise<void> {
+    // GitHub doesn't have empty directories, they're created implicitly with files
+    // No-op for GitHub
   }
 
-  readDir(path: string): string[] {
+  async readDir(path: string): Promise<string[]> {
     const normalizedPath = this.normalizePath(path);
     const cacheKey = `dir:${normalizedPath}`;
 
@@ -74,14 +188,33 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
       return this.cache.get(cacheKey) as string[];
     }
 
-    throw new Error(`Directory not in cache: ${path}. Must be pre-fetched using async methods.`);
+    try {
+      const { data } = await this.octokit.repos.getContent({
+        owner: this.owner,
+        repo: this.repo,
+        path: normalizedPath,
+        ref: this.branch,
+      });
+
+      if (!Array.isArray(data)) {
+        throw new Error(`Path ${path} is not a directory`);
+      }
+
+      const files = data.map(item => item.name);
+      this.cache.set(cacheKey, files);
+      this.cache.set(`exists:${normalizedPath}`, true);
+      this.cache.set(`isdir:${normalizedPath}`, true);
+      return files;
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
+        this.cache.set(`exists:${normalizedPath}`, false);
+        return [];
+      }
+      throw error;
+    }
   }
 
-  deleteDir(): void {
-    throw new Error('GitHubFileSystemAdapter is read-only');
-  }
-
-  isDirectory(path: string): boolean {
+  async isDirectory(path: string): Promise<boolean> {
     const normalizedPath = this.normalizePath(path);
     const cacheKey = `isdir:${normalizedPath}`;
 
@@ -89,7 +222,66 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
       return this.cache.get(cacheKey) as boolean;
     }
 
-    return false;
+    try {
+      const { data } = await this.octokit.repos.getContent({
+        owner: this.owner,
+        repo: this.repo,
+        path: normalizedPath,
+        ref: this.branch,
+      });
+
+      const isDir = Array.isArray(data);
+      this.cache.set(cacheKey, isDir);
+      this.cache.set(`exists:${normalizedPath}`, true);
+      return isDir;
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
+        this.cache.set(`exists:${normalizedPath}`, false);
+        this.cache.set(cacheKey, false);
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  async deleteDir(_path: string): Promise<void> {
+    throw new Error('Directory deletion not supported for GitHub adapter');
+  }
+
+  async rename(_oldPath: string, _newPath: string): Promise<void> {
+    throw new Error('Rename operation not supported for GitHub adapter');
+  }
+
+  async stat(path: string): Promise<FileStats> {
+    const normalizedPath = this.normalizePath(path);
+
+    try {
+      const { data } = await this.octokit.repos.getContent({
+        owner: this.owner,
+        repo: this.repo,
+        path: normalizedPath,
+        ref: this.branch,
+      });
+
+      if (Array.isArray(data)) {
+        return {
+          mtime: new Date(),
+          isDirectory: true,
+          size: 0,
+        };
+      }
+
+      return {
+        mtime: new Date(),
+        isDirectory: false,
+        size: data.size || 0,
+      };
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
+        throw new Error(`Path not found: ${path}`);
+      }
+      throw error;
+    }
   }
 
   // Path operations
@@ -151,123 +343,13 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
     return this.repo;
   }
 
-  // Async methods for pre-fetching data
-  async existsAsync(path: string): Promise<boolean> {
-    try {
-      await this.octokit.repos.getContent({
-        owner: this.owner,
-        repo: this.repo,
-        path: this.normalizePath(path),
-        ref: this.branch,
-      });
-
-      const normalizedPath = this.normalizePath(path);
-      this.cache.set(`exists:${normalizedPath}`, true);
-      return true;
-    } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
-        const normalizedPath = this.normalizePath(path);
-        this.cache.set(`exists:${normalizedPath}`, false);
-        return false;
-      }
-      throw error;
-    }
+  // Sync path helper methods
+  normalize(path: string): string {
+    return this.normalizePath(path);
   }
 
-  async readFileAsync(path: string): Promise<string> {
-    const normalizedPath = this.normalizePath(path);
-    const cacheKey = `file:${normalizedPath}`;
-
-    if (this.cache.has(cacheKey)) {
-      return this.cache.get(cacheKey) as string;
-    }
-
-    try {
-      const { data } = await this.octokit.repos.getContent({
-        owner: this.owner,
-        repo: this.repo,
-        path: normalizedPath,
-        ref: this.branch,
-      });
-
-      if ('content' in data && data.type === 'file') {
-        const content = Buffer.from(data.content, 'base64').toString('utf-8');
-        this.cache.set(cacheKey, content);
-        this.cache.set(`exists:${normalizedPath}`, true);
-        return content;
-      }
-
-      throw new Error(`Path ${path} is not a file`);
-    } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
-        throw new Error(`File not found: ${path}`);
-      }
-      throw error;
-    }
-  }
-
-  async readDirAsync(path: string): Promise<string[]> {
-    const normalizedPath = this.normalizePath(path);
-    const cacheKey = `dir:${normalizedPath}`;
-
-    if (this.cache.has(cacheKey)) {
-      return this.cache.get(cacheKey) as string[];
-    }
-
-    try {
-      const { data } = await this.octokit.repos.getContent({
-        owner: this.owner,
-        repo: this.repo,
-        path: normalizedPath,
-        ref: this.branch,
-      });
-
-      if (!Array.isArray(data)) {
-        throw new Error(`Path ${path} is not a directory`);
-      }
-
-      const files = data.map(item => item.name);
-      this.cache.set(cacheKey, files);
-      this.cache.set(`exists:${normalizedPath}`, true);
-      this.cache.set(`isdir:${normalizedPath}`, true);
-      return files;
-    } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
-        this.cache.set(`exists:${normalizedPath}`, false);
-        return [];
-      }
-      throw error;
-    }
-  }
-
-  async isDirectoryAsync(path: string): Promise<boolean> {
-    const normalizedPath = this.normalizePath(path);
-    const cacheKey = `isdir:${normalizedPath}`;
-
-    if (this.cache.has(cacheKey)) {
-      return this.cache.get(cacheKey) as boolean;
-    }
-
-    try {
-      const { data } = await this.octokit.repos.getContent({
-        owner: this.owner,
-        repo: this.repo,
-        path: normalizedPath,
-        ref: this.branch,
-      });
-
-      const isDir = Array.isArray(data);
-      this.cache.set(cacheKey, isDir);
-      this.cache.set(`exists:${normalizedPath}`, true);
-      return isDir;
-    } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
-        this.cache.set(`exists:${normalizedPath}`, false);
-        this.cache.set(cacheKey, false);
-        return false;
-      }
-      throw error;
-    }
+  homedir(): string {
+    return '/';
   }
 
   // Helper to normalize paths for GitHub API

@@ -2,42 +2,53 @@ import { NextResponse } from 'next/server';
 import { unstable_cache } from 'next/cache';
 import type {
   Collection,
-  CollectionMembership,
-  CollectionsData,
-  CollectionMembershipsData,
 } from '@principal-ai/alexandria-collections';
 
-const BASE_URL = 'https://raw.githubusercontent.com/principal-ai/web-ade-collections/main';
+const GITHUB_API_URL = 'https://api.github.com/repos/principal-ai/web-ade-collections/contents/collections';
+const RAW_BASE_URL = 'https://raw.githubusercontent.com/principal-ai/web-ade-collections/main/collections';
 
-async function fetchCollections(): Promise<{
-  collections: Collection[];
-  memberships: CollectionMembership[];
-}> {
-  const [collectionsResponse, membershipsResponse] = await Promise.all([
-    fetch(`${BASE_URL}/collections.json`, {
-      headers: { Accept: 'application/json' },
-    }),
-    fetch(`${BASE_URL}/collection-memberships.json`, {
-      headers: { Accept: 'application/json' },
-    }),
-  ]);
+interface GitHubFileEntry {
+  name: string;
+  path: string;
+  type: string;
+  download_url: string;
+}
 
-  if (!collectionsResponse.ok) {
-    throw new Error(`Failed to fetch collections: ${collectionsResponse.status}`);
+interface CollectionFile {
+  version: string;
+  collection: Collection;
+}
+
+async function fetchCollections(): Promise<Collection[]> {
+  // Fetch the collections directory listing from GitHub API
+  const dirResponse = await fetch(GITHUB_API_URL, {
+    headers: { Accept: 'application/vnd.github.v3+json' },
+  });
+
+  if (!dirResponse.ok) {
+    throw new Error(`Failed to fetch collections directory: ${dirResponse.status}`);
   }
 
-  const collectionsData: CollectionsData = await collectionsResponse.json();
+  const files: GitHubFileEntry[] = await dirResponse.json();
+  const collectionFiles = files.filter(f => f.type === 'file' && f.name.endsWith('.json'));
 
-  let memberships: CollectionMembership[] = [];
-  if (membershipsResponse.ok) {
-    const membershipsData: CollectionMembershipsData = await membershipsResponse.json();
-    memberships = membershipsData.memberships || [];
-  }
+  // Fetch all collection files in parallel
+  const collectionPromises = collectionFiles.map(async (file) => {
+    const response = await fetch(`${RAW_BASE_URL}/${file.name}`, {
+      headers: { Accept: 'application/json' },
+    });
 
-  return {
-    collections: collectionsData.collections || [],
-    memberships,
-  };
+    if (!response.ok) {
+      console.warn(`Failed to fetch ${file.name}: ${response.status}`);
+      return null;
+    }
+
+    const data: CollectionFile = await response.json();
+    return data.collection;
+  });
+
+  const collectionsResults = await Promise.all(collectionPromises);
+  return collectionsResults.filter((c): c is Collection => c !== null);
 }
 
 // Use Next.js data cache - persists across serverless instances
@@ -52,9 +63,9 @@ const getCachedCollections = unstable_cache(
 
 export async function GET() {
   try {
-    const data = await getCachedCollections();
+    const collections = await getCachedCollections();
 
-    return NextResponse.json(data, {
+    return NextResponse.json({ collections }, {
       headers: {
         'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
       },

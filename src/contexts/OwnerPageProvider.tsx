@@ -23,7 +23,6 @@ import {
 } from '@principal-ade/panel-framework-core';
 import type {
   PanelContextValue,
-  PanelActions,
   PanelEventEmitter,
   DataSlice,
   WorkspaceMetadata,
@@ -38,6 +37,16 @@ import { minimatch } from 'minimatch';
 import { PathsFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
 import { useAuth } from './AuthContext';
+import type {
+  Collection,
+  CustomRegion,
+  RepositoryLayoutData,
+} from '@principal-ai/alexandria-collections';
+import type {
+  AlexandriaEntryWithMetrics,
+  SelectedCollectionView,
+  CollectionMapPanelActions,
+} from '@industry-theme/repository-composition-panels';
 
 // Host-provided tools
 const hostTools: PanelTool[] = [
@@ -198,6 +207,7 @@ export interface OwnerPageContextType {
   packages?: DataSlice<PackagesSliceData>;
   commitFiles?: DataSlice<CommitFilesSliceData>;
   storyboardContext?: DataSlice<StoryboardContextSliceData>;
+  selectedCollectionView: DataSlice<SelectedCollectionView['data']>;
 }
 
 interface OwnerPageProviderProps {
@@ -210,7 +220,7 @@ interface OwnerPageProviderProps {
 
 interface OwnerPageProviderValue {
   context: PanelContextValue<OwnerPageContextType>;
-  actions: PanelActions;
+  actions: CollectionMapPanelActions;
   events: PanelEventEmitter;
   selectedColorMode: string | null;
   clearColorMode: () => void;
@@ -298,6 +308,12 @@ export function OwnerPageProvider({
   // State for enabled color modes
   const [enabledColorModes] = useState<string[]>([]);
 
+  // State for selectedCollectionView (for CollectionMapPanel)
+  const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
+  const [collectionRepositories] = useState<AlexandriaEntryWithMetrics[]>([]);
+  const [collectionLoading] = useState(false);
+  const [collectionError] = useState<string | null>(null);
+
   // Slices ref
   const slicesRef = useRef<Map<string, DataSlice>>(new Map());
 
@@ -372,6 +388,20 @@ export function OwnerPageProvider({
       scope: 'repository',
       name: 'storyboardContext',
       data: null,
+      loading: false,
+      error: null,
+      refresh: async () => {},
+    });
+
+    initialSlices.set('selectedCollectionView', {
+      scope: 'workspace',
+      name: 'selectedCollectionView',
+      data: {
+        collection: null,
+        memberships: [],
+        repositories: [],
+        dependencies: undefined,
+      },
       loading: false,
       error: null,
       refresh: async () => {},
@@ -610,6 +640,21 @@ export function OwnerPageProvider({
         data: storyboardContextData,
       });
     }
+
+    // Update selectedCollectionView slice
+    const selectedCollectionViewSlice = slicesRef.current.get('selectedCollectionView');
+    if (selectedCollectionViewSlice) {
+      slicesRef.current.set('selectedCollectionView', {
+        ...selectedCollectionViewSlice,
+        data: {
+          collection: selectedCollection,
+          repositories: collectionRepositories,
+          dependencies: undefined,
+        },
+        loading: collectionLoading,
+        error: collectionError ? new Error(collectionError) : null,
+      });
+    }
   }, [
     ownerRepos,
     ownerReposLoading,
@@ -631,6 +676,10 @@ export function OwnerPageProvider({
     packagesError,
     commitFilesData,
     storyboardContextData,
+    selectedCollection,
+    collectionRepositories,
+    collectionLoading,
+    collectionError,
   ]);
 
   // Build context value
@@ -646,6 +695,15 @@ export function OwnerPageProvider({
         } : repository,
       },
       slices: slicesRef.current,
+      selectedCollectionView: slicesRef.current.get('selectedCollectionView') as DataSlice<SelectedCollectionView['data']> || {
+        data: {
+          collection: null,
+          repositories: [],
+          dependencies: undefined,
+        },
+        loading: false,
+        error: null,
+      },
       adapters,
       // Typed slice properties
       'owner-repositories': slicesRef.current.get('owner-repositories') as DataSlice<OwnerRepositoriesData> | undefined,
@@ -682,7 +740,7 @@ export function OwnerPageProvider({
   );
 
   // Actions
-  const actions: PanelActions = useMemo(
+  const actions: CollectionMapPanelActions = useMemo(
     () => ({
       openFile: async (filePath: string) => {
         console.log('[OwnerPageProvider] Opening file:', filePath);
@@ -713,8 +771,245 @@ export function OwnerPageProvider({
       notifyPanels: (event) => {
         events.emit(event);
       },
+      // Region management callbacks for CollectionMapPanel
+      onRegionCreated: async (collectionId: string, region: Omit<CustomRegion, 'id'>) => {
+        if (!currentOwner) {
+          throw new Error('No owner set');
+        }
+
+        const response = await fetch(`/api/github/collections/${currentOwner}/regions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'createRegion',
+            collectionId,
+            region,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to create region');
+        }
+
+        const newRegion: CustomRegion = await response.json();
+
+        // Update local state
+        if (selectedCollection && selectedCollection.id === collectionId) {
+          const customRegions = selectedCollection.metadata?.customRegions || [];
+          setSelectedCollection({
+            ...selectedCollection,
+            metadata: {
+              ...selectedCollection.metadata,
+              customRegions: [...customRegions, newRegion],
+            },
+          });
+        }
+
+        return newRegion;
+      },
+      onRegionUpdated: async (collectionId: string, regionId: string, updates: Partial<CustomRegion>) => {
+        if (!currentOwner) {
+          throw new Error('No owner set');
+        }
+
+        const response = await fetch(`/api/github/collections/${currentOwner}/regions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'updateRegion',
+            collectionId,
+            regionId,
+            updates,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to update region');
+        }
+
+        // Update local state
+        if (selectedCollection && selectedCollection.id === collectionId) {
+          const customRegions = selectedCollection.metadata?.customRegions || [];
+          const updatedRegions = customRegions.map(r =>
+            r.id === regionId ? { ...r, ...updates } : r
+          );
+          setSelectedCollection({
+            ...selectedCollection,
+            metadata: {
+              ...selectedCollection.metadata,
+              customRegions: updatedRegions,
+            },
+          });
+        }
+      },
+      onRegionDeleted: async (collectionId: string, regionId: string) => {
+        if (!currentOwner) {
+          throw new Error('No owner set');
+        }
+
+        const response = await fetch(`/api/github/collections/${currentOwner}/regions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'deleteRegion',
+            collectionId,
+            regionId,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to delete region');
+        }
+
+        // Update local state
+        if (selectedCollection && selectedCollection.id === collectionId) {
+          const customRegions = selectedCollection.metadata?.customRegions || [];
+          const updatedRegions = customRegions.filter(r => r.id !== regionId);
+          setSelectedCollection({
+            ...selectedCollection,
+            metadata: {
+              ...selectedCollection.metadata,
+              customRegions: updatedRegions,
+            },
+          });
+        }
+      },
+      onRepositoryAssigned: async (collectionId: string, repositoryId: string, regionId: string) => {
+        if (!currentOwner) {
+          throw new Error('No owner set');
+        }
+
+        const response = await fetch(`/api/github/collections/${currentOwner}/regions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'assignRepository',
+            collectionId,
+            repositoryId,
+            regionId,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to assign repository');
+        }
+
+        // Update local state
+        if (selectedCollection && selectedCollection.id === collectionId) {
+          const updatedMembers = selectedCollection.members.map(m =>
+            m.repositoryId === repositoryId
+              ? { ...m, metadata: { ...m.metadata, regionId } }
+              : m
+          );
+          setSelectedCollection({
+            ...selectedCollection,
+            members: updatedMembers,
+          });
+        }
+      },
+      onRepositoryPositionUpdated: async (collectionId: string, repositoryId: string, layout: RepositoryLayoutData) => {
+        if (!currentOwner) {
+          throw new Error('No owner set');
+        }
+
+        const response = await fetch(`/api/github/collections/${currentOwner}/regions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'updatePosition',
+            collectionId,
+            repositoryId,
+            layout,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to update position');
+        }
+
+        // Update local state
+        if (selectedCollection && selectedCollection.id === collectionId) {
+          const updatedMembers = selectedCollection.members.map(m =>
+            m.repositoryId === repositoryId
+              ? { ...m, metadata: { ...m.metadata, layout } }
+              : m
+          );
+          setSelectedCollection({
+            ...selectedCollection,
+            members: updatedMembers,
+          });
+        }
+      },
+      onBatchLayoutInitialized: async (collectionId: string, updates: {
+        regions?: CustomRegion[];
+        assignments?: Array<{ repositoryId: string; regionId: string }>;
+        positions?: Array<{ repositoryId: string; layout: RepositoryLayoutData }>;
+      }) => {
+        if (!currentOwner) {
+          throw new Error('No owner set');
+        }
+
+        const response = await fetch(`/api/github/collections/${currentOwner}/regions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'batchInitialize',
+            collectionId,
+            batchUpdates: updates,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to batch initialize layout');
+        }
+
+        // Update local state
+        if (selectedCollection && selectedCollection.id === collectionId) {
+          const updatedCollection = { ...selectedCollection };
+
+          // Update regions if provided
+          if (updates.regions && updates.regions.length > 0) {
+            updatedCollection.metadata = {
+              ...updatedCollection.metadata,
+              customRegions: updates.regions,
+            };
+          }
+
+          // Apply assignments and positions to members
+          if ((updates.assignments && updates.assignments.length > 0) ||
+              (updates.positions && updates.positions.length > 0)) {
+            const updatedMembers = updatedCollection.members.map(m => {
+              const updatedMember = { ...m };
+
+              // Apply region assignment
+              const assignment = updates.assignments?.find(a => a.repositoryId === m.repositoryId);
+              if (assignment) {
+                updatedMember.metadata = { ...updatedMember.metadata, regionId: assignment.regionId };
+              }
+
+              // Apply position
+              const position = updates.positions?.find(p => p.repositoryId === m.repositoryId);
+              if (position) {
+                updatedMember.metadata = { ...updatedMember.metadata, layout: position.layout };
+              }
+
+              return updatedMember;
+            });
+
+            updatedCollection.members = updatedMembers;
+          }
+
+          setSelectedCollection(updatedCollection);
+        }
+      },
     }),
-    [adapters, events]
+    [adapters, events, currentOwner, selectedCollection]
   );
 
   // Clear color mode

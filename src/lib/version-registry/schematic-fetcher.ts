@@ -102,7 +102,7 @@ export async function fetchSchematicFromGitHub(
     const schematic = await discovery.discover(fileTree, {
       fileReader: async (path: string) => {
         // Read file content from GitHub at the specific commit
-        return adapter.readFileAsync(path);
+        return adapter.readFile(path);
       },
       includeContent: true, // Include parsed canvas/workflow content
     });

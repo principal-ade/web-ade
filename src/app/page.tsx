@@ -112,19 +112,20 @@ function HomePageContent() {
       .then((res) => res.json())
       .then((data) => {
         const collections = data.collections || [];
-        const memberships = data.memberships || [];
 
-        // Group repositories by collection
+        // Map collections with embedded members
         const collectionsWithRepos: GalleryCollection[] = collections.map(
-          (collection: { id: string; name: string; description: string }) => {
-            const collectionMemberships = memberships
-              .filter((m: { collectionId: string }) => m.collectionId === collection.id);
-
-            // Create basic repo objects, using sourceRepository for forks
-            const repos = collectionMemberships.slice(0, 12).map((m: {
+          (collection: {
+            id: string;
+            name: string;
+            description: string;
+            members: Array<{
               repositoryId: string;
               metadata?: { sourceRepository?: { owner: string; name: string } }
-            }) => {
+            }>
+          }) => {
+            // Create basic repo objects from members, using sourceRepository for forks
+            const repos = (collection.members || []).slice(0, 12).map((m) => {
               // Use source repo (original) if this is a fork, otherwise use the repo itself
               const source = m.metadata?.sourceRepository;
               const displayOwner = source?.owner || m.repositoryId.split('/')[0] || '';

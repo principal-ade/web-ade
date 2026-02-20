@@ -2,46 +2,33 @@ import { NextResponse } from 'next/server';
 import { unstable_cache } from 'next/cache';
 import type {
   Collection,
-  CollectionMembership,
-  CollectionsData,
-  CollectionMembershipsData,
 } from '@principal-ai/alexandria-collections';
 
-const BASE_URL = 'https://raw.githubusercontent.com/principal-ai/web-ade-collections/main';
+const RAW_BASE_URL = 'https://raw.githubusercontent.com/principal-ai/web-ade-collections/main/collections';
+
+interface CollectionFile {
+  version: string;
+  collection: Collection;
+}
 
 async function fetchCollection(id: string): Promise<
-  | { collection: Collection; memberships: CollectionMembership[] }
+  | { collection: Collection }
   | { error: string; status: number }
 > {
-  const [collectionsResponse, membershipsResponse] = await Promise.all([
-    fetch(`${BASE_URL}/collections.json`, {
-      headers: { Accept: 'application/json' },
-    }),
-    fetch(`${BASE_URL}/collection-memberships.json`, {
-      headers: { Accept: 'application/json' },
-    }),
-  ]);
+  // Directly fetch the collection file by ID
+  const response = await fetch(`${RAW_BASE_URL}/${id}.json`, {
+    headers: { Accept: 'application/json' },
+  });
 
-  if (!collectionsResponse.ok) {
-    throw new Error(`Failed to fetch collections: ${collectionsResponse.status}`);
+  if (!response.ok) {
+    if (response.status === 404) {
+      return { error: 'Collection not found', status: 404 };
+    }
+    throw new Error(`Failed to fetch collection: ${response.status}`);
   }
 
-  const collectionsData: CollectionsData = await collectionsResponse.json();
-  const collection = collectionsData.collections?.find((c) => c.id === id);
-
-  if (!collection) {
-    return { error: 'Collection not found', status: 404 };
-  }
-
-  let memberships: CollectionMembership[] = [];
-  if (membershipsResponse.ok) {
-    const membershipsData: CollectionMembershipsData = await membershipsResponse.json();
-    memberships = (membershipsData.memberships || []).filter(
-      (m) => m.collectionId === id
-    );
-  }
-
-  return { collection, memberships };
+  const data: CollectionFile = await response.json();
+  return { collection: data.collection };
 }
 
 // Use Next.js data cache - persists across serverless instances

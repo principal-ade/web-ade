@@ -208,6 +208,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
           icon,
           createdAt: now,
           updatedAt: now,
+          members: [],
         };
 
         const newCollections = [...collections, newCollection];

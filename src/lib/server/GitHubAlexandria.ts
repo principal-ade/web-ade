@@ -1,5 +1,5 @@
 import { GitHubFileSystemAdapter } from './GitHubFileSystemAdapter';
-import { MemoryPalace, type CodebaseView } from '@principal-ai/alexandria-core-library';
+import type { CodebaseView } from '@principal-ai/alexandria-core-library';
 
 /**
  * GitHub helper for fetching Alexandria data from GitHub repositories
@@ -25,21 +25,21 @@ export class GitHubAlexandria {
 
     try {
       // Check if .alexandria directory exists
-      const hasAlexandria = await adapter.existsAsync('.alexandria');
+      const hasAlexandria = await adapter.exists('.alexandria');
       if (!hasAlexandria) {
         return [];
       }
 
       // Check if views directory exists
       const viewsPath = '.alexandria/views';
-      const hasViews = await adapter.isDirectoryAsync(viewsPath);
+      const hasViews = await adapter.isDirectory(viewsPath);
       if (!hasViews) {
         return [];
       }
 
       // Read all JSON files in the views directory
-      const viewFiles = await adapter.readDirAsync(viewsPath);
-      const jsonFiles = viewFiles.filter(f => f.endsWith('.json'));
+      const viewFiles = await adapter.readDir(viewsPath);
+      const jsonFiles = viewFiles.filter((f: string) => f.endsWith('.json'));
 
       if (jsonFiles.length === 0) {
         return [];
@@ -50,7 +50,7 @@ export class GitHubAlexandria {
       for (const file of jsonFiles) {
         try {
           const viewPath = adapter.join(viewsPath, file);
-          const content = await adapter.readFileAsync(viewPath);
+          const content = await adapter.readFile(viewPath);
           const view = JSON.parse(content) as CodebaseView;
           views.push(view);
         } catch (error: unknown) {
@@ -81,14 +81,10 @@ export class GitHubAlexandria {
     const adapter = new GitHubFileSystemAdapter(owner, name, branch, this.token);
 
     try {
-      // Pre-fetch the specific view file
+      // Fetch and parse the specific view file
       const viewPath = `.alexandria/views/${viewId}.json`;
-      await adapter.readFileAsync(viewPath);
-
-      // Use MemoryPalace to get the view (properly parsed and validated)
-      const repoPath = `${owner}/${name}`;
-      const memoryPalace = new MemoryPalace(repoPath, adapter);
-      const view = memoryPalace.getView(viewId);
+      const content = await adapter.readFile(viewPath);
+      const view = JSON.parse(content) as CodebaseView;
 
       return view;
     } catch (error: unknown) {

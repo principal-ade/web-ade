@@ -352,7 +352,6 @@ export function WorldsPageProvider({
   const [selectedCollectionView, setSelectedCollectionView] = useState<SelectedCollectionView>({
     data: {
       collection: null,
-      memberships: [],
       repositories: [],
       dependencies: undefined,
     },
@@ -678,12 +677,11 @@ export function WorldsPageProvider({
     setSelectedCollectionView({
       data: {
         collection: selectedCollection || null,
-        memberships: selectedMemberships,
         repositories,
         dependencies: undefined,
       },
       loading: userCollections.loading || collectionRepoDetailsLoading,
-      error: userCollections.error?.message || null,
+      error: userCollections.error || null,
     });
 
     // Update workspace slice

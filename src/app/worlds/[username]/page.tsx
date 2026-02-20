@@ -738,6 +738,7 @@ function SharedCollectionsWrapper() {
       icon,
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      members: [],
     };
 
     const updatedCollections = [...collections, newCollection];
@@ -1059,6 +1060,7 @@ function SharedCollectionsWrapper() {
                   icon: selectedCollection.icon,
                   createdAt: selectedCollection.createdAt,
                   updatedAt: selectedCollection.updatedAt,
+                  members: selectedCollection.members || [],
                 }}
                 mode="edit"
               />

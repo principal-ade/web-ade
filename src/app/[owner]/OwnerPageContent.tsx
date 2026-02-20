@@ -11,12 +11,11 @@ import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import { UserAvatarMenu } from "@/components/UserAvatarMenu";
 import { Logo } from "@principal-ai/logo-component";
 import { iconMap } from "@/components/collections/CollectionModal";
-import dynamic from "next/dynamic";
 import { addRecentOwner, type OwnerInfo, OwnerRepositoriesPanel } from "@industry-theme/github-panels";
 import { panels as principalViewPanels } from "@industry-theme/principal-view-panels";
 import { panels as codeQualityPanels } from "@principal-ade/code-quality-panels";
 import { panels as fileCityPanels } from "@industry-theme/file-city-panel";
-import { PackageCompositionPanel } from "@industry-theme/repository-composition-panels";
+import { PackageCompositionPanel, CollectionMapPanel } from "@industry-theme/repository-composition-panels";
 import {
   EditableConfigurablePanelLayout,
   ResponsiveConfigurablePanelLayout,
@@ -134,13 +133,7 @@ const PrincipalViewPanelLoader = principalViewPanels[0]!.component;
 const CodeQualityPanelLoader = codeQualityPanels[0]!.component;
 const FileCityPanelLoader = fileCityPanels[0]!.component;
 const PackageCompositionPanelLoader = PackageCompositionPanel;
-
-// Keep CollectionMapPanel as dynamic for now - needs proper integration work
-const CollectionMapPanelLoader = dynamic(
-  () => import('@industry-theme/repository-composition-panels').then((mod) => mod.CollectionMapPanelContent),
-  { ssr: false }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-) as React.ComponentType<any>;
+const CollectionMapPanelLoader = CollectionMapPanel;
 
 export type ViewMode = 'default' | 'world';
 
@@ -465,68 +458,15 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
       id: 'collection-map',
       label: 'World Map',
       icon: <Compass size={16} />,
-      content: (() => {
-        // Get repositories from the owner-repositories slice
-        const ownerReposData = ownerReposSlice?.data as {
-          repositories?: Array<{
-            id: number;
-            name: string;
-            full_name: string;
-            owner: { login: string };
-            language: string | null;
-            stargazers_count: number;
-            fork: boolean;
-          }>;
-          owner?: { login: string; name?: string };
-        } | undefined;
-
-        const repositories = ownerReposData?.repositories || [];
-        const ownerInfo = ownerReposData?.owner || { login: owner };
-
-        // Convert GitHub repos to Alexandria format (simplified for now)
-        const alexandriaRepos = repositories.map((repo) => ({
-          name: repo.full_name,
-          registeredAt: new Date().toISOString(),
-          provider: {
-            type: 'github' as const,
-            url: `https://github.com/${repo.full_name}`,
-          },
-          theme: repo.language || 'git-repo',
-        }));
-
-        // Create memberships
-        const memberships = repositories.map((repo) => ({
-          repositoryId: repo.full_name,
-          collectionId: owner,
-          addedAt: Date.now(),
-          metadata: {
-            pinned: !repo.fork && repo.stargazers_count > 100,
-          },
-        }));
-
-        // Create virtual collection
-        const virtualCollection = {
-          id: owner,
-          name: ownerInfo.name || owner,
-          description: `All repositories by ${owner}`,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
-
-        return (
-          <div className="h-full w-full overflow-hidden">
-            <CollectionMapPanelLoader
-              collection={virtualCollection}
-              memberships={memberships}
-              repositories={alexandriaRepos}
-              dependencies={{}}
-              width={800}
-              height={600}
-              isLoading={ownerReposLoading}
-            />
-          </div>
-        );
-      })(),
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <CollectionMapPanelLoader
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        </div>
+      ),
     },
     {
       id: 'empty',
