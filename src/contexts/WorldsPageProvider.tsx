@@ -51,7 +51,8 @@ import type { CustomRegion, RepositoryLayoutData } from '@principal-ai/alexandri
 import type {
   UserCollectionsSlice,
   WorkspaceSlice,
-  WorkspaceRepositoriesSlice,
+  WorkspaceCollectionRepositoriesSlice,
+  GitHubRepository,
   GitHubStarredSlice,
   GitHubProjectsSlice,
 } from '@industry-theme/alexandria-panels';
@@ -121,29 +122,6 @@ const hostTools: PanelTool[] = [
 ];
 
 // GitHub repository interface
-interface GitHubRepository {
-  id: number;
-  name: string;
-  full_name: string;
-  owner: {
-    login: string;
-    avatar_url: string;
-  };
-  description: string | null;
-  html_url: string;
-  stargazers_count: number;
-  forks_count: number;
-  watchers_count: number;
-  open_issues_count: number;
-  language: string | null;
-  topics: string[];
-  visibility: string;
-  default_branch: string;
-  created_at: string;
-  updated_at: string;
-  pushed_at: string;
-}
-
 // GitHub repositories slice data
 interface GitHubRepositoriesData {
   owned: GitHubRepository[];
@@ -221,7 +199,7 @@ export interface WorldsPageContextType {
   userCollections: DataSlice<UserCollectionsSlice>; // Required for UserCollectionsPanel
   // selectedCollectionView is always initialized and managed as direct state (not wrapped in DataSlice)
   selectedCollectionView: SelectedCollectionView;
-  workspaceRepositories: DataSlice<WorkspaceRepositoriesSlice>; // Required for WorkspaceCollectionPanel
+  workspaceRepositories: DataSlice<WorkspaceCollectionRepositoriesSlice>; // Required for WorkspaceCollectionPanel
   workspace: DataSlice<WorkspaceSlice>; // Required for WorkspaceCollectionPanel
   githubStarred: DataSlice<GitHubStarredSlice>; // Required for GitHubStarredPanel
   githubProjects: DataSlice<GitHubProjectsSlice>; // Required for GitHubProjectsPanel
@@ -906,7 +884,7 @@ export function WorldsPageProvider({
       userCollections: slicesRef.current.get('userCollections') as DataSlice<UserCollectionsSlice>,
       // selectedCollectionView is managed as direct state for type safety (not in Map)
       selectedCollectionView: selectedCollectionView,
-      workspaceRepositories: slicesRef.current.get('workspaceRepositories') as DataSlice<WorkspaceRepositoriesSlice>,
+      workspaceRepositories: slicesRef.current.get('workspaceRepositories') as DataSlice<WorkspaceCollectionRepositoriesSlice>,
       workspace: slicesRef.current.get('workspace') as DataSlice<WorkspaceSlice>,
       githubStarred: slicesRef.current.get('githubStarred') as DataSlice<GitHubStarredSlice>,
       githubProjects: slicesRef.current.get('githubProjects') as DataSlice<GitHubProjectsSlice>,

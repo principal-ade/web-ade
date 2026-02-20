@@ -47,6 +47,9 @@ import type {
   SelectedCollectionView,
   CollectionMapPanelActions,
 } from '@industry-theme/repository-composition-panels';
+import type {
+  OwnerRepositoriesSliceData,
+} from '@industry-theme/github-panels';
 
 // Host-provided tools
 const hostTools: PanelTool[] = [
@@ -111,43 +114,7 @@ const hostTools: PanelTool[] = [
 ];
 
 // GitHub repository interface
-interface GitHubRepository {
-  id: number;
-  name: string;
-  full_name: string;
-  owner: {
-    login: string;
-    avatar_url: string;
-  };
-  description: string | null;
-  html_url: string;
-  stargazers_count: number;
-  forks_count: number;
-  watchers_count: number;
-  open_issues_count: number;
-  language: string | null;
-  topics: string[];
-  visibility: string;
-  default_branch: string;
-  created_at: string;
-  updated_at: string;
-  pushed_at: string;
-  fork: boolean;
-}
-
 // Owner repositories slice data
-interface OwnerRepositoriesData {
-  owner: {
-    login: string;
-    name?: string;
-    avatar_url?: string;
-    type?: 'User' | 'Organization';
-  } | null;
-  repositories: GitHubRepository[];
-  isAuthenticated: boolean;
-  error?: string;
-}
-
 // Quality slice data
 interface QualitySliceData {
   summary: {
@@ -199,7 +166,8 @@ interface PackagesSliceData {
 
 // Owner page context type - includes only the slices needed for owner page
 export interface OwnerPageContextType {
-  'owner-repositories'?: DataSlice<OwnerRepositoriesData>;
+  'owner-repositories'?: DataSlice<OwnerRepositoriesSliceData>;
+  ownerRepositories: DataSlice<OwnerRepositoriesSliceData>; // Required - expected by OwnerRepositoriesPanel
   fileTree?: DataSlice<FileTree>;
   fileCityColorModes?: DataSlice<FileCityColorModesSliceData>;
   quality?: DataSlice<QualitySliceData>;
@@ -281,7 +249,7 @@ export function OwnerPageProvider({
   const [activeFileError, setActiveFileError] = useState<Error | null>(null);
 
   // State for owner repositories
-  const [ownerRepos, setOwnerRepos] = useState<OwnerRepositoriesData>({
+  const [ownerRepos, setOwnerRepos] = useState<OwnerRepositoriesSliceData>({
     owner: null,
     repositories: [],
     isAuthenticated: false,
@@ -426,13 +394,13 @@ export function OwnerPageProvider({
 
       if (response.ok && data.success) {
         setOwnerRepos({
-          owner: data.owner || { login: owner },
+          owner: data.owner || null,
           repositories: data.repositories || [],
           isAuthenticated,
         });
       } else {
         setOwnerRepos({
-          owner: { login: owner },
+          owner: null,
           repositories: [],
           isAuthenticated,
           error: data.error || 'Failed to load repositories',
@@ -441,7 +409,7 @@ export function OwnerPageProvider({
     } catch (error) {
       console.error('[OwnerPageProvider] Failed to fetch owner repos:', error);
       setOwnerRepos({
-        owner: { login: owner },
+        owner: null,
         repositories: [],
         isAuthenticated,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -706,7 +674,8 @@ export function OwnerPageProvider({
       },
       adapters,
       // Typed slice properties
-      'owner-repositories': slicesRef.current.get('owner-repositories') as DataSlice<OwnerRepositoriesData> | undefined,
+      'owner-repositories': slicesRef.current.get('owner-repositories') as DataSlice<OwnerRepositoriesSliceData> | undefined,
+      ownerRepositories: slicesRef.current.get('owner-repositories') as DataSlice<OwnerRepositoriesSliceData>, // Required by OwnerRepositoriesPanel - non-null assertion since it's always initialized
       fileTree: slicesRef.current.get('fileTree') as DataSlice<FileTree> | undefined,
       fileCityColorModes: slicesRef.current.get('fileCityColorModes') as DataSlice<FileCityColorModesSliceData> | undefined,
       quality: slicesRef.current.get('quality') as DataSlice<QualitySliceData> | undefined,
