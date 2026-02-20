@@ -10,11 +10,8 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Limit worker processes during build to prevent OOM in CI environments
-  experimental: {
-    workerThreads: false,
-    cpus: 1,
-  },
+  // Disable source maps in production to reduce memory usage during build
+  productionBrowserSourceMaps: false,
   images: {
     remotePatterns: [
       {
