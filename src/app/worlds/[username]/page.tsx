@@ -233,52 +233,8 @@ function SharedCollectionsContent({
           </div>
         </div>
 
-        {/* Right: Edit buttons, Collection dropdown + Import button */}
+        {/* Right: Import button */}
         <div className="flex items-center gap-3">
-          {/* Edit buttons (only when canEdit) */}
-          {canEdit && (
-            <div className="flex items-center gap-2">
-              {onAddRepository && (
-                <button
-                  onClick={onAddRepository}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
-                  style={{
-                    background: theme.colors.primary,
-                    color: theme.colors.textOnPrimary,
-                  }}
-                  title="Add repository to collection"
-                >
-                  <Plus size={16} />
-                  <span className="hidden sm:inline">Add Repo</span>
-                </button>
-              )}
-              {onEditCollection && (
-                <button
-                  onClick={onEditCollection}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
-                  style={{
-                    background: theme.colors.secondary,
-                    color: theme.colors.text,
-                    border: `1px solid ${theme.colors.border}`,
-                  }}
-                  title="Edit collection"
-                >
-                  <Edit2 size={16} />
-                  <span className="hidden sm:inline">Edit</span>
-                </button>
-              )}
-            </div>
-          )}
-
-          <SharedCollectionDropdown
-            collections={collections}
-            memberships={memberships}
-            selectedId={selectedCollectionId}
-            onSelect={onSelectCollection}
-            onCreateNew={canEdit ? onCreateCollection : undefined}
-            theme={theme}
-          />
-
           {/* Import button (only for authenticated users viewing someone else's collection without edit access) */}
           {isAuthenticated && selectedCollection && user?.login !== userData.user.login && !canEdit && (
             <button

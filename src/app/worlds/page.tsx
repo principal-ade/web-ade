@@ -117,7 +117,7 @@ function CollectionsPageWrapper() {
   const handleShare = useCallback(() => {
     if (!user?.login) return;
 
-    const shareUrl = `${window.location.origin}/repos/${user.login}`;
+    const shareUrl = `${window.location.origin}/worlds/${user.login}`;
     navigator.clipboard.writeText(shareUrl).then(() => {
       setShareSuccess(true);
       setTimeout(() => setShareSuccess(false), 2000);
