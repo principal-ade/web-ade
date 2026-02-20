@@ -16,7 +16,7 @@ import {
   PanelLayout,
 } from "@principal-ade/panel-layouts";
 import '@principal-ade/panel-layouts/styles.css';
-import { Plus, FolderOpen, Edit2, Cloud, CloudOff, Share2, Check, Settings, Compass, Clock, GitFork, User, Library, ArrowRight, X, Home, Star, Users, Search, Map, Package } from 'lucide-react';
+import { Plus, FolderOpen, Cloud, CloudOff, Share2, Check, Settings, Compass, Clock, GitFork, User, Library, ArrowRight, X, Home, Star, Users, Search, Map, Package, PanelRight, PanelRightClose } from 'lucide-react';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { iconMap } from '@/components/collections/CollectionModal';
 import type { Collection } from '@principal-ai/alexandria-collections';
@@ -82,9 +82,6 @@ const CollectionMapPanelLoader = CollectionMapPanel;
 export type ViewMode = 'manage' | 'explore';
 
 export interface CollectionsPageContentProps {
-  isUserCollection: boolean;
-  onAddRepository?: () => void;
-  onEditCollection?: () => void;
   // Collection dropdown props
   allCollections: Collection[];
   selectedCollectionId: string | null;
@@ -110,9 +107,6 @@ export interface CollectionsPageContentProps {
 }
 
 export function CollectionsPageContent({
-  isUserCollection,
-  onAddRepository,
-  onEditCollection,
   allCollections,
   selectedCollectionId,
   onSelectCollection,
@@ -503,39 +497,27 @@ export function CollectionsPageContent({
 
         {/* Right: Actions and toggles */}
         <div className="flex items-center justify-end gap-3">
-          {/* User collection action buttons - only show in manage mode */}
-          {!isMobile && isUserCollection && viewMode === 'manage' && (
-            <div className="flex items-center gap-2">
-              {onAddRepository && (
-                <button
-                  onClick={onAddRepository}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
-                  style={{
-                    background: theme.colors.primary,
-                    color: theme.colors.textOnPrimary,
-                  }}
-                  title="Add repository to collection"
-                >
-                  <Plus size={16} />
-                  <span className="hidden sm:inline">Add Repo</span>
-                </button>
+          {/* Right panel toggle - only show in explore mode */}
+          {!isMobile && viewMode === 'explore' && (
+            <button
+              onClick={() => setRightCollapsed(!rightCollapsed)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
+              style={{
+                background: theme.colors.secondary,
+                color: theme.colors.text,
+                border: `1px solid ${theme.colors.border}`,
+              }}
+              title={rightCollapsed ? 'Show right panel' : 'Hide right panel'}
+            >
+              {rightCollapsed ? (
+                <PanelRight size={16} />
+              ) : (
+                <PanelRightClose size={16} />
               )}
-              {onEditCollection && (
-                <button
-                  onClick={onEditCollection}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
-                  style={{
-                    background: theme.colors.secondary,
-                    color: theme.colors.text,
-                    border: `1px solid ${theme.colors.border}`,
-                  }}
-                  title="Edit collection"
-                >
-                  <Edit2 size={16} />
-                  <span className="hidden sm:inline">Edit</span>
-                </button>
-              )}
-            </div>
+              <span className="hidden sm:inline">
+                {rightCollapsed ? 'Show Panel' : 'Hide Panel'}
+              </span>
+            </button>
           )}
 
           {/* Share Button (only show when repo exists) */}
@@ -611,7 +593,7 @@ export function CollectionsPageContent({
             collapsed={{ left: leftCollapsed, right: rightCollapsed }}
             onRightCollapseComplete={() => setRightCollapsed(true)}
             onRightExpandComplete={() => setRightCollapsed(false)}
-            showCollapseButtons={viewMode === 'explore'}
+            showCollapseButtons={false}
             mobileBreakpoint="(max-width: 768px)"
           />
         ) : (
@@ -633,7 +615,7 @@ export function CollectionsPageContent({
             collapsed={{ left: leftCollapsed, right: rightCollapsed }}
             onRightCollapseComplete={() => setRightCollapsed(true)}
             onRightExpandComplete={() => setRightCollapsed(false)}
-            showCollapseButtons={viewMode === 'explore'}
+            showCollapseButtons={false}
           />
         )}
       </div>

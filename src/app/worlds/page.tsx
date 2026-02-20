@@ -242,9 +242,6 @@ function CollectionsPageWrapper() {
             collectionRepositories={repositories}
           >
             <CollectionsPageContent
-              isUserCollection={isUserCollection}
-              onAddRepository={isUserCollection ? () => setAddRepoModalOpen(true) : undefined}
-              onEditCollection={isUserCollection ? () => setEditModalOpen(true) : undefined}
               allCollections={allCollections}
               selectedCollectionId={selectedCollectionId}
               onSelectCollection={handleSelectCollection}
