@@ -1,5 +1,5 @@
 version: 1
-# Updated to Node.js 24 LTS - optimized build caching enabled
+# Using Node.js 22 (latest supported by AWS Amplify)
 env:
   variables:
     # Version registry configuration
@@ -9,8 +9,8 @@ frontend:
     preBuild:
       commands:
         - export SERVICE_COMMIT_SHA=$AWS_COMMIT_ID
-        - nvm install 24
-        - nvm use 24
+        - nvm install 22
+        - nvm use 22
         - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
         - echo "@industry-theme:registry=https://registry.npmjs.org/" >> .npmrc
         - echo "@principal-ade:registry=https://registry.npmjs.org/" >> .npmrc
