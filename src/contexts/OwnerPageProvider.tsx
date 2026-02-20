@@ -36,6 +36,7 @@ import type { FormattedResults } from '@principal-ai/codebase-quality-lenses';
 import { minimatch } from 'minimatch';
 import { PathsFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
+import type { PackagesSliceData } from '@principal-ai/codebase-composition';
 import { useAuth } from './AuthContext';
 import type {
   Collection,
@@ -147,23 +148,6 @@ interface CommitFilesSliceData {
   }>;
 }
 
-// Packages slice data
-interface PackagesSliceData {
-  packages: Array<{
-    name: string;
-    version: string;
-    path: string;
-    dependencies?: Record<string, string>;
-    devDependencies?: Record<string, string>;
-  }>;
-  rootPackage?: {
-    name?: string;
-    version?: string;
-    license?: string;
-    packageManager?: 'npm' | 'yarn' | 'pnpm' | 'bun' | 'pip' | 'cargo' | 'unknown';
-  };
-}
-
 // Owner page context type - includes only the slices needed for owner page
 export interface OwnerPageContextType {
   'owner-repositories'?: DataSlice<OwnerRepositoriesSliceData>;
@@ -172,10 +156,10 @@ export interface OwnerPageContextType {
   fileCityColorModes?: DataSlice<FileCityColorModesSliceData>;
   quality?: DataSlice<QualitySliceData>;
   'active-file'?: DataSlice<ActiveFileSlice>;
-  packages?: DataSlice<PackagesSliceData>;
+  packages: DataSlice<PackagesSliceData>; // Required - expected by PackageCompositionPanel
   commitFiles?: DataSlice<CommitFilesSliceData>;
   storyboardContext?: DataSlice<StoryboardContextSliceData>;
-  selectedCollectionView: DataSlice<SelectedCollectionView['data']>;
+  selectedCollectionView: SelectedCollectionView;
 }
 
 interface OwnerPageProviderProps {
@@ -663,7 +647,9 @@ export function OwnerPageProvider({
         } : repository,
       },
       slices: slicesRef.current,
-      selectedCollectionView: slicesRef.current.get('selectedCollectionView') as DataSlice<SelectedCollectionView['data']> || {
+      selectedCollectionView: slicesRef.current.get('selectedCollectionView') as SelectedCollectionView || {
+        scope: 'workspace',
+        name: 'selectedCollectionView',
         data: {
           collection: null,
           repositories: [],
@@ -671,6 +657,7 @@ export function OwnerPageProvider({
         },
         loading: false,
         error: null,
+        refresh: async () => {},
       },
       adapters,
       // Typed slice properties
@@ -680,7 +667,7 @@ export function OwnerPageProvider({
       fileCityColorModes: slicesRef.current.get('fileCityColorModes') as DataSlice<FileCityColorModesSliceData> | undefined,
       quality: slicesRef.current.get('quality') as DataSlice<QualitySliceData> | undefined,
       'active-file': slicesRef.current.get('active-file') as DataSlice<ActiveFileSlice> | undefined,
-      packages: slicesRef.current.get('packages') as DataSlice<PackagesSliceData> | undefined,
+      packages: slicesRef.current.get('packages') as DataSlice<PackagesSliceData>, // Required by PackageCompositionPanel - non-null assertion since it's always initialized
       commitFiles: slicesRef.current.get('commitFiles') as DataSlice<CommitFilesSliceData> | undefined,
       storyboardContext: slicesRef.current.get('storyboardContext') as DataSlice<StoryboardContextSliceData> | undefined,
       getSlice: <T,>(name: string) => slicesRef.current.get(name) as DataSlice<T> | undefined,

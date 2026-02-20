@@ -45,6 +45,7 @@ import type { FormattedResults } from '@principal-ai/codebase-quality-lenses';
 import { minimatch } from 'minimatch';
 import { PathsFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
+import type { PackagesSliceData } from '@principal-ai/codebase-composition';
 import { useAuth } from './AuthContext';
 import { useUserCollections } from './UserCollectionsContext';
 import type { CustomRegion, RepositoryLayoutData } from '@principal-ai/alexandria-collections';
@@ -168,23 +169,6 @@ interface CommitFilesSliceData {
   }>;
 }
 
-// Packages slice data
-interface PackagesSliceData {
-  packages: Array<{
-    name: string;
-    version: string;
-    path: string;
-    dependencies?: Record<string, string>;
-    devDependencies?: Record<string, string>;
-  }>;
-  rootPackage?: {
-    name?: string;
-    version?: string;
-    license?: string;
-    packageManager?: 'npm' | 'yarn' | 'pnpm' | 'bun' | 'pip' | 'cargo' | 'unknown';
-  };
-}
-
 // Use slice types from alexandria-panels for type safety
 // UserCollectionsSlice, WorkspaceSlice, WorkspaceRepositoriesSlice imported above
 
@@ -208,7 +192,7 @@ export interface WorldsPageContextType {
   fileCityColorModes?: DataSlice<FileCityColorModesSliceData>;
   quality?: DataSlice<QualitySliceData>;
   'active-file'?: DataSlice<ActiveFileSlice>;
-  packages?: DataSlice<PackagesSliceData>;
+  packages: DataSlice<PackagesSliceData>; // Required - expected by PackageCompositionPanel
   commitFiles?: DataSlice<CommitFilesSliceData>;
   storyboardContext?: DataSlice<StoryboardContextSliceData>;
 }
@@ -328,6 +312,8 @@ export function WorldsPageProvider({
   // Direct state for typed slices (always present and type-safe)
   // These slices are managed as React state and synced to slicesRef for backward compatibility
   const [selectedCollectionView, setSelectedCollectionView] = useState<SelectedCollectionView>({
+    scope: 'workspace',
+    name: 'selectedCollectionView',
     data: {
       collection: null,
       repositories: [],
@@ -335,6 +321,7 @@ export function WorldsPageProvider({
     },
     loading: false,
     error: null,
+    refresh: async () => {},
   });
 
   // Slices ref for dynamic/optional slices
@@ -653,6 +640,8 @@ export function WorldsPageProvider({
     }));
 
     setSelectedCollectionView({
+      scope: 'workspace',
+      name: 'selectedCollectionView',
       data: {
         collection: selectedCollection || null,
         repositories,
@@ -660,6 +649,7 @@ export function WorldsPageProvider({
       },
       loading: userCollections.loading || collectionRepoDetailsLoading,
       error: userCollections.error || null,
+      refresh: async () => {},
     });
 
     // Update workspace slice
@@ -893,7 +883,7 @@ export function WorldsPageProvider({
       fileCityColorModes: slicesRef.current.get('fileCityColorModes') as DataSlice<FileCityColorModesSliceData> | undefined,
       quality: slicesRef.current.get('quality') as DataSlice<QualitySliceData> | undefined,
       'active-file': slicesRef.current.get('active-file') as DataSlice<ActiveFileSlice> | undefined,
-      packages: slicesRef.current.get('packages') as DataSlice<PackagesSliceData> | undefined,
+      packages: slicesRef.current.get('packages') as DataSlice<PackagesSliceData>, // Required by PackageCompositionPanel - non-null assertion since it's always initialized
       commitFiles: slicesRef.current.get('commitFiles') as DataSlice<CommitFilesSliceData> | undefined,
       storyboardContext: slicesRef.current.get('storyboardContext') as DataSlice<StoryboardContextSliceData> | undefined,
       getSlice: <T,>(name: string) => slicesRef.current.get(name) as DataSlice<T> | undefined,
