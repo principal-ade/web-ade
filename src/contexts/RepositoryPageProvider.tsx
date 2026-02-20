@@ -229,8 +229,12 @@ interface SchematicsSliceData {
 
 // Repository page context type
 export interface RepositoryPageContextType {
-  'active-file'?: DataSlice<ActiveFileSlice>;
-  fileTree?: DataSlice<FileTree>;
+  // Core slices - always present (initialized on mount)
+  'active-file': DataSlice<ActiveFileSlice>;
+  activeFile: DataSlice<ActiveFileSlice>; // Alias for 'active-file' (required by some panels)
+  fileTree: DataSlice<FileTree>;
+
+  // Optional slices - may not be present in all contexts
   commits?: DataSlice<CommitsSliceData>;
   quality?: DataSlice<QualitySliceData>;
   lensResults?: DataSlice<LensResultsSliceData>;
@@ -837,9 +841,11 @@ export function RepositoryPageProvider({
       },
       slices: slicesRef.current,
       adapters,
-      // Typed slice properties
-      'active-file': slicesRef.current.get('active-file') as DataSlice<ActiveFileSlice> | undefined,
-      fileTree: slicesRef.current.get('fileTree') as DataSlice<FileTree> | undefined,
+      // Core slice properties (always present)
+      'active-file': slicesRef.current.get('active-file') as DataSlice<ActiveFileSlice>,
+      activeFile: slicesRef.current.get('active-file') as DataSlice<ActiveFileSlice>, // Alias for panels expecting camelCase
+      fileTree: slicesRef.current.get('fileTree') as DataSlice<FileTree>,
+      // Optional slice properties
       commits: slicesRef.current.get('commits') as DataSlice<CommitsSliceData> | undefined,
       quality: slicesRef.current.get('quality') as DataSlice<QualitySliceData> | undefined,
       lensResults: slicesRef.current.get('lensResults') as DataSlice<LensResultsSliceData> | undefined,
