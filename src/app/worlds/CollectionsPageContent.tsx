@@ -576,11 +576,11 @@ export function CollectionsPageContent({
             panels={panels}
             layout={layout}
             defaultSizes={viewMode === 'manage'
-              ? { left: 40, middle: 60, right: 0 }
+              ? { left: 30, middle: 40, right: 30 }
               : { left: 25, middle: 50, right: 25 }
             }
             minSizes={viewMode === 'manage'
-              ? { left: 20, middle: 40, right: 0 }
+              ? { left: 20, middle: 30, right: 20 }
               : { left: 15, middle: 30, right: 15 }
             }
             collapsiblePanels={{ left: true, right: true }}
@@ -598,11 +598,11 @@ export function CollectionsPageContent({
             layout={layout}
             isEditMode={false}
             defaultSizes={viewMode === 'manage'
-              ? { left: 40, middle: 60, right: 0 }
+              ? { left: 30, middle: 40, right: 30 }
               : { left: 25, middle: 50, right: 25 }
             }
             minSizes={viewMode === 'manage'
-              ? { left: 20, middle: 40, right: 0 }
+              ? { left: 20, middle: 30, right: 20 }
               : { left: 15, middle: 30, right: 15 }
             }
             collapsiblePanels={{ left: true, right: true }}
