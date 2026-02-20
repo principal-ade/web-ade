@@ -127,7 +127,10 @@ export function exportSpansToOTLP(testName: string, workflowPath?: string) {
 /**
  * Convert attribute values to OTLP format
  */
-function convertAttributeValue(value: AttributeValue) {
+function convertAttributeValue(value: AttributeValue | undefined) {
+  if (value === undefined) {
+    return { stringValue: '' };
+  }
   if (typeof value === 'string') {
     return { stringValue: value };
   } else if (typeof value === 'number') {
