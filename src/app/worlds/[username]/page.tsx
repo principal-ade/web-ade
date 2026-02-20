@@ -17,7 +17,6 @@ import {
 } from "@principal-ade/panel-layouts";
 import '@principal-ade/panel-layouts/styles.css';
 import {
-  ChevronDown,
   Layers,
   ExternalLink,
   ArrowLeft,
@@ -25,9 +24,6 @@ import {
   Check,
   Loader2,
   AlertCircle,
-  Plus,
-  Edit2,
-  FolderOpen,
 } from 'lucide-react';
 import { CollectionModal } from "@/components/collections/CollectionModal";
 import { AddRepositoryModal } from "@/components/collections/AddRepositoryModal";
@@ -57,15 +53,11 @@ interface SharedCollectionsContentProps {
   collections: Collection[];
   memberships: CollectionMembership[];
   selectedCollectionId: string | null;
-  onSelectCollection: (id: string) => void;
   onImportCollection: (collection: Collection, collectionMemberships: CollectionMembership[]) => Promise<void>;
   importingCollectionId: string | null;
   importedCollectionIds: Set<string>;
   // Edit mode props
   canEdit: boolean;
-  onAddRepository?: () => void;
-  onEditCollection?: () => void;
-  onCreateCollection?: () => void;
   onRemoveRepository?: (repositoryId: string) => Promise<void>;
 }
 
@@ -74,14 +66,10 @@ function SharedCollectionsContent({
   collections,
   memberships,
   selectedCollectionId,
-  onSelectCollection,
   onImportCollection,
   importingCollectionId,
   importedCollectionIds,
   canEdit,
-  onAddRepository,
-  onEditCollection,
-  onCreateCollection,
   onRemoveRepository,
 }: SharedCollectionsContentProps) {
   const { theme } = useTheme();
@@ -353,168 +341,6 @@ function SharedCollectionsContent({
   );
 }
 
-interface SharedCollectionDropdownProps {
-  collections: Collection[];
-  memberships: CollectionMembership[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-  onCreateNew?: () => void;
-  theme: ReturnType<typeof useTheme>['theme'];
-}
-
-function SharedCollectionDropdown({
-  collections,
-  memberships,
-  selectedId,
-  onSelect,
-  onCreateNew,
-  theme,
-}: SharedCollectionDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const selected = collections.find(c => c.id === selectedId);
-
-  const getRepoCount = (collectionId: string) => {
-    return memberships.filter(m => m.collectionId === collectionId).length;
-  };
-
-  return (
-    <div style={{ position: 'relative' }}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '8px 12px',
-          backgroundColor: theme.colors.surface,
-          border: `1px solid ${theme.colors.border}`,
-          borderRadius: '8px',
-          cursor: 'pointer',
-          color: theme.colors.text,
-          fontSize: `${theme.fontSizes[2]}px`,
-          fontWeight: theme.fontWeights.medium,
-          minWidth: '200px',
-        }}
-      >
-        <Layers size={18} style={{ color: theme.colors.primary }} />
-        <span style={{ flex: 1, textAlign: 'left' }}>
-          {selected?.name || 'Select Collection'}
-        </span>
-        <ChevronDown size={16} style={{ color: theme.colors.textSecondary }} />
-      </button>
-
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 40,
-            }}
-            onClick={() => setIsOpen(false)}
-          />
-
-          {/* Dropdown */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '100%',
-              right: 0,
-              marginTop: '4px',
-              minWidth: '280px',
-              backgroundColor: theme.colors.background,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: '8px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-              zIndex: 50,
-              overflow: 'hidden',
-            }}
-          >
-            {/* Create New (only when onCreateNew is provided) */}
-            {onCreateNew && (
-              <button
-                onClick={() => {
-                  setIsOpen(false);
-                  onCreateNew();
-                }}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 12px',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  borderBottom: `1px solid ${theme.colors.border}`,
-                  cursor: 'pointer',
-                  color: theme.colors.primary,
-                  fontSize: `${theme.fontSizes[1]}px`,
-                  fontWeight: theme.fontWeights.medium,
-                }}
-              >
-                <Plus size={16} />
-                Create New Collection
-              </button>
-            )}
-
-            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-              {collections.map(collection => (
-                <button
-                  key={collection.id}
-                  onClick={() => {
-                    onSelect(collection.id);
-                    setIsOpen(false);
-                  }}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '10px 12px',
-                    backgroundColor: collection.id === selectedId ? theme.colors.backgroundTertiary : 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: theme.colors.text,
-                    fontSize: `${theme.fontSizes[1]}px`,
-                    textAlign: 'left',
-                  }}
-                >
-                  <FolderOpen size={16} style={{ color: theme.colors.textSecondary }} />
-                  <div style={{ flex: 1 }}>
-                    <div>{collection.name}</div>
-                    {collection.description && (
-                      <div
-                        style={{
-                          fontSize: `${theme.fontSizes[0]}px`,
-                          color: theme.colors.textSecondary,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {collection.description}
-                      </div>
-                    )}
-                  </div>
-                  <span
-                    style={{
-                      fontSize: `${theme.fontSizes[0]}px`,
-                      color: theme.colors.textMuted,
-                    }}
-                  >
-                    {getRepoCount(collection.id)} repos
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
 function SharedCollectionsWrapper() {
   const { theme } = useTheme();
   const router = useRouter();
@@ -600,11 +426,6 @@ function SharedCollectionsWrapper() {
       .filter(m => m.collectionId === selectedCollectionId)
       .map(m => m.repositoryId);
   }, [selectedCollectionId, memberships]);
-
-  // Handle collection selection
-  const handleSelectCollection = useCallback((id: string) => {
-    setSelectedCollectionId(id);
-  }, []);
 
   // Handle import collection
   const handleImportCollection = useCallback(async (collection: Collection, collectionMemberships: CollectionMembership[]) => {
@@ -979,14 +800,10 @@ function SharedCollectionsWrapper() {
             collections={collections}
             memberships={memberships}
             selectedCollectionId={selectedCollectionId}
-            onSelectCollection={handleSelectCollection}
             onImportCollection={handleImportCollection}
             importingCollectionId={importingCollectionId}
             importedCollectionIds={importedCollectionIds}
             canEdit={canEdit}
-            onAddRepository={canEdit ? () => setAddRepoModalOpen(true) : undefined}
-            onEditCollection={canEdit ? () => setEditModalOpen(true) : undefined}
-            onCreateCollection={canEdit ? () => setCreateModalOpen(true) : undefined}
             onRemoveRepository={canEdit ? handleRemoveRepository : undefined}
           />
         </WorldsPageProvider>
