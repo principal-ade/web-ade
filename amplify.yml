@@ -1,5 +1,5 @@
 version: 1
-# Force rebuild to clear package cache - 2026-01-30 - Updated to latest packages
+# Updated to Node.js 24 LTS - optimized build caching enabled
 env:
   variables:
     # Version registry configuration
@@ -9,10 +9,8 @@ frontend:
     preBuild:
       commands:
         - export SERVICE_COMMIT_SHA=$AWS_COMMIT_ID
-        - nvm install 20
-        - nvm use 20
-        - npm cache clean --force
-        - rm -rf node_modules .next
+        - nvm install 24
+        - nvm use 24
         - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
         - echo "@industry-theme:registry=https://registry.npmjs.org/" >> .npmrc
         - echo "@principal-ade:registry=https://registry.npmjs.org/" >> .npmrc
