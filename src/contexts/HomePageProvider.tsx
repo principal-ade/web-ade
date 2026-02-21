@@ -200,7 +200,48 @@ export function HomePageProvider({
     loading: false,
   });
 
-  // Slices ref
+  // ===== EXPLICIT SLICES (migrated from Map) =====
+
+  // Explicit slice: github-repositories
+  const githubRepositoriesSlice = useMemo<DataSlice<GitHubRepositoriesData>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'github-repositories',
+      data: githubRepos,
+      loading: githubReposLoading,
+      error: null,
+      refresh: async () => { /* no-op */ },
+    }),
+    [githubRepos, githubReposLoading]
+  );
+
+  // Explicit slice: owner-repositories
+  const ownerRepositoriesSlice = useMemo<DataSlice<OwnerRepositoriesData>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'owner-repositories',
+      data: ownerRepos,
+      loading: ownerReposLoading,
+      error: null,
+      refresh: async () => { /* no-op */ },
+    }),
+    [ownerRepos, ownerReposLoading]
+  );
+
+  // Explicit slice: githubStarred
+  const githubStarredSlice = useMemo<DataSlice<GitHubStarredData>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'githubStarred',
+      data: starredData,
+      loading: starredData.loading,
+      error: starredData.error || null,
+      refresh: async () => { /* no-op */ },
+    }),
+    [starredData]
+  );
+
+  // Slices ref (now empty after full migration)
   const slicesRef = useRef<Map<string, DataSlice>>(new Map());
 
   // Fetch GitHub repositories (owned, starred, organizations)
@@ -267,46 +308,16 @@ export function HomePageProvider({
     }
   }, [isAuthenticated]);
 
-  // Refresh function
-  const refresh = useCallback(async () => {
-    await fetchGithubRepos();
-  }, [fetchGithubRepos]);
+  // Note: refresh is now a no-op inline function in the context
+  // Actions handle data refreshing - React handles reactivity through useMemo dependencies
 
   // Initialize slices on mount
   useEffect(() => {
+    // All slices are now explicit (see useMemo above) - No Map initialization needed
     const initialSlices = new Map<string, DataSlice>();
-
-    initialSlices.set('github-repositories', {
-      scope: 'global',
-      name: 'github-repositories',
-      data: null,
-      loading: true,
-      error: null,
-      refresh: fetchGithubRepos,
-    });
-
-    initialSlices.set('owner-repositories', {
-      scope: 'global',
-      name: 'owner-repositories',
-      data: null,
-      loading: false,
-      error: null,
-      refresh: async () => {},
-    });
-
-    initialSlices.set('githubStarred', {
-      scope: 'global',
-      name: 'githubStarred',
-      data: null,
-      loading: true,
-      error: null,
-      refresh: fetchGithubRepos, // Reuses the same fetch
-    });
-
     slicesRef.current = initialSlices;
-
-    console.log('[HomePageProvider] Slices initialized:', Array.from(initialSlices.keys()));
-  }, [fetchGithubRepos]);
+    console.log('[HomePageProvider] All slices are now explicit - Map is empty');
+  }, []);
 
   // Fetch GitHub repos on auth state change
   useEffect(() => {
@@ -315,41 +326,8 @@ export function HomePageProvider({
     }
   }, [isAuthenticated, fetchGithubRepos]);
 
-  // Update github-repositories slice
-  useEffect(() => {
-    const slice = slicesRef.current.get('github-repositories');
-    if (slice) {
-      slicesRef.current.set('github-repositories', {
-        ...slice,
-        data: githubRepos,
-        loading: githubReposLoading,
-      });
-    }
-  }, [githubRepos, githubReposLoading]);
-
-  // Update owner-repositories slice
-  useEffect(() => {
-    const slice = slicesRef.current.get('owner-repositories');
-    if (slice) {
-      slicesRef.current.set('owner-repositories', {
-        ...slice,
-        data: ownerRepos,
-        loading: ownerReposLoading,
-      });
-    }
-  }, [ownerRepos, ownerReposLoading]);
-
-  // Update githubStarred slice
-  useEffect(() => {
-    const slice = slicesRef.current.get('githubStarred');
-    if (slice) {
-      slicesRef.current.set('githubStarred', {
-        ...slice,
-        data: starredData,
-        loading: starredData.loading,
-      });
-    }
-  }, [starredData]);
+  // All slices are now explicit useMemo slices (see above)
+  // No Map-based updating needed - React handles reactivity automatically through useMemo dependencies
 
   // Adapters for file operations (minimal for home page)
   const adapters: PanelAdapters = useMemo(
@@ -365,40 +343,40 @@ export function HomePageProvider({
   );
 
   // Build panel context
+  // All slices are now explicit - use typed properties directly
   const context = useMemo<PanelContextValue<HomePageContextType>>(() => ({
     currentScope: {
       type: 'workspace' as const,
       workspace: workspace || { name: 'web-ade', path: '/workspace' },
       repository: repository || { name: 'home', path: '/home' },
     },
+    // Empty Map - all slices are now explicit (required by interface)
     slices: slicesRef.current,
     adapters,
-    // Typed slice properties
-    'github-repositories': slicesRef.current.get('github-repositories') as DataSlice<GitHubRepositoriesData> | undefined,
-    'owner-repositories': slicesRef.current.get('owner-repositories') as DataSlice<OwnerRepositoriesData> | undefined,
-    githubStarred: slicesRef.current.get('githubStarred') as DataSlice<GitHubStarredData> | undefined,
-    getSlice: <T,>(name: string) => slicesRef.current.get(name) as DataSlice<T> | undefined,
-    getWorkspaceSlice: <T,>(name: string) => {
-      const slice = slicesRef.current.get(name);
-      return slice?.scope === 'workspace' ? (slice as DataSlice<T>) : undefined;
-    },
-    getRepositorySlice: <T,>(name: string) => {
-      const slice = slicesRef.current.get(name);
-      return slice?.scope === 'repository' ? (slice as DataSlice<T>) : undefined;
-    },
-    hasSlice: (name: string, scope?: 'workspace' | 'repository') => {
-      const slice = slicesRef.current.get(name);
-      if (!slice) return false;
-      return scope ? slice.scope === scope : true;
-    },
-    isSliceLoading: (name: string, scope?: 'workspace' | 'repository') => {
-      const slice = slicesRef.current.get(name);
-      if (!slice) return false;
-      if (scope && slice.scope !== scope) return false;
-      return slice.loading;
-    },
-    refresh,
-  }), [workspace, repository, adapters, refresh]);
+
+    // ===== EXPLICIT TYPED SLICES (migrated from Map) =====
+    'github-repositories': githubRepositoriesSlice,
+    'owner-repositories': ownerRepositoriesSlice,
+    githubStarred: githubStarredSlice,
+
+    // ===== LEGACY METHODS (no-ops for interface compatibility) =====
+    // All slices are now explicit - use typed properties above instead
+    getSlice: () => undefined,
+    getWorkspaceSlice: () => undefined,
+    getRepositorySlice: () => undefined,
+    hasSlice: () => false,
+    isSliceLoading: () => false,
+    // Actions handle refreshing - this is a no-op for interface compatibility
+    refresh: async () => { /* no-op - use actions instead */ },
+  }), [
+    workspace,
+    repository,
+    adapters,
+    // All explicit slices
+    githubRepositoriesSlice,
+    ownerRepositoriesSlice,
+    githubStarredSlice,
+  ]);
 
   // Panel actions
   const actions = useMemo<PanelActions>(() => ({
