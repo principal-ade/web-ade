@@ -574,9 +574,13 @@ export function RepositoryPageProvider({
 
         const data = await response.json();
         const [owner, name] = githubRepo.split('/');
+        // GitHub API returns { tree: [{ path, type, ... }] } - extract paths for blobs only
+        const filePaths = (data.tree || [])
+          .filter((entry: { type: string }) => entry.type === 'blob')
+          .map((entry: { path: string }) => entry.path);
         const builder = new PathsFileTreeBuilder();
         const tree = builder.build({
-          files: data.files || [],
+          files: filePaths,
           rootPath: `/${owner}/${name}`,
         });
 

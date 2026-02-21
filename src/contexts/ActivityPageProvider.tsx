@@ -403,9 +403,13 @@ export function ActivityPageProvider({
         if (!owner || !name) {
           throw new Error('Invalid repository format');
         }
+        // GitHub API returns { tree: [{ path, type, ... }] } - extract paths for blobs only
+        const filePaths = (data.tree || [])
+          .filter((entry: { type: string }) => entry.type === 'blob')
+          .map((entry: { path: string }) => entry.path);
         const builder = new PathsFileTreeBuilder();
         const tree = builder.build({
-          files: data.files || [],
+          files: filePaths,
           rootPath: `/${owner}/${name}`,
         });
 
