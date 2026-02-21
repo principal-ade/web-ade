@@ -266,100 +266,186 @@ export function OwnerPageProvider({
   const [collectionLoading] = useState(false);
   const [collectionError] = useState<string | null>(null);
 
-  // Slices ref
+  // ===== EXPLICIT SLICES (migrated from Map) =====
+
+  // Explicit slice: ownerRepositories (required - expected by OwnerRepositoriesPanel)
+  const ownerRepositoriesSlice = useMemo<DataSlice<OwnerRepositoriesSliceData>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'owner-repositories',
+      data: ownerRepos,
+      loading: ownerReposLoading,
+      error: ownerRepos.error ? new Error(ownerRepos.error) : null,
+      refresh: async () => { /* no-op */ },
+    }),
+    [ownerRepos, ownerReposLoading]
+  );
+
+  // Explicit slice: fileTree
+  const fileTreeSlice = useMemo<DataSlice<FileTree>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'fileTree',
+      data: fileTree,
+      loading: fileTreeLoading,
+      error: fileTreeError,
+      refresh: async () => { /* no-op */ },
+    }),
+    [fileTree, fileTreeLoading, fileTreeError]
+  );
+
+  // Explicit slice: quality
+  const qualitySlice = useMemo<DataSlice<QualitySliceData>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'quality',
+      data: qualityData,
+      loading: qualityLoading,
+      error: qualityError,
+      refresh: async () => { /* no-op */ },
+    }),
+    [qualityData, qualityLoading, qualityError]
+  );
+
+  // Explicit slice: fileCityColorModes
+  const fileCityColorModesSlice = useMemo<DataSlice<FileCityColorModesSliceData>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'fileCityColorModes',
+      data: {
+        enabledModes: enabledColorModes,
+        selectedColorMode,
+        qualityData: qualityData ?? undefined,
+      },
+      loading: qualityLoading,
+      error: qualityError,
+      refresh: async () => { /* no-op */ },
+    }),
+    [enabledColorModes, selectedColorMode, qualityData, qualityLoading, qualityError]
+  );
+
+  // Explicit slice: active-file
+  const activeFileSlice = useMemo<DataSlice<ActiveFileSlice>>(
+    () => {
+      if (!activeFileContent || !githubRepo) {
+        return {
+          scope: 'repository' as const,
+          name: 'active-file',
+          data: null,
+          loading: activeFileLoading,
+          error: activeFileError,
+          refresh: async () => { /* no-op */ },
+        };
+      }
+
+      const parts = githubRepo.split('/');
+      const owner = parts[0] || '';
+      const name = parts[1] || '';
+
+      if (!owner || !name) {
+        return {
+          scope: 'repository' as const,
+          name: 'active-file',
+          data: null,
+          loading: activeFileLoading,
+          error: activeFileError,
+          refresh: async () => { /* no-op */ },
+        };
+      }
+
+      const activeFileData: ActiveFileSlice = {
+        path: activeFilePath,
+        content: activeFileContent,
+        type: 'code',
+        size: activeFileContent.length,
+        lastModified: new Date(),
+        encoding: 'utf-8',
+        source: createFileTreeSource.remoteBranch(
+          owner,
+          name,
+          `https://github.com/${githubRepo}`,
+          'main',
+          'github'
+        ),
+      };
+
+      return {
+        scope: 'repository' as const,
+        name: 'active-file',
+        data: activeFileData,
+        loading: activeFileLoading,
+        error: activeFileError,
+        refresh: async () => { /* no-op */ },
+      };
+    },
+    [activeFilePath, activeFileContent, activeFileLoading, activeFileError, githubRepo]
+  );
+
+  // Explicit slice: packages (required - expected by PackageCompositionPanel)
+  const packagesSlice = useMemo<DataSlice<PackagesSliceData>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'packages',
+      data: packagesData,
+      loading: packagesLoading,
+      error: packagesError,
+      refresh: async () => { /* no-op */ },
+    }),
+    [packagesData, packagesLoading, packagesError]
+  );
+
+  // Explicit slice: commitFiles
+  const commitFilesSlice = useMemo<DataSlice<CommitFilesSliceData>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'commitFiles',
+      data: commitFilesData,
+      loading: false,
+      error: null,
+      refresh: async () => { /* no-op */ },
+    }),
+    [commitFilesData]
+  );
+
+  // Explicit slice: storyboardContext
+  const storyboardContextSlice = useMemo<DataSlice<StoryboardContextSliceData>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'storyboardContext',
+      data: storyboardContextData,
+      loading: false,
+      error: null,
+      refresh: async () => { /* no-op */ },
+    }),
+    [storyboardContextData]
+  );
+
+  // Explicit slice: selectedCollectionView (special - used by CollectionMapPanel)
+  const selectedCollectionViewSlice = useMemo<SelectedCollectionView>(
+    () => ({
+      scope: 'workspace' as const,
+      name: 'selectedCollectionView',
+      data: {
+        collection: selectedCollection,
+        repositories: collectionRepositories,
+        dependencies: undefined,
+      },
+      loading: collectionLoading,
+      error: collectionError ? new Error(collectionError) : null,
+      refresh: async () => { /* no-op */ },
+    }),
+    [selectedCollection, collectionRepositories, collectionLoading, collectionError]
+  );
+
+  // Slices ref (now empty after full migration)
   const slicesRef = useRef<Map<string, DataSlice>>(new Map());
 
   // Initialize slices on mount
   useEffect(() => {
+    // All slices are now explicit (see useMemo above) - No Map initialization needed
     const initialSlices = new Map<string, DataSlice>();
-
-    initialSlices.set('owner-repositories', {
-      scope: 'global',
-      name: 'owner-repositories',
-      data: null,
-      loading: true,
-      error: null,
-      refresh: async () => {},
-    });
-
-    initialSlices.set('fileTree', {
-      scope: 'repository',
-      name: 'fileTree',
-      data: null,
-      loading: true,
-      error: null,
-      refresh: async () => {},
-    });
-
-    initialSlices.set('fileCityColorModes', {
-      scope: 'repository',
-      name: 'fileCityColorModes',
-      data: null,
-      loading: true,
-      error: null,
-      refresh: async () => {},
-    });
-
-    initialSlices.set('quality', {
-      scope: 'repository',
-      name: 'quality',
-      data: null,
-      loading: false,
-      error: null,
-      refresh: async () => {},
-    });
-
-    initialSlices.set('active-file', {
-      scope: 'repository',
-      name: 'active-file',
-      data: null,
-      loading: false,
-      error: null,
-      refresh: async () => {},
-    });
-
-    initialSlices.set('packages', {
-      scope: 'repository',
-      name: 'packages',
-      data: null,
-      loading: false,
-      error: null,
-      refresh: async () => {},
-    });
-
-    initialSlices.set('commitFiles', {
-      scope: 'repository',
-      name: 'commitFiles',
-      data: null,
-      loading: false,
-      error: null,
-      refresh: async () => {},
-    });
-
-    initialSlices.set('storyboardContext', {
-      scope: 'repository',
-      name: 'storyboardContext',
-      data: null,
-      loading: false,
-      error: null,
-      refresh: async () => {},
-    });
-
-    initialSlices.set('selectedCollectionView', {
-      scope: 'workspace',
-      name: 'selectedCollectionView',
-      data: {
-        collection: null,
-        memberships: [],
-        repositories: [],
-        dependencies: undefined,
-      },
-      loading: false,
-      error: null,
-      refresh: async () => {},
-    });
-
     slicesRef.current = initialSlices;
+    console.log('[OwnerPageProvider] All slices are now explicit - Map is empty');
   }, []);
 
   // Fetch owner repositories
@@ -449,12 +535,8 @@ export function OwnerPageProvider({
     fetchFileTree();
   }, [githubRepo]);
 
-  // Refresh function
-  const refresh = useCallback(async () => {
-    if (currentOwner) {
-      await fetchOwnerRepos(currentOwner);
-    }
-  }, [currentOwner, fetchOwnerRepos]);
+  // Note: refresh is now a no-op inline function in the context
+  // Actions handle data refreshing - React handles reactivity through useMemo dependencies
 
   // Adapters for file operations
   const adapters: PanelAdapters = useMemo(
@@ -479,162 +561,11 @@ export function OwnerPageProvider({
     [githubRepo]
   );
 
-  // Update slices
-  useEffect(() => {
-    // Update owner-repositories slice
-    const ownerReposSlice = slicesRef.current.get('owner-repositories');
-    if (ownerReposSlice) {
-      slicesRef.current.set('owner-repositories', {
-        ...ownerReposSlice,
-        data: ownerRepos,
-        loading: ownerReposLoading,
-        error: ownerRepos.error ? new Error(ownerRepos.error) : null,
-      });
-    }
-
-    // Update fileTree slice
-    const fileTreeSlice = slicesRef.current.get('fileTree');
-    if (fileTreeSlice) {
-      slicesRef.current.set('fileTree', {
-        ...fileTreeSlice,
-        data: fileTree,
-        loading: fileTreeLoading,
-        error: fileTreeError,
-      });
-    }
-
-    // Update quality slice
-    const qualitySlice = slicesRef.current.get('quality');
-    if (qualitySlice) {
-      slicesRef.current.set('quality', {
-        ...qualitySlice,
-        data: qualityData,
-        loading: qualityLoading,
-        error: qualityError,
-      });
-    }
-
-    // Update fileCityColorModes slice
-    const fileCityColorModesSlice = slicesRef.current.get('fileCityColorModes');
-    if (fileCityColorModesSlice) {
-      slicesRef.current.set('fileCityColorModes', {
-        ...fileCityColorModesSlice,
-        data: {
-          enabledModes: enabledColorModes,
-          selectedColorMode,
-          qualityData: qualityData ?? undefined,
-        },
-        loading: qualityLoading,
-        error: qualityError,
-      });
-    }
-
-    // Update active-file slice
-    if (activeFileContent && githubRepo) {
-      const parts = githubRepo.split('/');
-      const owner = parts[0] || '';
-      const name = parts[1] || '';
-
-      if (owner && name) {
-        const activeFileData: ActiveFileSlice = {
-          path: activeFilePath,
-          content: activeFileContent,
-          type: 'code',
-          size: activeFileContent.length,
-          lastModified: new Date(),
-          encoding: 'utf-8',
-          source: createFileTreeSource.remoteBranch(
-            owner,
-            name,
-            `https://github.com/${githubRepo}`,
-            'main',
-            'github'
-          ),
-        };
-
-        const activeFileSlice = slicesRef.current.get('active-file');
-        if (activeFileSlice) {
-          slicesRef.current.set('active-file', {
-            ...activeFileSlice,
-            data: activeFileData,
-            loading: activeFileLoading,
-            error: activeFileError,
-          });
-        }
-      }
-    }
-
-    // Update packages slice
-    const packagesSlice = slicesRef.current.get('packages');
-    if (packagesSlice) {
-      slicesRef.current.set('packages', {
-        ...packagesSlice,
-        data: packagesData,
-        loading: packagesLoading,
-        error: packagesError,
-      });
-    }
-
-    // Update commitFiles slice
-    const commitFilesSlice = slicesRef.current.get('commitFiles');
-    if (commitFilesSlice) {
-      slicesRef.current.set('commitFiles', {
-        ...commitFilesSlice,
-        data: commitFilesData,
-      });
-    }
-
-    // Update storyboardContext slice
-    const storyboardContextSlice = slicesRef.current.get('storyboardContext');
-    if (storyboardContextSlice) {
-      slicesRef.current.set('storyboardContext', {
-        ...storyboardContextSlice,
-        data: storyboardContextData,
-      });
-    }
-
-    // Update selectedCollectionView slice
-    const selectedCollectionViewSlice = slicesRef.current.get('selectedCollectionView');
-    if (selectedCollectionViewSlice) {
-      slicesRef.current.set('selectedCollectionView', {
-        ...selectedCollectionViewSlice,
-        data: {
-          collection: selectedCollection,
-          repositories: collectionRepositories,
-          dependencies: undefined,
-        },
-        loading: collectionLoading,
-        error: collectionError ? new Error(collectionError) : null,
-      });
-    }
-  }, [
-    ownerRepos,
-    ownerReposLoading,
-    fileTree,
-    fileTreeLoading,
-    fileTreeError,
-    qualityData,
-    qualityLoading,
-    qualityError,
-    enabledColorModes,
-    selectedColorMode,
-    activeFilePath,
-    activeFileContent,
-    activeFileLoading,
-    activeFileError,
-    githubRepo,
-    packagesData,
-    packagesLoading,
-    packagesError,
-    commitFilesData,
-    storyboardContextData,
-    selectedCollection,
-    collectionRepositories,
-    collectionLoading,
-    collectionError,
-  ]);
+  // All slices are now explicit useMemo slices (see above)
+  // No Map-based updating needed - React handles reactivity automatically through useMemo dependencies
 
   // Build context value
+  // All slices are now explicit - use typed properties directly
   const context: PanelContextValue<OwnerPageContextType> = useMemo(
     () => ({
       currentScope: {
@@ -646,53 +577,51 @@ export function OwnerPageProvider({
           ...repository,
         } : repository,
       },
+      // Empty Map - all slices are now explicit (required by interface)
       slices: slicesRef.current,
-      selectedCollectionView: slicesRef.current.get('selectedCollectionView') as SelectedCollectionView || {
-        scope: 'workspace',
-        name: 'selectedCollectionView',
-        data: {
-          collection: null,
-          repositories: [],
-          dependencies: undefined,
-        },
-        loading: false,
-        error: null,
-        refresh: async () => {},
-      },
       adapters,
-      // Typed slice properties
-      'owner-repositories': slicesRef.current.get('owner-repositories') as DataSlice<OwnerRepositoriesSliceData> | undefined,
-      ownerRepositories: slicesRef.current.get('owner-repositories') as DataSlice<OwnerRepositoriesSliceData>, // Required by OwnerRepositoriesPanel - non-null assertion since it's always initialized
-      fileTree: slicesRef.current.get('fileTree') as DataSlice<FileTree> | undefined,
-      fileCityColorModes: slicesRef.current.get('fileCityColorModes') as DataSlice<FileCityColorModesSliceData> | undefined,
-      quality: slicesRef.current.get('quality') as DataSlice<QualitySliceData> | undefined,
-      'active-file': slicesRef.current.get('active-file') as DataSlice<ActiveFileSlice> | undefined,
-      packages: slicesRef.current.get('packages') as DataSlice<PackagesSliceData>, // Required by PackageCompositionPanel - non-null assertion since it's always initialized
-      commitFiles: slicesRef.current.get('commitFiles') as DataSlice<CommitFilesSliceData> | undefined,
-      storyboardContext: slicesRef.current.get('storyboardContext') as DataSlice<StoryboardContextSliceData> | undefined,
-      getSlice: <T,>(name: string) => slicesRef.current.get(name) as DataSlice<T> | undefined,
-      getWorkspaceSlice: <T,>(name: string) => {
-        const slice = slicesRef.current.get(name);
-        return slice?.scope === 'workspace' ? (slice as DataSlice<T>) : undefined;
-      },
-      getRepositorySlice: <T,>(name: string) => {
-        const slice = slicesRef.current.get(name);
-        return slice?.scope === 'repository' ? (slice as DataSlice<T>) : undefined;
-      },
-      hasSlice: (name: string, scope?: 'workspace' | 'repository') => {
-        const slice = slicesRef.current.get(name);
-        if (!slice) return false;
-        return scope ? slice.scope === scope : true;
-      },
-      isSliceLoading: (name: string, scope?: 'workspace' | 'repository') => {
-        const slice = slicesRef.current.get(name);
-        if (!slice) return false;
-        if (scope && slice.scope !== scope) return false;
-        return slice.loading;
-      },
-      refresh,
+
+      // ===== EXPLICIT TYPED SLICES (migrated from Map) =====
+      // Required slices
+      'owner-repositories': ownerRepositoriesSlice,
+      ownerRepositories: ownerRepositoriesSlice, // Alias for panels expecting camelCase
+      packages: packagesSlice,
+      selectedCollectionView: selectedCollectionViewSlice,
+
+      // Optional slices
+      fileTree: fileTreeSlice,
+      fileCityColorModes: fileCityColorModesSlice,
+      quality: qualitySlice,
+      'active-file': activeFileSlice,
+      commitFiles: commitFilesSlice,
+      storyboardContext: storyboardContextSlice,
+
+      // ===== LEGACY METHODS (no-ops for interface compatibility) =====
+      // All slices are now explicit - use typed properties above instead
+      getSlice: () => undefined,
+      getWorkspaceSlice: () => undefined,
+      getRepositorySlice: () => undefined,
+      hasSlice: () => false,
+      isSliceLoading: () => false,
+      // Actions handle refreshing - this is a no-op for interface compatibility
+      refresh: async () => { /* no-op - use actions instead */ },
     }),
-    [workspace, repository, githubRepo, adapters, refresh]
+    [
+      workspace,
+      repository,
+      githubRepo,
+      adapters,
+      // All explicit slices
+      ownerRepositoriesSlice,
+      packagesSlice,
+      selectedCollectionViewSlice,
+      fileTreeSlice,
+      fileCityColorModesSlice,
+      qualitySlice,
+      activeFileSlice,
+      commitFilesSlice,
+      storyboardContextSlice,
+    ]
   );
 
   // Actions
