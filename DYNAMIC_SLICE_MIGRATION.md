@@ -2,7 +2,7 @@
 
 **Goal:** Migrate all panel contexts from Map-based dynamic slices to explicit typed slices.
 
-**Status:** 1/5 contexts in progress (20%)
+**Status:** 2/5 contexts in progress (40%)
 
 ---
 
@@ -104,12 +104,14 @@ await actions.createCollection(...)  // Action handles refresh
 
 ---
 
-### ❌ 2. RepositoryPageProvider (NOT STARTED)
+### 🟡 2. RepositoryPageProvider (IN PROGRESS - 1/13 slices migrated)
 - **Location:** `src/contexts/RepositoryPageProvider.tsx`
-- **Status:** ❌ Not Started
-- **Slices to migrate:**
+- **Status:** 🟡 Partially Migrated (8%)
+- **Total slices:** 13
+- **Slices migrated:**
+  - ✅ `fileTree` → explicit slice (DONE)
+- **Slices remaining:**
   - ❌ `active-file` / `activeFile` (required, aliased)
-  - ❌ `fileTree` (required)
   - ❌ `commits` (optional)
   - ❌ `quality` (optional)
   - ❌ `lensResults` (optional)
@@ -119,12 +121,15 @@ await actions.createCollection(...)  // Action handles refresh
   - ❌ `storyboardContext` (optional)
   - ❌ `telemetry` (optional)
   - ❌ `schematics` (optional)
+  - ❌ `fileCityColorModes` (optional)
+  - ❌ `commitFiles` (optional)
 - **Used by:** /[owner]/[repo] page (main repository view)
-- **Complexity:** Very High - 11 slices (most critical context!)
+- **Complexity:** Very High - 13 slices (most critical context!)
 - **Notes:**
   - Most heavily used context in the app
   - Two core slices are required (active-file, fileTree)
   - Has alias: activeFile → 'active-file'
+  - Started 2025-02-20
 
 ---
 
@@ -291,22 +296,47 @@ Located at: `/Users/griever/Developer/web-ade/industry-themed-alexandria-entry-p
 
 ---
 
+### 2025-02-20: RepositoryPageProvider - Started Migration (1/13 slices)
+- Migrated `fileTree` to explicit pattern
+- Created explicit useMemo slice with proper dependencies
+- Removed Map initialization and updating code for fileTree
+- Updated context to use explicit slice directly
+- Verified typecheck passes
+
+**Key changes:**
+- Created explicit fileTree slice with data, loading, and error state
+- No-op refresh function for interface compatibility
+- React handles reactivity through useMemo dependencies
+
+**Impact:**
+- File tree now has full type safety
+- 1 out of 13 slices migrated (8% complete for this context)
+- Most critical context - used by main repository view
+
+**Next steps for RepositoryPageProvider:**
+- Migrate `active-file` / `activeFile` slice (required, aliased)
+- Migrate remaining optional slices (commits, quality, packages, etc.)
+
+---
+
 ## Next Steps
 
 **Priority order:**
-1. ✅ Complete WorldsPageProvider (12 slices remaining)
+1. 🟡 Complete WorldsPageProvider (12 slices remaining)
    - Start with required slices: `userCollections`, `workspace`, `workspaceRepositories`, `packages`
    - Then optional slices
-2. Migrate HomePageProvider (3 slices - simplest)
-3. Migrate ActivityPageProvider (8 slices - all optional)
-4. Migrate OwnerPageProvider (9 slices)
-5. Migrate RepositoryPageProvider (11 slices - most complex and critical)
+2. 🟡 Complete RepositoryPageProvider (12 slices remaining) - **IN PROGRESS**
+   - Next: `active-file` / `activeFile` (required, aliased)
+   - Then remaining slices
+3. Migrate HomePageProvider (3 slices - simplest)
+4. Migrate ActivityPageProvider (8 slices - all optional)
+5. Migrate OwnerPageProvider (9 slices)
 
 **Estimated effort:**
 - WorldsPageProvider: 2-3 hours (12 slices remaining)
+- RepositoryPageProvider: 2-2.5 hours (12 slices remaining)
 - HomePageProvider: 30 minutes (3 slices)
 - ActivityPageProvider: 1 hour (8 slices)
 - OwnerPageProvider: 1.5 hours (9 slices)
-- RepositoryPageProvider: 2-3 hours (11 slices, most complex)
 
 **Total:** ~7-10 hours for full migration

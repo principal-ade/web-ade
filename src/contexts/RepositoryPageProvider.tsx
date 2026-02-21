@@ -368,7 +368,21 @@ export function RepositoryPageProvider({
   // State for enabled color modes
   const [enabledColorModes] = useState<string[]>([]);
 
-  // Slices ref
+  // Explicit slice: fileTree (typed for File City and other panels)
+  const fileTreeSlice = useMemo<DataSlice<FileTree>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'fileTree',
+      data: fileTree,
+      loading: fileTreeLoading,
+      error: fileTreeError,
+      // Actions handle refreshing - this is a no-op for interface compatibility
+      refresh: async () => { /* no-op */ },
+    }),
+    [fileTree, fileTreeLoading, fileTreeError]
+  );
+
+  // Slices ref (will be emptied after full migration)
   const slicesRef = useRef<Map<string, DataSlice>>(new Map());
 
   // Initialize slices on mount
@@ -384,14 +398,8 @@ export function RepositoryPageProvider({
       refresh: async () => {},
     });
 
-    initialSlices.set('fileTree', {
-      scope: 'repository',
-      name: 'fileTree',
-      data: null,
-      loading: false,
-      error: null,
-      refresh: async () => {},
-    });
+    // fileTree is now an explicit slice (see useMemo above)
+    // No Map initialization needed
 
     initialSlices.set('commits', {
       scope: 'repository',
@@ -636,16 +644,8 @@ export function RepositoryPageProvider({
 
   // Update slices
   useEffect(() => {
-    // Update fileTree slice
-    const fileTreeSlice = slicesRef.current.get('fileTree');
-    if (fileTreeSlice) {
-      slicesRef.current.set('fileTree', {
-        ...fileTreeSlice,
-        data: fileTree,
-        loading: fileTreeLoading,
-        error: fileTreeError,
-      });
-    }
+    // fileTree is now an explicit slice (see useMemo above)
+    // No Map-based updating needed - React handles reactivity automatically
 
     // Update commits slice
     const commitsSlice = slicesRef.current.get('commits');
@@ -844,7 +844,8 @@ export function RepositoryPageProvider({
       // Core slice properties (always present)
       'active-file': slicesRef.current.get('active-file') as DataSlice<ActiveFileSlice>,
       activeFile: slicesRef.current.get('active-file') as DataSlice<ActiveFileSlice>, // Alias for panels expecting camelCase
-      fileTree: slicesRef.current.get('fileTree') as DataSlice<FileTree>,
+      // Explicit typed slice (migrated from Map)
+      fileTree: fileTreeSlice,
       // Optional slice properties
       commits: slicesRef.current.get('commits') as DataSlice<CommitsSliceData> | undefined,
       quality: slicesRef.current.get('quality') as DataSlice<QualitySliceData> | undefined,
@@ -879,7 +880,7 @@ export function RepositoryPageProvider({
       },
       refresh,
     }),
-    [workspace, repository, githubRepo, adapters, refresh]
+    [workspace, repository, githubRepo, adapters, fileTreeSlice, refresh]
   );
 
   // Actions
