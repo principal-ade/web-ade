@@ -277,6 +277,7 @@ export function LayoutSidebar({
         className="flex items-center w-full"
         style={{
           minWidth: `${SIDEBAR_EXPANDED_WIDTH}px`,
+          height: '49px',
           borderBottom: `1px solid ${theme.colors.border}`,
           paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
           paddingBottom: '0.5rem',
