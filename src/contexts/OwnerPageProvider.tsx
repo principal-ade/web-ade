@@ -509,7 +509,7 @@ export function OwnerPageProvider({
 
     const fetchFileTree = async () => {
       try {
-        const response = await fetch(`/api/github/repo/${githubRepo}/tree`);
+        const response = await fetch(`/api/github/repo/${githubRepo}?action=tree`);
         if (!response.ok) {
           throw new Error('Failed to fetch file tree');
         }
