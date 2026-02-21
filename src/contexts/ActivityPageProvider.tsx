@@ -33,10 +33,10 @@ import type {
   ActiveFileSlice,
 } from '@principal-ade/panel-framework-core';
 import { layoutTools } from '@principal-ade/utcp-panel-event';
-import type { FormattedResults } from '@principal-ai/codebase-quality-lenses';
 import { minimatch } from 'minimatch';
 import { PathsFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
+import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode, FeedProjectSliceData } from '@industry-theme/file-city-panel';
 import { useAuth } from './AuthContext';
 
 // Host-provided tools
@@ -72,54 +72,8 @@ const hostTools: PanelTool[] = [
   },
 ];
 
-// Quality slice data
-interface QualitySliceData {
-  summary: {
-    totalFiles: number;
-    filesWithIssues: number;
-    totalIssues: number;
-    criticalIssues: number;
-  };
-  fileIssues: Record<string, number>;
-  rawResults?: FormattedResults;
-}
-
-// File City color modes slice
-interface FileCityColorModesSliceData {
-  enabledModes: string[];
-  selectedColorMode: string | null;
-  qualityData?: QualitySliceData;
-}
-
-// Commit files slice data
-interface CommitFilesSliceData {
-  commitHash: string;
-  files: Array<{
-    path: string;
-    additions: number;
-    deletions: number;
-    changes: number;
-    status: 'added' | 'modified' | 'removed' | 'renamed';
-    previousPath?: string;
-  }>;
-}
-
-// Packages slice data
-interface PackagesSliceData {
-  packages: Array<{
-    name: string;
-    version: string;
-    path: string;
-    dependencies?: Record<string, string>;
-    devDependencies?: Record<string, string>;
-  }>;
-  rootPackage?: {
-    name?: string;
-    version?: string;
-    license?: string;
-    packageManager?: 'npm' | 'yarn' | 'pnpm' | 'bun' | 'pip' | 'cargo' | 'unknown';
-  };
-}
+// Type definitions imported from @industry-theme/file-city-panel:
+// QualitySliceData, PackagesSliceData, ColorMode
 
 // GitHub messages slice data
 interface GitHubMessagesSliceData {
@@ -141,8 +95,9 @@ interface GitHubMessagesSliceData {
 
 // Activity page context type - includes only the slices needed for activity page
 export interface ActivityPageContextType {
-  fileTree?: DataSlice<FileTree>;
-  fileCityColorModes?: DataSlice<FileCityColorModesSliceData>;
+  fileTree: DataSlice<FileTree>;
+  fileCityColorModes: DataSlice<FileCityColorModesSliceData>;
+  feedProject: DataSlice<FeedProjectSliceData>;
   quality?: DataSlice<QualitySliceData>;
   'active-file'?: DataSlice<ActiveFileSlice>;
   packages?: DataSlice<PackagesSliceData>;
@@ -206,7 +161,7 @@ export function ActivityPageProvider({
   const { isAuthenticated } = useAuth();
 
   // State for selected color mode (File City)
-  const [selectedColorMode, setSelectedColorMode] = useState<string | null>(null);
+  const [selectedColorMode, setSelectedColorMode] = useState<ColorMode | null>(null);
 
   // State for file tree
   const [fileTree, setFileTree] = useState<FileTree | null>(null);
@@ -235,6 +190,9 @@ export function ActivityPageProvider({
   // State for storyboard context
   const [storyboardContextData] = useState<StoryboardContextSliceData | null>(null);
 
+  // State for feed project (used by FeedCodeCityPanel)
+  const [feedProjectData, setFeedProjectData] = useState<FeedProjectSliceData | null>(null);
+
   // State for GitHub messages
   const [githubMessages, setGithubMessages] = useState<GitHubMessagesSliceData>({
     messages: [],
@@ -242,7 +200,7 @@ export function ActivityPageProvider({
   });
 
   // State for enabled color modes
-  const [enabledColorModes] = useState<string[]>([]);
+  const [enabledColorModes] = useState<ColorMode[]>([]);
 
   // ===== EXPLICIT SLICES (migrated from Map) =====
 
@@ -398,6 +356,19 @@ export function ActivityPageProvider({
     [githubMessages]
   );
 
+  // Explicit slice: feedProject (for FeedCodeCityPanel)
+  const feedProjectSlice = useMemo<DataSlice<FeedProjectSliceData>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'feedProject',
+      data: feedProjectData,
+      loading: fileTreeLoading,
+      error: null,
+      refresh: async () => { /* no-op */ },
+    }),
+    [feedProjectData, fileTreeLoading]
+  );
+
   // Slices ref (now empty after full migration)
   const slicesRef = useRef<Map<string, DataSlice>>(new Map());
 
@@ -429,6 +400,9 @@ export function ActivityPageProvider({
 
         const data = await response.json();
         const [owner, name] = githubRepo.split('/');
+        if (!owner || !name) {
+          throw new Error('Invalid repository format');
+        }
         const builder = new PathsFileTreeBuilder();
         const tree = builder.build({
           files: data.files || [],
@@ -437,6 +411,18 @@ export function ActivityPageProvider({
 
         setFileTree(tree);
         setFileTreeError(null);
+
+        // Set feed project data for FeedCodeCityPanel
+        setFeedProjectData({
+          repo: {
+            owner,
+            name,
+            fullName: githubRepo,
+            htmlUrl: `https://github.com/${githubRepo}`,
+            stars: 0,
+            forks: 0,
+          },
+        });
       } catch (error) {
         console.error('[ActivityPageProvider] Failed to fetch file tree:', error);
         setFileTreeError(error as Error);
@@ -530,6 +516,7 @@ export function ActivityPageProvider({
       // ===== EXPLICIT TYPED SLICES (migrated from Map) =====
       fileTree: fileTreeSlice,
       fileCityColorModes: fileCityColorModesSlice,
+      feedProject: feedProjectSlice,
       quality: qualitySlice,
       'active-file': activeFileSlice,
       packages: packagesSlice,
@@ -555,6 +542,7 @@ export function ActivityPageProvider({
       // All explicit slices
       fileTreeSlice,
       fileCityColorModesSlice,
+      feedProjectSlice,
       qualitySlice,
       activeFileSlice,
       packagesSlice,
@@ -608,7 +596,7 @@ export function ActivityPageProvider({
   // Listen for color mode events
   useEffect(() => {
     const unsubscribe = events.on('file-city:color-mode:select', (event) => {
-      const payload = event.payload as { mode: string };
+      const payload = event.payload as { mode: ColorMode };
       setSelectedColorMode(payload.mode);
     });
 

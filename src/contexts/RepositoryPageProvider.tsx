@@ -43,6 +43,7 @@ import type { FormattedResults } from '@principal-ai/codebase-quality-lenses';
 import { minimatch } from 'minimatch';
 import { PathsFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
+import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode } from '@industry-theme/file-city-panel';
 import { useAuth } from './AuthContext';
 
 // Host-provided tools
@@ -112,51 +113,7 @@ const hostTools: PanelTool[] = [
 ];
 
 // Type definitions for slice data
-
-interface QualitySliceData {
-  summary: {
-    totalFiles: number;
-    filesWithIssues: number;
-    totalIssues: number;
-    criticalIssues: number;
-  };
-  fileIssues: Record<string, number>;
-  rawResults?: FormattedResults;
-}
-
-interface FileCityColorModesSliceData {
-  enabledModes: string[];
-  selectedColorMode: string | null;
-  qualityData?: QualitySliceData;
-}
-
-interface CommitFilesSliceData {
-  commitHash: string;
-  files: Array<{
-    path: string;
-    additions: number;
-    deletions: number;
-    changes: number;
-    status: 'added' | 'modified' | 'removed' | 'renamed';
-    previousPath?: string;
-  }>;
-}
-
-interface PackagesSliceData {
-  packages: Array<{
-    name: string;
-    version: string;
-    path: string;
-    dependencies?: Record<string, string>;
-    devDependencies?: Record<string, string>;
-  }>;
-  rootPackage?: {
-    name?: string;
-    version?: string;
-    license?: string;
-    packageManager?: 'npm' | 'yarn' | 'pnpm' | 'bun' | 'pip' | 'cargo' | 'unknown';
-  };
-}
+// QualitySliceData, PackagesSliceData imported from @industry-theme/file-city-panel
 
 interface GitCommit {
   hash: string;
@@ -244,7 +201,7 @@ export interface RepositoryPageContextType {
   storyboardContext?: DataSlice<StoryboardContextSliceData>;
   telemetry?: DataSlice<TelemetrySliceData>;
   schematics?: DataSlice<SchematicsSliceData>;
-  fileCityColorModes?: DataSlice<FileCityColorModesSliceData>;
+  fileCityColorModes: DataSlice<FileCityColorModesSliceData>;
   commitFiles?: DataSlice<CommitFilesSliceData>;
 }
 
@@ -303,7 +260,7 @@ export function RepositoryPageProvider({
   const { isAuthenticated } = useAuth();
 
   // State for selected color mode (File City)
-  const [selectedColorMode, setSelectedColorMode] = useState<string | null>(null);
+  const [selectedColorMode, setSelectedColorMode] = useState<ColorMode | null>(null);
 
   // State for file tree
   const [fileTree, setFileTree] = useState<FileTree | null>(null);
@@ -366,7 +323,7 @@ export function RepositoryPageProvider({
   const [commitFilesData] = useState<CommitFilesSliceData | null>(null);
 
   // State for enabled color modes
-  const [enabledColorModes] = useState<string[]>([]);
+  const [enabledColorModes] = useState<ColorMode[]>([]);
 
   // Explicit slice: fileTree (typed for File City and other panels)
   const fileTreeSlice = useMemo<DataSlice<FileTree>>(
@@ -847,7 +804,7 @@ export function RepositoryPageProvider({
   // Listen for color mode events
   useEffect(() => {
     const unsubscribe = events.on('file-city:color-mode:select', (event) => {
-      const payload = event.payload as { mode: string };
+      const payload = event.payload as { mode: ColorMode };
       setSelectedColorMode(payload.mode);
     });
 

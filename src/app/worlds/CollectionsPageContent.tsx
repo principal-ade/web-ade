@@ -27,7 +27,7 @@ import {
 } from '@industry-theme/alexandria-panels';
 import { GitHubSearchPanel } from '@industry-theme/github-panels';
 import { panels as principalViewPanels } from '@industry-theme/principal-view-panels';
-import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
+import { CodeCityPanel } from '@industry-theme/file-city-panel';
 import {
   PackageCompositionPanel,
   CollectionMapPanel,
@@ -75,7 +75,7 @@ const GitHubSearchPanelLoader = GitHubSearchPanel;
 
 // Explore mode panels
 const PrincipalViewPanelLoader = principalViewPanels[0]!.component;
-const FileCityPanelLoader = fileCityPanels[0]!.component;
+const FileCityPanelLoader = CodeCityPanel;
 const PackageCompositionPanelLoader = PackageCompositionPanel;
 const CollectionMapPanelLoader = CollectionMapPanel;
 

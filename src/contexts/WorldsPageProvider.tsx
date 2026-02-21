@@ -41,11 +41,10 @@ import type {
 import type { CollectionMapPanelActions } from '@industry-theme/repository-composition-panels';
 import { layoutTools } from '@principal-ade/utcp-panel-event';
 import type { ValidatedRepositoryPath } from '@principal-ai/alexandria-core-library/types';
-import type { FormattedResults } from '@principal-ai/codebase-quality-lenses';
 import { minimatch } from 'minimatch';
 import { PathsFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
-import type { PackagesSliceData } from '@principal-ai/codebase-composition';
+import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode } from '@industry-theme/file-city-panel';
 import { useAuth } from './AuthContext';
 import { useUserCollections } from './UserCollectionsContext';
 import type { CustomRegion, RepositoryLayoutData } from '@principal-ai/alexandria-collections';
@@ -137,40 +136,8 @@ interface GitHubRepositoriesData {
   isAuthenticated: boolean;
 }
 
-// Quality slice data
-interface QualitySliceData {
-  summary: {
-    totalFiles: number;
-    filesWithIssues: number;
-    totalIssues: number;
-    criticalIssues: number;
-  };
-  fileIssues: Record<string, number>;
-  rawResults?: FormattedResults;
-}
-
-// File City color modes slice
-interface FileCityColorModesSliceData {
-  enabledModes: string[];
-  selectedColorMode: string | null;
-  qualityData?: QualitySliceData;
-}
-
-// Commit files slice data
-interface CommitFilesSliceData {
-  commitHash: string;
-  files: Array<{
-    path: string;
-    additions: number;
-    deletions: number;
-    changes: number;
-    status: 'added' | 'modified' | 'removed' | 'renamed';
-    previousPath?: string;
-  }>;
-}
-
-// Use slice types from alexandria-panels for type safety
-// UserCollectionsSlice, WorkspaceSlice, WorkspaceRepositoriesSlice imported above
+// Type definitions imported from @industry-theme/file-city-panel:
+// QualitySliceData, PackagesSliceData, ColorMode
 
 /**
  * Extended actions for WorldsPageProvider
@@ -188,8 +155,8 @@ export interface WorldsPageContextType {
   githubStarred: DataSlice<GitHubStarredSlice>; // Required for GitHubStarredPanel
   githubProjects: DataSlice<GitHubProjectsSlice>; // Required for GitHubProjectsPanel
   'github-repositories'?: DataSlice<GitHubRepositoriesData>;
-  fileTree?: DataSlice<FileTree>;
-  fileCityColorModes?: DataSlice<FileCityColorModesSliceData>;
+  fileTree: DataSlice<FileTree>;
+  fileCityColorModes: DataSlice<FileCityColorModesSliceData>;
   quality?: DataSlice<QualitySliceData>;
   'active-file'?: DataSlice<ActiveFileSlice>;
   packages: DataSlice<PackagesSliceData>; // Required - expected by PackageCompositionPanel
@@ -264,7 +231,7 @@ export function WorldsPageProvider({
   vfsRef.current = vfs;
 
   // State for selected color mode (File City)
-  const [selectedColorMode, setSelectedColorMode] = useState<string | null>(null);
+  const [selectedColorMode, setSelectedColorMode] = useState<ColorMode | null>(null);
 
   // State for file tree
   const [fileTree, setFileTree] = useState<FileTree | null>(null);
@@ -307,7 +274,7 @@ export function WorldsPageProvider({
   const [storyboardContextData] = useState<StoryboardContextSliceData | null>(null);
 
   // State for enabled color modes
-  const [enabledColorModes] = useState<string[]>([]);
+  const [enabledColorModes] = useState<ColorMode[]>([]);
 
   // Direct state for typed slices (always present and type-safe)
   // These slices are managed as React state and synced to slicesRef for backward compatibility
@@ -1155,7 +1122,7 @@ export function WorldsPageProvider({
   // Listen for color mode events
   useEffect(() => {
     const unsubscribe = events.on('file-city:color-mode:select', (event) => {
-      const payload = event.payload as { mode: string };
+      const payload = event.payload as { mode: ColorMode };
       setSelectedColorMode(payload.mode);
     });
 

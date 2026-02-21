@@ -45,7 +45,7 @@ import type { OpenWorkflowScenariosPayload } from '@/types/panel-events';
 // Static panel imports for type safety
 import { panels as markdownPanels } from '@industry-theme/markdown-panels';
 import { panels as alexandriaDocsPanels } from '@industry-theme/alexandria-docs-panel';
-import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
+import { CodeCityPanel } from '@industry-theme/file-city-panel';
 import { panels as backlogmdPanels } from '@industry-theme/backlogmd-kanban-panel';
 import { panels as principalViewPanels, TraceDetailsPanel } from '@industry-theme/principal-view-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
@@ -67,7 +67,7 @@ import {
 // Static panel loaders (type-safe, no SSR)
 const MarkdownPanelLoader = markdownPanels[0]!.component;
 const AlexandriaDocsPanelLoader = alexandriaDocsPanels[0]!.component;
-const FileCityPanelLoader = fileCityPanels[0]!.component;
+const FileCityPanelLoader = CodeCityPanel;
 const KanbanPanelLoader = backlogmdPanels[0]!.component;
 const TaskDetailPanelLoader = backlogmdPanels[1]!.component;
 const PrincipalViewPanelLoader = principalViewPanels[0]!.component;

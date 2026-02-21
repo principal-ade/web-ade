@@ -26,11 +26,11 @@ import { UserActivityPanel } from '@/components/UserActivityPanel';
 import { FollowingUsersPanel } from '@/components/FollowingUsersPanel';
 
 // Static imports for type safety
-import { panels as fileCityPanels } from '@industry-theme/file-city-panel';
+import { FeedCodeCityPanel } from '@industry-theme/file-city-panel';
 import { panels as githubPanels } from '@industry-theme/github-panels';
 
-// FeedCodeCityPanel is panels[1] which includes project header
-const FeedCodeCityPanelLoader = fileCityPanels[1]!.component;
+// FeedCodeCityPanel includes project header
+const FeedCodeCityPanelLoader = FeedCodeCityPanel;
 
 // GitHubMessagesPanel is panels[6]
 const GitHubMessagesPanelLoader = githubPanels[6]!.component;

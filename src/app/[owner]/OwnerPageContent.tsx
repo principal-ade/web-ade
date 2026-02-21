@@ -14,7 +14,7 @@ import { iconMap } from "@/components/collections/CollectionModal";
 import { addRecentOwner, type OwnerInfo, OwnerRepositoriesPanel } from "@industry-theme/github-panels";
 import { panels as principalViewPanels } from "@industry-theme/principal-view-panels";
 import { panels as codeQualityPanels } from "@principal-ade/code-quality-panels";
-import { panels as fileCityPanels } from "@industry-theme/file-city-panel";
+import { CodeCityPanel } from "@industry-theme/file-city-panel";
 import { PackageCompositionPanel, CollectionMapPanel } from "@industry-theme/repository-composition-panels";
 import {
   EditableConfigurablePanelLayout,
@@ -131,7 +131,7 @@ async function saveRecentOwnerWithMetadata(owner: string) {
 const OwnerRepositoriesPanelLoader = OwnerRepositoriesPanel;
 const PrincipalViewPanelLoader = principalViewPanels[0]!.component;
 const CodeQualityPanelLoader = codeQualityPanels[0]!.component;
-const FileCityPanelLoader = fileCityPanels[0]!.component;
+const FileCityPanelLoader = CodeCityPanel;
 const PackageCompositionPanelLoader = PackageCompositionPanel;
 const CollectionMapPanelLoader = CollectionMapPanel;
 

@@ -32,11 +32,10 @@ import type {
   ActiveFileSlice,
 } from '@principal-ade/panel-framework-core';
 import { layoutTools } from '@principal-ade/utcp-panel-event';
-import type { FormattedResults } from '@principal-ai/codebase-quality-lenses';
 import { minimatch } from 'minimatch';
 import { PathsFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
-import type { PackagesSliceData } from '@principal-ai/codebase-composition';
+import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode } from '@industry-theme/file-city-panel';
 import { useAuth } from './AuthContext';
 import type {
   Collection,
@@ -114,46 +113,15 @@ const hostTools: PanelTool[] = [
   },
 ];
 
-// GitHub repository interface
-// Owner repositories slice data
-// Quality slice data
-interface QualitySliceData {
-  summary: {
-    totalFiles: number;
-    filesWithIssues: number;
-    totalIssues: number;
-    criticalIssues: number;
-  };
-  fileIssues: Record<string, number>;
-  rawResults?: FormattedResults;
-}
-
-// File City color modes slice
-interface FileCityColorModesSliceData {
-  enabledModes: string[];
-  selectedColorMode: string | null;
-  qualityData?: QualitySliceData;
-}
-
-// Commit files slice data
-interface CommitFilesSliceData {
-  commitHash: string;
-  files: Array<{
-    path: string;
-    additions: number;
-    deletions: number;
-    changes: number;
-    status: 'added' | 'modified' | 'removed' | 'renamed';
-    previousPath?: string;
-  }>;
-}
+// Type definitions imported from @industry-theme/file-city-panel:
+// QualitySliceData, PackagesSliceData, ColorMode
 
 // Owner page context type - includes only the slices needed for owner page
 export interface OwnerPageContextType {
   'owner-repositories'?: DataSlice<OwnerRepositoriesSliceData>;
   ownerRepositories: DataSlice<OwnerRepositoriesSliceData>; // Required - expected by OwnerRepositoriesPanel
-  fileTree?: DataSlice<FileTree>;
-  fileCityColorModes?: DataSlice<FileCityColorModesSliceData>;
+  fileTree: DataSlice<FileTree>;
+  fileCityColorModes: DataSlice<FileCityColorModesSliceData>;
   quality?: DataSlice<QualitySliceData>;
   'active-file'?: DataSlice<ActiveFileSlice>;
   packages: DataSlice<PackagesSliceData>; // Required - expected by PackageCompositionPanel
@@ -219,7 +187,7 @@ export function OwnerPageProvider({
   const { isAuthenticated } = useAuth();
 
   // State for selected color mode (File City)
-  const [selectedColorMode, setSelectedColorMode] = useState<string | null>(null);
+  const [selectedColorMode, setSelectedColorMode] = useState<ColorMode | null>(null);
 
   // State for file tree
   const [fileTree, setFileTree] = useState<FileTree | null>(null);
@@ -258,7 +226,7 @@ export function OwnerPageProvider({
   const [storyboardContextData] = useState<StoryboardContextSliceData | null>(null);
 
   // State for enabled color modes
-  const [enabledColorModes] = useState<string[]>([]);
+  const [enabledColorModes] = useState<ColorMode[]>([]);
 
   // State for selectedCollectionView (for CollectionMapPanel)
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
@@ -905,7 +873,7 @@ export function OwnerPageProvider({
   // Listen for color mode events
   useEffect(() => {
     const unsubscribe = events.on('file-city:color-mode:select', (event) => {
-      const payload = event.payload as { mode: string };
+      const payload = event.payload as { mode: ColorMode };
       setSelectedColorMode(payload.mode);
     });
 
