@@ -324,7 +324,54 @@ export function WorldsPageProvider({
     refresh: async () => {},
   });
 
-  // Slices ref for dynamic/optional slices
+  // Explicit slice: githubStarred (typed for GitHubStarredPanel)
+  const githubStarredSlice = useMemo<DataSlice<GitHubStarredSlice>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'githubStarred',
+      data: {
+        repositories: githubRepos.starred,
+        loading: githubReposLoading,
+        error: undefined,
+      },
+      loading: githubReposLoading,
+      error: null,
+      // Actions handle refreshing - this is a no-op for interface compatibility
+      refresh: async () => { /* no-op */ },
+    }),
+    [githubRepos.starred, githubReposLoading]
+  );
+
+  // Explicit slice: githubProjects (typed for GitHubProjectsPanel)
+  const orgRepositoriesMap = useMemo(() => {
+    const map: Record<string, GitHubRepository[]> = {};
+    githubRepos.organizations.forEach(org => {
+      map[org.login] = org.repositories;
+    });
+    return map;
+  }, [githubRepos.organizations]);
+
+  const githubProjectsSlice = useMemo<DataSlice<GitHubProjectsSlice>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'githubProjects',
+      data: {
+        userRepositories: githubRepos.owned,
+        organizations: githubRepos.organizations,
+        orgRepositories: orgRepositoriesMap,
+        loading: githubReposLoading,
+        error: undefined,
+        currentUser: undefined, // TODO: Get from auth context if needed
+      },
+      loading: githubReposLoading,
+      error: null,
+      // Actions handle refreshing - this is a no-op for interface compatibility
+      refresh: async () => { /* no-op */ },
+    }),
+    [githubRepos.owned, githubRepos.organizations, orgRepositoriesMap, githubReposLoading]
+  );
+
+  // Slices ref for dynamic/optional slices (will be emptied after migration)
   const slicesRef = useRef<Map<string, DataSlice>>(new Map());
 
   // Initialize slices on mount
@@ -362,23 +409,8 @@ export function WorldsPageProvider({
       refresh: async () => {},
     });
 
-    initialSlices.set('githubStarred', {
-      scope: 'global',
-      name: 'githubStarred',
-      data: null,
-      loading: true,
-      error: null,
-      refresh: async () => {},
-    });
-
-    initialSlices.set('githubProjects', {
-      scope: 'global',
-      name: 'githubProjects',
-      data: null,
-      loading: true,
-      error: null,
-      refresh: async () => {},
-    });
+    // githubStarred and githubProjects are now explicit slices (see useMemo above)
+    // No Map initialization needed
 
     initialSlices.set('github-repositories', {
       scope: 'global',
@@ -470,7 +502,7 @@ export function WorldsPageProvider({
 
       const data = await response.json();
 
-      if (response.ok && data.success) {
+      if (response.ok && data.isAuthenticated) {
         setGithubRepos({
           owned: data.owned || [],
           starred: data.starred || [],
@@ -557,11 +589,6 @@ export function WorldsPageProvider({
 
     fetchFileTree();
   }, [githubRepo]);
-
-  // Refresh function
-  const refresh = useCallback(async () => {
-    await fetchGithubRepos();
-  }, [fetchGithubRepos]);
 
   // Adapters for file operations
   const adapters: PanelAdapters = useMemo(
@@ -694,32 +721,8 @@ export function WorldsPageProvider({
       });
     }
 
-    // Update githubStarred slice
-    const githubStarredSlice = slicesRef.current.get('githubStarred');
-    if (githubStarredSlice) {
-      slicesRef.current.set('githubStarred', {
-        ...githubStarredSlice,
-        data: {
-          starred: githubRepos.starred,
-          isAuthenticated: githubRepos.isAuthenticated,
-        },
-        loading: githubReposLoading,
-      });
-    }
-
-    // Update githubProjects slice
-    const githubProjectsSlice = slicesRef.current.get('githubProjects');
-    if (githubProjectsSlice) {
-      slicesRef.current.set('githubProjects', {
-        ...githubProjectsSlice,
-        data: {
-          owned: githubRepos.owned,
-          organizations: githubRepos.organizations,
-          isAuthenticated: githubRepos.isAuthenticated,
-        },
-        loading: githubReposLoading,
-      });
-    }
+    // githubStarred and githubProjects slices are now explicit (see useMemo above)
+    // No Map-based updating needed - React handles reactivity automatically
 
     // Update fileTree slice
     const fileTreeSlice = slicesRef.current.get('fileTree');
@@ -876,8 +879,9 @@ export function WorldsPageProvider({
       selectedCollectionView: selectedCollectionView,
       workspaceRepositories: slicesRef.current.get('workspaceRepositories') as DataSlice<WorkspaceCollectionRepositoriesSlice>,
       workspace: slicesRef.current.get('workspace') as DataSlice<WorkspaceSlice>,
-      githubStarred: slicesRef.current.get('githubStarred') as DataSlice<GitHubStarredSlice>,
-      githubProjects: slicesRef.current.get('githubProjects') as DataSlice<GitHubProjectsSlice>,
+      // Explicit typed slices (migrated from Map)
+      githubStarred: githubStarredSlice,
+      githubProjects: githubProjectsSlice,
       'github-repositories': slicesRef.current.get('github-repositories') as DataSlice<GitHubRepositoriesData> | undefined,
       fileTree: slicesRef.current.get('fileTree') as DataSlice<FileTree> | undefined,
       fileCityColorModes: slicesRef.current.get('fileCityColorModes') as DataSlice<FileCityColorModesSliceData> | undefined,
@@ -886,29 +890,16 @@ export function WorldsPageProvider({
       packages: slicesRef.current.get('packages') as DataSlice<PackagesSliceData>, // Required by PackageCompositionPanel - non-null assertion since it's always initialized
       commitFiles: slicesRef.current.get('commitFiles') as DataSlice<CommitFilesSliceData> | undefined,
       storyboardContext: slicesRef.current.get('storyboardContext') as DataSlice<StoryboardContextSliceData> | undefined,
-      getSlice: <T,>(name: string) => slicesRef.current.get(name) as DataSlice<T> | undefined,
-      getWorkspaceSlice: <T,>(name: string) => {
-        const slice = slicesRef.current.get(name);
-        return slice?.scope === 'workspace' ? (slice as DataSlice<T>) : undefined;
-      },
-      getRepositorySlice: <T,>(name: string) => {
-        const slice = slicesRef.current.get(name);
-        return slice?.scope === 'repository' ? (slice as DataSlice<T>) : undefined;
-      },
-      hasSlice: (name: string, scope?: 'workspace' | 'repository') => {
-        const slice = slicesRef.current.get(name);
-        if (!slice) return false;
-        return scope ? slice.scope === scope : true;
-      },
-      isSliceLoading: (name: string, scope?: 'workspace' | 'repository') => {
-        const slice = slicesRef.current.get(name);
-        if (!slice) return false;
-        if (scope && slice.scope !== scope) return false;
-        return slice.loading;
-      },
-      refresh,
+      // Legacy methods - no-ops after migration to explicit slices
+      // Actions handle refreshing - panels should use typed properties directly
+      getSlice: () => undefined,
+      getWorkspaceSlice: () => undefined,
+      getRepositorySlice: () => undefined,
+      hasSlice: () => false,
+      isSliceLoading: () => false,
+      refresh: async () => { /* no-op */ },
     }),
-    [workspace, repository, githubRepo, adapters, selectedCollection, selectedCollectionView, refresh]
+    [workspace, repository, githubRepo, adapters, selectedCollection, selectedCollectionView, githubStarredSlice, githubProjectsSlice]
   );
 
   // Actions
