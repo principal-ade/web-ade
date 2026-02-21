@@ -75,19 +75,19 @@ await actions.createCollection(...)  // Action handles refresh
 
 ## Contexts to Migrate
 
-### 🟡 1. WorldsPageProvider (IN PROGRESS - 2/14 slices migrated)
+### 🟡 1. WorldsPageProvider (IN PROGRESS - 6/14 slices migrated)
 - **Location:** `src/contexts/WorldsPageProvider.tsx`
-- **Status:** 🟡 Partially Migrated (14%)
+- **Status:** 🟡 Partially Migrated (43%)
 - **Total slices:** 14
 - **Slices migrated:**
+  - ✅ `userCollections` → explicit slice (DONE)
+  - ✅ `workspace` → explicit slice (DONE)
+  - ✅ `workspaceRepositories` → explicit slice (DONE)
+  - ✅ `packages` → explicit slice (DONE)
   - ✅ `githubStarred` → explicit slice (DONE)
   - ✅ `githubProjects` → explicit slice (DONE)
   - ✅ `selectedCollectionView` → already explicit state (special case)
 - **Slices remaining:**
-  - ❌ `userCollections` (required)
-  - ❌ `workspace` (required)
-  - ❌ `workspaceRepositories` (required)
-  - ❌ `packages` (required!)
   - ❌ `github-repositories` (optional)
   - ❌ `fileTree` (optional)
   - ❌ `fileCityColorModes` (optional)
@@ -98,7 +98,8 @@ await actions.createCollection(...)  // Action handles refresh
 - **Used by:** /worlds page (main collections view)
 - **Complexity:** High - 14 slices total
 - **Notes:**
-  - Partially migrated to fix empty panels issue
+  - All required slices migrated! ✅
+  - 7 optional slices remaining
   - Started 2025-02-20
   - Fixed API response check bug (data.success → data.isAuthenticated)
 
@@ -290,9 +291,31 @@ Located at: `/Users/griever/Developer/web-ade/industry-themed-alexandria-entry-p
 - Pattern established for remaining slices in this context
 
 **Next steps for WorldsPageProvider:**
-- Migrate `userCollections` slice
-- Migrate `workspace` and `workspaceRepositories` slices
-- Migrate optional slices (fileTree, quality, packages, etc.)
+- Migrate remaining optional slices (github-repositories, fileTree, fileCityColorModes, quality, active-file, commitFiles, storyboardContext)
+
+---
+
+### 2025-02-20: WorldsPageProvider - Migrated Required Slices (6/14 slices)
+- Migrated `userCollections`, `workspace`, `workspaceRepositories`, and `packages` to explicit pattern
+- All required slices now migrated ✅
+- Created explicit useMemo slices with proper dependencies
+- Removed Map initialization and updating code
+- Updated context to use explicit slices directly
+- Verified typecheck passes
+
+**Key changes:**
+- userCollections: includes collections, memberships, loading, saving, gitHubRepoExists, gitHubRepoUrl
+- workspace: conditional data based on collectionId and workspace props
+- workspaceRepositories: uses collectionRepoDetails and loading state
+- packages: uses packagesData, packagesLoading, packagesError state
+
+**Impact:**
+- All required slices have full type safety
+- 6 out of 14 slices migrated (43% complete for this context)
+- 7 optional slices remaining (all related to File City and other panels)
+
+**Next steps for WorldsPageProvider:**
+- Migrate optional slices as needed for specific panels
 
 ---
 

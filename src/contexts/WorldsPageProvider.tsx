@@ -371,6 +371,91 @@ export function WorldsPageProvider({
     [githubRepos.owned, githubRepos.organizations, orgRepositoriesMap, githubReposLoading]
   );
 
+  // Explicit slice: userCollections (typed for UserCollectionsPanel)
+  const userCollectionsSlice = useMemo<DataSlice<UserCollectionsSlice>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'userCollections',
+      data: {
+        collections: userCollections.collections,
+        memberships: userCollections.memberships,
+        loading: userCollections.loading,
+        saving: userCollections.saving,
+        gitHubRepoExists: userCollections.gitHubRepoExists,
+        gitHubRepoUrl: userCollections.gitHubRepoUrl,
+        error: undefined,
+      },
+      loading: userCollections.loading,
+      error: null,
+      // Actions handle refreshing - this is a no-op for interface compatibility
+      refresh: async () => { /* no-op */ },
+    }),
+    [
+      userCollections.collections,
+      userCollections.memberships,
+      userCollections.loading,
+      userCollections.saving,
+      userCollections.gitHubRepoExists,
+      userCollections.gitHubRepoUrl,
+    ]
+  );
+
+  // Explicit slice: workspace (typed for WorkspaceCollectionPanel)
+  const workspaceSlice = useMemo<DataSlice<WorkspaceSlice>>(
+    () => ({
+      scope: 'workspace' as const,
+      name: 'workspace',
+      data: collectionId && workspace ? {
+        workspace: {
+          id: collectionId,
+          name: workspace.name,
+          description: '',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+        loading: false,
+        error: undefined,
+      } : null,
+      loading: false,
+      error: null,
+      // Actions handle refreshing - this is a no-op for interface compatibility
+      refresh: async () => { /* no-op */ },
+    }),
+    [collectionId, workspace]
+  );
+
+  // Explicit slice: workspaceRepositories (typed for WorkspaceCollectionPanel)
+  const workspaceRepositoriesSlice = useMemo<DataSlice<WorkspaceCollectionRepositoriesSlice>>(
+    () => ({
+      scope: 'workspace' as const,
+      name: 'workspaceRepositories',
+      data: {
+        repositories: collectionRepoDetails,
+        loading: collectionRepoDetailsLoading,
+        error: undefined,
+      },
+      loading: collectionRepoDetailsLoading,
+      error: null,
+      // Actions handle refreshing - this is a no-op for interface compatibility
+      refresh: async () => { /* no-op */ },
+    }),
+    [collectionRepoDetails, collectionRepoDetailsLoading]
+  );
+
+  // Explicit slice: packages (typed for PackageCompositionPanel)
+  const packagesSlice = useMemo<DataSlice<PackagesSliceData>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'packages',
+      data: packagesData,
+      loading: packagesLoading,
+      error: packagesError,
+      // Actions handle refreshing - this is a no-op for interface compatibility
+      refresh: async () => { /* no-op */ },
+    }),
+    [packagesData, packagesLoading, packagesError]
+  );
+
   // Slices ref for dynamic/optional slices (will be emptied after migration)
   const slicesRef = useRef<Map<string, DataSlice>>(new Map());
 
@@ -378,39 +463,8 @@ export function WorldsPageProvider({
   useEffect(() => {
     const initialSlices = new Map<string, DataSlice>();
 
-    // Create initial slices with default data
-    initialSlices.set('userCollections', {
-      scope: 'global',
-      name: 'userCollections',
-      data: null,
-      loading: true,
-      error: null,
-      refresh: async () => {},
-    });
-
-    // Note: selectedCollectionView is now managed as direct state (see useState above)
-    // It will be synced to the Map in a separate useEffect for backward compatibility
-
-    initialSlices.set('workspaceRepositories', {
-      scope: 'workspace',
-      name: 'workspaceRepositories',
-      data: null,
-      loading: true,
-      error: null,
-      refresh: async () => {},
-    });
-
-    initialSlices.set('workspace', {
-      scope: 'workspace',
-      name: 'workspace',
-      data: null,
-      loading: true,
-      error: null,
-      refresh: async () => {},
-    });
-
-    // githubStarred and githubProjects are now explicit slices (see useMemo above)
-    // No Map initialization needed
+    // userCollections, workspace, workspaceRepositories, githubStarred, and githubProjects
+    // are now explicit slices (see useMemo above) - No Map initialization needed
 
     initialSlices.set('github-repositories', {
       scope: 'global',
@@ -457,14 +511,8 @@ export function WorldsPageProvider({
       refresh: async () => {},
     });
 
-    initialSlices.set('packages', {
-      scope: 'repository',
-      name: 'packages',
-      data: null,
-      loading: false,
-      error: null,
-      refresh: async () => {},
-    });
+    // packages is now an explicit slice (see useMemo above)
+    // No Map initialization needed
 
     initialSlices.set('commitFiles', {
       scope: 'repository',
@@ -615,23 +663,8 @@ export function WorldsPageProvider({
 
   // Update slices
   useEffect(() => {
-    // Update userCollections slice
-    const userCollectionsSlice = slicesRef.current.get('userCollections');
-    if (userCollectionsSlice) {
-      slicesRef.current.set('userCollections', {
-        ...userCollectionsSlice,
-        data: {
-          collections: userCollections.collections,
-          memberships: userCollections.memberships,
-          loading: userCollections.loading,
-          saving: userCollections.saving,
-          gitHubRepoExists: userCollections.gitHubRepoExists,
-          gitHubRepoUrl: userCollections.gitHubRepoUrl,
-          error: undefined,
-        },
-        loading: userCollections.loading,
-      });
-    }
+    // userCollections, workspace, and workspaceRepositories slices are now explicit (see useMemo above)
+    // No Map-based updating needed - React handles reactivity automatically
 
     // Update selectedCollectionView slice (using direct state)
     const selectedCollection = collectionId
@@ -678,38 +711,6 @@ export function WorldsPageProvider({
       error: userCollections.error || null,
       refresh: async () => {},
     });
-
-    // Update workspace slice
-    const workspaceSlice = slicesRef.current.get('workspace');
-    if (workspaceSlice && collectionId && workspace) {
-      slicesRef.current.set('workspace', {
-        ...workspaceSlice,
-        data: {
-          workspace: {
-            id: collectionId,
-            name: workspace.name,
-            description: '',
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-          },
-          loading: false,
-          error: undefined,
-        },
-      });
-    }
-
-    // Update workspaceRepositories slice
-    const workspaceReposSlice = slicesRef.current.get('workspaceRepositories');
-    if (workspaceReposSlice) {
-      slicesRef.current.set('workspaceRepositories', {
-        ...workspaceReposSlice,
-        data: {
-          repositories: collectionRepoDetails,
-          loading: collectionRepoDetailsLoading,
-          error: undefined,
-        },
-      });
-    }
 
     // Update github-repositories slice
     const githubReposSlice = slicesRef.current.get('github-repositories');
@@ -796,16 +797,8 @@ export function WorldsPageProvider({
       }
     }
 
-    // Update packages slice
-    const packagesSlice = slicesRef.current.get('packages');
-    if (packagesSlice) {
-      slicesRef.current.set('packages', {
-        ...packagesSlice,
-        data: packagesData,
-        loading: packagesLoading,
-        error: packagesError,
-      });
-    }
+    // packages is now an explicit slice (see useMemo above)
+    // No Map-based updating needed - React handles reactivity automatically
 
     // Update commitFiles slice
     const commitFilesSlice = slicesRef.current.get('commitFiles');
@@ -873,13 +866,12 @@ export function WorldsPageProvider({
       slices: slicesRef.current,
       adapters,
       selectedCollection,
-      // Typed slice properties
-      userCollections: slicesRef.current.get('userCollections') as DataSlice<UserCollectionsSlice>,
+      // Explicit typed slices (migrated from Map)
+      userCollections: userCollectionsSlice,
       // selectedCollectionView is managed as direct state for type safety (not in Map)
       selectedCollectionView: selectedCollectionView,
-      workspaceRepositories: slicesRef.current.get('workspaceRepositories') as DataSlice<WorkspaceCollectionRepositoriesSlice>,
-      workspace: slicesRef.current.get('workspace') as DataSlice<WorkspaceSlice>,
-      // Explicit typed slices (migrated from Map)
+      workspaceRepositories: workspaceRepositoriesSlice,
+      workspace: workspaceSlice,
       githubStarred: githubStarredSlice,
       githubProjects: githubProjectsSlice,
       'github-repositories': slicesRef.current.get('github-repositories') as DataSlice<GitHubRepositoriesData> | undefined,
@@ -887,7 +879,7 @@ export function WorldsPageProvider({
       fileCityColorModes: slicesRef.current.get('fileCityColorModes') as DataSlice<FileCityColorModesSliceData> | undefined,
       quality: slicesRef.current.get('quality') as DataSlice<QualitySliceData> | undefined,
       'active-file': slicesRef.current.get('active-file') as DataSlice<ActiveFileSlice> | undefined,
-      packages: slicesRef.current.get('packages') as DataSlice<PackagesSliceData>, // Required by PackageCompositionPanel - non-null assertion since it's always initialized
+      packages: packagesSlice, // Required by PackageCompositionPanel
       commitFiles: slicesRef.current.get('commitFiles') as DataSlice<CommitFilesSliceData> | undefined,
       storyboardContext: slicesRef.current.get('storyboardContext') as DataSlice<StoryboardContextSliceData> | undefined,
       // Legacy methods - no-ops after migration to explicit slices
@@ -899,7 +891,7 @@ export function WorldsPageProvider({
       isSliceLoading: () => false,
       refresh: async () => { /* no-op */ },
     }),
-    [workspace, repository, githubRepo, adapters, selectedCollection, selectedCollectionView, githubStarredSlice, githubProjectsSlice]
+    [workspace, repository, githubRepo, adapters, selectedCollection, selectedCollectionView, userCollectionsSlice, workspaceSlice, workspaceRepositoriesSlice, packagesSlice, githubStarredSlice, githubProjectsSlice]
   );
 
   // Actions
