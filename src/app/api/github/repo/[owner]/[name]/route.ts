@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { gitTreeCache } from "@/lib/git-tree-cache";
 import { getGitHubToken } from "@/lib/auth/cookies";
+import type {
+  GitHubTreeResponse,
+  GitHubRepoInfoResponse,
+  GitHubReadmeResponse,
+  GitHubFileResponse,
+  GitHubContributorsResponse,
+  GitHubCountsResponse,
+  GitHubCommit,
+} from "@/types/api";
 
 function addCorsHeaders(response: NextResponse) {
   response.headers.set("Access-Control-Allow-Origin", "*");
@@ -45,7 +54,7 @@ class GitHubApiError extends Error {
   }
 }
 
-async function makeGitHubRequest(endpoint: string, userToken?: string | null) {
+async function makeGitHubRequest<T>(endpoint: string, userToken?: string | null): Promise<T> {
   // Use user's token if provided, otherwise fall back to server token
   const token = userToken || process.env.GITHUB_TOKEN || null;
 
@@ -82,7 +91,7 @@ async function makeGitHubRequest(endpoint: string, userToken?: string | null) {
     throw new GitHubApiError(errorMessage, response.status);
   }
 
-  return response.json();
+  return response.json() as Promise<T>;
 }
 
 // GraphQL request for efficient data fetching
@@ -127,16 +136,16 @@ async function makeGitHubGraphQLRequest(
 }
 
 // Cached version of makeGitHubRequest
-function makeCachedGitHubRequest(
+function makeCachedGitHubRequest<T>(
   endpoint: string,
   cacheKey: string,
   revalidate: number,
   userToken?: string | null,
-) {
+): Promise<T> {
   // Note: We include userToken in the cache key for user-specific data
   const fullCacheKey = userToken ? `${cacheKey}-user-${userToken.substring(0, 8)}` : cacheKey;
   return unstable_cache(
-    async () => makeGitHubRequest(endpoint, userToken),
+    async () => makeGitHubRequest<T>(endpoint, userToken),
     [fullCacheKey],
     {
       revalidate,
@@ -157,11 +166,12 @@ export async function GET(
     // Get user's GitHub token from HTTP-only cookie
     const userToken = await getGitHubToken();
 
-    let data;
+    // Response data - union of all possible response types
+    let data: GitHubRepoInfoResponse | GitHubTreeResponse | GitHubReadmeResponse | GitHubContributorsResponse | GitHubFileResponse | GitHubCountsResponse;
 
     switch (action) {
       case "info":
-        data = await makeCachedGitHubRequest(
+        data = await makeCachedGitHubRequest<GitHubRepoInfoResponse>(
           `/repos/${owner}/${name}`,
           `repo-info-${owner}-${name}`,
           CACHE_DURATIONS.info,
@@ -178,7 +188,7 @@ export async function GET(
         // This ensures we don't serve stale trees when new commits are pushed
         let resolvedSha: string;
         try {
-          const refData = await makeGitHubRequest(
+          const refData = await makeGitHubRequest<GitHubCommit>(
             `/repos/${owner}/${name}/commits/${requestedRef}`,
             userToken
           );
@@ -191,28 +201,29 @@ export async function GET(
         const cacheKey = `${owner}/${name}/${resolvedSha}`;
 
         // Check in-memory cache first using the resolved SHA
-        const cachedTree = gitTreeCache.get(cacheKey);
+        const cachedTree = gitTreeCache.get(cacheKey) as GitHubTreeResponse | undefined;
         if (cachedTree) {
           data = cachedTree;
           break;
         }
 
         // Not in cache, fetch from GitHub using the resolved SHA
-        data = await makeGitHubRequest(
+        const treeData = await makeGitHubRequest<GitHubTreeResponse>(
           `/repos/${owner}/${name}/git/trees/${resolvedSha}?recursive=1`,
           userToken
         );
 
         // Cache by SHA
-        if (data && data.sha) {
-          gitTreeCache.set(cacheKey, data);
-          gitTreeCache.set(data.sha, data); // Also cache by tree SHA for direct lookups
+        if (treeData && treeData.sha) {
+          gitTreeCache.set(cacheKey, treeData);
+          gitTreeCache.set(treeData.sha, treeData); // Also cache by tree SHA for direct lookups
         }
+        data = treeData;
         break;
       }
 
       case "readme":
-        data = await makeCachedGitHubRequest(
+        data = await makeCachedGitHubRequest<GitHubReadmeResponse>(
           `/repos/${owner}/${name}/readme`,
           `repo-readme-${owner}-${name}`,
           CACHE_DURATIONS.readme,
@@ -221,7 +232,7 @@ export async function GET(
         break;
 
       case "contributors":
-        data = await makeCachedGitHubRequest(
+        data = await makeCachedGitHubRequest<GitHubContributorsResponse>(
           `/repos/${owner}/${name}/contributors?per_page=100`,
           `repo-contributors-${owner}-${name}`,
           CACHE_DURATIONS.contributors,
@@ -229,7 +240,7 @@ export async function GET(
         );
         break;
 
-      case "file":
+      case "file": {
         const filePath = searchParams.get("path");
         if (!filePath) {
           return NextResponse.json(
@@ -237,13 +248,14 @@ export async function GET(
             { status: 400 },
           );
         }
-        data = await makeCachedGitHubRequest(
+        data = await makeCachedGitHubRequest<GitHubFileResponse>(
           `/repos/${owner}/${name}/contents/${filePath}`,
           `repo-file-${owner}-${name}-${filePath}`,
           CACHE_DURATIONS.file,
           userToken,
         );
         break;
+      }
 
       case "counts": {
         // Use GraphQL to efficiently fetch PR and issue counts in a single request
@@ -263,7 +275,7 @@ export async function GET(
         data = {
           openIssues: countsData.repository.issues.totalCount,
           openPullRequests: countsData.repository.pullRequests.totalCount,
-        };
+        } satisfies GitHubCountsResponse;
         break;
       }
 

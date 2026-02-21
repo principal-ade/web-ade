@@ -45,6 +45,7 @@ import { minimatch } from 'minimatch';
 import { PathsFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
 import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode } from '@industry-theme/file-city-panel';
+import type { GitHubTreeResponse } from '@/types/api';
 import { useAuth } from './AuthContext';
 import { useUserCollections } from './UserCollectionsContext';
 import type { CustomRegion, RepositoryLayoutData } from '@principal-ai/alexandria-collections';
@@ -662,12 +663,12 @@ export function WorldsPageProvider({
           throw new Error('Failed to fetch file tree');
         }
 
-        const data = await response.json();
+        const data: GitHubTreeResponse = await response.json();
         const [owner, name] = githubRepo.split('/');
         // GitHub API returns { tree: [{ path, type, ... }] } - extract paths for blobs only
-        const filePaths = (data.tree || [])
-          .filter((entry: { type: string }) => entry.type === 'blob')
-          .map((entry: { path: string }) => entry.path);
+        const filePaths = data.tree
+          .filter((entry) => entry.type === 'blob')
+          .map((entry) => entry.path);
         const builder = new PathsFileTreeBuilder();
         const tree = builder.build({
           files: filePaths,
