@@ -527,13 +527,18 @@ export function OwnerPageProvider({
         const repoPrefix = `/GitHub/${githubRepo}/`;
         const relativePath = path.startsWith(repoPrefix) ? path.slice(repoPrefix.length) : path;
 
-        const response = await fetch(`/api/github/repo/${githubRepo}?action=file&path=${encodeURIComponent(relativePath)}`);
-        if (!response.ok) {
-          throw new Error(`Failed to read file: ${path}`);
+        const [owner, repo] = githubRepo.split('/');
+        if (!owner || !repo) {
+          throw new Error('Invalid repository format');
         }
 
-        const data = await response.json();
-        return data.content || '';
+        const data = await trpc.github.readFile.query({
+          owner,
+          repo,
+          path: relativePath,
+        });
+
+        return data.content;
       },
       matchesPath: (pattern: string, path: string): boolean => {
         return minimatch(path, pattern);
