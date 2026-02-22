@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Palette, GitCommit, ArrowLeftRight, Sparkles, X, Star, Rss, Menu, Package, Activity } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Palette, GitCommit, ArrowLeftRight, X, Star, Rss, Menu, Package, Activity } from 'lucide-react';
 import { UserAvatarMenu } from './UserAvatarMenu';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
@@ -28,9 +28,6 @@ interface EditorHeaderProps {
   onCommitClick?: () => void;
   // Panel visibility
   hideLeftToggle?: boolean;
-  // Gallery toggle
-  showGallery?: boolean;
-  onToggleGallery?: () => void;
   // Vim mode toggle
   vimMode?: boolean;
   onVimModeToggle?: () => void;
@@ -54,8 +51,6 @@ export function EditorHeader({
   pendingChangesCount = 0,
   onCommitClick,
   hideLeftToggle = false,
-  showGallery = false,
-  onToggleGallery,
   vimMode = false,
   onVimModeToggle,
   selectedColorMode,
@@ -346,37 +341,21 @@ export function EditorHeader({
             </Link>
           </div>
         )}
-        {/* Feed and Gallery buttons - only show on home page */}
+        {/* Feed button - only show on home page */}
         {!repositoryName && !ownerOnly && (
-          <div className="flex items-center gap-2">
-            <Link
-              href="/activity"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-all hover:opacity-80"
-              style={{
-                background: theme.colors.surface,
-                color: theme.colors.text,
-                border: `1px solid ${theme.colors.border}`,
-                textDecoration: 'none',
-              }}
-            >
-              <Rss className="w-4 h-4" />
-              <span>Feed</span>
-            </Link>
-            {onToggleGallery && (
-              <button
-                onClick={onToggleGallery}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-all hover:opacity-80"
-                style={{
-                  background: showGallery ? theme.colors.primary : theme.colors.surface,
-                  color: showGallery ? theme.colors.textOnPrimary : theme.colors.text,
-                  border: `1px solid ${showGallery ? theme.colors.primary : theme.colors.border}`,
-                }}
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Gallery</span>
-              </button>
-            )}
-          </div>
+          <Link
+            href="/activity"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-all hover:opacity-80"
+            style={{
+              background: theme.colors.surface,
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+              textDecoration: 'none',
+            }}
+          >
+            <Rss className="w-4 h-4" />
+            <span>Feed</span>
+          </Link>
         )}
       </div>
 

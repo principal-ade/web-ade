@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Search, Sparkles, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -68,11 +68,7 @@ interface UserGitHubRepo {
   updated_at: string;
 }
 
-interface CenteredSearchLayoutProps {
-  onToggleGallery?: () => void;
-}
-
-export function CenteredSearchLayout({ onToggleGallery }: CenteredSearchLayoutProps) {
+export function CenteredSearchLayout() {
   const { theme } = useTheme();
   const { isAuthenticated } = useAuth();
   const router = useRouter();
@@ -380,39 +376,6 @@ export function CenteredSearchLayout({ onToggleGallery }: CenteredSearchLayoutPr
               >
                 No recently visited repositories
               </p>
-              {onToggleGallery && (
-                <button
-                  onClick={onToggleGallery}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '10px 20px',
-                    fontSize: '15px',
-                    fontWeight: 500,
-                    fontFamily: theme.fonts.body,
-                    color: theme.colors.text,
-                    background: theme.colors.surface,
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = theme.colors.primary;
-                    e.currentTarget.style.borderColor = theme.colors.primary;
-                    e.currentTarget.style.color = theme.colors.textOnPrimary;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = theme.colors.surface;
-                    e.currentTarget.style.borderColor = theme.colors.border;
-                    e.currentTarget.style.color = theme.colors.text;
-                  }}
-                >
-                  <Sparkles size={16} />
-                  Explore the Gallery
-                </button>
-              )}
             </div>
           )}
 
