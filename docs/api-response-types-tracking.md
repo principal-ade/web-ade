@@ -134,22 +134,52 @@ const data = await fetchTyped<GitHubTreeResponse>(`/api/github/repo/${repo}?acti
 |-------|--------|-------|
 | `/api/chat` | [ ] | |
 | `/api/chat/gemini` | [ ] | |
-| `/api/tts/generate` | [x] | Types in src/lib/tts/types.ts |
-| `/api/tts/batch-generate` | [x] | Types in src/lib/tts/types.ts |
+| `/api/tts/generate` | [x] | Migrated to tRPC: `trpc.tts.generate` |
+| `/api/tts/batch-generate` | [x] | Migrated to tRPC: `trpc.tts.batchGenerate` |
 | `/api/backlog/tasks/create` | [ ] | |
+
+## tRPC Migration
+
+We're progressively migrating API routes to tRPC for compile-time type safety. tRPC eliminates the need for manual type annotations on fetch calls - types flow automatically from server to client.
+
+### tRPC Procedures
+| Procedure | Status | Notes |
+|-----------|--------|-------|
+| `trpc.tts.generate` | [x] | Migrated from `/api/tts/generate` |
+| `trpc.tts.batchGenerate` | [x] | Migrated from `/api/tts/batch-generate` |
+| `trpc.github.readFile` | [x] | New - handles base64 decoding server-side |
+
+### tRPC Infrastructure
+- [x] `src/server/trpc.ts` - tRPC instance configuration
+- [x] `src/server/routers/_app.ts` - Root router combining sub-routers
+- [x] `src/server/routers/tts.ts` - TTS router (generate, batchGenerate)
+- [x] `src/server/routers/github.ts` - GitHub router (readFile)
+- [x] `src/app/api/trpc/[trpc]/route.ts` - Next.js API handler
+- [x] `src/lib/trpc/client.ts` - Vanilla tRPC client for imperative usage
+
+### Benefits of tRPC over typed fetch
+1. **No manual types** - Types are inferred from Zod schemas
+2. **Compile-time errors** - Typos in procedure names caught immediately
+3. **Refactoring safety** - Rename a procedure, all usages update or error
+4. **Automatic validation** - Zod validates inputs server-side
 
 ## Consumers to Update
 
 After adding types to API routes, update all fetch consumers:
 
 ### Context Providers
-- [x] `src/contexts/RepositoryPageProvider.tsx` - tree
-- [x] `src/contexts/ActivityPageProvider.tsx` - tree
-- [x] `src/contexts/WorldsPageProvider.tsx` - tree
-- [x] `src/contexts/OwnerPageProvider.tsx` - tree
+- [x] `src/contexts/RepositoryPageProvider.tsx` - tree, readFile (tRPC), fetchAudioUrls (tRPC)
+- [x] `src/contexts/ActivityPageProvider.tsx` - tree, readFile (tRPC), fetchAudioUrls (tRPC)
+- [x] `src/contexts/WorldsPageProvider.tsx` - tree, readFile (tRPC), fetchAudioUrls (tRPC)
+- [x] `src/contexts/OwnerPageProvider.tsx` - tree, readFile (tRPC), fetchAudioUrls (tRPC)
 
 ### Components
 - [ ] Audit all components using `fetch('/api/...')`
+
+### Migrated to tRPC
+These consumers now use tRPC and get automatic type safety:
+- [x] `readFile` adapter in all 4 providers → `trpc.github.readFile.query()`
+- [x] `fetchAudioUrls` action in all 4 providers → `trpc.tts.batchGenerate.mutate()`
 
 ## Implementation Steps
 
