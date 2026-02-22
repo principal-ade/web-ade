@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGitHubToken } from "@/lib/auth/cookies";
+import type { GitHubCommitDetailResponse } from "@/types/api";
 
 function addCorsHeaders(response: NextResponse) {
   response.headers.set("Access-Control-Allow-Origin", "*");
@@ -69,7 +70,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const commit = await response.json();
+    const commit: GitHubCommitDetailResponse = await response.json();
 
     // Return commit with cache headers
     const jsonResponse = NextResponse.json(commit, {

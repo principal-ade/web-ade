@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGitHubToken } from "@/lib/auth/cookies";
+import type { GitHubIssue } from "@/types/api";
 
 function addCorsHeaders(response: NextResponse) {
   response.headers.set("Access-Control-Allow-Origin", "*");
@@ -74,11 +75,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const issues = await response.json();
+    const issues: GitHubIssue[] = await response.json();
 
     // Filter out pull requests (GitHub API returns PRs as issues too)
     const filteredIssues = issues.filter(
-      (issue: { pull_request?: unknown }) => !issue.pull_request
+      (issue) => !issue.pull_request
     );
 
     // Return issues with cache headers
@@ -169,7 +170,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const issue = await response.json();
+    const issue: GitHubIssue = await response.json();
     return addCorsHeaders(NextResponse.json({ issue, success: true }));
   } catch (error) {
     console.error("[issues API] Error creating issue:", error);

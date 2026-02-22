@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGitHubToken } from "@/lib/auth/cookies";
+import type { GitHubPullRequest } from "@/types/api";
 
 function addCorsHeaders(response: NextResponse) {
   response.headers.set("Access-Control-Allow-Origin", "*");
@@ -74,37 +75,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const pullRequests = await response.json();
+    const pullRequests: GitHubPullRequest[] = await response.json();
 
     // Transform to match PullRequestInfo interface expected by GitPullRequestsPanel
-    const transformedPRs = pullRequests.map((pr: {
-      id: number;
-      number: number;
-      title: string;
-      body: string | null;
-      state: 'open' | 'closed';
-      draft?: boolean;
-      html_url: string;
-      user?: {
-        login: string;
-        avatar_url?: string;
-        html_url?: string;
-      } | null;
-      created_at: string;
-      updated_at: string;
-      closed_at?: string | null;
-      merged_at?: string | null;
-      base?: {
-        ref: string;
-        sha?: string;
-      } | null;
-      head?: {
-        ref: string;
-        sha?: string;
-      } | null;
-      comments?: number;
-      review_comments?: number;
-    }) => ({
+    const transformedPRs = pullRequests.map((pr) => ({
       id: pr.id,
       number: pr.number,
       title: pr.title,

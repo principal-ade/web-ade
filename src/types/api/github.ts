@@ -231,6 +231,8 @@ export interface GitHubPullRequest {
   draft: boolean;
   mergeable?: boolean;
   mergeable_state?: string;
+  comments?: number;
+  review_comments?: number;
 }
 
 export type GitHubPullRequestsResponse = GitHubPullRequest[];
