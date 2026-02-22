@@ -38,6 +38,7 @@ import { PathsFileTreeBuilder, type FileTree, createFileTreeSource } from '@prin
 import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
 import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode, FeedProjectSliceData } from '@industry-theme/file-city-panel';
 import type { GitHubTreeResponse } from '@/types/api';
+import { trpc } from '@/lib/trpc/client';
 import { useAuth } from './AuthContext';
 
 // Host-provided tools
@@ -562,22 +563,13 @@ export function ActivityPageProvider({
       },
       fetchAudioUrls: async (context: { owner: string; repo: string; path: string; commitSha: string }) => {
         try {
-          const response = await fetch('/api/tts/batch-generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(context),
-          });
-
-          if (!response.ok) {
-            throw new Error(`Failed to fetch audio URLs: ${response.statusText}`);
-          }
-
-          const data = await response.json();
+          // Use tRPC for type-safe API call
+          const data = await trpc.tts.batchGenerate.mutate(context);
 
           // Convert array of steps to Map<stepId, audioUrl>
           // Only include URLs where status='ready' (cached files that exist)
           const urls = new Map<string, string>();
-          data.steps.forEach((step: { stepId: string; audioUrl: string; status: 'ready' | 'generating' }) => {
+          data.steps.forEach((step) => {
             if (step.status === 'ready') {
               urls.set(step.stepId, step.audioUrl);
             }
