@@ -25,5 +25,9 @@ export type {
   GitHubIssuesResponse,
   GitHubPullRequest,
   GitHubPullRequestsResponse,
+  GitHubRepo,
+  GitHubOrg,
+  GitHubUserProfile,
+  GitHubSearchReposResponse,
   GitHubErrorResponse,
 } from './github';

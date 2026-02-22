@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getGitHubToken } from '@/lib/auth/cookies';
+import type { GitHubSearchReposResponse } from '@/types/api';
 
 export async function GET(request: NextRequest) {
   try {
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const data = await response.json();
+    const data: GitHubSearchReposResponse = await response.json();
 
     return NextResponse.json(data);
   } catch (error) {

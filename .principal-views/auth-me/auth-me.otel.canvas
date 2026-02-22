@@ -1,0 +1,334 @@
+{
+  "pv": {
+    "name": "Get Current User (Auth Me)",
+    "version": "1.0.0",
+    "markdown": ".principal-views/auth-me/auth-me.md",
+    "edgeTypes": {
+      "flow": {
+        "label": "Flow"
+      },
+      "error": {
+        "label": "Error Path"
+      },
+      "external": {
+        "label": "External Call"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "http-request",
+      "type": "text",
+      "text": "# GET /api/auth/me\n\nHTTP request to get current user",
+      "x": 100,
+      "y": 50,
+      "width": 250,
+      "height": 100,
+      "color": "#3b82f6",
+      "pv": {
+        "status": "planned",
+        "event": {
+          "name": "http.request.start",
+          "attributes": {
+            "http.method": { "type": "string" },
+            "http.route": { "type": "string" }
+          }
+        },
+        "sources": [
+          "src/app/api/auth/me/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "http"
+        },
+        "shape": "rectangle",
+        "fill": "#dbeafe",
+        "stroke": "#3b82f6"
+      }
+    },
+    {
+      "id": "get-token",
+      "type": "text",
+      "text": "# Get GitHub Token\n\nRead token from HTTP-only cookie",
+      "x": 100,
+      "y": 200,
+      "width": 250,
+      "height": 100,
+      "color": "#f59e0b",
+      "pv": {
+        "status": "implemented",
+        "event": {
+          "name": "auth.me.get_token",
+          "attributes": {
+            "has_token": { "type": "boolean" }
+          }
+        },
+        "sources": [
+          "src/app/api/auth/me/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "auth",
+          "files": ["src/app/api/auth/me/route.ts"]
+        },
+        "shape": "rectangle",
+        "fill": "#fef3c7",
+        "stroke": "#f59e0b"
+      }
+    },
+    {
+      "id": "fetch-github-user",
+      "type": "text",
+      "text": "# Fetch GitHub User\n\nCall GitHub API /user endpoint",
+      "x": 100,
+      "y": 350,
+      "width": 250,
+      "height": 100,
+      "color": "#8b5cf6",
+      "pv": {
+        "status": "implemented",
+        "event": {
+          "name": "auth.me.fetch_github",
+          "attributes": {
+            "response.status": { "type": "number" }
+          }
+        },
+        "sources": [
+          "src/app/api/auth/me/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "external",
+          "files": ["src/app/api/auth/me/route.ts"]
+        },
+        "shape": "rectangle",
+        "fill": "#ede9fe",
+        "stroke": "#8b5cf6"
+      }
+    },
+    {
+      "id": "sync-token",
+      "type": "text",
+      "text": "# Sync Token\n\nOptionally sync from auth server",
+      "x": 450,
+      "y": 350,
+      "width": 220,
+      "height": 100,
+      "color": "#f59e0b",
+      "pv": {
+        "status": "implemented",
+        "event": {
+          "name": "auth.me.sync_token",
+          "attributes": {
+            "synced": { "type": "boolean" }
+          }
+        },
+        "sources": [
+          "src/app/api/auth/me/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "auth",
+          "files": ["src/app/api/auth/me/route.ts"]
+        },
+        "shape": "rectangle",
+        "fill": "#fef3c7",
+        "stroke": "#f59e0b"
+      }
+    },
+    {
+      "id": "return-user",
+      "type": "text",
+      "text": "# Return User Data\n\nRespond with user profile (no tokens)",
+      "x": 100,
+      "y": 500,
+      "width": 250,
+      "height": 100,
+      "color": "#22c55e",
+      "pv": {
+        "status": "implemented",
+        "event": {
+          "name": "auth.me.success",
+          "attributes": {
+            "user.login": { "type": "string" },
+            "user.id": { "type": "number" }
+          }
+        },
+        "sources": [
+          "src/app/api/auth/me/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/app/api/auth/me/route.ts"]
+        },
+        "shape": "rectangle",
+        "fill": "#d1fae5",
+        "stroke": "#22c55e",
+        "dataSchema": {
+          "isAuthenticated": {
+            "type": "boolean",
+            "required": true
+          },
+          "user.login": {
+            "type": "string",
+            "required": true
+          },
+          "user.id": {
+            "type": "number",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "unauthenticated",
+      "type": "text",
+      "text": "# Not Authenticated\n\nNo valid token found",
+      "x": 450,
+      "y": 200,
+      "width": 220,
+      "height": 100,
+      "color": "#ef4444",
+      "pv": {
+        "status": "implemented",
+        "event": {
+          "name": "auth.me.unauthenticated",
+          "attributes": {
+            "reason": { "type": "string" }
+          }
+        },
+        "sources": [
+          "src/app/api/auth/me/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "auth",
+          "files": ["src/app/api/auth/me/route.ts"]
+        },
+        "shape": "rectangle",
+        "fill": "#fee2e2",
+        "stroke": "#ef4444"
+      }
+    },
+    {
+      "id": "error",
+      "type": "text",
+      "text": "# Error\n\nFailed to fetch user data",
+      "x": 450,
+      "y": 500,
+      "width": 220,
+      "height": 100,
+      "color": "#ef4444",
+      "pv": {
+        "status": "implemented",
+        "event": {
+          "name": "auth.me.error",
+          "attributes": {
+            "error.type": { "type": "string" },
+            "error.message": { "type": "string" }
+          }
+        },
+        "sources": [
+          "src/app/api/auth/me/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error",
+          "files": ["src/app/api/auth/me/route.ts"]
+        },
+        "shape": "rectangle",
+        "fill": "#fee2e2",
+        "stroke": "#ef4444",
+        "dataSchema": {
+          "error.type": {
+            "type": "string",
+            "required": true
+          },
+          "error.message": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "request-to-token",
+      "fromNode": "http-request",
+      "fromSide": "bottom",
+      "toNode": "get-token",
+      "toSide": "top",
+      "label": "1. get token",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "token-to-unauth",
+      "fromNode": "get-token",
+      "fromSide": "right",
+      "toNode": "unauthenticated",
+      "toSide": "left",
+      "label": "no token",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "token-to-github",
+      "fromNode": "get-token",
+      "fromSide": "bottom",
+      "toNode": "fetch-github-user",
+      "toSide": "top",
+      "label": "2. has token",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "github-to-sync",
+      "fromNode": "fetch-github-user",
+      "fromSide": "right",
+      "toNode": "sync-token",
+      "toSide": "left",
+      "label": "3. optional sync",
+      "pv": {
+        "edgeType": "external"
+      }
+    },
+    {
+      "id": "github-to-user",
+      "fromNode": "fetch-github-user",
+      "fromSide": "bottom",
+      "toNode": "return-user",
+      "toSide": "top",
+      "label": "4. success",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "sync-to-user",
+      "fromNode": "sync-token",
+      "fromSide": "bottom",
+      "toNode": "return-user",
+      "toSide": "right",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "github-to-error",
+      "fromNode": "fetch-github-user",
+      "fromSide": "right",
+      "toNode": "error",
+      "toSide": "top",
+      "label": "API error",
+      "pv": {
+        "edgeType": "error"
+      }
+    }
+  ]
+}

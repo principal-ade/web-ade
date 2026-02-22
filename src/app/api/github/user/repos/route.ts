@@ -7,50 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { getGitHubToken } from '@/lib/auth/cookies';
-
-interface GitHubRepo {
-  id: number;
-  name: string;
-  full_name: string;
-  owner: {
-    login: string;
-    avatar_url: string;
-    type: string;
-  };
-  private: boolean;
-  html_url: string;
-  description: string | null;
-  fork: boolean;
-  clone_url: string;
-  language: string | null;
-  default_branch: string;
-  stargazers_count: number;
-  forks_count: number;
-  updated_at: string;
-  topics?: string[];
-  license?: {
-    key: string;
-    name: string;
-    spdx_id: string;
-  } | null;
-}
-
-interface GitHubOrg {
-  login: string;
-  id: number;
-  avatar_url: string;
-  description: string | null;
-}
-
-interface GitHubUser {
-  login: string;
-  id: number;
-  avatar_url: string;
-  html_url: string;
-  name: string | null;
-  bio: string | null;
-  type: string;
-}
+import type { GitHubRepo, GitHubOrg, GitHubUserProfile } from '@/types/api';
 
 export async function GET() {
   try {
@@ -89,7 +46,7 @@ export async function GET() {
     const ownedRepos: GitHubRepo[] = await ownedResponse.json();
     const starredRepos: GitHubRepo[] = starredResponse.ok ? await starredResponse.json() : [];
     const orgs: GitHubOrg[] = orgsResponse.ok ? await orgsResponse.json() : [];
-    const following: GitHubUser[] = followingResponse.ok ? await followingResponse.json() : [];
+    const following: GitHubUserProfile[] = followingResponse.ok ? await followingResponse.json() : [];
 
     // Fetch repos for each org
     const orgReposPromises = orgs.map(async (org) => {

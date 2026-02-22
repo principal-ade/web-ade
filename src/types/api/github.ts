@@ -237,6 +237,60 @@ export interface GitHubPullRequest {
 
 export type GitHubPullRequestsResponse = GitHubPullRequest[];
 
+// Repository (simplified for lists)
+export interface GitHubRepo {
+  id: number;
+  name: string;
+  full_name: string;
+  owner: {
+    login: string;
+    avatar_url: string;
+    type: string;
+  };
+  private: boolean;
+  html_url: string;
+  description: string | null;
+  fork: boolean;
+  clone_url: string;
+  language: string | null;
+  default_branch: string;
+  stargazers_count: number;
+  forks_count: number;
+  updated_at: string;
+  topics?: string[];
+  license?: {
+    key: string;
+    name: string;
+    spdx_id: string;
+  } | null;
+}
+
+// Organization
+export interface GitHubOrg {
+  login: string;
+  id: number;
+  avatar_url: string;
+  description: string | null;
+}
+
+// User profile (extended)
+export interface GitHubUserProfile {
+  login: string;
+  id: number;
+  avatar_url: string;
+  html_url: string;
+  name: string | null;
+  bio: string | null;
+  type: string;
+}
+
+// Search results
+export interface GitHubSearchReposResponse {
+  total_count: number;
+  incomplete_results: boolean;
+  items: GitHubRepo[];
+}
+
 // Error response
 export interface GitHubErrorResponse {
   error: string;
