@@ -38,16 +38,16 @@ const data = await fetchTyped<GitHubTreeResponse>(`/api/github/repo/${repo}?acti
 ### GitHub Repository Routes
 | Route | Status | Notes |
 |-------|--------|-------|
-| `/api/github/repo/[owner]/[name]` | [ ] | Multiple actions: info, tree, readme, file, contributors, counts |
-| `/api/github/repo/[owner]/[name]/commits` | [ ] | |
-| `/api/github/repo/[owner]/[name]/commits/[sha]` | [ ] | |
+| `/api/github/repo/[owner]/[name]` | [x] | Multiple actions: info, tree, readme, file, contributors, counts |
+| `/api/github/repo/[owner]/[name]/commits` | [x] | |
+| `/api/github/repo/[owner]/[name]/commits/[sha]` | [x] | |
 | `/api/github/repo/[owner]/[name]/commit` | [ ] | |
-| `/api/github/repo/[owner]/[name]/issues` | [ ] | |
+| `/api/github/repo/[owner]/[name]/issues` | [x] | |
 | `/api/github/repo/[owner]/[name]/issues/[number]` | [ ] | |
 | `/api/github/repo/[owner]/[name]/issues/[number]/timeline` | [ ] | |
 | `/api/github/repo/[owner]/[name]/issues/[number]/reactions` | [ ] | |
 | `/api/github/repo/[owner]/[name]/issues/comments/[commentId]/reactions` | [ ] | |
-| `/api/github/repo/[owner]/[name]/pull-requests` | [ ] | |
+| `/api/github/repo/[owner]/[name]/pull-requests` | [x] | |
 | `/api/github/repo/[owner]/[name]/pull-requests/[number]` | [ ] | |
 | `/api/github/repo/[owner]/[name]/pull-requests/[number]/files` | [ ] | |
 | `/api/github/repo/[owner]/[name]/pull-requests/comments/[commentId]/reactions` | [ ] | |
@@ -60,7 +60,7 @@ const data = await fetchTyped<GitHubTreeResponse>(`/api/github/repo/${repo}?acti
 ### GitHub User Routes
 | Route | Status | Notes |
 |-------|--------|-------|
-| `/api/github/user/repos` | [ ] | |
+| `/api/github/user/repos` | [x] | |
 | `/api/github/user/orgs` | [ ] | |
 | `/api/github/user/[username]/following` | [ ] | |
 | `/api/github/user/[username]/activity` | [ ] | |
@@ -82,7 +82,7 @@ const data = await fetchTyped<GitHubTreeResponse>(`/api/github/repo/${repo}?acti
 ### GitHub Other Routes
 | Route | Status | Notes |
 |-------|--------|-------|
-| `/api/github/search` | [ ] | |
+| `/api/github/search` | [x] | |
 | `/api/github/star/[owner]/[repo]` | [ ] | |
 
 ### Auth Routes
@@ -143,10 +143,10 @@ const data = await fetchTyped<GitHubTreeResponse>(`/api/github/repo/${repo}?acti
 After adding types to API routes, update all fetch consumers:
 
 ### Context Providers
-- [ ] `src/contexts/RepositoryPageProvider.tsx` - tree, commits, issues
-- [ ] `src/contexts/ActivityPageProvider.tsx` - tree, commits
-- [ ] `src/contexts/WorldsPageProvider.tsx` - tree
-- [ ] `src/contexts/OwnerPageProvider.tsx` - tree
+- [x] `src/contexts/RepositoryPageProvider.tsx` - tree
+- [x] `src/contexts/ActivityPageProvider.tsx` - tree
+- [x] `src/contexts/WorldsPageProvider.tsx` - tree
+- [x] `src/contexts/OwnerPageProvider.tsx` - tree
 
 ### Components
 - [ ] Audit all components using `fetch('/api/...')`
