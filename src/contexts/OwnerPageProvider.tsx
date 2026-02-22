@@ -512,6 +512,9 @@ export function OwnerPageProvider({
   // Actions handle data refreshing - React handles reactivity through useMemo dependencies
 
   // Adapters for file operations
+  // TODO: Centralize adapter creation into a shared hook (e.g., useGitHubAdapters)
+  // to reduce duplication across OwnerPageProvider, ActivityPageProvider,
+  // RepositoryPageProvider, and WorldsPageProvider
   const adapters: PanelAdapters = useMemo(
     () => ({
       readFile: async (path: string): Promise<string> => {
@@ -519,7 +522,11 @@ export function OwnerPageProvider({
           throw new Error('No repository selected');
         }
 
-        const response = await fetch(`/api/github/repo/${githubRepo}/file?path=${encodeURIComponent(path)}`);
+        // Strip the repo path prefix if present (e.g., /GitHub/owner/repo/file.txt -> file.txt)
+        const repoPrefix = `/GitHub/${githubRepo}/`;
+        const relativePath = path.startsWith(repoPrefix) ? path.slice(repoPrefix.length) : path;
+
+        const response = await fetch(`/api/github/repo/${githubRepo}/file?path=${encodeURIComponent(relativePath)}`);
         if (!response.ok) {
           throw new Error(`Failed to read file: ${path}`);
         }

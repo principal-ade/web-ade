@@ -675,7 +675,11 @@ export function RepositoryPageProvider({
           throw new Error('No repository selected');
         }
 
-        const response = await fetch(`/api/github/repo/${githubRepo}/file?path=${encodeURIComponent(path)}`);
+        // Strip the repo path prefix if present (e.g., /GitHub/owner/repo/file.txt -> file.txt)
+        const repoPrefix = `/GitHub/${githubRepo}/`;
+        const relativePath = path.startsWith(repoPrefix) ? path.slice(repoPrefix.length) : path;
+
+        const response = await fetch(`/api/github/repo/${githubRepo}/file?path=${encodeURIComponent(relativePath)}`);
         if (!response.ok) {
           throw new Error(`Failed to read file: ${path}`);
         }
