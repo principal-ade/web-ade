@@ -17,5 +17,10 @@ resources:
     # service.repository.url and service.commit.sha are auto-detected from git locally
     # and set via environment variables in production (see amplify.yml)
 
+    # Instrumentation scopes owned by this service
+    # Spans from these tracers will be matched against this service's storyboards
+    owned-scopes:
+      - "auth-me"
+
 nodeComponents: {}
 edgeComponents: {}

@@ -700,7 +700,7 @@ export function WorldsPageProvider({
         const repoPrefix = `/GitHub/${githubRepo}/`;
         const relativePath = path.startsWith(repoPrefix) ? path.slice(repoPrefix.length) : path;
 
-        const response = await fetch(`/api/github/repo/${githubRepo}/file?path=${encodeURIComponent(relativePath)}`);
+        const response = await fetch(`/api/github/repo/${githubRepo}?action=file&path=${encodeURIComponent(relativePath)}`);
         if (!response.ok) {
           throw new Error(`Failed to read file: ${path}`);
         }
