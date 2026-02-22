@@ -9,6 +9,9 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getGitHubToken, getGitHubUserId } from '@/lib/auth/cookies';
+import { trace } from '@opentelemetry/api';
+
+const tracer = trace.getTracer('auth-me');
 
 /**
  * Sync token from auth server's central token store
@@ -53,11 +56,22 @@ async function syncTokenFromServer(
 }
 
 export async function GET() {
+  const span = tracer.startSpan('auth.me');
+
   try {
     // Get GitHub token from HTTP-only cookie
     let githubToken = await getGitHubToken();
 
+    span.addEvent('auth.me.get_token', {
+      has_token: !!githubToken,
+    });
+
     if (!githubToken) {
+      span.addEvent('auth.me.unauthenticated', {
+        reason: 'no_token',
+      });
+      span.end();
+
       return NextResponse.json(
         { error: 'Not authenticated', isAuthenticated: false },
         { status: 401 }
@@ -72,6 +86,10 @@ export async function GET() {
       },
     });
 
+    span.addEvent('auth.me.fetch_github', {
+      'response.status': response.status,
+    });
+
     // If token is invalid, try to sync from central token store
     if (!response.ok && response.status === 401) {
       console.log('[Auth/me] Token invalid, attempting to sync from server...');
@@ -81,6 +99,11 @@ export async function GET() {
       if (storedUserId) {
         // Try to fetch the current valid token from the server
         const syncedToken = await syncTokenFromServer(storedUserId, githubToken);
+
+        span.addEvent('auth.me.sync_token', {
+          synced: !!syncedToken,
+        });
+
         if (syncedToken) {
           console.log('[Auth/me] Successfully synced new token from server');
 
@@ -112,6 +135,12 @@ export async function GET() {
       // If we still don't have a valid response, return 401
       if (!response.ok) {
         console.error('GitHub API error after sync attempt:', response.status, response.statusText);
+
+        span.addEvent('auth.me.unauthenticated', {
+          reason: 'invalid_token_after_sync',
+        });
+        span.end();
+
         return NextResponse.json(
           { error: 'Invalid token', isAuthenticated: false, needsSync: true },
           { status: 401 }
@@ -142,6 +171,12 @@ export async function GET() {
     }
 
     // Return user data (no tokens!)
+    span.addEvent('auth.me.success', {
+      'user.login': userData.login,
+      'user.id': userData.id,
+    });
+    span.end();
+
     return NextResponse.json({
       isAuthenticated: true,
       user: {
@@ -154,6 +189,13 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Auth me error:', error);
+
+    span.addEvent('auth.me.error', {
+      'error.type': error instanceof Error ? error.name : 'Unknown',
+      'error.message': error instanceof Error ? error.message : 'Unknown error',
+    });
+    span.end();
+
     return NextResponse.json(
       {
         error: 'Failed to fetch user',

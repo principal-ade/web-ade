@@ -134,8 +134,8 @@ const data = await fetchTyped<GitHubTreeResponse>(`/api/github/repo/${repo}?acti
 |-------|--------|-------|
 | `/api/chat` | [ ] | |
 | `/api/chat/gemini` | [ ] | |
-| `/api/tts/generate` | [ ] | |
-| `/api/tts/batch-generate` | [ ] | |
+| `/api/tts/generate` | [x] | Types in src/lib/tts/types.ts |
+| `/api/tts/batch-generate` | [x] | Types in src/lib/tts/types.ts |
 | `/api/backlog/tasks/create` | [ ] | |
 
 ## Consumers to Update

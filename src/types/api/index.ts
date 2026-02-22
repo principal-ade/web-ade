@@ -39,3 +39,17 @@ export type {
   CollectionsPutResponse,
   CollectionsPermissionsResponse,
 } from './collections';
+
+// TTS (Tour audio) types - re-exported from lib/tts
+export type {
+  TTSGenerateRequest,
+  TTSGenerateResponse,
+  TTSBatchGenerateRequest,
+  TTSBatchResponse,
+  TTSOptions,
+  TTSError,
+  IntroductionTour,
+  IntroductionTourStep,
+} from '@/lib/tts/types';
+
+export { TTSErrorCode } from '@/lib/tts/types';
