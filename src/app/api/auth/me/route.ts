@@ -11,8 +11,6 @@ import { cookies } from 'next/headers';
 import { getGitHubToken, getGitHubUserId } from '@/lib/auth/cookies';
 import { trace } from '@opentelemetry/api';
 
-const tracer = trace.getTracer('auth-me');
-
 /**
  * Sync token from auth server's central token store
  */
@@ -56,21 +54,21 @@ async function syncTokenFromServer(
 }
 
 export async function GET() {
-  const span = tracer.startSpan('auth.me');
+  // Get the active span (created by Next.js auto-instrumentation)
+  const span = trace.getActiveSpan();
 
   try {
     // Get GitHub token from HTTP-only cookie
     let githubToken = await getGitHubToken();
 
-    span.addEvent('auth.me.get_token', {
+    span?.addEvent('auth.me.get_token', {
       has_token: !!githubToken,
     });
 
     if (!githubToken) {
-      span.addEvent('auth.me.unauthenticated', {
+      span?.addEvent('auth.me.unauthenticated', {
         reason: 'no_token',
       });
-      span.end();
 
       return NextResponse.json(
         { error: 'Not authenticated', isAuthenticated: false },
@@ -86,7 +84,7 @@ export async function GET() {
       },
     });
 
-    span.addEvent('auth.me.fetch_github', {
+    span?.addEvent('auth.me.fetch_github', {
       'response.status': response.status,
     });
 
@@ -100,7 +98,7 @@ export async function GET() {
         // Try to fetch the current valid token from the server
         const syncedToken = await syncTokenFromServer(storedUserId, githubToken);
 
-        span.addEvent('auth.me.sync_token', {
+        span?.addEvent('auth.me.sync_token', {
           synced: !!syncedToken,
         });
 
@@ -136,10 +134,9 @@ export async function GET() {
       if (!response.ok) {
         console.error('GitHub API error after sync attempt:', response.status, response.statusText);
 
-        span.addEvent('auth.me.unauthenticated', {
+        span?.addEvent('auth.me.unauthenticated', {
           reason: 'invalid_token_after_sync',
         });
-        span.end();
 
         return NextResponse.json(
           { error: 'Invalid token', isAuthenticated: false, needsSync: true },
@@ -171,11 +168,10 @@ export async function GET() {
     }
 
     // Return user data (no tokens!)
-    span.addEvent('auth.me.success', {
+    span?.addEvent('auth.me.success', {
       'user.login': userData.login,
       'user.id': userData.id,
     });
-    span.end();
 
     return NextResponse.json({
       isAuthenticated: true,
@@ -190,11 +186,10 @@ export async function GET() {
   } catch (error) {
     console.error('Auth me error:', error);
 
-    span.addEvent('auth.me.error', {
+    span?.addEvent('auth.me.error', {
       'error.type': error instanceof Error ? error.name : 'Unknown',
       'error.message': error instanceof Error ? error.message : 'Unknown error',
     });
-    span.end();
 
     return NextResponse.json(
       {

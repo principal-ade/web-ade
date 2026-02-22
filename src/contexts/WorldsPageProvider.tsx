@@ -810,9 +810,9 @@ export function WorldsPageProvider({
         type: 'workspace' as const,
         workspace,
         repository: githubRepo ? {
+          ...repository,
           name: githubRepo.split('/')[1] || githubRepo,
           path: `/GitHub/${githubRepo}`,
-          ...repository,
         } : repository,
       },
       slices: slicesRef.current,

@@ -21,6 +21,7 @@ resources:
     # Spans from these tracers will be matched against this service's storyboards
     owned-scopes:
       - "auth-me"
+      - "next.js"
 
 nodeComponents: {}
 edgeComponents: {}

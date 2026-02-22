@@ -3,6 +3,9 @@
   "canvas": ".principal-views/auth-me/auth-me.otel.canvas",
   "mode": "span-tree",
   "spanPattern": "GET /api/auth/me/route",
+  "scope": "next.js",
+  "status": "implemented",
+  "files": ["src/app/api/auth/me/route.ts"],
   "name": "Get Current User",
   "description": "Fetch the currently authenticated user's profile from GitHub",
   "scenarios": [
@@ -13,7 +16,7 @@
       "template": {
         "summary": "Authenticated user: {{user.login}}",
         "events": {
-          "http.request.start": "HTTP request started",
+          "http.request.start": "GET /api/auth/me",
           "auth.me.get_token": "Getting GitHub token from cookie",
           "auth.me.fetch_github": "Fetching user profile from GitHub API",
           "auth.me.sync_token": "Syncing token from auth server",
@@ -26,18 +29,12 @@
       "description": "User is not authenticated (no token or invalid token)",
       "priority": 2,
       "template": {
-        "summary": "Not authenticated{{#if auth.me.fetch_github}} - invalid token{{else}} - no token{{/if}}",
+        "summary": "Not authenticated",
         "events": {
-          "http.request.start": "HTTP request started",
+          "http.request.start": "GET /api/auth/me",
           "auth.me.get_token": "Checking for GitHub token",
-          "auth.me.unauthenticated": "{{#if auth.me.fetch_github}}Token invalid after sync{{else}}No token found{{/if}}"
-        },
-        "flow": [
-          "Check for GitHub token in cookies",
-          "{{#if auth.me.fetch_github}}Attempt GitHub API call (failed){{/if}}",
-          "{{#if auth.me.sync_token}}Attempt token sync from auth server{{/if}}",
-          "Return 401 Unauthorized"
-        ]
+          "auth.me.unauthenticated": "No valid token found"
+        }
       }
     },
     {
@@ -47,7 +44,7 @@
       "template": {
         "summary": "Error: {{error.message}}",
         "events": {
-          "http.request.start": "HTTP request started",
+          "http.request.start": "GET /api/auth/me",
           "auth.me.get_token": "Getting GitHub token from cookie",
           "auth.me.error": "Error: {{error.message}}"
         }

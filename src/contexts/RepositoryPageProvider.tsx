@@ -710,9 +710,9 @@ export function RepositoryPageProvider({
         type: 'repository' as const,
         workspace,
         repository: githubRepo ? {
+          ...repository,
           name: githubRepo.split('/')[1] || githubRepo,
           path: `/GitHub/${githubRepo}`,
-          ...repository,
         } : repository,
       },
       // Empty Map - all slices are now explicit (required by interface)
