@@ -13,21 +13,9 @@
       "template": {
         "summary": "Authenticated user: {{user.login}}",
         "events": {
+          "http.request.start": "HTTP request started",
           "auth.me.get_token": "Getting GitHub token from cookie",
           "auth.me.fetch_github": "Fetching user profile from GitHub API",
-          "auth.me.success": "Returning user profile for {{user.login}}"
-        }
-      }
-    },
-    {
-      "id": "authenticated-with-sync",
-      "description": "User is authenticated after token sync from auth server",
-      "priority": 2,
-      "template": {
-        "summary": "Authenticated user (synced): {{user.login}}",
-        "events": {
-          "auth.me.get_token": "Getting GitHub token from cookie",
-          "auth.me.fetch_github": "Initial GitHub API call",
           "auth.me.sync_token": "Syncing token from auth server",
           "auth.me.success": "Returning user profile for {{user.login}}"
         }
@@ -35,37 +23,31 @@
     },
     {
       "id": "unauthenticated",
-      "description": "No token found - user is not authenticated",
-      "priority": 3,
+      "description": "User is not authenticated (no token or invalid token)",
+      "priority": 2,
       "template": {
-        "summary": "Not authenticated - no token",
+        "summary": "Not authenticated{{#if auth.me.fetch_github}} - invalid token{{else}} - no token{{/if}}",
         "events": {
+          "http.request.start": "HTTP request started",
           "auth.me.get_token": "Checking for GitHub token",
-          "auth.me.unauthenticated": "No valid token found"
-        }
-      }
-    },
-    {
-      "id": "invalid-token",
-      "description": "Token is invalid and sync failed",
-      "priority": 4,
-      "template": {
-        "summary": "Not authenticated - invalid token",
-        "events": {
-          "auth.me.get_token": "Getting GitHub token from cookie",
-          "auth.me.fetch_github": "GitHub API call failed",
-          "auth.me.sync_token": "Token sync attempted",
-          "auth.me.unauthenticated": "Token still invalid after sync"
-        }
+          "auth.me.unauthenticated": "{{#if auth.me.fetch_github}}Token invalid after sync{{else}}No token found{{/if}}"
+        },
+        "flow": [
+          "Check for GitHub token in cookies",
+          "{{#if auth.me.fetch_github}}Attempt GitHub API call (failed){{/if}}",
+          "{{#if auth.me.sync_token}}Attempt token sync from auth server{{/if}}",
+          "Return 401 Unauthorized"
+        ]
       }
     },
     {
       "id": "error",
       "description": "Error occurred while fetching user profile",
-      "priority": 5,
+      "priority": 3,
       "template": {
         "summary": "Error: {{error.message}}",
         "events": {
+          "http.request.start": "HTTP request started",
           "auth.me.get_token": "Getting GitHub token from cookie",
           "auth.me.error": "Error: {{error.message}}"
         }
