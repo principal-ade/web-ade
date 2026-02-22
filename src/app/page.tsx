@@ -194,7 +194,8 @@ function HomePageContent() {
       await Promise.all(
         Array.from(reposToFetch.entries()).map(async ([fullName, positions]) => {
           try {
-            const res = await fetch(`/api/github/repos/${fullName}`);
+            const [owner, name] = fullName.split('/');
+            const res = await fetch(`/api/github/repo/${owner}/${name}?action=info`);
             if (!res.ok) return;
             const data = await res.json();
 

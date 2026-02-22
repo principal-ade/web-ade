@@ -258,41 +258,21 @@ export function HomePageProvider({
 
     setGithubReposLoading(true);
     try {
-      // Fetch user's repositories
-      const reposResponse = await fetch('/api/github/user/repos');
-      if (!reposResponse.ok) throw new Error('Failed to fetch repositories');
-      const owned = await reposResponse.json();
-
-      // Fetch starred repositories
-      const starredResponse = await fetch('/api/github/user/starred');
-      if (!starredResponse.ok) throw new Error('Failed to fetch starred repos');
-      const starred = await starredResponse.json();
-
-      // Fetch organization repositories
-      const orgsResponse = await fetch('/api/github/user/orgs');
-      if (!orgsResponse.ok) throw new Error('Failed to fetch organizations');
-      const orgs = await orgsResponse.json();
-
-      // Fetch repos for each organization
-      const orgReposPromises = orgs.map(async (org: { login: string }) => {
-        const orgReposResponse = await fetch(`/api/github/orgs/${org.login}/repos`);
-        if (!orgReposResponse.ok) return [];
-        return orgReposResponse.json();
-      });
-
-      const orgReposArrays = await Promise.all(orgReposPromises);
-      const organizations = orgReposArrays.flat();
+      // Single endpoint returns owned, starred, and organizations with repos
+      const response = await fetch('/api/github/user/repos');
+      if (!response.ok) throw new Error('Failed to fetch repositories');
+      const data = await response.json();
 
       setGithubRepos({
-        owned,
-        starred,
-        organizations,
+        owned: data.owned || [],
+        starred: data.starred || [],
+        organizations: data.organizations || [],
         isAuthenticated: true,
       });
 
       // Also update the starred data
       setStarredData({
-        repositories: starred,
+        repositories: data.starred || [],
         loading: false,
       });
     } catch (error) {

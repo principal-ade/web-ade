@@ -158,8 +158,8 @@ export function ActivityPageProvider({
     };
   }, [events]);
 
-  // Get auth state
-  const { isAuthenticated } = useAuth();
+  // Get auth state (currently unused but may be needed for future features)
+  const { isAuthenticated: _isAuthenticated } = useAuth();
 
   // State for selected color mode (File City)
   const [selectedColorMode, setSelectedColorMode] = useState<ColorMode | null>(null);
@@ -194,8 +194,8 @@ export function ActivityPageProvider({
   // State for feed project (used by FeedCodeCityPanel)
   const [feedProjectData, setFeedProjectData] = useState<FeedProjectSliceData | null>(null);
 
-  // State for GitHub messages
-  const [githubMessages, setGithubMessages] = useState<GitHubMessagesSliceData>({
+  // State for GitHub messages (placeholder - notifications feature not yet implemented)
+  const [githubMessages] = useState<GitHubMessagesSliceData>({
     messages: [],
     loading: false,
   });
@@ -439,39 +439,6 @@ export function ActivityPageProvider({
     fetchFileTree();
   }, [githubRepo]);
 
-  // Fetch GitHub messages when authenticated
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setGithubMessages({ messages: [], loading: false });
-      return;
-    }
-
-    const fetchMessages = async () => {
-      setGithubMessages(prev => ({ ...prev, loading: true }));
-
-      try {
-        const response = await fetch('/api/github/user/notifications');
-        if (!response.ok) throw new Error('Failed to fetch notifications');
-
-        const data = await response.json();
-
-        setGithubMessages({
-          messages: data || [],
-          loading: false,
-        });
-      } catch (error) {
-        console.error('[ActivityPageProvider] Failed to fetch messages:', error);
-        setGithubMessages({
-          messages: [],
-          loading: false,
-          error: error as Error,
-        });
-      }
-    };
-
-    fetchMessages();
-  }, [isAuthenticated]);
-
   // Note: refresh is now a no-op inline function in the context
   // Actions handle data refreshing - React handles reactivity through useMemo dependencies
 
@@ -592,6 +559,35 @@ export function ActivityPageProvider({
       },
       notifyPanels: (event) => {
         events.emit(event);
+      },
+      fetchAudioUrls: async (context: { owner: string; repo: string; path: string; commitSha: string }) => {
+        try {
+          const response = await fetch('/api/tts/batch-generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(context),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch audio URLs: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+
+          // Convert array of steps to Map<stepId, audioUrl>
+          // Only include URLs where status='ready' (cached files that exist)
+          const urls = new Map<string, string>();
+          data.steps.forEach((step: { stepId: string; audioUrl: string; status: 'ready' | 'generating' }) => {
+            if (step.status === 'ready') {
+              urls.set(step.stepId, step.audioUrl);
+            }
+          });
+
+          return urls;
+        } catch (error) {
+          console.error('[ActivityPageProvider] Error fetching audio URLs:', error);
+          throw error;
+        }
       },
     }),
     [adapters, events]

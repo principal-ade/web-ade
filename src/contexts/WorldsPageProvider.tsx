@@ -897,6 +897,35 @@ export function WorldsPageProvider({
       notifyPanels: (event) => {
         events.emit(event);
       },
+      fetchAudioUrls: async (context: { owner: string; repo: string; path: string; commitSha: string }) => {
+        try {
+          const response = await fetch('/api/tts/batch-generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(context),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch audio URLs: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+
+          // Convert array of steps to Map<stepId, audioUrl>
+          // Only include URLs where status='ready' (cached files that exist)
+          const urls = new Map<string, string>();
+          data.steps.forEach((step: { stepId: string; audioUrl: string; status: 'ready' | 'generating' }) => {
+            if (step.status === 'ready') {
+              urls.set(step.stepId, step.audioUrl);
+            }
+          });
+
+          return urls;
+        } catch (error) {
+          console.error('[WorldsPageProvider] Error fetching audio URLs:', error);
+          throw error;
+        }
+      },
 
       // Region management actions (CollectionMapPanelActions)
       onInitializeDefaultRegions: async (
