@@ -31,3 +31,11 @@ export type {
   GitHubSearchReposResponse,
   GitHubErrorResponse,
 } from './github';
+
+export type {
+  CollectionsUser,
+  CollectionsGetResponse,
+  CollectionsPutRequest,
+  CollectionsPutResponse,
+  CollectionsPermissionsResponse,
+} from './collections';

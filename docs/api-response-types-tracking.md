@@ -75,8 +75,8 @@ const data = await fetchTyped<GitHubTreeResponse>(`/api/github/repo/${repo}?acti
 | Route | Status | Notes |
 |-------|--------|-------|
 | `/api/github/collections` | [ ] | |
-| `/api/github/collections/[username]` | [ ] | |
-| `/api/github/collections/[username]/permissions` | [ ] | |
+| `/api/github/collections/[username]` | [x] | GET and PUT |
+| `/api/github/collections/[username]/permissions` | [x] | |
 | `/api/github/collections/[username]/regions` | [ ] | |
 
 ### GitHub Other Routes

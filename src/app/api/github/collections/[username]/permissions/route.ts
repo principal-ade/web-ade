@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getGitHubToken } from '@/lib/auth/cookies';
+import type { CollectionsPermissionsResponse } from '@/types/api';
 
 const REPO_NAME = 'web-ade-collections';
 
@@ -18,10 +19,11 @@ export async function GET(
     const token = await getGitHubToken();
 
     if (!token) {
-      return NextResponse.json({
+      const response: CollectionsPermissionsResponse = {
         canEdit: false,
         reason: 'not_authenticated',
-      });
+      };
+      return NextResponse.json(response);
     }
 
     if (!username) {
@@ -57,34 +59,38 @@ export async function GET(
         );
 
         if (!repoCheck.ok) {
-          return NextResponse.json({
+          const notFoundResponse: CollectionsPermissionsResponse = {
             canEdit: false,
             reason: 'repo_not_found',
-          });
+          };
+          return NextResponse.json(notFoundResponse);
         }
 
-        return NextResponse.json({
+        const noAccessResponse: CollectionsPermissionsResponse = {
           canEdit: false,
           reason: 'no_access',
-        });
+        };
+        return NextResponse.json(noAccessResponse);
       }
 
-      return NextResponse.json({
+      const errorResponse: CollectionsPermissionsResponse = {
         canEdit: false,
         reason: 'error',
-      });
+      };
+      return NextResponse.json(errorResponse);
     }
 
     const data = await response.json();
-    const permission = data.permission;
+    const permission = data.permission as CollectionsPermissionsResponse['permission'];
 
     // 'admin' or 'write' permissions allow editing
     const canEdit = permission === 'admin' || permission === 'write';
 
-    return NextResponse.json({
+    const successResponse: CollectionsPermissionsResponse = {
       canEdit,
       permission,
-    });
+    };
+    return NextResponse.json(successResponse);
   } catch (error) {
     console.error('GitHub permissions check error:', error);
     return NextResponse.json(

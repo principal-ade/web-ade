@@ -26,7 +26,7 @@
       "height": 100,
       "color": "#3b82f6",
       "pv": {
-        "status": "planned",
+        "status": "approved",
         "event": {
           "name": "http.request.start",
           "attributes": {
@@ -39,7 +39,8 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "http"
+          "category": "http",
+          "files": ["src/app/api/auth/me/route.ts"]
         },
         "shape": "rectangle",
         "fill": "#dbeafe",
@@ -56,7 +57,7 @@
       "height": 100,
       "color": "#f59e0b",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "auth.me.get_token",
           "attributes": {
@@ -86,7 +87,7 @@
       "height": 100,
       "color": "#8b5cf6",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "auth.me.fetch_github",
           "attributes": {
@@ -116,7 +117,7 @@
       "height": 100,
       "color": "#f59e0b",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "auth.me.sync_token",
           "attributes": {
@@ -146,7 +147,7 @@
       "height": 100,
       "color": "#22c55e",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "auth.me.success",
           "attributes": {
@@ -191,7 +192,7 @@
       "height": 100,
       "color": "#ef4444",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "auth.me.unauthenticated",
           "attributes": {
@@ -221,7 +222,7 @@
       "height": 100,
       "color": "#ef4444",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "auth.me.error",
           "attributes": {

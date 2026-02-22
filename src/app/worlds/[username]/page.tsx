@@ -28,6 +28,7 @@ import {
 import { CollectionModal } from "@/components/collections/CollectionModal";
 import { AddRepositoryModal } from "@/components/collections/AddRepositoryModal";
 import type { Collection, CollectionMembership } from '@principal-ai/alexandria-collections';
+import type { CollectionsPermissionsResponse } from '@/types/api';
 
 // Static import for type safety
 const WorkspaceCollectionPanelLoader = WorkspaceCollectionPanel;
@@ -408,7 +409,7 @@ function SharedCollectionsWrapper() {
 
     fetch(`/api/github/collections/${username}/permissions`)
       .then(res => res.json())
-      .then(data => {
+      .then((data: CollectionsPermissionsResponse) => {
         setCanEdit(data.canEdit === true);
       })
       .catch(() => {

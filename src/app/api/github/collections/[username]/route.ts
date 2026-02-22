@@ -9,9 +9,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getGitHubToken } from '@/lib/auth/cookies';
+import type { Collection } from '@principal-ai/alexandria-collections';
 import type {
-  Collection,
-} from '@principal-ai/alexandria-collections';
+  CollectionsGetResponse,
+  CollectionsPutResponse,
+  CollectionsUser,
+} from '@/types/api';
 
 const REPO_NAME = 'web-ade-collections';
 const COLLECTIONS_DIR = 'collections';
@@ -19,14 +22,6 @@ const COLLECTIONS_DIR = 'collections';
 interface CollectionFile {
   version: string;
   collection: Collection;
-}
-
-interface GitHubUser {
-  login: string;
-  name: string | null;
-  avatar_url: string;
-  bio: string | null;
-  html_url: string;
 }
 
 export async function GET(
@@ -64,7 +59,7 @@ export async function GET(
       throw new Error(`Failed to fetch user: ${userResponse.status}`);
     }
 
-    const user: GitHubUser = await userResponse.json();
+    const user: CollectionsUser = await userResponse.json();
 
     // List files in collections directory
     const dirResponse = await fetch(
@@ -81,7 +76,7 @@ export async function GET(
 
     // Check if collections directory exists
     if (dirResponse.status === 404) {
-      return NextResponse.json({
+      const response: CollectionsGetResponse = {
         user: {
           login: user.login,
           name: user.name,
@@ -92,7 +87,8 @@ export async function GET(
         exists: false,
         collections: [],
         repoUrl: null,
-      });
+      };
+      return NextResponse.json(response);
     }
 
     if (!dirResponse.ok) {
@@ -128,7 +124,7 @@ export async function GET(
     const collectionsResults = await Promise.all(collectionPromises);
     const collections = collectionsResults.filter((c): c is Collection => c !== null);
 
-    return NextResponse.json({
+    const response: CollectionsGetResponse = {
       user: {
         login: user.login,
         name: user.name,
@@ -139,7 +135,8 @@ export async function GET(
       exists: true,
       collections,
       repoUrl: `https://github.com/${username}/${REPO_NAME}`,
-    });
+    };
+    return NextResponse.json(response);
   } catch (error) {
     console.error('GitHub collections fetch error:', error);
     return NextResponse.json(
@@ -246,7 +243,8 @@ export async function PUT(
 
     const results = await Promise.all(updatePromises);
 
-    return NextResponse.json({ success: true, updated: results.length });
+    const response: CollectionsPutResponse = { success: true, updated: results.length };
+    return NextResponse.json(response);
   } catch (error) {
     console.error('GitHub collections PUT error:', error);
 
