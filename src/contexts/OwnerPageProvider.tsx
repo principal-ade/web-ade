@@ -905,6 +905,15 @@ export function OwnerPageProvider({
           setSelectedCollection(updatedCollection);
         }
       },
+
+      addRepositoryToCollection: async (
+        _collectionId: string,
+        repositoryPath: string,
+      ): Promise<void> => {
+        // TODO: Implement API-based repository addition for other users' collections
+        console.log('[OwnerPageProvider] Adding repository to collection not yet supported:', repositoryPath);
+        alert('Adding repositories to collections on profile pages is coming soon!');
+      },
     }),
     [adapters, events, currentOwner, selectedCollection]
   );

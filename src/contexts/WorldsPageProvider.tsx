@@ -1151,6 +1151,14 @@ export function WorldsPageProvider({
           }
         }
       },
+
+      addRepositoryToCollection: async (
+        collectionId: string,
+        repositoryPath: string,
+      ): Promise<void> => {
+        console.log('[WorldsPageProvider] Adding repository to collection:', repositoryPath);
+        await userCollections.addRepository(collectionId, repositoryPath);
+      },
     }),
     [adapters, events, userCollections]
   );
