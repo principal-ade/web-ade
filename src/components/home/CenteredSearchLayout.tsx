@@ -209,7 +209,7 @@ export function CenteredSearchLayout() {
           />
           <input
             type="text"
-            placeholder="Search GitHub repositories or paste a URL..."
+            placeholder="Search GitHub or paste a link"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}
