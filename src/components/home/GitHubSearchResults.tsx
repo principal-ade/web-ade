@@ -362,7 +362,7 @@ const RepoCard: React.FC<{
       href={`/${repo.full_name}`}
       style={{
         padding: '16px 20px',
-        borderRadius: 0,
+        borderRadius: '12px',
         backgroundColor: theme.colors.surface,
         border: `1px solid ${theme.colors.border}`,
         display: 'flex',
@@ -468,7 +468,7 @@ const SkeletonCard: React.FC<{
     <div
       style={{
         padding: '16px 20px',
-        borderRadius: 0,
+        borderRadius: '12px',
         backgroundColor: theme.colors.surface,
         border: `1px solid ${theme.colors.border}`,
         display: 'flex',
