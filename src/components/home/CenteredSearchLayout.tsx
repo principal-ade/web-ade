@@ -356,29 +356,6 @@ export function CenteredSearchLayout() {
             </div>
           )}
 
-          {/* Empty state - show when no search query and no recent repos */}
-          {!searchQuery.trim() && recentRepos.length === 0 && (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '16px',
-                marginTop: '48px',
-                color: theme.colors.textMuted,
-              }}
-            >
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: '15px',
-                }}
-              >
-                No recently visited repositories
-              </p>
-            </div>
-          )}
-
           {/* Search Results */}
           {searchQuery.trim() && (
             <div style={{ marginTop: '32px' }}>
