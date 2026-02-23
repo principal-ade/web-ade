@@ -1156,8 +1156,19 @@ export function WorldsPageProvider({
         collectionId: string,
         repositoryPath: string,
       ): Promise<void> => {
-        console.log('[WorldsPageProvider] Adding repository to collection:', repositoryPath);
-        await userCollections.addRepository(collectionId, repositoryPath);
+        console.log('[WorldsPageProvider] Adding repository to collection:', {
+          collectionId,
+          repositoryPath,
+          existingCollections: userCollections.collections.map(c => ({ id: c.id, name: c.name })),
+          existingMemberships: userCollections.memberships.length,
+        });
+        try {
+          await userCollections.addRepository(collectionId, repositoryPath);
+          console.log('[WorldsPageProvider] Repository added successfully');
+        } catch (error) {
+          console.error('[WorldsPageProvider] Failed to add repository:', error);
+          throw error;
+        }
       },
     }),
     [adapters, events, userCollections]

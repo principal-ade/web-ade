@@ -391,8 +391,22 @@ export async function PUT(request: NextRequest) {
     const collections: Collection[] = body.collections || [];
     const memberships: CollectionMembership[] = body.memberships || [];
 
+    console.log('[API] PUT /api/github/collections', {
+      collectionsCount: collections.length,
+      membershipsCount: memberships.length,
+      memberships: memberships.map(m => ({ collectionId: m.collectionId, repositoryId: m.repositoryId })),
+    });
+
     // Merge memberships into collections
     const collectionsWithMembers = mergeCollectionsWithMemberships(collections, memberships);
+
+    console.log('[API] After merge:', {
+      collectionsWithMembers: collectionsWithMembers.map(c => ({
+        id: c.id,
+        name: c.name,
+        membersCount: c.members.length,
+      })),
+    });
 
     // Check if repo exists
     const exists = await checkRepoExists(token, user.login);
