@@ -26,34 +26,41 @@ const RecentRepositoriesPanelLoader = dynamicImport(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) as React.ComponentType<any>;
 
-// LocalStorage keys for recent items
-const RECENT_REPOS_KEY = 'recent-repos';
+// LocalStorage keys - same as RecentRepositoriesPanel from @industry-theme/github-panels
+const RECENT_REPOS_KEY = 'recent-repositories';
 const RECENT_OWNERS_KEY = 'recent-owners';
 
-// RecentOwner format used by [owner]/page.tsx when storing to localStorage
-interface RecentOwner {
-  owner: string;
-  visitedAt: string;
-}
-
-
-function getRecentItems(key: string, max: number = 10): string[] {
+function getRecentRepos(max: number = 10): string[] {
   if (typeof window === 'undefined') return [];
   try {
-    const stored = localStorage.getItem(key);
+    const stored = localStorage.getItem(RECENT_REPOS_KEY);
     if (!stored) return [];
 
     const parsed: unknown[] = JSON.parse(stored);
+    return parsed
+      .filter((item): item is { full_name: string } =>
+        item != null && typeof item === 'object' && 'full_name' in item && typeof (item as { full_name: unknown }).full_name === 'string'
+      )
+      .slice(0, max)
+      .map(item => item.full_name);
+  } catch {
+    return [];
+  }
+}
 
-    // Handle recent-owners format: [{ owner: string, visitedAt: string }, ...]
-    // vs recent-repos format: [string, ...]
-    return parsed.slice(0, max).map(item => {
-      if (typeof item === 'string') return item;
-      if (item && typeof item === 'object' && 'owner' in item) {
-        return (item as RecentOwner).owner;
-      }
-      return '';
-    }).filter(Boolean);
+function getRecentOwners(max: number = 10): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const stored = localStorage.getItem(RECENT_OWNERS_KEY);
+    if (!stored) return [];
+
+    const parsed: unknown[] = JSON.parse(stored);
+    return parsed
+      .filter((item): item is { login: string } =>
+        item != null && typeof item === 'object' && 'login' in item && typeof (item as { login: unknown }).login === 'string'
+      )
+      .slice(0, max)
+      .map(item => item.login);
   } catch {
     return [];
   }
@@ -74,10 +81,18 @@ function HomePageContent() {
     setMounted(true);
   }, []);
 
-  // Load recent items from localStorage on mount
+  // Load recent items from localStorage on mount and listen for updates
   useEffect(() => {
-    setRecentRepos(getRecentItems(RECENT_REPOS_KEY));
-    setRecentOwners(getRecentItems(RECENT_OWNERS_KEY));
+    const loadRecent = () => {
+      setRecentRepos(getRecentRepos());
+      setRecentOwners(getRecentOwners());
+    };
+
+    loadRecent();
+
+    // Listen for updates from RecentRepositoriesPanel
+    window.addEventListener('recent-items-updated', loadRecent);
+    return () => window.removeEventListener('recent-items-updated', loadRecent);
   }, []);
 
 
