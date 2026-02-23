@@ -2,7 +2,7 @@
   "version": "1.0.0",
   "canvas": ".principal-views/auth-me/auth-me.otel.canvas",
   "mode": "span-tree",
-  "spanPattern": "GET /api/auth/me/route",
+  "spanPattern": "executing api route (app) /api/auth/me/route",
   "scope": "next.js",
   "status": "implemented",
   "files": ["src/app/api/auth/me/route.ts"],
