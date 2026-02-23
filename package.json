@@ -38,7 +38,7 @@
     "@industry-theme/github-panels": "^0.1.68",
     "@industry-theme/markdown-panels": "^0.2.25",
     "@industry-theme/principal-view-panels": "^0.11.4",
-    "@industry-theme/repository-composition-panels": "^0.6.20",
+    "@industry-theme/repository-composition-panels": "^0.6.22",
     "@industry-theme/theme-editor-panel": "^0.1.5",
     "@mlc-ai/web-llm": "^0.2.80",
     "@monaco-editor/react": "^4.7.0",
