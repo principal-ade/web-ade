@@ -42,7 +42,7 @@ import type { CollectionMapPanelActions } from '@industry-theme/repository-compo
 import { layoutTools } from '@principal-ade/utcp-panel-event';
 import type { ValidatedRepositoryPath } from '@principal-ai/alexandria-core-library/types';
 import { minimatch } from 'minimatch';
-import { PathsFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
+import { GitFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
 import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode } from '@industry-theme/file-city-panel';
 import type { GitHubTreeResponse } from '@/types/api';
@@ -666,14 +666,19 @@ export function WorldsPageProvider({
 
         const data: GitHubTreeResponse = await response.json();
         const [owner, name] = githubRepo.split('/');
-        // GitHub API returns { tree: [{ path, type, ... }] } - extract paths for blobs only
-        const filePaths = data.tree
+        // GitHub API returns { tree: [{ path, type, ... }] } - extract file info for blobs only
+        const files = data.tree
           .filter((entry) => entry.type === 'blob')
-          .map((entry) => entry.path);
-        const builder = new PathsFileTreeBuilder();
+          .map((entry) => ({
+            path: entry.path,
+            size: entry.size,
+          }));
+        const builder = new GitFileTreeBuilder();
         const tree = builder.build({
-          files: filePaths,
+          files,
           rootPath: `/${owner}/${name}`,
+          commitSha: data.sha,
+          branch: 'main',
         });
 
         setFileTree(tree);
@@ -818,6 +823,7 @@ export function WorldsPageProvider({
           ...repository,
           name: githubRepo.split('/')[1] || githubRepo,
           path: `/GitHub/${githubRepo}`,
+          githubRepo,
         } : repository,
       },
       slices: slicesRef.current,

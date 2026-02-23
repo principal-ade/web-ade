@@ -723,6 +723,7 @@ export function RepositoryPageProvider({
           ...repository,
           name: githubRepo.split('/')[1] || githubRepo,
           path: `/GitHub/${githubRepo}`,
+          githubRepo,
         } : repository,
       },
       // Empty Map - all slices are now explicit (required by interface)

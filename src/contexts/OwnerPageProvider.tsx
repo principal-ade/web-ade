@@ -33,7 +33,7 @@ import type {
 } from '@principal-ade/panel-framework-core';
 import { layoutTools } from '@principal-ade/utcp-panel-event';
 import { minimatch } from 'minimatch';
-import { PathsFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
+import { GitFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
 import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode } from '@industry-theme/file-city-panel';
 import type { GitHubTreeResponse } from '@/types/api';
@@ -486,14 +486,19 @@ export function OwnerPageProvider({
 
         const data: GitHubTreeResponse = await response.json();
         const [owner, name] = githubRepo.split('/');
-        // GitHub API returns { tree: [{ path, type, ... }] } - extract paths for blobs only
-        const filePaths = data.tree
+        // GitHub API returns { tree: [{ path, type, ... }] } - extract file info for blobs only
+        const files = data.tree
           .filter((entry) => entry.type === 'blob')
-          .map((entry) => entry.path);
-        const builder = new PathsFileTreeBuilder();
+          .map((entry) => ({
+            path: entry.path,
+            size: entry.size,
+          }));
+        const builder = new GitFileTreeBuilder();
         const tree = builder.build({
-          files: filePaths,
+          files,
           rootPath: `/${owner}/${name}`,
+          commitSha: data.sha,
+          branch: 'main',
         });
 
         setFileTree(tree);
@@ -561,6 +566,7 @@ export function OwnerPageProvider({
           ...repository,
           name: githubRepo.split('/')[1] || githubRepo,
           path: `/GitHub/${githubRepo}`,
+          githubRepo,
         } : repository,
       },
       // Empty Map - all slices are now explicit (required by interface)
