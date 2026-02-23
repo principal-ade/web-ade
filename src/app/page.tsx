@@ -201,7 +201,7 @@ function HomePageContent() {
               left: recentRepos.length === 0,
               right: true,
             }}
-            showCollapseButtons={true}
+            showCollapseButtons={false}
             mobileBreakpoint="(max-width: 768px)"
           />
         ) : (
