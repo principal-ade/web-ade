@@ -43,9 +43,9 @@ import { markTourAsShown } from '@/lib/tourStorage';
 import type { OpenWorkflowScenariosPayload } from '@/types/panel-events';
 
 // Static panel imports for type safety
-import { panels as markdownPanels } from '@industry-theme/markdown-panels';
+import dynamic from 'next/dynamic';
+import type { MarkdownPanelProps } from '@industry-theme/markdown-panels';
 import { panels as alexandriaDocsPanels } from '@industry-theme/alexandria-docs-panel';
-import { CodeCityPanel } from '@industry-theme/file-city-panel';
 import { panels as backlogmdPanels } from '@industry-theme/backlogmd-kanban-panel';
 import { panels as principalViewPanels, TraceDetailsPanel } from '@industry-theme/principal-view-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
@@ -56,7 +56,6 @@ import { panels as githubPanels } from '@industry-theme/github-panels';
 import { panels as themeEditorPanels } from '@industry-theme/theme-editor-panel';
 import { panels as fileEditingPanels } from '@industry-theme/file-editing-panels';
 import { panels as agentPanels } from '@industry-theme/agent-panels';
-
 import {
   BookOpen, MessageSquare, FileText, Map, LayoutGrid,
   CheckSquare, Terminal, Users, Compass, Shield, Bug, Palette,
@@ -64,8 +63,18 @@ import {
   Zap, File, GitCompare, Edit, Activity
 } from 'lucide-react';
 
+// Dynamic imports for panels that access document at import time
+const MarkdownPanel = dynamic<MarkdownPanelProps>(
+  () => import('@industry-theme/markdown-panels').then(m => m.MarkdownPanel),
+  { ssr: false }
+);
+const CodeCityPanel = dynamic(
+  () => import('@industry-theme/file-city-panel').then(m => m.CodeCityPanel),
+  { ssr: false }
+);
+
 // Static panel loaders (type-safe, no SSR)
-const MarkdownPanelLoader = markdownPanels[0]!.component;
+const MarkdownPanelLoader = MarkdownPanel;
 const AlexandriaDocsPanelLoader = alexandriaDocsPanels[0]!.component;
 const FileCityPanelLoader = CodeCityPanel;
 const KanbanPanelLoader = backlogmdPanels[0]!.component;
