@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Star, GitFork } from 'lucide-react';
 import Link from 'next/link';
 
 interface GitHubRepo {
@@ -436,39 +435,6 @@ const RepoCard: React.FC<{
           {repo.description}
         </div>
       )}
-
-      {/* Footer: Stats */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          fontSize: '13px',
-          color: theme.colors.textMuted,
-        }}
-      >
-        {repo.language && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                backgroundColor: getLanguageColor(repo.language),
-              }}
-            />
-            {repo.language}
-          </span>
-        )}
-        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <Star size={12} />
-          {formatCount(repo.stargazers_count)}
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <GitFork size={12} />
-          {formatCount(repo.forks_count)}
-        </span>
-      </div>
     </Link>
   );
 };
@@ -536,37 +502,3 @@ const SkeletonCard: React.FC<{
   );
 };
 
-function formatCount(count: number): string {
-  if (count >= 1000000) {
-    return `${(count / 1000000).toFixed(1)}m`;
-  }
-  if (count >= 1000) {
-    return `${(count / 1000).toFixed(1)}k`;
-  }
-  return count.toString();
-}
-
-function getLanguageColor(language: string): string {
-  const colors: Record<string, string> = {
-    TypeScript: '#3178c6',
-    JavaScript: '#f1e05a',
-    Python: '#3572A5',
-    Rust: '#dea584',
-    Go: '#00ADD8',
-    Java: '#b07219',
-    Ruby: '#701516',
-    PHP: '#4F5D95',
-    'C++': '#f34b7d',
-    C: '#555555',
-    'C#': '#178600',
-    Swift: '#F05138',
-    Kotlin: '#A97BFF',
-    Scala: '#c22d40',
-    HTML: '#e34c26',
-    CSS: '#563d7c',
-    Shell: '#89e051',
-    Vue: '#41b883',
-    Svelte: '#ff3e00',
-  };
-  return colors[language] || '#8b949e';
-}
