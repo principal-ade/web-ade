@@ -10,9 +10,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getGitHubToken } from '@/lib/auth/cookies';
 import type {
   Collection,
+  CollectionMembership,
 } from '@principal-ai/alexandria-collections';
 
 const REPO_NAME = 'web-ade-collections';
+
+/**
+ * Merge memberships into collections' members arrays
+ */
+function mergeCollectionsWithMemberships(
+  collections: Collection[],
+  memberships: CollectionMembership[]
+): Collection[] {
+  return collections.map(collection => ({
+    ...collection,
+    members: memberships.filter(m => m.collectionId === collection.id),
+  }));
+}
 const COLLECTIONS_DIR = 'collections';
 
 interface CollectionFile {
@@ -239,9 +253,20 @@ export async function GET() {
     const collectionsResults = await Promise.all(collectionPromises);
     const collections = collectionsResults.filter((c): c is Collection => c !== null);
 
+    // Extract memberships from collections' members arrays
+    const memberships: CollectionMembership[] = collections.flatMap(collection =>
+      (collection.members || []).map(member => ({
+        collectionId: collection.id,
+        repositoryId: member.repositoryId,
+        addedAt: member.addedAt,
+        metadata: member.metadata,
+      }))
+    );
+
     return NextResponse.json({
       exists: true,
       collections,
+      memberships,
       repoUrl: `https://github.com/${user.login}/${REPO_NAME}`,
     });
   } catch (error) {
@@ -280,6 +305,10 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const collections: Collection[] = body.collections || [];
+    const memberships: CollectionMembership[] = body.memberships || [];
+
+    // Merge memberships into collections
+    const collectionsWithMembers = mergeCollectionsWithMemberships(collections, memberships);
 
     // Check if repo exists
     const exists = await checkRepoExists(token, user.login);
@@ -298,7 +327,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Save each collection as a separate file
-    const savePromises = collections.map(async (collection) => {
+    const savePromises = collectionsWithMembers.map(async (collection) => {
       const filename = `${COLLECTIONS_DIR}/${collection.id}.json`;
       const existingFile = await getFile<CollectionFile>(token, user.login, filename);
 
@@ -360,6 +389,10 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json();
     const collections: Collection[] = body.collections || [];
+    const memberships: CollectionMembership[] = body.memberships || [];
+
+    // Merge memberships into collections
+    const collectionsWithMembers = mergeCollectionsWithMemberships(collections, memberships);
 
     // Check if repo exists
     const exists = await checkRepoExists(token, user.login);
@@ -372,7 +405,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Save each collection as a separate file
-    const savePromises = collections.map(async (collection) => {
+    const savePromises = collectionsWithMembers.map(async (collection) => {
       const filename = `${COLLECTIONS_DIR}/${collection.id}.json`;
       const existingFile = await getFile<CollectionFile>(token, user.login, filename);
 
