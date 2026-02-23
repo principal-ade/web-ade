@@ -392,18 +392,30 @@ const RepoCard: React.FC<{
             flexShrink: 0,
           }}
         />
-        <div
-          style={{
-            fontSize: '16px',
-            fontWeight: theme.fontWeights.semibold,
-            color: theme.colors.text,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            flex: 1,
-          }}
-        >
-          {repo.full_name}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: '16px',
+              fontWeight: theme.fontWeights.semibold,
+              color: theme.colors.text,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {repo.name}
+          </div>
+          <div
+            style={{
+              fontSize: '13px',
+              color: theme.colors.textMuted,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {repo.owner.login}
+          </div>
         </div>
       </div>
 
