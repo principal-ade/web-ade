@@ -6,6 +6,8 @@
  * Provides state management for user-created collections.
  * Uses GitHub as the single source of truth - no localStorage caching.
  * Collections are fetched from GitHub on auth and written directly on changes.
+ *
+ * Memberships are stored inside each collection's `members` array (not separately).
  */
 
 import {
@@ -14,6 +16,8 @@ import {
   useState,
   useCallback,
   useEffect,
+  useMemo,
+  useRef,
   type ReactNode,
 } from 'react';
 import type { Collection, CollectionMembership } from '@principal-ai/alexandria-collections';
@@ -32,7 +36,7 @@ interface RepositoryInfo {
 interface UserCollectionsContextValue {
   // State
   collections: Collection[];
-  memberships: CollectionMembership[];
+  memberships: CollectionMembership[]; // Derived from collections for backward compatibility
   loading: boolean;
   error: Error | null;
   saving: boolean;
@@ -83,28 +87,51 @@ function generateCollectionId(): string {
 export function UserCollectionsProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const [collections, setCollections] = useState<Collection[]>([]);
-  const [memberships, setMemberships] = useState<CollectionMembership[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [gitHubRepoExists, setGitHubRepoExists] = useState(false);
   const [gitHubRepoUrl, setGitHubRepoUrl] = useState<string | null>(null);
 
-  // Save collections and memberships to GitHub
-  // Uses POST to create repo if it doesn't exist, PUT to update
+  // Ref to track latest collections for sync operations (avoids stale closure issues)
+  const collectionsRef = useRef<Collection[]>([]);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    collectionsRef.current = collections;
+  }, [collections]);
+
+  // Derive memberships from collections for backward compatibility
+  const memberships = useMemo<CollectionMembership[]>(() => {
+    return collections.flatMap(collection =>
+      (collection.members || []).map(member => ({
+        ...member,
+        collectionId: collection.id,
+      }))
+    );
+  }, [collections]);
+
+  // Save collections to GitHub (memberships are inside collections.members)
   const saveToGitHub = useCallback(async (
     newCollections: Collection[],
-    newMemberships: CollectionMembership[],
     repoExists: boolean
   ): Promise<{ repoUrl?: string }> => {
     setSaving(true);
     try {
+      // Extract memberships from collections for API compatibility
+      const allMemberships = newCollections.flatMap(collection =>
+        (collection.members || []).map(member => ({
+          ...member,
+          collectionId: collection.id,
+        }))
+      );
+
       const response = await fetch('/api/github/collections', {
         method: repoExists ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           collections: newCollections,
-          memberships: newMemberships
+          memberships: allMemberships
         }),
       });
 
@@ -124,7 +151,6 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
   const loadFromGitHub = useCallback(async () => {
     if (!isAuthenticated) {
       setCollections([]);
-      setMemberships([]);
       setGitHubRepoExists(false);
       setGitHubRepoUrl(null);
       setLoading(false);
@@ -144,7 +170,6 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
           if (response.status === 401) {
             emit('collections.load.unauthorized');
             setCollections([]);
-            setMemberships([]);
             setGitHubRepoExists(false);
             setGitHubRepoUrl(null);
             return;
@@ -164,12 +189,19 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
 
         setGitHubRepoExists(data.exists);
         setGitHubRepoUrl(data.repoUrl || null);
+
+        // Collections already have members inside them from the API
         setCollections(data.collections || []);
-        setMemberships(data.memberships || []);
+
+        // Count memberships for telemetry
+        const membershipCount = (data.collections || []).reduce(
+          (acc: number, c: Collection) => acc + (c.members?.length || 0),
+          0
+        );
 
         emit('collections.load.success', {
           collectionCount: (data.collections || []).length,
-          membershipCount: (data.memberships || []).length,
+          membershipCount,
         });
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Failed to load collections'));
@@ -211,7 +243,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
           members: [],
         };
 
-        const newCollections = [...collections, newCollection];
+        const newCollections = [...collectionsRef.current, newCollection];
 
         // Emit appropriate GitHub event based on whether repo exists
         if (gitHubRepoExists) {
@@ -223,10 +255,12 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         }
 
         // Save to GitHub first, then update state
-        const result = await saveToGitHub(newCollections, memberships, gitHubRepoExists);
+        const result = await saveToGitHub(newCollections, gitHubRepoExists);
 
         emit('collection.create.github.commit');
 
+        // Update ref immediately
+        collectionsRef.current = newCollections;
         setCollections(newCollections);
 
         // If repo was just created, update state
@@ -242,20 +276,23 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         return newCollection;
       });
     },
-    [collections, memberships, gitHubRepoExists, gitHubRepoUrl, saveToGitHub]
+    [gitHubRepoExists, gitHubRepoUrl, saveToGitHub]
   );
 
   // Update a collection
   const updateCollection = useCallback(
     async (id: string, updates: Partial<Omit<Collection, 'id' | 'createdAt'>>): Promise<void> => {
-      const newCollections = collections.map((col) =>
+      const newCollections = collectionsRef.current.map((col) =>
         col.id === id
           ? { ...col, ...updates, updatedAt: Date.now() }
           : col
       );
 
+      // Update ref immediately
+      collectionsRef.current = newCollections;
+
       // Save to GitHub first, then update state
-      const result = await saveToGitHub(newCollections, memberships, gitHubRepoExists);
+      const result = await saveToGitHub(newCollections, gitHubRepoExists);
       setCollections(newCollections);
 
       if (result.repoUrl && !gitHubRepoExists) {
@@ -263,24 +300,25 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         setGitHubRepoUrl(result.repoUrl);
       }
     },
-    [collections, memberships, gitHubRepoExists, saveToGitHub]
+    [gitHubRepoExists, saveToGitHub]
   );
 
   // Delete a collection
   const deleteCollection = useCallback(async (id: string): Promise<void> => {
-    const newCollections = collections.filter((col) => col.id !== id);
-    const newMemberships = memberships.filter((m) => m.collectionId !== id);
+    const newCollections = collectionsRef.current.filter((col) => col.id !== id);
+
+    // Update ref immediately
+    collectionsRef.current = newCollections;
 
     // Save to GitHub first, then update state
-    const result = await saveToGitHub(newCollections, newMemberships, gitHubRepoExists);
+    const result = await saveToGitHub(newCollections, gitHubRepoExists);
     setCollections(newCollections);
-    setMemberships(newMemberships);
 
     if (result.repoUrl && !gitHubRepoExists) {
       setGitHubRepoExists(true);
       setGitHubRepoUrl(result.repoUrl);
     }
-  }, [collections, memberships, gitHubRepoExists, saveToGitHub]);
+  }, [gitHubRepoExists, saveToGitHub]);
 
   // Add a repository to a collection
   const addRepository = useCallback(
@@ -311,37 +349,55 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         addedAt: Date.now(),
         metadata,
       };
-      const newMemberships = [...memberships, newMembership];
+
+      // Add membership to the collection's members array
+      const newCollections = collectionsRef.current.map((col) =>
+        col.id === collectionId
+          ? { ...col, members: [...(col.members || []), newMembership], updatedAt: Date.now() }
+          : col
+      );
+
+      // Update ref immediately so subsequent calls have latest data
+      collectionsRef.current = newCollections;
 
       // Save to GitHub first, then update state
-      const result = await saveToGitHub(collections, newMemberships, gitHubRepoExists);
-      setMemberships(newMemberships);
+      const result = await saveToGitHub(newCollections, gitHubRepoExists);
+      setCollections(newCollections);
 
       if (result.repoUrl && !gitHubRepoExists) {
         setGitHubRepoExists(true);
         setGitHubRepoUrl(result.repoUrl);
       }
     },
-    [collections, memberships, gitHubRepoExists, saveToGitHub]
+    [gitHubRepoExists, saveToGitHub]
   );
 
   // Remove a repository from a collection
   const removeRepository = useCallback(
     async (collectionId: string, repositoryId: string): Promise<void> => {
-      const newMemberships = memberships.filter(
-        (m) => !(m.collectionId === collectionId && m.repositoryId === repositoryId)
+      const newCollections = collectionsRef.current.map((col) =>
+        col.id === collectionId
+          ? {
+              ...col,
+              members: (col.members || []).filter((m) => m.repositoryId !== repositoryId),
+              updatedAt: Date.now(),
+            }
+          : col
       );
 
+      // Update ref immediately
+      collectionsRef.current = newCollections;
+
       // Save to GitHub first, then update state
-      const result = await saveToGitHub(collections, newMemberships, gitHubRepoExists);
-      setMemberships(newMemberships);
+      const result = await saveToGitHub(newCollections, gitHubRepoExists);
+      setCollections(newCollections);
 
       if (result.repoUrl && !gitHubRepoExists) {
         setGitHubRepoExists(true);
         setGitHubRepoUrl(result.repoUrl);
       }
     },
-    [collections, memberships, gitHubRepoExists, saveToGitHub]
+    [gitHubRepoExists, saveToGitHub]
   );
 
   // Update membership metadata (for region assignments, positions, etc.)
@@ -351,61 +407,70 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       repositoryId: string,
       metadata: Record<string, unknown>
     ): Promise<void> => {
-      const newMemberships = memberships.map((m) =>
-        m.collectionId === collectionId && m.repositoryId === repositoryId
-          ? { ...m, metadata: { ...m.metadata, ...metadata } }
-          : m
+      const newCollections = collectionsRef.current.map((col) =>
+        col.id === collectionId
+          ? {
+              ...col,
+              members: (col.members || []).map((m) =>
+                m.repositoryId === repositoryId
+                  ? { ...m, metadata: { ...m.metadata, ...metadata } }
+                  : m
+              ),
+              updatedAt: Date.now(),
+            }
+          : col
       );
 
+      // Update ref immediately so subsequent calls have latest data
+      collectionsRef.current = newCollections;
+
       // Save to GitHub first, then update state
-      const result = await saveToGitHub(collections, newMemberships, gitHubRepoExists);
-      setMemberships(newMemberships);
+      const result = await saveToGitHub(newCollections, gitHubRepoExists);
+      setCollections(newCollections);
 
       if (result.repoUrl && !gitHubRepoExists) {
         setGitHubRepoExists(true);
         setGitHubRepoUrl(result.repoUrl);
       }
     },
-    [collections, memberships, gitHubRepoExists, saveToGitHub]
+    [gitHubRepoExists, saveToGitHub]
   );
 
   // Get all repository IDs in a collection
   const getCollectionRepositories = useCallback(
     (collectionId: string): string[] => {
-      return memberships
-        .filter((m) => m.collectionId === collectionId)
-        .map((m) => m.repositoryId);
+      const collection = collectionsRef.current.find((c) => c.id === collectionId);
+      return (collection?.members || []).map((m) => m.repositoryId);
     },
-    [memberships]
+    []
   );
 
   // Get all repository infos with source repository metadata
   const getCollectionRepositoryInfos = useCallback(
     (collectionId: string): RepositoryInfo[] => {
-      return memberships
-        .filter((m) => m.collectionId === collectionId)
-        .map((m) => ({
-          repositoryId: m.repositoryId,
-          sourceRepository: m.metadata?.sourceRepository as { owner: string; name: string } | undefined,
-        }));
+      const collection = collectionsRef.current.find((c) => c.id === collectionId);
+      return (collection?.members || []).map((m) => ({
+        repositoryId: m.repositoryId,
+        sourceRepository: m.metadata?.sourceRepository as { owner: string; name: string } | undefined,
+      }));
     },
-    [memberships]
+    []
   );
 
   // Get a collection by ID
   const getCollection = useCallback(
     (id: string): Collection | undefined => {
-      return collections.find((col) => col.id === id);
+      return collectionsRef.current.find((col) => col.id === id);
     },
-    [collections]
+    []
   );
 
   // Check if a collection ID belongs to user collections
   const isUserCollection = useCallback(
     (id: string): boolean => {
-      return collections.some((col) => col.id === id);
+      return collectionsRef.current.some((col) => col.id === id);
     },
-    [collections]
+    []
   );
 
   // Refresh data from GitHub
@@ -421,10 +486,18 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
 
     setSaving(true);
     try {
+      // Extract memberships from collections for API
+      const allMemberships = collectionsRef.current.flatMap(collection =>
+        (collection.members || []).map(member => ({
+          ...member,
+          collectionId: collection.id,
+        }))
+      );
+
       const response = await fetch('/api/github/collections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ collections, memberships }),
+        body: JSON.stringify({ collections: collectionsRef.current, memberships: allMemberships }),
       });
 
       if (!response.ok) {
@@ -438,13 +511,13 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
     } finally {
       setSaving(false);
     }
-  }, [isAuthenticated, collections, memberships]);
+  }, [isAuthenticated]);
 
   return (
     <UserCollectionsContext.Provider
       value={{
         collections,
-        memberships,
+        memberships, // Derived from collections for backward compatibility
         loading,
         error,
         saving,
