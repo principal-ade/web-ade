@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { ArrowRight, Star, GitFork } from 'lucide-react';
+import { Star, GitFork } from 'lucide-react';
 import Link from 'next/link';
 
 interface GitHubRepo {
@@ -362,7 +362,7 @@ const RepoCard: React.FC<{
       href={`/${repo.full_name}`}
       style={{
         padding: '16px 20px',
-        borderRadius: '12px',
+        borderRadius: 0,
         backgroundColor: theme.colors.surface,
         border: `1px solid ${theme.colors.border}`,
         display: 'flex',
@@ -405,7 +405,6 @@ const RepoCard: React.FC<{
         >
           {repo.full_name}
         </div>
-        <ArrowRight size={16} style={{ color: theme.colors.textMuted, flexShrink: 0 }} />
       </div>
 
       {/* Description */}
@@ -469,7 +468,7 @@ const SkeletonCard: React.FC<{
     <div
       style={{
         padding: '16px 20px',
-        borderRadius: '12px',
+        borderRadius: 0,
         backgroundColor: theme.colors.surface,
         border: `1px solid ${theme.colors.border}`,
         display: 'flex',
