@@ -653,12 +653,18 @@ export function WorldsPageProvider({
 
   // Fetch packages for collection repositories (for monorepo visualization)
   useEffect(() => {
+    console.log('[WorldsPageProvider] Packages useEffect triggered:', {
+      collectionRepositories,
+      count: collectionRepositories?.length || 0,
+    });
+
     if (!collectionRepositories || collectionRepositories.length === 0) {
       setCollectionRepoPackages({});
       setCollectionRepoPackagesLoading(false);
       return;
     }
 
+    console.log('[WorldsPageProvider] Fetching packages for:', collectionRepositories);
     setCollectionRepoPackagesLoading(true);
 
     Promise.all(
@@ -676,6 +682,7 @@ export function WorldsPageProvider({
         }
       })
     ).then((results) => {
+      console.log('[WorldsPageProvider] Packages fetch results:', results);
       const packagesMap: Record<string, PackageLayer[]> = {};
       results.forEach(({ repoId, packages }) => {
         packagesMap[repoId] = packages;
