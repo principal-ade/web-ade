@@ -790,6 +790,11 @@ export function WorldsPageProvider({
       const [owner, repoName] = membership.repositoryId.split('/');
       const packages = collectionRepoPackages[membership.repositoryId] || [];
 
+      // Find matching repo details for stars/metadata
+      const repoDetails = collectionRepoDetails.find(
+        r => r.full_name === membership.repositoryId
+      );
+
       // Calculate total file count from packages for metrics
       const totalFileCount = packages.reduce((sum, pkg) => {
         const pkgFileCount = pkg.derivedFrom?.fileSets?.reduce((acc, fs) =>
@@ -810,8 +815,10 @@ export function WorldsPageProvider({
           id: membership.repositoryId,
           owner: owner || '',
           name: repoName || membership.repositoryId,
-          stars: 0,
-          lastUpdated: new Date(membership.addedAt).toISOString(),
+          stars: repoDetails?.stargazers_count ?? 0,
+          lastUpdated: repoDetails?.updated_at ?? new Date(membership.addedAt).toISOString(),
+          primaryLanguage: repoDetails?.language ?? undefined,
+          description: repoDetails?.description ?? undefined,
         },
         lastChecked: undefined,
         lastOpenedAt: undefined,
@@ -822,7 +829,7 @@ export function WorldsPageProvider({
           lineCount: undefined,
           commitCount: undefined,
           contributors: undefined,
-          lastEditedAt: new Date(membership.addedAt).toISOString(),
+          lastEditedAt: repoDetails?.pushed_at ?? new Date(membership.addedAt).toISOString(),
           createdAt: new Date(membership.addedAt).toISOString(),
         },
         packages: packages.length > 0 ? packages : undefined,
