@@ -50,6 +50,7 @@ import { trpc } from '@/lib/trpc/client';
 import { useAuth } from './AuthContext';
 import { useUserCollections } from './UserCollectionsContext';
 import type { CustomRegion, RepositoryLayoutData } from '@principal-ai/alexandria-collections';
+import type { PackageLayer } from '@principal-ai/codebase-composition';
 import type {
   UserCollectionsSlice,
   WorkspaceSlice,
@@ -268,6 +269,10 @@ export function WorldsPageProvider({
   // State for collection repository details
   const [collectionRepoDetails, setCollectionRepoDetails] = useState<GitHubRepository[]>([]);
   const [collectionRepoDetailsLoading, setCollectionRepoDetailsLoading] = useState(false);
+
+  // State for collection repository packages (for monorepo visualization)
+  const [collectionRepoPackages, setCollectionRepoPackages] = useState<Record<string, PackageLayer[]>>({});
+  const [collectionRepoPackagesLoading, setCollectionRepoPackagesLoading] = useState(false);
 
   // State for commit files
   const [commitFilesData] = useState<CommitFilesSliceData | null>(null);
@@ -646,6 +651,40 @@ export function WorldsPageProvider({
     });
   }, [collectionRepositories]);
 
+  // Fetch packages for collection repositories (for monorepo visualization)
+  useEffect(() => {
+    if (!collectionRepositories || collectionRepositories.length === 0) {
+      setCollectionRepoPackages({});
+      setCollectionRepoPackagesLoading(false);
+      return;
+    }
+
+    setCollectionRepoPackagesLoading(true);
+
+    Promise.all(
+      collectionRepositories.map(async (repoId) => {
+        try {
+          const response = await fetch(`/api/github/repo/${repoId}/packages`);
+          if (response.ok) {
+            const data = await response.json();
+            return { repoId, packages: data.packages || [] };
+          }
+          return { repoId, packages: [] };
+        } catch (error) {
+          console.error(`Failed to fetch packages for ${repoId}:`, error);
+          return { repoId, packages: [] };
+        }
+      })
+    ).then((results) => {
+      const packagesMap: Record<string, PackageLayer[]> = {};
+      results.forEach(({ repoId, packages }) => {
+        packagesMap[repoId] = packages;
+      });
+      setCollectionRepoPackages(packagesMap);
+      setCollectionRepoPackagesLoading(false);
+    });
+  }, [collectionRepositories]);
+
   // Fetch file tree when githubRepo changes
   useEffect(() => {
     if (!githubRepo) {
@@ -742,6 +781,15 @@ export function WorldsPageProvider({
 
     const repositories: AlexandriaEntryWithMetrics[] = selectedMemberships.map(membership => {
       const [owner, repoName] = membership.repositoryId.split('/');
+      const packages = collectionRepoPackages[membership.repositoryId] || [];
+
+      // Calculate total file count from packages for metrics
+      const totalFileCount = packages.reduce((sum, pkg) => {
+        const pkgFileCount = pkg.derivedFrom?.fileSets?.reduce((acc, fs) =>
+          acc + (fs.fileCount ?? fs.matchedFiles?.length ?? 0), 0) ?? 0;
+        return sum + pkgFileCount;
+      }, 0);
+
       return {
         name: repoName || membership.repositoryId,
         path: membership.repositoryId as ValidatedRepositoryPath,
@@ -763,13 +811,14 @@ export function WorldsPageProvider({
         bookColor: undefined,
         theme: undefined,
         metrics: {
-          fileCount: undefined,
+          fileCount: totalFileCount || undefined,
           lineCount: undefined,
           commitCount: undefined,
           contributors: undefined,
           lastEditedAt: new Date(membership.addedAt).toISOString(),
           createdAt: new Date(membership.addedAt).toISOString(),
         },
+        packages: packages.length > 0 ? packages : undefined,
       };
     });
 
@@ -781,7 +830,7 @@ export function WorldsPageProvider({
         repositories,
         dependencies: undefined,
       },
-      loading: userCollections.loading || collectionRepoDetailsLoading,
+      loading: userCollections.loading || collectionRepoDetailsLoading || collectionRepoPackagesLoading,
       error: userCollections.error || null,
       refresh: async () => {},
     });
@@ -794,6 +843,8 @@ export function WorldsPageProvider({
     workspace,
     collectionRepoDetails,
     collectionRepoDetailsLoading,
+    collectionRepoPackages,
+    collectionRepoPackagesLoading,
     githubRepos,
     githubReposLoading,
     fileTree,
