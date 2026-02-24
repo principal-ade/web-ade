@@ -66,9 +66,9 @@ function CollectionsPageWrapper() {
   }, [userCollections, selectedCollectionId]);
 
   const repositories = useMemo(() => {
-    if (!selectedCollectionId) return [];
-    return userCollections.getCollectionRepositories(selectedCollectionId);
-  }, [selectedCollectionId, userCollections]);
+    if (!selectedCollection?.members) return [];
+    return selectedCollection.members.map(m => m.repositoryId);
+  }, [selectedCollection]);
 
   // Handlers
   const handleSelectCollection = useCallback((id: string) => {

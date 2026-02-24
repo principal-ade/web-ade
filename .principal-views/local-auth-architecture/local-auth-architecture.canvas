@@ -1,0 +1,448 @@
+{
+  "pv": {
+    "name": "Local Auth Architecture",
+    "version": "1.0.0",
+    "markdown": ".principal-views/local-auth-architecture/local-auth-architecture.md",
+    "nodeTypes": {
+      "browser": {
+        "label": "Browser",
+        "description": "User's web browser"
+      },
+      "web-ade": {
+        "label": "web-ade",
+        "description": "Next.js app on localhost:3001"
+      },
+      "auth-server": {
+        "label": "Auth Server",
+        "description": "Auth server on localhost:3002"
+      },
+      "external": {
+        "label": "External Service",
+        "description": "External OAuth providers"
+      },
+      "storage": {
+        "label": "Storage",
+        "description": "Token/session storage"
+      }
+    },
+    "edgeTypes": {
+      "redirect": {
+        "label": "Browser Redirect",
+        "style": "dashed",
+        "color": "#f59e0b"
+      },
+      "api-call": {
+        "label": "API Call",
+        "style": "solid",
+        "color": "#3b82f6"
+      },
+      "server-to-server": {
+        "label": "Server-to-Server",
+        "style": "solid",
+        "color": "#8b5cf6"
+      },
+      "cookie": {
+        "label": "Cookie",
+        "style": "dotted",
+        "color": "#22c55e"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "group-components",
+      "type": "group",
+      "x": 48,
+      "y": 6,
+      "width": 900,
+      "height": 280,
+      "color": "#334155",
+      "label": "Local Development Components"
+    },
+    {
+      "id": "browser",
+      "type": "text",
+      "text": "# Browser\n\nUser's browser on localhost",
+      "x": 100,
+      "y": 50,
+      "width": 180,
+      "height": 80,
+      "color": "#64748b",
+      "pv": {
+        "nodeType": "browser",
+        "shape": "rectangle",
+        "fill": "#64748b",
+        "stroke": "#475569"
+      }
+    },
+    {
+      "id": "web-ade",
+      "type": "text",
+      "text": "# web-ade\n\nlocalhost:3001\nNext.js App",
+      "x": 400,
+      "y": 50,
+      "width": 180,
+      "height": 80,
+      "color": "#3b82f6",
+      "pv": {
+        "nodeType": "web-ade",
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "stroke": "#1d4ed8",
+        "sources": [
+          "src/app/api/auth/login/route.ts",
+          "src/app/api/auth/callback/route.ts",
+          "src/app/api/auth/me/route.ts"
+        ]
+      }
+    },
+    {
+      "id": "auth-server",
+      "type": "text",
+      "text": "# Auth Server\n\nlocalhost:3002\nWorkOS + GitHub OAuth",
+      "x": 700,
+      "y": 50,
+      "width": 200,
+      "height": 80,
+      "color": "#8b5cf6",
+      "pv": {
+        "nodeType": "auth-server",
+        "shape": "rectangle",
+        "fill": "#8b5cf6",
+        "stroke": "#7c3aed"
+      }
+    },
+    {
+      "id": "workos",
+      "type": "text",
+      "text": "# WorkOS\n\nOAuth Provider",
+      "x": 700,
+      "y": 159,
+      "width": 200,
+      "height": 60,
+      "color": "#f97316",
+      "pv": {
+        "nodeType": "external",
+        "shape": "rectangle",
+        "fill": "#f97316",
+        "stroke": "#ea580c"
+      }
+    },
+    {
+      "id": "github",
+      "type": "text",
+      "text": "# GitHub\n\nIdentity Provider",
+      "x": 700,
+      "y": 250,
+      "width": 200,
+      "height": 60,
+      "color": "#171717",
+      "pv": {
+        "nodeType": "external",
+        "shape": "rectangle",
+        "fill": "#171717",
+        "stroke": "#404040"
+      }
+    },
+    {
+      "id": "group-login-flow",
+      "type": "group",
+      "x": 49,
+      "y": 344,
+      "width": 900,
+      "height": 500,
+      "color": "#334155",
+      "label": "Login Flow (PKCE)"
+    },
+    {
+      "id": "step1",
+      "type": "text",
+      "text": "# 1. User Clicks Login\n\nBrowser calls web-ade\n`/api/auth/login`",
+      "x": 100,
+      "y": 410,
+      "width": 200,
+      "height": 80,
+      "color": "#64748b",
+      "pv": {
+        "nodeType": "browser",
+        "shape": "rectangle",
+        "fill": "#64748b"
+      }
+    },
+    {
+      "id": "step2",
+      "type": "text",
+      "text": "# 2. Generate PKCE\n\nweb-ade generates:\n- code_verifier\n- code_challenge\n- state (CSRF)",
+      "x": 350,
+      "y": 400,
+      "width": 200,
+      "height": 100,
+      "color": "#3b82f6",
+      "pv": {
+        "nodeType": "web-ade",
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "sources": [
+          "src/lib/auth/pkce.ts",
+          "src/app/api/auth/login/route.ts"
+        ]
+      }
+    },
+    {
+      "id": "step3",
+      "type": "text",
+      "text": "# 3. Start OAuth\n\nauth-server calls\n`/api/auth/workos/start`\nReturns WorkOS auth URL",
+      "x": 599,
+      "y": 400,
+      "width": 200,
+      "height": 100,
+      "color": "#8b5cf6",
+      "pv": {
+        "nodeType": "auth-server",
+        "shape": "rectangle",
+        "fill": "#8b5cf6"
+      }
+    },
+    {
+      "id": "step4",
+      "type": "text",
+      "text": "# 4. OAuth Consent\n\nUser redirected to\nGitHub via WorkOS\nfor authorization",
+      "x": 850,
+      "y": 400,
+      "width": 180,
+      "height": 100,
+      "color": "#f97316",
+      "pv": {
+        "nodeType": "external",
+        "shape": "rectangle",
+        "fill": "#f97316"
+      }
+    },
+    {
+      "id": "step5",
+      "type": "text",
+      "text": "# 5. OAuth Callback\n\nGitHub redirects to\nauth-server callback\nwith auth code",
+      "x": 850,
+      "y": 533,
+      "width": 180,
+      "height": 100,
+      "color": "#8b5cf6",
+      "pv": {
+        "nodeType": "auth-server",
+        "shape": "rectangle",
+        "fill": "#8b5cf6"
+      }
+    },
+    {
+      "id": "step6",
+      "type": "text",
+      "text": "# 6. Redirect to web-ade\n\nauth-server redirects to\nweb-ade `/api/auth/callback`\nwith state param",
+      "x": 589,
+      "y": 535,
+      "width": 220,
+      "height": 100,
+      "color": "#8b5cf6",
+      "pv": {
+        "nodeType": "auth-server",
+        "shape": "rectangle",
+        "fill": "#8b5cf6"
+      }
+    },
+    {
+      "id": "step7",
+      "type": "text",
+      "text": "# 7. Token Exchange\n\nweb-ade calls auth-server\n`/api/auth/workos/token`\n(server-to-server)\nwith PKCE verifier",
+      "x": 589,
+      "y": 679,
+      "width": 220,
+      "height": 120,
+      "color": "#3b82f6",
+      "pv": {
+        "nodeType": "web-ade",
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "sources": [
+          "src/app/api/auth/callback/route.ts"
+        ]
+      }
+    },
+    {
+      "id": "step8",
+      "type": "text",
+      "text": "# 8. Set Cookies\n\nweb-ade sets HTTP-only\ncookies on localhost:3001\n- github_token\n- workos_token\n- refresh_token",
+      "x": 101,
+      "y": 680,
+      "width": 200,
+      "height": 120,
+      "color": "#22c55e",
+      "pv": {
+        "nodeType": "web-ade",
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "sources": [
+          "src/lib/auth/cookies.ts"
+        ]
+      }
+    },
+    {
+      "id": "group-key-points",
+      "type": "group",
+      "x": 56,
+      "y": 880,
+      "width": 900,
+      "height": 200,
+      "color": "#334155",
+      "label": "Key Points"
+    },
+    {
+      "id": "key-cookies",
+      "type": "text",
+      "text": "# Cookie Scope\n\nCookies are scoped by **domain**, not port.\n`localhost:3001` and `localhost:3002`\nshare the same cookie jar.\n\nBUT - web-ade sets its own cookies,\nnot the auth-server.",
+      "x": 100,
+      "y": 920,
+      "width": 260,
+      "height": 140,
+      "color": "#22c55e"
+    },
+    {
+      "id": "key-pkce",
+      "type": "text",
+      "text": "# PKCE Security\n\n- code_verifier stored in iron-session\n- Only web-ade knows the verifier\n- auth-server validates challenge\n- Prevents authorization code interception",
+      "x": 380,
+      "y": 920,
+      "width": 260,
+      "height": 140,
+      "color": "#06b6d4"
+    },
+    {
+      "id": "key-tokens",
+      "type": "text",
+      "text": "# Token Flow\n\n- Tokens returned server-to-server\n- Never exposed to browser JavaScript\n- HTTP-only cookies for security\n- Refresh token for session extension",
+      "x": 660,
+      "y": 920,
+      "width": 260,
+      "height": 140,
+      "color": "#8b5cf6"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-browser-webade",
+      "fromNode": "browser",
+      "toNode": "web-ade",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "HTTP requests",
+      "pv": {
+        "edgeType": "api-call"
+      }
+    },
+    {
+      "id": "e-webade-auth",
+      "fromNode": "web-ade",
+      "toNode": "auth-server",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "server-to-server",
+      "pv": {
+        "edgeType": "server-to-server"
+      }
+    },
+    {
+      "id": "e-auth-workos",
+      "fromNode": "auth-server",
+      "toNode": "workos",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "api-call"
+      }
+    },
+    {
+      "id": "e-workos-github",
+      "fromNode": "workos",
+      "toNode": "github",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "delegates auth",
+      "pv": {
+        "edgeType": "redirect"
+      }
+    },
+    {
+      "id": "e-step1-2",
+      "fromNode": "step1",
+      "toNode": "step2",
+      "fromSide": "right",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "api-call"
+      }
+    },
+    {
+      "id": "e-step2-3",
+      "fromNode": "step2",
+      "toNode": "step3",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "POST /start",
+      "pv": {
+        "edgeType": "server-to-server"
+      }
+    },
+    {
+      "id": "e-step3-4",
+      "fromNode": "step3",
+      "toNode": "step4",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "redirect",
+      "pv": {
+        "edgeType": "redirect"
+      }
+    },
+    {
+      "id": "e-step4-5",
+      "fromNode": "step4",
+      "toNode": "step5",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "callback",
+      "pv": {
+        "edgeType": "redirect"
+      }
+    },
+    {
+      "id": "e-step5-6",
+      "fromNode": "step5",
+      "toNode": "step6",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "redirect",
+      "pv": {
+        "edgeType": "redirect"
+      }
+    },
+    {
+      "id": "e-step6-7",
+      "fromNode": "step6",
+      "toNode": "step7",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "api-call"
+      }
+    },
+    {
+      "id": "e-step7-8",
+      "fromNode": "step7",
+      "toNode": "step8",
+      "fromSide": "left",
+      "toSide": "right",
+      "label": "set cookies",
+      "pv": {
+        "edgeType": "cookie"
+      }
+    }
+  ]
+}
