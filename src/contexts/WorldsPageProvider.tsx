@@ -1155,15 +1155,16 @@ export function WorldsPageProvider({
       addRepositoryToCollection: async (
         collectionId: string,
         repositoryPath: string,
+        repositoryMetadata?: Record<string, unknown>,
       ): Promise<void> => {
         console.log('[WorldsPageProvider] Adding repository to collection:', {
           collectionId,
           repositoryPath,
+          repositoryMetadata,
           existingCollections: userCollections.collections.map(c => ({ id: c.id, name: c.name })),
-          existingMemberships: userCollections.memberships.length,
         });
         try {
-          await userCollections.addRepository(collectionId, repositoryPath);
+          await userCollections.addRepository(collectionId, repositoryPath, repositoryMetadata);
           console.log('[WorldsPageProvider] Repository added successfully');
         } catch (error) {
           console.error('[WorldsPageProvider] Failed to add repository:', error);

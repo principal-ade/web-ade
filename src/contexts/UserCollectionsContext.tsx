@@ -58,7 +58,7 @@ interface UserCollectionsContextValue {
   deleteCollection: (id: string) => Promise<void>;
 
   // Membership management
-  addRepository: (collectionId: string, repositoryId: string) => Promise<void>;
+  addRepository: (collectionId: string, repositoryId: string, initialMetadata?: Record<string, unknown>) => Promise<void>;
   removeRepository: (collectionId: string, repositoryId: string) => Promise<void>;
   updateMembershipMetadata: (
     collectionId: string,
@@ -322,20 +322,22 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
 
   // Add a repository to a collection
   const addRepository = useCallback(
-    async (collectionId: string, repositoryId: string): Promise<void> => {
+    async (
+      collectionId: string,
+      repositoryId: string,
+      initialMetadata?: Record<string, unknown>
+    ): Promise<void> => {
       // Fetch repository info to check if it's a fork
-      let metadata: Record<string, unknown> | undefined;
+      let metadata: Record<string, unknown> = { ...initialMetadata };
       try {
         const [owner, repo] = repositoryId.split('/');
         const response = await fetch(`/api/github/repo/${owner}/${repo}?action=info`);
         if (response.ok) {
           const repoInfo = await response.json();
           if (repoInfo.fork && repoInfo.parent) {
-            metadata = {
-              sourceRepository: {
-                owner: repoInfo.parent.owner.login,
-                name: repoInfo.parent.name,
-              },
+            metadata.sourceRepository = {
+              owner: repoInfo.parent.owner.login,
+              name: repoInfo.parent.name,
             };
           }
         }
@@ -347,7 +349,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         repositoryId,
         collectionId,
         addedAt: Date.now(),
-        metadata,
+        metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
       };
 
       // Add membership to the collection's members array
