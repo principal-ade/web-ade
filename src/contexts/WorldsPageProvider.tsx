@@ -740,29 +740,38 @@ export function WorldsPageProvider({
       ? userCollections.memberships.filter(m => m.collectionId === collectionId)
       : [];
 
-    const repositories: AlexandriaEntryWithMetrics[] = selectedMemberships.map(membership => ({
-      name: membership.repositoryId.split('/')[1] || membership.repositoryId,
-      path: membership.repositoryId as ValidatedRepositoryPath,
-      purl: undefined,
-      remoteUrl: `https://github.com/${membership.repositoryId}`,
-      registeredAt: new Date(membership.addedAt).toISOString(),
-      hasViews: false,
-      viewCount: 0,
-      views: [],
-      github: undefined,
-      lastChecked: undefined,
-      lastOpenedAt: undefined,
-      bookColor: undefined,
-      theme: undefined,
-      metrics: {
-        fileCount: undefined,
-        lineCount: undefined,
-        commitCount: undefined,
-        contributors: undefined,
-        lastEditedAt: new Date(membership.addedAt).toISOString(),
-        createdAt: new Date(membership.addedAt).toISOString(),
-      },
-    }));
+    const repositories: AlexandriaEntryWithMetrics[] = selectedMemberships.map(membership => {
+      const [owner, repoName] = membership.repositoryId.split('/');
+      return {
+        name: repoName || membership.repositoryId,
+        path: membership.repositoryId as ValidatedRepositoryPath,
+        purl: undefined,
+        remoteUrl: `https://github.com/${membership.repositoryId}`,
+        registeredAt: new Date(membership.addedAt).toISOString(),
+        hasViews: false,
+        viewCount: 0,
+        views: [],
+        github: {
+          id: membership.repositoryId,
+          owner: owner || '',
+          name: repoName || membership.repositoryId,
+          stars: 0,
+          lastUpdated: new Date(membership.addedAt).toISOString(),
+        },
+        lastChecked: undefined,
+        lastOpenedAt: undefined,
+        bookColor: undefined,
+        theme: undefined,
+        metrics: {
+          fileCount: undefined,
+          lineCount: undefined,
+          commitCount: undefined,
+          contributors: undefined,
+          lastEditedAt: new Date(membership.addedAt).toISOString(),
+          createdAt: new Date(membership.addedAt).toISOString(),
+        },
+      };
+    });
 
     setSelectedCollectionView({
       scope: 'workspace',
