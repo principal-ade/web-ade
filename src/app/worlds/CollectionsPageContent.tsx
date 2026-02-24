@@ -254,6 +254,8 @@ export function CollectionsPageContent({
   useEffect(() => {
     if (!events) return;
 
+    console.log('[CollectionsPageContent] Setting up event listeners, events object:', events);
+
     const unsubscribers = [
       events.on('repository:navigate', (event) => {
         const payload = event.payload as { owner?: string; repo?: string };
@@ -268,10 +270,15 @@ export function CollectionsPageContent({
           onSelectCollection(payload.collectionId);
         }
       }),
+      // Listen for create collection request from UserCollectionsPanel
+      events.on('industry-theme.user-collections:create-collection-requested', () => {
+        console.log('[CollectionsPageContent] Received create-collection-requested event');
+        onCreateNew();
+      }),
     ];
 
     return () => unsubscribers.forEach((unsub) => unsub());
-  }, [events, router, onSelectCollection]);
+  }, [events, router, onSelectCollection, onCreateNew]);
 
   const panels = [
     {

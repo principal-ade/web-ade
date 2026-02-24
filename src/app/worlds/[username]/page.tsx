@@ -1,15 +1,13 @@
 'use client';
 
 import { useRouter, useParams, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
-import { WorldsPageProvider, useWorldsPageProvider } from "@/contexts/WorldsPageProvider";
-import { useUserCollections } from "@/contexts/UserCollectionsContext";
+import { SharedCollectionsProvider, useSharedCollectionsProvider } from "@/contexts/SharedCollectionsProvider";
 import { useAuth } from "@/contexts/AuthContext";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
-import { withTelemetrySpan } from "@/lib/telemetry";
-import { WorkspaceCollectionPanel } from "@industry-theme/alexandria-panels";
+import { WorkspaceCollectionPanel, UserProfilePanel } from "@industry-theme/alexandria-panels";
+import { CollectionMapPanel } from "@industry-theme/repository-composition-panels";
 import {
   EditableConfigurablePanelLayout,
   ResponsiveConfigurablePanelLayout,
@@ -20,18 +18,20 @@ import {
   Layers,
   ExternalLink,
   ArrowLeft,
-  Download,
-  Check,
   Loader2,
   AlertCircle,
+  Map,
+  User,
 } from 'lucide-react';
 import { CollectionModal } from "@/components/collections/CollectionModal";
 import { AddRepositoryModal } from "@/components/collections/AddRepositoryModal";
 import type { Collection, CollectionMembership } from '@principal-ai/alexandria-collections';
 import type { CollectionsPermissionsResponse } from '@/types/api';
 
-// Static import for type safety
+// Static imports for type safety
 const WorkspaceCollectionPanelLoader = WorkspaceCollectionPanel;
+const CollectionMapPanelLoader = CollectionMapPanel;
+const UserProfilePanelLoader = UserProfilePanel;
 
 interface UserInfo {
   login: string;
@@ -50,41 +50,28 @@ interface SharedCollectionsData {
 }
 
 interface SharedCollectionsContentProps {
-  userData: SharedCollectionsData;
   collections: Collection[];
-  memberships: CollectionMembership[];
-  selectedCollectionId: string | null;
-  onImportCollection: (collection: Collection, collectionMemberships: CollectionMembership[]) => Promise<void>;
-  importingCollectionId: string | null;
-  importedCollectionIds: Set<string>;
   // Edit mode props
   canEdit: boolean;
   onRemoveRepository?: (repositoryId: string) => Promise<void>;
 }
 
 function SharedCollectionsContent({
-  userData,
   collections,
-  memberships,
-  selectedCollectionId,
-  onImportCollection,
-  importingCollectionId,
-  importedCollectionIds,
   canEdit,
   onRemoveRepository,
 }: SharedCollectionsContentProps) {
   const { theme } = useTheme();
   const router = useRouter();
-  const { context, actions, events } = useWorldsPageProvider();
-  const { user, isAuthenticated } = useAuth();
+  const { context, actions, events } = useSharedCollectionsProvider();
   const [isMobile, setIsMobile] = useState(false);
   const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
 
-  // Layout: just the collection panel (no right side panels for shared view)
+  // Layout: user profile on left, map in middle, collection list on right
   const layout: PanelLayout = {
-    left: 'empty',
-    middle: 'workspace-collection',
-    right: 'empty',
+    left: 'user-profile',
+    middle: 'collection-map',
+    right: 'workspace-collection',
   };
 
   // Detect mobile viewport
@@ -117,15 +104,39 @@ function SharedCollectionsContent({
     return () => unsubscribers.forEach((unsub) => unsub());
   }, [events, router]);
 
-  const selectedCollection = useMemo(() => {
-    return collections.find(c => c.id === selectedCollectionId);
-  }, [collections, selectedCollectionId]);
-
   const panels = [
     {
       id: 'empty',
       label: '',
       content: <div />,
+    },
+    {
+      id: 'user-profile',
+      label: 'Profile',
+      icon: <User size={16} />,
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <UserProfilePanelLoader
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        </div>
+      ),
+    },
+    {
+      id: 'collection-map',
+      label: 'Overworld Map',
+      icon: <Map size={16} />,
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <CollectionMapPanelLoader
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        </div>
+      ),
     },
     {
       id: 'workspace-collection',
@@ -163,145 +174,6 @@ function SharedCollectionsContent({
 
   return (
     <div className="h-full w-full flex flex-col">
-      {/* Header */}
-      <header
-        className="flex items-center justify-between px-4 border-b"
-        style={{
-          background: theme.colors.surface,
-          borderColor: theme.colors.border,
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)',
-          paddingBottom: '0.75rem',
-        }}
-      >
-        {/* Left: Org/User info */}
-        <div className="flex items-center gap-4">
-          {/* Org/User info */}
-          <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={userData.user.avatar_url}
-              alt={userData.user.name || userData.user.login}
-              className="w-10 h-10 rounded-full"
-            />
-            <div>
-              <div className="flex items-center gap-2">
-                <span
-                  style={{
-                    fontSize: `${theme.fontSizes[3]}px`,
-                    fontWeight: theme.fontWeights.semibold,
-                    color: theme.colors.text,
-                  }}
-                >
-                  {userData.user.name || userData.user.login}
-                </span>
-                <a
-                  href={userData.user.html_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: theme.colors.textSecondary }}
-                >
-                  <ExternalLink size={14} />
-                </a>
-              </div>
-              {userData.user.bio && (
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: `${theme.fontSizes[1]}px`,
-                    color: theme.colors.textSecondary,
-                    maxWidth: '300px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {userData.user.bio}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Import button */}
-        <div className="flex items-center gap-3">
-          {/* Import button (only for authenticated users viewing someone else's collection without edit access) */}
-          {isAuthenticated && selectedCollection && user?.login !== userData.user.login && !canEdit && (
-            <button
-              onClick={() => {
-                const colMemberships = memberships.filter(m => m.collectionId === selectedCollection.id);
-                onImportCollection(selectedCollection, colMemberships);
-              }}
-              disabled={importingCollectionId === selectedCollection.id || importedCollectionIds.has(selectedCollection.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
-              style={{
-                background: importedCollectionIds.has(selectedCollection.id)
-                  ? '#10b98120'
-                  : theme.colors.primary,
-                color: importedCollectionIds.has(selectedCollection.id)
-                  ? '#10b981'
-                  : theme.colors.textOnPrimary,
-                border: importedCollectionIds.has(selectedCollection.id)
-                  ? '1px solid #10b981'
-                  : 'none',
-                opacity: importingCollectionId === selectedCollection.id ? 0.6 : 1,
-                cursor: importingCollectionId === selectedCollection.id ? 'not-allowed' : 'pointer',
-              }}
-              title="Import to your collections"
-            >
-              {importingCollectionId === selectedCollection.id ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  <span className="hidden sm:inline">Importing...</span>
-                </>
-              ) : importedCollectionIds.has(selectedCollection.id) ? (
-                <>
-                  <Check size={16} />
-                  <span className="hidden sm:inline">Imported</span>
-                </>
-              ) : (
-                <>
-                  <Download size={16} />
-                  <span className="hidden sm:inline">Import</span>
-                </>
-              )}
-            </button>
-          )}
-
-          {/* Login prompt if not authenticated */}
-          {!isAuthenticated && (
-            <div
-              style={{
-                fontSize: `${theme.fontSizes[1]}px`,
-                color: theme.colors.textSecondary,
-              }}
-            >
-              <Link
-                href="/worlds"
-                style={{ color: theme.colors.primary }}
-              >
-                Login
-              </Link>
-              {' to import'}
-            </div>
-          )}
-
-          {/* Signed-in user avatar */}
-          {isAuthenticated && user && (
-            <button
-              onClick={() => router.push(`/${user.login}`)}
-              className="flex items-center rounded-full transition-all hover:opacity-80"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={user.avatar_url}
-                alt={user.name || user.login}
-                className="w-8 h-8 rounded-full"
-              />
-            </button>
-          )}
-        </div>
-      </header>
-
       {/* Panel content */}
       <div className="flex-1 overflow-hidden">
         {isMobile ? (
@@ -309,10 +181,10 @@ function SharedCollectionsContent({
             theme={theme}
             panels={panels}
             layout={layout}
-            defaultSizes={{ left: 0, middle: 100, right: 0 }}
-            minSizes={{ left: 0, middle: 100, right: 0 }}
-            collapsiblePanels={{ left: false, right: false }}
-            collapsed={{ left: true, right: true }}
+            defaultSizes={{ left: 20, middle: 55, right: 25 }}
+            minSizes={{ left: 15, middle: 40, right: 20 }}
+            collapsiblePanels={{ left: true, right: true }}
+            collapsed={{ left: false, right: false }}
             showCollapseButtons={false}
             mobileBreakpoint="(max-width: 768px)"
           />
@@ -322,10 +194,10 @@ function SharedCollectionsContent({
             panels={panels}
             layout={layout}
             isEditMode={false}
-            defaultSizes={{ left: 0, middle: 100, right: 0 }}
-            minSizes={{ left: 0, middle: 100, right: 0 }}
-            collapsiblePanels={{ left: false, right: false }}
-            collapsed={{ left: true, right: true }}
+            defaultSizes={{ left: 20, middle: 55, right: 25 }}
+            minSizes={{ left: 15, middle: 40, right: 20 }}
+            collapsiblePanels={{ left: true, right: true }}
+            collapsed={{ left: false, right: false }}
             showCollapseButtons={false}
           />
         )}
@@ -348,15 +220,12 @@ function SharedCollectionsWrapper() {
   const params = useParams();
   const searchParams = useSearchParams();
   const username = params.username as string;
-  const userCollections = useUserCollections();
   const { isAuthenticated } = useAuth();
 
   const [collectionsData, setCollectionsData] = useState<SharedCollectionsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
-  const [importingCollectionId, setImportingCollectionId] = useState<string | null>(null);
-  const [importedCollectionIds, setImportedCollectionIds] = useState<Set<string>>(new Set());
 
   // Edit mode state
   const [canEdit, setCanEdit] = useState(false);
@@ -427,68 +296,16 @@ function SharedCollectionsWrapper() {
     return collectionsData?.memberships || [];
   }, [collectionsData]);
 
-  // Get repositories for selected collection
+  // Get selected collection
+  const selectedCollection = useMemo(() => {
+    return collections.find(c => c.id === selectedCollectionId) || null;
+  }, [collections, selectedCollectionId]);
+
+  // Get repositories for selected collection (use collection.members directly)
   const repositories = useMemo(() => {
-    if (!selectedCollectionId) return [];
-    return memberships
-      .filter(m => m.collectionId === selectedCollectionId)
-      .map(m => m.repositoryId);
-  }, [selectedCollectionId, memberships]);
-
-  // Handle import collection
-  const handleImportCollection = useCallback(async (collection: Collection, collectionMemberships: CollectionMembership[]) => {
-    await withTelemetrySpan('api.collections.import', async (emit) => {
-      try {
-        setImportingCollectionId(collection.id);
-
-        emit('collection.import.started', {
-          sourceUsername: username,
-          collectionName: collection.name,
-        });
-
-        emit('collection.import.fetch-source');
-
-        // Create a new collection with the same name (maybe add "from @username")
-        const importedName = `${collection.name} (from @${username})`;
-
-        emit('collection.import.create-copy', {
-          newCollectionName: importedName,
-        });
-
-        const newCollection = await userCollections.createCollection(
-          importedName,
-          collection.description,
-          collection.icon
-        );
-
-        emit('collection.import.copy-memberships', {
-          membershipCount: collectionMemberships.length,
-        });
-
-        // Add all repositories from memberships
-        for (const membership of collectionMemberships) {
-          await userCollections.addRepository(newCollection.id, membership.repositoryId);
-        }
-
-        emit('collection.import.github.sync');
-
-        // Mark as imported
-        setImportedCollectionIds(prev => new Set([...prev, collection.id]));
-
-        emit('collection.import.success', {
-          newCollectionId: newCollection.id,
-        });
-      } catch (err) {
-        emit('collection.import.error', {
-          'error.message': err instanceof Error ? err.message : 'Unknown error',
-        });
-        // Could show an error toast here
-        throw err;
-      } finally {
-        setImportingCollectionId(null);
-      }
-    });
-  }, [username, userCollections]);
+    if (!selectedCollection?.members) return [];
+    return selectedCollection.members.map(m => m.repositoryId);
+  }, [selectedCollection]);
 
   // Save collections and memberships to GitHub
   const saveToGitHub = useCallback(async (
@@ -778,9 +595,6 @@ function SharedCollectionsWrapper() {
     );
   }
 
-  // Get selected collection for PanelProvider
-  const selectedCollection = collections.find(c => c.id === selectedCollectionId);
-
   return (
     <div
       className="w-screen overflow-hidden"
@@ -790,31 +604,34 @@ function SharedCollectionsWrapper() {
       }}
     >
       <div style={{ height: '100vh' }}>
-        <WorldsPageProvider
+        <SharedCollectionsProvider
           key={selectedCollectionId}
-          workspace={{
-            name: selectedCollection?.name || 'Shared Collections',
-            path: `/collections/${username}`,
-          }}
-          repository={{
-            name: selectedCollection?.name || 'Shared Collections',
-            path: `/collections/${username}`,
-          }}
-          collectionId={selectedCollectionId || undefined}
+          collection={selectedCollection}
           collectionRepositories={repositories}
+          username={username}
+          userProfile={{
+            login: collectionsData!.user.login,
+            id: 0,
+            avatar_url: collectionsData!.user.avatar_url,
+            name: collectionsData!.user.name,
+            company: null,
+            location: null,
+            email: null,
+            bio: collectionsData!.user.bio,
+            public_repos: 0,
+            public_gists: 0,
+            followers: 0,
+            following: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }}
         >
           <SharedCollectionsContent
-            userData={collectionsData!}
             collections={collections}
-            memberships={memberships}
-            selectedCollectionId={selectedCollectionId}
-            onImportCollection={handleImportCollection}
-            importingCollectionId={importingCollectionId}
-            importedCollectionIds={importedCollectionIds}
             canEdit={canEdit}
             onRemoveRepository={canEdit ? handleRemoveRepository : undefined}
           />
-        </WorldsPageProvider>
+        </SharedCollectionsProvider>
       </div>
 
       {/* Modals (only when canEdit) */}

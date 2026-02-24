@@ -328,7 +328,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       initialMetadata?: Record<string, unknown>
     ): Promise<void> => {
       // Fetch repository info to check if it's a fork
-      let metadata: Record<string, unknown> = { ...initialMetadata };
+      const metadata: Record<string, unknown> = { ...initialMetadata };
       try {
         const [owner, repo] = repositoryId.split('/');
         const response = await fetch(`/api/github/repo/${owner}/${repo}?action=info`);
