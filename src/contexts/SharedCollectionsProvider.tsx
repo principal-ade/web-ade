@@ -28,6 +28,7 @@ import type {
 import type { ValidatedRepositoryPath } from '@principal-ai/alexandria-core-library/types';
 import type { Collection } from '@principal-ai/alexandria-collections';
 import { GitFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
+import type { FileCityColorModesSliceData, ColorMode } from '@industry-theme/file-city-panel';
 import { trpc } from '@/lib/trpc/client';
 import type {
   WorkspaceSlice,
@@ -50,6 +51,7 @@ export interface SharedCollectionsContextType {
   workspace: DataSlice<WorkspaceSlice>;
   userProfile: DataSlice<UserProfileSlice>;
   fileTree: DataSlice<FileTree>;
+  fileCityColorModes: DataSlice<FileCityColorModesSliceData>;
 }
 
 interface SharedCollectionsProviderProps {
@@ -255,6 +257,23 @@ export function SharedCollectionsProvider({
     [fileTree, fileTreeLoading, fileTreeError]
   );
 
+  // Build fileCityColorModes slice (minimal - just basic color mode)
+  const fileCityColorModesSlice = useMemo<DataSlice<FileCityColorModesSliceData>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'fileCityColorModes',
+      data: {
+        enabledModes: ['language' as ColorMode],
+        selectedColorMode: 'language' as ColorMode,
+        qualityData: undefined,
+      },
+      loading: false,
+      error: null,
+      refresh: async () => { /* no-op */ },
+    }),
+    []
+  );
+
   // Build selectedCollectionView slice
   const selectedCollectionView = useMemo<SelectedCollectionView>(() => {
     const repositories: AlexandriaEntryWithMetrics[] = collectionRepositories.map(repoId => {
@@ -329,6 +348,7 @@ export function SharedCollectionsProvider({
       workspace: workspaceSlice,
       userProfile: userProfileSlice,
       fileTree: fileTreeSlice,
+      fileCityColorModes: fileCityColorModesSlice,
       // Legacy methods - no-ops
       getSlice: () => undefined,
       getWorkspaceSlice: () => undefined,
@@ -337,7 +357,7 @@ export function SharedCollectionsProvider({
       isSliceLoading: () => false,
       refresh: async () => { /* no-op */ },
     }),
-    [workspace, adapters, collection, selectedCollectionView, workspaceRepositoriesSlice, workspaceSlice, userProfileSlice, fileTreeSlice]
+    [workspace, adapters, collection, selectedCollectionView, workspaceRepositoriesSlice, workspaceSlice, userProfileSlice, fileTreeSlice, fileCityColorModesSlice]
   );
 
   // Actions - read-only view (CollectionMapPanelActions are no-ops except for click handling)

@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import { WorkspaceCollectionPanel, UserProfilePanel } from "@industry-theme/alexandria-panels";
 import { CollectionMapPanel } from "@industry-theme/repository-composition-panels";
+import { CodeCityPanel } from "@industry-theme/file-city-panel";
 import {
   EditableConfigurablePanelLayout,
   ResponsiveConfigurablePanelLayout,
@@ -32,6 +33,7 @@ import type { CollectionsPermissionsResponse } from '@/types/api';
 const WorkspaceCollectionPanelLoader = WorkspaceCollectionPanel;
 const CollectionMapPanelLoader = CollectionMapPanel;
 const UserProfilePanelLoader = UserProfilePanel;
+const FileCityPanelLoader = CodeCityPanel;
 
 interface UserInfo {
   login: string;
@@ -71,11 +73,11 @@ function SharedCollectionsContent({
   const { context, actions, events } = useSharedCollectionsProvider();
   const [isMobile, setIsMobile] = useState(false);
 
-  // Layout: user profile on left, map in middle, collection list on right
+  // Layout: user profile on left, map in middle, file-city or collection list on right
   const layout: PanelLayout = {
     left: 'user-profile',
     middle: 'collection-map',
-    right: 'workspace-collection',
+    right: previewedRepo ? 'file-city' : 'workspace-collection',
   };
 
   // Detect mobile viewport
@@ -171,6 +173,16 @@ function SharedCollectionsContent({
             selectedRepository={previewedRepo ?? undefined}
             defaultShowSearch
           />
+        </div>
+      ),
+    },
+    {
+      id: 'file-city',
+      label: 'File City',
+      icon: <Map size={16} />,
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <FileCityPanelLoader context={context} actions={actions} events={events} />
         </div>
       ),
     },
