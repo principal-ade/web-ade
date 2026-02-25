@@ -604,6 +604,49 @@ export function RepositoryPageProvider({
     fetchFileTree();
   }, [githubRepo]);
 
+  // Auto-load README when repository changes
+  useEffect(() => {
+    if (!githubRepo || activeFileContent !== null) {
+      return;
+    }
+
+    const [owner, repo] = githubRepo.split('/');
+    if (!owner || !repo) return;
+
+    // Try to load README.md directly
+    const loadReadme = async () => {
+      setActiveFileLoading(true);
+      try {
+        const data = await trpc.github.readFile.query({
+          owner,
+          repo,
+          path: 'README.md',
+        });
+
+        setActiveFilePath('README.md');
+        setActiveFileContent(data.content);
+      } catch (error) {
+        // README.md might not exist, try lowercase
+        try {
+          const data = await trpc.github.readFile.query({
+            owner,
+            repo,
+            path: 'readme.md',
+          });
+          setActiveFilePath('readme.md');
+          setActiveFileContent(data.content);
+        } catch {
+          // No README found, that's okay
+          console.log('[RepositoryPageProvider] No README found');
+        }
+      } finally {
+        setActiveFileLoading(false);
+      }
+    };
+
+    loadReadme();
+  }, [githubRepo, activeFileContent]);
+
   // Fetch commits when githubRepo changes
   useEffect(() => {
     if (!githubRepo) {

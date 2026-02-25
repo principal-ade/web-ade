@@ -22,7 +22,7 @@ export const layoutConfigs: LayoutConfig[] = [
     id: 'documentation',
     name: 'Overview',
     layout: {
-      left: 'docs',
+      left: 'packages',
       middle: 'markdown-viewer',
       right: 'file-city',
     },

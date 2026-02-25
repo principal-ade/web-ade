@@ -607,7 +607,7 @@ function EditorLayoutContent({
       }),
       events.on('panel:reset-layout', () => {
         setLayout({
-          left: 'docs',
+          left: 'packages',
           middle: 'markdown-viewer',
           right: 'file-city',
         });
