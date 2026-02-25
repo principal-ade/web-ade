@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { router, publicProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
 import { cookies } from 'next/headers';
+import { gitTreeCache } from '@/lib/git-tree-cache';
 
 const GITHUB_API_BASE = 'https://api.github.com';
 
@@ -23,6 +24,12 @@ const readFileInputSchema = z.object({
   ref: z.string().optional(),
 });
 
+const getTreeInputSchema = z.object({
+  owner: z.string().min(1),
+  repo: z.string().min(1),
+  ref: z.string().optional().default('HEAD'),
+});
+
 // ============================================================================
 // Output Schemas
 // ============================================================================
@@ -32,6 +39,22 @@ const readFileOutputSchema = z.object({
   sha: z.string(),
   size: z.number(),
   encoding: z.string(),
+});
+
+const treeEntrySchema = z.object({
+  path: z.string(),
+  mode: z.string(),
+  type: z.enum(['blob', 'tree']),
+  sha: z.string(),
+  size: z.number().optional(),
+  url: z.string(),
+});
+
+const getTreeOutputSchema = z.object({
+  sha: z.string(),
+  url: z.string(),
+  tree: z.array(treeEntrySchema),
+  truncated: z.boolean(),
 });
 
 // ============================================================================
@@ -140,6 +163,71 @@ export const githubRouter = router({
         size: data.size,
         encoding: 'utf-8', // Always return decoded content
       };
+    }),
+
+  /**
+   * Get the file tree for a GitHub repository
+   * Returns the recursive tree structure with in-memory caching by SHA
+   */
+  getTree: publicProcedure
+    .input(getTreeInputSchema)
+    .output(getTreeOutputSchema)
+    .query(async ({ input }) => {
+      const { owner, repo, ref } = input;
+
+      const userToken = await getGitHubToken();
+
+      // First resolve the ref to actual commit SHA to ensure cache freshness
+      let resolvedSha: string;
+      try {
+        interface GitHubCommitResponse {
+          sha: string;
+        }
+        const refData = await makeGitHubRequest<GitHubCommitResponse>(
+          `/repos/${owner}/${repo}/commits/${ref}`,
+          userToken
+        );
+        resolvedSha = refData.sha;
+      } catch {
+        // If we can't resolve the ref, fall back to using the ref directly
+        resolvedSha = ref;
+      }
+
+      const cacheKey = `${owner}/${repo}/${resolvedSha}`;
+
+      // Check in-memory cache first using the resolved SHA
+      interface GitHubTreeResponse {
+        sha: string;
+        url: string;
+        tree: Array<{
+          path: string;
+          mode: string;
+          type: 'blob' | 'tree';
+          sha: string;
+          size?: number;
+          url: string;
+        }>;
+        truncated: boolean;
+      }
+
+      const cachedTree = gitTreeCache.get<GitHubTreeResponse>(cacheKey);
+      if (cachedTree) {
+        return cachedTree;
+      }
+
+      // Not in cache, fetch from GitHub using the resolved SHA
+      const treeData = await makeGitHubRequest<GitHubTreeResponse>(
+        `/repos/${owner}/${repo}/git/trees/${resolvedSha}?recursive=1`,
+        userToken
+      );
+
+      // Cache by both the cache key and the tree SHA
+      if (treeData && treeData.sha) {
+        gitTreeCache.set(cacheKey, treeData);
+        gitTreeCache.set(treeData.sha, treeData);
+      }
+
+      return treeData;
     }),
 });
 

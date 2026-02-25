@@ -54,18 +54,22 @@ interface SharedCollectionsContentProps {
   // Edit mode props
   canEdit: boolean;
   onRemoveRepository?: (repositoryId: string) => Promise<void>;
+  // Repository preview state (lifted from parent)
+  previewedRepo: string | null;
+  setPreviewedRepo: (repo: string | null) => void;
 }
 
 function SharedCollectionsContent({
   collections,
   canEdit,
   onRemoveRepository,
+  previewedRepo,
+  setPreviewedRepo,
 }: SharedCollectionsContentProps) {
   const { theme } = useTheme();
   const router = useRouter();
   const { context, actions, events } = useSharedCollectionsProvider();
   const [isMobile, setIsMobile] = useState(false);
-  const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
 
   // Layout: user profile on left, map in middle, collection list on right
   const layout: PanelLayout = {
@@ -232,6 +236,9 @@ function SharedCollectionsWrapper() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [addRepoModalOpen, setAddRepoModalOpen] = useState(false);
+
+  // Previewed repo state for overworld map click -> file city integration
+  const [previewedRepo, setPreviewedRepo] = useState<string | null>(null);
 
   // Fetch user's public collections
   useEffect(() => {
@@ -625,11 +632,15 @@ function SharedCollectionsWrapper() {
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }}
+          onRepositoryClicked={setPreviewedRepo}
+          selectedRepositoryId={previewedRepo}
         >
           <SharedCollectionsContent
             collections={collections}
             canEdit={canEdit}
             onRemoveRepository={canEdit ? handleRemoveRepository : undefined}
+            previewedRepo={previewedRepo}
+            setPreviewedRepo={setPreviewedRepo}
           />
         </SharedCollectionsProvider>
       </div>

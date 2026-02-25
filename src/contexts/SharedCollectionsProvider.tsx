@@ -27,6 +27,8 @@ import type {
 } from '@principal-ade/panel-framework-core';
 import type { ValidatedRepositoryPath } from '@principal-ai/alexandria-core-library/types';
 import type { Collection } from '@principal-ai/alexandria-collections';
+import { GitFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
+import { trpc } from '@/lib/trpc/client';
 import type {
   WorkspaceSlice,
   WorkspaceCollectionRepositoriesSlice,
@@ -47,6 +49,7 @@ export interface SharedCollectionsContextType {
   workspaceRepositories: DataSlice<WorkspaceCollectionRepositoriesSlice>;
   workspace: DataSlice<WorkspaceSlice>;
   userProfile: DataSlice<UserProfileSlice>;
+  fileTree: DataSlice<FileTree>;
 }
 
 interface SharedCollectionsProviderProps {
@@ -55,6 +58,10 @@ interface SharedCollectionsProviderProps {
   collectionRepositories: string[];
   username: string;
   userProfile: GitHubUserProfile;
+  /** Callback when a repository is clicked in the overworld map */
+  onRepositoryClicked?: (repositoryId: string) => void;
+  /** Currently selected repository ID (for visual highlight) */
+  selectedRepositoryId?: string | null;
 }
 
 // Extended actions for shared collections (includes CollectionMapPanelActions for read-only view)
@@ -74,6 +81,8 @@ export function SharedCollectionsProvider({
   collectionRepositories,
   username,
   userProfile,
+  onRepositoryClicked,
+  selectedRepositoryId,
 }: SharedCollectionsProviderProps) {
   // Initialize event bus
   const events = useMemo(() => new PanelEventBus(), []);
@@ -81,6 +90,11 @@ export function SharedCollectionsProvider({
   // State for collection repository details (fetched from GitHub API)
   const [collectionRepoDetails, setCollectionRepoDetails] = useState<GitHubRepository[]>([]);
   const [collectionRepoDetailsLoading, setCollectionRepoDetailsLoading] = useState(false);
+
+  // State for file tree (for File City panel)
+  const [fileTree, setFileTree] = useState<FileTree | null>(null);
+  const [fileTreeLoading, setFileTreeLoading] = useState(false);
+  const [fileTreeError, setFileTreeError] = useState<Error | null>(null);
 
   // Fetch collection repository details
   useEffect(() => {
@@ -110,6 +124,56 @@ export function SharedCollectionsProvider({
       setCollectionRepoDetailsLoading(false);
     });
   }, [collectionRepositories]);
+
+  // Fetch file tree when selectedRepositoryId changes
+  useEffect(() => {
+    if (!selectedRepositoryId) {
+      setFileTree(null);
+      setFileTreeLoading(false);
+      setFileTreeError(null);
+      return;
+    }
+
+    const [owner, repo] = selectedRepositoryId.split('/');
+    if (!owner || !repo) {
+      setFileTreeError(new Error('Invalid repository format'));
+      return;
+    }
+
+    setFileTreeLoading(true);
+    setFileTreeError(null);
+
+    const fetchFileTree = async () => {
+      try {
+        const data = await trpc.github.getTree.query({ owner, repo });
+
+        // Build FileTree from GitHub tree data
+        const fileTreeBuilder = new GitFileTreeBuilder();
+        const files = data.tree
+          .filter((entry) => entry.type === 'blob')
+          .map((entry) => ({
+            path: entry.path,
+            size: entry.size || 0,
+          }));
+
+        const builtTree = fileTreeBuilder.build({
+          files,
+          rootPath: `/${owner}/${repo}`,
+          commitSha: data.sha,
+          branch: 'main',
+        });
+
+        setFileTree(builtTree);
+        setFileTreeLoading(false);
+      } catch (error) {
+        console.error('[SharedCollectionsProvider] Failed to fetch file tree:', error);
+        setFileTreeError(error instanceof Error ? error : new Error('Failed to fetch file tree'));
+        setFileTreeLoading(false);
+      }
+    };
+
+    fetchFileTree();
+  }, [selectedRepositoryId]);
 
   // Build workspace metadata
   const workspace: WorkspaceMetadata = useMemo(() => ({
@@ -176,6 +240,19 @@ export function SharedCollectionsProvider({
       refresh: async () => { /* no-op */ },
     }),
     [userProfile, collection]
+  );
+
+  // Build fileTree slice
+  const fileTreeSlice = useMemo<DataSlice<FileTree>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'fileTree',
+      data: fileTree,
+      loading: fileTreeLoading,
+      error: fileTreeError,
+      refresh: async () => { /* no-op */ },
+    }),
+    [fileTree, fileTreeLoading, fileTreeError]
   );
 
   // Build selectedCollectionView slice
@@ -251,6 +328,7 @@ export function SharedCollectionsProvider({
       workspaceRepositories: workspaceRepositoriesSlice,
       workspace: workspaceSlice,
       userProfile: userProfileSlice,
+      fileTree: fileTreeSlice,
       // Legacy methods - no-ops
       getSlice: () => undefined,
       getWorkspaceSlice: () => undefined,
@@ -259,15 +337,21 @@ export function SharedCollectionsProvider({
       isSliceLoading: () => false,
       refresh: async () => { /* no-op */ },
     }),
-    [workspace, adapters, collection, selectedCollectionView, workspaceRepositoriesSlice, workspaceSlice, userProfileSlice]
+    [workspace, adapters, collection, selectedCollectionView, workspaceRepositoriesSlice, workspaceSlice, userProfileSlice, fileTreeSlice]
   );
 
-  // Actions - read-only view (CollectionMapPanelActions are no-ops)
+  // Actions - read-only view (CollectionMapPanelActions are no-ops except for click handling)
   const actions: SharedCollectionsPanelActions = useMemo(
     () => ({
       notifyPanels: (event) => {
         events.emit(event);
       },
+      // Repository click handling - calls parent callback
+      onRepositoryClicked: (repositoryId: string) => {
+        console.log('[SharedCollectionsProvider] Repository clicked:', repositoryId);
+        onRepositoryClicked?.(repositoryId);
+      },
+      selectedRepositoryId: selectedRepositoryId ?? null,
       // CollectionMapPanelActions - no-ops for read-only shared view
       addRepositoryToCollection: async () => {
         console.warn('[SharedCollectionsProvider] addRepositoryToCollection not available in read-only view');
@@ -291,7 +375,7 @@ export function SharedCollectionsProvider({
         console.warn('[SharedCollectionsProvider] onBatchLayoutInitialized not available in read-only view');
       },
     }),
-    [events]
+    [events, onRepositoryClicked, selectedRepositoryId]
   );
 
   // Provider value
