@@ -263,8 +263,8 @@ export function SharedCollectionsProvider({
       scope: 'repository' as const,
       name: 'fileCityColorModes',
       data: {
-        enabledModes: ['language' as ColorMode],
-        selectedColorMode: 'language' as ColorMode,
+        enabledModes: ['fileTypes' as ColorMode],
+        selectedColorMode: 'fileTypes' as ColorMode,
         qualityData: undefined,
       },
       loading: false,
