@@ -25,8 +25,9 @@
       "y": 50,
       "width": 200,
       "height": 100,
+      "color": "#16a34a",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "version.registration.started",
           "attributes": {}
@@ -36,7 +37,8 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle"
+          "category": "lifecycle",
+          "files": ["src/app/api/versions/route.ts"]
         },
         "shape": "rectangle",
         "fill": "#22c55e",
@@ -73,8 +75,9 @@
       "y": 199,
       "width": 200,
       "height": 100,
+      "color": "#1d4ed8",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "version.registration.validated",
           "attributes": {}
@@ -84,7 +87,8 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "operation"
+          "category": "operation",
+          "files": ["src/lib/version-registry/version-manager.ts"]
         },
         "shape": "rectangle",
         "fill": "#3b82f6",
@@ -113,8 +117,9 @@
       "y": 350,
       "width": 200,
       "height": 100,
+      "color": "#1d4ed8",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "version.registration.s3.stored",
           "attributes": {}
@@ -124,7 +129,8 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "operation"
+          "category": "operation",
+          "files": ["src/lib/version-registry/s3-storage.ts"]
         },
         "shape": "rectangle",
         "fill": "#3b82f6",
@@ -153,8 +159,9 @@
       "y": 498,
       "width": 200,
       "height": 100,
+      "color": "#1d4ed8",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "version.registration.schematic.fetching",
           "attributes": {}
@@ -164,7 +171,8 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "operation"
+          "category": "operation",
+          "files": ["src/lib/version-registry/version-manager.ts"]
         },
         "shape": "rectangle",
         "fill": "#3b82f6",
@@ -193,8 +201,9 @@
       "y": 649,
       "width": 200,
       "height": 100,
+      "color": "#1d4ed8",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "version.registration.schematic.fetched",
           "attributes": {}
@@ -204,7 +213,8 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "operation"
+          "category": "operation",
+          "files": ["src/lib/version-registry/schematic-fetcher.ts"]
         },
         "shape": "rectangle",
         "fill": "#3b82f6",
@@ -241,8 +251,9 @@
       "y": 801,
       "width": 200,
       "height": 100,
+      "color": "#1d4ed8",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "version.registration.schematic.stored",
           "attributes": {}
@@ -252,7 +263,8 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "operation"
+          "category": "operation",
+          "files": ["src/lib/version-registry/s3-storage.ts"]
         },
         "shape": "rectangle",
         "fill": "#3b82f6",
@@ -281,8 +293,9 @@
       "y": 954,
       "width": 200,
       "height": 100,
+      "color": "#16a34a",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "version.registration.complete",
           "attributes": {}
@@ -292,7 +305,8 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle"
+          "category": "lifecycle",
+          "files": ["src/app/api/versions/route.ts"]
         },
         "shape": "rectangle",
         "fill": "#22c55e",
@@ -321,8 +335,9 @@
       "y": 358,
       "width": 200,
       "height": 100,
+      "color": "#dc2626",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "version.registration.error",
           "attributes": {}
@@ -333,7 +348,8 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "error"
+          "category": "error",
+          "files": ["src/app/api/versions/route.ts", "src/lib/version-registry/version-manager.ts"]
         },
         "shape": "rectangle",
         "fill": "#ef4444",
@@ -370,8 +386,9 @@
       "y": 172,
       "width": 200,
       "height": 100,
+      "color": "#16a34a",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "version.lookup.started",
           "attributes": {}
@@ -381,7 +398,8 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle"
+          "category": "lifecycle",
+          "files": ["src/app/api/versions/lookup/route.ts"]
         },
         "shape": "rectangle",
         "fill": "#22c55e",
@@ -414,8 +432,9 @@
       "y": 386,
       "width": 200,
       "height": 100,
+      "color": "#1d4ed8",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "version.lookup.s3.retrieved",
           "attributes": {}
@@ -425,7 +444,8 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "operation"
+          "category": "operation",
+          "files": ["src/lib/version-registry/s3-storage.ts"]
         },
         "shape": "rectangle",
         "fill": "#3b82f6",
@@ -458,8 +478,9 @@
       "y": 596,
       "width": 200,
       "height": 100,
+      "color": "#16a34a",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "version.lookup.complete",
           "attributes": {}
@@ -469,7 +490,8 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle"
+          "category": "lifecycle",
+          "files": ["src/app/api/versions/lookup/route.ts"]
         },
         "shape": "rectangle",
         "fill": "#22c55e",
@@ -494,8 +516,9 @@
       "y": 262,
       "width": 200,
       "height": 100,
+      "color": "#d97706",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "version.lookup.not_found",
           "attributes": {}
@@ -506,7 +529,8 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "operation"
+          "category": "operation",
+          "files": ["src/app/api/versions/lookup/route.ts", "src/lib/version-registry/s3-storage.ts"]
         },
         "shape": "rectangle",
         "fill": "#f59e0b",
@@ -535,8 +559,9 @@
       "y": 93,
       "width": 200,
       "height": 100,
+      "color": "#dc2626",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "version.lookup.error",
           "attributes": {}
@@ -547,7 +572,8 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "error"
+          "category": "error",
+          "files": ["src/app/api/versions/lookup/route.ts", "src/lib/version-registry/version-manager.ts"]
         },
         "shape": "rectangle",
         "fill": "#ef4444",
@@ -576,8 +602,9 @@
       "y": 292,
       "width": 200,
       "height": 100,
+      "color": "#16a34a",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "version.list.started",
           "attributes": {}
@@ -587,7 +614,8 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle"
+          "category": "lifecycle",
+          "files": ["src/app/api/versions/list/route.ts"]
         },
         "shape": "rectangle",
         "fill": "#22c55e",
@@ -608,8 +636,9 @@
       "y": 465,
       "width": 200,
       "height": 100,
+      "color": "#2563eb",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "version.list.s3.retrieved",
           "attributes": {}
@@ -619,7 +648,8 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "operation"
+          "category": "operation",
+          "files": ["src/lib/version-registry/s3-storage.ts"]
         },
         "shape": "rectangle",
         "fill": "#3b82f6",
@@ -644,8 +674,9 @@
       "y": 675,
       "width": 200,
       "height": 100,
+      "color": "#16a34a",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "version.list.complete",
           "attributes": {}
@@ -655,7 +686,8 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "lifecycle"
+          "category": "lifecycle",
+          "files": ["src/app/api/versions/list/route.ts"]
         },
         "shape": "rectangle",
         "fill": "#22c55e",
@@ -680,8 +712,9 @@
       "y": 291,
       "width": 200,
       "height": 100,
+      "color": "#dc2626",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "version.list.error",
           "attributes": {}
@@ -692,7 +725,8 @@
         ],
         "otel": {
           "kind": "event",
-          "category": "error"
+          "category": "error",
+          "files": ["src/app/api/versions/list/route.ts", "src/lib/version-registry/s3-storage.ts"]
         },
         "shape": "rectangle",
         "fill": "#ef4444",
