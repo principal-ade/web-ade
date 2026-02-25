@@ -37,7 +37,6 @@ import { minimatch } from 'minimatch';
 import { GitFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
 import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode, FeedProjectSliceData } from '@industry-theme/file-city-panel';
-import type { GitHubTreeResponse } from '@/types/api';
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from './AuthContext';
 
@@ -390,32 +389,30 @@ export function ActivityPageProvider({
       return;
     }
 
+    const [owner, repo] = githubRepo.split('/');
+    if (!owner || !repo) {
+      setFileTreeError(new Error('Invalid repository format'));
+      return;
+    }
+
     setFileTreeLoading(true);
     setFileTreeError(null);
 
     const fetchFileTree = async () => {
       try {
-        const response = await fetch(`/api/github/repo/${githubRepo}?action=tree`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch file tree');
-        }
+        const data = await trpc.github.getTree.query({ owner, repo });
 
-        const data: GitHubTreeResponse = await response.json();
-        const [owner, name] = githubRepo.split('/');
-        if (!owner || !name) {
-          throw new Error('Invalid repository format');
-        }
         // GitHub API returns { tree: [{ path, type, ... }] } - extract file info for blobs only
         const files = data.tree
           .filter((entry) => entry.type === 'blob')
           .map((entry) => ({
             path: entry.path,
-            size: entry.size,
+            size: entry.size || 0,
           }));
         const builder = new GitFileTreeBuilder();
         const tree = builder.build({
           files,
-          rootPath: `/${owner}/${name}`,
+          rootPath: `/${owner}/${repo}`,
           commitSha: data.sha,
           branch: 'main',
         });
@@ -427,7 +424,7 @@ export function ActivityPageProvider({
         setFeedProjectData({
           repo: {
             owner,
-            name,
+            name: repo,
             fullName: githubRepo,
             htmlUrl: `https://github.com/${githubRepo}`,
             stars: 0,
@@ -436,7 +433,7 @@ export function ActivityPageProvider({
         });
       } catch (error) {
         console.error('[ActivityPageProvider] Failed to fetch file tree:', error);
-        setFileTreeError(error as Error);
+        setFileTreeError(error instanceof Error ? error : new Error('Failed to fetch file tree'));
       } finally {
         setFileTreeLoading(false);
       }
