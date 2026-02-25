@@ -24,6 +24,7 @@ import {
   UserCollectionsPanel,
   GitHubStarredPanel,
   GitHubProjectsPanel,
+  UserProfilePanel,
 } from '@industry-theme/alexandria-panels';
 import { GitHubSearchPanel } from '@industry-theme/github-panels';
 import { panels as principalViewPanels } from '@industry-theme/principal-view-panels';
@@ -72,6 +73,7 @@ const UserCollectionsPanelLoader = UserCollectionsPanel;
 const GitHubStarredPanelLoader = GitHubStarredPanel;
 const GitHubProjectsPanelLoader = GitHubProjectsPanel;
 const GitHubSearchPanelLoader = GitHubSearchPanel;
+const UserProfilePanelLoader = UserProfilePanel;
 
 // Explore mode panels
 const PrincipalViewPanelLoader = principalViewPanels[0]!.component;
@@ -190,7 +192,7 @@ export function CollectionsPageContent({
 
   // Layout configurations for each mode
   const manageLayout: PanelLayout = {
-    left: 'user-collections',
+    left: 'user-profile',
     middle: 'collection-map',
     right: {
       type: 'tabs',
@@ -199,7 +201,7 @@ export function CollectionsPageContent({
   };
 
   const exploreLayout: PanelLayout = {
-    left: 'user-collections',
+    left: 'user-profile',
     middle: 'collection-map',
     right: {
       type: 'tabs',
@@ -293,6 +295,20 @@ export function CollectionsPageContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <UserCollectionsPanelLoader
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        </div>
+      ),
+    },
+    {
+      id: 'user-profile',
+      label: 'Profile',
+      icon: <User size={16} />,
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <UserProfilePanelLoader
             context={context}
             actions={actions}
             events={events}
@@ -403,35 +419,24 @@ export function CollectionsPageContent({
           paddingBottom: '0.75rem',
         }}
       >
-        {/* Left: User Avatar, Collections label, and Collection Dropdown */}
+        {/* Left: Logo and Collection Dropdown */}
         <div className="flex items-center gap-3">
-          {user?.avatar_url ? (
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="flex items-center transition-all hover:opacity-80"
-              title="Open recent activity"
-              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+          <Link
+            href="/"
+            className="flex items-center gap-2 transition-all hover:opacity-80"
+            title="Home"
+          >
+            <Logo width={28} height={28} color={theme.colors.primary} />
+            <span
+              style={{
+                color: theme.colors.text,
+                fontSize: `${theme.fontSizes[2]}px`,
+                fontWeight: theme.fontWeights.semibold,
+              }}
             >
-              <Image
-                src={user.avatar_url}
-                alt={user.name || user.login}
-                width={32}
-                height={32}
-                style={{
-                  borderRadius: '50%',
-                  border: `2px solid ${theme.colors.border}`,
-                }}
-              />
-            </button>
-          ) : (
-            <Link
-              href="/"
-              className="flex items-center transition-all hover:opacity-80"
-              title="Home"
-            >
-              <Logo width={32} height={32} color={theme.colors.primary} />
-            </Link>
-          )}
+              Principal AI
+            </span>
+          </Link>
           {isMobile ? (
             <span
               style={{

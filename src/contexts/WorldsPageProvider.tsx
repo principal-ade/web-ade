@@ -57,6 +57,7 @@ import type {
   GitHubRepository,
   GitHubStarredSlice,
   GitHubProjectsSlice,
+  UserProfileSlice,
 } from '@industry-theme/alexandria-panels';
 import type {
   AlexandriaEntryWithMetrics,
@@ -164,6 +165,7 @@ export interface WorldsPageContextType {
   packages: DataSlice<PackagesSliceData>; // Required - expected by PackageCompositionPanel
   commitFiles?: DataSlice<CommitFilesSliceData>;
   storyboardContext?: DataSlice<StoryboardContextSliceData>;
+  userProfile: DataSlice<UserProfileSlice>; // Required for UserProfilePanel
 }
 
 interface WorldsPageProviderProps {
@@ -225,7 +227,7 @@ export function WorldsPageProvider({
   }, [events]);
 
   // Get auth state
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   // Get user collections
   const userCollections = useUserCollections();
@@ -374,6 +376,42 @@ export function WorldsPageProvider({
       userCollections.gitHubRepoExists,
       userCollections.gitHubRepoUrl,
     ]
+  );
+
+  // Explicit slice: userProfile (typed for UserProfilePanel)
+  const userProfileSlice = useMemo<DataSlice<UserProfileSlice>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'userProfile',
+      data: {
+        user: user ? {
+          login: user.login,
+          id: user.id,
+          avatar_url: user.avatar_url || '',
+          name: user.name || null,
+          bio: null,
+          company: null,
+          location: null,
+          email: user.email || null,
+          public_repos: 0,
+          public_gists: 0,
+          followers: 0,
+          following: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } : null,
+        collections: userCollections.collections,
+        organizations: [],
+        starredRepositories: [],
+        currentView: 'profile' as const,
+        loading: false,
+        error: undefined,
+      },
+      loading: false,
+      error: null,
+      refresh: async () => { /* no-op */ },
+    }),
+    [user, userCollections.collections]
   );
 
   // Explicit slice: workspace (typed for WorkspaceCollectionPanel)
@@ -908,6 +946,7 @@ export function WorldsPageProvider({
       selectedCollection,
       // Explicit typed slices (migrated from Map)
       userCollections: userCollectionsSlice,
+      userProfile: userProfileSlice,
       // selectedCollectionView is managed as direct state for type safety (not in Map)
       selectedCollectionView: selectedCollectionView,
       workspaceRepositories: workspaceRepositoriesSlice,
@@ -939,6 +978,7 @@ export function WorldsPageProvider({
       selectedCollection,
       selectedCollectionView,
       userCollectionsSlice,
+      userProfileSlice,
       workspaceSlice,
       workspaceRepositoriesSlice,
       packagesSlice,
