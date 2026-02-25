@@ -16,7 +16,7 @@ import {
   PanelLayout,
 } from "@principal-ade/panel-layouts";
 import '@principal-ade/panel-layouts/styles.css';
-import { Plus, FolderOpen, Cloud, CloudOff, Share2, Check, Settings, Clock, GitFork, User, Library, ArrowRight, X, Home, Star, Users, Search, Map, PanelRight, PanelRightClose } from 'lucide-react';
+import { FolderOpen, Cloud, CloudOff, Share2, Check, Settings, Clock, GitFork, User, Library, ArrowRight, X, Home, Star, Users, Search, Map, PanelRight, PanelRightClose } from 'lucide-react';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { iconMap } from '@/components/collections/CollectionModal';
 import type { Collection } from '@principal-ai/alexandria-collections';
@@ -130,7 +130,6 @@ export function CollectionsPageContent({
   const [rightCollapsed, setRightCollapsed] = useState(initialViewMode === 'manage');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<'recent' | 'collections' | 'following' | 'starred'>('recent');
-  const [collectionDropdownOpen, setCollectionDropdownOpen] = useState(false);
   const [recentRepos, setRecentRepos] = useState<RecentRepository[]>([]);
   const [recentOwners, setRecentOwners] = useState<RecentOwner[]>([]);
   const [starredRepos, setStarredRepos] = useState<StarredRepo[]>([]);
@@ -408,28 +407,6 @@ export function CollectionsPageContent({
               Principal AI
             </span>
           </Link>
-          {isMobile ? (
-            <span
-              style={{
-                color: theme.colors.text,
-                fontSize: `${theme.fontSizes[2]}px`,
-                fontWeight: theme.fontWeights.semibold,
-              }}
-            >
-              Repo
-            </span>
-          ) : (
-            <CollectionDropdown
-              collections={allCollections}
-              selectedId={selectedCollectionId}
-              onSelect={onSelectCollection}
-              onCreateNew={onCreateNew}
-              theme={theme}
-              isOpen={collectionDropdownOpen}
-              onToggle={() => setCollectionDropdownOpen(!collectionDropdownOpen)}
-              onClose={() => setCollectionDropdownOpen(false)}
-            />
-          )}
         </div>
 
         {/* Center: Mode Switch */}
@@ -1052,140 +1029,3 @@ export function CollectionsPageContent({
   );
 }
 
-interface CollectionDropdownProps {
-  collections: Collection[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-  onCreateNew: () => void;
-  theme: ReturnType<typeof useTheme>['theme'];
-  isOpen: boolean;
-  onToggle: () => void;
-  onClose: () => void;
-}
-
-export function CollectionDropdown({
-  collections,
-  selectedId,
-  onSelect,
-  onCreateNew,
-  theme,
-  isOpen,
-  onToggle,
-  onClose,
-}: CollectionDropdownProps) {
-  const selected = collections.find(c => c.id === selectedId);
-
-  return (
-    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <button
-        onClick={onToggle}
-        style={{
-          color: theme.colors.textSecondary,
-          fontSize: `${theme.fontSizes[2]}px`,
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: 0,
-          fontFamily: 'inherit',
-        }}
-        title="Switch collection"
-      >
-        Collections
-      </button>
-      <span style={{ color: theme.colors.textSecondary, fontSize: `${theme.fontSizes[2]}px` }}>/</span>
-      <span
-        style={{
-          color: theme.colors.text,
-          fontSize: `${theme.fontSizes[2]}px`,
-          fontWeight: theme.fontWeights.semibold,
-        }}
-      >
-        {selected?.name || 'Select Collection'}
-      </span>
-
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 40,
-            }}
-            onClick={onClose}
-          />
-
-          {/* Dropdown */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '100%',
-              left: 0,
-              marginTop: '4px',
-              minWidth: '280px',
-              backgroundColor: theme.colors.background,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: '8px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-              zIndex: 50,
-              overflow: 'hidden',
-            }}
-          >
-            {/* Create New */}
-            <button
-              onClick={() => {
-                onClose();
-                onCreateNew();
-              }}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '10px 12px',
-                backgroundColor: 'transparent',
-                border: 'none',
-                borderBottom: `1px solid ${theme.colors.border}`,
-                cursor: 'pointer',
-                color: theme.colors.primary,
-                fontSize: `${theme.fontSizes[1]}px`,
-                fontWeight: theme.fontWeights.medium,
-              }}
-            >
-              <Plus size={16} />
-              Create New Collection
-            </button>
-
-            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-              {collections.map(collection => (
-                <button
-                  key={collection.id}
-                  onClick={() => {
-                    onSelect(collection.id);
-                    onClose();
-                  }}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '10px 12px',
-                    backgroundColor: collection.id === selectedId ? theme.colors.backgroundTertiary : 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: theme.colors.text,
-                    fontSize: `${theme.fontSizes[1]}px`,
-                    textAlign: 'left',
-                  }}
-                >
-                  <FolderOpen size={16} style={{ color: theme.colors.textSecondary }} />
-                  <span style={{ flex: 1 }}>{collection.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
