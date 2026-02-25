@@ -16,7 +16,7 @@ import {
   PanelLayout,
 } from "@principal-ade/panel-layouts";
 import '@principal-ade/panel-layouts/styles.css';
-import { FolderOpen, Cloud, CloudOff, Share2, Check, Settings, Clock, GitFork, User, Library, ArrowRight, X, Home, Star, Users, Search, Map, PanelRight, PanelRightClose } from 'lucide-react';
+import { FolderOpen, Share2, Check, Settings, Clock, GitFork, User, Library, ArrowRight, X, Home, Star, Users, Search, Map, PanelRight, PanelRightClose, Plus } from 'lucide-react';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { iconMap } from '@/components/collections/CollectionModal';
 import type { Collection } from '@principal-ai/alexandria-collections';
@@ -89,9 +89,6 @@ export interface CollectionsPageContentProps {
   onRemoveFromCollection?: (repositoryId: string) => Promise<void>;
   // GitHub state
   gitHubRepoExists: boolean;
-  saving: boolean;
-  gitHubRepoUrl: string | null;
-  onOpenSyncModal: () => void;
   // Share
   onShare: () => void;
   shareSuccess: boolean;
@@ -110,9 +107,6 @@ export function CollectionsPageContent({
   onAddToCollection,
   onRemoveFromCollection: _onRemoveFromCollection,
   gitHubRepoExists,
-  saving,
-  gitHubRepoUrl,
-  onOpenSyncModal,
   onShare,
   shareSuccess,
   onPreviewChange: _onPreviewChange,
@@ -451,6 +445,22 @@ export function CollectionsPageContent({
 
         {/* Right: Actions and toggles */}
         <div className="flex items-center justify-end gap-3">
+          {/* Add Collection button */}
+          {!isMobile && isAuthenticated && (
+            <button
+              onClick={onCreateNew}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
+              style={{
+                background: theme.colors.primary,
+                color: theme.colors.background,
+              }}
+              title="Create new collection"
+            >
+              <Plus size={16} />
+              <span className="hidden sm:inline">New Collection</span>
+            </button>
+          )}
+
           {/* Right panel toggle */}
           {!isMobile && (
             <button
@@ -493,33 +503,6 @@ export function CollectionsPageContent({
               )}
               <span className="hidden sm:inline">
                 {shareSuccess ? 'Copied!' : 'Share'}
-              </span>
-            </button>
-          )}
-
-          {/* GitHub Sync Button */}
-          {!isMobile && isAuthenticated && (
-            <button
-              onClick={onOpenSyncModal}
-              disabled={saving}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-all hover:opacity-80"
-              style={{
-                background: gitHubRepoExists ? '#10b98120' : theme.colors.secondary,
-                color: gitHubRepoExists ? '#10b981' : theme.colors.text,
-                border: `1px solid ${gitHubRepoExists ? '#10b981' : theme.colors.border}`,
-                opacity: saving ? 0.6 : 1,
-              }}
-              title={gitHubRepoExists ? `Synced to ${gitHubRepoUrl || 'GitHub'}` : 'Enable GitHub sync'}
-            >
-              {saving ? (
-                <Cloud size={16} className="animate-pulse" />
-              ) : gitHubRepoExists ? (
-                <Cloud size={16} />
-              ) : (
-                <CloudOff size={16} />
-              )}
-              <span className="hidden sm:inline">
-                {saving ? 'Saving...' : gitHubRepoExists ? 'Synced' : 'Sync'}
               </span>
             </button>
           )}

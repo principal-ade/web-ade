@@ -8,7 +8,6 @@ import { useUserCollections } from "@/contexts/UserCollectionsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { CollectionModal } from "@/components/collections/CollectionModal";
 import { AddRepositoryModal } from "@/components/collections/AddRepositoryModal";
-import { GitHubSyncModal } from "@/components/collections/GitHubSyncModal";
 import '@principal-ade/panel-layouts/styles.css';
 import { Plus, Layers } from 'lucide-react';
 import type { Collection } from '@principal-ai/alexandria-collections';
@@ -29,7 +28,6 @@ function CollectionsPageWrapper() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [addRepoModalOpen, setAddRepoModalOpen] = useState(false);
-  const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
 
   // Previewed repo state for explore mode
@@ -252,9 +250,6 @@ function CollectionsPageWrapper() {
               onAddToCollection={isUserCollection ? handleAddRepository : undefined}
               onRemoveFromCollection={isUserCollection ? handleRemoveRepository : undefined}
               gitHubRepoExists={userCollections.gitHubRepoExists}
-              saving={userCollections.saving}
-              gitHubRepoUrl={userCollections.gitHubRepoUrl}
-              onOpenSyncModal={() => setSyncModalOpen(true)}
               onShare={handleShare}
               shareSuccess={shareSuccess}
               onPreviewChange={handlePreviewChange}
@@ -328,18 +323,6 @@ function CollectionsPageWrapper() {
         </>
       )}
 
-      {/* GitHub Sync Modal */}
-      <GitHubSyncModal
-        isOpen={syncModalOpen}
-        onClose={() => setSyncModalOpen(false)}
-        onConfirm={async () => {
-          if (!userCollections.gitHubRepoExists) {
-            await userCollections.enableGitHub();
-          }
-        }}
-        repoUrl={userCollections.gitHubRepoUrl}
-        isSynced={userCollections.gitHubRepoExists}
-      />
     </div>
   );
 }
