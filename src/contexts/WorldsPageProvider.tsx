@@ -987,9 +987,11 @@ export function WorldsPageProvider({
         events.emit(event);
       },
       // Repository click handling - calls parent callback
-      onRepositoryClicked: (repositoryId: string) => {
+      onRepositoryClicked: (repositoryId: string | null) => {
         console.log('[WorldsPageProvider] Repository clicked:', repositoryId);
-        onRepositoryClicked?.(repositoryId);
+        if (repositoryId) {
+          onRepositoryClicked?.(repositoryId);
+        }
       },
       selectedRepositoryId: githubRepo ?? null,
       fetchAudioUrls: async (context: { owner: string; repo: string; path: string; commitSha: string }) => {

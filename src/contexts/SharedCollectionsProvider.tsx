@@ -347,9 +347,11 @@ export function SharedCollectionsProvider({
         events.emit(event);
       },
       // Repository click handling - calls parent callback
-      onRepositoryClicked: (repositoryId: string) => {
+      onRepositoryClicked: (repositoryId: string | null) => {
         console.log('[SharedCollectionsProvider] Repository clicked:', repositoryId);
-        onRepositoryClicked?.(repositoryId);
+        if (repositoryId) {
+          onRepositoryClicked?.(repositoryId);
+        }
       },
       selectedRepositoryId: selectedRepositoryId ?? null,
       // CollectionMapPanelActions - no-ops for read-only shared view

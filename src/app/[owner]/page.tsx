@@ -47,6 +47,7 @@ function OwnerPageWrapper({ owner }: { owner: string }) {
         }}
         githubRepo={previewedRepo || undefined}
         initialOwner={owner}
+        onRepositoryClicked={handlePreviewChange}
       >
         <OwnerPageContent owner={owner} onPreviewChange={handlePreviewChange} initialPreviewedRepo={previewedRepo} />
       </OwnerPageProvider>
