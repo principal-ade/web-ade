@@ -16,7 +16,7 @@ import {
   PanelLayout,
 } from "@principal-ade/panel-layouts";
 import '@principal-ade/panel-layouts/styles.css';
-import { Plus, FolderOpen, Cloud, CloudOff, Share2, Check, Settings, Compass, Clock, GitFork, User, Library, ArrowRight, X, Home, Star, Users, Search, Map, Package, PanelRight, PanelRightClose } from 'lucide-react';
+import { Plus, FolderOpen, Cloud, CloudOff, Share2, Check, Settings, Clock, GitFork, User, Library, ArrowRight, X, Home, Star, Users, Search, Map, PanelRight, PanelRightClose } from 'lucide-react';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { iconMap } from '@/components/collections/CollectionModal';
 import type { Collection } from '@principal-ai/alexandria-collections';
@@ -27,12 +27,8 @@ import {
   UserProfilePanel,
 } from '@industry-theme/alexandria-panels';
 import { GitHubSearchPanel } from '@industry-theme/github-panels';
-import { panels as principalViewPanels } from '@industry-theme/principal-view-panels';
 import { CodeCityPanel } from '@industry-theme/file-city-panel';
-import {
-  PackageCompositionPanel,
-  CollectionMapPanel,
-} from '@industry-theme/repository-composition-panels';
+import { CollectionMapPanel } from '@industry-theme/repository-composition-panels';
 
 const RECENT_REPOSITORIES_KEY = 'recent-repositories';
 const RECENT_OWNERS_KEY = 'recent-owners';
@@ -76,9 +72,7 @@ const GitHubSearchPanelLoader = GitHubSearchPanel;
 const UserProfilePanelLoader = UserProfilePanel;
 
 // Explore mode panels
-const PrincipalViewPanelLoader = principalViewPanels[0]!.component;
 const FileCityPanelLoader = CodeCityPanel;
-const PackageCompositionPanelLoader = PackageCompositionPanel;
 const CollectionMapPanelLoader = CollectionMapPanel;
 
 export type ViewMode = 'manage' | 'explore';
@@ -203,10 +197,7 @@ export function CollectionsPageContent({
   const exploreLayout: PanelLayout = {
     left: 'user-profile',
     middle: 'collection-map',
-    right: {
-      type: 'tabs',
-      panels: ['file-city', 'visual-validation', 'package-composition'],
-    },
+    right: 'file-city',
   };
 
   // Mobile layout: distribute panels across slots instead of tabs
@@ -385,26 +376,6 @@ export function CollectionsPageContent({
         </div>
       ),
     },
-    {
-      id: 'visual-validation',
-      label: 'Architecture',
-      icon: <Compass size={16} />,
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <PrincipalViewPanelLoader context={context} actions={actions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'package-composition',
-      label: 'Packages',
-      icon: <Package size={16} />,
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <PackageCompositionPanelLoader context={context} actions={actions} events={events} />
-        </div>
-      ),
-    },
   ];
 
   return (
@@ -494,7 +465,7 @@ export function CollectionsPageContent({
                 }}
                 title="Explore collection with visualizations"
               >
-                <Compass size={14} />
+                <Map size={14} />
                 <span className="hidden sm:inline">Explore</span>
               </button>
             </div>
