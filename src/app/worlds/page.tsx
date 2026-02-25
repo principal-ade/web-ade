@@ -242,6 +242,7 @@ function CollectionsPageWrapper() {
             githubRepo={previewedRepo || undefined}
             collectionId={selectedCollectionId || undefined}
             collectionRepositories={repositories}
+            onRepositoryClicked={handlePreviewChange}
           >
             <CollectionsPageContent
               allCollections={allCollections}

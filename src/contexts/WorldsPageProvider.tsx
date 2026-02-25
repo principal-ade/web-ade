@@ -45,7 +45,6 @@ import { minimatch } from 'minimatch';
 import { GitFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
 import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode } from '@industry-theme/file-city-panel';
-import type { GitHubTreeResponse } from '@/types/api';
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from './AuthContext';
 import { useUserCollections } from './UserCollectionsContext';
@@ -174,6 +173,8 @@ interface WorldsPageProviderProps {
   githubRepo?: string;
   collectionId?: string;
   collectionRepositories?: string[];
+  /** Callback when a repository is clicked in the overworld map */
+  onRepositoryClicked?: (repositoryId: string) => void;
 }
 
 interface WorldsPageProviderValue {
@@ -193,6 +194,7 @@ export function WorldsPageProvider({
   githubRepo,
   collectionId,
   collectionRepositories,
+  onRepositoryClicked,
 }: WorldsPageProviderProps) {
   // Initialize event bus
   const events = useMemo(() => new PanelEventBus(), []);
@@ -700,29 +702,30 @@ export function WorldsPageProvider({
       return;
     }
 
+    const [owner, repo] = githubRepo.split('/');
+    if (!owner || !repo) {
+      setFileTreeError(new Error('Invalid repository format'));
+      return;
+    }
+
     setFileTreeLoading(true);
     setFileTreeError(null);
 
     const fetchFileTree = async () => {
       try {
-        const response = await fetch(`/api/github/repo/${githubRepo}?action=tree`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch file tree');
-        }
+        const data = await trpc.github.getTree.query({ owner, repo });
 
-        const data: GitHubTreeResponse = await response.json();
-        const [owner, name] = githubRepo.split('/');
         // GitHub API returns { tree: [{ path, type, ... }] } - extract file info for blobs only
         const files = data.tree
           .filter((entry) => entry.type === 'blob')
           .map((entry) => ({
             path: entry.path,
-            size: entry.size,
+            size: entry.size || 0,
           }));
         const builder = new GitFileTreeBuilder();
         const tree = builder.build({
           files,
-          rootPath: `/${owner}/${name}`,
+          rootPath: `/${owner}/${repo}`,
           commitSha: data.sha,
           branch: 'main',
         });
@@ -731,7 +734,7 @@ export function WorldsPageProvider({
         setFileTreeError(null);
       } catch (error) {
         console.error('[WorldsPageProvider] Failed to fetch file tree:', error);
-        setFileTreeError(error as Error);
+        setFileTreeError(error instanceof Error ? error : new Error('Failed to fetch file tree'));
       } finally {
         setFileTreeLoading(false);
       }
@@ -983,6 +986,12 @@ export function WorldsPageProvider({
       notifyPanels: (event) => {
         events.emit(event);
       },
+      // Repository click handling - calls parent callback
+      onRepositoryClicked: (repositoryId: string) => {
+        console.log('[WorldsPageProvider] Repository clicked:', repositoryId);
+        onRepositoryClicked?.(repositoryId);
+      },
+      selectedRepositoryId: githubRepo ?? null,
       fetchAudioUrls: async (context: { owner: string; repo: string; path: string; commitSha: string }) => {
         try {
           // Use tRPC for type-safe API call
@@ -1246,7 +1255,7 @@ export function WorldsPageProvider({
         }
       },
     }),
-    [adapters, events, userCollections]
+    [adapters, events, userCollections, onRepositoryClicked, githubRepo]
   );
 
   // Clear color mode
