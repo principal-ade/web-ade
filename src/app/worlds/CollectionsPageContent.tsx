@@ -256,6 +256,13 @@ export function CollectionsPageContent({
           onSelectCollection(payload.collectionId);
         }
       }),
+      // Listen for collection selection from UserProfilePanel (left panel)
+      events.on('industry-theme.user-profile:collection:selected', (event) => {
+        const payload = event.payload as { collection?: Collection; collectionId?: string };
+        if (payload?.collectionId) {
+          onSelectCollection(payload.collectionId);
+        }
+      }),
       // Listen for create collection request from UserCollectionsPanel
       events.on('industry-theme.user-collections:create-collection-requested', () => {
         console.log('[CollectionsPageContent] Received create-collection-requested event');
