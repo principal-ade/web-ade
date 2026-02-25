@@ -162,6 +162,12 @@ async function saveFile(
 
   if (!response.ok) {
     const error = await response.json();
+    console.error(`saveFile failed for ${filename}:`, {
+      status: response.status,
+      error,
+      sha,
+      retries,
+    });
 
     // Handle SHA conflict (409) by refetching SHA and retrying
     if (response.status === 409 && retries > 0) {
@@ -343,8 +349,9 @@ export async function POST(request: NextRequest) {
     const failures = results.filter(r => !r.success);
 
     if (failures.length > 0) {
+      console.error('GitHub collections POST save failures:', failures);
       return NextResponse.json(
-        { error: `Failed to save ${failures.length} collection(s)` },
+        { error: `Failed to save ${failures.length} collection(s)`, details: failures.map(f => f.error) },
         { status: 500 }
       );
     }
@@ -435,8 +442,9 @@ export async function PUT(request: NextRequest) {
     const failures = results.filter(r => !r.success);
 
     if (failures.length > 0) {
+      console.error('GitHub collections PUT save failures:', failures);
       return NextResponse.json(
-        { error: `Failed to save ${failures.length} collection(s)` },
+        { error: `Failed to save ${failures.length} collection(s)`, details: failures.map(f => f.error) },
         { status: 500 }
       );
     }
