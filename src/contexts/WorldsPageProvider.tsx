@@ -401,8 +401,9 @@ export function WorldsPageProvider({
           updated_at: new Date().toISOString(),
         } : null,
         collections: userCollections.collections,
-        organizations: [],
+        repositories: [],
         starredRepositories: [],
+        selectedCollectionId: collectionId,
         currentView: 'profile' as const,
         loading: false,
         error: undefined,
@@ -411,7 +412,7 @@ export function WorldsPageProvider({
       error: null,
       refresh: async () => { /* no-op */ },
     }),
-    [user, userCollections.collections]
+    [user, userCollections.collections, collectionId]
   );
 
   // Explicit slice: workspace (typed for WorkspaceCollectionPanel)

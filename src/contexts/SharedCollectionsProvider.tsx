@@ -231,7 +231,7 @@ export function SharedCollectionsProvider({
       data: {
         user: userProfile,
         collections: collection ? [collection] : [],
-        organizations: [],
+        repositories: [],
         starredRepositories: [],
         currentView: 'profile' as const,
         loading: false,
