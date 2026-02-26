@@ -511,80 +511,118 @@ export const githubRouter = router({
       const { owner, repo } = input;
       const userToken = await getGitHubToken();
 
-      // Fetch the repository tree
-      const treeData = await makeGitHubRequest<GitHubTreeResponseRaw>(
-        `/repos/${owner}/${repo}/git/trees/HEAD?recursive=1`,
-        userToken
-      );
+      try {
+        // Fetch the repository tree
+        const treeData = await makeGitHubRequest<GitHubTreeResponseRaw>(
+          `/repos/${owner}/${repo}/git/trees/HEAD?recursive=1`,
+          userToken
+        );
 
-      // Build FileTree structure
-      const fileTree = buildFileTree(treeData, owner, repo);
+        // For very large repos, GitHub truncates the tree - return empty packages
+        if (treeData.truncated) {
+          console.warn(`[getRepoPackages] Tree truncated for ${owner}/${repo}, skipping package discovery`);
+          return {
+            packages: [],
+            summary: {
+              isMonorepo: false,
+              rootPackageName: undefined,
+              totalPackages: 0,
+              workspacePackages: [],
+              totalDependencies: 0,
+              totalDevDependencies: 0,
+              availableScripts: [],
+              truncated: true,
+            },
+            treeSha: treeData.sha,
+          };
+        }
 
-      // Create a file reader that fetches from GitHub with concurrency limiting
-      const limit = createLimiter(MAX_CONCURRENT_REQUESTS);
-      const fileReader = async (filePath: string): Promise<string> => {
-        // Normalize path (remove leading slash if present)
-        const normalizedPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+        // Build FileTree structure
+        const fileTree = buildFileTree(treeData, owner, repo);
 
-        return limit(async () => {
-          interface GitHubFileContent {
-            content: string;
-            encoding: string;
-          }
+        // Create a file reader that fetches from GitHub with concurrency limiting
+        const limit = createLimiter(MAX_CONCURRENT_REQUESTS);
+        const fileReader = async (filePath: string): Promise<string> => {
+          // Normalize path (remove leading slash if present)
+          const normalizedPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
 
-          const fileData = await makeGitHubRequest<GitHubFileContent>(
-            `/repos/${owner}/${repo}/contents/${normalizedPath}`,
-            userToken
-          );
+          return limit(async () => {
+            interface GitHubFileContent {
+              content: string;
+              encoding: string;
+            }
 
-          if (fileData.content && fileData.encoding === 'base64') {
-            return Buffer.from(fileData.content, 'base64').toString('utf-8');
-          }
+            const fileData = await makeGitHubRequest<GitHubFileContent>(
+              `/repos/${owner}/${repo}/contents/${normalizedPath}`,
+              userToken
+            );
 
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `Unable to read file: ${filePath}`,
+            if (fileData.content && fileData.encoding === 'base64') {
+              return Buffer.from(fileData.content, 'base64').toString('utf-8');
+            }
+
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: `Unable to read file: ${filePath}`,
+            });
           });
-        });
-      };
+        };
 
-      // Use PackageLayerModule to discover packages
-      const packageModule = new PackageLayerModule();
-      const packages = await packageModule.discoverPackages(fileTree, fileReader);
+        // Use PackageLayerModule to discover packages
+        const packageModule = new PackageLayerModule();
+        const packages = await packageModule.discoverPackages(fileTree, fileReader);
 
-      // Calculate summary
-      const summary = {
-        isMonorepo: packages.some(p => p.packageData?.isMonorepoRoot) || packages.length > 1,
-        rootPackageName: packages.find(p => p.packageData?.isMonorepoRoot)?.packageData?.name,
-        totalPackages: packages.length,
-        workspacePackages: packages
-          .filter(p => p.packageData?.isWorkspace)
-          .map(p => ({
-            name: p.packageData?.name,
-            path: p.packageData?.path,
-          })),
-        totalDependencies: packages.reduce(
-          (sum, p) => sum + Object.keys(p.packageData?.dependencies || {}).length,
-          0
-        ),
-        totalDevDependencies: packages.reduce(
-          (sum, p) => sum + Object.keys(p.packageData?.devDependencies || {}).length,
-          0
-        ),
-        availableScripts: [
-          ...new Set(
-            packages.flatMap(p =>
-              (p.packageData?.availableCommands || []).map(c => c.name)
-            )
+        // Calculate summary
+        const summary = {
+          isMonorepo: packages.some(p => p.packageData?.isMonorepoRoot) || packages.length > 1,
+          rootPackageName: packages.find(p => p.packageData?.isMonorepoRoot)?.packageData?.name,
+          totalPackages: packages.length,
+          workspacePackages: packages
+            .filter(p => p.packageData?.isWorkspace)
+            .map(p => ({
+              name: p.packageData?.name,
+              path: p.packageData?.path,
+            })),
+          totalDependencies: packages.reduce(
+            (sum, p) => sum + Object.keys(p.packageData?.dependencies || {}).length,
+            0
           ),
-        ],
-      };
+          totalDevDependencies: packages.reduce(
+            (sum, p) => sum + Object.keys(p.packageData?.devDependencies || {}).length,
+            0
+          ),
+          availableScripts: [
+            ...new Set(
+              packages.flatMap(p =>
+                (p.packageData?.availableCommands || []).map(c => c.name)
+              )
+            ),
+          ],
+        };
 
-      return {
-        packages,
-        summary,
-        treeSha: treeData.sha,
-      };
+        return {
+          packages,
+          summary,
+          treeSha: treeData.sha,
+        };
+      } catch (error) {
+        // For any error (timeout, rate limit, etc.), return empty packages gracefully
+        console.error(`[getRepoPackages] Error fetching packages for ${owner}/${repo}:`, error);
+        return {
+          packages: [],
+          summary: {
+            isMonorepo: false,
+            rootPackageName: undefined,
+            totalPackages: 0,
+            workspacePackages: [],
+            totalDependencies: 0,
+            totalDevDependencies: 0,
+            availableScripts: [],
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+          treeSha: undefined,
+        };
+      }
     }),
 });
 
