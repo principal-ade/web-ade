@@ -322,11 +322,11 @@ export function SharedCollectionsProvider({
         repositories,
         dependencies: undefined,
       },
-      loading: collectionRepoDetailsLoading,
+      loading: false,
       error: null,
       refresh: async () => { /* no-op */ },
     };
-  }, [collection, collectionRepositories, collectionRepoDetails, collectionRepoDetailsLoading]);
+  }, [collection, collectionRepositories, collectionRepoDetails]);
 
   // Minimal adapters
   const adapters: PanelAdapters = useMemo(() => ({}), []);

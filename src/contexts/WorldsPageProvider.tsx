@@ -886,7 +886,7 @@ export function WorldsPageProvider({
         repositories,
         dependencies: undefined,
       },
-      loading: userCollections.loading || collectionRepoDetailsLoading || collectionRepoPackagesLoading,
+      loading: userCollections.loading,
       error: userCollections.error || null,
       refresh: async () => {},
     });
