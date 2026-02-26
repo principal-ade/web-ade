@@ -98,7 +98,7 @@ export function SharedCollectionsProvider({
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
   const [fileTreeError, setFileTreeError] = useState<Error | null>(null);
 
-  // Fetch collection repository details
+  // Fetch collection repository details (progressively as each completes)
   useEffect(() => {
     if (!collectionRepositories || collectionRepositories.length === 0) {
       setCollectionRepoDetails([]);
@@ -107,23 +107,26 @@ export function SharedCollectionsProvider({
     }
 
     setCollectionRepoDetailsLoading(true);
+    setCollectionRepoDetails([]); // Reset before fetching
 
-    Promise.all(
-      collectionRepositories.map(async (repoId) => {
-        try {
-          const response = await fetch(`/api/github/repo/${repoId}`);
-          if (response.ok) {
-            return await response.json();
-          }
-          return null;
-        } catch (error) {
-          console.error(`Failed to fetch repo ${repoId}:`, error);
-          return null;
+    let completed = 0;
+    const total = collectionRepositories.length;
+
+    collectionRepositories.forEach(async (repoId) => {
+      try {
+        const response = await fetch(`/api/github/repo/${repoId}`);
+        if (response.ok) {
+          const repo = await response.json();
+          setCollectionRepoDetails(prev => [...prev, repo]);
         }
-      })
-    ).then((results) => {
-      setCollectionRepoDetails(results.filter((r): r is GitHubRepository => r !== null));
-      setCollectionRepoDetailsLoading(false);
+      } catch (error) {
+        console.error(`Failed to fetch repo ${repoId}:`, error);
+      } finally {
+        completed++;
+        if (completed === total) {
+          setCollectionRepoDetailsLoading(false);
+        }
+      }
     });
   }, [collectionRepositories]);
 

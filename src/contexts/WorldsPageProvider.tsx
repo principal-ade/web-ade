@@ -663,7 +663,7 @@ export function WorldsPageProvider({
     fetchGithubRepos();
   }, [fetchGithubRepos]);
 
-  // Fetch collection repository details
+  // Fetch collection repository details (progressively as each completes)
   useEffect(() => {
     if (!collectionRepositories || collectionRepositories.length === 0) {
       setCollectionRepoDetails([]);
@@ -672,64 +672,61 @@ export function WorldsPageProvider({
     }
 
     setCollectionRepoDetailsLoading(true);
+    setCollectionRepoDetails([]); // Reset before fetching
 
-    Promise.all(
-      collectionRepositories.map(async (repoId) => {
-        try {
-          const response = await fetch(`/api/github/repo/${repoId}`);
-          if (response.ok) {
-            return await response.json();
-          }
-          return null;
-        } catch (error) {
-          console.error(`Failed to fetch repo ${repoId}:`, error);
-          return null;
+    let completed = 0;
+    const total = collectionRepositories.length;
+
+    collectionRepositories.forEach(async (repoId) => {
+      try {
+        const response = await fetch(`/api/github/repo/${repoId}`);
+        if (response.ok) {
+          const repo = await response.json();
+          setCollectionRepoDetails(prev => [...prev, repo]);
         }
-      })
-    ).then((results) => {
-      setCollectionRepoDetails(results.filter((r): r is GitHubRepository => r !== null));
-      setCollectionRepoDetailsLoading(false);
+      } catch (error) {
+        console.error(`Failed to fetch repo ${repoId}:`, error);
+      } finally {
+        completed++;
+        if (completed === total) {
+          setCollectionRepoDetailsLoading(false);
+        }
+      }
     });
   }, [collectionRepositories]);
 
-  // Fetch packages for collection repositories (for monorepo visualization)
+  // Fetch packages for collection repositories (progressively as each completes)
   useEffect(() => {
-    console.log('[WorldsPageProvider] Packages useEffect triggered:', {
-      collectionRepositories,
-      count: collectionRepositories?.length || 0,
-    });
-
     if (!collectionRepositories || collectionRepositories.length === 0) {
       setCollectionRepoPackages({});
       setCollectionRepoPackagesLoading(false);
       return;
     }
 
-    console.log('[WorldsPageProvider] Fetching packages for:', collectionRepositories);
     setCollectionRepoPackagesLoading(true);
+    setCollectionRepoPackages({}); // Reset before fetching
 
-    Promise.all(
-      collectionRepositories.map(async (repoId) => {
-        try {
-          const response = await fetch(`/api/github/repo/${repoId}/packages`);
-          if (response.ok) {
-            const data = await response.json();
-            return { repoId, packages: data.packages || [] };
-          }
-          return { repoId, packages: [] };
-        } catch (error) {
-          console.error(`Failed to fetch packages for ${repoId}:`, error);
-          return { repoId, packages: [] };
+    let completed = 0;
+    const total = collectionRepositories.length;
+
+    collectionRepositories.forEach(async (repoId) => {
+      try {
+        const response = await fetch(`/api/github/repo/${repoId}/packages`);
+        if (response.ok) {
+          const data = await response.json();
+          setCollectionRepoPackages(prev => ({
+            ...prev,
+            [repoId]: data.packages || [],
+          }));
         }
-      })
-    ).then((results) => {
-      console.log('[WorldsPageProvider] Packages fetch results:', results);
-      const packagesMap: Record<string, PackageLayer[]> = {};
-      results.forEach(({ repoId, packages }) => {
-        packagesMap[repoId] = packages;
-      });
-      setCollectionRepoPackages(packagesMap);
-      setCollectionRepoPackagesLoading(false);
+      } catch (error) {
+        console.error(`Failed to fetch packages for ${repoId}:`, error);
+      } finally {
+        completed++;
+        if (completed === total) {
+          setCollectionRepoPackagesLoading(false);
+        }
+      }
     });
   }, [collectionRepositories]);
 
