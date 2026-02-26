@@ -210,6 +210,13 @@ export function CollectionsPageContent({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Auto-toggle right panel based on repository selection in explore mode
+  useEffect(() => {
+    if (viewMode === 'explore') {
+      setRightCollapsed(!actions.selectedRepositoryId);
+    }
+  }, [viewMode, actions.selectedRepositoryId]);
+
   // Note: Right panel state persists across mode changes
   // Users can toggle it in both manage and explore modes
 
