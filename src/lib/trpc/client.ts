@@ -7,7 +7,7 @@
  * For React components, consider using @trpc/react-query hooks instead.
  */
 
-import { createTRPCClient, httpBatchLink } from '@trpc/client';
+import { createTRPCClient, httpLink } from '@trpc/client';
 import type { AppRouter } from '@/server/routers/_app';
 
 /**
@@ -51,14 +51,8 @@ function getBaseUrl(): string {
  */
 export const trpc = createTRPCClient<AppRouter>({
   links: [
-    httpBatchLink({
+    httpLink({
       url: `${getBaseUrl()}/api/trpc`,
-      // Optional: Add headers for auth, etc.
-      // headers() {
-      //   return {
-      //     Authorization: getAuthToken(),
-      //   };
-      // },
     }),
   ],
 });
