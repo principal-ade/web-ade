@@ -678,12 +678,16 @@ export function WorldsPageProvider({
     const total = collectionRepositories.length;
 
     collectionRepositories.forEach(async (repoId) => {
+      const [owner, repo] = repoId.split('/');
+      if (!owner || !repo) {
+        completed++;
+        if (completed === total) setCollectionRepoDetailsLoading(false);
+        return;
+      }
+
       try {
-        const response = await fetch(`/api/github/repo/${repoId}`);
-        if (response.ok) {
-          const repo = await response.json();
-          setCollectionRepoDetails(prev => [...prev, repo]);
-        }
+        const repoInfo = await trpc.github.getRepoInfo.query({ owner, repo });
+        setCollectionRepoDetails(prev => [...prev, repoInfo as unknown as GitHubRepository]);
       } catch (error) {
         console.error(`Failed to fetch repo ${repoId}:`, error);
       } finally {
@@ -710,15 +714,19 @@ export function WorldsPageProvider({
     const total = collectionRepositories.length;
 
     collectionRepositories.forEach(async (repoId) => {
+      const [owner, repo] = repoId.split('/');
+      if (!owner || !repo) {
+        completed++;
+        if (completed === total) setCollectionRepoPackagesLoading(false);
+        return;
+      }
+
       try {
-        const response = await fetch(`/api/github/repo/${repoId}/packages`);
-        if (response.ok) {
-          const data = await response.json();
-          setCollectionRepoPackages(prev => ({
-            ...prev,
-            [repoId]: data.packages || [],
-          }));
-        }
+        const data = await trpc.github.getRepoPackages.query({ owner, repo });
+        setCollectionRepoPackages(prev => ({
+          ...prev,
+          [repoId]: data.packages || [],
+        }));
       } catch (error) {
         console.error(`Failed to fetch packages for ${repoId}:`, error);
       } finally {

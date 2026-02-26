@@ -10,6 +10,8 @@ import { router, publicProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
 import { cookies } from 'next/headers';
 import { gitTreeCache } from '@/lib/git-tree-cache';
+import { PackageLayerModule } from '@principal-ai/codebase-composition';
+import type { FileTree, FileInfo, DirectoryInfo } from '@principal-ai/repository-abstraction';
 
 const GITHUB_API_BASE = 'https://api.github.com';
 
@@ -28,6 +30,11 @@ const getTreeInputSchema = z.object({
   owner: z.string().min(1),
   repo: z.string().min(1),
   ref: z.string().optional().default('HEAD'),
+});
+
+const getRepoInfoInputSchema = z.object({
+  owner: z.string().min(1),
+  repo: z.string().min(1),
 });
 
 // ============================================================================
@@ -57,9 +64,228 @@ const getTreeOutputSchema = z.object({
   truncated: z.boolean(),
 });
 
+const repoInfoOutputSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  full_name: z.string(),
+  private: z.boolean(),
+  owner: z.object({
+    login: z.string(),
+    id: z.number(),
+    avatar_url: z.string(),
+    type: z.string(),
+  }),
+  html_url: z.string(),
+  description: z.string().nullable(),
+  fork: z.boolean(),
+  url: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  pushed_at: z.string(),
+  homepage: z.string().nullable(),
+  size: z.number(),
+  stargazers_count: z.number(),
+  watchers_count: z.number(),
+  language: z.string().nullable(),
+  forks_count: z.number(),
+  open_issues_count: z.number(),
+  default_branch: z.string(),
+  topics: z.array(z.string()),
+  visibility: z.string(),
+});
+
 // ============================================================================
 // Helpers
 // ============================================================================
+
+const MAX_CONCURRENT_REQUESTS = 5;
+
+// Simple concurrency limiter
+function createLimiter(concurrency: number) {
+  let active = 0;
+  const queue: (() => void)[] = [];
+
+  return async <T>(fn: () => Promise<T>): Promise<T> => {
+    if (active >= concurrency) {
+      await new Promise<void>((resolve) => queue.push(resolve));
+    }
+    active++;
+    try {
+      return await fn();
+    } finally {
+      active--;
+      queue.shift()?.();
+    }
+  };
+}
+
+interface GitHubTreeItem {
+  path: string;
+  mode: string;
+  type: 'blob' | 'tree';
+  sha: string;
+  size?: number;
+  url: string;
+}
+
+interface GitHubTreeResponseRaw {
+  sha: string;
+  url: string;
+  tree: GitHubTreeItem[];
+  truncated: boolean;
+}
+
+function buildFileTree(
+  tree: GitHubTreeResponseRaw,
+  owner: string,
+  name: string
+): FileTree {
+  // Extract all files (blobs)
+  const allFiles: FileInfo[] = tree.tree
+    .filter((item) => item.type === 'blob')
+    .map((item) => {
+      const pathParts = item.path.split('/');
+      const fileName = pathParts[pathParts.length - 1] ?? item.path;
+      const extension = fileName.includes('.') ? (fileName.split('.').pop() ?? '') : '';
+
+      return {
+        path: `/${item.path}`,
+        name: fileName,
+        extension,
+        size: item.size || 0,
+        lastModified: new Date(),
+        isDirectory: false,
+        relativePath: item.path,
+      };
+    });
+
+  // Build directory structure
+  const dirMap = new Map<string, DirectoryInfo>();
+
+  // Create directories from tree items
+  tree.tree
+    .filter((item) => item.type === 'tree')
+    .forEach((item) => {
+      const pathParts = item.path.split('/');
+      const dirName = pathParts[pathParts.length - 1] ?? item.path;
+
+      dirMap.set(item.path, {
+        path: `/${item.path}`,
+        name: dirName,
+        children: [],
+        fileCount: 0,
+        totalSize: 0,
+        depth: pathParts.length,
+        relativePath: item.path,
+      });
+    });
+
+  // Create implicit parent directories for files
+  allFiles.forEach((file) => {
+    const pathParts = file.relativePath.split('/');
+    let currentPath = '';
+
+    for (let i = 0; i < pathParts.length - 1; i++) {
+      const part = pathParts[i];
+      if (!part) continue;
+      currentPath = currentPath ? `${currentPath}/${part}` : part;
+
+      if (!dirMap.has(currentPath)) {
+        dirMap.set(currentPath, {
+          path: `/${currentPath}`,
+          name: part,
+          children: [],
+          fileCount: 0,
+          totalSize: 0,
+          depth: i + 1,
+          relativePath: currentPath,
+        });
+      }
+    }
+  });
+
+  const allDirectories = Array.from(dirMap.values());
+  let maxDepth = 0;
+  let totalSize = 0;
+
+  // Assign files to parent directories
+  allFiles.forEach((file) => {
+    const pathParts = file.relativePath.split('/');
+    if (pathParts.length > 1) {
+      const parentPath = pathParts.slice(0, -1).join('/');
+      const parentDir = dirMap.get(parentPath);
+      if (parentDir) {
+        parentDir.children.push(file);
+        parentDir.fileCount++;
+        parentDir.totalSize += file.size;
+      }
+    }
+    totalSize += file.size;
+  });
+
+  // Assign subdirectories to parent directories
+  allDirectories.forEach((dir) => {
+    maxDepth = Math.max(maxDepth, dir.depth);
+    const pathParts = dir.relativePath.split('/');
+
+    if (pathParts.length > 1) {
+      const parentPath = pathParts.slice(0, -1).join('/');
+      const parentDir = dirMap.get(parentPath);
+      if (parentDir) {
+        parentDir.children.push(dir);
+      }
+    }
+  });
+
+  // Build root directory
+  const rootChildren: (FileInfo | DirectoryInfo)[] = [];
+
+  allFiles.forEach((file) => {
+    if (!file.relativePath.includes('/')) {
+      rootChildren.push(file);
+    }
+  });
+
+  allDirectories.forEach((dir) => {
+    if (!dir.relativePath.includes('/')) {
+      rootChildren.push(dir);
+    }
+  });
+
+  const rootDir: DirectoryInfo = {
+    path: `/${owner}/${name}`,
+    name: name,
+    children: rootChildren,
+    fileCount: allFiles.length,
+    totalSize,
+    depth: 0,
+    relativePath: '',
+  };
+
+  return {
+    sha: tree.sha,
+    root: rootDir,
+    allFiles,
+    allDirectories,
+    stats: {
+      totalFiles: allFiles.length,
+      totalDirectories: allDirectories.length,
+      totalSize,
+      maxDepth,
+    },
+    metadata: {
+      id: `github:${owner}/${name}:${tree.sha}`,
+      timestamp: new Date(),
+      sourceType: 'github',
+      sourceSha: tree.sha,
+      sourceInfo: {
+        owner,
+        name,
+        provider: 'github',
+      },
+    },
+  };
+}
 
 async function getGitHubToken(): Promise<string | null> {
   try {
@@ -228,6 +454,137 @@ export const githubRouter = router({
       }
 
       return treeData;
+    }),
+
+  /**
+   * Get repository info (metadata, stars, description, etc.)
+   */
+  getRepoInfo: publicProcedure
+    .input(getRepoInfoInputSchema)
+    .output(repoInfoOutputSchema)
+    .query(async ({ input }) => {
+      const { owner, repo } = input;
+      const userToken = await getGitHubToken();
+
+      interface GitHubRepoInfoResponse {
+        id: number;
+        name: string;
+        full_name: string;
+        private: boolean;
+        owner: {
+          login: string;
+          id: number;
+          avatar_url: string;
+          type: string;
+        };
+        html_url: string;
+        description: string | null;
+        fork: boolean;
+        url: string;
+        created_at: string;
+        updated_at: string;
+        pushed_at: string;
+        homepage: string | null;
+        size: number;
+        stargazers_count: number;
+        watchers_count: number;
+        language: string | null;
+        forks_count: number;
+        open_issues_count: number;
+        default_branch: string;
+        topics: string[];
+        visibility: string;
+      }
+
+      return makeGitHubRequest<GitHubRepoInfoResponse>(
+        `/repos/${owner}/${repo}`,
+        userToken
+      );
+    }),
+
+  /**
+   * Get packages for a repository (detects monorepos, dependencies, etc.)
+   */
+  getRepoPackages: publicProcedure
+    .input(getRepoInfoInputSchema) // Same input as getRepoInfo
+    .query(async ({ input }) => {
+      const { owner, repo } = input;
+      const userToken = await getGitHubToken();
+
+      // Fetch the repository tree
+      const treeData = await makeGitHubRequest<GitHubTreeResponseRaw>(
+        `/repos/${owner}/${repo}/git/trees/HEAD?recursive=1`,
+        userToken
+      );
+
+      // Build FileTree structure
+      const fileTree = buildFileTree(treeData, owner, repo);
+
+      // Create a file reader that fetches from GitHub with concurrency limiting
+      const limit = createLimiter(MAX_CONCURRENT_REQUESTS);
+      const fileReader = async (filePath: string): Promise<string> => {
+        // Normalize path (remove leading slash if present)
+        const normalizedPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+
+        return limit(async () => {
+          interface GitHubFileContent {
+            content: string;
+            encoding: string;
+          }
+
+          const fileData = await makeGitHubRequest<GitHubFileContent>(
+            `/repos/${owner}/${repo}/contents/${normalizedPath}`,
+            userToken
+          );
+
+          if (fileData.content && fileData.encoding === 'base64') {
+            return Buffer.from(fileData.content, 'base64').toString('utf-8');
+          }
+
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Unable to read file: ${filePath}`,
+          });
+        });
+      };
+
+      // Use PackageLayerModule to discover packages
+      const packageModule = new PackageLayerModule();
+      const packages = await packageModule.discoverPackages(fileTree, fileReader);
+
+      // Calculate summary
+      const summary = {
+        isMonorepo: packages.some(p => p.packageData?.isMonorepoRoot) || packages.length > 1,
+        rootPackageName: packages.find(p => p.packageData?.isMonorepoRoot)?.packageData?.name,
+        totalPackages: packages.length,
+        workspacePackages: packages
+          .filter(p => p.packageData?.isWorkspace)
+          .map(p => ({
+            name: p.packageData?.name,
+            path: p.packageData?.path,
+          })),
+        totalDependencies: packages.reduce(
+          (sum, p) => sum + Object.keys(p.packageData?.dependencies || {}).length,
+          0
+        ),
+        totalDevDependencies: packages.reduce(
+          (sum, p) => sum + Object.keys(p.packageData?.devDependencies || {}).length,
+          0
+        ),
+        availableScripts: [
+          ...new Set(
+            packages.flatMap(p =>
+              (p.packageData?.availableCommands || []).map(c => c.name)
+            )
+          ),
+        ],
+      };
+
+      return {
+        packages,
+        summary,
+        treeSha: treeData.sha,
+      };
     }),
 });
 
