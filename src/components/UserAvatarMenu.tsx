@@ -5,6 +5,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogOut, Home, FolderOpen, Calendar, User, LogIn } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export function UserAvatarMenu() {
   const { theme } = useTheme();
@@ -12,6 +13,8 @@ export function UserAvatarMenu() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [loggedOutMenuOpen, setLoggedOutMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+  const isHomePage = pathname === '/';
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -73,16 +76,18 @@ export function UserAvatarMenu() {
               Login
             </button>
 
-            {/* Home */}
-            <Link
-              href="/"
-              className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
-              style={{ color: theme.colors.text }}
-              onClick={() => setLoggedOutMenuOpen(false)}
-            >
-              <Home className="w-4 h-4" />
-              Home
-            </Link>
+            {/* Home - hide when already on home page */}
+            {!isHomePage && (
+              <Link
+                href="/"
+                className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
+                style={{ color: theme.colors.text }}
+                onClick={() => setLoggedOutMenuOpen(false)}
+              >
+                <Home className="w-4 h-4" />
+                Home
+              </Link>
+            )}
           </div>
         )}
       </div>
@@ -114,16 +119,18 @@ export function UserAvatarMenu() {
             borderColor: theme.colors.border,
           }}
         >
-          {/* Home */}
-          <Link
-            href="/"
-            className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
-            style={{ color: theme.colors.text }}
-            onClick={() => setUserMenuOpen(false)}
-          >
-            <Home className="w-4 h-4" />
-            Home
-          </Link>
+          {/* Home - hide when already on home page */}
+          {!isHomePage && (
+            <Link
+              href="/"
+              className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
+              style={{ color: theme.colors.text }}
+              onClick={() => setUserMenuOpen(false)}
+            >
+              <Home className="w-4 h-4" />
+              Home
+            </Link>
+          )}
           {/* Worlds */}
           <Link
             href="/worlds"
