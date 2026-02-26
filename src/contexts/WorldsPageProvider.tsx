@@ -276,7 +276,8 @@ export function WorldsPageProvider({
 
   // State for collection repository packages (for monorepo visualization)
   const [collectionRepoPackages, setCollectionRepoPackages] = useState<Record<string, PackageLayer[]>>({});
-  const [collectionRepoPackagesLoading, setCollectionRepoPackagesLoading] = useState(false);
+  // Note: Loading state for packages is not tracked since nothing consumes it
+  // The packages are progressively added to collectionRepoPackages as they load
 
   // State for commit files
   const [commitFilesData] = useState<CommitFilesSliceData | null>(null);
@@ -619,6 +620,108 @@ export function WorldsPageProvider({
   // Slices ref for dynamic/optional slices (now empty after full migration)
   const slicesRef = useRef<Map<string, DataSlice>>(new Map());
 
+  // Cache for memoizing individual repository objects
+  // Key: repositoryId, Value: { data: AlexandriaEntryWithMetrics, hash: string }
+  const repositoryCacheRef = useRef<Map<string, { data: AlexandriaEntryWithMetrics; hash: string }>>(new Map());
+
+  // Memoized repositories computation - only recomputes when repository-relevant data changes
+  const memoizedRepositories = useMemo<AlexandriaEntryWithMetrics[]>(() => {
+    const selectedMemberships = collectionId
+      ? userCollections.memberships.filter(m => m.collectionId === collectionId)
+      : [];
+
+    const cache = repositoryCacheRef.current;
+    const newCache = new Map<string, { data: AlexandriaEntryWithMetrics; hash: string }>();
+
+    const repositories = selectedMemberships.map(membership => {
+      const [owner, repoName] = membership.repositoryId.split('/');
+      const packages = collectionRepoPackages[membership.repositoryId] || [];
+      const repoDetails = collectionRepoDetails.find(
+        r => r.full_name === membership.repositoryId
+      );
+
+      // Create a hash of the data that affects this repository object
+      // This allows us to preserve object references when data hasn't changed
+      const hash = JSON.stringify({
+        repositoryId: membership.repositoryId,
+        addedAt: membership.addedAt,
+        // Note: We intentionally exclude membership.metadata from the hash
+        // because position/region changes shouldn't cause repository object recreation
+        stars: repoDetails?.stargazers_count,
+        language: repoDetails?.language,
+        description: repoDetails?.description,
+        pushed_at: repoDetails?.pushed_at,
+        updated_at: repoDetails?.updated_at,
+        packageCount: packages.length,
+        packageFileCount: packages.reduce((sum, pkg) => {
+          const pkgFileCount = pkg.derivedFrom?.fileSets?.reduce((acc, fs) =>
+            acc + (fs.fileCount ?? fs.matchedFiles?.length ?? 0), 0) ?? 0;
+          return sum + pkgFileCount;
+        }, 0),
+      });
+
+      // Check if we have a cached version with the same hash
+      const cached = cache.get(membership.repositoryId);
+      if (cached && cached.hash === hash) {
+        newCache.set(membership.repositoryId, cached);
+        return cached.data;
+      }
+
+      // Calculate total file count from packages for metrics
+      const totalFileCount = packages.reduce((sum, pkg) => {
+        const pkgFileCount = pkg.derivedFrom?.fileSets?.reduce((acc, fs) =>
+          acc + (fs.fileCount ?? fs.matchedFiles?.length ?? 0), 0) ?? 0;
+        return sum + pkgFileCount;
+      }, 0);
+
+      const data: AlexandriaEntryWithMetrics = {
+        name: repoName || membership.repositoryId,
+        path: membership.repositoryId as ValidatedRepositoryPath,
+        purl: undefined,
+        remoteUrl: `https://github.com/${membership.repositoryId}`,
+        registeredAt: new Date(membership.addedAt).toISOString(),
+        hasViews: false,
+        viewCount: 0,
+        views: [],
+        github: {
+          id: membership.repositoryId,
+          owner: owner || '',
+          name: repoName || membership.repositoryId,
+          stars: repoDetails?.stargazers_count ?? 0,
+          lastUpdated: repoDetails?.updated_at ?? new Date(membership.addedAt).toISOString(),
+          primaryLanguage: repoDetails?.language ?? undefined,
+          description: repoDetails?.description ?? undefined,
+        },
+        lastChecked: undefined,
+        lastOpenedAt: undefined,
+        bookColor: undefined,
+        theme: undefined,
+        metrics: {
+          fileCount: totalFileCount || undefined,
+          lineCount: undefined,
+          commitCount: undefined,
+          contributors: undefined,
+          lastEditedAt: repoDetails?.pushed_at ?? new Date(membership.addedAt).toISOString(),
+          createdAt: new Date(membership.addedAt).toISOString(),
+        },
+        packages: packages.length > 0 ? packages : undefined,
+      };
+
+      newCache.set(membership.repositoryId, { data, hash });
+      return data;
+    });
+
+    // Update cache ref
+    repositoryCacheRef.current = newCache;
+
+    return repositories;
+  }, [
+    collectionId,
+    userCollections.memberships,
+    collectionRepoDetails,
+    collectionRepoPackages,
+  ]);
+
   // Initialize slices on mount
   useEffect(() => {
     const initialSlices = new Map<string, DataSlice>();
@@ -703,21 +806,14 @@ export function WorldsPageProvider({
   useEffect(() => {
     if (!collectionRepositories || collectionRepositories.length === 0) {
       setCollectionRepoPackages({});
-      setCollectionRepoPackagesLoading(false);
       return;
     }
 
-    setCollectionRepoPackagesLoading(true);
     setCollectionRepoPackages({}); // Reset before fetching
-
-    let completed = 0;
-    const total = collectionRepositories.length;
 
     collectionRepositories.forEach(async (repoId) => {
       const [owner, repo] = repoId.split('/');
       if (!owner || !repo) {
-        completed++;
-        if (completed === total) setCollectionRepoPackagesLoading(false);
         return;
       }
 
@@ -729,11 +825,6 @@ export function WorldsPageProvider({
         }));
       } catch (error) {
         console.error(`Failed to fetch packages for ${repoId}:`, error);
-      } finally {
-        completed++;
-        if (completed === total) {
-          setCollectionRepoPackagesLoading(false);
-        }
       }
     });
   }, [collectionRepositories]);
@@ -819,120 +910,36 @@ export function WorldsPageProvider({
     [githubRepo]
   );
 
-  // Update slices
+  // Memoized selected collection - used in multiple places
+  const memoizedSelectedCollection = useMemo(() => {
+    if (!collectionId) return null;
+    return userCollections.collections.find(c => c.id === collectionId) || null;
+  }, [collectionId, userCollections.collections]);
+
+  // Update selectedCollectionView slice when relevant data changes
+  // Uses memoizedRepositories to preserve object references for unchanged repos
   useEffect(() => {
-    // userCollections, workspace, and workspaceRepositories slices are now explicit (see useMemo above)
-    // No Map-based updating needed - React handles reactivity automatically
-
-    // Update selectedCollectionView slice (using direct state)
-    const selectedCollection = collectionId
-      ? userCollections.collections.find(c => c.id === collectionId)
-      : null;
-
-    const selectedMemberships = collectionId
-      ? userCollections.memberships.filter(m => m.collectionId === collectionId)
-      : [];
-
-    const repositories: AlexandriaEntryWithMetrics[] = selectedMemberships.map(membership => {
-      const [owner, repoName] = membership.repositoryId.split('/');
-      const packages = collectionRepoPackages[membership.repositoryId] || [];
-
-      // Find matching repo details for stars/metadata
-      const repoDetails = collectionRepoDetails.find(
-        r => r.full_name === membership.repositoryId
-      );
-
-      // Calculate total file count from packages for metrics
-      const totalFileCount = packages.reduce((sum, pkg) => {
-        const pkgFileCount = pkg.derivedFrom?.fileSets?.reduce((acc, fs) =>
-          acc + (fs.fileCount ?? fs.matchedFiles?.length ?? 0), 0) ?? 0;
-        return sum + pkgFileCount;
-      }, 0);
-
-      return {
-        name: repoName || membership.repositoryId,
-        path: membership.repositoryId as ValidatedRepositoryPath,
-        purl: undefined,
-        remoteUrl: `https://github.com/${membership.repositoryId}`,
-        registeredAt: new Date(membership.addedAt).toISOString(),
-        hasViews: false,
-        viewCount: 0,
-        views: [],
-        github: {
-          id: membership.repositoryId,
-          owner: owner || '',
-          name: repoName || membership.repositoryId,
-          stars: repoDetails?.stargazers_count ?? 0,
-          lastUpdated: repoDetails?.updated_at ?? new Date(membership.addedAt).toISOString(),
-          primaryLanguage: repoDetails?.language ?? undefined,
-          description: repoDetails?.description ?? undefined,
-        },
-        lastChecked: undefined,
-        lastOpenedAt: undefined,
-        bookColor: undefined,
-        theme: undefined,
-        metrics: {
-          fileCount: totalFileCount || undefined,
-          lineCount: undefined,
-          commitCount: undefined,
-          contributors: undefined,
-          lastEditedAt: repoDetails?.pushed_at ?? new Date(membership.addedAt).toISOString(),
-          createdAt: new Date(membership.addedAt).toISOString(),
-        },
-        packages: packages.length > 0 ? packages : undefined,
-      };
-    });
-
     setSelectedCollectionView({
       scope: 'workspace',
       name: 'selectedCollectionView',
       data: {
-        collection: selectedCollection || null,
-        repositories,
+        collection: memoizedSelectedCollection,
+        repositories: memoizedRepositories,
         dependencies: undefined,
       },
       loading: userCollections.loading,
       error: userCollections.error || null,
       refresh: async () => {},
     });
-
-    // All slices are now explicit (see useMemo above)
-    // No Map-based updating needed - React handles reactivity automatically
   }, [
-    userCollections,
-    collectionId,
-    workspace,
-    collectionRepoDetails,
-    collectionRepoDetailsLoading,
-    collectionRepoPackages,
-    collectionRepoPackagesLoading,
-    githubRepos,
-    githubReposLoading,
-    fileTree,
-    fileTreeLoading,
-    fileTreeError,
-    qualityData,
-    qualityLoading,
-    qualityError,
-    enabledColorModes,
-    selectedColorMode,
-    activeFilePath,
-    activeFileContent,
-    activeFileLoading,
-    activeFileError,
-    githubRepo,
-    packagesData,
-    packagesLoading,
-    packagesError,
-    commitFilesData,
-    storyboardContextData,
+    memoizedSelectedCollection,
+    memoizedRepositories,
+    userCollections.loading,
+    userCollections.error,
   ]);
 
-  // Selected collection for callback context
-  const selectedCollection = useMemo(() => {
-    if (!collectionId) return undefined;
-    return userCollections.collections.find(c => c.id === collectionId);
-  }, [collectionId, userCollections.collections]);
+  // Selected collection for callback context (reuses memoizedSelectedCollection)
+  const selectedCollection = memoizedSelectedCollection ?? undefined;
 
   // Build context value
   const context: PanelContextValue<WorldsPageContextType> = useMemo(
