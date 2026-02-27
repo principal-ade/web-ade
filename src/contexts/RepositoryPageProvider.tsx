@@ -625,7 +625,7 @@ export function RepositoryPageProvider({
 
         setActiveFilePath('README.md');
         setActiveFileContent(data.content);
-      } catch (error) {
+      } catch (_error) {
         // README.md might not exist, try lowercase
         try {
           const data = await trpc.github.readFile.query({

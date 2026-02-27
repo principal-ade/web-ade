@@ -45,6 +45,28 @@ import {
   Settings,
 } from 'lucide-react';
 
+// Static layout configurations (outside component to avoid recreation)
+const defaultLayout: PanelLayout = {
+  left: 'owner-repositories',
+  middle: {
+    type: 'tabs',
+    panels: ['file-city', 'visual-validation'],
+  },
+  right: {
+    type: 'tabs',
+    panels: ['code-quality', 'package-composition'],
+  },
+};
+
+const worldLayout: PanelLayout = {
+  left: 'owner-repositories',
+  middle: 'collection-map',
+  right: {
+    type: 'tabs',
+    panels: ['file-city', 'visual-validation'],
+  },
+};
+
 interface LibraryRecentRepository {
   type: 'repository';
   id: number;
@@ -164,28 +186,6 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
   const [recentOwners, setRecentOwners] = useState<LibraryRecentOwner[]>([]);
   const [starredRepos, setStarredRepos] = useState<StarredRepo[]>([]);
   const [followingUsers, setFollowingUsers] = useState<FollowingUser[]>([]);
-
-  // Layout configurations for each mode
-  const defaultLayout: PanelLayout = {
-    left: 'owner-repositories',
-    middle: {
-      type: 'tabs',
-      panels: ['file-city', 'visual-validation'],
-    },
-    right: {
-      type: 'tabs',
-      panels: ['code-quality', 'package-composition'],
-    },
-  };
-
-  const worldLayout: PanelLayout = {
-    left: 'owner-repositories',
-    middle: 'collection-map',
-    right: {
-      type: 'tabs',
-      panels: ['file-city', 'visual-validation'],
-    },
-  };
 
   const [layout, setLayout] = useState<PanelLayout>(defaultLayout);
 

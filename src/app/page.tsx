@@ -155,7 +155,7 @@ function HomePageContent() {
       label: '',
       content: <div />,
     },
-  ], [theme, context, actions, events, router]);
+  ], [context, actions, events, router]);
 
   // Define layout with recent panel on left, welcome panel in the middle
   const layout = useMemo<PanelLayout>(() => ({

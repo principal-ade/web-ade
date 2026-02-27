@@ -632,7 +632,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
         return next;
       });
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.login]);
 
   // Listen for repo filter events
   useEffect(() => {

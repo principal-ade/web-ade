@@ -178,7 +178,7 @@ async function fetchFromDepsdev(
       version: versionData.versionKey.version,
       source: 'deps.dev',
     };
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
@@ -228,7 +228,7 @@ async function fetchFromNpmRegistry(
       version: latestVersion,
       source: 'npm-registry',
     };
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }

@@ -108,7 +108,7 @@ function SharedCollectionsContent({
     ];
 
     return () => unsubscribers.forEach((unsub) => unsub());
-  }, [events, router]);
+  }, [events, router, setPreviewedRepo]);
 
   const panels = [
     {

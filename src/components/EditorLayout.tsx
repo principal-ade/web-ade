@@ -49,18 +49,16 @@ import { panels as alexandriaDocsPanels } from '@industry-theme/alexandria-docs-
 import { panels as backlogmdPanels } from '@industry-theme/backlogmd-kanban-panel';
 import { panels as principalViewPanels, TraceDetailsPanel } from '@industry-theme/principal-view-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
-import { panels as agentDrivenUIPanels } from '@industry-theme/agent-driven-ui-panels';
 import { panels as repositoryCompositionPanels } from '@industry-theme/repository-composition-panels';
 import { panels as gitPanels } from '@industry-theme/git-panels';
 import { panels as githubPanels } from '@industry-theme/github-panels';
-import { panels as themeEditorPanels } from '@industry-theme/theme-editor-panel';
 import { panels as fileEditingPanels } from '@industry-theme/file-editing-panels';
 import { panels as agentPanels } from '@industry-theme/agent-panels';
 import {
   BookOpen, MessageSquare, FileText, Map, LayoutGrid,
-  CheckSquare, Terminal, Users, Compass, Shield, Bug, Palette,
-  Radio, Wrench, GitBranch, History, GitCommit, Package,
-  Zap, File, GitCompare, Edit, Activity
+  CheckSquare, Terminal, Users, Compass, Shield, Bug,
+  GitBranch, History, GitCommit, Package,
+  Zap, File, Edit, Activity
 } from 'lucide-react';
 
 // Dynamic imports for panels that access document at import time
@@ -82,17 +80,12 @@ const TaskDetailPanelLoader = backlogmdPanels[1]!.component;
 const PrincipalViewPanelLoader = principalViewPanels[0]!.component;
 const QualityHexagonPanelLoader = codeQualityPanels[0]!.component;
 const LensDataDebugPanelLoader = codeQualityPanels[2]!.component;
-const EventBusPanelLoader = agentDrivenUIPanels[0]!.component;
-const AgentToolsPanelLoader = agentDrivenUIPanels[1]!.component;
 const GitChangesPanelLoader = repositoryCompositionPanels[0]!.component;
 const PackageCompositionPanelLoader = repositoryCompositionPanels[1]!.component;
 const GitCommitHistoryPanelLoader = gitPanels[0]!.component;
 const GitCommitDetailPanelLoader = gitPanels[1]!.component;
 const GitHubMessagesPanelLoader = githubPanels[6]!.component;
-const ThemeEditorPanelLoader = themeEditorPanels[0]!.component;
 const FileEditorPanelLoader = fileEditingPanels[0]!.component;
-const GitDiffPanelLoader = fileEditingPanels[1]!.component;
-const MDXEditorPanelLoader = fileEditingPanels[2]!.component;
 const SkillsListPanelLoader = agentPanels[0]!.component;
 const SkillDetailPanelLoader = agentPanels[1]!.component;
 
@@ -1766,36 +1759,6 @@ function EditorLayoutContent({
       ),
     },
     {
-      id: 'theme-editor',
-      label: 'Theme Editor',
-      icon: <Palette size={16} />,
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <ThemeEditorPanelLoader context={context} actions={enhancedActions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'event-bus',
-      label: 'Event Bus',
-      icon: <Radio size={16} />,
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <EventBusPanelLoader context={context} actions={enhancedActions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'agent-tools',
-      label: 'Agent Tools',
-      icon: <Wrench size={16} />,
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <AgentToolsPanelLoader context={context} actions={enhancedActions} events={events} />
-        </div>
-      ),
-    },
-    {
       id: 'git-changes',
       label: 'Git Changes',
       icon: <GitBranch size={16} />,
@@ -1960,7 +1923,7 @@ function EditorLayoutContent({
         </div>
       ),
     },
-  ], [context, enhancedActions, events, theme.colors.textMuted, selectedCanvasData, selectedWorkflowData, selectedTrace]);
+  ], [context, enhancedActions, events, theme.colors.textMuted, theme.colors.text, theme.fontSizes, selectedCanvasData, selectedWorkflowData, selectedTrace]);
 
   // File editing panels - now use the standard panel framework pattern
   const fileEditingPanels = useMemo(() => [
@@ -1979,26 +1942,6 @@ function EditorLayoutContent({
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } as any)}
           />
-        </div>
-      ),
-    },
-    {
-      id: 'git-diff',
-      label: 'Git Diff',
-      icon: <GitCompare size={16} />,
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <GitDiffPanelLoader context={context} actions={enhancedActions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'mdx-editor',
-      label: 'MDX Editor',
-      icon: <Edit size={16} />,
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <MDXEditorPanelLoader context={context} actions={enhancedActions} events={events} />
         </div>
       ),
     },
