@@ -291,9 +291,11 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       // Update ref immediately
       collectionsRef.current = newCollections;
 
-      // Save to GitHub first, then update state
-      const result = await saveToGitHub(newCollections, gitHubRepoExists);
+      // Update state immediately (optimistic update) to keep UI in sync
       setCollections(newCollections);
+
+      // Save to GitHub in background
+      const result = await saveToGitHub(newCollections, gitHubRepoExists);
 
       if (result.repoUrl && !gitHubRepoExists) {
         setGitHubRepoExists(true);
@@ -426,9 +428,12 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       // Update ref immediately so subsequent calls have latest data
       collectionsRef.current = newCollections;
 
-      // Save to GitHub first, then update state
-      const result = await saveToGitHub(newCollections, gitHubRepoExists);
+      // Update state immediately (optimistic update) to keep UI in sync
+      // This prevents the snap-back issue during drag-and-drop
       setCollections(newCollections);
+
+      // Save to GitHub in background
+      const result = await saveToGitHub(newCollections, gitHubRepoExists);
 
       if (result.repoUrl && !gitHubRepoExists) {
         setGitHubRepoExists(true);
