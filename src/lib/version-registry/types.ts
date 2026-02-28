@@ -122,3 +122,12 @@ export interface VersionListResponse {
   count: number;
   error?: string;
 }
+
+/**
+ * Response from getting the latest registration for a repository
+ */
+export interface VersionLatestResponse {
+  success: boolean;
+  registration: VersionRegistration | null;
+  error?: string;
+}
