@@ -773,6 +773,9 @@ export function RepositoryPageProvider({
       slices: slicesRef.current,
       adapters,
 
+      // Repository path for panels that need it for file operations
+      repositoryPath: githubRepo ? `/GitHub/${githubRepo}` : repository.path,
+
       // ===== EXPLICIT TYPED SLICES (migrated from Map) =====
       // Core slices (always present)
       'active-file': activeFileSlice,
