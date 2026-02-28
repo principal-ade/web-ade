@@ -152,6 +152,74 @@
       }
     },
     {
+      "id": "tokens-received-pkce",
+      "type": "text",
+      "text": "# Tokens via PKCE\n\nExchanged code verifier for tokens",
+      "x": 0,
+      "y": 550,
+      "width": 200,
+      "height": 100,
+      "color": "#1d4ed8",
+      "pv": {
+        "status": "implemented",
+        "event": {
+          "name": "auth.tokens.received.pkce",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/auth/callback/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "operation",
+          "files": ["src/app/api/auth/callback/route.ts"]
+        },
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "stroke": "#1d4ed8",
+        "dataSchema": {
+          "user.id": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "tokens-received-cookie",
+      "type": "text",
+      "text": "# Tokens via Cookie\n\nParsed session data from cookie",
+      "x": 220,
+      "y": 550,
+      "width": 200,
+      "height": 100,
+      "color": "#1d4ed8",
+      "pv": {
+        "status": "implemented",
+        "event": {
+          "name": "auth.tokens.received.cookie",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/auth/callback/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "operation",
+          "files": ["src/app/api/auth/callback/route.ts"]
+        },
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "stroke": "#1d4ed8",
+        "dataSchema": {
+          "user.id": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
       "id": "cookies-set",
       "type": "text",
       "text": "# Cookies Set\n\nHTTP-only auth cookies created",
@@ -296,8 +364,40 @@
       }
     },
     {
-      "id": "edge-tokens-to-cookies",
+      "id": "edge-tokens-to-pkce",
       "fromNode": "tokens-received",
+      "fromSide": "bottom",
+      "toNode": "tokens-received-pkce",
+      "toSide": "top",
+      "label": "PKCE flow",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-tokens-to-cookie",
+      "fromNode": "tokens-received",
+      "fromSide": "bottom",
+      "toNode": "tokens-received-cookie",
+      "toSide": "top",
+      "label": "Cookie flow",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-pkce-to-cookies",
+      "fromNode": "tokens-received-pkce",
+      "fromSide": "bottom",
+      "toNode": "cookies-set",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-cookie-to-cookies",
+      "fromNode": "tokens-received-cookie",
       "fromSide": "bottom",
       "toNode": "cookies-set",
       "toSide": "top",

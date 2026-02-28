@@ -41,8 +41,11 @@ export async function GET() {
     const expiresIn = expiresAt ? Math.max(0, expiresAt - now) : null;
     const shouldRefresh = expiresIn !== null && expiresIn < 5 * 60 * 1000;
 
-    // Emit authenticated event
-    span.addEvent('token.check.authenticated', {
+    // Emit authenticated event (different event if expiring soon)
+    const eventName = shouldRefresh
+      ? 'token.check.authenticated-expiring'
+      : 'token.check.authenticated';
+    span.addEvent(eventName, {
       'authenticated': true,
       'expiresAt': expiresAt || 0,
       'expiresIn': expiresIn || 0,

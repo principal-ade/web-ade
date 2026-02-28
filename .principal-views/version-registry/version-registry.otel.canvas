@@ -328,6 +328,82 @@
       }
     },
     {
+      "id": "registration-complete-no-schematic",
+      "type": "text",
+      "text": "# Registration Complete (No Schematic)\n\nVersion registered without schematic",
+      "x": 97,
+      "y": 1080,
+      "width": 200,
+      "height": 100,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "version.registration.complete-no-schematic",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/versions/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/app/api/versions/route.ts"]
+        },
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a",
+        "dataSchema": {
+          "registration.id": {
+            "type": "string",
+            "required": true
+          },
+          "duration.ms": {
+            "type": "number",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "registration-schematic-error",
+      "type": "text",
+      "text": "# Schematic Error\n\nSchematic fetch failed (mapping still valid)",
+      "x": 410,
+      "y": 800,
+      "width": 200,
+      "height": 100,
+      "color": "#d97706",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "version.registration.schematic-error",
+          "attributes": {}
+        },
+        "sources": [
+          "src/lib/version-registry/version-manager.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error",
+          "files": ["src/lib/version-registry/version-manager.ts"]
+        },
+        "shape": "rectangle",
+        "fill": "#f59e0b",
+        "stroke": "#d97706",
+        "dataSchema": {
+          "error.type": {
+            "type": "string",
+            "required": true
+          },
+          "error.message": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
       "id": "registration-error",
       "type": "text",
       "text": "# Registration Error\n\nVersion registration failed",
@@ -810,14 +886,25 @@
       }
     },
     {
-      "id": "edge-schematic-fetching-to-error",
+      "id": "edge-schematic-fetching-to-schematic-error",
       "fromNode": "schematic-fetching",
       "fromSide": "right",
-      "toNode": "registration-error",
+      "toNode": "registration-schematic-error",
       "toSide": "left",
       "label": "schematic fetch failed",
       "pv": {
         "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-s3-stored-to-complete-no-schematic",
+      "fromNode": "registration-s3-stored",
+      "fromSide": "bottom",
+      "toNode": "registration-complete-no-schematic",
+      "toSide": "top",
+      "label": "no schematic",
+      "pv": {
+        "edgeType": "flow"
       }
     },
     {

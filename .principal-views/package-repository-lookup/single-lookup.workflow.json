@@ -7,29 +7,71 @@
   "description": "Look up repository URLs for packages across multiple ecosystems",
   "scenarios": [
     {
-      "id": "success",
-      "description": "Successfully found the repository URL for the requested package",
+      "id": "success-npm-registry",
+      "description": "Found repository URL via npm registry (npm packages)",
       "priority": 1,
       "template": {
-        "summary": "✅ Found repository for '{packageName}' via {{source}}",
+        "summary": "✅ Found repository for '{packageName}' via npm-registry",
         "events": {
           "package.lookup.single.started": "Looking up repository for {{packageName}} (system: {{system}})",
-          "package.lookup.npm-registry": "{{#if package.lookup.npm-registry}}Fetching from npm registry: {{packageName}}{{/if}}",
-          "package.lookup.depsdev": "{{#if package.lookup.depsdev}}{{#if package.lookup.npm-registry}}Fallback to deps.dev: {{packageName}}{{else}}Fetching from deps.dev: {{packageName}} ({{system}}){{/if}}{{/if}}",
-          "package.lookup.single.success": "Repository found: {{repository}} (version: {{version}}, source: {{source}})"
+          "package.lookup.npm-registry": "Fetching from npm registry: {{packageName}}",
+          "package.lookup.npm-registry.hit": "Repository found in npm registry: {{repository}}",
+          "package.lookup.single.success": "Repository found: {{repository}} (version: {{version}}, source: npm-registry)"
         }
       }
     },
     {
-      "id": "not-found",
-      "description": "Lookup completed but the repository URL could not be found for the package",
+      "id": "success-depsdev-fallback",
+      "description": "npm registry didn't have repository URL, found via deps.dev fallback",
       "priority": 2,
+      "template": {
+        "summary": "✅ Found repository for '{packageName}' via deps.dev (fallback)",
+        "events": {
+          "package.lookup.single.started": "Looking up repository for {{packageName}} (system: {{system}})",
+          "package.lookup.npm-registry": "Fetching from npm registry: {{packageName}}",
+          "package.lookup.npm-registry.miss": "No repository in npm registry, falling back to deps.dev",
+          "package.lookup.depsdev": "Fallback to deps.dev: {{packageName}}",
+          "package.lookup.single.success": "Repository found: {{repository}} (version: {{version}}, source: deps.dev)"
+        }
+      }
+    },
+    {
+      "id": "success-depsdev-direct",
+      "description": "Found repository URL via deps.dev (non-npm packages: pypi, maven, go, etc.)",
+      "priority": 3,
+      "template": {
+        "summary": "✅ Found repository for '{packageName}' via deps.dev",
+        "events": {
+          "package.lookup.single.started": "Looking up repository for {{packageName}} (system: {{system}})",
+          "package.lookup.depsdev.direct": "Fetching from deps.dev: {{packageName}} ({{system}})",
+          "package.lookup.single.success": "Repository found: {{repository}} (version: {{version}}, source: deps.dev)"
+        }
+      }
+    },
+    {
+      "id": "not-found-npm-fallback",
+      "description": "Repository URL not found after trying npm registry and deps.dev fallback",
+      "priority": 4,
+      "template": {
+        "summary": "⚠️ Repository not found for '{packageName}' (tried npm + deps.dev)",
+        "events": {
+          "package.lookup.single.started": "Looking up repository for {{packageName}} (system: {{system}})",
+          "package.lookup.npm-registry": "Fetching from npm registry: {{packageName}}",
+          "package.lookup.npm-registry.miss": "No repository in npm registry, falling back to deps.dev",
+          "package.lookup.depsdev": "Fallback to deps.dev: {{packageName}}",
+          "package.lookup.single.not-found": "Repository not found for {{packageName}} ({{system}})"
+        }
+      }
+    },
+    {
+      "id": "not-found-depsdev-direct",
+      "description": "Repository URL not found via deps.dev (non-npm packages)",
+      "priority": 5,
       "template": {
         "summary": "⚠️ Repository not found for '{packageName}'",
         "events": {
           "package.lookup.single.started": "Looking up repository for {{packageName}} (system: {{system}})",
-          "package.lookup.npm-registry": "{{#if package.lookup.npm-registry}}Fetching from npm registry: {{packageName}}{{/if}}",
-          "package.lookup.depsdev": "{{#if package.lookup.depsdev}}{{#if package.lookup.npm-registry}}Fallback to deps.dev: {{packageName}}{{else}}Fetching from deps.dev: {{packageName}} ({{system}}){{/if}}{{/if}}",
+          "package.lookup.depsdev.direct": "Fetching from deps.dev: {{packageName}} ({{system}})",
           "package.lookup.single.not-found": "Repository not found for {{packageName}} ({{system}})"
         }
       }
@@ -37,7 +79,7 @@
     {
       "id": "validation-error",
       "description": "Lookup failed because the request parameters are invalid or missing",
-      "priority": 3,
+      "priority": 6,
       "template": {
         "summary": "❌ Invalid request parameters",
         "events": {
@@ -48,13 +90,11 @@
     {
       "id": "error",
       "description": "Lookup failed due to an unexpected error (e.g., network issue, API failure)",
-      "priority": 4,
+      "priority": 7,
       "template": {
         "summary": "❌ Failed to lookup repository: {error.message}",
         "events": {
           "package.lookup.single.started": "Looking up repository for {{packageName}} (system: {{system}})",
-          "package.lookup.npm-registry": "{{#if package.lookup.npm-registry}}Fetching from npm registry: {{packageName}}{{/if}}",
-          "package.lookup.depsdev": "{{#if package.lookup.depsdev}}Fetching from deps.dev: {{packageName}} ({{system}}){{/if}}",
           "package.lookup.single.error": "Error: {{error.message}}"
         }
       }

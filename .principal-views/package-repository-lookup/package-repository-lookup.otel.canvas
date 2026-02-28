@@ -89,6 +89,78 @@
       }
     },
     {
+      "id": "single-npm-registry-hit",
+      "type": "text",
+      "text": "# NPM Registry Hit\n\nRepository found in npm registry",
+      "x": -600,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "package.lookup.npm-registry.hit",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/packages/repository-lookup/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io",
+          "files": ["src/app/api/packages/repository-lookup/route.ts"]
+        },
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a",
+        "dataSchema": {
+          "packageName": {
+            "type": "string",
+            "required": true
+          },
+          "repository": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "single-npm-registry-miss",
+      "type": "text",
+      "text": "# NPM Registry Miss\n\nNo repository in npm, fallback to deps.dev",
+      "x": -400,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "color": "#d97706",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "package.lookup.npm-registry.miss",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/packages/repository-lookup/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io",
+          "files": ["src/app/api/packages/repository-lookup/route.ts"]
+        },
+        "shape": "rectangle",
+        "fill": "#f59e0b",
+        "stroke": "#d97706",
+        "dataSchema": {
+          "packageName": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
       "id": "single-depsdev",
       "type": "text",
       "text": "# Deps.dev API Fetch\n\nFetch from deps.dev API",
@@ -111,6 +183,44 @@
           "kind": "event",
           "category": "io",
           "files": ["src/app/api/packages/repository-lookup/route.ts", "src/app/api/packages/repository-lookup/batch/route.ts"]
+        },
+        "shape": "rectangle",
+        "fill": "#8b5cf6",
+        "stroke": "#6d28d9",
+        "dataSchema": {
+          "packageName": {
+            "type": "string",
+            "required": true
+          },
+          "system": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "single-depsdev-direct",
+      "type": "text",
+      "text": "# Deps.dev Direct\n\nDirect fetch from deps.dev (non-npm)",
+      "x": -230,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "package.lookup.depsdev.direct",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/packages/repository-lookup/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io",
+          "files": ["src/app/api/packages/repository-lookup/route.ts"]
         },
         "shape": "rectangle",
         "fill": "#8b5cf6",
@@ -482,16 +592,60 @@
       "id": "single-2",
       "fromNode": "single-started",
       "fromSide": "bottom",
-      "toNode": "single-depsdev",
+      "toNode": "single-depsdev-direct",
       "toSide": "top",
-      "label": "other system",
+      "label": "non-npm package",
       "pv": {
         "edgeType": "flow"
       }
     },
     {
-      "id": "single-3",
+      "id": "single-2b",
+      "fromNode": "single-depsdev-direct",
+      "fromSide": "bottom",
+      "toNode": "single-success",
+      "toSide": "top",
+      "label": "found",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "single-2c",
+      "fromNode": "single-depsdev-direct",
+      "fromSide": "bottom",
+      "toNode": "single-not-found",
+      "toSide": "top",
+      "label": "not found",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "single-3a",
       "fromNode": "single-npm-registry",
+      "fromSide": "bottom",
+      "toNode": "single-npm-registry-hit",
+      "toSide": "top",
+      "label": "found",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "single-3b",
+      "fromNode": "single-npm-registry",
+      "fromSide": "bottom",
+      "toNode": "single-npm-registry-miss",
+      "toSide": "top",
+      "label": "not found",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "single-3c",
+      "fromNode": "single-npm-registry-miss",
       "fromSide": "right",
       "toNode": "single-depsdev",
       "toSide": "left",
@@ -502,11 +656,11 @@
     },
     {
       "id": "single-4",
-      "fromNode": "single-npm-registry",
+      "fromNode": "single-npm-registry-hit",
       "fromSide": "bottom",
       "toNode": "single-success",
       "toSide": "top",
-      "label": "found",
+      "label": "success",
       "pv": {
         "edgeType": "flow"
       }

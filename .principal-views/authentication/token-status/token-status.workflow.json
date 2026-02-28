@@ -8,20 +8,32 @@
   "scenarios": [
     {
       "id": "authenticated",
-      "description": "Token is valid and user is authenticated (may need refresh if expiring soon)",
+      "description": "Token is valid with plenty of time remaining",
       "priority": 1,
       "template": {
         "summary": "✅ Token validated - expires in {expiresIn}ms",
         "events": {
           "token.check.started": "Token status request received",
-          "token.check.authenticated": "Token is valid (expires at {{expiresAt}}, {{expiresIn}}ms remaining){{#if shouldRefresh}} - ⚠️ Refresh recommended{{/if}}"
+          "token.check.authenticated": "Token is valid (expires at {{expiresAt}}, {{expiresIn}}ms remaining)"
+        }
+      }
+    },
+    {
+      "id": "authenticated-expiring",
+      "description": "Token is valid but expiring soon - refresh recommended",
+      "priority": 2,
+      "template": {
+        "summary": "⚠️ Token expiring soon - refresh recommended",
+        "events": {
+          "token.check.started": "Token status request received",
+          "token.check.authenticated-expiring": "Token is valid but expiring soon (expires at {{expiresAt}}, {{expiresIn}}ms remaining) - refresh recommended"
         }
       }
     },
     {
       "id": "unauthenticated",
       "description": "No valid token found and user is not authenticated",
-      "priority": 2,
+      "priority": 3,
       "template": {
         "summary": "🔓 No valid token found - user not authenticated",
         "events": {
@@ -33,7 +45,7 @@
     {
       "id": "error",
       "description": "Token status check failed due to an unexpected error during validation",
-      "priority": 3,
+      "priority": 4,
       "template": {
         "summary": "❌ Token check failed: {error.message}",
         "events": {

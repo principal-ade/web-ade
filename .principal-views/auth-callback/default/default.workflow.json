@@ -7,30 +7,46 @@
   "description": "OAuth callback handling with PKCE and WorkOS cookie flows",
   "scenarios": [
     {
-      "id": "authentication-success",
-      "description": "OAuth authentication completed successfully and user is now authenticated",
+      "id": "success-pkce",
+      "description": "OAuth authentication completed successfully via PKCE code exchange",
       "priority": 1,
       "template": {
-        "summary": "✅ Authentication successful{{#if flow.type}} via {{flow.type}}{{/if}} (completed in {duration.ms}ms)",
+        "summary": "✅ Authentication successful via PKCE (completed in {duration.ms}ms)",
         "events": {
           "auth.callback.started": "OAuth callback request received",
-          "auth.state.validated": "Validated state and CSRF token for {{flow.type}} flow",
-          "auth.tokens.received": "{{#if tokens.source}}{{#if (eq tokens.source 'pkce_exchange')}}Exchanged code verifier for tokens{{else}}Parsed session data from cookie{{/if}}{{else}}Tokens received{{/if}} (user: {{user.id}})",
+          "auth.state.validated": "Validated state and CSRF token for PKCE flow",
+          "auth.tokens.received": "Tokens received via code exchange",
+          "auth.tokens.received.pkce": "Exchanged code verifier for tokens (user: {{user.id}})",
           "auth.cookies.set": "Set {{cookies.count}} authentication cookies",
           "auth.callback.complete": "Redirecting to {{redirect.path}} (from {{redirect.source}})"
         }
       }
     },
     {
-      "id": "authentication-error",
-      "description": "OAuth authentication failed due to an error during the callback process",
+      "id": "success-cookie",
+      "description": "OAuth authentication completed successfully via WorkOS cookie session",
       "priority": 2,
       "template": {
-        "summary": "❌ Authentication {{#if error.type}}{{error.type}} {{/if}}failed: {error.message}",
+        "summary": "✅ Authentication successful via cookie session (completed in {duration.ms}ms)",
         "events": {
           "auth.callback.started": "OAuth callback request received",
-          "auth.state.validated": "Validated state and CSRF token",
-          "auth.callback.error": "Error at {{error.stage}}: {{error.message}}{{#if error.status_code}} (status {{error.status_code}}){{/if}}{{#if error.type}} (type: {{error.type}}){{/if}}"
+          "auth.state.validated": "Validated state and CSRF token for cookie flow",
+          "auth.tokens.received": "Tokens received from session",
+          "auth.tokens.received.cookie": "Parsed session data from cookie (user: {{user.id}})",
+          "auth.cookies.set": "Set {{cookies.count}} authentication cookies",
+          "auth.callback.complete": "Redirecting to {{redirect.path}} (from {{redirect.source}})"
+        }
+      }
+    },
+    {
+      "id": "error",
+      "description": "OAuth authentication failed due to an error during the callback process",
+      "priority": 3,
+      "template": {
+        "summary": "❌ Authentication failed: {error.message}",
+        "events": {
+          "auth.callback.started": "OAuth callback request received",
+          "auth.callback.error": "Error at {{error.stage}}: {{error.message}}"
         }
       }
     }

@@ -7,11 +7,11 @@
   "description": "Register a new version-to-commit mapping for deployment tracking",
   "scenarios": [
     {
-      "id": "registration-success",
-      "description": "Successfully registered a version-to-commit mapping and fetched the schematic from GitHub",
+      "id": "success-with-schematic",
+      "description": "Successfully registered version mapping and fetched schematic from GitHub",
       "priority": 1,
       "template": {
-        "summary": "✅ Registered {service.name}@{version} → {git.sha}{{#if schematic.id}} with schematic{{/if}} (completed in {duration.ms}ms)",
+        "summary": "✅ Registered {service.name}@{version} → {git.sha} with schematic (completed in {duration.ms}ms)",
         "events": {
           "version.registration.started": "Version registration request received",
           "version.registration.validated": "Validated request for {{customer.id}}/{{service.name}}@{{version}}",
@@ -19,22 +19,48 @@
           "version.registration.schematic.fetching": "Fetching schematic from {{repository.url}} at {{git.sha}}",
           "version.registration.schematic.fetched": "Schematic fetched successfully ({{schematic.size}} bytes)",
           "version.registration.schematic.stored": "Schematic stored to {{s3.bucket}}/{{schematic.key}}",
-          "version.registration.complete": "Registration completed → {{registration.id}}{{#if schematic.id}} (schematic: {{schematic.id}}){{else}} (no schematic){{/if}}"
+          "version.registration.complete": "Registration completed → {{registration.id}} (schematic: {{schematic.id}})"
         }
       }
     },
     {
-      "id": "registration-error",
-      "description": "Registration failed or completed with errors (e.g., schematic fetch failed but mapping was stored)",
+      "id": "success-no-schematic",
+      "description": "Successfully registered version mapping without schematic (repo has no .principal-views)",
       "priority": 2,
       "template": {
-        "summary": "{{#if (eq error.stage 'schematic')}}⚠️ Registered {service.name}@{version} but schematic fetch failed{{else}}❌ Registration failed{{/if}}: {error.message}",
+        "summary": "✅ Registered {service.name}@{version} → {git.sha} (no schematic)",
+        "events": {
+          "version.registration.started": "Version registration request received",
+          "version.registration.validated": "Validated request for {{customer.id}}/{{service.name}}@{{version}}",
+          "version.registration.s3.stored": "Stored mapping to {{s3.bucket}}/{{s3.key}}",
+          "version.registration.complete-no-schematic": "Registration completed → {{registration.id}} (no schematic)"
+        }
+      }
+    },
+    {
+      "id": "error-schematic",
+      "description": "Version mapping stored successfully but schematic fetch failed (partial success)",
+      "priority": 3,
+      "template": {
+        "summary": "⚠️ Registered {service.name}@{version} but schematic fetch failed: {error.message}",
         "events": {
           "version.registration.started": "Version registration request received",
           "version.registration.validated": "Validation passed for {{customer.id}}/{{service.name}}",
-          "version.registration.s3.stored": "{{#if (eq error.stage 'schematic')}}Version mapping stored to S3{{else}}Stored to S3{{/if}}",
+          "version.registration.s3.stored": "Version mapping stored to S3",
           "version.registration.schematic.fetching": "Attempting to fetch schematic from {{repository.url}}",
-          "version.registration.error": "{{#if (eq error.stage 'schematic')}}Schematic fetch failed ({{error.type}}): {{error.message}} - version mapping still valid{{else}}Error at {{error.stage}} ({{error.type}}): {{error.message}}{{/if}}"
+          "version.registration.schematic-error": "Schematic fetch failed ({{error.type}}): {{error.message}} - version mapping still valid"
+        }
+      }
+    },
+    {
+      "id": "error",
+      "description": "Registration failed due to validation or storage error",
+      "priority": 4,
+      "template": {
+        "summary": "❌ Registration failed: {error.message}",
+        "events": {
+          "version.registration.started": "Version registration request received",
+          "version.registration.error": "Error at {{error.stage}} ({{error.type}}): {{error.message}}"
         }
       }
     }

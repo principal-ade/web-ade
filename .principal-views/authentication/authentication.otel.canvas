@@ -94,6 +94,52 @@
       }
     },
     {
+      "id": "token-check-authenticated-expiring",
+      "type": "text",
+      "text": "# Authenticated (Expiring)\n\nValid token but expiring soon - refresh recommended",
+      "x": 100,
+      "y": 450,
+      "width": 200,
+      "height": 100,
+      "color": "#d97706",
+      "pv": {
+        "status": "implemented",
+        "event": {
+          "name": "token.check.authenticated-expiring",
+          "attributes": {}
+        },
+        "sources": [
+          "src/app/api/auth/token-status/route.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/app/api/auth/token-status/route.ts"]
+        },
+        "shape": "rectangle",
+        "fill": "#f59e0b",
+        "stroke": "#d97706",
+        "dataSchema": {
+          "authenticated": {
+            "type": "boolean",
+            "required": true
+          },
+          "expiresAt": {
+            "type": "number",
+            "required": true
+          },
+          "expiresIn": {
+            "type": "number",
+            "required": true
+          },
+          "shouldRefresh": {
+            "type": "boolean",
+            "required": true
+          }
+        }
+      }
+    },
+    {
       "id": "token-check-unauthenticated",
       "type": "text",
       "text": "# Unauthenticated\n\nNo valid token - unauthenticated",
@@ -174,6 +220,17 @@
       "toNode": "token-check-authenticated",
       "toSide": "top",
       "label": "valid token",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "started-to-authenticated-expiring",
+      "fromNode": "token-check-started",
+      "fromSide": "bottom",
+      "toNode": "token-check-authenticated-expiring",
+      "toSide": "top",
+      "label": "valid token (expiring)",
       "pv": {
         "edgeType": "flow"
       }
