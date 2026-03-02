@@ -11,7 +11,7 @@
       "description": "Successfully retrieved a list of registered versions from S3",
       "priority": 1,
       "template": {
-        "summary": "✅ Listed {registration.count} version(s) for {customer.id} (completed in {duration.ms}ms)",
+        "summary": "[Success] Listed {registration.count} version(s) for {customer.id} (completed in {duration.ms}ms)",
         "events": {
           "version.list.started": "Version list request received",
           "version.list.s3.retrieved": "Retrieved {{registration.count}} registration(s) from S3",
@@ -24,7 +24,7 @@
       "description": "Successfully completed list operation but no versions have been registered yet",
       "priority": 2,
       "template": {
-        "summary": "✅ No versions registered for {customer.id}",
+        "summary": "[Success] No versions registered for {customer.id}",
         "events": {
           "version.list.started": "Version list request received",
           "version.list.s3.retrieved": "No registrations found in S3",
@@ -37,7 +37,7 @@
       "description": "List operation failed due to an S3 storage error",
       "priority": 3,
       "template": {
-        "summary": "❌ S3 list failed for {customer.id}: {error.message}",
+        "summary": "[Error] S3 list failed for {customer.id}: {error.message}",
         "events": {
           "version.list.started": "Version list request received",
           "version.list.error": "S3 storage error ({{error.type}}): {{error.message}}"
@@ -49,7 +49,7 @@
       "description": "List operation failed due to invalid request parameters",
       "priority": 4,
       "template": {
-        "summary": "❌ List validation failed: {error.message}",
+        "summary": "[Error] List validation failed: {error.message}",
         "events": {
           "version.list.started": "Version list request received",
           "version.list.error": "Validation failed ({{error.type}}): {{error.message}}"
@@ -61,7 +61,7 @@
       "description": "List operation failed due to an unexpected error",
       "priority": 5,
       "template": {
-        "summary": "❌ List failed for {customer.id}: {error.message}",
+        "summary": "[Error] List failed for {customer.id}: {error.message}",
         "events": {
           "version.list.started": "Version list request received",
           "version.list.error": "Error at {{error.stage}} ({{error.type}}): {{error.message}}"

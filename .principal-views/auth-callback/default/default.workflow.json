@@ -11,7 +11,7 @@
       "description": "OAuth authentication completed successfully via PKCE code exchange",
       "priority": 1,
       "template": {
-        "summary": "✅ Authentication successful via PKCE (completed in {duration.ms}ms)",
+        "summary": "[Success] Authentication successful via PKCE (completed in {duration.ms}ms)",
         "events": {
           "auth.callback.started": "OAuth callback request received",
           "auth.state.validated": "Validated state and CSRF token for PKCE flow",
@@ -27,7 +27,7 @@
       "description": "OAuth authentication completed successfully via WorkOS cookie session",
       "priority": 2,
       "template": {
-        "summary": "✅ Authentication successful via cookie session (completed in {duration.ms}ms)",
+        "summary": "[Success] Authentication successful via cookie session (completed in {duration.ms}ms)",
         "events": {
           "auth.callback.started": "OAuth callback request received",
           "auth.state.validated": "Validated state and CSRF token for cookie flow",
@@ -43,7 +43,7 @@
       "description": "OAuth authentication failed due to an error during the callback process",
       "priority": 3,
       "template": {
-        "summary": "❌ Authentication failed: {error.message}",
+        "summary": "[Error] Authentication failed: {error.message}",
         "events": {
           "auth.callback.started": "OAuth callback request received",
           "auth.callback.error": "Error at {{error.stage}}: {{error.message}}"

@@ -11,7 +11,7 @@
       "description": "Successfully imported a shared collection from another user into the current user's collections",
       "priority": 1,
       "template": {
-        "summary": "✅ Imported '{collectionName}' from @{sourceUsername}",
+        "summary": "[Success] Imported '{collectionName}' from @{sourceUsername}",
         "events": {
           "collection.import.started": "Importing collection from @{{sourceUsername}}: {{collectionName}}",
           "collection.import.fetch-source": "Fetching source collection data",
@@ -27,7 +27,7 @@
       "description": "Import skipped because the collection has already been imported by the user",
       "priority": 2,
       "template": {
-        "summary": "⚪ Collection already imported",
+        "summary": "[Skipped] Collection already imported",
         "events": {
           "collection.import.started": "Importing collection from @{{sourceUsername}}: {{collectionName}}",
           "collection.import.duplicate-check": "Collection already exists in user's collections"
@@ -39,7 +39,7 @@
       "description": "Import failed because the source collection or user does not exist",
       "priority": 3,
       "template": {
-        "summary": "⚠️ Source collection not found",
+        "summary": "[Warning] Source collection not found",
         "events": {
           "collection.import.started": "Importing collection from @{{sourceUsername}}: {{collectionName}}",
           "collection.import.fetch-source": "Fetching source collection data",
@@ -52,7 +52,7 @@
       "description": "Import failed because the user is not authenticated",
       "priority": 4,
       "template": {
-        "summary": "🔒 Authentication required",
+        "summary": "[Unauthorized] Authentication required",
         "events": {
           "collection.import.started": "Importing collection from @{{sourceUsername}}",
           "collection.import.unauthorized": "User not authenticated (401)"
@@ -64,7 +64,7 @@
       "description": "Import failed due to an unexpected error (e.g., GitHub API error, network issue)",
       "priority": 5,
       "template": {
-        "summary": "❌ Import failed: {error.message}",
+        "summary": "[Error] Import failed: {error.message}",
         "events": {
           "collection.import.started": "Importing collection from @{{sourceUsername}}",
           "collection.import.error": "Error during import: {{error.message}}"

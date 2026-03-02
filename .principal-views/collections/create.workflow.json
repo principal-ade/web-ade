@@ -11,7 +11,7 @@
       "description": "Successfully created a new collection in an existing GitHub repository",
       "priority": 1,
       "template": {
-        "summary": "✅ Created collection '{collectionName}'",
+        "summary": "[Success] Created collection '{collectionName}'",
         "events": {
           "collection.create.started": "Creating collection: {{collectionName}}",
           "collection.create.validate": "Validating collection data (name: {{collectionName}}, icon: {{icon}})",
@@ -26,7 +26,7 @@
       "description": "Successfully created a new collection and initialized a new GitHub repository",
       "priority": 2,
       "template": {
-        "summary": "✅ Created collection '{collectionName}' and initialized GitHub repo",
+        "summary": "[Success] Created collection '{collectionName}' and initialized GitHub repo",
         "events": {
           "collection.create.started": "Creating collection: {{collectionName}}",
           "collection.create.validate": "Validating collection data (name: {{collectionName}}, icon: {{icon}})",
@@ -41,7 +41,7 @@
       "description": "Collection creation failed due to invalid data (e.g., missing name, invalid characters)",
       "priority": 3,
       "template": {
-        "summary": "⚠️ Invalid collection data: {error.field}",
+        "summary": "[Warning] Invalid collection data: {error.field}",
         "events": {
           "collection.create.started": "Creating collection: {{collectionName}}",
           "collection.create.validation-error": "Validation failed: {{error.field}} - {{error.message}}"
@@ -53,7 +53,7 @@
       "description": "Collection creation failed because user is not authenticated",
       "priority": 4,
       "template": {
-        "summary": "🔒 Authentication required",
+        "summary": "[Unauthorized] Authentication required",
         "events": {
           "collection.create.started": "Creating collection: {{collectionName}}",
           "collection.create.unauthorized": "User not authenticated (401)"
@@ -65,7 +65,7 @@
       "description": "Collection creation failed due to an unexpected error (e.g., GitHub API error, network issue)",
       "priority": 5,
       "template": {
-        "summary": "❌ Failed to create collection: {error.message}",
+        "summary": "[Error] Failed to create collection: {error.message}",
         "events": {
           "collection.create.started": "Creating collection: {{collectionName}}",
           "collection.create.error": "Error: {{error.message}}"

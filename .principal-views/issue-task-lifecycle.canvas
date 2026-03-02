@@ -2,6 +2,7 @@
   "pv": {
     "name": "Issue to Task Lifecycle",
     "version": "1.0.0",
+    "markdown": ".principal-views/issue-task-lifecycle.md",
     "nodeTypes": {
       "panel": {
         "label": "UI Panel",

@@ -11,7 +11,7 @@
       "description": "Successfully loaded the user's collections from their GitHub repository",
       "priority": 1,
       "template": {
-        "summary": "✅ Loaded {collectionCount} collections",
+        "summary": "[Success] Loaded {collectionCount} collections",
         "events": {
           "collections.load.started": "Fetching collections for authenticated user",
           "collections.load.github.fetch": "Fetching from GitHub repo: {{repoUrl}}",
@@ -24,7 +24,7 @@
       "description": "Load completed with no collections because the user's GitHub repository doesn't exist yet",
       "priority": 2,
       "template": {
-        "summary": "⚪ No collections repo found",
+        "summary": "[Skipped] No collections repo found",
         "events": {
           "collections.load.started": "Fetching collections for authenticated user",
           "collections.load.github.not-found": "Collections repo doesn't exist yet (404)"
@@ -36,7 +36,7 @@
       "description": "Load failed because the user is not authenticated",
       "priority": 3,
       "template": {
-        "summary": "🔒 Authentication required",
+        "summary": "[Unauthorized] Authentication required",
         "events": {
           "collections.load.started": "Fetching collections for authenticated user",
           "collections.load.unauthorized": "User not authenticated (401)"
@@ -48,7 +48,7 @@
       "description": "Load failed due to an unexpected error (e.g., GitHub API error, network issue)",
       "priority": 4,
       "template": {
-        "summary": "❌ Failed to load collections: {error.message}",
+        "summary": "[Error] Failed to load collections: {error.message}",
         "events": {
           "collections.load.started": "Fetching collections for authenticated user",
           "collections.load.error": "Error loading collections: {{error.message}}"

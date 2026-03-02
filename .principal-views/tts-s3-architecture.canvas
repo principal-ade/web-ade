@@ -32,6 +32,7 @@
       "y": 50,
       "width": 250,
       "height": 150,
+      "color": "#3b82f6",
       "pv": {
         "description": "Tour player component that initiates TTS requests",
         "shape": "rectangle",
@@ -47,6 +48,7 @@
       "y": 250,
       "width": 250,
       "height": 120,
+      "color": "#6366f1",
       "pv": {
         "description": "API endpoint for TTS generation",
         "shape": "rectangle",
@@ -62,6 +64,7 @@
       "y": 420,
       "width": 250,
       "height": 140,
+      "color": "#6366f1",
       "pv": {
         "description": "API endpoint for TTS generation",
         "shape": "rectangle",
@@ -77,6 +80,7 @@
       "y": 610,
       "width": 250,
       "height": 130,
+      "color": "#6366f1",
       "pv": {
         "description": "API endpoint for TTS generation",
         "shape": "rectangle",
@@ -92,6 +96,7 @@
       "y": 790,
       "width": 250,
       "height": 140,
+      "color": "#f59e0b",
       "pv": {
         "description": "S3 cache check decision point",
         "shape": "diamond",
@@ -107,6 +112,7 @@
       "y": 790,
       "width": 250,
       "height": 140,
+      "color": "#22c55e",
       "pv": {
         "description": "Cached audio found in S3",
         "shape": "rectangle",
@@ -122,6 +128,7 @@
       "y": 980,
       "width": 250,
       "height": 150,
+      "color": "#ec4899",
       "pv": {
         "description": "ElevenLabs API call to generate audio",
         "shape": "rectangle",
@@ -137,6 +144,7 @@
       "y": 1180,
       "width": 250,
       "height": 130,
+      "color": "#f59e0b",
       "pv": {
         "description": "Upload generated audio to S3",
         "shape": "rectangle",
@@ -152,6 +160,7 @@
       "y": 1050,
       "width": 250,
       "height": 150,
+      "color": "#22c55e",
       "pv": {
         "description": "Return audio URL response to client",
         "shape": "rectangle",
@@ -167,6 +176,7 @@
       "y": 50,
       "width": 250,
       "height": 130,
+      "color": "#22c55e",
       "pv": {
         "description": "Client-side audio playback using HTMLAudioElement",
         "shape": "rectangle",
@@ -182,6 +192,7 @@
       "y": 424,
       "width": 250,
       "height": 130,
+      "color": "#ef4444",
       "pv": {
         "description": "Error handling for API failures",
         "shape": "rectangle",
@@ -197,6 +208,7 @@
       "y": 606,
       "width": 250,
       "height": 130,
+      "color": "#ef4444",
       "pv": {
         "description": "Error handling for API failures",
         "shape": "rectangle",
@@ -212,6 +224,7 @@
       "y": 980,
       "width": 250,
       "height": 140,
+      "color": "#ef4444",
       "pv": {
         "description": "Error handling for API failures",
         "shape": "rectangle",
@@ -227,6 +240,7 @@
       "y": 1380,
       "width": 250,
       "height": 140,
+      "color": "#6366f1",
       "pv": {
         "description": "Batch endpoint for pre-fetching all tour steps",
         "shape": "rectangle",
@@ -242,6 +256,7 @@
       "y": 1380,
       "width": 250,
       "height": 180,
+      "color": "#f59e0b",
       "pv": {
         "description": "S3 bucket storage organization structure",
         "shape": "cylinder",

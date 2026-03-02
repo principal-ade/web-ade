@@ -11,7 +11,7 @@
       "description": "Successfully registered version mapping and fetched schematic from GitHub",
       "priority": 1,
       "template": {
-        "summary": "✅ Registered {service.name}@{version} → {git.sha} with schematic (completed in {duration.ms}ms)",
+        "summary": "[Success] Registered {service.name}@{version} → {git.sha} with schematic (completed in {duration.ms}ms)",
         "events": {
           "version.registration.started": "Version registration request received",
           "version.registration.validated": "Validated request for {{customer.id}}/{{service.name}}@{{version}}",
@@ -28,7 +28,7 @@
       "description": "Successfully registered version mapping without schematic (repo has no .principal-views)",
       "priority": 2,
       "template": {
-        "summary": "✅ Registered {service.name}@{version} → {git.sha} (no schematic)",
+        "summary": "[Success] Registered {service.name}@{version} → {git.sha} (no schematic)",
         "events": {
           "version.registration.started": "Version registration request received",
           "version.registration.validated": "Validated request for {{customer.id}}/{{service.name}}@{{version}}",
@@ -42,7 +42,7 @@
       "description": "Version mapping stored successfully but schematic fetch failed (partial success)",
       "priority": 3,
       "template": {
-        "summary": "⚠️ Registered {service.name}@{version} but schematic fetch failed: {error.message}",
+        "summary": "[Warning] Registered {service.name}@{version} but schematic fetch failed: {error.message}",
         "events": {
           "version.registration.started": "Version registration request received",
           "version.registration.validated": "Validation passed for {{customer.id}}/{{service.name}}",
@@ -57,7 +57,7 @@
       "description": "Registration failed due to validation or storage error",
       "priority": 4,
       "template": {
-        "summary": "❌ Registration failed: {error.message}",
+        "summary": "[Error] Registration failed: {error.message}",
         "events": {
           "version.registration.started": "Version registration request received",
           "version.registration.error": "Error at {{error.stage}} ({{error.type}}): {{error.message}}"

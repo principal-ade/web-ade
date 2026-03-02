@@ -11,7 +11,7 @@
       "description": "Successfully retrieved the git commit SHA for the requested version",
       "priority": 1,
       "template": {
-        "summary": "✅ Found {service.name}@{version} → {git.sha} (completed in {duration.ms}ms)",
+        "summary": "[Success] Found {service.name}@{version} → {git.sha} (completed in {duration.ms}ms)",
         "events": {
           "version.lookup.started": "Version lookup request received",
           "version.lookup.s3.retrieved": "Retrieved mapping from {{s3.key}} (SHA: {{git.sha}}, deployed: {{deployed.at}})",
@@ -24,7 +24,7 @@
       "description": "Lookup completed but the version has not been registered",
       "priority": 2,
       "template": {
-        "summary": "⚠️ Version {service.name}@{version} not registered",
+        "summary": "[Not Found] Version {service.name}@{version} not registered",
         "events": {
           "version.lookup.started": "Version lookup request received",
           "version.lookup.not_found": "Version not registered - deployment gate will reject traces from this version"
@@ -36,7 +36,7 @@
       "description": "Lookup operation failed due to an S3 storage error",
       "priority": 3,
       "template": {
-        "summary": "❌ S3 lookup failed: {error.message}",
+        "summary": "[Error] S3 lookup failed: {error.message}",
         "events": {
           "version.lookup.started": "Version lookup request received",
           "version.lookup.error": "S3 storage error ({{error.type}}): {{error.message}}"
@@ -48,7 +48,7 @@
       "description": "Lookup operation failed due to invalid request parameters",
       "priority": 4,
       "template": {
-        "summary": "❌ Lookup validation failed: {error.message}",
+        "summary": "[Error] Lookup validation failed: {error.message}",
         "events": {
           "version.lookup.started": "Version lookup request received",
           "version.lookup.error": "Validation failed ({{error.type}}): {{error.message}}"
@@ -60,7 +60,7 @@
       "description": "Lookup operation failed due to an unexpected error",
       "priority": 5,
       "template": {
-        "summary": "❌ Lookup failed: {error.message}",
+        "summary": "[Error] Lookup failed: {error.message}",
         "events": {
           "version.lookup.started": "Version lookup request received",
           "version.lookup.error": "Error at {{error.stage}} ({{error.type}}): {{error.message}}"

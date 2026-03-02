@@ -11,7 +11,7 @@
       "description": "Successfully looked up repositories for all packages in the batch",
       "priority": 1,
       "template": {
-        "summary": "✅ Batch lookup completed: {total} packages, all found",
+        "summary": "[Success] Batch lookup completed: {total} packages, all found",
         "events": {
           "package.lookup.batch.started": "Starting batch lookup for {{packageCount}} packages (concurrency: {{concurrency}})",
           "package.lookup.batch.process": "Processing batch (size: {{batchSize}})",
@@ -24,7 +24,7 @@
       "description": "Batch lookup completed but some packages were not found",
       "priority": 2,
       "template": {
-        "summary": "✅ Batch lookup completed: {found}/{total} packages found",
+        "summary": "[Partial] Batch lookup completed: {found}/{total} packages found",
         "events": {
           "package.lookup.batch.started": "Starting batch lookup for {{packageCount}} packages (concurrency: {{concurrency}})",
           "package.lookup.batch.process": "Processing batch (size: {{batchSize}})",
@@ -37,7 +37,7 @@
       "description": "Batch lookup completed but some packages encountered errors during lookup",
       "priority": 3,
       "template": {
-        "summary": "⚠️ Batch lookup completed with errors: {found}/{total} found, {errors} errors",
+        "summary": "[Warning] Batch lookup completed with errors: {found}/{total} found, {errors} errors",
         "events": {
           "package.lookup.batch.started": "Starting batch lookup for {{packageCount}} packages (concurrency: {{concurrency}})",
           "package.lookup.batch.process": "Processing batch (size: {{batchSize}})",
@@ -50,7 +50,7 @@
       "description": "Batch lookup failed because the packages array was not provided in the request",
       "priority": 4,
       "template": {
-        "summary": "❌ Invalid request: missing packages array",
+        "summary": "[Error] Invalid request: missing packages array",
         "events": {
           "package.lookup.batch.validation-error": "Validation failed: {{error}}"
         }
@@ -61,7 +61,7 @@
       "description": "Batch lookup failed because an unsupported package system was specified",
       "priority": 5,
       "template": {
-        "summary": "❌ Invalid request: unsupported package system",
+        "summary": "[Error] Invalid request: unsupported package system",
         "events": {
           "package.lookup.batch.validation-error": "Validation failed: {{error}}"
         }
@@ -72,7 +72,7 @@
       "description": "Batch lookup failed because the number of packages exceeds the maximum batch size limit",
       "priority": 6,
       "template": {
-        "summary": "❌ Invalid request: batch size exceeds limit",
+        "summary": "[Error] Invalid request: batch size exceeds limit",
         "events": {
           "package.lookup.batch.validation-error": "Validation failed: {{error}}"
         }
@@ -83,7 +83,7 @@
       "description": "Batch lookup failed due to an unexpected error (e.g., network issue, API failure)",
       "priority": 7,
       "template": {
-        "summary": "❌ Batch lookup failed: {error.message}",
+        "summary": "[Error] Batch lookup failed: {error.message}",
         "events": {
           "package.lookup.batch.started": "Starting batch lookup for {{packageCount}} packages",
           "package.lookup.batch.error": "Error: {{error.message}}"
