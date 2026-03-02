@@ -16,11 +16,11 @@ import {
   ListObjectsV2Command,
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
-import type { VersionSnapshot } from '@principal-ai/principal-view-core';
 import type {
   VersionRegistration,
   VersionRegistryKey,
 } from './types';
+import type { SchematicResponse } from './schematic-fetcher';
 
 // Initialize S3 client with IAM role credentials
 const s3Client = new S3Client({
@@ -361,19 +361,19 @@ export function buildSchematicS3Key(repositoryUrl: string, commitSha: string): s
  *
  * @param repositoryUrl - GitHub repository URL
  * @param commitSha - Git commit SHA
- * @param schematic - Complete VersionSnapshot
+ * @param schematic - Complete SchematicResponse (includes library data)
  * @returns S3 key where schematic was stored
  */
 export async function storeSchematic(
   repositoryUrl: string,
   commitSha: string,
-  schematic: VersionSnapshot
+  schematic: SchematicResponse
 ): Promise<string> {
   try {
     const s3Key = buildSchematicS3Key(repositoryUrl, commitSha);
 
     // Ensure required VersionIdentifier fields are present
-    const completeSchematic: VersionSnapshot = {
+    const completeSchematic: SchematicResponse = {
       ...schematic,
       repositoryUrl,
       commitSha,
@@ -414,12 +414,12 @@ export async function storeSchematic(
  *
  * @param repositoryUrl - GitHub repository URL
  * @param commitSha - Git commit SHA
- * @returns Schematic (VersionSnapshot) or null if not found
+ * @returns Schematic (SchematicResponse with library data) or null if not found
  */
 export async function getSchematic(
   repositoryUrl: string,
   commitSha: string
-): Promise<VersionSnapshot | null> {
+): Promise<SchematicResponse | null> {
   try {
     const s3Key = buildSchematicS3Key(repositoryUrl, commitSha);
     const response = await s3Client.send(
@@ -434,7 +434,7 @@ export async function getSchematic(
       return null;
     }
 
-    const schematic = JSON.parse(data) as VersionSnapshot;
+    const schematic = JSON.parse(data) as SchematicResponse;
 
     // Ensure required fields are present (for backward compatibility with old data)
     // These fields are required by VersionIdentifier but might be missing from old S3 data

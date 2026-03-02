@@ -17,8 +17,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import type { VersionSnapshot } from '@principal-ai/principal-view-core';
 import { getSchematic } from '@/lib/version-registry/s3-storage';
+import type { SchematicResponse } from '@/lib/version-registry/schematic-fetcher';
 
 /**
  * Add CORS headers to response
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Fetch schematic from S3
-    const schematic: VersionSnapshot | null = await getSchematic(repositoryUrl, commitSha);
+    const schematic: SchematicResponse | null = await getSchematic(repositoryUrl, commitSha);
 
     if (!schematic) {
       console.log('[Schematic API] Schematic not found:', {
@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
 
     // Return properly typed response
     return addCorsHeaders(
-      NextResponse.json<VersionSnapshot>(schematic, {
+      NextResponse.json<SchematicResponse>(schematic, {
         status: 200,
         headers: {
           'Cache-Control': 'public, max-age=3600, immutable', // Cache for 1 hour - schematics are immutable by commit

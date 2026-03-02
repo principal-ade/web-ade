@@ -5,17 +5,63 @@
  * from GitHub repositories at specific commits.
  *
  * A schematic is the complete CanvasDiscoveryResult for a service, including:
- * - All .otel.canvas files (event schemas)
+ * - All .otel.canvas files (event schemas) - filtered to exclude regular .canvas files
  * - All .workflow.json files (scenarios)
  * - All test traces/executions
  * - Complete storyboard structure
+ * - Library metadata including owned-scopes for trace routing
  */
 
 import { Octokit } from '@octokit/rest';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
-import { CanvasDiscovery, type VersionSnapshot } from '@principal-ai/principal-view-core';
+import {
+  CanvasDiscovery,
+  type VersionSnapshot,
+  type ComponentLibrary,
+  type ResourceAttributes,
+} from '@principal-ai/principal-view-core';
 import { GitHubFileSystemAdapter } from '@/lib/server/GitHubFileSystemAdapter';
 import { getGitHubToken } from '@/lib/auth/cookies';
+import * as yaml from 'yaml';
+
+/**
+ * Extended schematic response that includes library.yaml content
+ *
+ * Adds library metadata and resource definitions to enable:
+ * - Scope-to-storyboard matching for trace processing
+ * - Service identification and routing
+ */
+export interface SchematicResponse extends VersionSnapshot {
+  /** Library metadata from .principal-views/library.yaml */
+  library?: {
+    version: string;
+    name: string;
+    description?: string;
+  };
+  /** Resource definitions with owned-scopes for trace routing */
+  resources?: Record<string, ResourceAttributes>;
+}
+
+/**
+ * Fetches and parses library.yaml from a repository
+ *
+ * @param adapter - GitHub file system adapter
+ * @returns Parsed ComponentLibrary or null if not found
+ */
+async function fetchLibraryYaml(
+  adapter: GitHubFileSystemAdapter
+): Promise<ComponentLibrary | null> {
+  const libraryPath = '.principal-views/library.yaml';
+
+  try {
+    const content = await adapter.readFile(libraryPath);
+    const parsed = yaml.parse(content) as ComponentLibrary;
+    return parsed;
+  } catch {
+    // library.yaml is optional
+    return null;
+  }
+}
 
 /**
  * Fetches complete schematic from GitHub at specific commit
@@ -25,19 +71,21 @@ import { getGitHubToken } from '@/lib/auth/cookies';
  * 2. Build FileTree from paths
  * 3. Create GitHubFileSystemAdapter for file content fetching
  * 4. Use CanvasDiscovery to find and parse all canvas/workflow files
- * 5. Return complete VersionSnapshot (the schematic)
+ * 5. Filter to only include .otel.canvas storyboards (exclude regular .canvas)
+ * 6. Fetch and include library.yaml content (for owned-scopes)
+ * 7. Return complete SchematicResponse
  *
  * @param repositoryUrl - GitHub repository URL
  * @param commitSha - Git commit SHA (40-char hex)
  * @param providedToken - GitHub token (optional, from Authorization header)
- * @returns Complete schematic (VersionSnapshot with content)
+ * @returns Complete schematic with library data
  * @throws Error if repository not found or schematic fetch fails
  */
 export async function fetchSchematicFromGitHub(
   repositoryUrl: string,
   commitSha: string,
   providedToken?: string
-): Promise<VersionSnapshot> {
+): Promise<SchematicResponse> {
   // Parse owner/repo from URL
   const match = repositoryUrl.match(/github\.com[/:]([\w.-]+)\/([\w.-]+)/);
   if (!match) {
@@ -107,10 +155,18 @@ export async function fetchSchematicFromGitHub(
       includeContent: true, // Include parsed canvas/workflow content
     });
 
+    // Filter to only include otel.canvas storyboards (exclude regular .canvas files)
+    // Regular .canvas files are for documentation/architecture diagrams, not telemetry
+    const otelStoryboards = schematic.storyboards.filter(
+      (storyboard) => storyboard.canvas.type === 'otel'
+    );
+
     console.log('[Schematic Fetcher] Schematic discovered:', {
-      canvases: schematic.canvases.length,
-      storyboards: schematic.storyboards.length,
-      workflows: schematic.storyboards.reduce((sum, sb) => sum + sb.workflows.length, 0),
+      totalCanvases: schematic.canvases.length,
+      otelCanvases: schematic.canvases.filter((c) => c.type === 'otel').length,
+      totalStoryboards: schematic.storyboards.length,
+      otelStoryboards: otelStoryboards.length,
+      workflows: otelStoryboards.reduce((sum, sb) => sum + sb.workflows.length, 0),
       errors: schematic.errors.length,
     });
 
@@ -118,13 +174,40 @@ export async function fetchSchematicFromGitHub(
       console.warn('[Schematic Fetcher] Discovery errors:', schematic.errors);
     }
 
-    // Return as VersionSnapshot format
-    return {
+    // Fetch library.yaml for owned-scopes and service metadata
+    const library = await fetchLibraryYaml(adapter);
+
+    if (library) {
+      console.log('[Schematic Fetcher] Library found:', {
+        name: library.name,
+        version: library.version,
+        resourceCount: library.resources ? Object.keys(library.resources).length : 0,
+      });
+    }
+
+    // Build response with library data for trace routing
+    const response: SchematicResponse = {
       repositoryUrl,
       commitSha,
-      storyboards: schematic.storyboards,
+      storyboards: otelStoryboards,
       registeredAt: new Date().toISOString(),
     };
+
+    // Include library metadata if available
+    if (library) {
+      response.library = {
+        version: library.version,
+        name: library.name,
+        description: library.description,
+      };
+
+      // Include resources with owned-scopes for trace routing
+      if (library.resources) {
+        response.resources = library.resources;
+      }
+    }
+
+    return response;
   } catch (error) {
     console.error('[Schematic Fetcher] Failed to fetch schematic:', {
       owner,
