@@ -48,6 +48,7 @@ import type {
   SelectedCollectionView,
   CollectionMapPanelActions,
 } from '@industry-theme/repository-composition-panels';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import type {
   OwnerRepositoriesSliceData,
 } from '@industry-theme/github-panels';
@@ -126,6 +127,7 @@ export interface OwnerPageContextType {
   quality?: DataSlice<QualitySliceData>;
   'active-file'?: DataSlice<ActiveFileSlice>;
   packages: DataSlice<PackagesSliceData>; // Required - expected by PackageCompositionPanel
+  repositoryEntry: DataSlice<AlexandriaEntry | null>; // Required - expected by PackageCompositionPanel
   commitFiles?: DataSlice<CommitFilesSliceData>;
   storyboardContext?: DataSlice<StoryboardContextSliceData>;
   selectedCollectionView: SelectedCollectionView;
@@ -366,6 +368,19 @@ export function OwnerPageProvider({
     [packagesData, packagesLoading, packagesError]
   );
 
+  // Explicit slice: repositoryEntry (required - expected by PackageCompositionPanel)
+  const repositoryEntrySlice = useMemo<DataSlice<AlexandriaEntry | null>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'repositoryEntry',
+      data: null,
+      loading: false,
+      error: null,
+      refresh: async () => { /* no-op */ },
+    }),
+    []
+  );
+
   // Explicit slice: commitFiles
   const commitFilesSlice = useMemo<DataSlice<CommitFilesSliceData>>(
     () => ({
@@ -581,6 +596,7 @@ export function OwnerPageProvider({
       'owner-repositories': ownerRepositoriesSlice,
       ownerRepositories: ownerRepositoriesSlice, // Alias for panels expecting camelCase
       packages: packagesSlice,
+      repositoryEntry: repositoryEntrySlice,
       selectedCollectionView: selectedCollectionViewSlice,
 
       // Optional slices
@@ -609,6 +625,7 @@ export function OwnerPageProvider({
       // All explicit slices
       ownerRepositoriesSlice,
       packagesSlice,
+      repositoryEntrySlice,
       selectedCollectionViewSlice,
       fileTreeSlice,
       fileCityColorModesSlice,
