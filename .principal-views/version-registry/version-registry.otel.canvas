@@ -30,7 +30,13 @@
         "status": "approved",
         "event": {
           "name": "version.registration.started",
-          "attributes": {}
+          "attributes": {
+            "service.name": { "type": "string", "description": "Service name", "required": true },
+            "version": { "type": "string", "description": "Version string", "required": true },
+            "repository.url": { "type": "string", "description": "Repository URL", "required": true },
+            "environment": { "type": "string", "description": "Deployment environment", "required": true },
+            "git.sha": { "type": "string", "description": "Git commit SHA", "required": true }
+          }
         },
         "sources": [
           "src/app/api/versions/route.ts"
@@ -80,7 +86,11 @@
         "status": "approved",
         "event": {
           "name": "version.registration.validated",
-          "attributes": {}
+          "attributes": {
+            "customer.id": { "type": "string", "description": "Customer ID", "required": true },
+            "service.name": { "type": "string", "description": "Service name", "required": true },
+            "version": { "type": "string", "description": "Version string", "required": true }
+          }
         },
         "sources": [
           "src/lib/version-registry/version-manager.ts"
@@ -122,7 +132,11 @@
         "status": "approved",
         "event": {
           "name": "version.registration.s3.stored",
-          "attributes": {}
+          "attributes": {
+            "s3.key": { "type": "string", "description": "S3 object key", "required": true },
+            "s3.bucket": { "type": "string", "description": "S3 bucket name", "required": true },
+            "already.exists": { "type": "boolean", "description": "Whether mapping already existed", "required": false }
+          }
         },
         "sources": [
           "src/lib/version-registry/s3-storage.ts"
@@ -164,7 +178,11 @@
         "status": "approved",
         "event": {
           "name": "version.registration.schematic.fetching",
-          "attributes": {}
+          "attributes": {
+            "repository.url": { "type": "string", "description": "Repository URL", "required": true },
+            "git.sha": { "type": "string", "description": "Git commit SHA", "required": true },
+            "schematic.cached": { "type": "boolean", "description": "Whether schematic is cached", "required": false }
+          }
         },
         "sources": [
           "src/lib/version-registry/version-manager.ts"
@@ -206,7 +224,13 @@
         "status": "approved",
         "event": {
           "name": "version.registration.schematic.fetched",
-          "attributes": {}
+          "attributes": {
+            "schematic.id": { "type": "string", "description": "Schematic ID", "required": true },
+            "canvases.count": { "type": "number", "description": "Number of canvases", "required": true },
+            "storyboards.count": { "type": "number", "description": "Number of storyboards", "required": true },
+            "workflows.count": { "type": "number", "description": "Number of workflows", "required": true },
+            "errors.count": { "type": "number", "description": "Number of errors", "required": false }
+          }
         },
         "sources": [
           "src/lib/version-registry/schematic-fetcher.ts"
@@ -256,7 +280,11 @@
         "status": "approved",
         "event": {
           "name": "version.registration.schematic.stored",
-          "attributes": {}
+          "attributes": {
+            "s3.key": { "type": "string", "description": "S3 object key", "required": true },
+            "s3.bucket": { "type": "string", "description": "S3 bucket name", "required": true },
+            "schematic.id": { "type": "string", "description": "Schematic ID", "required": true }
+          }
         },
         "sources": [
           "src/lib/version-registry/s3-storage.ts"
@@ -298,7 +326,11 @@
         "status": "approved",
         "event": {
           "name": "version.registration.complete",
-          "attributes": {}
+          "attributes": {
+            "registration.id": { "type": "string", "description": "Registration ID", "required": true },
+            "schematic.id": { "type": "string", "description": "Schematic ID", "required": true },
+            "duration.ms": { "type": "number", "description": "Duration in milliseconds", "required": false }
+          }
         },
         "sources": [
           "src/app/api/versions/route.ts"
@@ -340,7 +372,10 @@
         "status": "approved",
         "event": {
           "name": "version.registration.complete-no-schematic",
-          "attributes": {}
+          "attributes": {
+            "registration.id": { "type": "string", "description": "Registration ID", "required": true },
+            "duration.ms": { "type": "number", "description": "Duration in milliseconds", "required": false }
+          }
         },
         "sources": [
           "src/app/api/versions/route.ts"
@@ -378,7 +413,10 @@
         "status": "approved",
         "event": {
           "name": "version.registration.schematic-error",
-          "attributes": {}
+          "attributes": {
+            "error.type": { "type": "string", "description": "Error type", "required": true },
+            "error.message": { "type": "string", "description": "Error message", "required": true }
+          }
         },
         "sources": [
           "src/lib/version-registry/version-manager.ts"
@@ -416,7 +454,13 @@
         "status": "approved",
         "event": {
           "name": "version.registration.error",
-          "attributes": {}
+          "attributes": {
+            "error.type": { "type": "string", "description": "Error type", "required": true },
+            "error.message": { "type": "string", "description": "Error message", "required": true },
+            "error.stage": { "type": "string", "description": "Stage where error occurred", "required": true },
+            "service.name": { "type": "string", "description": "Service name", "required": false },
+            "version": { "type": "string", "description": "Version string", "required": false }
+          }
         },
         "sources": [
           "src/app/api/versions/route.ts",
@@ -467,7 +511,12 @@
         "status": "approved",
         "event": {
           "name": "version.lookup.started",
-          "attributes": {}
+          "attributes": {
+            "customer.id": { "type": "string", "description": "Customer ID", "required": true },
+            "service.name": { "type": "string", "description": "Service name", "required": true },
+            "version": { "type": "string", "description": "Version string", "required": true },
+            "environment": { "type": "string", "description": "Deployment environment", "required": true }
+          }
         },
         "sources": [
           "src/app/api/versions/lookup/route.ts"
@@ -513,7 +562,12 @@
         "status": "approved",
         "event": {
           "name": "version.lookup.s3.retrieved",
-          "attributes": {}
+          "attributes": {
+            "s3.key": { "type": "string", "description": "S3 object key", "required": true },
+            "git.sha": { "type": "string", "description": "Git commit SHA", "required": true },
+            "repository.url": { "type": "string", "description": "Repository URL", "required": true },
+            "deployed.at": { "type": "string", "description": "Deployment timestamp", "required": true }
+          }
         },
         "sources": [
           "src/lib/version-registry/s3-storage.ts"
@@ -559,7 +613,10 @@
         "status": "approved",
         "event": {
           "name": "version.lookup.complete",
-          "attributes": {}
+          "attributes": {
+            "git.sha": { "type": "string", "description": "Git commit SHA", "required": true },
+            "duration.ms": { "type": "number", "description": "Duration in milliseconds", "required": false }
+          }
         },
         "sources": [
           "src/app/api/versions/lookup/route.ts"
@@ -597,7 +654,11 @@
         "status": "approved",
         "event": {
           "name": "version.lookup.not_found",
-          "attributes": {}
+          "attributes": {
+            "customer.id": { "type": "string", "description": "Customer ID", "required": true },
+            "service.name": { "type": "string", "description": "Service name", "required": true },
+            "version": { "type": "string", "description": "Version string", "required": true }
+          }
         },
         "sources": [
           "src/app/api/versions/lookup/route.ts",
@@ -640,7 +701,11 @@
         "status": "approved",
         "event": {
           "name": "version.lookup.error",
-          "attributes": {}
+          "attributes": {
+            "error.type": { "type": "string", "description": "Error type", "required": true },
+            "error.message": { "type": "string", "description": "Error message", "required": true },
+            "error.stage": { "type": "string", "description": "Stage where error occurred", "required": true }
+          }
         },
         "sources": [
           "src/app/api/versions/lookup/route.ts",
@@ -683,7 +748,9 @@
         "status": "approved",
         "event": {
           "name": "version.list.started",
-          "attributes": {}
+          "attributes": {
+            "customer.id": { "type": "string", "description": "Customer ID", "required": true }
+          }
         },
         "sources": [
           "src/app/api/versions/list/route.ts"
@@ -717,7 +784,10 @@
         "status": "approved",
         "event": {
           "name": "version.list.s3.retrieved",
-          "attributes": {}
+          "attributes": {
+            "customer.id": { "type": "string", "description": "Customer ID", "required": true },
+            "registration.count": { "type": "number", "description": "Number of registrations", "required": true }
+          }
         },
         "sources": [
           "src/lib/version-registry/s3-storage.ts"
@@ -755,7 +825,10 @@
         "status": "approved",
         "event": {
           "name": "version.list.complete",
-          "attributes": {}
+          "attributes": {
+            "customer.id": { "type": "string", "description": "Customer ID", "required": true },
+            "registration.count": { "type": "number", "description": "Number of registrations", "required": true }
+          }
         },
         "sources": [
           "src/app/api/versions/list/route.ts"
@@ -793,7 +866,11 @@
         "status": "approved",
         "event": {
           "name": "version.list.error",
-          "attributes": {}
+          "attributes": {
+            "error.type": { "type": "string", "description": "Error type", "required": true },
+            "error.message": { "type": "string", "description": "Error message", "required": true },
+            "error.stage": { "type": "string", "description": "Stage where error occurred", "required": true }
+          }
         },
         "sources": [
           "src/app/api/versions/list/route.ts",

@@ -29,7 +29,10 @@
         "status": "approved",
         "event": {
           "name": "package.lookup.single.started",
-          "attributes": {}
+          "attributes": {
+            "packageName": { "type": "string", "description": "Package name", "required": true },
+            "system": { "type": "string", "description": "Package system (npm, pypi, etc)", "required": true }
+          }
         },
         "sources": [
           "src/app/api/packages/repository-lookup/route.ts"
@@ -67,7 +70,9 @@
         "status": "approved",
         "event": {
           "name": "package.lookup.npm-registry",
-          "attributes": {}
+          "attributes": {
+            "packageName": { "type": "string", "description": "Package name", "required": true }
+          }
         },
         "sources": [
           "src/app/api/packages/repository-lookup/route.ts"
@@ -101,7 +106,10 @@
         "status": "approved",
         "event": {
           "name": "package.lookup.npm-registry.hit",
-          "attributes": {}
+          "attributes": {
+            "packageName": { "type": "string", "description": "Package name", "required": true },
+            "repository": { "type": "string", "description": "Repository URL", "required": true }
+          }
         },
         "sources": [
           "src/app/api/packages/repository-lookup/route.ts"
@@ -139,7 +147,9 @@
         "status": "approved",
         "event": {
           "name": "package.lookup.npm-registry.miss",
-          "attributes": {}
+          "attributes": {
+            "packageName": { "type": "string", "description": "Package name", "required": true }
+          }
         },
         "sources": [
           "src/app/api/packages/repository-lookup/route.ts"
@@ -173,7 +183,10 @@
         "status": "approved",
         "event": {
           "name": "package.lookup.depsdev",
-          "attributes": {}
+          "attributes": {
+            "packageName": { "type": "string", "description": "Package name", "required": true },
+            "system": { "type": "string", "description": "Package system", "required": true }
+          }
         },
         "sources": [
           "src/app/api/packages/repository-lookup/route.ts",
@@ -212,7 +225,10 @@
         "status": "approved",
         "event": {
           "name": "package.lookup.depsdev.direct",
-          "attributes": {}
+          "attributes": {
+            "packageName": { "type": "string", "description": "Package name", "required": true },
+            "system": { "type": "string", "description": "Package system", "required": true }
+          }
         },
         "sources": [
           "src/app/api/packages/repository-lookup/route.ts"
@@ -250,7 +266,12 @@
         "status": "approved",
         "event": {
           "name": "package.lookup.single.success",
-          "attributes": {}
+          "attributes": {
+            "packageName": { "type": "string", "description": "Package name", "required": true },
+            "repository": { "type": "string", "description": "Repository URL", "required": true },
+            "source": { "type": "string", "description": "Data source", "required": true },
+            "version": { "type": "string", "description": "Package version", "required": false }
+          }
         },
         "sources": [
           "src/app/api/packages/repository-lookup/route.ts"
@@ -296,7 +317,10 @@
         "status": "approved",
         "event": {
           "name": "package.lookup.single.not-found",
-          "attributes": {}
+          "attributes": {
+            "packageName": { "type": "string", "description": "Package name", "required": true },
+            "system": { "type": "string", "description": "Package system", "required": true }
+          }
         },
         "sources": [
           "src/app/api/packages/repository-lookup/route.ts"
@@ -334,7 +358,9 @@
         "status": "approved",
         "event": {
           "name": "package.lookup.single.validation-error",
-          "attributes": {}
+          "attributes": {
+            "error": { "type": "string", "description": "Validation error", "required": true }
+          }
         },
         "sources": [
           "src/app/api/packages/repository-lookup/route.ts"
@@ -368,7 +394,9 @@
         "status": "approved",
         "event": {
           "name": "package.lookup.single.error",
-          "attributes": {}
+          "attributes": {
+            "error.message": { "type": "string", "description": "Error message", "required": true }
+          }
         },
         "sources": [
           "src/app/api/packages/repository-lookup/route.ts"
@@ -402,7 +430,10 @@
         "status": "approved",
         "event": {
           "name": "package.lookup.batch.started",
-          "attributes": {}
+          "attributes": {
+            "packageCount": { "type": "number", "description": "Number of packages", "required": true },
+            "concurrency": { "type": "number", "description": "Concurrency level", "required": false }
+          }
         },
         "sources": [
           "src/app/api/packages/repository-lookup/batch/route.ts"
@@ -440,7 +471,9 @@
         "status": "approved",
         "event": {
           "name": "package.lookup.batch.process",
-          "attributes": {}
+          "attributes": {
+            "batchSize": { "type": "number", "description": "Batch size", "required": true }
+          }
         },
         "sources": [
           "src/app/api/packages/repository-lookup/batch/route.ts"
@@ -474,7 +507,12 @@
         "status": "approved",
         "event": {
           "name": "package.lookup.batch.success",
-          "attributes": {}
+          "attributes": {
+            "total": { "type": "number", "description": "Total packages", "required": true },
+            "found": { "type": "number", "description": "Found count", "required": true },
+            "notFound": { "type": "number", "description": "Not found count", "required": true },
+            "errors": { "type": "number", "description": "Error count", "required": true }
+          }
         },
         "sources": [
           "src/app/api/packages/repository-lookup/batch/route.ts"
@@ -520,7 +558,9 @@
         "status": "approved",
         "event": {
           "name": "package.lookup.batch.validation-error",
-          "attributes": {}
+          "attributes": {
+            "error": { "type": "string", "description": "Validation error", "required": true }
+          }
         },
         "sources": [
           "src/app/api/packages/repository-lookup/batch/route.ts"
@@ -554,7 +594,9 @@
         "status": "approved",
         "event": {
           "name": "package.lookup.batch.error",
-          "attributes": {}
+          "attributes": {
+            "error.message": { "type": "string", "description": "Error message", "required": true }
+          }
         },
         "sources": [
           "src/app/api/packages/repository-lookup/batch/route.ts"

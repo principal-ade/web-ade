@@ -13,9 +13,9 @@
       "template": {
         "summary": "[Success] Listed {registration.count} version(s) for {customer.id} (completed in {duration.ms}ms)",
         "events": {
-          "version.list.started": "Version list request received",
-          "version.list.s3.retrieved": "Retrieved {{registration.count}} registration(s) from S3",
-          "version.list.complete": "List complete with {{registration.count}} version(s)"
+          "version.list.started": "Version list request for {{customer.id}}",
+          "version.list.s3.retrieved": "Retrieved {{registration.count}} registration(s) from S3 for {{customer.id}}",
+          "version.list.complete": "List complete for {{customer.id}} with {{registration.count}} version(s)"
         }
       }
     },
@@ -26,9 +26,9 @@
       "template": {
         "summary": "[Success] No versions registered for {customer.id}",
         "events": {
-          "version.list.started": "Version list request received",
-          "version.list.s3.retrieved": "No registrations found in S3",
-          "version.list.complete": "List complete - repository has no registered versions"
+          "version.list.started": "Version list request for {{customer.id}}",
+          "version.list.s3.retrieved": "No registrations found in S3 for {{customer.id}} ({{registration.count}})",
+          "version.list.complete": "List complete for {{customer.id}} - repository has {{registration.count}} versions"
         }
       }
     },
@@ -39,7 +39,7 @@
       "template": {
         "summary": "[Error] S3 list failed for {customer.id}: {error.message}",
         "events": {
-          "version.list.started": "Version list request received",
+          "version.list.started": "Version list request for {{customer.id}}",
           "version.list.error": "S3 storage error ({{error.type}}): {{error.message}}"
         }
       }
@@ -51,7 +51,7 @@
       "template": {
         "summary": "[Error] List validation failed: {error.message}",
         "events": {
-          "version.list.started": "Version list request received",
+          "version.list.started": "Version list request for {{customer.id}}",
           "version.list.error": "Validation failed ({{error.type}}): {{error.message}}"
         }
       }
@@ -63,7 +63,7 @@
       "template": {
         "summary": "[Error] List failed for {customer.id}: {error.message}",
         "events": {
-          "version.list.started": "Version list request received",
+          "version.list.started": "Version list request for {{customer.id}}",
           "version.list.error": "Error at {{error.stage}} ({{error.type}}): {{error.message}}"
         }
       }

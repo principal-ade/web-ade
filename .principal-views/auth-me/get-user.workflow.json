@@ -16,11 +16,11 @@
       "template": {
         "summary": "Authenticated user: {{user.login}}",
         "events": {
-          "http.request.start": "GET /api/auth/me",
-          "auth.me.get_token": "Getting GitHub token from cookie",
-          "auth.me.fetch_github": "Fetching user profile from GitHub API",
-          "auth.me.sync_token": "Syncing token from auth server",
-          "auth.me.success": "Returning user profile for {{user.login}}"
+          "http.request.start": "{{http.method}} {{http.route}}",
+          "auth.me.get_token": "Getting GitHub token (has_token: {{has_token}})",
+          "auth.me.fetch_github": "Fetching user profile from GitHub API (status: {{response.status}})",
+          "auth.me.sync_token": "Syncing token from auth server (synced: {{synced}})",
+          "auth.me.success": "Returning user profile for {{user.login}} (id: {{user.id}})"
         }
       }
     },
@@ -31,9 +31,9 @@
       "template": {
         "summary": "Not authenticated",
         "events": {
-          "http.request.start": "GET /api/auth/me",
-          "auth.me.get_token": "Checking for GitHub token",
-          "auth.me.unauthenticated": "No valid token found"
+          "http.request.start": "{{http.method}} {{http.route}}",
+          "auth.me.get_token": "Checking for GitHub token (has_token: {{has_token}})",
+          "auth.me.unauthenticated": "No valid token found: {{reason}}"
         }
       }
     },
@@ -44,9 +44,9 @@
       "template": {
         "summary": "Error: {{error.message}}",
         "events": {
-          "http.request.start": "GET /api/auth/me",
-          "auth.me.get_token": "Getting GitHub token from cookie",
-          "auth.me.error": "Error: {{error.message}}"
+          "http.request.start": "{{http.method}} {{http.route}}",
+          "auth.me.get_token": "Getting GitHub token (has_token: {{has_token}})",
+          "auth.me.error": "{{error.type}}: {{error.message}}"
         }
       }
     }

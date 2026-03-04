@@ -13,9 +13,9 @@
       "template": {
         "summary": "[Success] Found {service.name}@{version} → {git.sha} (completed in {duration.ms}ms)",
         "events": {
-          "version.lookup.started": "Version lookup request received",
-          "version.lookup.s3.retrieved": "Retrieved mapping from {{s3.key}} (SHA: {{git.sha}}, deployed: {{deployed.at}})",
-          "version.lookup.complete": "Lookup complete → {{git.sha}}"
+          "version.lookup.started": "Version lookup for {{customer.id}}/{{service.name}}@{{version}} ({{environment}})",
+          "version.lookup.s3.retrieved": "Retrieved mapping from {{s3.key}} (SHA: {{git.sha}}, repo: {{repository.url}}, deployed: {{deployed.at}})",
+          "version.lookup.complete": "Lookup complete → {{git.sha}} ({{duration.ms}}ms)"
         }
       }
     },
@@ -26,8 +26,8 @@
       "template": {
         "summary": "[Not Found] Version {service.name}@{version} not registered",
         "events": {
-          "version.lookup.started": "Version lookup request received",
-          "version.lookup.not_found": "Version not registered - deployment gate will reject traces from this version"
+          "version.lookup.started": "Version lookup for {{customer.id}}/{{service.name}}@{{version}} ({{environment}})",
+          "version.lookup.not_found": "{{customer.id}}/{{service.name}}@{{version}} not registered"
         }
       }
     },
@@ -38,7 +38,7 @@
       "template": {
         "summary": "[Error] S3 lookup failed: {error.message}",
         "events": {
-          "version.lookup.started": "Version lookup request received",
+          "version.lookup.started": "Version lookup for {{customer.id}}/{{service.name}}@{{version}} ({{environment}})",
           "version.lookup.error": "S3 storage error ({{error.type}}): {{error.message}}"
         }
       }
@@ -50,7 +50,7 @@
       "template": {
         "summary": "[Error] Lookup validation failed: {error.message}",
         "events": {
-          "version.lookup.started": "Version lookup request received",
+          "version.lookup.started": "Version lookup for {{customer.id}}/{{service.name}}@{{version}} ({{environment}})",
           "version.lookup.error": "Validation failed ({{error.type}}): {{error.message}}"
         }
       }
@@ -62,7 +62,7 @@
       "template": {
         "summary": "[Error] Lookup failed: {error.message}",
         "events": {
-          "version.lookup.started": "Version lookup request received",
+          "version.lookup.started": "Version lookup for {{customer.id}}/{{service.name}}@{{version}} ({{environment}})",
           "version.lookup.error": "Error at {{error.stage}} ({{error.type}}): {{error.message}}"
         }
       }

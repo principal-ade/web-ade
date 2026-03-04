@@ -13,10 +13,10 @@
       "template": {
         "summary": "[Success] Created collection '{collectionName}'",
         "events": {
-          "collection.create.started": "Creating collection: {{collectionName}}",
+          "collection.create.started": "Creating collection: {{collectionName}} (icon: {{icon}}, description: {{description}})",
           "collection.create.validate": "Validating collection data (name: {{collectionName}}, icon: {{icon}})",
-          "collection.create.github.update": "Updating existing GitHub repo",
-          "collection.create.github.commit": "Committing collections.json",
+          "collection.create.github.update": "Updating existing GitHub repo: {{repoUrl}}",
+          "collection.create.github.commit": "Committing collections.json ({{commitSha}})",
           "collection.create.success": "Collection created with ID {{collectionId}}"
         }
       }
@@ -28,10 +28,10 @@
       "template": {
         "summary": "[Success] Created collection '{collectionName}' and initialized GitHub repo",
         "events": {
-          "collection.create.started": "Creating collection: {{collectionName}}",
+          "collection.create.started": "Creating collection: {{collectionName}} (icon: {{icon}}, description: {{description}})",
           "collection.create.validate": "Validating collection data (name: {{collectionName}}, icon: {{icon}})",
           "collection.create.github.init": "Initializing new GitHub repo: {{repoUrl}}",
-          "collection.create.github.commit": "Committing collections.json and collection-memberships.json",
+          "collection.create.github.commit": "Committing collections.json and collection-memberships.json ({{commitSha}})",
           "collection.create.success": "Collection created with ID {{collectionId}}"
         }
       }
@@ -43,7 +43,7 @@
       "template": {
         "summary": "[Warning] Invalid collection data: {error.field}",
         "events": {
-          "collection.create.started": "Creating collection: {{collectionName}}",
+          "collection.create.started": "Creating collection: {{collectionName}} (icon: {{icon}}, description: {{description}})",
           "collection.create.validation-error": "Validation failed: {{error.field}} - {{error.message}}"
         }
       }
@@ -55,8 +55,8 @@
       "template": {
         "summary": "[Unauthorized] Authentication required",
         "events": {
-          "collection.create.started": "Creating collection: {{collectionName}}",
-          "collection.create.unauthorized": "User not authenticated (401)"
+          "collection.create.started": "Creating collection: {{collectionName}} (icon: {{icon}}, description: {{description}})",
+          "collection.create.unauthorized": "Not authenticated: {{reason}}"
         }
       }
     },
@@ -67,7 +67,7 @@
       "template": {
         "summary": "[Error] Failed to create collection: {error.message}",
         "events": {
-          "collection.create.started": "Creating collection: {{collectionName}}",
+          "collection.create.started": "Creating collection: {{collectionName}} (icon: {{icon}}, description: {{description}})",
           "collection.create.error": "Error: {{error.message}}"
         }
       }

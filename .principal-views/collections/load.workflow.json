@@ -13,7 +13,7 @@
       "template": {
         "summary": "[Success] Loaded {collectionCount} collections",
         "events": {
-          "collections.load.started": "Fetching collections for authenticated user",
+          "collections.load.started": "Fetching collections for {{username}}",
           "collections.load.github.fetch": "Fetching from GitHub repo: {{repoUrl}}",
           "collections.load.success": "Loaded {{collectionCount}} collections and {{membershipCount}} memberships"
         }
@@ -26,8 +26,8 @@
       "template": {
         "summary": "[Skipped] No collections repo found",
         "events": {
-          "collections.load.started": "Fetching collections for authenticated user",
-          "collections.load.github.not-found": "Collections repo doesn't exist yet (404)"
+          "collections.load.started": "Fetching collections for {{username}}",
+          "collections.load.github.not-found": "Collections repo not found: {{reason}}"
         }
       }
     },
@@ -38,8 +38,8 @@
       "template": {
         "summary": "[Unauthorized] Authentication required",
         "events": {
-          "collections.load.started": "Fetching collections for authenticated user",
-          "collections.load.unauthorized": "User not authenticated (401)"
+          "collections.load.started": "Fetching collections for {{username}}",
+          "collections.load.unauthorized": "Not authenticated: {{reason}}"
         }
       }
     },
@@ -50,7 +50,7 @@
       "template": {
         "summary": "[Error] Failed to load collections: {error.message}",
         "events": {
-          "collections.load.started": "Fetching collections for authenticated user",
+          "collections.load.started": "Fetching collections for {{username}}",
           "collections.load.error": "Error loading collections: {{error.message}}"
         }
       }

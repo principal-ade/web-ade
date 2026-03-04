@@ -26,7 +26,13 @@
         "status": "implemented",
         "event": {
           "name": "collections.load.started",
-          "attributes": {}
+          "attributes": {
+            "username": {
+              "type": "string",
+              "description": "Username loading collections",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -54,7 +60,13 @@
         "status": "approved",
         "event": {
           "name": "collections.load.github.fetch",
-          "attributes": {}
+          "attributes": {
+            "repoUrl": {
+              "type": "string",
+              "description": "GitHub repository URL",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx",
@@ -89,7 +101,18 @@
         "status": "implemented",
         "event": {
           "name": "collections.load.success",
-          "attributes": {}
+          "attributes": {
+            "collectionCount": {
+              "type": "number",
+              "description": "Number of collections loaded",
+              "required": true
+            },
+            "membershipCount": {
+              "type": "number",
+              "description": "Number of memberships loaded",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -127,7 +150,13 @@
         "status": "approved",
         "event": {
           "name": "collections.load.github.not-found",
-          "attributes": {}
+          "attributes": {
+            "reason": {
+              "type": "string",
+              "description": "Reason repository was not found",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/app/api/github/collections/route.ts"
@@ -155,7 +184,13 @@
         "status": "approved",
         "event": {
           "name": "collections.load.unauthorized",
-          "attributes": {}
+          "attributes": {
+            "reason": {
+              "type": "string",
+              "description": "Reason for unauthorized access",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/app/api/github/collections/route.ts"
@@ -183,7 +218,13 @@
         "status": "implemented",
         "event": {
           "name": "collections.load.error",
-          "attributes": {}
+          "attributes": {
+            "error.message": {
+              "type": "string",
+              "description": "Error message",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -217,7 +258,23 @@
         "status": "implemented",
         "event": {
           "name": "collection.create.started",
-          "attributes": {}
+          "attributes": {
+            "collectionName": {
+              "type": "string",
+              "description": "Name of the collection being created",
+              "required": true
+            },
+            "icon": {
+              "type": "string",
+              "description": "Icon for the collection",
+              "required": false
+            },
+            "description": {
+              "type": "string",
+              "description": "Collection description",
+              "required": false
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -259,7 +316,18 @@
         "status": "implemented",
         "event": {
           "name": "collection.create.validate",
-          "attributes": {}
+          "attributes": {
+            "collectionName": {
+              "type": "string",
+              "description": "Name being validated",
+              "required": true
+            },
+            "icon": {
+              "type": "string",
+              "description": "Icon being validated",
+              "required": false
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -287,7 +355,13 @@
         "status": "implemented",
         "event": {
           "name": "collection.create.github.update",
-          "attributes": {}
+          "attributes": {
+            "repoUrl": {
+              "type": "string",
+              "description": "GitHub repository URL being updated",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -315,7 +389,13 @@
         "status": "implemented",
         "event": {
           "name": "collection.create.github.init",
-          "attributes": {}
+          "attributes": {
+            "repoUrl": {
+              "type": "string",
+              "description": "GitHub repository URL being initialized",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -349,7 +429,13 @@
         "status": "implemented",
         "event": {
           "name": "collection.create.github.commit",
-          "attributes": {}
+          "attributes": {
+            "commitSha": {
+              "type": "string",
+              "description": "Git commit SHA",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -377,7 +463,13 @@
         "status": "implemented",
         "event": {
           "name": "collection.create.success",
-          "attributes": {}
+          "attributes": {
+            "collectionId": {
+              "type": "string",
+              "description": "ID of the created collection",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -411,7 +503,18 @@
         "status": "approved",
         "event": {
           "name": "collection.create.validation-error",
-          "attributes": {}
+          "attributes": {
+            "error.field": {
+              "type": "string",
+              "description": "Field that failed validation",
+              "required": true
+            },
+            "error.message": {
+              "type": "string",
+              "description": "Validation error message",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -449,7 +552,13 @@
         "status": "approved",
         "event": {
           "name": "collection.create.unauthorized",
-          "attributes": {}
+          "attributes": {
+            "reason": {
+              "type": "string",
+              "description": "Reason for unauthorized access",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -477,7 +586,13 @@
         "status": "approved",
         "event": {
           "name": "collection.create.error",
-          "attributes": {}
+          "attributes": {
+            "error.message": {
+              "type": "string",
+              "description": "Error message",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -511,7 +626,18 @@
         "status": "approved",
         "event": {
           "name": "collection.import.started",
-          "attributes": {}
+          "attributes": {
+            "sourceUsername": {
+              "type": "string",
+              "description": "Username of source collection owner",
+              "required": true
+            },
+            "collectionName": {
+              "type": "string",
+              "description": "Name of collection being imported",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -549,7 +675,13 @@
         "status": "approved",
         "event": {
           "name": "collection.import.fetch-source",
-          "attributes": {}
+          "attributes": {
+            "sourceUrl": {
+              "type": "string",
+              "description": "URL of the source collection",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -577,7 +709,13 @@
         "status": "approved",
         "event": {
           "name": "collection.import.create-copy",
-          "attributes": {}
+          "attributes": {
+            "newCollectionName": {
+              "type": "string",
+              "description": "Name for the new collection copy",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -611,7 +749,13 @@
         "status": "approved",
         "event": {
           "name": "collection.import.copy-memberships",
-          "attributes": {}
+          "attributes": {
+            "membershipCount": {
+              "type": "number",
+              "description": "Number of memberships copied",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -645,7 +789,13 @@
         "status": "approved",
         "event": {
           "name": "collection.import.github.sync",
-          "attributes": {}
+          "attributes": {
+            "syncStatus": {
+              "type": "string",
+              "description": "Status of the GitHub sync operation",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -673,7 +823,13 @@
         "status": "approved",
         "event": {
           "name": "collection.import.success",
-          "attributes": {}
+          "attributes": {
+            "newCollectionId": {
+              "type": "string",
+              "description": "ID of the imported collection",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -707,7 +863,13 @@
         "status": "approved",
         "event": {
           "name": "collection.import.duplicate-check",
-          "attributes": {}
+          "attributes": {
+            "isDuplicate": {
+              "type": "boolean",
+              "description": "Whether collection is already imported",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -735,7 +897,13 @@
         "status": "approved",
         "event": {
           "name": "collection.import.not-found",
-          "attributes": {}
+          "attributes": {
+            "reason": {
+              "type": "string",
+              "description": "Reason source collection was not found",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -763,7 +931,13 @@
         "status": "approved",
         "event": {
           "name": "collection.import.unauthorized",
-          "attributes": {}
+          "attributes": {
+            "reason": {
+              "type": "string",
+              "description": "Reason for unauthorized access",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"
@@ -791,7 +965,13 @@
         "status": "approved",
         "event": {
           "name": "collection.import.error",
-          "attributes": {}
+          "attributes": {
+            "error.message": {
+              "type": "string",
+              "description": "Error message",
+              "required": true
+            }
+          }
         },
         "sources": [
           "src/contexts/UserCollectionsContext.tsx"

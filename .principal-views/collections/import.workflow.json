@@ -14,10 +14,10 @@
         "summary": "[Success] Imported '{collectionName}' from @{sourceUsername}",
         "events": {
           "collection.import.started": "Importing collection from @{{sourceUsername}}: {{collectionName}}",
-          "collection.import.fetch-source": "Fetching source collection data",
+          "collection.import.fetch-source": "Fetching source collection: {{sourceUrl}}",
           "collection.import.create-copy": "Creating copy: {{newCollectionName}}",
           "collection.import.copy-memberships": "Copying {{membershipCount}} repository memberships",
-          "collection.import.github.sync": "Syncing to user's GitHub repo",
+          "collection.import.github.sync": "Syncing to GitHub: {{syncStatus}}",
           "collection.import.success": "Import completed, new collection ID: {{newCollectionId}}"
         }
       }
@@ -30,7 +30,7 @@
         "summary": "[Skipped] Collection already imported",
         "events": {
           "collection.import.started": "Importing collection from @{{sourceUsername}}: {{collectionName}}",
-          "collection.import.duplicate-check": "Collection already exists in user's collections"
+          "collection.import.duplicate-check": "Duplicate check: {{isDuplicate}}"
         }
       }
     },
@@ -42,8 +42,8 @@
         "summary": "[Warning] Source collection not found",
         "events": {
           "collection.import.started": "Importing collection from @{{sourceUsername}}: {{collectionName}}",
-          "collection.import.fetch-source": "Fetching source collection data",
-          "collection.import.not-found": "Source collection or user not found (404)"
+          "collection.import.fetch-source": "Fetching source collection: {{sourceUrl}}",
+          "collection.import.not-found": "Source not found: {{reason}}"
         }
       }
     },
@@ -55,7 +55,7 @@
         "summary": "[Unauthorized] Authentication required",
         "events": {
           "collection.import.started": "Importing collection from @{{sourceUsername}}",
-          "collection.import.unauthorized": "User not authenticated (401)"
+          "collection.import.unauthorized": "Not authenticated: {{reason}}"
         }
       }
     },

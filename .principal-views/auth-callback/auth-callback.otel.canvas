@@ -26,7 +26,12 @@
         "status": "implemented",
         "event": {
           "name": "auth.callback.started",
-          "attributes": {}
+          "attributes": {
+            "request.has_state": { "type": "boolean", "description": "Request has state parameter", "required": true },
+            "request.has_code": { "type": "boolean", "description": "Request has auth code", "required": true },
+            "request.has_workos_cookie": { "type": "boolean", "description": "Request has WorkOS cookie", "required": true },
+            "request.has_auth_error": { "type": "boolean", "description": "Request has auth error", "required": false }
+          }
         },
         "sources": [
           "src/app/api/auth/callback/route.ts"
@@ -72,7 +77,11 @@
         "status": "implemented",
         "event": {
           "name": "auth.state.validated",
-          "attributes": {}
+          "attributes": {
+            "state.csrf": { "type": "string", "description": "CSRF token from state", "required": true },
+            "state.has_redirect": { "type": "boolean", "description": "State has redirect path", "required": true },
+            "flow.type": { "type": "string", "description": "Authentication flow type", "required": true }
+          }
         },
         "sources": [
           "src/app/api/auth/callback/route.ts"
@@ -114,7 +123,13 @@
         "status": "implemented",
         "event": {
           "name": "auth.tokens.received",
-          "attributes": {}
+          "attributes": {
+            "tokens.source": { "type": "string", "description": "Token source", "required": true },
+            "tokens.has_github_token": { "type": "boolean", "description": "Has GitHub token", "required": true },
+            "tokens.has_workos_token": { "type": "boolean", "description": "Has WorkOS token", "required": true },
+            "tokens.has_refresh_token": { "type": "boolean", "description": "Has refresh token", "required": true },
+            "user.id": { "type": "string", "description": "User ID", "required": false }
+          }
         },
         "sources": [
           "src/app/api/auth/callback/route.ts"
@@ -164,7 +179,9 @@
         "status": "implemented",
         "event": {
           "name": "auth.tokens.received.pkce",
-          "attributes": {}
+          "attributes": {
+            "user.id": { "type": "string", "description": "User ID", "required": true }
+          }
         },
         "sources": [
           "src/app/api/auth/callback/route.ts"
@@ -198,7 +215,9 @@
         "status": "implemented",
         "event": {
           "name": "auth.tokens.received.cookie",
-          "attributes": {}
+          "attributes": {
+            "user.id": { "type": "string", "description": "User ID", "required": true }
+          }
         },
         "sources": [
           "src/app/api/auth/callback/route.ts"
@@ -232,7 +251,9 @@
         "status": "implemented",
         "event": {
           "name": "auth.cookies.set",
-          "attributes": {}
+          "attributes": {
+            "cookies.count": { "type": "number", "description": "Number of cookies set", "required": true }
+          }
         },
         "sources": [
           "src/app/api/auth/callback/route.ts"
@@ -266,7 +287,11 @@
         "status": "implemented",
         "event": {
           "name": "auth.callback.complete",
-          "attributes": {}
+          "attributes": {
+            "redirect.path": { "type": "string", "description": "Redirect path", "required": true },
+            "redirect.source": { "type": "string", "description": "Redirect source", "required": true },
+            "duration.ms": { "type": "number", "description": "Duration in milliseconds", "required": false }
+          }
         },
         "sources": [
           "src/app/api/auth/callback/route.ts"
@@ -308,7 +333,12 @@
         "status": "implemented",
         "event": {
           "name": "auth.callback.error",
-          "attributes": {}
+          "attributes": {
+            "error.type": { "type": "string", "description": "Error type", "required": true },
+            "error.message": { "type": "string", "description": "Error message", "required": true },
+            "error.stage": { "type": "string", "description": "Stage where error occurred", "required": true },
+            "error.status_code": { "type": "number", "description": "HTTP status code", "required": false }
+          }
         },
         "sources": [
           "src/app/api/auth/callback/route.ts"

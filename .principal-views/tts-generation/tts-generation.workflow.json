@@ -13,9 +13,9 @@
       "template": {
         "summary": "[Cache Hit] TTS audio served from cache for {{tts.owner}}/{{tts.repo}}:{{tts.stepId}} in {{tts.durationMs}}ms",
         "events": {
-          "tts.request.started": "TTS generation request initiated",
-          "tts.cache.hit": "Cache hit! Audio found at {{tts.s3Key}}",
-          "tts.request.complete": "Returned cached audio URL: {{tts.audioUrl}}"
+          "tts.request.started": "TTS for {{tts.owner}}/{{tts.repo}}:{{tts.path}} step {{tts.stepId}} (commit: {{tts.commitSha}}, voice: {{tts.voice}}, speed: {{tts.speed}})",
+          "tts.cache.hit": "Cache hit! Audio at {{tts.s3Key}} → {{tts.audioUrl}} (cached: {{tts.cached}})",
+          "tts.request.complete": "Returned cached audio URL: {{tts.audioUrl}} (cached: {{tts.cached}})"
         }
       }
     },
@@ -26,12 +26,12 @@
       "template": {
         "summary": "[Success] Generated TTS audio for {{tts.owner}}/{{tts.repo}}:{{tts.stepId}} ({{tts.textLength}} chars) in {{tts.generationTimeMs}}ms",
         "events": {
-          "tts.request.started": "TTS generation request initiated",
-          "tts.cache.miss": "Cache miss at {{tts.s3Key}}, proceeding to generation",
-          "tts.tour.fetched": "Tour fetched (ID: {{tts.tourId}}), step description: {{tts.textLength}} characters",
-          "tts.audio.generated": "Audio generated using {{tts.voice}} in {{tts.generationTimeMs}}ms ({{tts.audioSizeBytes}} bytes)",
-          "tts.audio.uploaded": "Uploaded to S3: {{tts.audioUrl}}",
-          "tts.request.complete": "Audio URL returned (total duration: {{tts.durationMs}}ms)"
+          "tts.request.started": "TTS for {{tts.owner}}/{{tts.repo}}:{{tts.path}} step {{tts.stepId}} (commit: {{tts.commitSha}}, voice: {{tts.voice}}, speed: {{tts.speed}})",
+          "tts.cache.miss": "Cache miss at {{tts.s3Key}} (cached: {{tts.cached}}), proceeding to generation",
+          "tts.tour.fetched": "Tour fetched (ID: {{tts.tourId}}), step: {{tts.stepDescription}}, {{tts.textLength}} characters",
+          "tts.audio.generated": "Audio generated using {{tts.voice}} model {{tts.model}} in {{tts.generationTimeMs}}ms ({{tts.audioSizeBytes}} bytes, {{tts.textLength}} chars)",
+          "tts.audio.uploaded": "Uploaded {{tts.audioSizeBytes}} bytes to {{tts.s3Key}} → {{tts.audioUrl}}",
+          "tts.request.complete": "Audio URL returned: {{tts.audioUrl}} (cached: {{tts.cached}}, total: {{tts.durationMs}}ms)"
         }
       }
     },
@@ -42,10 +42,10 @@
       "template": {
         "summary": "[Rate Limited] ElevenLabs rate limit exceeded for {{tts.owner}}/{{tts.repo}}:{{tts.stepId}}, retry after {{tts.retryAfter}}s",
         "events": {
-          "tts.request.started": "TTS generation request initiated",
-          "tts.cache.miss": "Cache miss, proceeding to generation",
-          "tts.tour.fetched": "Tour fetched successfully ({{tts.textLength}} chars)",
-          "tts.error.rate_limit": "Rate limit hit: {{tts.errorMessage}} (retry after {{tts.retryAfter}}s)"
+          "tts.request.started": "TTS for {{tts.owner}}/{{tts.repo}}:{{tts.path}} step {{tts.stepId}} (commit: {{tts.commitSha}}, voice: {{tts.voice}}, speed: {{tts.speed}})",
+          "tts.cache.miss": "Cache miss (cached: {{tts.cached}}), proceeding to generation",
+          "tts.tour.fetched": "Tour fetched ({{tts.stepDescription}}), {{tts.textLength}} chars",
+          "tts.error.rate_limit": "Rate limit hit ({{tts.errorCode}}, HTTP {{tts.httpStatus}}): {{tts.errorMessage}} (retry after {{tts.retryAfter}}s)"
         }
       }
     },
@@ -56,9 +56,9 @@
       "template": {
         "summary": "[Error] Step not found: {{tts.stepId}} in {{tts.owner}}/{{tts.repo}}",
         "events": {
-          "tts.request.started": "TTS generation request initiated",
-          "tts.cache.miss": "Cache miss, fetching tour",
-          "tts.error.step_not_found": "Step validation failed: {{tts.errorMessage}}"
+          "tts.request.started": "TTS for {{tts.owner}}/{{tts.repo}}:{{tts.path}} step {{tts.stepId}} (commit: {{tts.commitSha}}, voice: {{tts.voice}}, speed: {{tts.speed}})",
+          "tts.cache.miss": "Cache miss (cached: {{tts.cached}}), fetching tour",
+          "tts.error.step_not_found": "Step {{tts.stepId}} not found ({{tts.errorCode}}, HTTP {{tts.httpStatus}}): {{tts.errorMessage}}"
         }
       }
     },
@@ -69,9 +69,9 @@
       "template": {
         "summary": "[Error] Tour not found: {{tts.owner}}/{{tts.repo}}:{{tts.path}}",
         "events": {
-          "tts.request.started": "TTS generation request initiated",
-          "tts.cache.miss": "Cache miss, attempting to fetch tour",
-          "tts.error.tour_not_found": "GitHub returned 404: {{tts.errorMessage}}"
+          "tts.request.started": "TTS for {{tts.owner}}/{{tts.repo}}:{{tts.path}} step {{tts.stepId}} (commit: {{tts.commitSha}}, voice: {{tts.voice}}, speed: {{tts.speed}})",
+          "tts.cache.miss": "Cache miss (cached: {{tts.cached}}), attempting to fetch tour",
+          "tts.error.tour_not_found": "Tour not found at {{tts.owner}}/{{tts.repo}}:{{tts.path}} ({{tts.errorCode}}, HTTP {{tts.httpStatus}}): {{tts.errorMessage}}"
         }
       }
     }

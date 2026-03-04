@@ -26,7 +26,9 @@
         "status": "implemented",
         "event": {
           "name": "token.check.started",
-          "attributes": {}
+          "attributes": {
+            "request.timestamp": { "type": "number", "description": "Request timestamp", "required": true }
+          }
         },
         "sources": [
           "src/app/api/auth/token-status/route.ts"
@@ -60,7 +62,12 @@
         "status": "implemented",
         "event": {
           "name": "token.check.authenticated",
-          "attributes": {}
+          "attributes": {
+            "authenticated": { "type": "boolean", "description": "Is authenticated", "required": true },
+            "expiresAt": { "type": "number", "description": "Expiration timestamp", "required": true },
+            "expiresIn": { "type": "number", "description": "Expires in seconds", "required": true },
+            "shouldRefresh": { "type": "boolean", "description": "Should refresh token", "required": true }
+          }
         },
         "sources": [
           "src/app/api/auth/token-status/route.ts"
@@ -106,7 +113,12 @@
         "status": "implemented",
         "event": {
           "name": "token.check.authenticated-expiring",
-          "attributes": {}
+          "attributes": {
+            "authenticated": { "type": "boolean", "description": "Is authenticated", "required": true },
+            "expiresAt": { "type": "number", "description": "Expiration timestamp", "required": true },
+            "expiresIn": { "type": "number", "description": "Expires in seconds", "required": true },
+            "shouldRefresh": { "type": "boolean", "description": "Should refresh token", "required": true }
+          }
         },
         "sources": [
           "src/app/api/auth/token-status/route.ts"
@@ -152,7 +164,9 @@
         "status": "implemented",
         "event": {
           "name": "token.check.unauthenticated",
-          "attributes": {}
+          "attributes": {
+            "authenticated": { "type": "boolean", "description": "Is authenticated", "required": true }
+          }
         },
         "sources": [
           "src/app/api/auth/token-status/route.ts"
@@ -186,7 +200,10 @@
         "status": "implemented",
         "event": {
           "name": "token.check.error",
-          "attributes": {}
+          "attributes": {
+            "error.type": { "type": "string", "description": "Error type", "required": true },
+            "error.message": { "type": "string", "description": "Error message", "required": true }
+          }
         },
         "sources": [
           "src/app/api/auth/token-status/route.ts"

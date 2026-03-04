@@ -13,12 +13,12 @@
       "template": {
         "summary": "[Success] Authentication successful via PKCE (completed in {duration.ms}ms)",
         "events": {
-          "auth.callback.started": "OAuth callback request received",
-          "auth.state.validated": "Validated state and CSRF token for PKCE flow",
-          "auth.tokens.received": "Tokens received via code exchange",
+          "auth.callback.started": "OAuth callback (state: {{request.has_state}}, code: {{request.has_code}}, cookie: {{request.has_workos_cookie}}, error: {{request.has_auth_error}})",
+          "auth.state.validated": "Validated state (csrf: {{state.csrf}}, redirect: {{state.has_redirect}}, flow: {{flow.type}})",
+          "auth.tokens.received": "Tokens from {{tokens.source}} (github: {{tokens.has_github_token}}, workos: {{tokens.has_workos_token}}, refresh: {{tokens.has_refresh_token}}, user: {{user.id}})",
           "auth.tokens.received.pkce": "Exchanged code verifier for tokens (user: {{user.id}})",
           "auth.cookies.set": "Set {{cookies.count}} authentication cookies",
-          "auth.callback.complete": "Redirecting to {{redirect.path}} (from {{redirect.source}})"
+          "auth.callback.complete": "Redirecting to {{redirect.path}} (from {{redirect.source}}, {{duration.ms}}ms)"
         }
       }
     },
@@ -29,12 +29,12 @@
       "template": {
         "summary": "[Success] Authentication successful via cookie session (completed in {duration.ms}ms)",
         "events": {
-          "auth.callback.started": "OAuth callback request received",
-          "auth.state.validated": "Validated state and CSRF token for cookie flow",
-          "auth.tokens.received": "Tokens received from session",
+          "auth.callback.started": "OAuth callback (state: {{request.has_state}}, code: {{request.has_code}}, cookie: {{request.has_workos_cookie}}, error: {{request.has_auth_error}})",
+          "auth.state.validated": "Validated state (csrf: {{state.csrf}}, redirect: {{state.has_redirect}}, flow: {{flow.type}})",
+          "auth.tokens.received": "Tokens from {{tokens.source}} (github: {{tokens.has_github_token}}, workos: {{tokens.has_workos_token}}, refresh: {{tokens.has_refresh_token}}, user: {{user.id}})",
           "auth.tokens.received.cookie": "Parsed session data from cookie (user: {{user.id}})",
           "auth.cookies.set": "Set {{cookies.count}} authentication cookies",
-          "auth.callback.complete": "Redirecting to {{redirect.path}} (from {{redirect.source}})"
+          "auth.callback.complete": "Redirecting to {{redirect.path}} (from {{redirect.source}}, {{duration.ms}}ms)"
         }
       }
     },
@@ -45,8 +45,8 @@
       "template": {
         "summary": "[Error] Authentication failed: {error.message}",
         "events": {
-          "auth.callback.started": "OAuth callback request received",
-          "auth.callback.error": "Error at {{error.stage}}: {{error.message}}"
+          "auth.callback.started": "OAuth callback (state: {{request.has_state}}, code: {{request.has_code}}, cookie: {{request.has_workos_cookie}}, error: {{request.has_auth_error}})",
+          "auth.callback.error": "{{error.type}} at {{error.stage}}: {{error.message}} ({{error.status_code}})"
         }
       }
     }

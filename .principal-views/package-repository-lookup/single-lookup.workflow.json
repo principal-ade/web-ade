@@ -15,8 +15,8 @@
         "events": {
           "package.lookup.single.started": "Looking up repository for {{packageName}} (system: {{system}})",
           "package.lookup.npm-registry": "Fetching from npm registry: {{packageName}}",
-          "package.lookup.npm-registry.hit": "Repository found in npm registry: {{repository}}",
-          "package.lookup.single.success": "Repository found: {{repository}} (version: {{version}}, source: npm-registry)"
+          "package.lookup.npm-registry.hit": "{{packageName}} found in npm registry: {{repository}}",
+          "package.lookup.single.success": "{{packageName}} found: {{repository}} (version: {{version}}, source: {{source}})"
         }
       }
     },
@@ -29,9 +29,9 @@
         "events": {
           "package.lookup.single.started": "Looking up repository for {{packageName}} (system: {{system}})",
           "package.lookup.npm-registry": "Fetching from npm registry: {{packageName}}",
-          "package.lookup.npm-registry.miss": "No repository in npm registry, falling back to deps.dev",
-          "package.lookup.depsdev": "Fallback to deps.dev: {{packageName}}",
-          "package.lookup.single.success": "Repository found: {{repository}} (version: {{version}}, source: deps.dev)"
+          "package.lookup.npm-registry.miss": "{{packageName}} not in npm registry, falling back to deps.dev",
+          "package.lookup.depsdev": "Fallback to deps.dev: {{packageName}} ({{system}})",
+          "package.lookup.single.success": "{{packageName}} found: {{repository}} (version: {{version}}, source: {{source}})"
         }
       }
     },
@@ -44,7 +44,7 @@
         "events": {
           "package.lookup.single.started": "Looking up repository for {{packageName}} (system: {{system}})",
           "package.lookup.depsdev.direct": "Fetching from deps.dev: {{packageName}} ({{system}})",
-          "package.lookup.single.success": "Repository found: {{repository}} (version: {{version}}, source: deps.dev)"
+          "package.lookup.single.success": "{{packageName}} found: {{repository}} (version: {{version}}, source: {{source}})"
         }
       }
     },
@@ -57,8 +57,8 @@
         "events": {
           "package.lookup.single.started": "Looking up repository for {{packageName}} (system: {{system}})",
           "package.lookup.npm-registry": "Fetching from npm registry: {{packageName}}",
-          "package.lookup.npm-registry.miss": "No repository in npm registry, falling back to deps.dev",
-          "package.lookup.depsdev": "Fallback to deps.dev: {{packageName}}",
+          "package.lookup.npm-registry.miss": "{{packageName}} not in npm registry, falling back to deps.dev",
+          "package.lookup.depsdev": "Fallback to deps.dev: {{packageName}} ({{system}})",
           "package.lookup.single.not-found": "Repository not found for {{packageName}} ({{system}})"
         }
       }
