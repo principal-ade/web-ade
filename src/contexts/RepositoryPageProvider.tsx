@@ -160,6 +160,7 @@ interface RepoCapabilitiesSliceData {
   hasIssues: boolean;
   hasWiki: boolean;
   hasProjects: boolean;
+  hasClaudeWorkflow: boolean;
 }
 
 interface TelemetrySliceData {

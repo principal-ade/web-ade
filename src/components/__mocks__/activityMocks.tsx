@@ -253,12 +253,6 @@ export const createMockContext = (): PanelContextValue => ({
     workspace: { name: 'web-ade', path: '/workspace' },
     repository: { name: 'activity', path: '/activity/octocat' },
   },
-  slices: new Map(),
-  getSlice: () => undefined,
-  getWorkspaceSlice: () => undefined,
-  getRepositorySlice: () => undefined,
-  hasSlice: () => false,
-  isSliceLoading: () => false,
   refresh: async () => {},
 });
 

@@ -180,11 +180,11 @@ function EditorLayoutContent({
   const { context, actions, events, selectedColorMode, clearColorMode } = useRepositoryPageProvider();
 
   // Count triaged items from fileTree (files in backlog/tasks/)
-  const fileTreeSlice = context.getSlice<{ allFiles?: Array<{ path: string }> }>('fileTree');
+  const fileTreeSlice = context.fileTree;
   const triagedCount = useMemo(() => {
     const allFiles = fileTreeSlice?.data?.allFiles;
     if (!allFiles) return 0;
-    return allFiles.filter((file) => file.path.includes('backlog/tasks/')).length;
+    return allFiles.filter((file: { path: string }) => file.path.includes('backlog/tasks/')).length;
   }, [fileTreeSlice?.data?.allFiles]);
 
   const { login } = useAuth();
@@ -1657,7 +1657,8 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <AIChatPanel
-            context={context}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ai-sdk-panel uses older PanelContextValue type
+            context={context as any}
             actions={enhancedActions}
             events={events}
             placeholder="Ask me anything about your code..."
@@ -2482,24 +2483,12 @@ function EditorContextWrapper({ initialConfigId, onConfigChange }: EditorContext
   }, [githubRepo]);
 
   // Function to get GitHub repositories from context
+  // Note: github-repositories slice is not available in RepositoryPageContextType
+  // This would need to be fetched separately if needed
   const getRepositories = useCallback(() => {
-    const reposSlice = context.getSlice<{
-      owned: Array<{ full_name: string; description: string | null; language: string | null; private: boolean }>;
-      starred: Array<{ full_name: string; description: string | null; language: string | null; private: boolean }>;
-      organizations: Array<{
-        login: string;
-        repositories: Array<{ full_name: string; description: string | null; language: string | null; private: boolean }>;
-      }>;
-    }>('github-repositories');
-
-    if (!reposSlice?.data) return null;
-
-    return {
-      owned: reposSlice.data.owned || [],
-      starred: reposSlice.data.starred || [],
-      organizations: reposSlice.data.organizations || [],
-    };
-  }, [context]);
+    // RepositoryPageContextType doesn't include github-repositories slice
+    return null;
+  }, []);
 
   // Layout state for AI providers
   const layoutState = useMemo(() => ({

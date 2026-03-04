@@ -288,7 +288,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
 
   // Auto-load architecture.canvas when panel is ready and canvas exists
   // Wait for fileTree to be loaded before emitting the config selection event
-  const fileTreeSlice = context.getSlice('fileTree');
+  const fileTreeSlice = context.fileTree;
   const fileTreeLoading = fileTreeSlice?.loading ?? true;
 
   useEffect(() => {
@@ -342,7 +342,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
   }, [initialPreviewedRepo, actions, checkForCanvas]);
 
   // Auto-select first repository when repositories are loaded
-  const ownerReposSlice = context.getSlice('owner-repositories');
+  const ownerReposSlice = context['owner-repositories'];
   const ownerReposData = ownerReposSlice?.data as { repositories?: Array<{ full_name: string }> } | undefined;
   const ownerReposLoading = ownerReposSlice?.loading ?? true;
 
