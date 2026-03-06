@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/repository/repository.otel.canvas",
+  "mode": "span-tree",
+  "spanPattern": "repo.panel.tour.render",
+  "name": "Tour Layout",
+  "description": "Tour layout shows interactive codebase tour in File City",
+  "scenarios": [
+    {
+      "id": "tour-start",
+      "description": "User switches to Tour mode and tour loads",
+      "priority": 1,
+      "template": {
+        "summary": "[Tour] Started '{{tourName}}' ({{stepCount}} steps)",
+        "events": {
+          "repo.layout.switch": "Layout changed: {{fromLayout}} → {{toLayout}}",
+          "repo.tour.config.load": "Loading tour for {{owner}}/{{repo}}",
+          "repo.tour.config.success": "Tour loaded: '{{tourName}}' ({{stepCount}} steps)",
+          "repo.tour.step.navigate": "Step {{stepIndex}}/{{stepCount}}",
+          "repo.panel.tour.render": "Tour rendered: step {{stepIndex}}/{{stepCount}}"
+        }
+      }
+    }
+  ]
+}

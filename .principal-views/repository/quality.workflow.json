@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/repository/repository.otel.canvas",
+  "mode": "span-tree",
+  "spanPattern": "repo.panel.quality.render",
+  "name": "Quality Views Layout",
+  "description": "Quality Views layout shows code quality metrics and lenses",
+  "scenarios": [
+    {
+      "id": "quality-init",
+      "description": "User switches to Quality Views and quality data loads",
+      "priority": 1,
+      "template": {
+        "summary": "[Quality] {{lensCount}} lenses loaded",
+        "events": {
+          "repo.layout.switch": "Layout changed: {{fromLayout}} → {{toLayout}}",
+          "repo.quality.data.load": "Loading quality data for {{owner}}/{{repo}}",
+          "repo.quality.data.success": "Quality data loaded: {{lensCount}} lenses available",
+          "repo.lens.select": "Selected lens: {{lensId}}",
+          "repo.panel.quality.render": "Quality panel rendered: {{lensId}}"
+        }
+      }
+    }
+  ]
+}

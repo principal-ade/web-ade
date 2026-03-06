@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/repository/repository.otel.canvas",
+  "mode": "span-tree",
+  "spanPattern": "repo.panel.traces.render",
+  "name": "Telemetry Layout",
+  "description": "Telemetry layout shows OpenTelemetry traces and spans",
+  "scenarios": [
+    {
+      "id": "telemetry-init",
+      "description": "User switches to Telemetry mode and traces load",
+      "priority": 1,
+      "template": {
+        "summary": "[Telemetry] {{traceCount}} traces loaded",
+        "events": {
+          "repo.layout.switch": "Layout changed: {{fromLayout}} → {{toLayout}}",
+          "repo.traces.list.load": "Loading traces for {{owner}}/{{repo}}",
+          "repo.traces.list.success": "Traces loaded: {{traceCount}} available",
+          "repo.trace.select": "Selected trace: {{traceId}}",
+          "repo.panel.traces.render": "Trace panel rendered: {{traceId}}"
+        }
+      }
+    }
+  ]
+}

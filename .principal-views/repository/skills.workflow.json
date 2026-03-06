@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/repository/repository.otel.canvas",
+  "mode": "span-tree",
+  "spanPattern": "repo.panel.skills.render",
+  "name": "Skills Layout",
+  "description": "Skills layout shows available Claude skills in the repository",
+  "scenarios": [
+    {
+      "id": "skills-init",
+      "description": "User switches to Skills mode and skills load",
+      "priority": 1,
+      "template": {
+        "summary": "[Skills] {{skillCount}} skills loaded",
+        "events": {
+          "repo.layout.switch": "Layout changed: {{fromLayout}} → {{toLayout}}",
+          "repo.skills.list.load": "Loading skills for {{owner}}/{{repo}}",
+          "repo.skills.list.success": "Skills loaded: {{skillCount}} available",
+          "repo.skill.select": "Selected skill: {{skillId}}",
+          "repo.panel.skills.render": "Skill rendered: {{skillId}}"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/repository/repository.otel.canvas",
+  "mode": "span-tree",
+  "spanPattern": "repo.panel.storyboard.render",
+  "name": "Stories Layout",
+  "description": "Stories layout shows workflow storyboards and scenarios",
+  "scenarios": [
+    {
+      "id": "stories-init",
+      "description": "User switches to Stories mode and storyboards load",
+      "priority": 1,
+      "template": {
+        "summary": "[Stories] {{storyboardCount}} storyboards loaded",
+        "events": {
+          "repo.layout.switch": "Layout changed: {{fromLayout}} → {{toLayout}}",
+          "repo.storyboard.list.load": "Loading storyboards for {{owner}}/{{repo}}",
+          "repo.storyboard.list.success": "Storyboards loaded: {{storyboardCount}} available",
+          "repo.storyboard.select": "Selected: {{storyboardId}} ({{scenarioCount}} scenarios)",
+          "repo.panel.storyboard.render": "Storyboard rendered: {{storyboardId}} ({{scenarioCount}} scenarios)"
+        }
+      }
+    }
+  ]
+}

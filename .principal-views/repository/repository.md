@@ -1,81 +1,54 @@
 # Repository Page
 
-This canvas documents the user interactions for the `/[owner]/[repo]` page, which displays a GitHub repository with file browsing and package composition analysis.
+This canvas documents the user interactions for the `/[owner]/[repo]` page, which displays a GitHub repository with multiple layout modes.
 
 ## Overview
 
-The Repository page provides an interactive view of a single GitHub repository with:
-- File tree visualization (File City panel)
-- Package composition analysis (monorepo detection)
-- File content viewing and editing
+The Repository page provides an interactive view of a single GitHub repository with multiple sidebar layout options:
+- **Overview** - README/markdown viewing with File City
+- **Tour** - Interactive codebase tour
+- **Stories** - Workflow storyboards and scenarios
+- **Skills** - Claude skills in the repository
+- **Quality Views** - Code quality metrics and lenses
+- **Telemetry** - OpenTelemetry traces and spans
 
 ## Page Architecture
 
 ### Key Files
 - `src/app/[owner]/[repo]/page.tsx` - Main page component
 - `src/contexts/RepositoryPageProvider.tsx` - Data provider for repository state
+- `src/components/EditorLayout.tsx` - Layout manager with sidebar modes
 
 ### Data Sources
 - **File Tree**: `/api/github/tree` - GitHub tree API
 - **Packages**: `/api/github/packages` - Package composition analysis
 - **File Content**: `/api/github/file` - GitHub file content API
 
-### Panel Layout
-| Left Panel | Middle Panel | Right Panel |
-|------------|--------------|-------------|
-| File Tree / Packages | File City | File Editor |
+## Workflows by Layout Mode
 
-## Workflows
+### Shared Workflows (all layouts)
 
-### 1. Page Initialization (`page-init.workflow.json`)
-Handles initial page load with parallel data fetching:
+#### `page-init.workflow.json` - Page Initialization
+Handles initial page load with parallel data fetching (file tree + packages).
 
-```
-Page Init (owner/repo from URL)
-    │
-    ├──► File Tree Load (parallel)
-    │         │
-    │         ├──► Success → State → File City Panel
-    │         └──► Error (empty repo, 404)
-    │
-    └──► Packages Load (parallel)
-              │
-              ├──► Success → State → Package Composition Panel
-              └──► Error (no package.json)
-```
+#### `data-hydration.workflow.json` - Data Hydration
+Two scenarios for data flowing to panels:
+- `file-tree-to-city` - File tree → File City Panel
+- `packages-to-panel` - Packages → Package Composition Panel
 
-### 2. Data Hydration (`data-hydration.workflow.json`)
-Two data flows feeding their respective panels:
+#### `file-selection.workflow.json` - File Selection
+User clicks a file → content loads → editor/markdown panel renders.
 
-**Scenario 1: file-tree-to-city** (File City visualization)
-```
-file-tree.load
-    │
-    └──► file-tree.success
-              │
-              └──► state.file-tree.updated ──► panel.file-city.render
-```
+### Layout-Specific Workflows
 
-**Scenario 2: packages-to-panel** (Package Composition)
-```
-packages.load
-    │
-    └──► packages.success
-              │
-              └──► state.packages.updated ──► panel.packages.render
-```
-
-### 3. File Selection (`file-selection.workflow.json`)
-When user clicks a file in the tree or File City:
-
-```
-File Selected
-    │
-    └──► File Content Load
-              │
-              ├──► Success → State → Editor Panel
-              └──► Error (binary, too large)
-```
+| Workflow | Layout | Key Flow |
+|----------|--------|----------|
+| `overview.workflow.json` | Overview | README auto-load → markdown panel |
+| `tour.workflow.json` | Tour | Tour config load → step navigation |
+| `stories.workflow.json` | Stories | Storyboard list → select → scenarios |
+| `skills.workflow.json` | Skills | Skills list → select → detail |
+| `quality.workflow.json` | Quality Views | Quality data → lens select → metrics |
+| `telemetry.workflow.json` | Telemetry | Traces list → select → details |
 
 ## Event Naming Convention
 
@@ -84,20 +57,27 @@ All events follow the pattern: `repo.<domain>.<action>`
 | Domain | Description |
 |--------|-------------|
 | `page` | Page-level lifecycle |
+| `layout` | Layout mode switching |
 | `file-tree` | File tree loading |
 | `packages` | Package composition loading |
 | `file` | File selection and content |
 | `state` | State store updates |
 | `panel` | Panel renders |
 | `readme` | README auto-loading |
+| `tour` | Tour configuration and navigation |
+| `storyboard` | Storyboard list and selection |
+| `skills` | Skills list and selection |
+| `quality` | Quality data and lenses |
+| `traces` | Telemetry traces |
 
 ## Data Flow Pattern
 
 1. **Page init** - Triggers parallel data loads
-2. **Load** - API calls to GitHub
-3. **Success/Error** - Handle response
-4. **State update** - Write to provider state
-5. **Panel render** - Panels subscribe to state and re-render
+2. **Layout switch** - User changes sidebar mode
+3. **Load** - API calls for layout-specific data
+4. **Success/Error** - Handle response
+5. **State update** - Write to provider state
+6. **Panel render** - Panels subscribe to state and re-render
 
 ## Related Canvases
 

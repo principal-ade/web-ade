@@ -626,6 +626,748 @@
           "files": ["src/contexts/RepositoryPageProvider.tsx"]
         }
       }
+    },
+    {
+      "id": "layout-switch",
+      "type": "text",
+      "text": "# Layout Switch\n\nUser changes layout mode",
+      "x": 600,
+      "y": 0,
+      "width": 200,
+      "height": 90,
+      "color": "#0891b2",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.layout.switch",
+          "attributes": {
+            "fromLayout": {
+              "type": "string",
+              "description": "Previous layout ID",
+              "required": true
+            },
+            "toLayout": {
+              "type": "string",
+              "description": "New layout ID",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/components/EditorLayout.tsx"]
+        }
+      }
+    },
+    {
+      "id": "panel-markdown",
+      "type": "text",
+      "text": "# Markdown Panel\n\nRenders markdown content",
+      "x": 600,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#059669",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.panel.markdown.render",
+          "attributes": {
+            "filePath": {
+              "type": "string",
+              "description": "Markdown file path",
+              "required": true
+            },
+            "contentLength": {
+              "type": "number",
+              "description": "Content size",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "render",
+          "files": ["src/components/EditorLayout.tsx"]
+        }
+      }
+    },
+    {
+      "id": "tour-config-load",
+      "type": "text",
+      "text": "# Load Tour Config\n\nFetch tour configuration",
+      "x": 850,
+      "y": 0,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.tour.config.load",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "tour-config-success",
+      "type": "text",
+      "text": "# Tour Config Ready\n\nTour loaded successfully",
+      "x": 850,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.tour.config.success",
+          "attributes": {
+            "stepCount": {
+              "type": "number",
+              "description": "Number of tour steps",
+              "required": true
+            },
+            "tourName": {
+              "type": "string",
+              "description": "Tour name",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "tour-step-navigate",
+      "type": "text",
+      "text": "# Tour Step\n\nNavigate to tour step",
+      "x": 850,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "color": "#0891b2",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.tour.step.navigate",
+          "attributes": {
+            "stepIndex": {
+              "type": "number",
+              "description": "Current step index",
+              "required": true
+            },
+            "stepCount": {
+              "type": "number",
+              "description": "Total steps",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/components/EditorLayout.tsx"]
+        }
+      }
+    },
+    {
+      "id": "panel-tour",
+      "type": "text",
+      "text": "# Tour Panel\n\nDisplays interactive tour",
+      "x": 850,
+      "y": 450,
+      "width": 200,
+      "height": 90,
+      "color": "#059669",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.panel.tour.render",
+          "attributes": {
+            "stepIndex": {
+              "type": "number",
+              "description": "Current step",
+              "required": true
+            },
+            "stepCount": {
+              "type": "number",
+              "description": "Total steps",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "render",
+          "files": ["src/components/EditorLayout.tsx"]
+        }
+      }
+    },
+    {
+      "id": "storyboard-list-load",
+      "type": "text",
+      "text": "# Load Storyboards\n\nFetch storyboard list",
+      "x": 1100,
+      "y": 0,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.storyboard.list.load",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "storyboard-list-success",
+      "type": "text",
+      "text": "# Storyboards Ready\n\nStoryboard list loaded",
+      "x": 1100,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.storyboard.list.success",
+          "attributes": {
+            "storyboardCount": {
+              "type": "number",
+              "description": "Number of storyboards",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "storyboard-select",
+      "type": "text",
+      "text": "# Select Storyboard\n\nUser selects storyboard",
+      "x": 1100,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "color": "#0891b2",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.storyboard.select",
+          "attributes": {
+            "storyboardId": {
+              "type": "string",
+              "description": "Selected storyboard ID",
+              "required": true
+            },
+            "scenarioCount": {
+              "type": "number",
+              "description": "Scenarios in storyboard",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/components/EditorLayout.tsx"]
+        }
+      }
+    },
+    {
+      "id": "panel-storyboard",
+      "type": "text",
+      "text": "# Storyboard Panel\n\nShows workflow scenarios",
+      "x": 1100,
+      "y": 450,
+      "width": 200,
+      "height": 90,
+      "color": "#059669",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.panel.storyboard.render",
+          "attributes": {
+            "storyboardId": {
+              "type": "string",
+              "description": "Active storyboard",
+              "required": true
+            },
+            "scenarioCount": {
+              "type": "number",
+              "description": "Scenarios displayed",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "render",
+          "files": ["src/components/EditorLayout.tsx"]
+        }
+      }
+    },
+    {
+      "id": "skills-list-load",
+      "type": "text",
+      "text": "# Load Skills\n\nFetch skills list",
+      "x": 1350,
+      "y": 0,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.skills.list.load",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "skills-list-success",
+      "type": "text",
+      "text": "# Skills Ready\n\nSkills list loaded",
+      "x": 1350,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.skills.list.success",
+          "attributes": {
+            "skillCount": {
+              "type": "number",
+              "description": "Number of skills",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "skill-select",
+      "type": "text",
+      "text": "# Select Skill\n\nUser selects skill",
+      "x": 1350,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "color": "#0891b2",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.skill.select",
+          "attributes": {
+            "skillId": {
+              "type": "string",
+              "description": "Selected skill ID",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/components/EditorLayout.tsx"]
+        }
+      }
+    },
+    {
+      "id": "panel-skills",
+      "type": "text",
+      "text": "# Skills Panel\n\nShows skill details",
+      "x": 1350,
+      "y": 450,
+      "width": 200,
+      "height": 90,
+      "color": "#059669",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.panel.skills.render",
+          "attributes": {
+            "skillId": {
+              "type": "string",
+              "description": "Active skill",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "render",
+          "files": ["src/components/EditorLayout.tsx"]
+        }
+      }
+    },
+    {
+      "id": "quality-data-load",
+      "type": "text",
+      "text": "# Load Quality Data\n\nFetch quality metrics",
+      "x": 1600,
+      "y": 0,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.quality.data.load",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "quality-data-success",
+      "type": "text",
+      "text": "# Quality Data Ready\n\nQuality metrics loaded",
+      "x": 1600,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.quality.data.success",
+          "attributes": {
+            "lensCount": {
+              "type": "number",
+              "description": "Number of quality lenses",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "lens-select",
+      "type": "text",
+      "text": "# Select Lens\n\nUser selects quality lens",
+      "x": 1600,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "color": "#0891b2",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.lens.select",
+          "attributes": {
+            "lensId": {
+              "type": "string",
+              "description": "Selected lens ID",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/components/EditorLayout.tsx"]
+        }
+      }
+    },
+    {
+      "id": "panel-quality",
+      "type": "text",
+      "text": "# Quality Panel\n\nShows quality metrics",
+      "x": 1600,
+      "y": 450,
+      "width": 200,
+      "height": 90,
+      "color": "#059669",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.panel.quality.render",
+          "attributes": {
+            "lensId": {
+              "type": "string",
+              "description": "Active lens",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "render",
+          "files": ["src/components/EditorLayout.tsx"]
+        }
+      }
+    },
+    {
+      "id": "traces-list-load",
+      "type": "text",
+      "text": "# Load Traces\n\nFetch trace list",
+      "x": 1850,
+      "y": 0,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.traces.list.load",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "traces-list-success",
+      "type": "text",
+      "text": "# Traces Ready\n\nTrace list loaded",
+      "x": 1850,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.traces.list.success",
+          "attributes": {
+            "traceCount": {
+              "type": "number",
+              "description": "Number of traces",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "trace-select",
+      "type": "text",
+      "text": "# Select Trace\n\nUser selects trace",
+      "x": 1850,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "color": "#0891b2",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.trace.select",
+          "attributes": {
+            "traceId": {
+              "type": "string",
+              "description": "Selected trace ID",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/components/EditorLayout.tsx"]
+        }
+      }
+    },
+    {
+      "id": "panel-traces",
+      "type": "text",
+      "text": "# Traces Panel\n\nShows trace details",
+      "x": 1850,
+      "y": 450,
+      "width": 200,
+      "height": 90,
+      "color": "#059669",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.panel.traces.render",
+          "attributes": {
+            "traceId": {
+              "type": "string",
+              "description": "Active trace",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "render",
+          "files": ["src/components/EditorLayout.tsx"]
+        }
+      }
     }
   ],
   "edges": [
@@ -774,6 +1516,185 @@
       "toSide": "left",
       "label": "auto",
       "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "md-1",
+      "fromNode": "state-active-file",
+      "fromSide": "right",
+      "toNode": "panel-markdown",
+      "toSide": "left",
+      "label": "subscribes",
+      "pv": { "edgeType": "data-flow" }
+    },
+    {
+      "id": "tour-1",
+      "fromNode": "layout-switch",
+      "fromSide": "right",
+      "toNode": "tour-config-load",
+      "toSide": "left",
+      "label": "tour mode",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "tour-2",
+      "fromNode": "tour-config-load",
+      "fromSide": "bottom",
+      "toNode": "tour-config-success",
+      "toSide": "top",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "tour-3",
+      "fromNode": "tour-config-success",
+      "fromSide": "bottom",
+      "toNode": "tour-step-navigate",
+      "toSide": "top",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "tour-4",
+      "fromNode": "tour-step-navigate",
+      "fromSide": "bottom",
+      "toNode": "panel-tour",
+      "toSide": "top",
+      "label": "renders",
+      "pv": { "edgeType": "data-flow" }
+    },
+    {
+      "id": "story-1",
+      "fromNode": "layout-switch",
+      "fromSide": "right",
+      "toNode": "storyboard-list-load",
+      "toSide": "left",
+      "label": "stories mode",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "story-2",
+      "fromNode": "storyboard-list-load",
+      "fromSide": "bottom",
+      "toNode": "storyboard-list-success",
+      "toSide": "top",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "story-3",
+      "fromNode": "storyboard-list-success",
+      "fromSide": "bottom",
+      "toNode": "storyboard-select",
+      "toSide": "top",
+      "pv": { "edgeType": "user-action" }
+    },
+    {
+      "id": "story-4",
+      "fromNode": "storyboard-select",
+      "fromSide": "bottom",
+      "toNode": "panel-storyboard",
+      "toSide": "top",
+      "label": "renders",
+      "pv": { "edgeType": "data-flow" }
+    },
+    {
+      "id": "skill-1",
+      "fromNode": "layout-switch",
+      "fromSide": "right",
+      "toNode": "skills-list-load",
+      "toSide": "left",
+      "label": "skills mode",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "skill-2",
+      "fromNode": "skills-list-load",
+      "fromSide": "bottom",
+      "toNode": "skills-list-success",
+      "toSide": "top",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "skill-3",
+      "fromNode": "skills-list-success",
+      "fromSide": "bottom",
+      "toNode": "skill-select",
+      "toSide": "top",
+      "pv": { "edgeType": "user-action" }
+    },
+    {
+      "id": "skill-4",
+      "fromNode": "skill-select",
+      "fromSide": "bottom",
+      "toNode": "panel-skills",
+      "toSide": "top",
+      "label": "renders",
+      "pv": { "edgeType": "data-flow" }
+    },
+    {
+      "id": "quality-1",
+      "fromNode": "layout-switch",
+      "fromSide": "right",
+      "toNode": "quality-data-load",
+      "toSide": "left",
+      "label": "quality mode",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "quality-2",
+      "fromNode": "quality-data-load",
+      "fromSide": "bottom",
+      "toNode": "quality-data-success",
+      "toSide": "top",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "quality-3",
+      "fromNode": "quality-data-success",
+      "fromSide": "bottom",
+      "toNode": "lens-select",
+      "toSide": "top",
+      "pv": { "edgeType": "user-action" }
+    },
+    {
+      "id": "quality-4",
+      "fromNode": "lens-select",
+      "fromSide": "bottom",
+      "toNode": "panel-quality",
+      "toSide": "top",
+      "label": "renders",
+      "pv": { "edgeType": "data-flow" }
+    },
+    {
+      "id": "trace-1",
+      "fromNode": "layout-switch",
+      "fromSide": "right",
+      "toNode": "traces-list-load",
+      "toSide": "left",
+      "label": "telemetry mode",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "trace-2",
+      "fromNode": "traces-list-load",
+      "fromSide": "bottom",
+      "toNode": "traces-list-success",
+      "toSide": "top",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "trace-3",
+      "fromNode": "traces-list-success",
+      "fromSide": "bottom",
+      "toNode": "trace-select",
+      "toSide": "top",
+      "pv": { "edgeType": "user-action" }
+    },
+    {
+      "id": "trace-4",
+      "fromNode": "trace-select",
+      "fromSide": "bottom",
+      "toNode": "panel-traces",
+      "toSide": "top",
+      "label": "renders",
+      "pv": { "edgeType": "data-flow" }
     }
   ]
 }
