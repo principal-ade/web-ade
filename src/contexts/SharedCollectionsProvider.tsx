@@ -43,6 +43,7 @@ import type {
   CollectionMapPanelActions,
 } from '@industry-theme/repository-composition-panels';
 import type { CustomRegion } from '@principal-ai/alexandria-collections';
+import type { PackageLayer } from '@principal-ai/codebase-composition';
 
 // Minimal context type for shared collections view
 export interface SharedCollectionsContextType {
@@ -98,6 +99,9 @@ export function SharedCollectionsProvider({
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
   const [fileTreeError, setFileTreeError] = useState<Error | null>(null);
 
+  // State for collection repository packages (for sprite sizing on map)
+  const [collectionRepoPackages, setCollectionRepoPackages] = useState<Record<string, PackageLayer[]>>({});
+
   // Fetch collection repository details (progressively as each completes)
   useEffect(() => {
     if (!collectionRepositories || collectionRepositories.length === 0) {
@@ -130,6 +134,33 @@ export function SharedCollectionsProvider({
         if (completed === total) {
           setCollectionRepoDetailsLoading(false);
         }
+      }
+    });
+  }, [collectionRepositories]);
+
+  // Fetch packages for collection repositories (progressively for sprite sizing)
+  useEffect(() => {
+    if (!collectionRepositories || collectionRepositories.length === 0) {
+      setCollectionRepoPackages({});
+      return;
+    }
+
+    setCollectionRepoPackages({}); // Reset before fetching
+
+    collectionRepositories.forEach(async (repoId) => {
+      const [owner, repo] = repoId.split('/');
+      if (!owner || !repo) {
+        return;
+      }
+
+      try {
+        const data = await trpc.github.getRepoPackages.query({ owner, repo });
+        setCollectionRepoPackages(prev => ({
+          ...prev,
+          [repoId]: data.packages || [],
+        }));
+      } catch (error) {
+        console.error(`[SharedCollectionsProvider] Failed to fetch packages for ${repoId}:`, error);
       }
     });
   }, [collectionRepositories]);
@@ -286,6 +317,7 @@ export function SharedCollectionsProvider({
     const repositories: AlexandriaEntryWithMetrics[] = collectionRepositories.map(repoId => {
       const [owner, repoName] = repoId.split('/');
       const repoDetails = collectionRepoDetails.find(r => r.full_name === repoId);
+      const packages = collectionRepoPackages[repoId] || [];
 
       return {
         name: repoName || repoId,
@@ -316,8 +348,9 @@ export function SharedCollectionsProvider({
           contributors: undefined,
           lastEditedAt: repoDetails?.pushed_at ?? new Date().toISOString(),
           createdAt: new Date().toISOString(),
+          packageCount: packages.length,
         },
-        packages: undefined,
+        packages: packages.length > 0 ? packages : undefined,
       };
     });
 
@@ -333,7 +366,7 @@ export function SharedCollectionsProvider({
       error: null,
       refresh: async () => { /* no-op */ },
     };
-  }, [collection, collectionRepositories, collectionRepoDetails]);
+  }, [collection, collectionRepositories, collectionRepoDetails, collectionRepoPackages]);
 
   // Minimal adapters
   const adapters: PanelAdapters = useMemo(() => ({}), []);

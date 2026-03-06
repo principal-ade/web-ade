@@ -1,0 +1,40 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/worlds/worlds.otel.canvas",
+  "mode": "span-tree",
+  "spanPattern": "worlds.panel.overworld-map",
+  "name": "Overworld Map Data",
+  "description": "Data hydration flows that feed the Overworld Map Panel",
+  "scenarios": [
+    {
+      "id": "repo-details-to-map",
+      "description": "Repository details hydrate and flow to map for sprite rendering",
+      "priority": 1,
+      "template": {
+        "summary": "[Repo Details] {{repositoryCount}} repos loaded",
+        "events": {
+          "worlds.hydrate.repo-details.start": "Loading details for {{repositoryCount}} repos in {{collectionId}}",
+          "worlds.hydrate.repo-details.item": "Loaded {{repositoryId}} ({{completedCount}}/{{totalCount}})",
+          "worlds.hydrate.repo-details.complete": "All {{loadedCount}} repo details loaded for {{collectionId}} ({{failedCount}} failed)",
+          "worlds.state.repo-details.updated": "State updated with {{repositoryCount}} repos",
+          "worlds.panel.overworld-map.render": "Map rendered with {{repositoryCount}} repos ({{regionsCount}} regions)"
+        }
+      }
+    },
+    {
+      "id": "packages-to-map",
+      "description": "Package counts hydrate and flow to map for sprite sizing",
+      "priority": 2,
+      "template": {
+        "summary": "[Packages] {{totalPackages}} packages loaded",
+        "events": {
+          "worlds.hydrate.packages.start": "Fetching packages for {{repositoryCount}} repos in {{collectionId}}",
+          "worlds.hydrate.packages.item": "{{repositoryId}}: {{packageCount}} packages",
+          "worlds.hydrate.packages.complete": "All packages loaded ({{totalPackages}} total) for {{collectionId}}",
+          "worlds.state.packages.updated": "State updated with {{totalPackages}} packages ({{repositoryCount}} repos)",
+          "worlds.panel.overworld-map.render": "Map re-rendered with package sizing ({{regionsCount}} regions)"
+        }
+      }
+    }
+  ]
+}

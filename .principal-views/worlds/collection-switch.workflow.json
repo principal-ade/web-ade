@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/worlds/worlds.otel.canvas",
+  "mode": "span-tree",
+  "spanPattern": "worlds.collection.switch",
+  "name": "Collection Switch",
+  "description": "Switch between collections in the Worlds page",
+  "scenarios": [
+    {
+      "id": "success",
+      "description": "User switches to a collection successfully",
+      "priority": 1,
+      "template": {
+        "summary": "[Success] Switched to {collectionName} ({repositoryCount} repos)",
+        "events": {
+          "worlds.collection.switch.started": "Switching from {{fromCollectionId}} to {{toCollectionId}}",
+          "worlds.collection.repos.load": "Loading {{repositoryCount}} repositories for {{collectionId}}",
+          "worlds.collection.switch.success": "Now viewing {{collectionName}} ({{collectionId}}) with {{repositoryCount}} repositories"
+        }
+      }
+    }
+  ]
+}

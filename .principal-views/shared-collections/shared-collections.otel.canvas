@@ -1,0 +1,1071 @@
+{
+  "pv": {
+    "name": "Shared Collections Page",
+    "version": "1.0.0",
+    "markdown": ".principal-views/shared-collections/shared-collections.md",
+    "edgeTypes": {
+      "flow": {
+        "label": "Flow"
+      },
+      "error": {
+        "label": "Error Path"
+      },
+      "user-action": {
+        "label": "User Action"
+      },
+      "progressive": {
+        "label": "Progressive Load"
+      },
+      "data-flow": {
+        "label": "Data Flow"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "page-init-started",
+      "type": "text",
+      "text": "# Page Init Started\n\nShared collections page loads for username",
+      "x": -400,
+      "y": 0,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.page.init.started",
+          "attributes": {
+            "username": {
+              "type": "string",
+              "description": "Username from URL param",
+              "required": true
+            },
+            "collectionFromQuery": {
+              "type": "string",
+              "description": "Collection ID from query param (if any)",
+              "required": false
+            }
+          }
+        },
+        "references": [
+          "src/app/worlds/[username]/page.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/app/worlds/[username]/page.tsx"]
+        }
+      }
+    },
+    {
+      "id": "fetch-collections",
+      "type": "text",
+      "text": "# Fetch Collections\n\nLoad from /api/github/collections/{user}",
+      "x": -400,
+      "y": 150,
+      "width": 220,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.collections.fetch",
+          "attributes": {
+            "username": {
+              "type": "string",
+              "description": "Username to fetch collections for",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/app/worlds/[username]/page.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io",
+          "files": ["src/app/worlds/[username]/page.tsx"]
+        }
+      }
+    },
+    {
+      "id": "user-not-found",
+      "type": "text",
+      "text": "# User Not Found\n\nGitHub user doesn't exist",
+      "x": -100,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#dc2626",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.user.not-found",
+          "attributes": {
+            "username": {
+              "type": "string",
+              "description": "Username that was not found",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/app/worlds/[username]/page.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error",
+          "files": ["src/app/worlds/[username]/page.tsx"]
+        }
+      }
+    },
+    {
+      "id": "no-collections-repo",
+      "type": "text",
+      "text": "# No Collections Repo\n\nUser hasn't created collections",
+      "x": -100,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "color": "#d97706",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.collections.not-exists",
+          "attributes": {
+            "username": {
+              "type": "string",
+              "description": "Username without collections repo",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/app/worlds/[username]/page.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/app/worlds/[username]/page.tsx"]
+        }
+      }
+    },
+    {
+      "id": "collections-loaded",
+      "type": "text",
+      "text": "# Collections Loaded\n\nUser's collections fetched",
+      "x": -400,
+      "y": 300,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.collections.loaded",
+          "attributes": {
+            "username": {
+              "type": "string",
+              "description": "Username whose collections loaded",
+              "required": true
+            },
+            "collectionCount": {
+              "type": "number",
+              "description": "Number of collections",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/app/worlds/[username]/page.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/app/worlds/[username]/page.tsx"]
+        }
+      }
+    },
+    {
+      "id": "empty-collections",
+      "type": "text",
+      "text": "# Empty Collections\n\nUser has no collections",
+      "x": -100,
+      "y": 450,
+      "width": 200,
+      "height": 90,
+      "color": "#4b5563",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.collections.empty",
+          "attributes": {
+            "username": {
+              "type": "string",
+              "description": "Username with empty collections",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/app/worlds/[username]/page.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/app/worlds/[username]/page.tsx"]
+        }
+      }
+    },
+    {
+      "id": "check-permissions",
+      "type": "text",
+      "text": "# Check Permissions\n\nCan viewer edit collections?",
+      "x": -400,
+      "y": 450,
+      "width": 220,
+      "height": 90,
+      "color": "#1d4ed8",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.permissions.check",
+          "attributes": {
+            "username": {
+              "type": "string",
+              "description": "Collections owner",
+              "required": true
+            },
+            "isAuthenticated": {
+              "type": "boolean",
+              "description": "Whether viewer is logged in",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/app/worlds/[username]/page.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "operation",
+          "files": ["src/app/worlds/[username]/page.tsx"]
+        }
+      }
+    },
+    {
+      "id": "permissions-result",
+      "type": "text",
+      "text": "# Permissions Result\n\nEdit access determined",
+      "x": -400,
+      "y": 600,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.permissions.result",
+          "attributes": {
+            "canEdit": {
+              "type": "boolean",
+              "description": "Whether viewer can edit",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/app/worlds/[username]/page.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/app/worlds/[username]/page.tsx"]
+        }
+      }
+    },
+    {
+      "id": "collection-select",
+      "type": "text",
+      "text": "# Collection Select\n\nAuto-select or from query",
+      "x": -400,
+      "y": 750,
+      "width": 220,
+      "height": 90,
+      "color": "#1d4ed8",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.collection.select",
+          "attributes": {
+            "collectionId": {
+              "type": "string",
+              "description": "Selected collection ID",
+              "required": true
+            },
+            "source": {
+              "type": "string",
+              "description": "Selection source: 'query' or 'auto'",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/app/worlds/[username]/page.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "operation",
+          "files": ["src/app/worlds/[username]/page.tsx"]
+        }
+      }
+    },
+    {
+      "id": "page-ready",
+      "type": "text",
+      "text": "# Page Ready\n\nShared collections view initialized",
+      "x": -400,
+      "y": 900,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.page.ready",
+          "attributes": {
+            "username": {
+              "type": "string",
+              "description": "Collections owner",
+              "required": true
+            },
+            "collectionId": {
+              "type": "string",
+              "description": "Active collection",
+              "required": true
+            },
+            "canEdit": {
+              "type": "boolean",
+              "description": "Whether viewer can edit",
+              "required": true
+            },
+            "repositoryCount": {
+              "type": "number",
+              "description": "Repos in collection",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/app/worlds/[username]/page.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/app/worlds/[username]/page.tsx"]
+        }
+      }
+    },
+    {
+      "id": "hydrate-repo-details-start",
+      "type": "text",
+      "text": "# Fetch Repo Details\n\nStart loading collection repos",
+      "x": -700,
+      "y": 750,
+      "width": 220,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.hydrate.repo-details.start",
+          "attributes": {
+            "collectionId": {
+              "type": "string",
+              "description": "Collection being hydrated",
+              "required": true
+            },
+            "repositoryCount": {
+              "type": "number",
+              "description": "Total repos to load",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/SharedCollectionsProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io",
+          "files": ["src/contexts/SharedCollectionsProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "hydrate-repo-details-item",
+      "type": "text",
+      "text": "# Repo Detail Loaded\n\nSingle repo info received",
+      "x": -700,
+      "y": 900,
+      "width": 220,
+      "height": 90,
+      "color": "#0891b2",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.hydrate.repo-details.item",
+          "attributes": {
+            "repositoryId": {
+              "type": "string",
+              "description": "Repository that loaded",
+              "required": true
+            },
+            "completedCount": {
+              "type": "number",
+              "description": "Repos loaded so far",
+              "required": true
+            },
+            "totalCount": {
+              "type": "number",
+              "description": "Total repos to load",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/SharedCollectionsProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/contexts/SharedCollectionsProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "hydrate-repo-details-complete",
+      "type": "text",
+      "text": "# All Repo Details Done\n\nAll repos loaded",
+      "x": -700,
+      "y": 1050,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.hydrate.repo-details.complete",
+          "attributes": {
+            "collectionId": {
+              "type": "string",
+              "description": "Collection loaded",
+              "required": true
+            },
+            "loadedCount": {
+              "type": "number",
+              "description": "Repos successfully loaded",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/SharedCollectionsProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/contexts/SharedCollectionsProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "state-repo-details",
+      "type": "text",
+      "text": "# collectionRepoDetails\n\nState: repo metadata for map",
+      "x": -700,
+      "y": 1200,
+      "width": 220,
+      "height": 90,
+      "color": "#ca8a04",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.state.repo-details.updated",
+          "attributes": {
+            "repositoryCount": {
+              "type": "number",
+              "description": "Repos in state",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/SharedCollectionsProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "state",
+          "files": ["src/contexts/SharedCollectionsProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "hydrate-packages-start",
+      "type": "text",
+      "text": "# Fetch Packages\n\nStart loading repo packages",
+      "x": -420,
+      "y": 750,
+      "width": 220,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.hydrate.packages.start",
+          "attributes": {
+            "collectionId": {
+              "type": "string",
+              "description": "Collection being hydrated",
+              "required": true
+            },
+            "repositoryCount": {
+              "type": "number",
+              "description": "Total repos to fetch packages for",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/SharedCollectionsProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io",
+          "files": ["src/contexts/SharedCollectionsProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "hydrate-packages-item",
+      "type": "text",
+      "text": "# Packages Loaded\n\nSingle repo packages received",
+      "x": -420,
+      "y": 900,
+      "width": 220,
+      "height": 90,
+      "color": "#0891b2",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.hydrate.packages.item",
+          "attributes": {
+            "repositoryId": {
+              "type": "string",
+              "description": "Repository that loaded",
+              "required": true
+            },
+            "packageCount": {
+              "type": "number",
+              "description": "Number of packages in repo",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/SharedCollectionsProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/contexts/SharedCollectionsProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "hydrate-packages-complete",
+      "type": "text",
+      "text": "# All Packages Done\n\nAll repo packages loaded",
+      "x": -420,
+      "y": 1050,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.hydrate.packages.complete",
+          "attributes": {
+            "collectionId": {
+              "type": "string",
+              "description": "Collection finished loading",
+              "required": true
+            },
+            "totalPackages": {
+              "type": "number",
+              "description": "Total packages across all repos",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/SharedCollectionsProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/contexts/SharedCollectionsProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "state-packages",
+      "type": "text",
+      "text": "# collectionRepoPackages\n\nState: package counts for sizing",
+      "x": -420,
+      "y": 1200,
+      "width": 220,
+      "height": 90,
+      "color": "#ca8a04",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.state.packages.updated",
+          "attributes": {
+            "repositoryCount": {
+              "type": "number",
+              "description": "Repos with packages",
+              "required": true
+            },
+            "totalPackages": {
+              "type": "number",
+              "description": "Total package count",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/SharedCollectionsProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "state",
+          "files": ["src/contexts/SharedCollectionsProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "panel-collection-map",
+      "type": "text",
+      "text": "# Collection Map Panel\n\nRenders collection as map",
+      "x": -560,
+      "y": 1350,
+      "width": 220,
+      "height": 90,
+      "color": "#059669",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.panel.collection-map.render",
+          "attributes": {
+            "repositoryCount": {
+              "type": "number",
+              "description": "Repos rendered on map",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/app/worlds/[username]/page.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "render",
+          "files": ["src/app/worlds/[username]/page.tsx"]
+        }
+      }
+    },
+    {
+      "id": "repo-clicked",
+      "type": "text",
+      "text": "# Repo Clicked\n\nUser clicks repo on map",
+      "x": 200,
+      "y": 0,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.repository.clicked",
+          "attributes": {
+            "repositoryId": {
+              "type": "string",
+              "description": "Clicked repository",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/SharedCollectionsProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/contexts/SharedCollectionsProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "file-tree-load",
+      "type": "text",
+      "text": "# Load File Tree\n\nFetch repository structure",
+      "x": 200,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.repository.file-tree.load",
+          "attributes": {
+            "repositoryId": {
+              "type": "string",
+              "description": "Repository being loaded",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/SharedCollectionsProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io",
+          "files": ["src/contexts/SharedCollectionsProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "file-tree-success",
+      "type": "text",
+      "text": "# File City Ready\n\nRepository loaded in panel",
+      "x": 200,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.repository.file-tree.success",
+          "attributes": {
+            "repositoryId": {
+              "type": "string",
+              "description": "Selected repository",
+              "required": true
+            },
+            "fileCount": {
+              "type": "number",
+              "description": "Files in tree",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/SharedCollectionsProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/contexts/SharedCollectionsProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "file-tree-error",
+      "type": "text",
+      "text": "# File Tree Error\n\nFailed to load tree",
+      "x": 450,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#dc2626",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.repository.file-tree.error",
+          "attributes": {
+            "repositoryId": {
+              "type": "string",
+              "description": "Repository that failed",
+              "required": true
+            },
+            "error.message": {
+              "type": "string",
+              "description": "Error message",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/SharedCollectionsProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error",
+          "files": ["src/contexts/SharedCollectionsProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "collection-switch",
+      "type": "text",
+      "text": "# Switch Collection\n\nUser changes collection",
+      "x": 200,
+      "y": 450,
+      "width": 200,
+      "height": 90,
+      "color": "#1d4ed8",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "shared.collection.switch",
+          "attributes": {
+            "fromCollectionId": {
+              "type": "string",
+              "description": "Previous collection",
+              "required": false
+            },
+            "toCollectionId": {
+              "type": "string",
+              "description": "New collection",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/app/worlds/[username]/page.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "operation",
+          "files": ["src/app/worlds/[username]/page.tsx"]
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "init-1",
+      "fromNode": "page-init-started",
+      "fromSide": "bottom",
+      "toNode": "fetch-collections",
+      "toSide": "top",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "init-2",
+      "fromNode": "fetch-collections",
+      "fromSide": "right",
+      "toNode": "user-not-found",
+      "toSide": "left",
+      "label": "404",
+      "pv": { "edgeType": "error" }
+    },
+    {
+      "id": "init-3",
+      "fromNode": "fetch-collections",
+      "fromSide": "bottom",
+      "toNode": "collections-loaded",
+      "toSide": "top",
+      "label": "success",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "init-4",
+      "fromNode": "fetch-collections",
+      "fromSide": "right",
+      "toNode": "no-collections-repo",
+      "toSide": "left",
+      "label": "no repo",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "init-5",
+      "fromNode": "collections-loaded",
+      "fromSide": "right",
+      "toNode": "empty-collections",
+      "toSide": "left",
+      "label": "empty",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "init-6",
+      "fromNode": "collections-loaded",
+      "fromSide": "bottom",
+      "toNode": "check-permissions",
+      "toSide": "top",
+      "label": "has collections",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "init-7",
+      "fromNode": "check-permissions",
+      "fromSide": "bottom",
+      "toNode": "permissions-result",
+      "toSide": "top",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "init-8",
+      "fromNode": "permissions-result",
+      "fromSide": "bottom",
+      "toNode": "collection-select",
+      "toSide": "top",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "init-9",
+      "fromNode": "collection-select",
+      "fromSide": "bottom",
+      "toNode": "page-ready",
+      "toSide": "top",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "hydrate-1",
+      "fromNode": "collection-select",
+      "fromSide": "left",
+      "toNode": "hydrate-repo-details-start",
+      "toSide": "top",
+      "label": "triggers",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "hydrate-2",
+      "fromNode": "hydrate-repo-details-start",
+      "fromSide": "bottom",
+      "toNode": "hydrate-repo-details-item",
+      "toSide": "top",
+      "label": "per repo",
+      "pv": { "edgeType": "progressive" }
+    },
+    {
+      "id": "hydrate-3",
+      "fromNode": "hydrate-repo-details-item",
+      "fromSide": "bottom",
+      "toNode": "hydrate-repo-details-complete",
+      "toSide": "top",
+      "label": "all done",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "data-1",
+      "fromNode": "hydrate-repo-details-item",
+      "fromSide": "right",
+      "toNode": "state-repo-details",
+      "toSide": "top",
+      "label": "writes",
+      "pv": { "edgeType": "data-flow" }
+    },
+    {
+      "id": "data-2",
+      "fromNode": "state-repo-details",
+      "fromSide": "bottom",
+      "toNode": "panel-collection-map",
+      "toSide": "top",
+      "label": "subscribes",
+      "pv": { "edgeType": "data-flow" }
+    },
+    {
+      "id": "hydrate-pkg-1",
+      "fromNode": "collection-select",
+      "fromSide": "left",
+      "toNode": "hydrate-packages-start",
+      "toSide": "top",
+      "label": "parallel",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "hydrate-pkg-2",
+      "fromNode": "hydrate-packages-start",
+      "fromSide": "bottom",
+      "toNode": "hydrate-packages-item",
+      "toSide": "top",
+      "label": "per repo",
+      "pv": { "edgeType": "progressive" }
+    },
+    {
+      "id": "hydrate-pkg-3",
+      "fromNode": "hydrate-packages-item",
+      "fromSide": "bottom",
+      "toNode": "hydrate-packages-complete",
+      "toSide": "top",
+      "label": "all done",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "data-pkg-1",
+      "fromNode": "hydrate-packages-item",
+      "fromSide": "right",
+      "toNode": "state-packages",
+      "toSide": "top",
+      "label": "writes",
+      "pv": { "edgeType": "data-flow" }
+    },
+    {
+      "id": "data-pkg-2",
+      "fromNode": "state-packages",
+      "fromSide": "bottom",
+      "toNode": "panel-collection-map",
+      "toSide": "top",
+      "label": "subscribes",
+      "pv": { "edgeType": "data-flow" }
+    },
+    {
+      "id": "repo-1",
+      "fromNode": "repo-clicked",
+      "fromSide": "bottom",
+      "toNode": "file-tree-load",
+      "toSide": "top",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "repo-2",
+      "fromNode": "file-tree-load",
+      "fromSide": "bottom",
+      "toNode": "file-tree-success",
+      "toSide": "top",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "repo-3",
+      "fromNode": "file-tree-load",
+      "fromSide": "right",
+      "toNode": "file-tree-error",
+      "toSide": "left",
+      "pv": { "edgeType": "error" }
+    },
+    {
+      "id": "switch-1",
+      "fromNode": "collection-switch",
+      "fromSide": "left",
+      "toNode": "hydrate-repo-details-start",
+      "toSide": "right",
+      "label": "re-triggers",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "switch-2",
+      "fromNode": "collection-switch",
+      "fromSide": "left",
+      "toNode": "hydrate-packages-start",
+      "toSide": "right",
+      "label": "re-triggers",
+      "pv": { "edgeType": "flow" }
+    }
+  ]
+}

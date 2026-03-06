@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/worlds/worlds.otel.canvas",
+  "mode": "span-tree",
+  "spanPattern": "worlds.region",
+  "name": "Region Management",
+  "description": "Create and manage custom regions on the overworld map",
+  "scenarios": [
+    {
+      "id": "create-and-assign",
+      "description": "User creates a new region and assigns a repository to it",
+      "priority": 1,
+      "template": {
+        "summary": "[Region] Created and assigned",
+        "events": {
+          "worlds.region.create": "Created region {{regionName}} ({{regionId}}) in {{collectionId}}",
+          "worlds.region.assign": "Assigned {{repositoryId}} to region {{regionId}} in {{collectionId}}"
+        }
+      }
+    }
+  ]
+}
