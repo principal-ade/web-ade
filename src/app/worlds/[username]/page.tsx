@@ -360,6 +360,9 @@ function SharedCollectionsWrapper() {
       createdAt: Date.now(),
       updatedAt: Date.now(),
       members: [],
+      visibility: 'public',
+      owner: username,
+      ownerType: 'user',
     };
 
     const updatedCollections = [...collections, newCollection];
@@ -682,6 +685,9 @@ function SharedCollectionsWrapper() {
                   createdAt: selectedCollection.createdAt,
                   updatedAt: selectedCollection.updatedAt,
                   members: selectedCollection.members || [],
+                  visibility: selectedCollection.visibility || 'public',
+                  owner: selectedCollection.owner || username,
+                  ownerType: selectedCollection.ownerType || 'user',
                 }}
                 mode="edit"
               />

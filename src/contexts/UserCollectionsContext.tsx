@@ -85,7 +85,7 @@ function generateCollectionId(): string {
 }
 
 export function UserCollectionsProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -241,6 +241,9 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
           createdAt: now,
           updatedAt: now,
           members: [],
+          visibility: 'public',
+          owner: user?.login || '',
+          ownerType: 'user',
         };
 
         const newCollections = [...collectionsRef.current, newCollection];
