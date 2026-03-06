@@ -1,0 +1,779 @@
+{
+  "pv": {
+    "name": "Repository Page",
+    "version": "1.0.0",
+    "markdown": ".principal-views/repository/repository.md",
+    "edgeTypes": {
+      "flow": {
+        "label": "Flow"
+      },
+      "error": {
+        "label": "Error Path"
+      },
+      "user-action": {
+        "label": "User Action"
+      },
+      "data-flow": {
+        "label": "Data Flow"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "page-init",
+      "type": "text",
+      "text": "# Page Init\n\nRepository page loads",
+      "x": -400,
+      "y": 0,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.page.init",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            },
+            "configId": {
+              "type": "string",
+              "description": "Initial layout config",
+              "required": false
+            }
+          }
+        },
+        "references": [
+          "src/app/[owner]/[repo]/page.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/app/[owner]/[repo]/page.tsx"]
+        }
+      }
+    },
+    {
+      "id": "file-tree-load",
+      "type": "text",
+      "text": "# Load File Tree\n\nFetch repository structure",
+      "x": -400,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.file-tree.load",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "file-tree-success",
+      "type": "text",
+      "text": "# File Tree Ready\n\nTree loaded successfully",
+      "x": -400,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.file-tree.success",
+          "attributes": {
+            "fileCount": {
+              "type": "number",
+              "description": "Number of files in tree",
+              "required": true
+            },
+            "treeSha": {
+              "type": "string",
+              "description": "Git tree SHA",
+              "required": false
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "file-tree-error",
+      "type": "text",
+      "text": "# File Tree Error\n\nFailed to load tree",
+      "x": -150,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#dc2626",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.file-tree.error",
+          "attributes": {
+            "error.message": {
+              "type": "string",
+              "description": "Error message",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "packages-load",
+      "type": "text",
+      "text": "# Load Packages\n\nFetch package composition",
+      "x": -700,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.packages.load",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "packages-success",
+      "type": "text",
+      "text": "# Packages Ready\n\nPackage data loaded",
+      "x": -700,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.packages.success",
+          "attributes": {
+            "packageCount": {
+              "type": "number",
+              "description": "Number of packages",
+              "required": true
+            },
+            "isMonorepo": {
+              "type": "boolean",
+              "description": "Whether repo is a monorepo",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "packages-error",
+      "type": "text",
+      "text": "# Packages Error\n\nFailed to load packages",
+      "x": -700,
+      "y": 450,
+      "width": 200,
+      "height": 90,
+      "color": "#dc2626",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.packages.error",
+          "attributes": {
+            "error.message": {
+              "type": "string",
+              "description": "Error message",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "state-file-tree",
+      "type": "text",
+      "text": "# fileTree\n\nState: repository structure",
+      "x": -400,
+      "y": 450,
+      "width": 200,
+      "height": 90,
+      "color": "#ca8a04",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.state.file-tree.updated",
+          "attributes": {
+            "fileCount": {
+              "type": "number",
+              "description": "Files in tree",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "state",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "state-packages",
+      "type": "text",
+      "text": "# packagesData\n\nState: package composition",
+      "x": -700,
+      "y": 600,
+      "width": 200,
+      "height": 90,
+      "color": "#ca8a04",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.state.packages.updated",
+          "attributes": {
+            "packageCount": {
+              "type": "number",
+              "description": "Packages in state",
+              "required": true
+            },
+            "isMonorepo": {
+              "type": "boolean",
+              "description": "Whether monorepo",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "state",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "panel-file-city",
+      "type": "text",
+      "text": "# File City Panel\n\nVisualizes repo structure",
+      "x": -400,
+      "y": 600,
+      "width": 200,
+      "height": 90,
+      "color": "#059669",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.panel.file-city.render",
+          "attributes": {
+            "fileCount": {
+              "type": "number",
+              "description": "Files rendered",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "render",
+          "files": ["src/components/EditorLayout.tsx"]
+        }
+      }
+    },
+    {
+      "id": "panel-packages",
+      "type": "text",
+      "text": "# Package Composition Panel\n\nShows packages/monorepo",
+      "x": -700,
+      "y": 750,
+      "width": 200,
+      "height": 90,
+      "color": "#059669",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.panel.packages.render",
+          "attributes": {
+            "packageCount": {
+              "type": "number",
+              "description": "Packages rendered",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "render",
+          "files": ["src/components/EditorLayout.tsx"]
+        }
+      }
+    },
+    {
+      "id": "file-select",
+      "type": "text",
+      "text": "# File Selected\n\nUser clicks file in tree",
+      "x": 100,
+      "y": 0,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.file.select",
+          "attributes": {
+            "filePath": {
+              "type": "string",
+              "description": "Selected file path",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "file-content-load",
+      "type": "text",
+      "text": "# Load File Content\n\nFetch file from GitHub",
+      "x": 100,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.file.content.load",
+          "attributes": {
+            "filePath": {
+              "type": "string",
+              "description": "File path to load",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "file-content-success",
+      "type": "text",
+      "text": "# File Content Ready\n\nContent loaded",
+      "x": 100,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.file.content.success",
+          "attributes": {
+            "filePath": {
+              "type": "string",
+              "description": "File path",
+              "required": true
+            },
+            "contentLength": {
+              "type": "number",
+              "description": "Content size in bytes",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "lifecycle",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "file-content-error",
+      "type": "text",
+      "text": "# File Content Error\n\nFailed to load file",
+      "x": 350,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#dc2626",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.file.content.error",
+          "attributes": {
+            "filePath": {
+              "type": "string",
+              "description": "File path",
+              "required": true
+            },
+            "error.message": {
+              "type": "string",
+              "description": "Error message",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "error",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "state-active-file",
+      "type": "text",
+      "text": "# activeFile\n\nState: current file content",
+      "x": 100,
+      "y": 450,
+      "width": 200,
+      "height": 90,
+      "color": "#ca8a04",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.state.active-file.updated",
+          "attributes": {
+            "filePath": {
+              "type": "string",
+              "description": "Active file path",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "state",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    },
+    {
+      "id": "panel-editor",
+      "type": "text",
+      "text": "# File Editor Panel\n\nDisplays file content",
+      "x": 100,
+      "y": 600,
+      "width": 200,
+      "height": 90,
+      "color": "#059669",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.panel.editor.render",
+          "attributes": {
+            "filePath": {
+              "type": "string",
+              "description": "File being edited",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "render",
+          "files": ["src/components/EditorLayout.tsx"]
+        }
+      }
+    },
+    {
+      "id": "readme-auto-load",
+      "type": "text",
+      "text": "# Auto-load README\n\nLoad README on init",
+      "x": -150,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "color": "#1d4ed8",
+      "pv": {
+        "status": "approved",
+        "event": {
+          "name": "repo.readme.auto-load",
+          "attributes": {
+            "found": {
+              "type": "boolean",
+              "description": "Whether README was found",
+              "required": true
+            },
+            "path": {
+              "type": "string",
+              "description": "README file path",
+              "required": false
+            }
+          }
+        },
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "operation",
+          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "init-1",
+      "fromNode": "page-init",
+      "fromSide": "bottom",
+      "toNode": "file-tree-load",
+      "toSide": "top",
+      "label": "parallel",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "init-2",
+      "fromNode": "page-init",
+      "fromSide": "left",
+      "toNode": "packages-load",
+      "toSide": "top",
+      "label": "parallel",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "tree-1",
+      "fromNode": "file-tree-load",
+      "fromSide": "bottom",
+      "toNode": "file-tree-success",
+      "toSide": "top",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "tree-2",
+      "fromNode": "file-tree-load",
+      "fromSide": "right",
+      "toNode": "file-tree-error",
+      "toSide": "left",
+      "pv": { "edgeType": "error" }
+    },
+    {
+      "id": "tree-3",
+      "fromNode": "file-tree-success",
+      "fromSide": "bottom",
+      "toNode": "state-file-tree",
+      "toSide": "top",
+      "label": "writes",
+      "pv": { "edgeType": "data-flow" }
+    },
+    {
+      "id": "tree-4",
+      "fromNode": "file-tree-success",
+      "fromSide": "right",
+      "toNode": "readme-auto-load",
+      "toSide": "left",
+      "label": "triggers",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "tree-5",
+      "fromNode": "state-file-tree",
+      "fromSide": "bottom",
+      "toNode": "panel-file-city",
+      "toSide": "top",
+      "label": "subscribes",
+      "pv": { "edgeType": "data-flow" }
+    },
+    {
+      "id": "pkg-1",
+      "fromNode": "packages-load",
+      "fromSide": "bottom",
+      "toNode": "packages-success",
+      "toSide": "top",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "pkg-2",
+      "fromNode": "packages-load",
+      "fromSide": "bottom",
+      "toNode": "packages-error",
+      "toSide": "top",
+      "pv": { "edgeType": "error" }
+    },
+    {
+      "id": "pkg-3",
+      "fromNode": "packages-success",
+      "fromSide": "bottom",
+      "toNode": "state-packages",
+      "toSide": "top",
+      "label": "writes",
+      "pv": { "edgeType": "data-flow" }
+    },
+    {
+      "id": "pkg-4",
+      "fromNode": "state-packages",
+      "fromSide": "bottom",
+      "toNode": "panel-packages",
+      "toSide": "top",
+      "label": "subscribes",
+      "pv": { "edgeType": "data-flow" }
+    },
+    {
+      "id": "file-1",
+      "fromNode": "file-select",
+      "fromSide": "bottom",
+      "toNode": "file-content-load",
+      "toSide": "top",
+      "pv": { "edgeType": "user-action" }
+    },
+    {
+      "id": "file-2",
+      "fromNode": "file-content-load",
+      "fromSide": "bottom",
+      "toNode": "file-content-success",
+      "toSide": "top",
+      "pv": { "edgeType": "flow" }
+    },
+    {
+      "id": "file-3",
+      "fromNode": "file-content-load",
+      "fromSide": "right",
+      "toNode": "file-content-error",
+      "toSide": "left",
+      "pv": { "edgeType": "error" }
+    },
+    {
+      "id": "file-4",
+      "fromNode": "file-content-success",
+      "fromSide": "bottom",
+      "toNode": "state-active-file",
+      "toSide": "top",
+      "label": "writes",
+      "pv": { "edgeType": "data-flow" }
+    },
+    {
+      "id": "file-5",
+      "fromNode": "state-active-file",
+      "fromSide": "bottom",
+      "toNode": "panel-editor",
+      "toSide": "top",
+      "label": "subscribes",
+      "pv": { "edgeType": "data-flow" }
+    },
+    {
+      "id": "readme-1",
+      "fromNode": "readme-auto-load",
+      "fromSide": "bottom",
+      "toNode": "file-content-load",
+      "toSide": "left",
+      "label": "auto",
+      "pv": { "edgeType": "flow" }
+    }
+  ]
+}

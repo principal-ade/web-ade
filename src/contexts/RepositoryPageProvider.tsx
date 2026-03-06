@@ -293,9 +293,9 @@ export function RepositoryPageProvider({
   });
 
   // State for packages
-  const [packagesData] = useState<PackagesSliceData | null>(null);
-  const [packagesLoading] = useState(false);
-  const [packagesError] = useState<Error | null>(null);
+  const [packagesData, setPackagesData] = useState<PackagesSliceData | null>(null);
+  const [packagesLoading, setPackagesLoading] = useState(false);
+  const [packagesError, setPackagesError] = useState<Error | null>(null);
 
   // State for GitHub messages
   const [githubMessages, setGithubMessages] = useState<GitHubMessagesSliceData>({
@@ -603,6 +603,60 @@ export function RepositoryPageProvider({
     };
 
     fetchFileTree();
+  }, [githubRepo]);
+
+  // Fetch packages when githubRepo changes
+  useEffect(() => {
+    if (!githubRepo) {
+      setPackagesData(null);
+      setPackagesLoading(false);
+      return;
+    }
+
+    const [owner, repo] = githubRepo.split('/');
+    if (!owner || !repo) {
+      setPackagesError(new Error('Invalid repository format'));
+      return;
+    }
+
+    setPackagesLoading(true);
+    setPackagesError(null);
+
+    const fetchPackages = async () => {
+      try {
+        const data = await trpc.github.getRepoPackages.query({ owner, repo });
+        const summary = data.summary as {
+          isMonorepo?: boolean;
+          rootPackageName?: string;
+          totalPackages?: number;
+          workspacePackages?: Array<{ name?: string; path: string }>;
+          totalDependencies?: number;
+          totalDevDependencies?: number;
+          availableScripts?: string[];
+        } | undefined;
+        setPackagesData({
+          packages: data.packages || [],
+          summary: {
+            isMonorepo: summary?.isMonorepo ?? false,
+            rootPackageName: summary?.rootPackageName,
+            totalPackages: summary?.totalPackages ?? 0,
+            workspacePackages: summary?.workspacePackages ?? [],
+            totalDependencies: summary?.totalDependencies ?? 0,
+            totalDevDependencies: summary?.totalDevDependencies ?? 0,
+            availableScripts: summary?.availableScripts ?? [],
+          },
+        });
+        setPackagesError(null);
+      } catch (error) {
+        console.error('[RepositoryPageProvider] Failed to fetch packages:', error);
+        setPackagesError(error instanceof Error ? error : new Error('Failed to fetch packages'));
+        setPackagesData(null);
+      } finally {
+        setPackagesLoading(false);
+      }
+    };
+
+    fetchPackages();
   }, [githubRepo]);
 
   // Auto-load README when repository changes

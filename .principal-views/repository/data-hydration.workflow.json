@@ -1,0 +1,50 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/repository/repository.otel.canvas",
+  "mode": "span-tree",
+  "spanPattern": "repo.panel.file-city.render",
+  "name": "Data Hydration",
+  "description": "Data flows that hydrate state and render to panels",
+  "scenarios": [
+    {
+      "id": "file-tree-to-city",
+      "description": "File tree loads and flows to File City panel for visualization",
+      "priority": 1,
+      "template": {
+        "summary": "[File Tree] {{fileCount}} files loaded",
+        "events": {
+          "repo.file-tree.load": "Loading file tree for {{owner}}/{{repo}}",
+          "repo.file-tree.success": "File tree loaded: {{fileCount}} files (sha: {{treeSha}})",
+          "repo.state.file-tree.updated": "State updated with {{fileCount}} files",
+          "repo.panel.file-city.render": "File City rendered {{fileCount}} files"
+        }
+      }
+    },
+    {
+      "id": "packages-to-panel",
+      "description": "Packages load and flow to Package Composition panel",
+      "priority": 2,
+      "template": {
+        "summary": "[Packages] {{packageCount}} packages loaded",
+        "events": {
+          "repo.packages.load": "Loading packages for {{owner}}/{{repo}}",
+          "repo.packages.success": "Packages loaded: {{packageCount}} packages (monorepo: {{isMonorepo}})",
+          "repo.state.packages.updated": "State updated with {{packageCount}} packages (monorepo: {{isMonorepo}})",
+          "repo.panel.packages.render": "Package panel rendered {{packageCount}} packages"
+        }
+      }
+    },
+    {
+      "id": "packages-error",
+      "description": "Package loading fails (no package.json, rate limited)",
+      "priority": 3,
+      "template": {
+        "summary": "[Packages] Error loading for {{owner}}/{{repo}}",
+        "events": {
+          "repo.packages.load": "Loading packages for {{owner}}/{{repo}}",
+          "repo.packages.error": "Failed to load packages: {{error.message}}"
+        }
+      }
+    }
+  ]
+}

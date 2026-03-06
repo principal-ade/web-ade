@@ -1,0 +1,38 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/repository/repository.otel.canvas",
+  "mode": "span-tree",
+  "spanPattern": "repo.file.select",
+  "name": "File Selection",
+  "description": "User selects a file and content loads into editor",
+  "scenarios": [
+    {
+      "id": "file-select-success",
+      "description": "User clicks file, content loads successfully into editor",
+      "priority": 1,
+      "template": {
+        "summary": "[File] {{filePath}} opened",
+        "events": {
+          "repo.file.select": "File selected: {{filePath}}",
+          "repo.file.content.load": "Loading content for {{filePath}}",
+          "repo.file.content.success": "Content loaded: {{filePath}} ({{contentLength}} bytes)",
+          "repo.state.active-file.updated": "Active file set to {{filePath}}",
+          "repo.panel.editor.render": "Editor rendering {{filePath}}"
+        }
+      }
+    },
+    {
+      "id": "file-select-error",
+      "description": "File content fails to load (permissions, size limit, etc.)",
+      "priority": 2,
+      "template": {
+        "summary": "[File] Error loading {{filePath}}",
+        "events": {
+          "repo.file.select": "File selected: {{filePath}}",
+          "repo.file.content.load": "Loading content for {{filePath}}",
+          "repo.file.content.error": "Failed to load {{filePath}}: {{error.message}}"
+        }
+      }
+    }
+  ]
+}
