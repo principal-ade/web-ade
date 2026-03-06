@@ -105,11 +105,10 @@
               "description": "Number of repositories",
               "required": true
             },
-            "owner": {
+            "ownerInfo": {
               "type": "object",
               "description": "Owner metadata",
-              "required": false,
-              "display": false
+              "required": false
             }
           }
         },

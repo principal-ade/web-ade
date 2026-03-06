@@ -15,7 +15,7 @@
         "events": {
           "owner.page.init": "Owner page initialized: {{owner}} (project: {{project}})",
           "owner.repos.load": "Loading repositories for {{owner}}",
-          "owner.repos.success": "Repositories loaded: {{repoCount}} repos",
+          "owner.repos.success": "Loaded {{repoCount}} repos for {{ownerInfo.login}}",
           "owner.state.repos.updated": "State updated with {{repoCount}} repositories",
           "owner.panel.repos.render": "Rendered {{repoCount}} repositories",
           "owner.repo.auto-select": "Auto-selected first repository: {{fullName}}"
@@ -31,7 +31,7 @@
         "events": {
           "owner.page.init": "Owner page initialized: {{owner}} (project: {{project}})",
           "owner.repos.load": "Loading repositories for {{owner}}",
-          "owner.repos.success": "Repositories loaded: {{repoCount}} repos",
+          "owner.repos.success": "Loaded {{repoCount}} repos for {{ownerInfo.login}}",
           "owner.repo.preview": "Previewing repository: {{fullName}}"
         }
       }
