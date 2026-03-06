@@ -1,14 +1,13 @@
 /**
  * GET /api/github/collections/[username]/permissions
  *
- * Check if the authenticated user has write access to a user/org's web-ade-collections repo.
+ * Check if the authenticated user has write access to a user/org's principal-ai-collections repo.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getGitHubToken } from '@/lib/auth/cookies';
 import type { CollectionsPermissionsResponse } from '@/types/api';
-
-const REPO_NAME = 'web-ade-collections';
+import { PUBLIC_REPO_NAME } from '@/lib/collections/github-repo-manager';
 
 export async function GET(
   _request: NextRequest,
@@ -35,7 +34,7 @@ export async function GET(
 
     // Check user's permission on the repo
     const response = await fetch(
-      `https://api.github.com/repos/${username}/${REPO_NAME}/collaborators/${await getAuthenticatedUsername(token)}/permission`,
+      `https://api.github.com/repos/${username}/${PUBLIC_REPO_NAME}/collaborators/${await getAuthenticatedUsername(token)}/permission`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -49,7 +48,7 @@ export async function GET(
       if (response.status === 404) {
         // Check if the repo exists at all
         const repoCheck = await fetch(
-          `https://api.github.com/repos/${username}/${REPO_NAME}`,
+          `https://api.github.com/repos/${username}/${PUBLIC_REPO_NAME}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

@@ -12,8 +12,11 @@ import type {
   Collection,
   CollectionMembership,
 } from '@principal-ai/alexandria-collections';
-
-const REPO_NAME = 'web-ade-collections';
+import {
+  getRepoName,
+  createCollectionsRepo,
+  type CollectionVisibility,
+} from '@/lib/collections/github-repo-manager';
 
 /**
  * Merge memberships into collections' members arrays
@@ -56,9 +59,14 @@ async function getAuthenticatedUser(token: string): Promise<GitHubUser | null> {
   return response.json();
 }
 
-async function checkRepoExists(token: string, owner: string): Promise<boolean> {
+async function checkRepoExistsForVisibility(
+  token: string,
+  owner: string,
+  visibility: CollectionVisibility
+): Promise<boolean> {
+  const repoName = getRepoName(visibility);
   const response = await fetch(
-    `https://api.github.com/repos/${owner}/${REPO_NAME}`,
+    `https://api.github.com/repos/${owner}/${repoName}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -70,37 +78,14 @@ async function checkRepoExists(token: string, owner: string): Promise<boolean> {
   return response.ok;
 }
 
-async function createRepo(token: string): Promise<{ success: boolean; error?: string }> {
-  const response = await fetch('https://api.github.com/user/repos', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      name: REPO_NAME,
-      description: 'My web-ade collections - synced repository collections',
-      public: true,
-      auto_init: true,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    return { success: false, error: error.message || 'Failed to create repository' };
-  }
-
-  return { success: true };
-}
-
 async function getFile<T>(
   token: string,
   owner: string,
+  repoName: string,
   filename: string
 ): Promise<{ data: T | null; sha: string | null; error?: string }> {
   const response = await fetch(
-    `https://api.github.com/repos/${owner}/${REPO_NAME}/contents/${filename}`,
+    `https://api.github.com/repos/${owner}/${repoName}/contents/${filename}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -131,6 +116,7 @@ async function getFile<T>(
 async function saveFile(
   token: string,
   owner: string,
+  repoName: string,
   filename: string,
   content: unknown,
   sha?: string | null,
@@ -148,7 +134,7 @@ async function saveFile(
   }
 
   const response = await fetch(
-    `https://api.github.com/repos/${owner}/${REPO_NAME}/contents/${filename}`,
+    `https://api.github.com/repos/${owner}/${repoName}/contents/${filename}`,
     {
       method: 'PUT',
       headers: {
@@ -171,9 +157,9 @@ async function saveFile(
 
     // Handle SHA conflict (409) by refetching SHA and retrying
     if (response.status === 409 && retries > 0) {
-      const currentFile = await getFile<unknown>(token, owner, filename);
+      const currentFile = await getFile<unknown>(token, owner, repoName, filename);
       if (currentFile.sha) {
-        return saveFile(token, owner, filename, content, currentFile.sha, retries - 1);
+        return saveFile(token, owner, repoName, filename, content, currentFile.sha, retries - 1);
       }
     }
 
@@ -184,9 +170,74 @@ async function saveFile(
 }
 
 /**
+ * Fetch collections from a specific repo
+ */
+async function fetchCollectionsFromRepo(
+  token: string,
+  owner: string,
+  repoName: string
+): Promise<{ exists: boolean; collections: Collection[] }> {
+  // Check if repo exists
+  const repoResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${repoName}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github.v3+json',
+      },
+    }
+  );
+
+  if (!repoResponse.ok) {
+    return { exists: false, collections: [] };
+  }
+
+  // List files in collections directory
+  const dirResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${repoName}/contents/${COLLECTIONS_DIR}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github.v3+json',
+      },
+    }
+  );
+
+  if (dirResponse.status === 404) {
+    return { exists: true, collections: [] };
+  }
+
+  if (!dirResponse.ok) {
+    return { exists: true, collections: [] };
+  }
+
+  const files = await dirResponse.json();
+  const collectionFiles = files.filter((f: { type: string; name: string }) =>
+    f.type === 'file' && f.name.endsWith('.json')
+  );
+
+  // Fetch all collection files in parallel
+  const collectionPromises = collectionFiles.map(async (file: { name: string }) => {
+    const result = await getFile<CollectionFile>(
+      token,
+      owner,
+      repoName,
+      `${COLLECTIONS_DIR}/${file.name}`
+    );
+    return result.data?.collection || null;
+  });
+
+  const collectionsResults = await Promise.all(collectionPromises);
+  const collections = collectionsResults.filter((c): c is Collection => c !== null);
+
+  return { exists: true, collections };
+}
+
+/**
  * GET /api/github/collections
  *
  * Check if the collections repo exists and fetch all collections if it does.
+ * Fetches from both public and private repos and merges results.
  */
 export async function GET() {
   try {
@@ -207,7 +258,13 @@ export async function GET() {
       );
     }
 
-    const exists = await checkRepoExists(token, user.login);
+    // Fetch from both public and private repos in parallel
+    const [publicResult, privateResult] = await Promise.all([
+      fetchCollectionsFromRepo(token, user.login, getRepoName('public')),
+      fetchCollectionsFromRepo(token, user.login, getRepoName('private')),
+    ]);
+
+    const exists = publicResult.exists || privateResult.exists;
 
     if (!exists) {
       return NextResponse.json({
@@ -217,47 +274,8 @@ export async function GET() {
       });
     }
 
-    // List files in collections directory
-    const dirResponse = await fetch(
-      `https://api.github.com/repos/${user.login}/${REPO_NAME}/contents/${COLLECTIONS_DIR}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json',
-        },
-      }
-    );
-
-    if (dirResponse.status === 404) {
-      // Directory doesn't exist yet
-      return NextResponse.json({
-        exists: true,
-        collections: [],
-        repoUrl: `https://github.com/${user.login}/${REPO_NAME}`,
-      });
-    }
-
-    if (!dirResponse.ok) {
-      throw new Error(`Failed to list collections directory: ${dirResponse.status}`);
-    }
-
-    const files = await dirResponse.json();
-    const collectionFiles = files.filter((f: { type: string; name: string }) =>
-      f.type === 'file' && f.name.endsWith('.json')
-    );
-
-    // Fetch all collection files in parallel
-    const collectionPromises = collectionFiles.map(async (file: { name: string }) => {
-      const result = await getFile<CollectionFile>(
-        token,
-        user.login,
-        `${COLLECTIONS_DIR}/${file.name}`
-      );
-      return result.data?.collection || null;
-    });
-
-    const collectionsResults = await Promise.all(collectionPromises);
-    const collections = collectionsResults.filter((c): c is Collection => c !== null);
+    // Merge collections from both repos
+    const collections = [...publicResult.collections, ...privateResult.collections];
 
     // Extract memberships from collections' members arrays
     const memberships: CollectionMembership[] = collections.flatMap(collection =>
@@ -273,7 +291,9 @@ export async function GET() {
       exists: true,
       collections,
       memberships,
-      repoUrl: `https://github.com/${user.login}/${REPO_NAME}`,
+      repoUrl: publicResult.exists
+        ? `https://github.com/${user.login}/${getRepoName('public')}`
+        : `https://github.com/${user.login}/${getRepoName('private')}`,
     });
   } catch (error) {
     console.error('GitHub collections GET error:', error);
@@ -288,7 +308,7 @@ export async function GET() {
  * POST /api/github/collections
  *
  * Create the collections repo if it doesn't exist, then save collections.
- * Body: { collections: Collection[] }
+ * Body: { collections: Collection[], visibility?: 'public' | 'private' }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -312,15 +332,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const collections: Collection[] = body.collections || [];
     const memberships: CollectionMembership[] = body.memberships || [];
+    const visibility: CollectionVisibility = body.visibility || 'public';
+    const repoName = getRepoName(visibility);
 
     // Merge memberships into collections
     const collectionsWithMembers = mergeCollectionsWithMemberships(collections, memberships);
 
     // Check if repo exists
-    const exists = await checkRepoExists(token, user.login);
+    const exists = await checkRepoExistsForVisibility(token, user.login, visibility);
 
     if (!exists) {
-      const createResult = await createRepo(token);
+      const createResult = await createCollectionsRepo(token, visibility);
       if (!createResult.success) {
         return NextResponse.json(
           { error: createResult.error },
@@ -335,14 +357,14 @@ export async function POST(request: NextRequest) {
     // Save each collection as a separate file
     const savePromises = collectionsWithMembers.map(async (collection) => {
       const filename = `${COLLECTIONS_DIR}/${collection.id}.json`;
-      const existingFile = await getFile<CollectionFile>(token, user.login, filename);
+      const existingFile = await getFile<CollectionFile>(token, user.login, repoName, filename);
 
       const collectionFile: CollectionFile = {
         version: '1.0',
         collection,
       };
 
-      return saveFile(token, user.login, filename, collectionFile, existingFile.sha);
+      return saveFile(token, user.login, repoName, filename, collectionFile, existingFile.sha);
     });
 
     const results = await Promise.all(savePromises);
@@ -358,7 +380,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      repoUrl: `https://github.com/${user.login}/${REPO_NAME}`,
+      repoUrl: `https://github.com/${user.login}/${repoName}`,
     });
   } catch (error) {
     console.error('GitHub collections POST error:', error);
@@ -373,7 +395,7 @@ export async function POST(request: NextRequest) {
  * PUT /api/github/collections
  *
  * Update collections in existing repo (fails if repo doesn't exist).
- * Body: { collections: Collection[] }
+ * Body: { collections: Collection[], visibility?: 'public' | 'private' }
  */
 export async function PUT(request: NextRequest) {
   try {
@@ -397,10 +419,13 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const collections: Collection[] = body.collections || [];
     const memberships: CollectionMembership[] = body.memberships || [];
+    const visibility: CollectionVisibility = body.visibility || 'public';
+    const repoName = getRepoName(visibility);
 
     console.log('[API] PUT /api/github/collections', {
       collectionsCount: collections.length,
       membershipsCount: memberships.length,
+      visibility,
       memberships: memberships.map(m => ({ collectionId: m.collectionId, repositoryId: m.repositoryId })),
     });
 
@@ -416,7 +441,7 @@ export async function PUT(request: NextRequest) {
     });
 
     // Check if repo exists
-    const exists = await checkRepoExists(token, user.login);
+    const exists = await checkRepoExistsForVisibility(token, user.login, visibility);
 
     if (!exists) {
       return NextResponse.json(
@@ -428,14 +453,14 @@ export async function PUT(request: NextRequest) {
     // Save each collection as a separate file
     const savePromises = collectionsWithMembers.map(async (collection) => {
       const filename = `${COLLECTIONS_DIR}/${collection.id}.json`;
-      const existingFile = await getFile<CollectionFile>(token, user.login, filename);
+      const existingFile = await getFile<CollectionFile>(token, user.login, repoName, filename);
 
       const collectionFile: CollectionFile = {
         version: '1.0',
         collection,
       };
 
-      return saveFile(token, user.login, filename, collectionFile, existingFile.sha);
+      return saveFile(token, user.login, repoName, filename, collectionFile, existingFile.sha);
     });
 
     const results = await Promise.all(savePromises);

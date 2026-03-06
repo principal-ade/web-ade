@@ -11,8 +11,7 @@ import {
   type CustomRegion,
   type RepositoryLayoutData,
 } from '@principal-ai/alexandria-collections';
-
-const REPO_NAME = 'web-ade-collections';
+import { getRepoName, type CollectionVisibility } from '@/lib/collections/github-repo-manager';
 
 interface RegionOperation {
   type: 'createRegion' | 'updateRegion' | 'deleteRegion' | 'assignRepository' | 'updatePosition' | 'batchInitialize';
@@ -27,6 +26,7 @@ interface RegionOperation {
     assignments?: Array<{ repositoryId: string; regionId: string }>;
     positions?: Array<{ repositoryId: string; layout: RepositoryLayoutData }>;
   };
+  visibility?: CollectionVisibility;
 }
 
 export async function POST(
@@ -45,9 +45,11 @@ export async function POST(
     }
 
     const operation: RegionOperation = await request.json();
+    const visibility: CollectionVisibility = operation.visibility || 'public';
+    const repoName = getRepoName(visibility);
 
     // Create adapter
-    const adapter = new GitHubFileSystemAdapter(username, REPO_NAME, 'main', token);
+    const adapter = new GitHubFileSystemAdapter(username, repoName, 'main', token);
     const storage = new CollectionStorageAdapter('/', adapter);
 
     let result;

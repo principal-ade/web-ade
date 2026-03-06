@@ -23,6 +23,7 @@ import {
 import type { Collection, CollectionMembership } from '@principal-ai/alexandria-collections';
 import { useAuth } from './AuthContext';
 import { withTelemetrySpan } from '@/lib/telemetry';
+import type { CollectionVisibility } from '@/lib/collections/github-repo-manager';
 
 /** Repository info with optional source repository for forks */
 interface RepositoryInfo {
@@ -44,6 +45,10 @@ interface UserCollectionsContextValue {
   // GitHub state
   gitHubRepoExists: boolean;
   gitHubRepoUrl: string | null;
+
+  // Visibility state
+  visibility: CollectionVisibility;
+  setVisibility: (visibility: CollectionVisibility) => void;
 
   // Collection CRUD
   createCollection: (
@@ -74,7 +79,7 @@ interface UserCollectionsContextValue {
   refresh: () => Promise<void>;
 
   // GitHub functions
-  enableGitHub: () => Promise<void>;
+  enableGitHub: (visibility?: CollectionVisibility) => Promise<void>;
 }
 
 const UserCollectionsContext = createContext<UserCollectionsContextValue | undefined>(undefined);
@@ -92,6 +97,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<Error | null>(null);
   const [gitHubRepoExists, setGitHubRepoExists] = useState(false);
   const [gitHubRepoUrl, setGitHubRepoUrl] = useState<string | null>(null);
+  const [visibility, setVisibility] = useState<CollectionVisibility>('public');
 
   // Ref to track latest collections for sync operations (avoids stale closure issues)
   const collectionsRef = useRef<Collection[]>([]);
@@ -114,7 +120,8 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
   // Save collections to GitHub (memberships are inside collections.members)
   const saveToGitHub = useCallback(async (
     newCollections: Collection[],
-    repoExists: boolean
+    repoExists: boolean,
+    targetVisibility: CollectionVisibility = 'public'
   ): Promise<{ repoUrl?: string }> => {
     setSaving(true);
     try {
@@ -131,7 +138,8 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           collections: newCollections,
-          memberships: allMemberships
+          memberships: allMemberships,
+          visibility: targetVisibility,
         }),
       });
 
@@ -241,7 +249,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
           createdAt: now,
           updatedAt: now,
           members: [],
-          visibility: 'public',
+          visibility,
           owner: user?.login || '',
           ownerType: 'user',
         };
@@ -258,7 +266,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         }
 
         // Save to GitHub first, then update state
-        const result = await saveToGitHub(newCollections, gitHubRepoExists);
+        const result = await saveToGitHub(newCollections, gitHubRepoExists, visibility);
 
         emit('collection.create.github.commit');
 
@@ -279,7 +287,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         return newCollection;
       });
     },
-    [gitHubRepoExists, gitHubRepoUrl, saveToGitHub, user?.login]
+    [gitHubRepoExists, gitHubRepoUrl, saveToGitHub, user?.login, visibility]
   );
 
   // Update a collection
@@ -298,14 +306,14 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       setCollections(newCollections);
 
       // Save to GitHub in background
-      const result = await saveToGitHub(newCollections, gitHubRepoExists);
+      const result = await saveToGitHub(newCollections, gitHubRepoExists, visibility);
 
       if (result.repoUrl && !gitHubRepoExists) {
         setGitHubRepoExists(true);
         setGitHubRepoUrl(result.repoUrl);
       }
     },
-    [gitHubRepoExists, saveToGitHub]
+    [gitHubRepoExists, saveToGitHub, visibility]
   );
 
   // Delete a collection
@@ -316,14 +324,14 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
     collectionsRef.current = newCollections;
 
     // Save to GitHub first, then update state
-    const result = await saveToGitHub(newCollections, gitHubRepoExists);
+    const result = await saveToGitHub(newCollections, gitHubRepoExists, visibility);
     setCollections(newCollections);
 
     if (result.repoUrl && !gitHubRepoExists) {
       setGitHubRepoExists(true);
       setGitHubRepoUrl(result.repoUrl);
     }
-  }, [gitHubRepoExists, saveToGitHub]);
+  }, [gitHubRepoExists, saveToGitHub, visibility]);
 
   // Add a repository to a collection
   const addRepository = useCallback(
@@ -368,7 +376,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       collectionsRef.current = newCollections;
 
       // Save to GitHub first, then update state
-      const result = await saveToGitHub(newCollections, gitHubRepoExists);
+      const result = await saveToGitHub(newCollections, gitHubRepoExists, visibility);
       setCollections(newCollections);
 
       if (result.repoUrl && !gitHubRepoExists) {
@@ -376,7 +384,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         setGitHubRepoUrl(result.repoUrl);
       }
     },
-    [gitHubRepoExists, saveToGitHub]
+    [gitHubRepoExists, saveToGitHub, visibility]
   );
 
   // Remove a repository from a collection
@@ -396,7 +404,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       collectionsRef.current = newCollections;
 
       // Save to GitHub first, then update state
-      const result = await saveToGitHub(newCollections, gitHubRepoExists);
+      const result = await saveToGitHub(newCollections, gitHubRepoExists, visibility);
       setCollections(newCollections);
 
       if (result.repoUrl && !gitHubRepoExists) {
@@ -404,7 +412,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         setGitHubRepoUrl(result.repoUrl);
       }
     },
-    [gitHubRepoExists, saveToGitHub]
+    [gitHubRepoExists, saveToGitHub, visibility]
   );
 
   // Update membership metadata (for region assignments, positions, etc.)
@@ -436,14 +444,14 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       setCollections(newCollections);
 
       // Save to GitHub in background
-      const result = await saveToGitHub(newCollections, gitHubRepoExists);
+      const result = await saveToGitHub(newCollections, gitHubRepoExists, visibility);
 
       if (result.repoUrl && !gitHubRepoExists) {
         setGitHubRepoExists(true);
         setGitHubRepoUrl(result.repoUrl);
       }
     },
-    [gitHubRepoExists, saveToGitHub]
+    [gitHubRepoExists, saveToGitHub, visibility]
   );
 
   // Get all repository IDs in a collection
@@ -489,7 +497,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
   }, [loadFromGitHub]);
 
   // Enable GitHub (create repo if it doesn't exist)
-  const enableGitHub = useCallback(async (): Promise<void> => {
+  const enableGitHub = useCallback(async (targetVisibility: CollectionVisibility = 'public'): Promise<void> => {
     if (!isAuthenticated) {
       throw new Error('Must be authenticated to enable GitHub');
     }
@@ -507,7 +515,11 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       const response = await fetch('/api/github/collections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ collections: collectionsRef.current, memberships: allMemberships }),
+        body: JSON.stringify({
+          collections: collectionsRef.current,
+          memberships: allMemberships,
+          visibility: targetVisibility,
+        }),
       });
 
       if (!response.ok) {
@@ -518,6 +530,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       setGitHubRepoExists(true);
       setGitHubRepoUrl(data.repoUrl || null);
+      setVisibility(targetVisibility);
     } finally {
       setSaving(false);
     }
@@ -533,6 +546,8 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         saving,
         gitHubRepoExists,
         gitHubRepoUrl,
+        visibility,
+        setVisibility,
         createCollection,
         updateCollection,
         deleteCollection,

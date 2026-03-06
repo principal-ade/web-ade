@@ -226,7 +226,7 @@ export function GitHubSyncModal({
                       fontFamily: theme.fonts.monospace,
                     }}
                   >
-                    web-ade-collections
+                    principal-ai-collections
                   </code>
                   {repoUrl && (
                     <a

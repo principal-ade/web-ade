@@ -4,7 +4,7 @@ import type {
   Collection,
 } from '@principal-ai/alexandria-collections';
 
-const RAW_BASE_URL = 'https://raw.githubusercontent.com/principal-ai/web-ade-collections/main/collections';
+const RAW_BASE_URL = 'https://raw.githubusercontent.com/principal-ai/principal-ai-collections/main/collections';
 
 interface CollectionFile {
   version: string;

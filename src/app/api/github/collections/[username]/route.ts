@@ -1,6 +1,6 @@
 /**
  * GET /api/github/collections/[username]
- * Fetches a user's public collections from their web-ade-collections repo.
+ * Fetches a user's public collections from their principal-ai-collections repo.
  * No authentication required since the repo is public.
  *
  * PUT /api/github/collections/[username]
@@ -15,8 +15,7 @@ import type {
   CollectionsPutResponse,
   CollectionsUser,
 } from '@/types/api';
-
-const REPO_NAME = 'web-ade-collections';
+import { PUBLIC_REPO_NAME } from '@/lib/collections/github-repo-manager';
 const COLLECTIONS_DIR = 'collections';
 
 interface CollectionFile {
@@ -63,7 +62,7 @@ export async function GET(
 
     // List files in collections directory
     const dirResponse = await fetch(
-      `https://api.github.com/repos/${username}/${REPO_NAME}/contents/${COLLECTIONS_DIR}`,
+      `https://api.github.com/repos/${username}/${PUBLIC_REPO_NAME}/contents/${COLLECTIONS_DIR}`,
       {
         headers: {
           Accept: 'application/vnd.github.v3+json',
@@ -103,7 +102,7 @@ export async function GET(
     // Fetch all collection files in parallel
     const collectionPromises = collectionFiles.map(async (file: { name: string }) => {
       const response = await fetch(
-        `https://raw.githubusercontent.com/${username}/${REPO_NAME}/main/${COLLECTIONS_DIR}/${file.name}`,
+        `https://raw.githubusercontent.com/${username}/${PUBLIC_REPO_NAME}/main/${COLLECTIONS_DIR}/${file.name}`,
         { headers: { Accept: 'application/json' } }
       );
 
@@ -134,7 +133,7 @@ export async function GET(
       },
       exists: true,
       collections,
-      repoUrl: `https://github.com/${username}/${REPO_NAME}`,
+      repoUrl: `https://github.com/${username}/${PUBLIC_REPO_NAME}`,
     };
     return NextResponse.json(response);
   } catch (error) {
@@ -185,7 +184,7 @@ export async function PUT(
 
       // Get current file SHA (if exists)
       const fileResponse = await fetch(
-        `https://api.github.com/repos/${username}/${REPO_NAME}/contents/${filename}`,
+        `https://api.github.com/repos/${username}/${PUBLIC_REPO_NAME}/contents/${filename}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -221,7 +220,7 @@ export async function PUT(
 
       // Update the file
       const updateResponse = await fetch(
-        `https://api.github.com/repos/${username}/${REPO_NAME}/contents/${filename}`,
+        `https://api.github.com/repos/${username}/${PUBLIC_REPO_NAME}/contents/${filename}`,
         {
           method: 'PUT',
           headers: {

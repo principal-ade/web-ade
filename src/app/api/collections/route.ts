@@ -4,8 +4,8 @@ import type {
   Collection,
 } from '@principal-ai/alexandria-collections';
 
-const GITHUB_API_URL = 'https://api.github.com/repos/principal-ai/web-ade-collections/contents/collections';
-const RAW_BASE_URL = 'https://raw.githubusercontent.com/principal-ai/web-ade-collections/main/collections';
+const GITHUB_API_URL = 'https://api.github.com/repos/principal-ai/principal-ai-collections/contents/collections';
+const RAW_BASE_URL = 'https://raw.githubusercontent.com/principal-ai/principal-ai-collections/main/collections';
 
 interface GitHubFileEntry {
   name: string;
