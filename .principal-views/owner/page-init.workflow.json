@@ -1,0 +1,53 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/owner/owner.otel.canvas",
+  "mode": "span-tree",
+  "spanPattern": "owner.page.init",
+  "name": "Page Initialization",
+  "description": "Owner page loads and initiates repository fetching",
+  "scenarios": [
+    {
+      "id": "page-load-success",
+      "description": "Page loads successfully and fetches owner repositories",
+      "priority": 1,
+      "template": {
+        "summary": "[Init] {{owner}} page loaded",
+        "events": {
+          "owner.page.init": "Owner page initialized: {{owner}} (project: {{project}})",
+          "owner.repos.load": "Loading repositories for {{owner}}",
+          "owner.repos.success": "Repositories loaded: {{repoCount}} repos",
+          "owner.state.repos.updated": "State updated with {{repoCount}} repositories",
+          "owner.panel.repos.render": "Rendered {{repoCount}} repositories",
+          "owner.repo.auto-select": "Auto-selected first repository: {{fullName}}"
+        }
+      }
+    },
+    {
+      "id": "page-load-with-project",
+      "description": "Page loads with pre-selected project from URL",
+      "priority": 2,
+      "template": {
+        "summary": "[Init] {{owner}} page loaded with project {{project}}",
+        "events": {
+          "owner.page.init": "Owner page initialized: {{owner}} (project: {{project}})",
+          "owner.repos.load": "Loading repositories for {{owner}}",
+          "owner.repos.success": "Repositories loaded: {{repoCount}} repos",
+          "owner.repo.preview": "Previewing repository: {{fullName}}"
+        }
+      }
+    },
+    {
+      "id": "repos-error",
+      "description": "Failed to load owner repositories (API error, rate limit)",
+      "priority": 3,
+      "template": {
+        "summary": "[Init] Failed to load repos for {{owner}}",
+        "events": {
+          "owner.page.init": "Owner page initialized: {{owner}}",
+          "owner.repos.load": "Loading repositories for {{owner}}",
+          "owner.repos.error": "Failed to load repositories: {{error.message}}"
+        }
+      }
+    }
+  ]
+}

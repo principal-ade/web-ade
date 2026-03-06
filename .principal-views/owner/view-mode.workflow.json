@@ -1,0 +1,37 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/owner/owner.otel.canvas",
+  "mode": "span-tree",
+  "spanPattern": "owner.view-mode.switch",
+  "name": "View Mode Switching",
+  "description": "User switches between Default and World layout modes",
+  "scenarios": [
+    {
+      "id": "switch-to-world",
+      "description": "User switches from Default to World mode",
+      "priority": 1,
+      "template": {
+        "summary": "[Mode] Switched to World view",
+        "events": {
+          "owner.view-mode.switch": "Switching view mode: {{fromMode}} -> {{toMode}}",
+          "owner.layout.world": "Activating World layout: {{panels}}",
+          "owner.panel.collection-map.render": "Rendering Collection Map with {{repoCount}} repos"
+        }
+      }
+    },
+    {
+      "id": "switch-to-default",
+      "description": "User switches from World to Default mode",
+      "priority": 2,
+      "template": {
+        "summary": "[Mode] Switched to Default view",
+        "events": {
+          "owner.view-mode.switch": "Switching view mode: {{fromMode}} -> {{toMode}}",
+          "owner.layout.default": "Activating Default layout: {{panels}}",
+          "owner.panel.quality.render": "Rendering Quality Panel with {{lensCount}} lenses",
+          "owner.panel.packages.render": "Rendering Packages Panel with {{packageCount}} packages"
+        }
+      }
+    }
+  ]
+}

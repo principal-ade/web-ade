@@ -7,11 +7,20 @@ import { LogOut, Home, FolderOpen, Calendar, User, LogIn } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+interface UserOrganization {
+  id: number;
+  login: string;
+  avatar_url: string;
+  description: string | null;
+}
+
 export function UserAvatarMenu() {
   const { theme } = useTheme();
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [loggedOutMenuOpen, setLoggedOutMenuOpen] = useState(false);
+  const [organizations, setOrganizations] = useState<UserOrganization[]>([]);
+  const [orgsLoading, setOrgsLoading] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const isHomePage = pathname === '/';
@@ -30,6 +39,28 @@ export function UserAvatarMenu() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [userMenuOpen, loggedOutMenuOpen]);
+
+  // Fetch organizations when menu opens
+  useEffect(() => {
+    if (!userMenuOpen || !isAuthenticated || organizations.length > 0) return;
+
+    const fetchOrganizations = async () => {
+      setOrgsLoading(true);
+      try {
+        const response = await fetch('/api/github/user/orgs');
+        if (response.ok) {
+          const data = await response.json();
+          setOrganizations(data.organizations || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch organizations:', error);
+      } finally {
+        setOrgsLoading(false);
+      }
+    };
+
+    fetchOrganizations();
+  }, [userMenuOpen, isAuthenticated, organizations.length]);
 
   if (isLoading) {
     return (
@@ -119,6 +150,18 @@ export function UserAvatarMenu() {
             borderColor: theme.colors.border,
           }}
         >
+          {/* User's profile */}
+          {user && (
+            <Link
+              href={`/${user.login}`}
+              className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
+              style={{ color: theme.colors.text }}
+              onClick={() => setUserMenuOpen(false)}
+            >
+              <User className="w-4 h-4" />
+              Your Profile
+            </Link>
+          )}
           {/* Home - hide when already on home page */}
           {!isHomePage && (
             <Link
@@ -141,6 +184,47 @@ export function UserAvatarMenu() {
             <FolderOpen className="w-4 h-4" />
             Worlds
           </Link>
+          {/* Organizations */}
+          {(organizations.length > 0 || orgsLoading) && (
+            <>
+              <div
+                className="my-1 h-px"
+                style={{ background: theme.colors.border }}
+              />
+              <div
+                className="px-3 py-1 text-xs font-medium uppercase tracking-wider"
+                style={{ color: theme.colors.textMuted }}
+              >
+                Organizations
+              </div>
+              {orgsLoading ? (
+                <div
+                  className="px-3 py-2 text-sm"
+                  style={{ color: theme.colors.textMuted }}
+                >
+                  Loading...
+                </div>
+              ) : (
+                organizations.map((org) => (
+                  <Link
+                    key={org.id}
+                    href={`/${org.login}`}
+                    className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
+                    style={{ color: theme.colors.text }}
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={org.avatar_url}
+                      alt={org.login}
+                      className="w-4 h-4 rounded"
+                    />
+                    {org.login}
+                  </Link>
+                ))
+              )}
+            </>
+          )}
           {/* Feed */}
           <Link
             href="/activity"

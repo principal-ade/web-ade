@@ -1,0 +1,52 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/owner/owner.otel.canvas",
+  "mode": "span-tree",
+  "spanPattern": "owner.repo.preview",
+  "name": "Repository Preview",
+  "description": "User clicks a repository to preview its structure",
+  "scenarios": [
+    {
+      "id": "preview-with-canvas",
+      "description": "Repository has architecture.canvas, auto-loads visual validation",
+      "priority": 1,
+      "template": {
+        "summary": "[Preview] {{fullName}} with architecture canvas",
+        "events": {
+          "owner.repo.preview": "Previewing repository: {{fullName}}",
+          "owner.file-tree.load": "Loading file tree for {{owner}}/{{repo}}",
+          "owner.canvas.check": "Checking for architecture.canvas in {{owner}}/{{repo}}",
+          "owner.file-tree.success": "File tree loaded: {{fileCount}} files",
+          "owner.state.file-tree.updated": "State updated with {{fileCount}} files",
+          "owner.canvas.found": "Canvas found at {{configPath}}",
+          "owner.panel.file-city.render": "Rendering File City with {{fileCount}} files",
+          "owner.panel.vv.render": "Rendering Visual Validation: {{configId}}"
+        }
+      }
+    },
+    {
+      "id": "preview-error",
+      "description": "Failed to load file tree (empty repo, API error)",
+      "priority": 2,
+      "template": {
+        "summary": "[Preview] Error loading {{fullName}}",
+        "events": {
+          "owner.repo.preview": "Previewing repository: {{fullName}}",
+          "owner.file-tree.load": "Loading file tree for {{owner}}/{{repo}}",
+          "owner.file-tree.error": "Failed to load file tree: {{error.message}}"
+        }
+      }
+    },
+    {
+      "id": "navigate-to-repo",
+      "description": "User double-clicks to navigate to full repository page",
+      "priority": 3,
+      "template": {
+        "summary": "[Navigate] Opening {{fullName}}",
+        "events": {
+          "owner.repo.navigate": "Navigating to repository: {{fullName}}"
+        }
+      }
+    }
+  ]
+}

@@ -5,12 +5,9 @@ import Image from "next/image";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useOwnerPageProvider } from "@/contexts/OwnerPageProvider";
-import { useAuth } from "@/contexts/AuthContext";
-import { useUserCollections } from "@/contexts/UserCollectionsContext";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import { UserAvatarMenu } from "@/components/UserAvatarMenu";
 import { Logo } from "@principal-ai/logo-component";
-import { iconMap } from "@/components/collections/CollectionModal";
 import { addRecentOwner, type OwnerInfo, OwnerRepositoriesPanel } from "@industry-theme/github-panels";
 import { panels as principalViewPanels } from "@industry-theme/principal-view-panels";
 import { panels as codeQualityPanels } from "@principal-ade/code-quality-panels";
@@ -28,16 +25,7 @@ import {
   PanelRightClose,
   PanelRightOpen,
   ArrowLeftRight,
-  Clock,
-  FolderOpen,
   GitFork,
-  User,
-  Library,
-  ArrowRight,
-  X,
-  Home,
-  Star,
-  Users,
   Compass,
   Shield,
   Package,
@@ -66,46 +54,6 @@ const worldLayout: PanelLayout = {
     panels: ['file-city', 'visual-validation'],
   },
 };
-
-interface LibraryRecentRepository {
-  type: 'repository';
-  id: number;
-  name: string;
-  full_name: string;
-  owner: {
-    login: string;
-    avatar_url: string;
-  };
-  visitedAt: number;
-}
-
-interface LibraryRecentOwner {
-  type: 'owner';
-  id: number;
-  login: string;
-  avatar_url: string;
-  visitedAt: number;
-}
-
-interface StarredRepo {
-  id: number;
-  name: string;
-  full_name: string;
-  owner: {
-    login: string;
-    avatar_url: string;
-  };
-  description: string | null;
-  stargazers_count: number;
-}
-
-interface FollowingUser {
-  id: number;
-  login: string;
-  avatar_url: string;
-  name: string | null;
-  bio: string | null;
-}
 
 // Save owner with full GitHub metadata
 async function saveRecentOwnerWithMetadata(owner: string) {
@@ -168,8 +116,6 @@ export interface OwnerPageContentProps {
 export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: OwnerPageContentProps) {
   const { theme } = useTheme();
   const { context, actions, events } = useOwnerPageProvider();
-  const { isAuthenticated, user } = useAuth();
-  const userCollections = useUserCollections();
   const [isMobile, setIsMobile] = useState(false);
   const [previewedRepo, setPreviewedRepo] = useState<string | null>(initialPreviewedRepo ?? null);
   const [canvasExists, setCanvasExists] = useState(false);
@@ -179,83 +125,12 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('default');
 
-  // Sidebar state
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<'recent' | 'collections' | 'following' | 'starred'>('recent');
-  const [recentRepos, setRecentRepos] = useState<LibraryRecentRepository[]>([]);
-  const [recentOwners, setRecentOwners] = useState<LibraryRecentOwner[]>([]);
-  const [starredRepos, setStarredRepos] = useState<StarredRepo[]>([]);
-  const [followingUsers, setFollowingUsers] = useState<FollowingUser[]>([]);
-
   const [layout, setLayout] = useState<PanelLayout>(defaultLayout);
 
   // Update layout when view mode changes
   useEffect(() => {
     setLayout(viewMode === 'world' ? worldLayout : defaultLayout);
   }, [viewMode]);
-
-  // Load recent items from library's localStorage format
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const loadRecentItems = () => {
-      try {
-        const storedRepos = localStorage.getItem('recent-repositories');
-        if (storedRepos) {
-          const repos: LibraryRecentRepository[] = JSON.parse(storedRepos);
-          setRecentRepos(repos);
-        }
-
-        const storedOwners = localStorage.getItem('recent-owners');
-        if (storedOwners) {
-          const owners: LibraryRecentOwner[] = JSON.parse(storedOwners);
-          setRecentOwners(owners);
-        }
-      } catch (err) {
-        console.error('Failed to load recent items:', err);
-      }
-    };
-
-    loadRecentItems();
-
-    // Listen for updates from the library
-    window.addEventListener('recent-items-updated', loadRecentItems);
-    return () => window.removeEventListener('recent-items-updated', loadRecentItems);
-  }, []);
-
-  // Fetch starred repos and following users when sidebar opens
-  useEffect(() => {
-    if (!sidebarOpen || !isAuthenticated) return;
-
-    const fetchUserData = async () => {
-      try {
-        const response = await fetch('/api/github/user/repos');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.starred) setStarredRepos(data.starred);
-          if (data.following) setFollowingUsers(data.following);
-        }
-      } catch (err) {
-        console.error('Failed to fetch user data:', err);
-      }
-    };
-
-    fetchUserData();
-  }, [sidebarOpen, isAuthenticated]);
-
-  const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    if (diffMins < 1) return 'just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
-  };
 
   // Notify parent when previewed repo changes
   const handlePreviewChange = useCallback((repo: string | null) => {
@@ -498,20 +373,13 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
             </Link>
             {/* Owner info */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="transition-opacity hover:opacity-80"
-                title="Open navigation"
-                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-              >
-                <Image
-                  src={`https://github.com/${owner}.png?size=64`}
-                  alt={owner}
-                  width={24}
-                  height={24}
-                  className="rounded-full"
-                />
-              </button>
+              <Image
+                src={`https://github.com/${owner}.png?size=64`}
+                alt={owner}
+                width={24}
+                height={24}
+                className="rounded-full"
+              />
               <a
                 href={`https://github.com/${owner}`}
                 target="_blank"
@@ -705,447 +573,6 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
 
         {/* Global Command Palette (Cmd+Shift+P) */}
         <GlobalCommandPalette events={events} />
-
-        {/* Sidebar Overlay */}
-        {sidebarOpen && (
-          <>
-            {/* Backdrop */}
-            <div
-              style={{
-                position: 'fixed',
-                inset: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                zIndex: 50,
-              }}
-              onClick={() => setSidebarOpen(false)}
-            />
-
-            {/* Sidebar */}
-            <div
-              style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                bottom: 0,
-                width: '400px',
-                // Layer surface color on solid black to ensure opacity regardless of theme
-                background: `linear-gradient(${theme.colors.surface}, ${theme.colors.surface}), #000`,
-                borderRight: `1px solid ${theme.colors.border}`,
-                zIndex: 51,
-                display: 'flex',
-                flexDirection: 'column',
-                animation: 'slideIn 0.2s ease-out',
-              }}
-            >
-              {/* Sidebar Header */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
-                  paddingLeft: '16px',
-                  paddingRight: '16px',
-                  paddingBottom: '0.5rem',
-                  borderBottom: `1px solid ${theme.colors.border}`,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {user?.avatar_url && (
-                    <Image
-                      src={user.avatar_url}
-                      alt={user.name || user.login}
-                      width={32}
-                      height={32}
-                      style={{
-                        borderRadius: '50%',
-                        border: `2px solid ${theme.colors.border}`,
-                      }}
-                    />
-                  )}
-                  <div>
-                    <div style={{ fontSize: `${theme.fontSizes[2]}px`, fontWeight: theme.fontWeights.semibold, color: theme.colors.text }}>
-                      {user?.name || user?.login || 'User'}
-                    </div>
-                    {user?.login && user?.name && (
-                      <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted }}>
-                        @{user.login}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSidebarOpen(false)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '4px',
-                    color: theme.colors.textMuted,
-                    borderRadius: '4px',
-                  }}
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              {/* Home Link */}
-              <Link
-                href="/"
-                onClick={() => setSidebarOpen(false)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '12px 16px',
-                  color: theme.colors.text,
-                  textDecoration: 'none',
-                  borderBottom: `1px solid ${theme.colors.border}`,
-                }}
-              >
-                <Home size={16} />
-                <span style={{ fontSize: `${theme.fontSizes[1]}px` }}>Home</span>
-              </Link>
-
-              {/* Tab Header */}
-              <div style={{ display: 'flex', gap: '4px', padding: '16px 16px 12px', flexWrap: 'wrap' }}>
-                {(['recent', 'collections', 'following', 'starred'] as const).map((tab) => {
-                  const tabConfig = {
-                    recent: { icon: Clock, label: 'Recent' },
-                    collections: { icon: FolderOpen, label: 'Collections' },
-                    following: { icon: Users, label: 'Following' },
-                    starred: { icon: Star, label: 'Starred' },
-                  };
-                  const { icon: Icon, label } = tabConfig[tab];
-                  return (
-                    <button
-                      key={tab}
-                      onClick={() => setSidebarTab(tab)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '8px 12px',
-                        fontSize: `${theme.fontSizes[1]}px`,
-                        fontWeight: theme.fontWeights.semibold,
-                        color: sidebarTab === tab ? theme.colors.text : theme.colors.textMuted,
-                        backgroundColor: sidebarTab === tab ? theme.colors.surface : 'transparent',
-                        border: sidebarTab === tab ? `1px solid ${theme.colors.border}` : '1px solid transparent',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontFamily: theme.fonts.body,
-                      }}
-                    >
-                      <Icon size={14} />
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Tab Content */}
-              <div style={{ flex: 1, overflowY: 'auto', paddingTop: '0', paddingLeft: '16px', paddingRight: '16px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
-                {sidebarTab === 'recent' && (
-                  <>
-                    {recentRepos.length > 0 && (
-                      <div style={{ marginBottom: '20px' }}>
-                        <div
-                          style={{
-                            fontSize: `${theme.fontSizes[0]}px`,
-                            fontWeight: theme.fontWeights.medium,
-                            color: theme.colors.textMuted,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px',
-                            marginBottom: '8px',
-                          }}
-                        >
-                          Repositories
-                        </div>
-                        {recentRepos.slice(0, 5).map((repo) => (
-                          <Link
-                            key={repo.full_name}
-                            href={`/${repo.full_name}`}
-                            onClick={() => setSidebarOpen(false)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              padding: '8px 12px',
-                              borderRadius: '4px',
-                              textDecoration: 'none',
-                              color: theme.colors.text,
-                              marginBottom: '2px',
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                          >
-                            <Image
-                              src={repo.owner.avatar_url}
-                              alt={repo.owner.login}
-                              width={28}
-                              height={28}
-                              style={{ borderRadius: '4px' }}
-                            />
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {repo.full_name}
-                              </div>
-                              <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <GitFork size={10} />
-                                {formatTimeAgo(new Date(repo.visitedAt).toISOString())}
-                              </div>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-
-                    {recentOwners.length > 0 && (
-                      <div>
-                        <div
-                          style={{
-                            fontSize: `${theme.fontSizes[0]}px`,
-                            fontWeight: theme.fontWeights.medium,
-                            color: theme.colors.textMuted,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px',
-                            marginBottom: '8px',
-                          }}
-                        >
-                          Owners
-                        </div>
-                        {recentOwners.slice(0, 5).map((recentOwner) => (
-                          <Link
-                            key={recentOwner.login}
-                            href={`/${recentOwner.login}`}
-                            onClick={() => setSidebarOpen(false)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              padding: '8px 12px',
-                              borderRadius: '4px',
-                              textDecoration: 'none',
-                              color: theme.colors.text,
-                              marginBottom: '2px',
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                          >
-                            <Image
-                              src={recentOwner.avatar_url}
-                              alt={recentOwner.login}
-                              width={28}
-                              height={28}
-                              style={{ borderRadius: '4px' }}
-                            />
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: `${theme.fontSizes[1]}px` }}>{recentOwner.login}</div>
-                              <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <User size={10} />
-                                {formatTimeAgo(new Date(recentOwner.visitedAt).toISOString())}
-                              </div>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-
-                    {recentRepos.length === 0 && recentOwners.length === 0 && (
-                      <div style={{ textAlign: 'center', padding: '32px 16px', color: theme.colors.textMuted }}>
-                        <Clock size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
-                        <p style={{ margin: 0, fontSize: `${theme.fontSizes[1]}px` }}>No recent activity</p>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {sidebarTab === 'collections' && (
-                  <>
-                    {userCollections.collections.length > 0 ? (
-                      userCollections.collections.map((collection) => {
-                        const IconComponent = collection.icon ? iconMap[collection.icon] : null;
-                        const repoCount = userCollections.getCollectionRepositories(collection.id).length;
-                        return (
-                          <Link
-                            key={collection.id}
-                            href={`/worlds?collection=${collection.id}`}
-                            onClick={() => setSidebarOpen(false)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              padding: '8px 12px',
-                              borderRadius: '4px',
-                              textDecoration: 'none',
-                              color: theme.colors.text,
-                              marginBottom: '2px',
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                          >
-                            <div
-                              style={{
-                                width: 28,
-                                height: 28,
-                                borderRadius: '4px',
-                                backgroundColor: theme.colors.surface,
-                                border: `1px solid ${theme.colors.border}`,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
-                            >
-                              {IconComponent ? (
-                                <IconComponent size={14} style={{ color: theme.colors.textMuted }} />
-                              ) : (
-                                <FolderOpen size={14} style={{ color: theme.colors.textMuted }} />
-                              )}
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {collection.name}
-                              </div>
-                              <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted }}>
-                                {repoCount} {repoCount === 1 ? 'repo' : 'repos'}
-                              </div>
-                            </div>
-                          </Link>
-                        );
-                      })
-                    ) : (
-                      <div style={{ textAlign: 'center', padding: '32px 16px', color: theme.colors.textMuted }}>
-                        <Library size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
-                        <p style={{ margin: 0, fontSize: `${theme.fontSizes[1]}px`, marginBottom: '16px' }}>No collections yet</p>
-                        <Link
-                          href="/worlds"
-                          onClick={() => setSidebarOpen(false)}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '8px 16px',
-                            fontSize: `${theme.fontSizes[1]}px`,
-                            fontWeight: theme.fontWeights.semibold,
-                            color: theme.colors.background,
-                            backgroundColor: theme.colors.text,
-                            borderRadius: '6px',
-                            textDecoration: 'none',
-                          }}
-                        >
-                          Create Collection
-                          <ArrowRight size={14} />
-                        </Link>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {sidebarTab === 'following' && (
-                  <>
-                    {followingUsers.length > 0 ? (
-                      followingUsers.map((followedUser) => (
-                        <Link
-                          key={followedUser.id}
-                          href={`/${followedUser.login}`}
-                          onClick={() => setSidebarOpen(false)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '8px 12px',
-                            borderRadius: '4px',
-                            textDecoration: 'none',
-                            color: theme.colors.text,
-                            marginBottom: '2px',
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                        >
-                          <Image
-                            src={followedUser.avatar_url}
-                            alt={followedUser.login}
-                            width={28}
-                            height={28}
-                            style={{ borderRadius: '50%' }}
-                          />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {followedUser.name || followedUser.login}
-                            </div>
-                            <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted }}>
-                              @{followedUser.login}
-                            </div>
-                          </div>
-                        </Link>
-                      ))
-                    ) : (
-                      <div style={{ textAlign: 'center', padding: '32px 16px', color: theme.colors.textMuted }}>
-                        <Users size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
-                        <p style={{ margin: 0, fontSize: `${theme.fontSizes[1]}px` }}>Not following anyone yet</p>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {sidebarTab === 'starred' && (
-                  <>
-                    {starredRepos.length > 0 ? (
-                      starredRepos.map((repo) => (
-                        <Link
-                          key={repo.id}
-                          href={`/${repo.full_name}`}
-                          onClick={() => setSidebarOpen(false)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '8px 12px',
-                            borderRadius: '4px',
-                            textDecoration: 'none',
-                            color: theme.colors.text,
-                            marginBottom: '2px',
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                        >
-                          <Image
-                            src={repo.owner.avatar_url}
-                            alt={repo.owner.login}
-                            width={28}
-                            height={28}
-                            style={{ borderRadius: '4px' }}
-                          />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: `${theme.fontSizes[1]}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {repo.full_name}
-                            </div>
-                            <div style={{ fontSize: `${theme.fontSizes[0]}px`, color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <Star size={10} />
-                              {repo.stargazers_count.toLocaleString()}
-                            </div>
-                          </div>
-                        </Link>
-                      ))
-                    ) : (
-                      <div style={{ textAlign: 'center', padding: '32px 16px', color: theme.colors.textMuted }}>
-                        <Star size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
-                        <p style={{ margin: 0, fontSize: `${theme.fontSizes[1]}px` }}>No starred repos yet</p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-
-            <style>{`
-              @keyframes slideIn {
-                from { transform: translateX(-100%); }
-                to { transform: translateX(0); }
-              }
-            `}</style>
-          </>
-        )}
     </div>
   );
 }
