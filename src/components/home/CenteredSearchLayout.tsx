@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Search, X } from 'lucide-react';
+import { Search, X, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -72,19 +72,46 @@ export function CenteredSearchLayout() {
   const { theme } = useTheme();
   const { isAuthenticated } = useAuth();
   const router = useRouter();
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const {
     searchQuery,
     setSearchQuery,
   } = useHomepageState();
 
+  // Dropdown visibility state
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [hoveredIndex, setHoveredIndex] = useState<number>(-1);
+
   // Handle Enter key to navigate to GitHub URLs
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
+      // If dropdown is showing and an item is hovered, navigate to it
+      const hoveredRepo = recentRepos[hoveredIndex];
+      if (showDropdown && hoveredIndex >= 0 && hoveredRepo) {
+        router.push(`/${hoveredRepo.owner}/${hoveredRepo.repo}`);
+        setShowDropdown(false);
+        return;
+      }
       const parsed = parseGitHubUrl(searchQuery);
       if (parsed && parsed.repo) {
         router.push(`/${parsed.owner}/${parsed.repo}`);
+        setShowDropdown(false);
       }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (showDropdown && recentRepos.length > 0) {
+        setHoveredIndex((prev) => Math.min(prev + 1, recentRepos.length - 1));
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (showDropdown) {
+        setHoveredIndex((prev) => Math.max(prev - 1, -1));
+      }
+    } else if (e.key === 'Escape') {
+      setShowDropdown(false);
+      setHoveredIndex(-1);
     }
   };
 
@@ -96,27 +123,34 @@ export function CenteredSearchLayout() {
 
   // Load recent repos from localStorage
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(RECENT_REPOSITORIES_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Validate and filter to ensure correct format
-        const validated = Array.isArray(parsed)
-          ? parsed.filter(
-              (item): item is RecentRepository =>
-                item &&
-                typeof item === 'object' &&
-                typeof item.owner === 'string' &&
-                typeof item.repo === 'string' &&
-                item.owner.length > 0 &&
-                item.repo.length > 0
-            )
-          : [];
-        setRecentRepos(validated);
+    const loadRecent = () => {
+      try {
+        const saved = localStorage.getItem(RECENT_REPOSITORIES_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const validated = Array.isArray(parsed)
+            ? parsed.filter(
+                (item): item is RecentRepository =>
+                  item &&
+                  typeof item === 'object' &&
+                  typeof item.owner === 'string' &&
+                  typeof item.repo === 'string' &&
+                  item.owner.length > 0 &&
+                  item.repo.length > 0
+              )
+            : [];
+          setRecentRepos(validated);
+        }
+      } catch {
+        // Ignore parse errors
       }
-    } catch {
-      // Ignore parse errors
-    }
+    };
+
+    loadRecent();
+
+    // Listen for updates
+    window.addEventListener('recent-items-updated', loadRecent);
+    return () => window.removeEventListener('recent-items-updated', loadRecent);
   }, []);
 
   // Fetch user repos when authenticated (for prioritizing in search)
@@ -137,8 +171,23 @@ export function CenteredSearchLayout() {
       });
   }, [isAuthenticated]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+        setHoveredIndex(-1);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Remove a repo from the recent list
-  const removeRecentRepo = (owner: string, repo: string) => {
+  const removeRecentRepo = (e: React.MouseEvent, owner: string, repo: string) => {
+    e.preventDefault();
+    e.stopPropagation();
     const updated = recentRepos.filter(
       (r) => !(r.owner === owner && r.repo === repo)
     );
@@ -150,9 +199,7 @@ export function CenteredSearchLayout() {
     }
   };
 
-  const [hoveredRepo, setHoveredRepo] = useState<string | null>(null);
-
-  const showRecents = !searchQuery.trim() && recentRepos.length > 0;
+  const shouldShowDropdown = showDropdown && !searchQuery.trim() && recentRepos.length > 0;
 
   return (
     <div
@@ -188,8 +235,9 @@ export function CenteredSearchLayout() {
           <span style={{ color: theme.colors.primary }}>AI</span>
         </h1>
 
-        {/* Large Centered Search Bar */}
+        {/* Large Centered Search Bar with Dropdown */}
         <div
+          ref={searchContainerRef}
           style={{
             position: 'relative',
             width: '100%',
@@ -205,35 +253,159 @@ export function CenteredSearchLayout() {
               top: '50%',
               transform: 'translateY(-50%)',
               color: theme.colors.textMuted,
+              zIndex: 1,
             }}
           />
           <input
+            ref={inputRef}
             type="text"
             placeholder="Search GitHub or paste a link"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}
+            onFocus={(e) => {
+              setShowDropdown(true);
+              e.currentTarget.style.borderColor = theme.colors.primary;
+              e.currentTarget.style.boxShadow = `0 0 0 4px ${theme.colors.primary}20`;
+              if (shouldShowDropdown || (!searchQuery.trim() && recentRepos.length > 0)) {
+                e.currentTarget.style.borderRadius = '24px 24px 0 0';
+              }
+            }}
+            onBlur={(e) => {
+              // Delay to allow click events on dropdown items
+              setTimeout(() => {
+                e.target.style.borderColor = theme.colors.border;
+                e.target.style.boxShadow = 'none';
+                e.target.style.borderRadius = '24px';
+              }, 150);
+            }}
             style={{
               width: '100%',
               padding: '16px 20px 16px 52px',
               fontSize: '18px',
               fontFamily: theme.fonts.body,
-              borderRadius: '24px',
+              borderRadius: shouldShowDropdown ? '24px 24px 0 0' : '24px',
               border: `2px solid ${theme.colors.border}`,
               background: theme.colors.surface,
               color: theme.colors.text,
               outline: 'none',
               transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
             }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = theme.colors.primary;
-              e.currentTarget.style.boxShadow = `0 0 0 4px ${theme.colors.primary}20`;
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = theme.colors.border;
-              e.currentTarget.style.boxShadow = 'none';
-            }}
           />
+
+          {/* Recent Repositories Dropdown */}
+          {shouldShowDropdown && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                background: theme.colors.surface,
+                border: `2px solid ${theme.colors.primary}`,
+                borderTop: 'none',
+                borderRadius: '0 0 24px 24px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                zIndex: 100,
+                maxHeight: '400px',
+                overflow: 'auto',
+              }}
+            >
+              {/* Header */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 20px 8px',
+                  color: theme.colors.textMuted,
+                  fontSize: '12px',
+                  fontWeight: theme.fontWeights.medium,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                <Clock size={14} />
+                Recent
+              </div>
+
+              {/* Recent Items */}
+              {recentRepos.slice(0, 8).map((repo, index) => {
+                const repoKey = `${repo.owner}/${repo.repo}`;
+                const isHovered = hoveredIndex === index;
+                return (
+                  <Link
+                    key={repoKey}
+                    href={`/${repo.owner}/${repo.repo}`}
+                    onClick={() => setShowDropdown(false)}
+                    onMouseEnter={() => setHoveredIndex(index)}
+                    onMouseLeave={() => setHoveredIndex(-1)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '10px 20px',
+                      textDecoration: 'none',
+                      backgroundColor: isHovered ? `${theme.colors.border}40` : 'transparent',
+                      transition: 'background-color 0.1s ease',
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`https://github.com/${repo.owner}.png?size=32`}
+                      alt={repo.owner}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span
+                        style={{
+                          fontSize: '14px',
+                          color: theme.colors.text,
+                          fontFamily: theme.fonts.body,
+                        }}
+                      >
+                        {repo.owner}
+                        <span style={{ color: theme.colors.textMuted }}>/</span>
+                        <span style={{ fontWeight: theme.fontWeights.medium }}>{repo.repo}</span>
+                      </span>
+                    </div>
+                    <button
+                      onClick={(e) => removeRecentRepo(e, repo.owner, repo.repo)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '24px',
+                        height: '24px',
+                        padding: 0,
+                        border: 'none',
+                        borderRadius: '50%',
+                        background: 'transparent',
+                        color: theme.colors.textMuted,
+                        cursor: 'pointer',
+                        opacity: isHovered ? 1 : 0,
+                        transition: 'opacity 0.15s ease, background-color 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = theme.colors.border;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                      title="Remove from recent"
+                    >
+                      <X size={14} />
+                    </button>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -252,110 +424,6 @@ export function CenteredSearchLayout() {
             margin: '0 auto',
           }}
         >
-          {/* Recent Repositories - show when no search query */}
-          {showRecents && (
-            <div
-              style={{
-                display: 'flex',
-                gap: '16px',
-                justifyContent: 'center',
-                marginTop: '32px',
-              }}
-            >
-              {recentRepos.slice(0, 6).map((repo) => {
-                const repoKey = `${repo.owner}/${repo.repo}`;
-                const isHovered = hoveredRepo === repoKey;
-                return (
-                  <div
-                    key={repoKey}
-                    style={{
-                      position: 'relative',
-                      width: '100px',
-                    }}
-                    onMouseEnter={() => setHoveredRepo(repoKey)}
-                    onMouseLeave={() => setHoveredRepo(null)}
-                  >
-                    <Link
-                      href={`/${repo.owner}/${repo.repo}`}
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        padding: '12px',
-                        borderRadius: '12px',
-                        textDecoration: 'none',
-                        transition: 'all 0.15s ease',
-                        width: '100%',
-                        backgroundColor: isHovered ? theme.colors.surface : 'transparent',
-                      }}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={`https://github.com/${repo.owner}.png?size=64`}
-                        alt={repo.owner}
-                        style={{
-                          width: 48,
-                          height: 48,
-                          borderRadius: '50%',
-                        }}
-                      />
-                      <span
-                        style={{
-                          fontSize: '14px',
-                          color: theme.colors.text,
-                          fontFamily: theme.fonts.body,
-                          textAlign: 'center',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          width: '100%',
-                        }}
-                      >
-                        {repo.repo}
-                      </span>
-                    </Link>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        removeRecentRepo(repo.owner, repo.repo);
-                      }}
-                      style={{
-                        position: 'absolute',
-                        top: '4px',
-                        right: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '20px',
-                        height: '20px',
-                        padding: 0,
-                        border: 'none',
-                        borderRadius: '50%',
-                        background: theme.colors.surface,
-                        color: theme.colors.textMuted,
-                        cursor: 'pointer',
-                        opacity: isHovered ? 1 : 0,
-                        transition: 'opacity 0.15s ease, color 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = theme.colors.text;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = theme.colors.textMuted;
-                      }}
-                      title="Remove from recent"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
           {/* Search Results */}
           {searchQuery.trim() && (
             <div style={{ marginTop: '32px' }}>
