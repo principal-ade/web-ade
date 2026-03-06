@@ -1454,17 +1454,17 @@ function EditorLayoutContent({
           }
 
           if (payload.openMode === 'editor') {
-            // Open canvas editor for canvas editing
-            console.log('[EditorLayout] Switching to canvas-editor');
+            // Open canvas editor for canvas editing (no workflow)
+            console.log('[EditorLayout] Switching to canvas-editor (no workflow)');
             setSelectedWorkflowData(null); // Clear workflow when opening canvas editor
             setLayout((prev) => ({
               ...prev,
               middle: 'canvas-editor',
             }));
           } else if (payload.openMode === 'detail' && payload.workflow) {
-            // Store workflow data and open workflow scenarios panel
-            console.log('[EditorLayout] Switching to workflow-scenarios with workflow:', payload.workflow);
-            // Get workflow path from workflowFileInfo (the file info for the workflow.json file)
+            // Store workflow data and open canvas editor with workflow integration (v0.12.1+)
+            // CanvasEditorPanel now shows ScenariosList side panel when workflowTemplate is provided
+            console.log('[EditorLayout] Switching to canvas-editor with workflow:', payload.workflow);
             const workflowPath = payload.workflowFileInfo?.path;
             console.log('[EditorLayout] Workflow path extracted:', workflowPath);
             setSelectedWorkflowData({
@@ -1475,7 +1475,7 @@ function EditorLayoutContent({
             });
             setLayout((prev) => ({
               ...prev,
-              middle: 'workflow-scenarios',
+              middle: 'canvas-editor', // Use canvas-editor with workflow props instead of workflow-scenarios
             }));
           }
         }
@@ -1853,6 +1853,12 @@ function EditorLayoutContent({
               canvasPath: selectedCanvasData.canvasPath,
               canvasName: selectedCanvasData.canvasName,
               canvasFileInfo: selectedCanvasData.canvasFileInfo,
+            })}
+            {...(selectedWorkflowData && {
+              workflowTemplate: selectedWorkflowData.workflow,
+              selectedWorkflowId: selectedWorkflowData.workflowId,
+              workflowPath: selectedWorkflowData.workflowPath,
+              workflowFileInfo: selectedWorkflowData.workflowFileInfo,
             })}
           />
         </div>
