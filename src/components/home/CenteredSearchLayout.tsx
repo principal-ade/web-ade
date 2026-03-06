@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHomepageState } from '@/hooks/useHomepageState';
 import { GitHubSearchResults } from './GitHubSearchResults';
+import type { GitHubRepository } from '@industry-theme/github-panels';
 
 /**
  * Parse a GitHub URL and extract owner/repo
@@ -45,12 +46,6 @@ function parseGitHubUrl(input: string): { owner: string; repo: string } | null {
 }
 
 const RECENT_REPOSITORIES_KEY = 'recent-repositories';
-
-interface RecentRepository {
-  owner: string;
-  repo: string;
-  visitedAt: string;
-}
 
 interface UserGitHubRepo {
   id: number;
@@ -90,7 +85,7 @@ export function CenteredSearchLayout() {
       // If dropdown is showing and an item is hovered, navigate to it
       const hoveredRepo = recentRepos[hoveredIndex];
       if (showDropdown && hoveredIndex >= 0 && hoveredRepo) {
-        router.push(`/${hoveredRepo.owner}/${hoveredRepo.repo}`);
+        router.push(`/${hoveredRepo.full_name}`);
         setShowDropdown(false);
         return;
       }
@@ -115,8 +110,8 @@ export function CenteredSearchLayout() {
     }
   };
 
-  // Recent repositories
-  const [recentRepos, setRecentRepos] = useState<RecentRepository[]>([]);
+  // Recent repositories (stored as GitHubRepository objects)
+  const [recentRepos, setRecentRepos] = useState<GitHubRepository[]>([]);
 
   // User's GitHub repos (for prioritizing in search)
   const [userRepos, setUserRepos] = useState<UserGitHubRepo[]>([]);
@@ -128,15 +123,14 @@ export function CenteredSearchLayout() {
         const saved = localStorage.getItem(RECENT_REPOSITORIES_KEY);
         if (saved) {
           const parsed = JSON.parse(saved);
+          // GitHubRepository has: full_name, owner.login, name, etc.
           const validated = Array.isArray(parsed)
             ? parsed.filter(
-                (item): item is RecentRepository =>
+                (item): item is GitHubRepository =>
                   item &&
                   typeof item === 'object' &&
-                  typeof item.owner === 'string' &&
-                  typeof item.repo === 'string' &&
-                  item.owner.length > 0 &&
-                  item.repo.length > 0
+                  typeof item.full_name === 'string' &&
+                  item.full_name.includes('/')
               )
             : [];
           setRecentRepos(validated);
@@ -185,12 +179,10 @@ export function CenteredSearchLayout() {
   }, []);
 
   // Remove a repo from the recent list
-  const removeRecentRepo = (e: React.MouseEvent, owner: string, repo: string) => {
+  const removeRecentRepo = (e: React.MouseEvent, fullName: string) => {
     e.preventDefault();
     e.stopPropagation();
-    const updated = recentRepos.filter(
-      (r) => !(r.owner === owner && r.repo === repo)
-    );
+    const updated = recentRepos.filter((r) => r.full_name !== fullName);
     setRecentRepos(updated);
     try {
       localStorage.setItem(RECENT_REPOSITORIES_KEY, JSON.stringify(updated));
@@ -331,12 +323,11 @@ export function CenteredSearchLayout() {
 
               {/* Recent Items */}
               {recentRepos.slice(0, 8).map((repo, index) => {
-                const repoKey = `${repo.owner}/${repo.repo}`;
                 const isHovered = hoveredIndex === index;
                 return (
                   <Link
-                    key={repoKey}
-                    href={`/${repo.owner}/${repo.repo}`}
+                    key={repo.full_name}
+                    href={`/${repo.full_name}`}
                     onClick={() => setShowDropdown(false)}
                     onMouseEnter={() => setHoveredIndex(index)}
                     onMouseLeave={() => setHoveredIndex(-1)}
@@ -352,8 +343,8 @@ export function CenteredSearchLayout() {
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={`https://github.com/${repo.owner}.png?size=32`}
-                      alt={repo.owner}
+                      src={repo.owner.avatar_url || `https://github.com/${repo.owner.login}.png?size=32`}
+                      alt={repo.owner.login}
                       style={{
                         width: 24,
                         height: 24,
@@ -369,13 +360,13 @@ export function CenteredSearchLayout() {
                           fontFamily: theme.fonts.body,
                         }}
                       >
-                        {repo.owner}
+                        {repo.owner.login}
                         <span style={{ color: theme.colors.textMuted }}>/</span>
-                        <span style={{ fontWeight: theme.fontWeights.medium }}>{repo.repo}</span>
+                        <span style={{ fontWeight: theme.fontWeights.medium }}>{repo.name}</span>
                       </span>
                     </div>
                     <button
-                      onClick={(e) => removeRecentRepo(e, repo.owner, repo.repo)}
+                      onClick={(e) => removeRecentRepo(e, repo.full_name)}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
