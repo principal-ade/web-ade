@@ -368,7 +368,7 @@ function SharedCollectionsWrapper() {
     const updatedCollections = [...collections, newCollection];
     await saveToGitHub(updatedCollections, memberships);
     setSelectedCollectionId(newCollection.id);
-  }, [collections, memberships, saveToGitHub]);
+  }, [collections, memberships, saveToGitHub, username]);
 
   // Handle update collection
   const handleUpdateCollection = useCallback(async (name: string, description: string, icon: string) => {

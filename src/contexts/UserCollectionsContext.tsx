@@ -279,7 +279,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         return newCollection;
       });
     },
-    [gitHubRepoExists, gitHubRepoUrl, saveToGitHub]
+    [gitHubRepoExists, gitHubRepoUrl, saveToGitHub, user?.login]
   );
 
   // Update a collection
