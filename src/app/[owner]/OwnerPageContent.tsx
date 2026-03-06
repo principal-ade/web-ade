@@ -8,7 +8,7 @@ import { useOwnerPageProvider } from "@/contexts/OwnerPageProvider";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import { UserAvatarMenu } from "@/components/UserAvatarMenu";
 import { Logo } from "@principal-ai/logo-component";
-import { addRecentOwner, type OwnerInfo, OwnerRepositoriesPanel } from "@industry-theme/github-panels";
+import { addRecentOwner, type OwnerInfo, OwnerRepositoriesPanel, OrgProfilePanel } from "@industry-theme/github-panels";
 import { panels as principalViewPanels } from "@industry-theme/principal-view-panels";
 import { panels as codeQualityPanels } from "@principal-ade/code-quality-panels";
 import { CodeCityPanel } from "@industry-theme/file-city-panel";
@@ -31,11 +31,12 @@ import {
   Package,
   Map,
   Settings,
+  User,
 } from 'lucide-react';
 
 // Static layout configurations (outside component to avoid recreation)
 const defaultLayout: PanelLayout = {
-  left: 'owner-repositories',
+  left: 'owner-profile',
   middle: {
     type: 'tabs',
     panels: ['file-city', 'visual-validation'],
@@ -47,7 +48,7 @@ const defaultLayout: PanelLayout = {
 };
 
 const worldLayout: PanelLayout = {
-  left: 'owner-repositories',
+  left: 'owner-profile',
   middle: 'collection-map',
   right: {
     type: 'tabs',
@@ -99,6 +100,7 @@ async function saveRecentOwnerWithMetadata(owner: string) {
 
 // Static imports for all panels (for type safety)
 const OwnerRepositoriesPanelLoader = OwnerRepositoriesPanel;
+const OrgProfilePanelLoader = OrgProfilePanel;
 const PrincipalViewPanelLoader = principalViewPanels[0]!.component;
 const CodeQualityPanelLoader = codeQualityPanels[0]!.component;
 const FileCityPanelLoader = CodeCityPanel;
@@ -272,6 +274,20 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
   }, [events, actions, checkForCanvas, handlePreviewChange]);
 
   const panels = [
+    {
+      id: 'owner-profile',
+      label: 'Profile',
+      icon: <User size={16} />,
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <OrgProfilePanelLoader
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        </div>
+      ),
+    },
     {
       id: 'owner-repositories',
       label: 'Repositories',

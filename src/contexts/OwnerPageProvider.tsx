@@ -51,7 +51,59 @@ import type {
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import type {
   OwnerRepositoriesSliceData,
+  GitHubRepository,
 } from '@industry-theme/github-panels';
+
+// Extended owner info type that includes all fields from API response
+interface ExtendedOwnerInfo {
+  login: string;
+  id: number;
+  avatar_url: string;
+  name: string | null;
+  bio: string | null;
+  type: 'User' | 'Organization';
+  public_repos: number;
+  followers: number;
+  following: number;
+  blog: string | null;
+  location: string | null;
+  email: string | null;
+  twitter_username: string | null;
+  html_url: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Local OrgProfileSlice type that matches what OrgProfilePanel expects
+interface OrgProfileSlice {
+  org: {
+    login: string;
+    id: number;
+    avatar_url: string;
+    name: string | null;
+    description: string | null;
+    company: string | null;
+    blog: string | null;
+    location: string | null;
+    email: string | null;
+    twitter_username: string | null;
+    is_verified: boolean;
+    has_organization_projects: boolean;
+    has_repository_projects: boolean;
+    public_repos: number;
+    public_gists: number;
+    followers: number;
+    following: number;
+    html_url: string;
+    created_at: string;
+    updated_at: string;
+    type: 'Organization';
+  } | null;
+  collections: Collection[];
+  repositories: GitHubRepository[];
+  loading: boolean;
+  error?: string;
+}
 
 // Host-provided tools
 const hostTools: PanelTool[] = [
@@ -122,6 +174,7 @@ const hostTools: PanelTool[] = [
 export interface OwnerPageContextType {
   'owner-repositories'?: DataSlice<OwnerRepositoriesSliceData>;
   ownerRepositories: DataSlice<OwnerRepositoriesSliceData>; // Required - expected by OwnerRepositoriesPanel
+  orgProfile: DataSlice<OrgProfileSlice>; // Required - expected by OrgProfilePanel
   fileTree: DataSlice<FileTree>;
   fileCityColorModes: DataSlice<FileCityColorModesSliceData>;
   quality?: DataSlice<QualitySliceData>;
@@ -212,6 +265,7 @@ export function OwnerPageProvider({
     repositories: [],
     isAuthenticated: false,
   });
+  const [extendedOwnerInfo, setExtendedOwnerInfo] = useState<ExtendedOwnerInfo | null>(null);
   const [ownerReposLoading, setOwnerReposLoading] = useState(false);
   const [currentOwner, setCurrentOwner] = useState<string | null>(initialOwner || null);
 
@@ -253,6 +307,47 @@ export function OwnerPageProvider({
       refresh: async () => { /* no-op */ },
     }),
     [ownerRepos, ownerReposLoading]
+  );
+
+  // Explicit slice: orgProfile (required - expected by OrgProfilePanel)
+  const orgProfileSlice = useMemo<DataSlice<OrgProfileSlice>>(
+    () => ({
+      scope: 'global' as const,
+      name: 'orgProfile',
+      data: {
+        org: extendedOwnerInfo ? {
+          login: extendedOwnerInfo.login,
+          id: extendedOwnerInfo.id,
+          avatar_url: extendedOwnerInfo.avatar_url,
+          name: extendedOwnerInfo.name || null,
+          description: extendedOwnerInfo.bio || null,
+          company: null,
+          blog: extendedOwnerInfo.blog || null,
+          location: extendedOwnerInfo.location || null,
+          email: extendedOwnerInfo.email || null,
+          twitter_username: extendedOwnerInfo.twitter_username || null,
+          is_verified: false,
+          has_organization_projects: true,
+          has_repository_projects: true,
+          public_repos: extendedOwnerInfo.public_repos || 0,
+          public_gists: 0,
+          followers: extendedOwnerInfo.followers || 0,
+          following: extendedOwnerInfo.following || 0,
+          html_url: extendedOwnerInfo.html_url || `https://github.com/${extendedOwnerInfo.login}`,
+          created_at: extendedOwnerInfo.created_at || new Date().toISOString(),
+          updated_at: extendedOwnerInfo.updated_at || new Date().toISOString(),
+          type: 'Organization' as const,
+        } : null,
+        collections: [], // TODO: Fetch owner's collections if needed
+        repositories: ownerRepos.repositories || [],
+        loading: ownerReposLoading,
+        error: ownerRepos.error,
+      },
+      loading: ownerReposLoading,
+      error: ownerRepos.error ? new Error(ownerRepos.error) : null,
+      refresh: async () => { /* no-op */ },
+    }),
+    [extendedOwnerInfo, ownerRepos.repositories, ownerRepos.error, ownerReposLoading]
   );
 
   // Explicit slice: fileTree
@@ -455,6 +550,12 @@ export function OwnerPageProvider({
           repositories: data.repositories || [],
           isAuthenticated,
         });
+        // Store extended owner info for OrgProfilePanel
+        if (data.owner) {
+          setExtendedOwnerInfo(data.owner as ExtendedOwnerInfo);
+        } else {
+          setExtendedOwnerInfo(null);
+        }
       } else {
         setOwnerRepos({
           owner: null,
@@ -462,6 +563,7 @@ export function OwnerPageProvider({
           isAuthenticated,
           error: data.error || 'Failed to load repositories',
         });
+        setExtendedOwnerInfo(null);
       }
     } catch (error) {
       console.error('[OwnerPageProvider] Failed to fetch owner repos:', error);
@@ -471,6 +573,7 @@ export function OwnerPageProvider({
         isAuthenticated,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
+      setExtendedOwnerInfo(null);
     } finally {
       setOwnerReposLoading(false);
     }
@@ -595,6 +698,7 @@ export function OwnerPageProvider({
       // Required slices
       'owner-repositories': ownerRepositoriesSlice,
       ownerRepositories: ownerRepositoriesSlice, // Alias for panels expecting camelCase
+      orgProfile: orgProfileSlice, // Required for OrgProfilePanel
       packages: packagesSlice,
       repositoryEntry: repositoryEntrySlice,
       selectedCollectionView: selectedCollectionViewSlice,
@@ -624,6 +728,7 @@ export function OwnerPageProvider({
       adapters,
       // All explicit slices
       ownerRepositoriesSlice,
+      orgProfileSlice,
       packagesSlice,
       repositoryEntrySlice,
       selectedCollectionViewSlice,

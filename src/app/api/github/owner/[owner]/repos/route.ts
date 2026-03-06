@@ -18,6 +18,14 @@ interface GitHubUser {
   public_repos: number;
   followers: number;
   following: number;
+  // Extended profile fields for OrgProfilePanel
+  blog: string | null;
+  location: string | null;
+  email: string | null;
+  twitter_username: string | null;
+  html_url: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface GitHubRepo {
@@ -104,8 +112,10 @@ export async function GET(
     }
 
     return NextResponse.json({
+      success: true,
       owner: {
         login: userData.login,
+        id: userData.id,
         avatar_url: userData.avatar_url,
         name: userData.name,
         bio: userData.bio,
@@ -113,6 +123,14 @@ export async function GET(
         public_repos: userData.public_repos,
         followers: userData.followers,
         following: userData.following,
+        // Extended profile fields for OrgProfilePanel
+        blog: userData.blog,
+        location: userData.location,
+        email: userData.email,
+        twitter_username: userData.twitter_username,
+        html_url: userData.html_url,
+        created_at: userData.created_at,
+        updated_at: userData.updated_at,
       },
       repositories: allRepos.map((repo) => ({
         id: repo.id,
