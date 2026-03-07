@@ -635,6 +635,36 @@ function EditorLayoutContent({
           }
         }
       }),
+      events.on('package:select', async (event) => {
+        const payload = event.payload as {
+          name: string;
+          path: string;
+          version?: string;
+        } | null;
+
+        if (!payload?.path) return;
+
+        if (!actions.openFile) return;
+
+        // Try to load the README from the package directory
+        const readmePath = payload.path.endsWith('/')
+          ? `${payload.path}README.md`
+          : `${payload.path}/README.md`;
+
+        try {
+          // Open the README file - this updates the active-file slice
+          await actions.openFile(readmePath);
+
+          // Switch middle panel to markdown viewer
+          setLayout((prev) => ({
+            ...prev,
+            middle: 'markdown-viewer',
+          }));
+        } catch (err) {
+          // README doesn't exist - that's fine, just log it
+          console.log('[EditorLayout] No README found for package:', payload.path);
+        }
+      }),
       events.on('github:login-requested', () => {
         login();
       }),
