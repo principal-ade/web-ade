@@ -652,6 +652,7 @@ export function WorldsPageProvider({
         description: repoDetails?.description,
         pushed_at: repoDetails?.pushed_at,
         updated_at: repoDetails?.updated_at,
+        license: repoDetails?.license,
         packageCount: packages.length,
         packageFileCount: packages.reduce((sum, pkg) => {
           const pkgFileCount = pkg.derivedFrom?.fileSets?.reduce((acc, fs) =>
@@ -691,6 +692,7 @@ export function WorldsPageProvider({
           lastUpdated: repoDetails?.updated_at ?? new Date(membership.addedAt).toISOString(),
           primaryLanguage: repoDetails?.language ?? undefined,
           description: repoDetails?.description ?? undefined,
+          license: repoDetails?.license ?? undefined,
         },
         lastChecked: undefined,
         lastOpenedAt: undefined,
@@ -790,7 +792,12 @@ export function WorldsPageProvider({
 
       try {
         const repoInfo = await trpc.github.getRepoInfo.query({ owner, repo });
-        setCollectionRepoDetails(prev => [...prev, repoInfo as unknown as GitHubRepository]);
+        // Transform license object to SPDX string for GitHubRepository compatibility
+        const transformedRepo: GitHubRepository = {
+          ...repoInfo,
+          license: repoInfo.license?.spdx_id ?? null,
+        };
+        setCollectionRepoDetails(prev => [...prev, transformedRepo]);
       } catch (error) {
         console.error(`Failed to fetch repo ${repoId}:`, error);
       } finally {

@@ -37,6 +37,7 @@ export interface GitHubRepoInfoResponse {
   description: string | null;
   fork: boolean;
   url: string;
+  clone_url: string;
   created_at: string;
   updated_at: string;
   pushed_at: string;
@@ -50,6 +51,11 @@ export interface GitHubRepoInfoResponse {
   default_branch: string;
   topics: string[];
   visibility: string;
+  license?: {
+    key: string;
+    name: string;
+    spdx_id: string;
+  } | null;
   // ... other fields as needed
 }
 

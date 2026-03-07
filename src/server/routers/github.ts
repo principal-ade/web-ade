@@ -79,6 +79,7 @@ const repoInfoOutputSchema = z.object({
   description: z.string().nullable(),
   fork: z.boolean(),
   url: z.string(),
+  clone_url: z.string(),
   created_at: z.string(),
   updated_at: z.string(),
   pushed_at: z.string(),
@@ -92,6 +93,11 @@ const repoInfoOutputSchema = z.object({
   default_branch: z.string(),
   topics: z.array(z.string()),
   visibility: z.string(),
+  license: z.object({
+    key: z.string(),
+    name: z.string(),
+    spdx_id: z.string(),
+  }).nullable().optional(),
 });
 
 // ============================================================================
@@ -481,6 +487,7 @@ export const githubRouter = router({
         description: string | null;
         fork: boolean;
         url: string;
+        clone_url: string;
         created_at: string;
         updated_at: string;
         pushed_at: string;
@@ -494,6 +501,11 @@ export const githubRouter = router({
         default_branch: string;
         topics: string[];
         visibility: string;
+        license?: {
+          key: string;
+          name: string;
+          spdx_id: string;
+        } | null;
       }
 
       return makeGitHubRequest<GitHubRepoInfoResponse>(
