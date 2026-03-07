@@ -43,9 +43,10 @@ import type { FormattedResults } from '@principal-ai/codebase-quality-lenses';
 import { minimatch } from 'minimatch';
 import { GitFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
-import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode } from '@industry-theme/file-city-panel';
+import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode, HighlightLayer } from '@industry-theme/file-city-panel';
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from './AuthContext';
+import { buildOtelHighlightLayers, type ParsedOtelCanvas } from '@/lib/otel-coverage/buildOtelHighlightLayers';
 
 // Host-provided tools
 const hostTools: PanelTool[] = [
@@ -205,6 +206,7 @@ export interface RepositoryPageContextType {
   schematics?: DataSlice<SchematicsSliceData>;
   fileCityColorModes: DataSlice<FileCityColorModesSliceData>;
   commitFiles?: DataSlice<CommitFilesSliceData>;
+  agentHighlightLayers?: DataSlice<HighlightLayer[]>;
 }
 
 interface RepositoryPageProviderProps {
@@ -323,6 +325,10 @@ export function RepositoryPageProvider({
 
   // State for commit files
   const [commitFilesData] = useState<CommitFilesSliceData | null>(null);
+
+  // State for OTEL highlight layers (from otel.canvas files)
+  const [otelHighlightLayers, setOtelHighlightLayers] = useState<HighlightLayer[]>([]);
+  const [otelHighlightLoading, setOtelHighlightLoading] = useState(false);
 
   // State for enabled color modes
   const [enabledColorModes] = useState<ColorMode[]>([]);
@@ -545,6 +551,19 @@ export function RepositoryPageProvider({
     [commitFilesData]
   );
 
+  // Explicit slice: agentHighlightLayers (OTEL canvas coverage)
+  const agentHighlightLayersSlice = useMemo<DataSlice<HighlightLayer[]>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'agentHighlightLayers',
+      data: otelHighlightLayers,
+      loading: otelHighlightLoading,
+      error: null,
+      refresh: async () => { /* no-op */ },
+    }),
+    [otelHighlightLayers, otelHighlightLoading]
+  );
+
   // Slices ref (now empty after full migration)
   const slicesRef = useRef<Map<string, DataSlice>>(new Map());
 
@@ -658,6 +677,65 @@ export function RepositoryPageProvider({
 
     fetchPackages();
   }, [githubRepo]);
+
+  // Fetch OTEL canvas files and build highlight layers
+  useEffect(() => {
+    if (!githubRepo || !fileTree) {
+      setOtelHighlightLayers([]);
+      return;
+    }
+
+    const [owner, repo] = githubRepo.split('/');
+    if (!owner || !repo) return;
+
+    // Find .otel.canvas files in the tree
+    const otelCanvasPaths = fileTree.allFiles
+      .filter((f) => f.path.endsWith('.otel.canvas'))
+      .map((f) => f.path);
+
+    if (otelCanvasPaths.length === 0) {
+      setOtelHighlightLayers([]);
+      return;
+    }
+
+    const fetchOtelCanvases = async () => {
+      setOtelHighlightLoading(true);
+
+      try {
+        const canvases: ParsedOtelCanvas[] = [];
+
+        for (const canvasPath of otelCanvasPaths) {
+          try {
+            const data = await trpc.github.readFile.query({
+              owner,
+              repo,
+              path: canvasPath,
+            });
+            const content = JSON.parse(data.content);
+            canvases.push({ path: canvasPath, content });
+          } catch (error) {
+            console.warn(`[RepositoryPageProvider] Failed to parse ${canvasPath}:`, error);
+          }
+        }
+
+        if (canvases.length > 0) {
+          const layers = buildOtelHighlightLayers(canvases, {
+            showDraft: false,
+            showApproved: true,
+            showImplemented: true,
+          });
+          setOtelHighlightLayers(layers);
+          console.log(`[RepositoryPageProvider] Built ${layers.length} OTEL highlight layers from ${canvases.length} canvas files`);
+        }
+      } catch (error) {
+        console.error('[RepositoryPageProvider] Failed to fetch OTEL canvases:', error);
+      } finally {
+        setOtelHighlightLoading(false);
+      }
+    };
+
+    fetchOtelCanvases();
+  }, [githubRepo, fileTree]);
 
   // Auto-load README when repository changes
   useEffect(() => {
@@ -849,6 +927,7 @@ export function RepositoryPageProvider({
       schematics: schematicsSlice,
       fileCityColorModes: fileCityColorModesSlice,
       commitFiles: commitFilesSlice,
+      agentHighlightLayers: agentHighlightLayersSlice,
 
       // ===== LEGACY METHODS (no-ops for interface compatibility) =====
       // All slices are now explicit - use typed properties above instead
@@ -879,6 +958,7 @@ export function RepositoryPageProvider({
       schematicsSlice,
       fileCityColorModesSlice,
       commitFilesSlice,
+      agentHighlightLayersSlice,
     ]
   );
 
