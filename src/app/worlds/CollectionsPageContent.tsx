@@ -25,6 +25,7 @@ import {
   GitHubStarredPanel,
   GitHubProjectsPanel,
   UserProfilePanel,
+  WorkspaceCollectionPanel,
 } from '@industry-theme/alexandria-panels';
 import { GitHubSearchPanel } from '@industry-theme/github-panels';
 import { CodeCityPanel } from '@industry-theme/file-city-panel';
@@ -70,6 +71,7 @@ const GitHubStarredPanelLoader = GitHubStarredPanel;
 const GitHubProjectsPanelLoader = GitHubProjectsPanel;
 const GitHubSearchPanelLoader = GitHubSearchPanel;
 const UserProfilePanelLoader = UserProfilePanel;
+const WorkspaceCollectionPanelLoader = WorkspaceCollectionPanel;
 
 // Explore mode panels
 const FileCityPanelLoader = CodeCityPanel;
@@ -190,7 +192,7 @@ export function CollectionsPageContent({
   const exploreLayout: PanelLayout = {
     left: 'user-profile',
     middle: 'collection-map',
-    right: 'file-city',
+    right: actions.selectedRepositoryId ? 'file-city' : 'workspace-collection',
   };
 
   // Mobile layout: distribute panels across slots instead of tabs
@@ -216,10 +218,10 @@ export function CollectionsPageContent({
       // Always open right panel in manage mode to show GitHub panels
       setRightCollapsed(false);
     } else if (viewMode === 'explore') {
-      // Open right panel in explore mode only when a repository is selected
-      setRightCollapsed(!actions.selectedRepositoryId);
+      // Always open right panel in explore mode to show repo list or file-city
+      setRightCollapsed(false);
     }
-  }, [viewMode, actions.selectedRepositoryId]);
+  }, [viewMode]);
 
   // Extended actions for panels with addToCollection and searchRepositories
   const panelActions = useMemo(() => {
@@ -374,6 +376,30 @@ export function CollectionsPageContent({
       ),
     },
     // Explore mode panels
+    {
+      id: 'workspace-collection',
+      label: 'Collection',
+      icon: <Library size={16} />,
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <WorkspaceCollectionPanelLoader
+            context={context}
+            actions={{
+              ...actions,
+              navigateToRepository: (owner: string, repo: string) => {
+                router.push(`/${owner}/${repo}`);
+              },
+              previewRepository: (repository: { full_name: string; owner: { login: string }; name: string }) => {
+                actions.onRepositoryClicked?.(repository.full_name);
+              },
+            }}
+            events={events}
+            selectedRepository={actions.selectedRepositoryId ?? undefined}
+            defaultShowSearch
+          />
+        </div>
+      ),
+    },
     {
       id: 'file-city',
       label: 'File City',
