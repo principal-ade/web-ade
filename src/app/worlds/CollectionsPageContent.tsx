@@ -555,7 +555,6 @@ export function CollectionsPageContent({
       <div className="flex-1 overflow-hidden">
         {isMobile ? (
           <ResponsiveConfigurablePanelLayout
-            key={viewMode}
             theme={theme}
             panels={panels}
             layout={layout}
@@ -576,7 +575,6 @@ export function CollectionsPageContent({
           />
         ) : (
           <EditableConfigurablePanelLayout
-            key={viewMode}
             theme={theme}
             panels={panels}
             layout={layout}
