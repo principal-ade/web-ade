@@ -123,7 +123,7 @@ export function CollectionsPageContent({
   const [isMobile, setIsMobile] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
   const leftCollapsed = false;
-  const [rightCollapsed, setRightCollapsed] = useState(true);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<'recent' | 'collections' | 'following' | 'starred'>('recent');
   const [recentRepos, setRecentRepos] = useState<RecentRepository[]>([]);
