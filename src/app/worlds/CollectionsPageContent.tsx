@@ -210,15 +210,16 @@ export function CollectionsPageContent({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Auto-toggle right panel based on repository selection in explore mode
+  // Auto-toggle right panel based on view mode
   useEffect(() => {
-    if (viewMode === 'explore') {
+    if (viewMode === 'manage') {
+      // Always open right panel in manage mode to show GitHub panels
+      setRightCollapsed(false);
+    } else if (viewMode === 'explore') {
+      // Open right panel in explore mode only when a repository is selected
       setRightCollapsed(!actions.selectedRepositoryId);
     }
   }, [viewMode, actions.selectedRepositoryId]);
-
-  // Note: Right panel state persists across mode changes
-  // Users can toggle it in both manage and explore modes
 
   // Extended actions for panels with addToCollection and searchRepositories
   const panelActions = useMemo(() => {
