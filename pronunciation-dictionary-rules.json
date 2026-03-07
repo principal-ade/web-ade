@@ -5,397 +5,562 @@
     {
       "type": "alias",
       "string_to_replace": ".ts",
-      "alias": "dot typescript"
+      "alias": "dot typescript",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".tsx",
-      "alias": "dot T S X"
+      "alias": "dot T S X",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".js",
-      "alias": "dot javascript"
+      "alias": "dot javascript",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".jsx",
-      "alias": "dot J S X"
+      "alias": "dot J S X",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".json",
-      "alias": "dot jason"
+      "alias": "dot jason",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".md",
-      "alias": "dot markdown"
+      "alias": "dot markdown",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".mdx",
-      "alias": "dot M D X"
+      "alias": "dot M D X",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".css",
-      "alias": "dot C S S"
+      "alias": "dot C S S",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".scss",
-      "alias": "dot S C S S"
+      "alias": "dot S C S S",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".sass",
-      "alias": "dot sass"
+      "alias": "dot sass",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".yml",
-      "alias": "dot yaml"
+      "alias": "dot yaml",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".yaml",
-      "alias": "dot yaml"
+      "alias": "dot yaml",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".env",
-      "alias": "dot env"
+      "alias": "dot env",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".config",
-      "alias": "dot config"
+      "alias": "dot config",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".html",
-      "alias": "dot H T M L"
+      "alias": "dot H T M L",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".svg",
-      "alias": "dot S V G"
+      "alias": "dot S V G",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".png",
-      "alias": "dot P N G"
+      "alias": "dot P N G",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".jpg",
-      "alias": "dot J P G"
+      "alias": "dot J P G",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".jpeg",
-      "alias": "dot J P E G"
+      "alias": "dot J P E G",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".test.ts",
-      "alias": "dot test dot typescript"
+      "alias": "dot test dot typescript",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".test.tsx",
-      "alias": "dot test dot T S X"
+      "alias": "dot test dot T S X",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".test.js",
-      "alias": "dot test dot javascript"
+      "alias": "dot test dot javascript",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".spec.ts",
-      "alias": "dot spec dot typescript"
+      "alias": "dot spec dot typescript",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".spec.js",
-      "alias": "dot spec dot javascript"
+      "alias": "dot spec dot javascript",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": ".d.ts",
-      "alias": "dot D dot T S"
+      "alias": "dot D dot T S",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "package.json",
-      "alias": "package dot jason"
+      "alias": "package dot jason",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "package-lock.json",
-      "alias": "package lock dot jason"
+      "alias": "package lock dot jason",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "tsconfig.json",
-      "alias": "T S config dot jason"
+      "alias": "T S config dot jason",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "README.md",
-      "alias": "read me dot markdown"
+      "alias": "read me dot markdown",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "README",
-      "alias": "read me"
+      "alias": "read me",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "npm",
-      "alias": "N P M"
+      "alias": "N P M",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "yarn",
-      "alias": "yarn"
+      "alias": "yarn",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "pnpm",
-      "alias": "P N P M"
+      "alias": "P N P M",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "node_modules",
-      "alias": "node modules"
+      "alias": "node modules",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "TypeScript",
-      "alias": "typescript"
+      "alias": "typescript",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "JavaScript",
-      "alias": "javascript"
+      "alias": "javascript",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "React",
-      "alias": "react"
+      "alias": "react",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "Next.js",
-      "alias": "next J S"
+      "alias": "next J S",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "Next",
-      "alias": "next"
+      "alias": "next",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "useState",
-      "alias": "use state"
+      "alias": "use state",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "useEffect",
-      "alias": "use effect"
+      "alias": "use effect",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "useCallback",
-      "alias": "use callback"
+      "alias": "use callback",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "useMemo",
-      "alias": "use memo"
+      "alias": "use memo",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "useRef",
-      "alias": "use ref"
+      "alias": "use ref",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "useContext",
-      "alias": "use context"
+      "alias": "use context",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "API",
-      "alias": "A P I"
+      "alias": "A P I",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "UI",
-      "alias": "U I"
+      "alias": "U I",
+      "case_sensitive": false,
+      "word_boundaries": true
     },
     {
       "type": "alias",
       "string_to_replace": "SDK",
-      "alias": "S D K"
+      "alias": "S D K",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "TTS",
-      "alias": "T T S"
+      "alias": "T T S",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "CLI",
-      "alias": "C L I"
+      "alias": "C L I",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "CSS",
-      "alias": "C S S"
+      "alias": "C S S",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "HTML",
-      "alias": "H T M L"
+      "alias": "H T M L",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "URL",
-      "alias": "U R L"
+      "alias": "U R L",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "HTTP",
-      "alias": "H T T P"
+      "alias": "H T T P",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "HTTPS",
-      "alias": "H T T P S"
+      "alias": "H T T P S",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "REST",
-      "alias": "rest"
+      "alias": "rest",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "GraphQL",
-      "alias": "graph Q L"
+      "alias": "graph Q L",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "SQL",
-      "alias": "S Q L"
+      "alias": "S Q L",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "NoSQL",
-      "alias": "no S Q L"
+      "alias": "no S Q L",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "PostgreSQL",
-      "alias": "postgres Q L"
+      "alias": "postgres Q L",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "MongoDB",
-      "alias": "mongo D B"
+      "alias": "mongo D B",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "S3",
-      "alias": "S three"
+      "alias": "S three",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "AWS",
-      "alias": "A W S"
+      "alias": "A W S",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "GitHub",
-      "alias": "git hub"
+      "alias": "git hub",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "GitLab",
-      "alias": "git lab"
+      "alias": "git lab",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "WebADE",
-      "alias": "Web A D E"
+      "alias": "Web A D E",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "JSON",
-      "alias": "jason"
+      "alias": "jason",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "XML",
-      "alias": "X M L"
+      "alias": "X M L",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "IDE",
-      "alias": "I D E"
+      "alias": "I D E",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "VS Code",
-      "alias": "V S code"
+      "alias": "V S code",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "ESLint",
-      "alias": "E S lint"
+      "alias": "E S lint",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "Prettier",
-      "alias": "prettier"
+      "alias": "prettier",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "Webpack",
-      "alias": "web pack"
+      "alias": "web pack",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "Vite",
-      "alias": "veet"
+      "alias": "veet",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "async",
-      "alias": "async"
+      "alias": "async",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "await",
-      "alias": "await"
+      "alias": "await",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "const",
-      "alias": "const"
+      "alias": "const",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "let",
-      "alias": "let"
+      "alias": "let",
+      "case_sensitive": false,
+      "word_boundaries": false
     },
     {
       "type": "alias",
       "string_to_replace": "var",
-      "alias": "var"
+      "alias": "var",
+      "case_sensitive": false,
+      "word_boundaries": false
+    },
+    {
+      "type": "alias",
+      "string_to_replace": "monorepo",
+      "alias": "mono reepo",
+      "case_sensitive": false,
+      "word_boundaries": false
     }
   ]
 }

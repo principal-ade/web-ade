@@ -51,15 +51,18 @@ export async function generateAudio(
 
     // Add pronunciation dictionary for code terms if configured
     const dictionaryId = process.env.ELEVENLABS_PRONUNCIATION_DICTIONARY_ID;
+    const dictionaryVersionId = process.env.ELEVENLABS_PRONUNCIATION_DICTIONARY_VERSION_ID;
     if (dictionaryId) {
-      requestBody.pronunciation_dictionary_locators = [
-        {
-          pronunciation_dictionary_id: dictionaryId,
-          // version_id omitted = use latest version
-        },
-      ];
+      const locator: { pronunciation_dictionary_id: string; version_id?: string } = {
+        pronunciation_dictionary_id: dictionaryId,
+      };
+      if (dictionaryVersionId) {
+        locator.version_id = dictionaryVersionId;
+      }
+      requestBody.pronunciation_dictionary_locators = [locator];
       console.log('[ElevenLabs] Using pronunciation dictionary:', {
         dictionaryId,
+        versionId: dictionaryVersionId || 'latest',
         textLength: text.length,
       });
     } else {
