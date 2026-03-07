@@ -20,15 +20,33 @@
       }
     },
     {
-      "id": "generation-success",
-      "description": "TTS request completed by generating new audio via ElevenLabs and caching it to S3",
+      "id": "generation-success-with-dictionary",
+      "description": "TTS request completed with pronunciation dictionary applied",
       "priority": 2,
+      "template": {
+        "summary": "[Success+Dict] Generated TTS for {{tts.owner}}/{{tts.repo}}:{{tts.stepId}} with dictionary ({{tts.termsMatched}} terms matched)",
+        "events": {
+          "tts.request.started": "TTS for {{tts.owner}}/{{tts.repo}}:{{tts.path}} step {{tts.stepId}} (commit: {{tts.commitSha}}, voice: {{tts.voice}}, speed: {{tts.speed}}, dictionary: {{tts.dictionaryId}})",
+          "tts.cache.miss": "Cache miss at {{tts.s3Key}} (cached: {{tts.cached}}), proceeding to generation",
+          "tts.tour.fetched": "Tour fetched (ID: {{tts.tourId}}), step: {{tts.stepDescription}}, {{tts.textLength}} characters",
+          "tts.dictionary.applied": "Dictionary {{tts.dictionaryId}} ({{tts.dictionaryName}}) applied, {{tts.termsMatched}} terms matched",
+          "tts.audio.generated": "Audio generated using {{tts.voice}} model {{tts.model}} in {{tts.generationTimeMs}}ms ({{tts.audioSizeBytes}} bytes, {{tts.textLength}} chars)",
+          "tts.audio.uploaded": "Uploaded {{tts.audioSizeBytes}} bytes to {{tts.s3Key}} → {{tts.audioUrl}}",
+          "tts.request.complete": "Audio URL returned: {{tts.audioUrl}} (cached: {{tts.cached}}, total: {{tts.durationMs}}ms)"
+        }
+      }
+    },
+    {
+      "id": "generation-success-no-dictionary",
+      "description": "TTS request completed without pronunciation dictionary",
+      "priority": 3,
       "template": {
         "summary": "[Success] Generated TTS audio for {{tts.owner}}/{{tts.repo}}:{{tts.stepId}} ({{tts.textLength}} chars) in {{tts.generationTimeMs}}ms",
         "events": {
           "tts.request.started": "TTS for {{tts.owner}}/{{tts.repo}}:{{tts.path}} step {{tts.stepId}} (commit: {{tts.commitSha}}, voice: {{tts.voice}}, speed: {{tts.speed}})",
           "tts.cache.miss": "Cache miss at {{tts.s3Key}} (cached: {{tts.cached}}), proceeding to generation",
           "tts.tour.fetched": "Tour fetched (ID: {{tts.tourId}}), step: {{tts.stepDescription}}, {{tts.textLength}} characters",
+          "tts.dictionary.skipped": "No pronunciation dictionary configured (dictionaryUsed: {{tts.dictionaryUsed}})",
           "tts.audio.generated": "Audio generated using {{tts.voice}} model {{tts.model}} in {{tts.generationTimeMs}}ms ({{tts.audioSizeBytes}} bytes, {{tts.textLength}} chars)",
           "tts.audio.uploaded": "Uploaded {{tts.audioSizeBytes}} bytes to {{tts.s3Key}} → {{tts.audioUrl}}",
           "tts.request.complete": "Audio URL returned: {{tts.audioUrl}} (cached: {{tts.cached}}, total: {{tts.durationMs}}ms)"
@@ -38,7 +56,7 @@
     {
       "id": "rate-limit-error",
       "description": "TTS generation failed because ElevenLabs API rate limit was exceeded",
-      "priority": 3,
+      "priority": 4,
       "template": {
         "summary": "[Rate Limited] ElevenLabs rate limit exceeded for {{tts.owner}}/{{tts.repo}}:{{tts.stepId}}, retry after {{tts.retryAfter}}s",
         "events": {
@@ -52,7 +70,7 @@
     {
       "id": "step-not-found-error",
       "description": "TTS generation failed because the requested step ID does not exist in the tour file",
-      "priority": 4,
+      "priority": 5,
       "template": {
         "summary": "[Error] Step not found: {{tts.stepId}} in {{tts.owner}}/{{tts.repo}}",
         "events": {
@@ -65,7 +83,7 @@
     {
       "id": "tour-not-found-error",
       "description": "TTS generation failed because the tour file could not be found on GitHub",
-      "priority": 5,
+      "priority": 6,
       "template": {
         "summary": "[Error] Tour not found: {{tts.owner}}/{{tts.repo}}:{{tts.path}}",
         "events": {

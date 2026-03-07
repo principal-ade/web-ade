@@ -28,7 +28,7 @@
     {
       "id": "tts-request-started",
       "type": "text",
-      "text": "# TTS Request Started\n\nTTS generation request initiated\n\n**Attributes:**\n- owner\n- repo\n- path\n- stepId\n- commitSha",
+      "text": "# TTS Request Started\n\nTTS generation request initiated\n\n**Attributes:**\n- owner\n- repo\n- path\n- stepId\n- commitSha\n- dictionaryId (optional)",
       "x": 100,
       "y": 50,
       "width": 200,
@@ -79,6 +79,11 @@
             "tts.speed": {
               "type": "number",
               "description": "Playback speed (0.5-2.0)",
+              "required": false
+            },
+            "tts.dictionaryId": {
+              "type": "string",
+              "description": "ElevenLabs pronunciation dictionary ID if specified",
               "required": false
             }
           }
@@ -524,6 +529,86 @@
           "files": ["src/lib/tts/elevenlabs-client.ts"]
         }
       }
+    },
+    {
+      "id": "tts-dictionary-applied",
+      "type": "text",
+      "text": "# Dictionary Applied\n\nPronunciation dictionary applied to text\n\n**Attributes:**\n- dictionaryId\n- dictionaryName\n- termsMatched",
+      "x": -100,
+      "y": 425,
+      "width": 200,
+      "height": 100,
+      "color": "#8b5cf6",
+      "pv": {
+        "status": "approved",
+        "name": "Dictionary Applied",
+        "description": "Pronunciation dictionary applied to transform text before TTS generation",
+        "shape": "rectangle",
+        "fill": "#ede9fe",
+        "stroke": "#8b5cf6",
+        "sources": ["src/lib/tts/dictionary-processor.ts"],
+        "event": {
+          "name": "tts.dictionary.applied",
+          "description": "Emitted when a pronunciation dictionary is applied to the text",
+          "attributes": {
+            "tts.dictionaryId": {
+              "type": "string",
+              "description": "ElevenLabs pronunciation dictionary ID",
+              "required": true
+            },
+            "tts.dictionaryName": {
+              "type": "string",
+              "description": "Human-readable dictionary name",
+              "required": false
+            },
+            "tts.termsMatched": {
+              "type": "number",
+              "description": "Number of terms from dictionary that matched in text",
+              "required": true
+            }
+          }
+        },
+        "otel": {
+          "kind": "event",
+          "category": "processing",
+          "files": ["src/lib/tts/dictionary-processor.ts"]
+        }
+      }
+    },
+    {
+      "id": "tts-dictionary-skipped",
+      "type": "text",
+      "text": "# No Dictionary\n\nNo pronunciation dictionary specified\n\n**Attributes:**\n- dictionaryUsed: false",
+      "x": 100,
+      "y": 425,
+      "width": 150,
+      "height": 60,
+      "color": "#94a3b8",
+      "pv": {
+        "status": "approved",
+        "name": "No Dictionary",
+        "description": "No pronunciation dictionary was specified, proceeding with raw text",
+        "shape": "rectangle",
+        "fill": "#f1f5f9",
+        "stroke": "#94a3b8",
+        "sources": ["src/lib/tts/dictionary-processor.ts"],
+        "event": {
+          "name": "tts.dictionary.skipped",
+          "description": "Emitted when no dictionary is specified for the request",
+          "attributes": {
+            "tts.dictionaryUsed": {
+              "type": "boolean",
+              "description": "Always false when skipped",
+              "required": true
+            }
+          }
+        },
+        "otel": {
+          "kind": "event",
+          "category": "processing",
+          "files": ["src/lib/tts/dictionary-processor.ts"]
+        }
+      }
     }
   ],
   "edges": [
@@ -586,12 +671,47 @@
       }
     },
     {
-      "id": "edge-tour-fetched-to-generated",
+      "id": "edge-tour-fetched-to-dictionary-applied",
       "fromNode": "tts-tour-fetched",
+      "fromSide": "left",
+      "toNode": "tts-dictionary-applied",
+      "toSide": "top",
+      "label": "has dictionary",
+      "color": "#8b5cf6",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-tour-fetched-to-dictionary-skipped",
+      "fromNode": "tts-tour-fetched",
+      "fromSide": "bottom",
+      "toNode": "tts-dictionary-skipped",
+      "toSide": "top",
+      "label": "no dictionary",
+      "color": "#94a3b8",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-dictionary-applied-to-generated",
+      "fromNode": "tts-dictionary-applied",
+      "fromSide": "bottom",
+      "toNode": "tts-audio-generated",
+      "toSide": "left",
+      "color": "#8b5cf6",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-dictionary-skipped-to-generated",
+      "fromNode": "tts-dictionary-skipped",
       "fromSide": "bottom",
       "toNode": "tts-audio-generated",
       "toSide": "top",
-      "color": "#3b82f6",
+      "color": "#94a3b8",
       "pv": {
         "edgeType": "flow"
       }

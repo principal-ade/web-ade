@@ -58,6 +58,12 @@ export async function generateAudio(
           // version_id omitted = use latest version
         },
       ];
+      console.log('[ElevenLabs] Using pronunciation dictionary:', {
+        dictionaryId,
+        textLength: text.length,
+      });
+    } else {
+      console.log('[ElevenLabs] No pronunciation dictionary configured');
     }
 
     const response = await fetch(url, {

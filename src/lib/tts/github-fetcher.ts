@@ -13,6 +13,7 @@ import removeMd from 'remove-markdown';
 /**
  * Normalizes text for TTS by removing problematic characters
  *
+ * - Removes backticks used for inline code (e.g., "`package/`" → "package/")
  * - Removes trailing slashes from directory paths (e.g., "src/components/" → "src components")
  * - Replaces forward slashes in paths with spaces for better pronunciation
  *
@@ -21,6 +22,8 @@ import removeMd from 'remove-markdown';
  */
 function normalizeTextForTTS(text: string): string {
   return text
+    // Remove backticks (inline code markers)
+    .replace(/`/g, '')
     // Replace path-like structures (word/word/) with spaces
     // This handles cases like "src/components/" → "src components"
     .replace(/(\w+)\/+/g, '$1 ')
