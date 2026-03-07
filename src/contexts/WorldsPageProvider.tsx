@@ -653,6 +653,7 @@ export function WorldsPageProvider({
         pushed_at: repoDetails?.pushed_at,
         updated_at: repoDetails?.updated_at,
         license: repoDetails?.license,
+        ownerAvatar: repoDetails?.owner?.avatar_url,
         packageCount: packages.length,
         packageFileCount: packages.reduce((sum, pkg) => {
           const pkgFileCount = pkg.derivedFrom?.fileSets?.reduce((acc, fs) =>
@@ -693,6 +694,7 @@ export function WorldsPageProvider({
           primaryLanguage: repoDetails?.language ?? undefined,
           description: repoDetails?.description ?? undefined,
           license: repoDetails?.license ?? undefined,
+          ownerAvatar: repoDetails?.owner?.avatar_url ?? undefined,
         },
         lastChecked: undefined,
         lastOpenedAt: undefined,
