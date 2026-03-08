@@ -27,7 +27,7 @@
       "height": 100,
       "color": "#16a34a",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.registration.started",
           "attributes": {
@@ -83,7 +83,7 @@
       "height": 100,
       "color": "#1d4ed8",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.registration.validated",
           "attributes": {
@@ -129,7 +129,7 @@
       "height": 100,
       "color": "#1d4ed8",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.registration.s3.stored",
           "attributes": {
@@ -175,7 +175,7 @@
       "height": 100,
       "color": "#1d4ed8",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.registration.schematic.fetching",
           "attributes": {
@@ -221,7 +221,7 @@
       "height": 100,
       "color": "#1d4ed8",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.registration.schematic.fetched",
           "attributes": {
@@ -277,7 +277,7 @@
       "height": 100,
       "color": "#1d4ed8",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.registration.schematic.stored",
           "attributes": {
@@ -323,7 +323,7 @@
       "height": 100,
       "color": "#16a34a",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.registration.complete",
           "attributes": {
@@ -369,7 +369,7 @@
       "height": 100,
       "color": "#16a34a",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.registration.complete-no-schematic",
           "attributes": {
@@ -410,7 +410,7 @@
       "height": 100,
       "color": "#d97706",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.registration.schematic-error",
           "attributes": {
@@ -451,7 +451,7 @@
       "height": 100,
       "color": "#dc2626",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.registration.error",
           "attributes": {
@@ -508,7 +508,7 @@
       "height": 100,
       "color": "#16a34a",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.lookup.started",
           "attributes": {
@@ -559,7 +559,7 @@
       "height": 100,
       "color": "#1d4ed8",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.lookup.s3.retrieved",
           "attributes": {
@@ -610,7 +610,7 @@
       "height": 100,
       "color": "#16a34a",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.lookup.complete",
           "attributes": {
@@ -651,7 +651,7 @@
       "height": 100,
       "color": "#d97706",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.lookup.not_found",
           "attributes": {
@@ -698,7 +698,7 @@
       "height": 100,
       "color": "#dc2626",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.lookup.error",
           "attributes": {
@@ -745,7 +745,7 @@
       "height": 100,
       "color": "#16a34a",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.list.started",
           "attributes": {
@@ -781,7 +781,7 @@
       "height": 100,
       "color": "#2563eb",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.list.s3.retrieved",
           "attributes": {
@@ -822,7 +822,7 @@
       "height": 100,
       "color": "#16a34a",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.list.complete",
           "attributes": {
@@ -863,7 +863,7 @@
       "height": 100,
       "color": "#dc2626",
       "pv": {
-        "status": "approved",
+        "status": "implemented",
         "event": {
           "name": "version.list.error",
           "attributes": {

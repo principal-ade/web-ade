@@ -6,8 +6,11 @@
  *
  * customerId format: "owner/repo" (e.g., "acme/backend-monorepo")
  * S3 key format: version-registry/{owner}/{repo}/{serviceName}/{version}/{environment}.json
+ *
+ * @otel canvas: .principal-views/version-registry/version-registry.otel.canvas
  */
 
+import type { Span } from '@opentelemetry/api';
 import {
   S3Client,
   HeadObjectCommand,
@@ -106,14 +109,24 @@ export async function checkVersionExists(
  * Stores as immutable JSON file with long cache TTL.
  *
  * @param registration - Version registration data
+ * @param span - OpenTelemetry span for instrumentation (optional)
  * @returns S3 key where registration was stored
  * @throws Error if upload fails
  */
 export async function storeVersionRegistration(
-  registration: VersionRegistration
+  registration: VersionRegistration,
+  span?: Span
 ): Promise<string> {
   try {
     const s3Key = buildS3Key({
+      customerId: registration.customerId,
+      serviceName: registration.serviceName,
+      version: registration.version,
+      environment: registration.environment,
+    });
+
+    // Check if already exists (for idempotency tracking)
+    const alreadyExists = await checkVersionExists({
       customerId: registration.customerId,
       serviceName: registration.serviceName,
       version: registration.version,
@@ -135,6 +148,13 @@ export async function storeVersionRegistration(
         },
       })
     );
+
+    // Emit: version.registration.s3.stored
+    span?.addEvent('version.registration.s3.stored', {
+      's3.key': s3Key,
+      's3.bucket': BUCKET_NAME,
+      'already.exists': alreadyExists,
+    });
 
     console.log('[Version Registry] Stored registration:', {
       s3Key,
@@ -158,10 +178,12 @@ export async function storeVersionRegistration(
  * Retrieves a version registration from S3
  *
  * @param key - Version registry key components
+ * @param span - OpenTelemetry span for instrumentation (optional)
  * @returns Version registration data or null if not found
  */
 export async function getVersionRegistration(
-  key: VersionRegistryKey
+  key: VersionRegistryKey,
+  span?: Span
 ): Promise<VersionRegistration | null> {
   try {
     const s3Key = buildS3Key(key);
@@ -179,6 +201,14 @@ export async function getVersionRegistration(
 
     const registration = JSON.parse(data) as VersionRegistration;
 
+    // Emit: version.lookup.s3.retrieved
+    span?.addEvent('version.lookup.s3.retrieved', {
+      's3.key': s3Key,
+      'git.sha': registration.gitSHA,
+      'repository.url': registration.repositoryUrl,
+      'deployed.at': registration.deployedAt,
+    });
+
     console.log('[Version Registry] Retrieved registration:', {
       s3Key,
       serviceName: registration.serviceName,
@@ -189,6 +219,13 @@ export async function getVersionRegistration(
     return registration;
   } catch (error: unknown) {
     if (error && typeof error === 'object' && 'name' in error && error.name === 'NoSuchKey') {
+      // Emit: version.lookup.not_found
+      span?.addEvent('version.lookup.not_found', {
+        'customer.id': key.customerId,
+        'service.name': key.serviceName,
+        'version': key.version,
+      });
+
       console.log('[Version Registry] Version not found:', {
         key: buildS3Key(key),
       });
@@ -253,10 +290,12 @@ export async function deleteVersionRegistration(
  * Returns all services, versions, and environments registered for the given repo.
  *
  * @param customerId - Repository in format "owner/repo"
+ * @param span - OpenTelemetry span for instrumentation (optional)
  * @returns Array of version registrations
  */
 export async function listRepoRegistrations(
-  customerId: string
+  customerId: string,
+  span?: Span
 ): Promise<VersionRegistration[]> {
   try {
     const prefix = `version-registry/${customerId}/`;
@@ -307,6 +346,12 @@ export async function listRepoRegistrations(
 
       continuationToken = response.NextContinuationToken;
     } while (continuationToken);
+
+    // Emit: version.list.s3.retrieved
+    span?.addEvent('version.list.s3.retrieved', {
+      'customer.id': customerId,
+      'registration.count': registrations.length,
+    });
 
     console.log('[Version Registry] Found registrations:', {
       customerId,
@@ -362,12 +407,14 @@ export function buildSchematicS3Key(repositoryUrl: string, commitSha: string): s
  * @param repositoryUrl - GitHub repository URL
  * @param commitSha - Git commit SHA
  * @param schematic - Complete SchematicResponse (includes library data)
+ * @param span - OpenTelemetry span for instrumentation (optional)
  * @returns S3 key where schematic was stored
  */
 export async function storeSchematic(
   repositoryUrl: string,
   commitSha: string,
-  schematic: SchematicResponse
+  schematic: SchematicResponse,
+  span?: Span
 ): Promise<string> {
   try {
     const s3Key = buildSchematicS3Key(repositoryUrl, commitSha);
@@ -392,6 +439,17 @@ export async function storeSchematic(
         },
       })
     );
+
+    // Generate schematic ID for event
+    const customerId = parseGitHubUrl(repositoryUrl);
+    const schematicId = `${customerId}@${commitSha.substring(0, 12)}`;
+
+    // Emit: version.registration.schematic.stored
+    span?.addEvent('version.registration.schematic.stored', {
+      's3.key': s3Key,
+      's3.bucket': BUCKET_NAME,
+      'schematic.id': schematicId,
+    });
 
     console.log('[Version Registry] Stored schematic:', {
       s3Key,

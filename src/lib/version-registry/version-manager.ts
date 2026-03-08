@@ -3,8 +3,11 @@
  *
  * Core business logic for version registration and lookup.
  * Coordinates S3 storage operations with validation and error handling.
+ *
+ * @otel canvas: .principal-views/version-registry/version-registry.otel.canvas
  */
 
+import type { Span } from '@opentelemetry/api';
 import {
   storeVersionRegistration,
   getVersionRegistration,
@@ -48,12 +51,14 @@ function isValidVersion(version: string): boolean {
  * @param request - Version registration request
  * @param customerId - Customer ID (owner/repo format)
  * @param githubToken - GitHub token for fetching schematics (optional, from Authorization header)
+ * @param span - OpenTelemetry span for instrumentation (optional)
  * @returns Registration response
  */
 export async function registerVersion(
   request: VersionRegistrationRequest,
   customerId?: string,
-  githubToken?: string
+  githubToken?: string,
+  span?: Span
 ): Promise<VersionRegistrationResponse> {
   // Extract customerId from repositoryUrl if not provided
   let resolvedCustomerId = customerId;
@@ -96,6 +101,13 @@ export async function registerVersion(
     };
   }
 
+  // Emit: version.registration.validated
+  span?.addEvent('version.registration.validated', {
+    'customer.id': resolvedCustomerId,
+    'service.name': request.serviceName,
+    'version': request.version,
+  });
+
   // Build registration object
   const registration: VersionRegistration = {
     customerId: resolvedCustomerId,
@@ -131,7 +143,7 @@ export async function registerVersion(
     }
 
     // Store to S3 (overwrites if exists)
-    const s3Key = await storeVersionRegistration(registration);
+    const s3Key = await storeVersionRegistration(registration, span);
 
     // Fetch and store schematic from GitHub at this SHA (BLOCKING - registration fails if this fails)
     // Check if schematic already exists in S3 (cache)
@@ -142,26 +154,43 @@ export async function registerVersion(
 
     let schematicId: string;
 
+    // Emit: version.registration.schematic.fetching
+    span?.addEvent('version.registration.schematic.fetching', {
+      'repository.url': registration.repositoryUrl,
+      'git.sha': registration.gitSHA,
+      'schematic.cached': schematicExists,
+    });
+
     if (schematicExists) {
       console.log('[Version Manager] Schematic already cached in S3');
       schematicId = generateSchematicId(registration.repositoryUrl, registration.gitSHA);
     } else {
       // Fetch schematic from GitHub (this will throw if it fails)
       console.log('[Version Manager] Fetching schematic from GitHub...');
-      const schematic = await fetchSchematicFromGitHub(
-        registration.repositoryUrl,
-        registration.gitSHA,
-        githubToken
-      );
+      try {
+        const schematic = await fetchSchematicFromGitHub(
+          registration.repositoryUrl,
+          registration.gitSHA,
+          githubToken,
+          span
+        );
 
-      // Store schematic in S3
-      await storeSchematic(registration.repositoryUrl, registration.gitSHA, schematic);
-      schematicId = generateSchematicId(registration.repositoryUrl, registration.gitSHA);
+        // Store schematic in S3
+        await storeSchematic(registration.repositoryUrl, registration.gitSHA, schematic, span);
+        schematicId = generateSchematicId(registration.repositoryUrl, registration.gitSHA);
 
-      console.log('[Version Manager] Schematic fetched and stored:', {
-        schematicId,
-        storyboards: schematic.storyboards.length,
-      });
+        console.log('[Version Manager] Schematic fetched and stored:', {
+          schematicId,
+          storyboards: schematic.storyboards.length,
+        });
+      } catch (schematicError) {
+        // Emit: version.registration.schematic-error
+        span?.addEvent('version.registration.schematic-error', {
+          'error.type': schematicError instanceof Error ? schematicError.name : 'UnknownError',
+          'error.message': schematicError instanceof Error ? schematicError.message : String(schematicError),
+        });
+        throw schematicError;
+      }
     }
 
     return {
@@ -193,10 +222,12 @@ export async function registerVersion(
  * Looks up a version-to-commit mapping
  *
  * @param request - Version lookup request
+ * @param span - OpenTelemetry span for instrumentation (optional)
  * @returns Lookup response with registration data if found
  */
 export async function lookupVersion(
-  request: VersionLookupRequest
+  request: VersionLookupRequest,
+  span?: Span
 ): Promise<VersionLookupResponse> {
   // Validate required fields
   if (!request.customerId || !request.serviceName || !request.version) {
@@ -212,7 +243,7 @@ export async function lookupVersion(
       serviceName: request.serviceName,
       version: request.version,
       environment: request.environment || 'production',
-    });
+    }, span);
 
     if (!registration) {
       return {

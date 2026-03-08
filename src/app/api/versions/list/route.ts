@@ -9,13 +9,21 @@
  *
  * Example:
  * GET /api/versions/list?customerId=acme/backend-monorepo
+ *
+ * @otel canvas: .principal-views/version-registry/version-registry.otel.canvas
+ * @otel workflow: .principal-views/version-registry/list/list.workflow.json
+ * @otel span: api.version-registry.list
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { trace } from '@opentelemetry/api';
 import { listRepoRegistrations } from '@/lib/version-registry/s3-storage';
 import type {
   VersionListResponse,
 } from '@/lib/version-registry/types';
+
+// Get tracer for version registry
+const tracer = trace.getTracer('version-registry', '1.0.0');
 
 /**
  * Add CORS headers to response
@@ -69,13 +77,28 @@ export async function OPTIONS() {
  * }
  */
 export async function GET(request: NextRequest) {
+  const span = tracer.startSpan('api.version-registry.list');
+
   try {
     const { searchParams } = new URL(request.url);
 
     const customerId = searchParams.get('customerId');
 
+    // Emit: version.list.started
+    span.addEvent('version.list.started', {
+      'customer.id': customerId || '',
+    });
+
     // Validate required parameter
     if (!customerId) {
+      // Emit: version.list.error
+      span.addEvent('version.list.error', {
+        'error.type': 'ValidationError',
+        'error.message': 'Missing required query parameter: customerId',
+        'error.stage': 'validation',
+      });
+      span.end();
+
       return addCorsHeaders(
         NextResponse.json(
           {
@@ -92,7 +115,7 @@ export async function GET(request: NextRequest) {
     console.log('[Version Registry] List request:', { customerId });
 
     // List all registrations for this repository
-    const registrations = await listRepoRegistrations(customerId);
+    const registrations = await listRepoRegistrations(customerId, span);
 
     console.log('[Version Registry] List successful:', {
       customerId,
@@ -105,6 +128,13 @@ export async function GET(request: NextRequest) {
       count: registrations.length,
     };
 
+    // Emit: version.list.complete
+    span.addEvent('version.list.complete', {
+      'customer.id': customerId,
+      'registration.count': registrations.length,
+    });
+    span.end();
+
     return addCorsHeaders(
       NextResponse.json(response, {
         status: 200,
@@ -116,6 +146,14 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     console.error('[Version Registry] List error:', error);
+
+    // Emit: version.list.error
+    span.addEvent('version.list.error', {
+      'error.type': error instanceof Error ? error.name : 'UnknownError',
+      'error.message': error instanceof Error ? error.message : String(error),
+      'error.stage': 'storage',
+    });
+    span.end();
 
     return addCorsHeaders(
       NextResponse.json(

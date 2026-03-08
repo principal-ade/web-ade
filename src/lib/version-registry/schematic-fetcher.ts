@@ -10,8 +10,11 @@
  * - All test traces/executions
  * - Complete storyboard structure
  * - Library metadata including owned-scopes for trace routing
+ *
+ * @otel canvas: .principal-views/version-registry/version-registry.otel.canvas
  */
 
+import type { Span } from '@opentelemetry/api';
 import { Octokit } from '@octokit/rest';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import {
@@ -78,13 +81,15 @@ async function fetchLibraryYaml(
  * @param repositoryUrl - GitHub repository URL
  * @param commitSha - Git commit SHA (40-char hex)
  * @param providedToken - GitHub token (optional, from Authorization header)
+ * @param span - OpenTelemetry span for instrumentation (optional)
  * @returns Complete schematic with library data
  * @throws Error if repository not found or schematic fetch fails
  */
 export async function fetchSchematicFromGitHub(
   repositoryUrl: string,
   commitSha: string,
-  providedToken?: string
+  providedToken?: string,
+  span?: Span
 ): Promise<SchematicResponse> {
   // Parse owner/repo from URL
   const match = repositoryUrl.match(/github\.com[/:]([\w.-]+)\/([\w.-]+)/);
@@ -161,13 +166,28 @@ export async function fetchSchematicFromGitHub(
       (storyboard) => storyboard.canvas.type === 'otel'
     );
 
+    const workflowCount = otelStoryboards.reduce((sum, sb) => sum + sb.workflows.length, 0);
+    const otelCanvasCount = schematic.canvases.filter((c) => c.type === 'otel').length;
+
     console.log('[Schematic Fetcher] Schematic discovered:', {
       totalCanvases: schematic.canvases.length,
-      otelCanvases: schematic.canvases.filter((c) => c.type === 'otel').length,
+      otelCanvases: otelCanvasCount,
       totalStoryboards: schematic.storyboards.length,
       otelStoryboards: otelStoryboards.length,
-      workflows: otelStoryboards.reduce((sum, sb) => sum + sb.workflows.length, 0),
+      workflows: workflowCount,
       errors: schematic.errors.length,
+    });
+
+    // Generate schematic ID
+    const schematicId = `${owner}/${repo}@${commitSha.substring(0, 12)}`;
+
+    // Emit: version.registration.schematic.fetched
+    span?.addEvent('version.registration.schematic.fetched', {
+      'schematic.id': schematicId,
+      'canvases.count': otelCanvasCount,
+      'storyboards.count': otelStoryboards.length,
+      'workflows.count': workflowCount,
+      'errors.count': schematic.errors.length,
     });
 
     if (schematic.errors.length > 0) {
