@@ -660,7 +660,7 @@ function EditorLayoutContent({
             ...prev,
             middle: 'markdown-viewer',
           }));
-        } catch (err) {
+        } catch (_err) {
           // README doesn't exist - that's fine, just log it
           console.log('[EditorLayout] No README found for package:', payload.path);
         }
