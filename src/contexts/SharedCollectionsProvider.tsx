@@ -127,7 +127,12 @@ export function SharedCollectionsProvider({
 
       try {
         const repoInfo = await trpc.github.getRepoInfo.query({ owner, repo });
-        setCollectionRepoDetails(prev => [...prev, repoInfo as unknown as GitHubRepository]);
+        // Transform license object to SPDX string for GitHubRepository compatibility
+        const transformedRepo: GitHubRepository = {
+          ...repoInfo,
+          license: repoInfo.license?.spdx_id ?? null,
+        };
+        setCollectionRepoDetails(prev => [...prev, transformedRepo]);
       } catch (error) {
         console.error(`Failed to fetch repo ${repoId}:`, error);
       } finally {
