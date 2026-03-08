@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Search, X, Clock } from 'lucide-react';
+import { Search, X, Clock, Map, Globe } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -210,6 +210,7 @@ export function CenteredSearchLayout() {
           alignItems: 'center',
           padding: '32px 24px 0',
           paddingTop: 'min(20vh, 160px)',
+          flexShrink: 0,
         }}
       >
         {/* Title */}
@@ -400,32 +401,139 @@ export function CenteredSearchLayout() {
         </div>
       </div>
 
-      {/* Scrollable Content Area */}
-      <div
-        style={{
-          flex: 1,
-          overflow: 'auto',
-          padding: '0 24px 32px',
-        }}
-      >
+      {/* Action Buttons - Centered in remaining space, hidden when searching */}
+      {!searchQuery.trim() && (
         <div
           style={{
-            maxWidth: '800px',
-            width: '100%',
-            margin: '0 auto',
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '48px 24px',
           }}
         >
-          {/* Search Results */}
-          {searchQuery.trim() && (
+          <div
+            style={{
+              display: 'flex',
+              gap: '32px',
+              width: '70vw',
+              maxWidth: '1000px',
+              minWidth: '600px',
+              height: '35vh',
+              minHeight: '280px',
+              maxHeight: '400px',
+            }}
+          >
+            <Link
+              href="/X-File-City"
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '28px',
+                padding: '48px 32px',
+                borderRadius: '32px',
+                border: `3px solid ${theme.colors.border}`,
+                background: theme.colors.surface,
+                color: theme.colors.text,
+                textDecoration: 'none',
+                transition: 'all 0.2s ease',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = theme.colors.primary;
+                e.currentTarget.style.transform = 'translateY(-6px)';
+                e.currentTarget.style.boxShadow = `0 12px 32px ${theme.colors.primary}30`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = theme.colors.border;
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <Map size={80} style={{ color: theme.colors.primary }} />
+              <span
+                style={{
+                  fontSize: '28px',
+                  fontWeight: theme.fontWeights.semibold,
+                  fontFamily: theme.fonts.body,
+                }}
+              >
+                See File City Tours
+              </span>
+            </Link>
+
+            <Link
+              href="/worlds"
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '28px',
+                padding: '48px 32px',
+                borderRadius: '32px',
+                border: `3px solid ${theme.colors.border}`,
+                background: theme.colors.surface,
+                color: theme.colors.text,
+                textDecoration: 'none',
+                transition: 'all 0.2s ease',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = theme.colors.primary;
+                e.currentTarget.style.transform = 'translateY(-6px)';
+                e.currentTarget.style.boxShadow = `0 12px 32px ${theme.colors.primary}30`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = theme.colors.border;
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <Globe size={80} style={{ color: theme.colors.primary }} />
+              <span
+                style={{
+                  fontSize: '28px',
+                  fontWeight: theme.fontWeights.semibold,
+                  fontFamily: theme.fonts.body,
+                }}
+              >
+                Visit Worlds
+              </span>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Scrollable Content Area - only shown when searching */}
+      {searchQuery.trim() && (
+        <div
+          style={{
+            flex: 1,
+            overflow: 'auto',
+            padding: '0 24px 32px',
+          }}
+        >
+          <div
+            style={{
+              maxWidth: '800px',
+              width: '100%',
+              margin: '0 auto',
+            }}
+          >
             <div style={{ marginTop: '32px' }}>
               <GitHubSearchResults
                 searchQuery={searchQuery}
                 userRepos={userRepos}
               />
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
