@@ -28,7 +28,7 @@ import {
   WorkspaceCollectionPanel,
 } from '@industry-theme/alexandria-panels';
 import { GitHubSearchPanel } from '@industry-theme/github-panels';
-import { CodeCityPanel } from '@industry-theme/file-city-panel';
+import { FeedCodeCityPanel } from '@industry-theme/file-city-panel';
 import { CollectionMapPanel } from '@industry-theme/repository-composition-panels';
 
 const RECENT_REPOSITORIES_KEY = 'recent-repositories';
@@ -74,7 +74,7 @@ const UserProfilePanelLoader = UserProfilePanel;
 const WorkspaceCollectionPanelLoader = WorkspaceCollectionPanel;
 
 // Explore mode panels
-const FileCityPanelLoader = CodeCityPanel;
+const FileCityPanelLoader = FeedCodeCityPanel;
 const CollectionMapPanelLoader = CollectionMapPanel;
 
 export type ViewMode = 'manage' | 'explore';

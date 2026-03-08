@@ -44,7 +44,7 @@ import type { ValidatedRepositoryPath } from '@principal-ai/alexandria-core-libr
 import { minimatch } from 'minimatch';
 import { GitFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
-import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode } from '@industry-theme/file-city-panel';
+import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode, FeedProjectSliceData } from '@industry-theme/file-city-panel';
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from './AuthContext';
 import { useUserCollections } from './UserCollectionsContext';
@@ -166,6 +166,7 @@ export interface WorldsPageContextType {
   commitFiles?: DataSlice<CommitFilesSliceData>;
   storyboardContext?: DataSlice<StoryboardContextSliceData>;
   userProfile: DataSlice<UserProfileSlice>; // Required for UserProfilePanel
+  feedProject: DataSlice<FeedProjectSliceData>; // Required for FeedCodeCityPanel
 }
 
 interface WorldsPageProviderProps {
@@ -617,6 +618,49 @@ export function WorldsPageProvider({
     [storyboardContextData]
   );
 
+  // Explicit slice: feedProject (typed for FeedCodeCityPanel)
+  const feedProjectSlice = useMemo<DataSlice<FeedProjectSliceData>>(() => {
+    if (!githubRepo) {
+      return {
+        scope: 'repository' as const,
+        name: 'feedProject',
+        data: null,
+        loading: false,
+        error: null,
+        refresh: async () => { /* no-op */ },
+      };
+    }
+
+    const [owner, repoName] = githubRepo.split('/');
+    const repoDetails = collectionRepoDetails.find(r => r.full_name === githubRepo);
+
+    const feedProjectData: FeedProjectSliceData = {
+      repo: {
+        owner: owner || '',
+        name: repoName || '',
+        fullName: githubRepo,
+        description: repoDetails?.description ?? undefined,
+        htmlUrl: `https://github.com/${githubRepo}`,
+        stars: repoDetails?.stargazers_count ?? 0,
+        forks: 0, // Not available in GitHubRepository type
+        language: repoDetails?.language ?? undefined,
+        updatedAt: repoDetails?.updated_at ?? undefined,
+        avatarUrl: repoDetails?.owner?.avatar_url,
+        license: repoDetails?.license ?? undefined,
+        defaultBranch: repoDetails?.default_branch,
+      },
+    };
+
+    return {
+      scope: 'repository' as const,
+      name: 'feedProject',
+      data: feedProjectData,
+      loading: collectionRepoDetailsLoading,
+      error: null,
+      refresh: async () => { /* no-op */ },
+    };
+  }, [githubRepo, collectionRepoDetails, collectionRepoDetailsLoading]);
+
   // Slices ref for dynamic/optional slices (now empty after full migration)
   const slicesRef = useRef<Map<string, DataSlice>>(new Map());
 
@@ -983,6 +1027,7 @@ export function WorldsPageProvider({
       packages: packagesSlice, // Required by PackageCompositionPanel
       commitFiles: commitFilesSlice,
       storyboardContext: storyboardContextSlice,
+      feedProject: feedProjectSlice,
       // Legacy methods - no-ops after migration to explicit slices
       // Actions handle refreshing - panels should use typed properties directly
       getSlice: () => undefined,
@@ -1013,6 +1058,7 @@ export function WorldsPageProvider({
       activeFileSlice,
       commitFilesSlice,
       storyboardContextSlice,
+      feedProjectSlice,
     ]
   );
 
