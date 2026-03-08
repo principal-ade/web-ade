@@ -266,8 +266,8 @@ export function OwnerPageProvider({
     isAuthenticated: false,
   });
   const [extendedOwnerInfo, setExtendedOwnerInfo] = useState<ExtendedOwnerInfo | null>(null);
-  const [ownerReposLoading, setOwnerReposLoading] = useState(false);
-  const [currentOwner, setCurrentOwner] = useState<string | null>(initialOwner || null);
+  const [ownerReposLoading, setOwnerReposLoading] = useState(true);
+  const [currentOwner, setCurrentOwner] = useState<string | null>(null);
 
   // State for quality metrics
   const [qualityData] = useState<QualitySliceData | null>(null);
