@@ -28,7 +28,7 @@ import type {
 import type { ValidatedRepositoryPath } from '@principal-ai/alexandria-core-library/types';
 import type { Collection } from '@principal-ai/alexandria-collections';
 import { GitFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
-import type { FileCityColorModesSliceData, ColorMode } from '@industry-theme/file-city-panel';
+import type { FileCityColorModesSliceData, ColorMode, FeedProjectSliceData } from '@industry-theme/file-city-panel';
 import { trpc } from '@/lib/trpc/client';
 import type {
   WorkspaceSlice,
@@ -53,6 +53,7 @@ export interface SharedCollectionsContextType {
   userProfile: DataSlice<UserProfileSlice>;
   fileTree: DataSlice<FileTree>;
   fileCityColorModes: DataSlice<FileCityColorModesSliceData>;
+  feedProject: DataSlice<FeedProjectSliceData>;
 }
 
 interface SharedCollectionsProviderProps {
@@ -312,6 +313,49 @@ export function SharedCollectionsProvider({
     []
   );
 
+  // Build feedProject slice for FeedCodeCityPanel
+  const feedProjectSlice = useMemo<DataSlice<FeedProjectSliceData>>(() => {
+    if (!selectedRepositoryId) {
+      return {
+        scope: 'repository' as const,
+        name: 'feedProject',
+        data: null,
+        loading: false,
+        error: null,
+        refresh: async () => { /* no-op */ },
+      };
+    }
+
+    const [owner, repoName] = selectedRepositoryId.split('/');
+    const repoDetails = collectionRepoDetails.find(r => r.full_name === selectedRepositoryId);
+
+    const feedProjectData: FeedProjectSliceData = {
+      repo: {
+        owner: owner || '',
+        name: repoName || '',
+        fullName: selectedRepositoryId,
+        description: repoDetails?.description ?? undefined,
+        htmlUrl: `https://github.com/${selectedRepositoryId}`,
+        stars: repoDetails?.stargazers_count ?? 0,
+        forks: 0,
+        language: repoDetails?.language ?? undefined,
+        updatedAt: repoDetails?.updated_at ?? undefined,
+        avatarUrl: repoDetails?.owner?.avatar_url,
+        license: repoDetails?.license ?? undefined,
+        defaultBranch: repoDetails?.default_branch,
+      },
+    };
+
+    return {
+      scope: 'repository' as const,
+      name: 'feedProject',
+      data: feedProjectData,
+      loading: collectionRepoDetailsLoading,
+      error: null,
+      refresh: async () => { /* no-op */ },
+    };
+  }, [selectedRepositoryId, collectionRepoDetails, collectionRepoDetailsLoading]);
+
   // Build selectedCollectionView slice
   const selectedCollectionView = useMemo<SelectedCollectionView>(() => {
     const repositories: AlexandriaEntryWithMetrics[] = collectionRepositories.map(repoId => {
@@ -389,6 +433,7 @@ export function SharedCollectionsProvider({
       userProfile: userProfileSlice,
       fileTree: fileTreeSlice,
       fileCityColorModes: fileCityColorModesSlice,
+      feedProject: feedProjectSlice,
       // Legacy methods - no-ops
       getSlice: () => undefined,
       getWorkspaceSlice: () => undefined,
@@ -397,7 +442,7 @@ export function SharedCollectionsProvider({
       isSliceLoading: () => false,
       refresh: async () => { /* no-op */ },
     }),
-    [workspace, adapters, collection, selectedCollectionView, workspaceRepositoriesSlice, workspaceSlice, userProfileSlice, fileTreeSlice, fileCityColorModesSlice]
+    [workspace, adapters, collection, selectedCollectionView, workspaceRepositoriesSlice, workspaceSlice, userProfileSlice, fileTreeSlice, fileCityColorModesSlice, feedProjectSlice]
   );
 
   // Actions - read-only view (CollectionMapPanelActions are no-ops except for click handling)

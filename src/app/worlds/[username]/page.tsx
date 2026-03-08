@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import { WorkspaceCollectionPanel, UserProfilePanel } from "@industry-theme/alexandria-panels";
 import { CollectionMapPanel } from "@industry-theme/repository-composition-panels";
-import { CodeCityPanel } from "@industry-theme/file-city-panel";
+import { FeedCodeCityPanel } from "@industry-theme/file-city-panel";
 import {
   EditableConfigurablePanelLayout,
   ResponsiveConfigurablePanelLayout,
@@ -33,7 +33,7 @@ import type { CollectionsPermissionsResponse } from '@/types/api';
 const WorkspaceCollectionPanelLoader = WorkspaceCollectionPanel;
 const CollectionMapPanelLoader = CollectionMapPanel;
 const UserProfilePanelLoader = UserProfilePanel;
-const FileCityPanelLoader = CodeCityPanel;
+const FileCityPanelLoader = FeedCodeCityPanel;
 
 interface UserInfo {
   login: string;
