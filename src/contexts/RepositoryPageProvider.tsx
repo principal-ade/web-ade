@@ -164,16 +164,15 @@ interface RepoCapabilitiesSliceData {
   hasClaudeWorkflow: boolean;
 }
 
-interface TelemetrySliceData {
-  traces: Array<{
-    id: string;
-    serviceName: string;
-    timestamp: string;
-    duration: number;
-    status: string;
-  }>;
-  loading: boolean;
-  error?: Error;
+/**
+ * Individual telemetry trace item
+ */
+interface TelemetryTrace {
+  id: string;
+  serviceName: string;
+  timestamp: string;
+  duration: number;
+  status: string;
 }
 
 interface SchematicsSliceData {
@@ -202,7 +201,7 @@ export interface RepositoryPageContextType {
   'github-messages'?: DataSlice<GitHubMessagesSliceData>;
   repoCapabilities?: DataSlice<RepoCapabilitiesSliceData>;
   storyboardContext?: DataSlice<StoryboardContextSliceData>;
-  telemetry?: DataSlice<TelemetrySliceData>;
+  telemetry?: DataSlice<TelemetryTrace[]>;
   schematics?: DataSlice<SchematicsSliceData>;
   fileCityColorModes: DataSlice<FileCityColorModesSliceData>;
   commitFiles?: DataSlice<CommitFilesSliceData>;
@@ -311,11 +310,8 @@ export function RepositoryPageProvider({
   // State for storyboard context
   const [storyboardContextData] = useState<StoryboardContextSliceData | null>(null);
 
-  // State for telemetry
-  const [telemetry] = useState<TelemetrySliceData>({
-    traces: [],
-    loading: false,
-  });
+  // State for telemetry traces
+  const [telemetryTraces] = useState<TelemetryTrace[]>([]);
 
   // State for schematics
   const [schematics] = useState<SchematicsSliceData>({
@@ -496,16 +492,16 @@ export function RepositoryPageProvider({
   );
 
   // Explicit slice: telemetry
-  const telemetrySlice = useMemo<DataSlice<TelemetrySliceData>>(
+  const telemetrySlice = useMemo<DataSlice<TelemetryTrace[]>>(
     () => ({
       scope: 'global' as const,
       name: 'telemetry',
-      data: telemetry,
-      loading: telemetry.loading,
-      error: telemetry.error || null,
+      data: telemetryTraces,
+      loading: false,
+      error: null,
       refresh: async () => { /* no-op */ },
     }),
-    [telemetry]
+    [telemetryTraces]
   );
 
   // Explicit slice: schematics
