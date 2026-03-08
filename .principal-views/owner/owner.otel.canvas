@@ -108,7 +108,8 @@
             "ownerInfo": {
               "type": "object",
               "description": "Owner metadata",
-              "required": false
+              "required": false,
+              "display": false
             }
           }
         },

@@ -1,7 +1,6 @@
 'use client';
 
 import Link from "next/link";
-import Image from "next/image";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useOwnerPageProvider } from "@/contexts/OwnerPageProvider";
@@ -37,13 +36,10 @@ import {
 // Static layout configurations (outside component to avoid recreation)
 const defaultLayout: PanelLayout = {
   left: 'owner-profile',
-  middle: {
-    type: 'tabs',
-    panels: ['file-city', 'visual-validation'],
-  },
+  middle: 'file-city',
   right: {
     type: 'tabs',
-    panels: ['code-quality', 'package-composition'],
+    panels: ['visual-validation', 'code-quality', 'package-composition'],
   },
 };
 
@@ -124,7 +120,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
   const [canvasLoading, setCanvasLoading] = useState(true);
   const canvasLoadedRef = useRef(false);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('default');
 
   const [layout, setLayout] = useState<PanelLayout>(defaultLayout);
@@ -378,66 +374,24 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
             paddingBottom: '0.75rem',
           }}
         >
-          {/* Left section: Logo and Owner info */}
+          {/* Left section: Logo and Principal AI */}
           <div className="flex items-center gap-3 flex-shrink-0">
             <Link
               href="/"
-              className="flex items-center transition-all hover:opacity-80"
+              className="flex items-center gap-2 transition-all hover:opacity-80"
               title="Home"
             >
               <Logo width={32} height={32} color={theme.colors.primary} />
-            </Link>
-            {/* Owner info */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Image
-                src={`https://github.com/${owner}.png?size=64`}
-                alt={owner}
-                width={24}
-                height={24}
-                className="rounded-full"
-              />
-              <a
-                href={`https://github.com/${owner}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-base font-semibold transition-opacity hover:opacity-80"
+              <span
+                className="text-base font-semibold"
                 style={{
                   fontFamily: theme.fonts.body,
                   color: theme.colors.text,
-                  textDecoration: 'none',
                 }}
               >
-                {owner}
-              </a>
-            </div>
-            {/* Selected repository */}
-            {previewedRepo && (
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span style={{ color: theme.colors.textMuted }}>/</span>
-                <Link
-                  href={`/${previewedRepo}`}
-                  className="text-base font-semibold transition-opacity hover:opacity-80"
-                  style={{
-                    fontFamily: theme.fonts.body,
-                    color: theme.colors.text,
-                    textDecoration: 'none',
-                  }}
-                >
-                  {previewedRepo.split('/')[1]}
-                </Link>
-                <Link
-                  href={`/${previewedRepo}`}
-                  className="px-2 py-0.5 rounded text-xs transition-all hover:opacity-80"
-                  style={{
-                    background: theme.colors.primary,
-                    color: theme.colors.textOnPrimary,
-                    textDecoration: 'none',
-                  }}
-                >
-                  Open
-                </Link>
-              </div>
-            )}
+                Principal <span style={{ color: theme.colors.primary }}>AI</span>
+              </span>
+            </Link>
           </div>
 
           {/* Center: Mode Switch */}
