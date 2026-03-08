@@ -18,7 +18,7 @@ function CollectionsPageWrapper() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const userCollections = useUserCollections();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, login } = useAuth();
 
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(
     searchParams.get('collection')
@@ -176,7 +176,7 @@ function CollectionsPageWrapper() {
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
-            onClick={() => router.push('/api/auth/github')}
+            onClick={() => login()}
             style={{
               display: 'flex',
               alignItems: 'center',
