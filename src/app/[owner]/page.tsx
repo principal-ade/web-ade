@@ -18,6 +18,7 @@ function OwnerPageWrapper({ owner }: { owner: string }) {
 
   // Update URL when previewed repo changes
   const handlePreviewChange = useCallback((repo: string | null) => {
+    console.log('[OwnerPage] handlePreviewChange called:', repo);
     setPreviewedRepo(repo);
     const params = new URLSearchParams(searchParams.toString());
     if (repo) {

@@ -309,6 +309,13 @@ export function OwnerPageProvider({
     [ownerRepos, ownerReposLoading]
   );
 
+  // Derive selectedRepositoryId from githubRepo
+  const selectedRepositoryId = useMemo(() => {
+    if (!githubRepo || !ownerRepos.repositories) return null;
+    const repo = ownerRepos.repositories.find((r) => r.full_name === githubRepo);
+    return repo?.id ?? null;
+  }, [githubRepo, ownerRepos.repositories]);
+
   // Explicit slice: orgProfile (required - expected by OrgProfilePanel)
   const orgProfileSlice = useMemo<DataSlice<OrgProfileSlice>>(
     () => ({
@@ -340,6 +347,7 @@ export function OwnerPageProvider({
         } : null,
         collections: [], // TODO: Fetch owner's collections if needed
         repositories: ownerRepos.repositories || [],
+        selectedRepositoryId,
         loading: ownerReposLoading,
         error: ownerRepos.error,
       },
@@ -347,7 +355,7 @@ export function OwnerPageProvider({
       error: ownerRepos.error ? new Error(ownerRepos.error) : null,
       refresh: async () => { /* no-op */ },
     }),
-    [extendedOwnerInfo, ownerRepos.repositories, ownerRepos.error, ownerReposLoading]
+    [extendedOwnerInfo, ownerRepos.repositories, ownerRepos.error, ownerReposLoading, selectedRepositoryId]
   );
 
   // Explicit slice: fileTree
@@ -588,6 +596,7 @@ export function OwnerPageProvider({
 
   // Fetch file tree when githubRepo changes
   useEffect(() => {
+    console.log('[OwnerPageProvider] githubRepo changed:', githubRepo);
     if (!githubRepo) {
       setFileTree(null);
       setFileTreeLoading(false);

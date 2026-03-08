@@ -246,11 +246,13 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
     const unsubscribers = [
       events.on('repository:preview', (event) => {
         const payload = event.payload as { repository: { full_name: string } };
+        console.log('[OwnerPageContent] repository:preview received:', payload?.repository?.full_name);
         if (payload?.repository?.full_name) {
           const parts = payload.repository.full_name.split('/');
           const repoOwner = parts[0];
           const repo = parts[1];
           if (repoOwner && repo) {
+            console.log('[OwnerPageContent] Calling handlePreviewChange for:', payload.repository.full_name);
             handlePreviewChange(payload.repository.full_name);
             (actions as { previewReadme?: (owner: string, repo: string) => Promise<string> }).previewReadme?.(repoOwner, repo);
             // Check if this repo has an architecture.canvas file
