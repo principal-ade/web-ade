@@ -49,6 +49,7 @@ import type {
   CollectionMapPanelActions,
 } from '@industry-theme/repository-composition-panels';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
+import type { ValidatedRepositoryPath } from '@principal-ai/alexandria-core-library/types';
 import type {
   OwnerRepositoriesSliceData,
   GitHubRepository,
@@ -290,9 +291,71 @@ export function OwnerPageProvider({
 
   // State for selectedCollectionView (for CollectionMapPanel)
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
-  const [collectionRepositories] = useState<AlexandriaEntryWithMetrics[]>([]);
-  const [collectionLoading] = useState(false);
-  const [collectionError] = useState<string | null>(null);
+
+  // Create virtual collection from first 10 repos for the world view
+  const virtualCollection = useMemo<Collection | null>(() => {
+    if (!initialOwner || !ownerRepos.repositories || ownerRepos.repositories.length === 0) {
+      return null;
+    }
+    const first10Repos = ownerRepos.repositories.slice(0, 10);
+    return {
+      id: `virtual-${initialOwner}`,
+      name: `${initialOwner}'s Repositories`,
+      description: `Top repositories from ${initialOwner}`,
+      visibility: 'public' as const,
+      owner: initialOwner,
+      ownerType: 'user' as const,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      members: first10Repos.map((repo) => ({
+        repositoryId: repo.full_name,
+        collectionId: `virtual-${initialOwner}`,
+        addedAt: repo.updated_at ? new Date(repo.updated_at).getTime() : Date.now(),
+      })),
+    };
+  }, [initialOwner, ownerRepos.repositories]);
+
+  // Transform repos into AlexandriaEntryWithMetrics for CollectionMapPanel
+  const virtualCollectionRepositories = useMemo<AlexandriaEntryWithMetrics[]>(() => {
+    if (!ownerRepos.repositories || ownerRepos.repositories.length === 0) {
+      return [];
+    }
+    const first10Repos = ownerRepos.repositories.slice(0, 10);
+    return first10Repos.map((repo): AlexandriaEntryWithMetrics => ({
+      name: repo.name,
+      path: repo.full_name as ValidatedRepositoryPath,
+      purl: undefined,
+      remoteUrl: repo.html_url,
+      registeredAt: repo.created_at || new Date().toISOString(),
+      hasViews: false,
+      viewCount: 0,
+      views: [],
+      github: {
+        id: repo.full_name,
+        owner: repo.owner?.login || initialOwner || '',
+        name: repo.name,
+        stars: repo.stargazers_count || 0,
+        lastUpdated: repo.updated_at || new Date().toISOString(),
+        primaryLanguage: repo.language || undefined,
+        description: repo.description || undefined,
+        license: typeof repo.license === 'string' ? repo.license : repo.license?.spdx_id,
+        ownerAvatar: repo.owner?.avatar_url,
+      },
+      lastChecked: undefined,
+      lastOpenedAt: undefined,
+      bookColor: undefined,
+      theme: undefined,
+      metrics: {
+        fileCount: undefined,
+        lineCount: undefined,
+        commitCount: undefined,
+        contributors: undefined,
+        lastEditedAt: repo.pushed_at || repo.updated_at || new Date().toISOString(),
+        createdAt: repo.created_at || new Date().toISOString(),
+      },
+      packages: undefined,
+    }));
+  }, [ownerRepos.repositories, initialOwner]);
 
   // ===== EXPLICIT SLICES (migrated from Map) =====
 
@@ -511,20 +574,21 @@ export function OwnerPageProvider({
   );
 
   // Explicit slice: selectedCollectionView (special - used by CollectionMapPanel)
+  // Uses virtual collection created from owner's first 10 repos
   const selectedCollectionViewSlice = useMemo<SelectedCollectionView>(
     () => ({
       scope: 'workspace' as const,
       name: 'selectedCollectionView',
       data: {
-        collection: selectedCollection,
-        repositories: collectionRepositories,
+        collection: selectedCollection || virtualCollection,
+        repositories: virtualCollectionRepositories,
         dependencies: undefined,
       },
-      loading: collectionLoading,
-      error: collectionError ? new Error(collectionError) : null,
+      loading: ownerReposLoading,
+      error: ownerRepos.error ? new Error(ownerRepos.error) : null,
       refresh: async () => { /* no-op */ },
     }),
-    [selectedCollection, collectionRepositories, collectionLoading, collectionError]
+    [selectedCollection, virtualCollection, virtualCollectionRepositories, ownerReposLoading, ownerRepos.error]
   );
 
   // Slices ref (now empty after full migration)
