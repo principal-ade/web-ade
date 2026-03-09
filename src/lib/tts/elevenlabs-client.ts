@@ -41,6 +41,7 @@ export async function generateAudio(
         similarity_boost: 0.75,
         style: 0.0,
         use_speaker_boost: true,
+        speed: options.speed,
       },
     };
 
@@ -125,7 +126,7 @@ export async function generateAudio(
 export function getDefaultOptions(): TTSOptions {
   return {
     voice: process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM', // Rachel
-    speed: 1.0,
+    speed: 1.1,
     model: process.env.ELEVENLABS_MODEL_ID || 'eleven_v3', // v3 for highest quality and emotional range
   };
 }
