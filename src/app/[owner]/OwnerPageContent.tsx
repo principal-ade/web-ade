@@ -1,8 +1,9 @@
 'use client';
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTheme } from "@principal-ade/industry-theme";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useOwnerPageProvider } from "@/contexts/OwnerPageProvider";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import { UserAvatarMenu } from "@/components/UserAvatarMenu";
@@ -113,6 +114,7 @@ export interface OwnerPageContentProps {
 
 export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo }: OwnerPageContentProps) {
   const { theme } = useTheme();
+  const router = useRouter();
   const { context, actions, events } = useOwnerPageProvider();
   const [isMobile, setIsMobile] = useState(false);
   const [previewedRepo, setPreviewedRepo] = useState<string | null>(initialPreviewedRepo ?? null);
@@ -271,6 +273,14 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
     return () => unsubscribers.forEach((unsub) => unsub());
   }, [events, actions, checkForCanvas, handlePreviewChange]);
 
+  // Create custom actions for File City panel with learnMore navigation
+  const fileCityActions = useMemo(() => ({
+    ...actions,
+    learnMore: previewedRepo ? () => {
+      router.push(`/${previewedRepo}`);
+    } : undefined,
+  }), [actions, previewedRepo, router]);
+
   const panels = [
     {
       id: 'owner-profile',
@@ -340,7 +350,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
       icon: <Map size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
-          <FileCityPanelLoader context={context} actions={actions} events={events} />
+          <FileCityPanelLoader context={context} actions={fileCityActions} events={events} />
         </div>
       ),
     },
