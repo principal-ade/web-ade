@@ -24,10 +24,9 @@ import {
   UserCollectionsPanel,
   GitHubStarredPanel,
   GitHubProjectsPanel,
-  UserProfilePanel,
   WorkspaceCollectionPanel,
 } from '@industry-theme/alexandria-panels';
-import { GitHubSearchPanel } from '@industry-theme/github-panels';
+import { GitHubSearchPanel, ProfilePanel } from '@industry-theme/github-panels';
 import { FeedCodeCityPanel } from '@industry-theme/file-city-panel';
 import { CollectionMapPanel } from '@industry-theme/repository-composition-panels';
 
@@ -70,7 +69,7 @@ const UserCollectionsPanelLoader = UserCollectionsPanel;
 const GitHubStarredPanelLoader = GitHubStarredPanel;
 const GitHubProjectsPanelLoader = GitHubProjectsPanel;
 const GitHubSearchPanelLoader = GitHubSearchPanel;
-const UserProfilePanelLoader = UserProfilePanel;
+const ProfilePanelLoader = ProfilePanel;
 const WorkspaceCollectionPanelLoader = WorkspaceCollectionPanel;
 
 // Explore mode panels
@@ -309,10 +308,11 @@ export function CollectionsPageContent({
       icon: <User size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
-          <UserProfilePanelLoader
+          <ProfilePanelLoader
             context={context}
             actions={actions}
             events={events}
+            profileType="user"
           />
         </div>
       ),

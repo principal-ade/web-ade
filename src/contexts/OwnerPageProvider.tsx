@@ -52,7 +52,7 @@ import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import type { ValidatedRepositoryPath } from '@principal-ai/alexandria-core-library/types';
 import type {
   OwnerRepositoriesSliceData,
-  GitHubRepository,
+  ProfileSlice,
 } from '@industry-theme/github-panels';
 
 // Extended owner info type that includes all fields from API response
@@ -75,36 +75,7 @@ interface ExtendedOwnerInfo {
   updated_at: string;
 }
 
-// Local OrgProfileSlice type that matches what OrgProfilePanel expects
-interface OrgProfileSlice {
-  org: {
-    login: string;
-    id: number;
-    avatar_url: string;
-    name: string | null;
-    description: string | null;
-    company: string | null;
-    blog: string | null;
-    location: string | null;
-    email: string | null;
-    twitter_username: string | null;
-    is_verified: boolean;
-    has_organization_projects: boolean;
-    has_repository_projects: boolean;
-    public_repos: number;
-    public_gists: number;
-    followers: number;
-    following: number;
-    html_url: string;
-    created_at: string;
-    updated_at: string;
-    type: 'Organization';
-  } | null;
-  collections: Collection[];
-  repositories: GitHubRepository[];
-  loading: boolean;
-  error?: string;
-}
+// ProfileSlice type is now imported from @industry-theme/github-panels
 
 // Host-provided tools
 const hostTools: PanelTool[] = [
@@ -175,7 +146,7 @@ const hostTools: PanelTool[] = [
 export interface OwnerPageContextType {
   'owner-repositories'?: DataSlice<OwnerRepositoriesSliceData>;
   ownerRepositories: DataSlice<OwnerRepositoriesSliceData>; // Required - expected by OwnerRepositoriesPanel
-  orgProfile: DataSlice<OrgProfileSlice>; // Required - expected by OrgProfilePanel
+  profile: DataSlice<ProfileSlice>; // Required - expected by ProfilePanel
   fileTree: DataSlice<FileTree>;
   fileCityColorModes: DataSlice<FileCityColorModesSliceData>;
   quality?: DataSlice<QualitySliceData>;
@@ -379,13 +350,13 @@ export function OwnerPageProvider({
     return repo?.id ?? null;
   }, [githubRepo, ownerRepos.repositories]);
 
-  // Explicit slice: orgProfile (required - expected by OrgProfilePanel)
-  const orgProfileSlice = useMemo<DataSlice<OrgProfileSlice>>(
+  // Explicit slice: profile (required - expected by ProfilePanel)
+  const profileSlice = useMemo<DataSlice<ProfileSlice>>(
     () => ({
       scope: 'global' as const,
-      name: 'orgProfile',
+      name: 'profile',
       data: {
-        org: extendedOwnerInfo ? {
+        profile: extendedOwnerInfo ? {
           login: extendedOwnerInfo.login,
           id: extendedOwnerInfo.id,
           avatar_url: extendedOwnerInfo.avatar_url,
@@ -622,7 +593,7 @@ export function OwnerPageProvider({
           repositories: data.repositories || [],
           isAuthenticated,
         });
-        // Store extended owner info for OrgProfilePanel
+        // Store extended owner info for ProfilePanel
         if (data.owner) {
           setExtendedOwnerInfo(data.owner as ExtendedOwnerInfo);
         } else {
@@ -771,7 +742,7 @@ export function OwnerPageProvider({
       // Required slices
       'owner-repositories': ownerRepositoriesSlice,
       ownerRepositories: ownerRepositoriesSlice, // Alias for panels expecting camelCase
-      orgProfile: orgProfileSlice, // Required for OrgProfilePanel
+      profile: profileSlice, // Required for ProfilePanel
       packages: packagesSlice,
       repositoryEntry: repositoryEntrySlice,
       selectedCollectionView: selectedCollectionViewSlice,
@@ -801,7 +772,7 @@ export function OwnerPageProvider({
       adapters,
       // All explicit slices
       ownerRepositoriesSlice,
-      orgProfileSlice,
+      profileSlice,
       packagesSlice,
       repositoryEntrySlice,
       selectedCollectionViewSlice,

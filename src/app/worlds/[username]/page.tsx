@@ -6,7 +6,8 @@ import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { SharedCollectionsProvider, useSharedCollectionsProvider } from "@/contexts/SharedCollectionsProvider";
 import { useAuth } from "@/contexts/AuthContext";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
-import { WorkspaceCollectionPanel, UserProfilePanel } from "@industry-theme/alexandria-panels";
+import { WorkspaceCollectionPanel } from "@industry-theme/alexandria-panels";
+import { ProfilePanel } from "@industry-theme/github-panels";
 import { CollectionMapPanel } from "@industry-theme/repository-composition-panels";
 import { FeedCodeCityPanel } from "@industry-theme/file-city-panel";
 import {
@@ -32,7 +33,7 @@ import type { CollectionsPermissionsResponse } from '@/types/api';
 // Static imports for type safety
 const WorkspaceCollectionPanelLoader = WorkspaceCollectionPanel;
 const CollectionMapPanelLoader = CollectionMapPanel;
-const UserProfilePanelLoader = UserProfilePanel;
+const ProfilePanelLoader = ProfilePanel;
 const FileCityPanelLoader = FeedCodeCityPanel;
 
 interface UserInfo {
@@ -122,10 +123,11 @@ function SharedCollectionsContent({
       icon: <User size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
-          <UserProfilePanelLoader
+          <ProfilePanelLoader
             context={context}
             actions={actions}
             events={events}
+            profileType="user"
           />
         </div>
       ),

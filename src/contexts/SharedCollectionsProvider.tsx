@@ -34,9 +34,8 @@ import type {
   WorkspaceSlice,
   WorkspaceCollectionRepositoriesSlice,
   GitHubRepository,
-  UserProfileSlice,
-  GitHubUserProfile,
 } from '@industry-theme/alexandria-panels';
+import type { ProfileSlice, GitHubUserProfile } from '@industry-theme/github-panels';
 import type {
   AlexandriaEntryWithMetrics,
   SelectedCollectionView,
@@ -50,7 +49,7 @@ export interface SharedCollectionsContextType {
   selectedCollectionView: SelectedCollectionView;
   workspaceRepositories: DataSlice<WorkspaceCollectionRepositoriesSlice>;
   workspace: DataSlice<WorkspaceSlice>;
-  userProfile: DataSlice<UserProfileSlice>;
+  profile: DataSlice<ProfileSlice>;
   fileTree: DataSlice<FileTree>;
   fileCityColorModes: DataSlice<FileCityColorModesSliceData>;
   feedProject: DataSlice<FeedProjectSliceData>;
@@ -131,6 +130,11 @@ export function SharedCollectionsProvider({
         const transformedRepo: GitHubRepository = {
           ...repoInfo,
           license: repoInfo.license?.spdx_id ?? null,
+          visibility: repoInfo.visibility as 'public' | 'private' | 'internal' | undefined,
+          owner: {
+            ...repoInfo.owner,
+            type: repoInfo.owner.type as 'User' | 'Organization' | undefined,
+          },
         };
         setCollectionRepoDetails(prev => [...prev, transformedRepo]);
       } catch (error) {
@@ -267,17 +271,17 @@ export function SharedCollectionsProvider({
     [collectionRepoDetails, collectionRepoDetailsLoading]
   );
 
-  // Build userProfile slice
-  const userProfileSlice = useMemo<DataSlice<UserProfileSlice>>(
+  // Build profile slice
+  const profileSlice = useMemo<DataSlice<ProfileSlice>>(
     () => ({
       scope: 'global' as const,
-      name: 'userProfile',
+      name: 'profile',
       data: {
-        user: userProfile,
+        profile: userProfile,
         collections: collection ? [collection] : [],
         repositories: [],
         starredRepositories: [],
-        currentView: 'profile' as const,
+        currentView: 'collections' as const,
         loading: false,
         error: undefined,
       },
@@ -346,7 +350,7 @@ export function SharedCollectionsProvider({
         language: repoDetails?.language ?? undefined,
         updatedAt: repoDetails?.updated_at ?? undefined,
         avatarUrl: repoDetails?.owner?.avatar_url,
-        license: repoDetails?.license ?? undefined,
+        license: typeof repoDetails?.license === 'string' ? repoDetails.license : undefined,
         defaultBranch: repoDetails?.default_branch,
       },
     };
@@ -435,7 +439,7 @@ export function SharedCollectionsProvider({
       selectedCollectionView,
       workspaceRepositories: workspaceRepositoriesSlice,
       workspace: workspaceSlice,
-      userProfile: userProfileSlice,
+      profile: profileSlice,
       fileTree: fileTreeSlice,
       fileCityColorModes: fileCityColorModesSlice,
       feedProject: feedProjectSlice,
@@ -447,7 +451,7 @@ export function SharedCollectionsProvider({
       isSliceLoading: () => false,
       refresh: async () => { /* no-op */ },
     }),
-    [workspace, adapters, collection, selectedCollectionView, workspaceRepositoriesSlice, workspaceSlice, userProfileSlice, fileTreeSlice, fileCityColorModesSlice, feedProjectSlice]
+    [workspace, adapters, collection, selectedCollectionView, workspaceRepositoriesSlice, workspaceSlice, profileSlice, fileTreeSlice, fileCityColorModesSlice, feedProjectSlice]
   );
 
   // Actions - read-only view (CollectionMapPanelActions are no-ops except for click handling)

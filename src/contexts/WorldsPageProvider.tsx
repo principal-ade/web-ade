@@ -57,8 +57,8 @@ import type {
   GitHubRepository,
   GitHubStarredSlice,
   GitHubProjectsSlice,
-  UserProfileSlice,
 } from '@industry-theme/alexandria-panels';
+import type { ProfileSlice } from '@industry-theme/github-panels';
 import type {
   AlexandriaEntryWithMetrics,
   SelectedCollectionView,
@@ -165,7 +165,7 @@ export interface WorldsPageContextType {
   packages: DataSlice<PackagesSliceData>; // Required - expected by PackageCompositionPanel
   commitFiles?: DataSlice<CommitFilesSliceData>;
   storyboardContext?: DataSlice<StoryboardContextSliceData>;
-  userProfile: DataSlice<UserProfileSlice>; // Required for UserProfilePanel
+  profile: DataSlice<ProfileSlice>; // Required for ProfilePanel
   feedProject: DataSlice<FeedProjectSliceData>; // Required for FeedCodeCityPanel
 }
 
@@ -380,13 +380,13 @@ export function WorldsPageProvider({
     ]
   );
 
-  // Explicit slice: userProfile (typed for UserProfilePanel)
-  const userProfileSlice = useMemo<DataSlice<UserProfileSlice>>(
+  // Explicit slice: profile (typed for ProfilePanel)
+  const profileSlice = useMemo<DataSlice<ProfileSlice>>(
     () => ({
       scope: 'global' as const,
-      name: 'userProfile',
+      name: 'profile',
       data: {
-        user: user ? {
+        profile: user ? {
           login: user.login,
           id: user.id,
           avatar_url: user.avatar_url || '',
@@ -406,7 +406,7 @@ export function WorldsPageProvider({
         repositories: [],
         starredRepositories: [],
         selectedCollectionId: collectionId,
-        currentView: 'profile' as const,
+        currentView: 'collections' as const,
         loading: false,
         error: undefined,
       },
@@ -646,7 +646,7 @@ export function WorldsPageProvider({
         language: repoDetails?.language ?? undefined,
         updatedAt: repoDetails?.updated_at ?? undefined,
         avatarUrl: repoDetails?.owner?.avatar_url,
-        license: repoDetails?.license ?? undefined,
+        license: typeof repoDetails?.license === 'string' ? repoDetails.license : undefined,
         defaultBranch: repoDetails?.default_branch,
       },
     };
@@ -737,7 +737,7 @@ export function WorldsPageProvider({
           lastUpdated: repoDetails?.updated_at ?? new Date(membership.addedAt).toISOString(),
           primaryLanguage: repoDetails?.language ?? undefined,
           description: repoDetails?.description ?? undefined,
-          license: repoDetails?.license ?? undefined,
+          license: typeof repoDetails?.license === 'string' ? repoDetails.license : undefined,
           ownerAvatar: repoDetails?.owner?.avatar_url ?? undefined,
         },
         lastChecked: undefined,
@@ -842,6 +842,11 @@ export function WorldsPageProvider({
         const transformedRepo: GitHubRepository = {
           ...repoInfo,
           license: repoInfo.license?.spdx_id ?? null,
+          visibility: repoInfo.visibility as 'public' | 'private' | 'internal' | undefined,
+          owner: {
+            ...repoInfo.owner,
+            type: repoInfo.owner.type as 'User' | 'Organization' | undefined,
+          },
         };
         setCollectionRepoDetails(prev => [...prev, transformedRepo]);
       } catch (error) {
@@ -1012,7 +1017,7 @@ export function WorldsPageProvider({
       selectedCollection,
       // Explicit typed slices (migrated from Map)
       userCollections: userCollectionsSlice,
-      userProfile: userProfileSlice,
+      profile: profileSlice,
       // selectedCollectionView is managed as direct state for type safety (not in Map)
       selectedCollectionView: selectedCollectionView,
       workspaceRepositories: workspaceRepositoriesSlice,
@@ -1045,7 +1050,7 @@ export function WorldsPageProvider({
       selectedCollection,
       selectedCollectionView,
       userCollectionsSlice,
-      userProfileSlice,
+      profileSlice,
       workspaceSlice,
       workspaceRepositoriesSlice,
       packagesSlice,

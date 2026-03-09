@@ -7,7 +7,7 @@ import { useOwnerPageProvider } from "@/contexts/OwnerPageProvider";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import { UserAvatarMenu } from "@/components/UserAvatarMenu";
 import { Logo } from "@principal-ai/logo-component";
-import { addRecentOwner, type OwnerInfo, OwnerRepositoriesPanel, OrgProfilePanel } from "@industry-theme/github-panels";
+import { addRecentOwner, type OwnerInfo, OwnerRepositoriesPanel, ProfilePanel } from "@industry-theme/github-panels";
 import { panels as principalViewPanels } from "@industry-theme/principal-view-panels";
 import { panels as codeQualityPanels } from "@principal-ade/code-quality-panels";
 import { CodeCityPanel } from "@industry-theme/file-city-panel";
@@ -96,7 +96,7 @@ async function saveRecentOwnerWithMetadata(owner: string) {
 
 // Static imports for all panels (for type safety)
 const OwnerRepositoriesPanelLoader = OwnerRepositoriesPanel;
-const OrgProfilePanelLoader = OrgProfilePanel;
+const ProfilePanelLoader = ProfilePanel;
 const PrincipalViewPanelLoader = principalViewPanels[0]!.component;
 const CodeQualityPanelLoader = codeQualityPanels[0]!.component;
 const FileCityPanelLoader = CodeCityPanel;
@@ -278,10 +278,11 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
       icon: <User size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
-          <OrgProfilePanelLoader
+          <ProfilePanelLoader
             context={context}
             actions={actions}
             events={events}
+            profileType="organization"
           />
         </div>
       ),
