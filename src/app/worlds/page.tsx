@@ -228,7 +228,6 @@ function CollectionsPageWrapper() {
       {selectedCollection ? (
         <div style={{ height: '100vh' }}>
           <WorldsPageProvider
-            key={selectedCollectionId}
             workspace={{
               name: selectedCollection.name,
               path: `/repos`,
