@@ -309,6 +309,7 @@ export function CollectionsPageContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <ProfilePanelLoader
+            panelId="industry-theme.user-profile"
             context={context}
             actions={actions}
             events={events}
