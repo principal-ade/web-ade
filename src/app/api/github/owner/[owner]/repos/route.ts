@@ -28,15 +28,17 @@ interface GitHubUser {
   updated_at: string;
 }
 
+interface GitHubRepoOwner {
+  login: string;
+  avatar_url: string;
+  type: string;
+}
+
 interface GitHubRepo {
   id: number;
   name: string;
   full_name: string;
-  owner: {
-    login: string;
-    avatar_url: string;
-    type: string;
-  };
+  owner: GitHubRepoOwner;
   private: boolean;
   html_url: string;
   description: string | null;
@@ -55,6 +57,25 @@ interface GitHubRepo {
     name: string;
     spdx_id: string;
   } | null;
+}
+
+interface GitHubRepoDetails extends GitHubRepo {
+  parent?: {
+    id: number;
+    name: string;
+    full_name: string;
+    owner: GitHubRepoOwner;
+    html_url: string;
+    description: string | null;
+  };
+  source?: {
+    id: number;
+    name: string;
+    full_name: string;
+    owner: GitHubRepoOwner;
+    html_url: string;
+    description: string | null;
+  };
 }
 
 export async function GET(
@@ -111,6 +132,41 @@ export async function GET(
       }
     }
 
+    // Fetch parent info for forked repos in parallel
+    const forkedRepos = allRepos.filter((repo) => repo.fork);
+    const forkParentMap = new Map<string, GitHubRepoDetails['parent']>();
+
+    if (forkedRepos.length > 0) {
+      const parentFetches = forkedRepos.map(async (repo) => {
+        try {
+          const detailsResponse = await fetch(
+            `https://api.github.com/repos/${repo.full_name}`,
+            { headers }
+          );
+          if (detailsResponse.ok) {
+            const details: GitHubRepoDetails = await detailsResponse.json();
+            if (details.parent) {
+              forkParentMap.set(repo.full_name, {
+                id: details.parent.id,
+                name: details.parent.name,
+                full_name: details.parent.full_name,
+                owner: {
+                  login: details.parent.owner.login,
+                  avatar_url: details.parent.owner.avatar_url,
+                  type: details.parent.owner.type,
+                },
+                html_url: details.parent.html_url,
+                description: details.parent.description,
+              });
+            }
+          }
+        } catch (err) {
+          console.warn(`Failed to fetch parent info for ${repo.full_name}:`, err);
+        }
+      });
+      await Promise.all(parentFetches);
+    }
+
     return NextResponse.json({
       success: true,
       owner: {
@@ -141,6 +197,7 @@ export async function GET(
         html_url: repo.html_url,
         description: repo.description,
         fork: repo.fork,
+        parent: forkParentMap.get(repo.full_name) || null,
         clone_url: repo.clone_url,
         language: repo.language,
         default_branch: repo.default_branch,

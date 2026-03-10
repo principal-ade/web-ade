@@ -241,6 +241,10 @@ export function OwnerPageProvider({
   const [ownerReposLoading, setOwnerReposLoading] = useState(true);
   const [currentOwner, setCurrentOwner] = useState<string | null>(null);
 
+  // State for owner collections
+  const [ownerCollections, setOwnerCollections] = useState<Collection[]>([]);
+  const [ownerCollectionsLoading, setOwnerCollectionsLoading] = useState(false);
+
   // State for quality metrics
   const [qualityData] = useState<QualitySliceData | null>(null);
   const [qualityLoading] = useState(false);
@@ -379,17 +383,17 @@ export function OwnerPageProvider({
           updated_at: extendedOwnerInfo.updated_at || new Date().toISOString(),
           type: 'Organization' as const,
         } : null,
-        collections: [], // TODO: Fetch owner's collections if needed
+        collections: ownerCollections,
         repositories: ownerRepos.repositories || [],
         selectedRepositoryId,
-        loading: ownerReposLoading,
+        loading: ownerReposLoading || ownerCollectionsLoading,
         error: ownerRepos.error,
       },
-      loading: ownerReposLoading,
+      loading: ownerReposLoading || ownerCollectionsLoading,
       error: ownerRepos.error ? new Error(ownerRepos.error) : null,
       refresh: async () => { /* no-op */ },
     }),
-    [extendedOwnerInfo, ownerRepos.repositories, ownerRepos.error, ownerReposLoading, selectedRepositoryId]
+    [extendedOwnerInfo, ownerRepos.repositories, ownerRepos.error, ownerReposLoading, selectedRepositoryId, ownerCollections, ownerCollectionsLoading]
   );
 
   // Explicit slice: fileTree
@@ -628,6 +632,38 @@ export function OwnerPageProvider({
       fetchOwnerRepos(initialOwner);
     }
   }, [initialOwner, currentOwner, fetchOwnerRepos]);
+
+  // Fetch owner collections
+  const fetchOwnerCollections = useCallback(async (owner: string) => {
+    if (!owner) return;
+
+    setOwnerCollectionsLoading(true);
+    try {
+      const response = await fetch(`/api/github/collections/${owner}`, {
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.collections) {
+        setOwnerCollections(data.collections);
+      } else {
+        setOwnerCollections([]);
+      }
+    } catch (error) {
+      console.error('[OwnerPageProvider] Failed to fetch owner collections:', error);
+      setOwnerCollections([]);
+    } finally {
+      setOwnerCollectionsLoading(false);
+    }
+  }, []);
+
+  // Fetch owner collections when owner changes
+  useEffect(() => {
+    if (initialOwner) {
+      fetchOwnerCollections(initialOwner);
+    }
+  }, [initialOwner, fetchOwnerCollections]);
 
   // Fetch file tree when githubRepo changes
   useEffect(() => {

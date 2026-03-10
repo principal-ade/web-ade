@@ -395,7 +395,7 @@ export function WorldsPageProvider({
           company: null,
           location: null,
           email: user.email || null,
-          public_repos: 0,
+          public_repos: githubRepos.owned.length,
           public_gists: 0,
           followers: 0,
           following: 0,
@@ -403,18 +403,18 @@ export function WorldsPageProvider({
           updated_at: new Date().toISOString(),
         } : null,
         collections: userCollections.collections,
-        repositories: [],
-        starredRepositories: [],
+        repositories: githubRepos.owned,
+        starredRepositories: githubRepos.starred,
         selectedCollectionId: collectionId,
         currentView: 'collections' as const,
-        loading: false,
+        loading: githubReposLoading,
         error: undefined,
       },
-      loading: false,
+      loading: githubReposLoading,
       error: null,
       refresh: async () => { /* no-op */ },
     }),
-    [user, userCollections.collections, collectionId]
+    [user, userCollections.collections, collectionId, githubRepos.owned, githubRepos.starred, githubReposLoading]
   );
 
   // Explicit slice: workspace (typed for WorkspaceCollectionPanel)
