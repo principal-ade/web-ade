@@ -8,10 +8,10 @@
   "scenarios": [
     {
       "id": "list-success",
-      "description": "Successfully retrieved a list of registered versions from S3",
+      "description": "Successfully retrieved a list of registered versions from S3 (may be empty)",
       "priority": 1,
       "template": {
-        "summary": "[Success] Listed {registration.count} version(s) for {customer.id} (completed in {duration.ms}ms)",
+        "summary": "[Success] Listed {{registration.count}} version(s) for {{customer.id}}",
         "events": {
           "version.list.started": "Version list request for {{customer.id}}",
           "version.list.s3.retrieved": "Retrieved {{registration.count}} registration(s) from S3 for {{customer.id}}",
@@ -20,46 +20,9 @@
       }
     },
     {
-      "id": "list-success-empty",
-      "description": "Successfully completed list operation but no versions have been registered yet",
-      "priority": 2,
-      "template": {
-        "summary": "[Success] No versions registered for {customer.id}",
-        "events": {
-          "version.list.started": "Version list request for {{customer.id}}",
-          "version.list.s3.retrieved": "No registrations found in S3 for {{customer.id}} ({{registration.count}})",
-          "version.list.complete": "List complete for {{customer.id}} - repository has {{registration.count}} versions"
-        }
-      }
-    },
-    {
-      "id": "list-storage-error",
-      "description": "List operation failed due to an S3 storage error",
+      "id": "list-error",
+      "description": "List operation failed due to storage, validation, or unexpected error",
       "priority": 3,
-      "template": {
-        "summary": "[Error] S3 list failed for {customer.id}: {error.message}",
-        "events": {
-          "version.list.started": "Version list request for {{customer.id}}",
-          "version.list.error": "S3 storage error ({{error.type}}): {{error.message}}"
-        }
-      }
-    },
-    {
-      "id": "list-validation-error",
-      "description": "List operation failed due to invalid request parameters",
-      "priority": 4,
-      "template": {
-        "summary": "[Error] List validation failed: {error.message}",
-        "events": {
-          "version.list.started": "Version list request for {{customer.id}}",
-          "version.list.error": "Validation failed ({{error.type}}): {{error.message}}"
-        }
-      }
-    },
-    {
-      "id": "list-generic-error",
-      "description": "List operation failed due to an unexpected error",
-      "priority": 5,
       "template": {
         "summary": "[Error] List failed for {customer.id}: {error.message}",
         "events": {

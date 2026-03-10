@@ -89,7 +89,7 @@
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8",
-        "sources": [
+        "references": [
           "src/app/api/auth/login/route.ts",
           "src/app/api/auth/callback/route.ts",
           "src/app/api/auth/me/route.ts"
@@ -182,7 +182,7 @@
         "nodeType": "web-ade",
         "shape": "rectangle",
         "fill": "#3b82f6",
-        "sources": [
+        "references": [
           "src/lib/auth/pkce.ts",
           "src/app/api/auth/login/route.ts"
         ]
@@ -261,7 +261,7 @@
         "nodeType": "web-ade",
         "shape": "rectangle",
         "fill": "#3b82f6",
-        "sources": [
+        "references": [
           "src/app/api/auth/callback/route.ts"
         ]
       }
@@ -279,7 +279,7 @@
         "nodeType": "web-ade",
         "shape": "rectangle",
         "fill": "#22c55e",
-        "sources": [
+        "references": [
           "src/lib/auth/cookies.ts"
         ]
       }

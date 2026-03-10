@@ -34,7 +34,7 @@
             "http.route": { "type": "string" }
           }
         },
-        "sources": [
+        "references": [
           "src/app/api/auth/me/route.ts"
         ],
         "otel": {
@@ -64,7 +64,7 @@
             "has_token": { "type": "boolean" }
           }
         },
-        "sources": [
+        "references": [
           "src/app/api/auth/me/route.ts"
         ],
         "otel": {
@@ -94,7 +94,7 @@
             "response.status": { "type": "number" }
           }
         },
-        "sources": [
+        "references": [
           "src/app/api/auth/me/route.ts"
         ],
         "otel": {
@@ -124,7 +124,7 @@
             "synced": { "type": "boolean" }
           }
         },
-        "sources": [
+        "references": [
           "src/app/api/auth/me/route.ts"
         ],
         "otel": {
@@ -155,7 +155,7 @@
             "user.id": { "type": "number" }
           }
         },
-        "sources": [
+        "references": [
           "src/app/api/auth/me/route.ts"
         ],
         "otel": {
@@ -199,7 +199,7 @@
             "reason": { "type": "string" }
           }
         },
-        "sources": [
+        "references": [
           "src/app/api/auth/me/route.ts"
         ],
         "otel": {
@@ -230,7 +230,7 @@
             "error.message": { "type": "string" }
           }
         },
-        "sources": [
+        "references": [
           "src/app/api/auth/me/route.ts"
         ],
         "otel": {

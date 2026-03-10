@@ -34,7 +34,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -68,7 +68,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx",
           "src/app/api/github/collections/route.ts"
         ],
@@ -114,7 +114,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -158,7 +158,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/app/api/github/collections/route.ts"
         ],
         "otel": {
@@ -192,7 +192,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/app/api/github/collections/route.ts"
         ],
         "otel": {
@@ -226,7 +226,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -276,7 +276,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -329,7 +329,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -363,7 +363,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -397,7 +397,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -437,7 +437,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -471,7 +471,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -516,7 +516,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -560,7 +560,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -594,7 +594,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -639,7 +639,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -683,7 +683,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -717,7 +717,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -757,7 +757,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -797,7 +797,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -831,7 +831,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -871,7 +871,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -905,7 +905,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -939,7 +939,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {
@@ -973,7 +973,7 @@
             }
           }
         },
-        "sources": [
+        "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
         "otel": {

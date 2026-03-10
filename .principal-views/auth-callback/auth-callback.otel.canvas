@@ -33,7 +33,7 @@
             "request.has_auth_error": { "type": "boolean", "description": "Request has auth error", "required": false }
           }
         },
-        "sources": [
+        "references": [
           "src/app/api/auth/callback/route.ts"
         ],
         "otel": {
@@ -83,7 +83,7 @@
             "flow.type": { "type": "string", "description": "Authentication flow type", "required": true }
           }
         },
-        "sources": [
+        "references": [
           "src/app/api/auth/callback/route.ts"
         ],
         "otel": {
@@ -131,7 +131,7 @@
             "user.id": { "type": "string", "description": "User ID", "required": false }
           }
         },
-        "sources": [
+        "references": [
           "src/app/api/auth/callback/route.ts"
         ],
         "otel": {
@@ -176,14 +176,14 @@
       "height": 100,
       "color": "#1d4ed8",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "auth.tokens.received.pkce",
           "attributes": {
             "user.id": { "type": "string", "description": "User ID", "required": true }
           }
         },
-        "sources": [
+        "references": [
           "src/app/api/auth/callback/route.ts"
         ],
         "otel": {
@@ -212,14 +212,14 @@
       "height": 100,
       "color": "#1d4ed8",
       "pv": {
-        "status": "implemented",
+        "status": "approved",
         "event": {
           "name": "auth.tokens.received.cookie",
           "attributes": {
             "user.id": { "type": "string", "description": "User ID", "required": true }
           }
         },
-        "sources": [
+        "references": [
           "src/app/api/auth/callback/route.ts"
         ],
         "otel": {
@@ -255,7 +255,7 @@
             "cookies.count": { "type": "number", "description": "Number of cookies set", "required": true }
           }
         },
-        "sources": [
+        "references": [
           "src/app/api/auth/callback/route.ts"
         ],
         "otel": {
@@ -293,7 +293,7 @@
             "duration.ms": { "type": "number", "description": "Duration in milliseconds", "required": false }
           }
         },
-        "sources": [
+        "references": [
           "src/app/api/auth/callback/route.ts"
         ],
         "otel": {
@@ -340,7 +340,7 @@
             "error.status_code": { "type": "number", "description": "HTTP status code", "required": false }
           }
         },
-        "sources": [
+        "references": [
           "src/app/api/auth/callback/route.ts"
         ],
         "otel": {

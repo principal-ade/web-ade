@@ -41,7 +41,7 @@
         "shape": "rectangle",
         "fill": "#dbeafe",
         "stroke": "#3b82f6",
-        "sources": ["src/app/api/tts/generate/route.ts"],
+        "references": ["src/app/api/tts/generate/route.ts"],
         "event": {
           "name": "tts.request.started",
           "description": "Emitted when a TTS generation request is received",
@@ -111,7 +111,7 @@
         "shape": "rectangle",
         "fill": "#d1fae5",
         "stroke": "#22c55e",
-        "sources": ["src/app/api/tts/generate/route.ts"],
+        "references": ["src/app/api/tts/generate/route.ts"],
         "event": {
           "name": "tts.cache.hit",
           "description": "Emitted when cached audio is found in S3",
@@ -156,7 +156,7 @@
         "shape": "rectangle",
         "fill": "#fef3c7",
         "stroke": "#f59e0b",
-        "sources": ["src/app/api/tts/generate/route.ts"],
+        "references": ["src/app/api/tts/generate/route.ts"],
         "event": {
           "name": "tts.cache.miss",
           "description": "Emitted when audio is not found in S3 cache",
@@ -196,7 +196,7 @@
         "shape": "rectangle",
         "fill": "#e0e7ff",
         "stroke": "#6366f1",
-        "sources": ["src/lib/tts/github-fetcher.ts"],
+        "references": ["src/lib/tts/github-fetcher.ts"],
         "event": {
           "name": "tts.tour.fetched",
           "description": "Emitted when tour file is successfully fetched from GitHub",
@@ -241,7 +241,7 @@
         "shape": "rectangle",
         "fill": "#fce7f3",
         "stroke": "#ec4899",
-        "sources": ["src/lib/tts/elevenlabs-client.ts"],
+        "references": ["src/lib/tts/elevenlabs-client.ts"],
         "event": {
           "name": "tts.audio.generated",
           "description": "Emitted when ElevenLabs successfully generates audio",
@@ -296,7 +296,7 @@
         "shape": "rectangle",
         "fill": "#fef3c7",
         "stroke": "#f59e0b",
-        "sources": ["src/lib/tts/s3-cache.ts"],
+        "references": ["src/lib/tts/s3-cache.ts"],
         "event": {
           "name": "tts.audio.uploaded",
           "description": "Emitted when generated audio is uploaded to S3",
@@ -341,7 +341,7 @@
         "shape": "rectangle",
         "fill": "#d1fae5",
         "stroke": "#22c55e",
-        "sources": ["src/app/api/tts/generate/route.ts"],
+        "references": ["src/app/api/tts/generate/route.ts"],
         "event": {
           "name": "tts.request.complete",
           "description": "Emitted when TTS request completes successfully",
@@ -386,7 +386,7 @@
         "shape": "rectangle",
         "fill": "#fee2e2",
         "stroke": "#ef4444",
-        "sources": ["src/lib/tts/github-fetcher.ts"],
+        "references": ["src/lib/tts/github-fetcher.ts"],
         "event": {
           "name": "tts.error.tour_not_found",
           "description": "Emitted when tour file is not found on GitHub",
@@ -446,7 +446,7 @@
         "shape": "rectangle",
         "fill": "#fee2e2",
         "stroke": "#ef4444",
-        "sources": ["src/lib/tts/github-fetcher.ts"],
+        "references": ["src/lib/tts/github-fetcher.ts"],
         "event": {
           "name": "tts.error.step_not_found",
           "description": "Emitted when requested step ID is not found in tour",
@@ -496,7 +496,7 @@
         "shape": "rectangle",
         "fill": "#fee2e2",
         "stroke": "#ef4444",
-        "sources": ["src/lib/tts/elevenlabs-client.ts"],
+        "references": ["src/lib/tts/elevenlabs-client.ts"],
         "event": {
           "name": "tts.error.rate_limit",
           "description": "Emitted when ElevenLabs API rate limit is exceeded",
@@ -546,7 +546,7 @@
         "shape": "rectangle",
         "fill": "#ede9fe",
         "stroke": "#8b5cf6",
-        "sources": ["src/lib/tts/dictionary-processor.ts"],
+        "references": ["src/lib/tts/dictionary-processor.ts"],
         "event": {
           "name": "tts.dictionary.applied",
           "description": "Emitted when a pronunciation dictionary is applied to the text",
@@ -591,7 +591,7 @@
         "shape": "rectangle",
         "fill": "#f1f5f9",
         "stroke": "#94a3b8",
-        "sources": ["src/lib/tts/dictionary-processor.ts"],
+        "references": ["src/lib/tts/dictionary-processor.ts"],
         "event": {
           "name": "tts.dictionary.skipped",
           "description": "Emitted when no dictionary is specified for the request",
