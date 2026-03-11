@@ -414,6 +414,15 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
               >
                 Principal <span style={{ color: theme.colors.primary }}>AI</span>
               </span>
+              <span
+                style={{
+                  color: theme.colors.textMuted,
+                  fontSize: `${theme.fontSizes[2]}px`,
+                  fontWeight: theme.fontWeights.medium,
+                }}
+              >
+                / Profile
+              </span>
             </Link>
           </div>
 
