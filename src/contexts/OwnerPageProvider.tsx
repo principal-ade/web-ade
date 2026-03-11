@@ -48,6 +48,7 @@ import type {
   SelectedCollectionView,
   CollectionMapPanelActions,
 } from '@industry-theme/repository-composition-panels';
+import { useCollectionPackages } from '@/hooks/useCollectionPackages';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import type { ValidatedRepositoryPath } from '@principal-ai/alexandria-core-library/types';
 import type {
@@ -290,6 +291,17 @@ export function OwnerPageProvider({
     };
   }, [initialOwner, ownerRepos.repositories]);
 
+  // Get repo IDs for package fetching
+  const virtualCollectionRepoIds = useMemo(() => {
+    if (!ownerRepos.repositories || ownerRepos.repositories.length === 0) {
+      return [];
+    }
+    return ownerRepos.repositories.slice(0, 10).map(repo => repo.full_name);
+  }, [ownerRepos.repositories]);
+
+  // Fetch packages for the virtual collection repositories
+  const { packages: collectionRepoPackages } = useCollectionPackages(virtualCollectionRepoIds);
+
   // Transform repos into AlexandriaEntryWithMetrics for CollectionMapPanel
   const virtualCollectionRepositories = useMemo<AlexandriaEntryWithMetrics[]>(() => {
     if (!ownerRepos.repositories || ownerRepos.repositories.length === 0) {
@@ -328,9 +340,9 @@ export function OwnerPageProvider({
         lastEditedAt: repo.pushed_at || repo.updated_at || new Date().toISOString(),
         createdAt: repo.created_at || new Date().toISOString(),
       },
-      packages: undefined,
+      packages: collectionRepoPackages[repo.full_name] || undefined,
     }));
-  }, [ownerRepos.repositories, initialOwner]);
+  }, [ownerRepos.repositories, initialOwner, collectionRepoPackages]);
 
   // ===== EXPLICIT SLICES (migrated from Map) =====
 

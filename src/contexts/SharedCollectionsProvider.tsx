@@ -42,7 +42,7 @@ import type {
   CollectionMapPanelActions,
 } from '@industry-theme/repository-composition-panels';
 import type { CustomRegion } from '@principal-ai/alexandria-collections';
-import type { PackageLayer } from '@principal-ai/codebase-composition';
+import { useCollectionPackages } from '@/hooks/useCollectionPackages';
 
 // Minimal context type for shared collections view
 export interface SharedCollectionsContextType {
@@ -99,8 +99,8 @@ export function SharedCollectionsProvider({
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
   const [fileTreeError, setFileTreeError] = useState<Error | null>(null);
 
-  // State for collection repository packages (for sprite sizing on map)
-  const [collectionRepoPackages, setCollectionRepoPackages] = useState<Record<string, PackageLayer[]>>({});
+  // Centralized hook for fetching collection repository packages
+  const { packages: collectionRepoPackages } = useCollectionPackages(collectionRepositories);
 
   // Fetch collection repository details (progressively as each completes)
   useEffect(() => {
@@ -148,32 +148,7 @@ export function SharedCollectionsProvider({
     });
   }, [collectionRepositories]);
 
-  // Fetch packages for collection repositories (progressively for sprite sizing)
-  useEffect(() => {
-    if (!collectionRepositories || collectionRepositories.length === 0) {
-      setCollectionRepoPackages({});
-      return;
-    }
-
-    setCollectionRepoPackages({}); // Reset before fetching
-
-    collectionRepositories.forEach(async (repoId) => {
-      const [owner, repo] = repoId.split('/');
-      if (!owner || !repo) {
-        return;
-      }
-
-      try {
-        const data = await trpc.github.getRepoPackages.query({ owner, repo });
-        setCollectionRepoPackages(prev => ({
-          ...prev,
-          [repoId]: data.packages || [],
-        }));
-      } catch (error) {
-        console.error(`[SharedCollectionsProvider] Failed to fetch packages for ${repoId}:`, error);
-      }
-    });
-  }, [collectionRepositories]);
+  // Package fetching is now handled by useCollectionPackages hook
 
   // Fetch file tree when selectedRepositoryId changes
   useEffect(() => {
