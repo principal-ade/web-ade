@@ -20,7 +20,7 @@ import removeMd from 'remove-markdown';
  * @param text - Text to normalize
  * @returns Normalized text suitable for TTS
  */
-function normalizeTextForTTS(text: string): string {
+export function normalizeTextForTTS(text: string): string {
   return text
     // Remove backticks (inline code markers)
     .replace(/`/g, '')

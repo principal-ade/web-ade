@@ -11,7 +11,7 @@ import { TRPCError } from '@trpc/server';
 
 // Import existing TTS utilities
 import { validateTTSRequest, generateS3Key } from '@/lib/tts/key-generator';
-import { fetchTourFromGitHub, getStepDescription } from '@/lib/tts/github-fetcher';
+import { fetchTourFromGitHub, getStepDescription, normalizeTextForTTS } from '@/lib/tts/github-fetcher';
 import { checkS3Cache, uploadToS3, getS3Url } from '@/lib/tts/s3-cache';
 import { generateAudio, mergeTTSOptions } from '@/lib/tts/elevenlabs-client';
 import { TTSErrorCode } from '@/lib/tts/types';
@@ -65,17 +65,6 @@ const batchOutputSchema = z.object({
   cachedSteps: z.number(),
   generatingSteps: z.number(),
 });
-
-// ============================================================================
-// Helper: Normalize text for TTS
-// ============================================================================
-
-function normalizeTextForTTS(text: string): string {
-  return text
-    .replace(/\/$/g, '') // Remove trailing slashes
-    .replace(/\s+/g, ' ') // Normalize whitespace
-    .trim();
-}
 
 // ============================================================================
 // Router Definition
