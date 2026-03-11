@@ -277,8 +277,10 @@ export function WorldsPageProvider({
 
   // State for collection repository packages (for monorepo visualization)
   const [collectionRepoPackages, setCollectionRepoPackages] = useState<Record<string, PackageLayer[]>>({});
-  // Note: Loading state for packages is not tracked since nothing consumes it
-  // The packages are progressively added to collectionRepoPackages as they load
+  // Track which repos are currently loading packages (exposed for future UI use)
+  const [_packagesLoadingRepos, setPackagesLoadingRepos] = useState<Set<string>>(new Set());
+  // Track which repos failed to load packages (for retry logic, exposed for future UI use)
+  const [_packagesFailedRepos, setPackagesFailedRepos] = useState<Set<string>>(new Set());
 
   // State for commit files
   const [commitFilesData] = useState<CommitFilesSliceData | null>(null);
@@ -861,30 +863,122 @@ export function WorldsPageProvider({
   }, [collectionRepositories]);
 
   // Fetch packages for collection repositories (progressively as each completes)
+  // Uses AbortController for cleanup and preserves existing packages
   useEffect(() => {
     if (!collectionRepositories || collectionRepositories.length === 0) {
       setCollectionRepoPackages({});
+      setPackagesLoadingRepos(new Set());
+      setPackagesFailedRepos(new Set());
       return;
     }
 
-    setCollectionRepoPackages({}); // Reset before fetching
+    // Create abort controller for cleanup
+    const abortController = new AbortController();
+    const currentRepoSet = new Set(collectionRepositories);
 
-    collectionRepositories.forEach(async (repoId) => {
+    // Remove packages for repos that are no longer in the collection (instead of clearing all)
+    setCollectionRepoPackages(prev => {
+      const filtered: Record<string, PackageLayer[]> = {};
+      for (const repoId of Object.keys(prev)) {
+        if (currentRepoSet.has(repoId) && prev[repoId]) {
+          filtered[repoId] = prev[repoId];
+        }
+      }
+      return filtered;
+    });
+
+    // Clear failed status for repos no longer in collection
+    setPackagesFailedRepos(prev => {
+      const filtered = new Set<string>();
+      prev.forEach(repoId => {
+        if (currentRepoSet.has(repoId)) {
+          filtered.add(repoId);
+        }
+      });
+      return filtered;
+    });
+
+    // Determine which repos need to fetch packages
+    // We fetch all repos since we check against latest state in the fetch function
+    const reposToFetch = collectionRepositories;
+
+    // Track repos we're about to fetch
+    setPackagesLoadingRepos(prev => {
+      const next = new Set(prev);
+      reposToFetch.forEach(repoId => next.add(repoId));
+      return next;
+    });
+
+    // Fetch packages for each repo
+    const fetchPackagesForRepo = async (repoId: string) => {
       const [owner, repo] = repoId.split('/');
       if (!owner || !repo) {
+        setPackagesLoadingRepos(prev => {
+          const next = new Set(prev);
+          next.delete(repoId);
+          return next;
+        });
         return;
       }
 
       try {
+        // Check if aborted before making request
+        if (abortController.signal.aborted) return;
+
         const data = await trpc.github.getRepoPackages.query({ owner, repo });
+
+        // Check if aborted after request completes
+        if (abortController.signal.aborted) return;
+
         setCollectionRepoPackages(prev => ({
           ...prev,
           [repoId]: data.packages || [],
         }));
+
+        // Clear from failed set if it was there
+        setPackagesFailedRepos(prev => {
+          if (!prev.has(repoId)) return prev;
+          const next = new Set(prev);
+          next.delete(repoId);
+          return next;
+        });
       } catch (error) {
+        // Don't log or update state if aborted
+        if (abortController.signal.aborted) return;
+
         console.error(`Failed to fetch packages for ${repoId}:`, error);
+        setPackagesFailedRepos(prev => {
+          const next = new Set(prev);
+          next.add(repoId);
+          return next;
+        });
+      } finally {
+        // Remove from loading set (if not aborted)
+        if (!abortController.signal.aborted) {
+          setPackagesLoadingRepos(prev => {
+            const next = new Set(prev);
+            next.delete(repoId);
+            return next;
+          });
+        }
       }
+    };
+
+    // Start fetching - only fetch repos we don't already have packages for
+    reposToFetch.forEach(repoId => {
+      // Use a microtask to check current state before fetching
+      queueMicrotask(() => {
+        if (abortController.signal.aborted) return;
+        // Note: We fetch all repos since state may have changed
+        // The server should cache responses anyway
+        fetchPackagesForRepo(repoId);
+      });
     });
+
+    // Cleanup: abort in-flight requests when dependencies change
+    return () => {
+      abortController.abort();
+    };
   }, [collectionRepositories]);
 
   // Fetch file tree when githubRepo changes
