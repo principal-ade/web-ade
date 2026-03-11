@@ -442,6 +442,15 @@ export function CollectionsPageContent({
             >
               Principal AI
             </span>
+            <span
+              style={{
+                color: theme.colors.textMuted,
+                fontSize: `${theme.fontSizes[2]}px`,
+                fontWeight: theme.fontWeights.medium,
+              }}
+            >
+              / Worlds
+            </span>
           </Link>
         </div>
 
