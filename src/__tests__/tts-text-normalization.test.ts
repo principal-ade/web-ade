@@ -43,6 +43,26 @@ describe('normalizeTextForTTS', () => {
     });
   });
 
+  describe('@ symbol removal', () => {
+    it('removes @ from scoped packages', () => {
+      expect(normalizeTextForTTS('@scope/package')).toBe('scope package');
+    });
+
+    it('removes @ from path aliases', () => {
+      expect(normalizeTextForTTS('@/lib/utils')).toBe('/lib utils');
+    });
+
+    it('removes multiple @ symbols', () => {
+      expect(normalizeTextForTTS('Email user@example.com or @mention')).toBe(
+        'Email userexample.com or mention'
+      );
+    });
+
+    it('handles @ at start of string', () => {
+      expect(normalizeTextForTTS('@angular/core')).toBe('angular core');
+    });
+  });
+
   describe('path conversion', () => {
     it('converts simple path to spaces', () => {
       expect(normalizeTextForTTS('src/components/')).toBe('src components');
@@ -119,15 +139,16 @@ describe('normalizeTextForTTS', () => {
     it('handles complex code references', () => {
       const input =
         'Import `generateAudio` from `@/lib/tts/elevenlabs-client.ts`';
-      // @ is not a word character, so @/ is preserved
+      // @ is removed, then path slashes converted
       expect(normalizeTextForTTS(input)).toBe(
-        'Import generateAudio from @/lib tts elevenlabs-client.ts'
+        'Import generateAudio from /lib tts elevenlabs-client.ts'
       );
     });
 
     it('handles package names with slashes', () => {
+      // @ removed, then scope/package becomes "scope package"
       expect(normalizeTextForTTS('Install `@scope/package`')).toBe(
-        'Install @scope package'
+        'Install scope package'
       );
     });
   });
