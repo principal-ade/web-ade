@@ -116,6 +116,16 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
   const { theme } = useTheme();
   const router = useRouter();
   const { context, actions, events } = useOwnerPageProvider();
+
+  // Get owner type from profile slice for dynamic profileType prop
+  const ownerType = useMemo(() => {
+    const profile = context?.profile?.data?.profile;
+    if (profile && 'type' in profile) {
+      return profile.type === 'Organization' ? 'organization' : 'user';
+    }
+    return 'user'; // Default to user if unknown
+  }, [context?.profile?.data?.profile]);
+
   const [isMobile, setIsMobile] = useState(false);
   const [previewedRepo, setPreviewedRepo] = useState<string | null>(initialPreviewedRepo ?? null);
   const [canvasExists, setCanvasExists] = useState(false);
@@ -292,7 +302,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
             context={context}
             actions={actions}
             events={events}
-            profileType="organization"
+            profileType={ownerType}
           />
         </div>
       ),

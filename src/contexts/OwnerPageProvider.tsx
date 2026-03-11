@@ -268,12 +268,27 @@ export function OwnerPageProvider({
   // State for selectedCollectionView (for CollectionMapPanel)
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
 
+  // Compute first 10 repos ONCE to ensure consistency between collection and repositories
+  const first10Repos = useMemo(() => {
+    if (!ownerRepos.repositories || ownerRepos.repositories.length === 0) {
+      return [];
+    }
+    return ownerRepos.repositories.slice(0, 10);
+  }, [ownerRepos.repositories]);
+
+  // Get repo IDs for package fetching (derived from first10Repos)
+  const virtualCollectionRepoIds = useMemo(() => {
+    return first10Repos.map(repo => repo.full_name);
+  }, [first10Repos]);
+
+  // Fetch packages for the virtual collection repositories
+  const { packages: collectionRepoPackages } = useCollectionPackages(virtualCollectionRepoIds);
+
   // Create virtual collection from first 10 repos for the world view
   const virtualCollection = useMemo<Collection | null>(() => {
-    if (!initialOwner || !ownerRepos.repositories || ownerRepos.repositories.length === 0) {
+    if (!initialOwner || first10Repos.length === 0) {
       return null;
     }
-    const first10Repos = ownerRepos.repositories.slice(0, 10);
     return {
       id: `virtual-${initialOwner}`,
       name: `${initialOwner}'s Repositories`,
@@ -289,25 +304,13 @@ export function OwnerPageProvider({
         addedAt: repo.updated_at ? new Date(repo.updated_at).getTime() : Date.now(),
       })),
     };
-  }, [initialOwner, ownerRepos.repositories]);
-
-  // Get repo IDs for package fetching
-  const virtualCollectionRepoIds = useMemo(() => {
-    if (!ownerRepos.repositories || ownerRepos.repositories.length === 0) {
-      return [];
-    }
-    return ownerRepos.repositories.slice(0, 10).map(repo => repo.full_name);
-  }, [ownerRepos.repositories]);
-
-  // Fetch packages for the virtual collection repositories
-  const { packages: collectionRepoPackages } = useCollectionPackages(virtualCollectionRepoIds);
+  }, [initialOwner, first10Repos]);
 
   // Transform repos into AlexandriaEntryWithMetrics for CollectionMapPanel
   const virtualCollectionRepositories = useMemo<AlexandriaEntryWithMetrics[]>(() => {
-    if (!ownerRepos.repositories || ownerRepos.repositories.length === 0) {
+    if (first10Repos.length === 0) {
       return [];
     }
-    const first10Repos = ownerRepos.repositories.slice(0, 10);
     return first10Repos.map((repo): AlexandriaEntryWithMetrics => ({
       name: repo.name,
       path: repo.full_name as ValidatedRepositoryPath,
@@ -342,7 +345,7 @@ export function OwnerPageProvider({
       },
       packages: collectionRepoPackages[repo.full_name] || undefined,
     }));
-  }, [ownerRepos.repositories, initialOwner, collectionRepoPackages]);
+  }, [first10Repos, initialOwner, collectionRepoPackages]);
 
   // ===== EXPLICIT SLICES (migrated from Map) =====
 
@@ -366,35 +369,52 @@ export function OwnerPageProvider({
     return repo?.id ?? null;
   }, [githubRepo, ownerRepos.repositories]);
 
+  // Build profile object based on type (User vs Organization)
+  const buildProfile = useCallback((info: ExtendedOwnerInfo) => {
+    const baseProfile = {
+      login: info.login,
+      id: info.id,
+      avatar_url: info.avatar_url,
+      name: info.name || null,
+      company: null,
+      blog: info.blog || null,
+      location: info.location || null,
+      email: info.email || null,
+      twitter_username: info.twitter_username || null,
+      public_repos: info.public_repos || 0,
+      public_gists: 0,
+      followers: info.followers || 0,
+      following: info.following || 0,
+      html_url: info.html_url || `https://github.com/${info.login}`,
+      created_at: info.created_at || new Date().toISOString(),
+      updated_at: info.updated_at || new Date().toISOString(),
+    };
+
+    if (info.type === 'Organization') {
+      return {
+        ...baseProfile,
+        description: info.bio || null,
+        is_verified: false,
+        has_organization_projects: true,
+        has_repository_projects: true,
+        type: 'Organization' as const,
+      };
+    } else {
+      return {
+        ...baseProfile,
+        bio: info.bio || null,
+        type: 'User' as const,
+      };
+    }
+  }, []);
+
   // Explicit slice: profile (required - expected by ProfilePanel)
   const profileSlice = useMemo<DataSlice<ProfileSlice>>(
     () => ({
       scope: 'global' as const,
       name: 'profile',
       data: {
-        profile: extendedOwnerInfo ? {
-          login: extendedOwnerInfo.login,
-          id: extendedOwnerInfo.id,
-          avatar_url: extendedOwnerInfo.avatar_url,
-          name: extendedOwnerInfo.name || null,
-          description: extendedOwnerInfo.bio || null,
-          company: null,
-          blog: extendedOwnerInfo.blog || null,
-          location: extendedOwnerInfo.location || null,
-          email: extendedOwnerInfo.email || null,
-          twitter_username: extendedOwnerInfo.twitter_username || null,
-          is_verified: false,
-          has_organization_projects: true,
-          has_repository_projects: true,
-          public_repos: extendedOwnerInfo.public_repos || 0,
-          public_gists: 0,
-          followers: extendedOwnerInfo.followers || 0,
-          following: extendedOwnerInfo.following || 0,
-          html_url: extendedOwnerInfo.html_url || `https://github.com/${extendedOwnerInfo.login}`,
-          created_at: extendedOwnerInfo.created_at || new Date().toISOString(),
-          updated_at: extendedOwnerInfo.updated_at || new Date().toISOString(),
-          type: 'Organization' as const,
-        } : null,
+        profile: extendedOwnerInfo ? buildProfile(extendedOwnerInfo) : null,
         collections: ownerCollections,
         repositories: ownerRepos.repositories || [],
         selectedRepositoryId,
@@ -405,7 +425,7 @@ export function OwnerPageProvider({
       error: ownerRepos.error ? new Error(ownerRepos.error) : null,
       refresh: async () => { /* no-op */ },
     }),
-    [extendedOwnerInfo, ownerRepos.repositories, ownerRepos.error, ownerReposLoading, selectedRepositoryId, ownerCollections, ownerCollectionsLoading]
+    [extendedOwnerInfo, buildProfile, ownerRepos.repositories, ownerRepos.error, ownerReposLoading, selectedRepositoryId, ownerCollections, ownerCollectionsLoading]
   );
 
   // Explicit slice: fileTree
@@ -894,29 +914,15 @@ export function OwnerPageProvider({
         }
       },
       // Region management callbacks for CollectionMapPanel
+      // Owner page uses ephemeral collections - all operations are local only
       onRegionCreated: async (collectionId: string, region: Omit<CustomRegion, 'id'>) => {
-        if (!currentOwner) {
-          throw new Error('No owner set');
-        }
+        // Generate a local ID for the ephemeral region
+        const newRegion: CustomRegion = {
+          ...region,
+          id: `ephemeral-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        };
 
-        const response = await fetch(`/api/github/collections/${currentOwner}/regions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'createRegion',
-            collectionId,
-            region,
-          }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Failed to create region');
-        }
-
-        const newRegion: CustomRegion = await response.json();
-
-        // Update local state
+        // Update local state only
         if (selectedCollection && selectedCollection.id === collectionId) {
           const customRegions = selectedCollection.metadata?.customRegions || [];
           setSelectedCollection({
@@ -931,27 +937,7 @@ export function OwnerPageProvider({
         return newRegion;
       },
       onRegionUpdated: async (collectionId: string, regionId: string, updates: Partial<CustomRegion>) => {
-        if (!currentOwner) {
-          throw new Error('No owner set');
-        }
-
-        const response = await fetch(`/api/github/collections/${currentOwner}/regions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'updateRegion',
-            collectionId,
-            regionId,
-            updates,
-          }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Failed to update region');
-        }
-
-        // Update local state
+        // Update local state only (ephemeral collection)
         if (selectedCollection && selectedCollection.id === collectionId) {
           const customRegions = selectedCollection.metadata?.customRegions || [];
           const updatedRegions = customRegions.map(r =>
@@ -967,26 +953,7 @@ export function OwnerPageProvider({
         }
       },
       onRegionDeleted: async (collectionId: string, regionId: string) => {
-        if (!currentOwner) {
-          throw new Error('No owner set');
-        }
-
-        const response = await fetch(`/api/github/collections/${currentOwner}/regions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'deleteRegion',
-            collectionId,
-            regionId,
-          }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Failed to delete region');
-        }
-
-        // Update local state
+        // Update local state only (ephemeral collection)
         if (selectedCollection && selectedCollection.id === collectionId) {
           const customRegions = selectedCollection.metadata?.customRegions || [];
           const updatedRegions = customRegions.filter(r => r.id !== regionId);
@@ -1000,27 +967,7 @@ export function OwnerPageProvider({
         }
       },
       onRepositoryAssigned: async (collectionId: string, repositoryId: string, regionId: string) => {
-        if (!currentOwner) {
-          throw new Error('No owner set');
-        }
-
-        const response = await fetch(`/api/github/collections/${currentOwner}/regions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'assignRepository',
-            collectionId,
-            repositoryId,
-            regionId,
-          }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Failed to assign repository');
-        }
-
-        // Update local state
+        // Update local state only (ephemeral collection)
         if (selectedCollection && selectedCollection.id === collectionId) {
           const updatedMembers = selectedCollection.members.map(m =>
             m.repositoryId === repositoryId
@@ -1034,27 +981,7 @@ export function OwnerPageProvider({
         }
       },
       onRepositoryPositionUpdated: async (collectionId: string, repositoryId: string, layout: RepositoryLayoutData) => {
-        if (!currentOwner) {
-          throw new Error('No owner set');
-        }
-
-        const response = await fetch(`/api/github/collections/${currentOwner}/regions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'updatePosition',
-            collectionId,
-            repositoryId,
-            layout,
-          }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Failed to update position');
-        }
-
-        // Update local state
+        // Update local state only (ephemeral collection)
         if (selectedCollection && selectedCollection.id === collectionId) {
           const updatedMembers = selectedCollection.members.map(m =>
             m.repositoryId === repositoryId
@@ -1072,26 +999,8 @@ export function OwnerPageProvider({
         assignments?: Array<{ repositoryId: string; regionId: string }>;
         positions?: Array<{ repositoryId: string; layout: RepositoryLayoutData }>;
       }) => {
-        if (!currentOwner) {
-          throw new Error('No owner set');
-        }
-
-        const response = await fetch(`/api/github/collections/${currentOwner}/regions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'batchInitialize',
-            collectionId,
-            batchUpdates: updates,
-          }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Failed to batch initialize layout');
-        }
-
-        // Update local state
+        // Owner page uses ephemeral/virtual collections - no persistence needed
+        // Update local state only (no API call)
         if (selectedCollection && selectedCollection.id === collectionId) {
           const updatedCollection = { ...selectedCollection };
 

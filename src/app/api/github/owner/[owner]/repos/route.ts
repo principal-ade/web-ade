@@ -105,6 +105,7 @@ export async function GET(
       if (userResponse.status === 404) {
         return NextResponse.json(
           {
+            success: false,
             owner: null,
             repositories: [],
             isAuthenticated: !!githubToken,
@@ -113,6 +114,14 @@ export async function GET(
           { status: 404 }
         );
       }
+      // Log rate limit info if available
+      const rateLimitRemaining = userResponse.headers.get('x-ratelimit-remaining');
+      const rateLimitReset = userResponse.headers.get('x-ratelimit-reset');
+      console.error(`[API /github/owner/${owner}/repos] GitHub API error: ${userResponse.status}, rate limit remaining: ${rateLimitRemaining}, reset: ${rateLimitReset}`);
+
+      const errorBody = await userResponse.text();
+      console.error(`[API /github/owner/${owner}/repos] Error body:`, errorBody);
+
       throw new Error(`GitHub API error: ${userResponse.status}`);
     }
 
@@ -212,9 +221,10 @@ export async function GET(
       isAuthenticated: !!githubToken,
     });
   } catch (error) {
-    console.error('GitHub owner repos error:', error);
+    console.error('[API /github/owner/*/repos] Error:', error);
     return NextResponse.json(
       {
+        success: false,
         owner: null,
         repositories: [],
         isAuthenticated: false,

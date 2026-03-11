@@ -91,12 +91,19 @@ export async function setAuthCookies(tokens: TokenData): Promise<void> {
 }
 
 /**
- * Gets GitHub token from HTTP-only cookie
+ * Gets GitHub token from HTTP-only cookie, with fallback to GITHUB_TOKEN env var
  * @returns GitHub token or null
  */
 export async function getGitHubToken(): Promise<string | null> {
   const cookieStore = await cookies();
-  return cookieStore.get('github_token')?.value ?? null;
+  const cookieToken = cookieStore.get('github_token')?.value;
+
+  // Fallback to environment variable for local development
+  if (!cookieToken && process.env.GITHUB_TOKEN) {
+    return process.env.GITHUB_TOKEN;
+  }
+
+  return cookieToken ?? null;
 }
 
 /**
