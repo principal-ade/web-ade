@@ -7,13 +7,30 @@
   "description": "Data flows that hydrate state and render to panels",
   "scenarios": [
     {
-      "id": "file-tree-to-city",
-      "description": "File tree loads and flows to File City panel for visualization",
+      "id": "file-tree-cache-hit",
+      "description": "File tree served from cache and flows to File City panel",
       "priority": 1,
       "template": {
-        "summary": "[File Tree] {{fileCount}} files loaded",
+        "summary": "[File Tree] {{fileCount}} files loaded (cached)",
         "events": {
           "repo.file-tree.load": "Loading file tree for {{owner}}/{{repo}}",
+          "repo.file-tree.cache.hit": "Cache hit: {{tree.fileCount}} files in {{durationMs}}ms (key: {{cache.key}}, sha: {{tree.sha}}, cached: {{cache.hit}})",
+          "repo.file-tree.success": "File tree loaded: {{fileCount}} files (sha: {{treeSha}})",
+          "repo.state.file-tree.updated": "State updated with {{fileCount}} files",
+          "repo.panel.file-city.render": "File City rendered {{fileCount}} files"
+        }
+      }
+    },
+    {
+      "id": "file-tree-cache-miss",
+      "description": "File tree fetched from GitHub and flows to File City panel",
+      "priority": 2,
+      "template": {
+        "summary": "[File Tree] {{fileCount}} files loaded (fetched)",
+        "events": {
+          "repo.file-tree.load": "Loading file tree for {{owner}}/{{repo}}",
+          "repo.file-tree.cache.miss": "Cache miss: fetching from GitHub (key: {{cache.key}}, cached: {{cache.hit}})",
+          "repo.file-tree.fetch.complete": "Fetched {{tree.fileCount}} files in {{durationMs}}ms (sha: {{tree.sha}}, truncated: {{tree.truncated}})",
           "repo.file-tree.success": "File tree loaded: {{fileCount}} files (sha: {{treeSha}})",
           "repo.state.file-tree.updated": "State updated with {{fileCount}} files",
           "repo.panel.file-city.render": "File City rendered {{fileCount}} files"
@@ -23,7 +40,7 @@
     {
       "id": "packages-to-panel",
       "description": "Packages load and flow to Package Composition panel",
-      "priority": 2,
+      "priority": 3,
       "template": {
         "summary": "[Packages] {{packageCount}} packages loaded",
         "events": {
@@ -37,7 +54,7 @@
     {
       "id": "packages-error",
       "description": "Package loading fails (no package.json, rate limited)",
-      "priority": 3,
+      "priority": 4,
       "template": {
         "summary": "[Packages] Error loading for {{owner}}/{{repo}}",
         "events": {

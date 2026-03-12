@@ -9,9 +9,13 @@ import { z } from 'zod';
 import { router, publicProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
 import { cookies } from 'next/headers';
+import { trace } from '@opentelemetry/api';
 import { gitTreeCache } from '@/lib/git-tree-cache';
 import { PackageLayerModule } from '@principal-ai/codebase-composition';
 import type { FileTree, FileInfo, DirectoryInfo } from '@principal-ai/repository-abstraction';
+
+// Get tracer for GitHub operations
+const tracer = trace.getTracer('github-router', '1.0.0');
 
 const GITHUB_API_BASE = 'https://api.github.com';
 
@@ -51,7 +55,7 @@ const readFileOutputSchema = z.object({
 const treeEntrySchema = z.object({
   path: z.string(),
   mode: z.string(),
-  type: z.enum(['blob', 'tree']),
+  type: z.enum(['blob', 'tree', 'commit']), // 'commit' = git submodule
   sha: z.string(),
   size: z.number().optional(),
   url: z.string(),
@@ -128,7 +132,7 @@ function createLimiter(concurrency: number) {
 interface GitHubTreeItem {
   path: string;
   mode: string;
-  type: 'blob' | 'tree';
+  type: 'blob' | 'tree' | 'commit'; // 'commit' = git submodule
   sha: string;
   size?: number;
   url: string;
@@ -344,7 +348,23 @@ async function makeGitHubRequest<T>(
     });
   }
 
-  return response.json() as Promise<T>;
+  // Handle empty responses (e.g., 204 No Content or empty body)
+  const text = await response.text();
+  if (!text || text.trim() === '') {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: `GitHub API returned empty response for: ${endpoint}`,
+    });
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch (parseError) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: `Failed to parse GitHub API response: ${parseError instanceof Error ? parseError.message : 'Invalid JSON'}`,
+    });
+  }
 }
 
 // ============================================================================
@@ -407,59 +427,109 @@ export const githubRouter = router({
     .query(async ({ input }) => {
       const { owner, repo, ref } = input;
 
-      const userToken = await getGitHubToken();
+      return tracer.startActiveSpan('repo.file-tree.load', async (span) => {
+        const startTime = Date.now();
 
-      // First resolve the ref to actual commit SHA to ensure cache freshness
-      let resolvedSha: string;
-      try {
-        interface GitHubCommitResponse {
-          sha: string;
+        span.setAttribute('repo.owner', owner);
+        span.setAttribute('repo.name', repo);
+        span.setAttribute('repo.ref', ref);
+
+        try {
+          const userToken = await getGitHubToken();
+
+          // First resolve the ref to actual commit SHA to ensure cache freshness
+          let resolvedSha: string;
+          try {
+            interface GitHubCommitResponse {
+              sha: string;
+            }
+            const refData = await makeGitHubRequest<GitHubCommitResponse>(
+              `/repos/${owner}/${repo}/commits/${ref}`,
+              userToken
+            );
+            resolvedSha = refData.sha;
+          } catch {
+            // If we can't resolve the ref, fall back to using the ref directly
+            resolvedSha = ref;
+          }
+
+          const cacheKey = `${owner}/${repo}/${resolvedSha}`;
+          span.setAttribute('cache.key', cacheKey);
+
+          // Check in-memory cache first using the resolved SHA
+          interface GitHubTreeResponse {
+            sha: string;
+            url: string;
+            tree: Array<{
+              path: string;
+              mode: string;
+              type: 'blob' | 'tree' | 'commit'; // 'commit' = git submodule
+              sha: string;
+              size?: number;
+              url: string;
+            }>;
+            truncated: boolean;
+          }
+
+          const cachedTree = gitTreeCache.get<GitHubTreeResponse>(cacheKey);
+          if (cachedTree) {
+            const durationMs = Date.now() - startTime;
+
+            // Emit cache hit event
+            span.addEvent('repo.file-tree.cache.hit', {
+              'cache.key': cacheKey,
+              'tree.sha': cachedTree.sha,
+              'tree.fileCount': cachedTree.tree.length,
+              'cache.hit': true,
+              'durationMs': durationMs,
+            });
+
+            span.setAttribute('cache.hit', true);
+            span.setAttribute('tree.fileCount', cachedTree.tree.length);
+            span.end();
+            return cachedTree;
+          }
+
+          // Emit cache miss event
+          span.addEvent('repo.file-tree.cache.miss', {
+            'cache.key': cacheKey,
+            'cache.hit': false,
+          });
+          span.setAttribute('cache.hit', false);
+
+          // Not in cache, fetch from GitHub using the resolved SHA
+          const treeData = await makeGitHubRequest<GitHubTreeResponse>(
+            `/repos/${owner}/${repo}/git/trees/${resolvedSha}?recursive=1`,
+            userToken
+          );
+
+          // Cache by both the cache key and the tree SHA
+          if (treeData && treeData.sha) {
+            gitTreeCache.set(cacheKey, treeData);
+            gitTreeCache.set(treeData.sha, treeData);
+          }
+
+          const durationMs = Date.now() - startTime;
+
+          // Emit fetch complete event
+          span.addEvent('repo.file-tree.fetch.complete', {
+            'tree.sha': treeData.sha,
+            'tree.fileCount': treeData.tree.length,
+            'tree.truncated': treeData.truncated,
+            'durationMs': durationMs,
+          });
+
+          span.setAttribute('tree.fileCount', treeData.tree.length);
+          span.end();
+          return treeData;
+        } catch (error) {
+          span.addEvent('repo.file-tree.error', {
+            'error.message': error instanceof Error ? error.message : String(error),
+          });
+          span.end();
+          throw error;
         }
-        const refData = await makeGitHubRequest<GitHubCommitResponse>(
-          `/repos/${owner}/${repo}/commits/${ref}`,
-          userToken
-        );
-        resolvedSha = refData.sha;
-      } catch {
-        // If we can't resolve the ref, fall back to using the ref directly
-        resolvedSha = ref;
-      }
-
-      const cacheKey = `${owner}/${repo}/${resolvedSha}`;
-
-      // Check in-memory cache first using the resolved SHA
-      interface GitHubTreeResponse {
-        sha: string;
-        url: string;
-        tree: Array<{
-          path: string;
-          mode: string;
-          type: 'blob' | 'tree';
-          sha: string;
-          size?: number;
-          url: string;
-        }>;
-        truncated: boolean;
-      }
-
-      const cachedTree = gitTreeCache.get<GitHubTreeResponse>(cacheKey);
-      if (cachedTree) {
-        return cachedTree;
-      }
-
-      // Not in cache, fetch from GitHub using the resolved SHA
-      const treeData = await makeGitHubRequest<GitHubTreeResponse>(
-        `/repos/${owner}/${repo}/git/trees/${resolvedSha}?recursive=1`,
-        userToken
-      );
-
-      // Cache by both the cache key and the tree SHA
-      if (treeData && treeData.sha) {
-        gitTreeCache.set(cacheKey, treeData);
-        gitTreeCache.set(treeData.sha, treeData);
-      }
-
-      return treeData;
+      });
     }),
 
   /**

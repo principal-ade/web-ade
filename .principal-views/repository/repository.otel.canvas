@@ -56,7 +56,9 @@
         "otel": {
           "kind": "event",
           "category": "lifecycle",
-          "files": ["src/app/[owner]/[repo]/page.tsx"]
+          "files": [
+            "src/app/[owner]/[repo]/page.tsx"
+          ]
         }
       }
     },
@@ -92,7 +94,9 @@
         "otel": {
           "kind": "event",
           "category": "io",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -101,7 +105,7 @@
       "type": "text",
       "text": "# File Tree Ready\n\nTree loaded successfully",
       "x": -400,
-      "y": 300,
+      "y": 425,
       "width": 200,
       "height": 90,
       "color": "#16a34a",
@@ -128,7 +132,9 @@
         "otel": {
           "kind": "event",
           "category": "lifecycle",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -159,7 +165,148 @@
         "otel": {
           "kind": "event",
           "category": "error",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
+        }
+      }
+    },
+    {
+      "id": "file-tree-cache-hit",
+      "type": "text",
+      "text": "# Cache Hit\n\nTree returned from cache",
+      "x": -461,
+      "y": 297,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "implemented",
+        "event": {
+          "name": "repo.file-tree.cache.hit",
+          "attributes": {
+            "cache.key": {
+              "type": "string",
+              "description": "Cache key (owner/repo/sha)",
+              "required": true
+            },
+            "tree.sha": {
+              "type": "string",
+              "description": "Git tree SHA",
+              "required": true
+            },
+            "tree.fileCount": {
+              "type": "number",
+              "description": "Number of files in tree",
+              "required": true
+            },
+            "cache.hit": {
+              "type": "boolean",
+              "description": "Always true for cache hit",
+              "required": true
+            },
+            "durationMs": {
+              "type": "number",
+              "description": "Time to retrieve from cache",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/server/routers/github.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "cache",
+          "files": [
+            "src/server/routers/github.ts"
+          ]
+        }
+      }
+    },
+    {
+      "id": "file-tree-cache-miss",
+      "type": "text",
+      "text": "# Cache Miss\n\nFetching from GitHub",
+      "x": -158,
+      "y": 278,
+      "width": 200,
+      "height": 90,
+      "color": "#ca8a04",
+      "pv": {
+        "status": "implemented",
+        "event": {
+          "name": "repo.file-tree.cache.miss",
+          "attributes": {
+            "cache.key": {
+              "type": "string",
+              "description": "Cache key (owner/repo/sha)",
+              "required": true
+            },
+            "cache.hit": {
+              "type": "boolean",
+              "description": "Always false for cache miss",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/server/routers/github.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "cache",
+          "files": [
+            "src/server/routers/github.ts"
+          ]
+        }
+      }
+    },
+    {
+      "id": "file-tree-fetch-complete",
+      "type": "text",
+      "text": "# Fetch Complete\n\nTree fetched from GitHub",
+      "x": -133,
+      "y": 400,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "implemented",
+        "event": {
+          "name": "repo.file-tree.fetch.complete",
+          "attributes": {
+            "tree.sha": {
+              "type": "string",
+              "description": "Git tree SHA",
+              "required": true
+            },
+            "tree.fileCount": {
+              "type": "number",
+              "description": "Number of files in tree",
+              "required": true
+            },
+            "tree.truncated": {
+              "type": "boolean",
+              "description": "Whether tree was truncated",
+              "required": true
+            },
+            "durationMs": {
+              "type": "number",
+              "description": "Time to fetch from GitHub",
+              "required": true
+            }
+          }
+        },
+        "references": [
+          "src/server/routers/github.ts"
+        ],
+        "otel": {
+          "kind": "event",
+          "category": "io",
+          "files": [
+            "src/server/routers/github.ts"
+          ]
         }
       }
     },
@@ -195,7 +342,9 @@
         "otel": {
           "kind": "event",
           "category": "io",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -231,7 +380,9 @@
         "otel": {
           "kind": "event",
           "category": "lifecycle",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -262,7 +413,9 @@
         "otel": {
           "kind": "event",
           "category": "error",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -271,7 +424,7 @@
       "type": "text",
       "text": "# fileTree\n\nState: repository structure",
       "x": -400,
-      "y": 450,
+      "y": 575,
       "width": 200,
       "height": 90,
       "color": "#ca8a04",
@@ -293,7 +446,9 @@
         "otel": {
           "kind": "event",
           "category": "state",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -329,7 +484,9 @@
         "otel": {
           "kind": "event",
           "category": "state",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -338,7 +495,7 @@
       "type": "text",
       "text": "# File City Panel\n\nVisualizes repo structure",
       "x": -400,
-      "y": 600,
+      "y": 725,
       "width": 200,
       "height": 90,
       "color": "#059669",
@@ -360,7 +517,9 @@
         "otel": {
           "kind": "event",
           "category": "render",
-          "files": ["src/components/EditorLayout.tsx"]
+          "files": [
+            "src/components/EditorLayout.tsx"
+          ]
         }
       }
     },
@@ -391,7 +550,9 @@
         "otel": {
           "kind": "event",
           "category": "render",
-          "files": ["src/components/EditorLayout.tsx"]
+          "files": [
+            "src/components/EditorLayout.tsx"
+          ]
         }
       }
     },
@@ -422,7 +583,9 @@
         "otel": {
           "kind": "event",
           "category": "lifecycle",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -453,7 +616,9 @@
         "otel": {
           "kind": "event",
           "category": "io",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -489,7 +654,9 @@
         "otel": {
           "kind": "event",
           "category": "lifecycle",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -525,7 +692,9 @@
         "otel": {
           "kind": "event",
           "category": "error",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -556,7 +725,9 @@
         "otel": {
           "kind": "event",
           "category": "state",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -587,7 +758,9 @@
         "otel": {
           "kind": "event",
           "category": "render",
-          "files": ["src/components/EditorLayout.tsx"]
+          "files": [
+            "src/components/EditorLayout.tsx"
+          ]
         }
       }
     },
@@ -596,7 +769,7 @@
       "type": "text",
       "text": "# Auto-load README\n\nLoad README on init",
       "x": -150,
-      "y": 300,
+      "y": 537,
       "width": 200,
       "height": 90,
       "color": "#1d4ed8",
@@ -623,7 +796,9 @@
         "otel": {
           "kind": "event",
           "category": "operation",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -659,7 +834,9 @@
         "otel": {
           "kind": "event",
           "category": "lifecycle",
-          "files": ["src/components/EditorLayout.tsx"]
+          "files": [
+            "src/components/EditorLayout.tsx"
+          ]
         }
       }
     },
@@ -695,7 +872,9 @@
         "otel": {
           "kind": "event",
           "category": "render",
-          "files": ["src/components/EditorLayout.tsx"]
+          "files": [
+            "src/components/EditorLayout.tsx"
+          ]
         }
       }
     },
@@ -731,7 +910,9 @@
         "otel": {
           "kind": "event",
           "category": "io",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -767,7 +948,9 @@
         "otel": {
           "kind": "event",
           "category": "lifecycle",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -803,7 +986,9 @@
         "otel": {
           "kind": "event",
           "category": "lifecycle",
-          "files": ["src/components/EditorLayout.tsx"]
+          "files": [
+            "src/components/EditorLayout.tsx"
+          ]
         }
       }
     },
@@ -839,7 +1024,9 @@
         "otel": {
           "kind": "event",
           "category": "render",
-          "files": ["src/components/EditorLayout.tsx"]
+          "files": [
+            "src/components/EditorLayout.tsx"
+          ]
         }
       }
     },
@@ -875,7 +1062,9 @@
         "otel": {
           "kind": "event",
           "category": "io",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -906,7 +1095,9 @@
         "otel": {
           "kind": "event",
           "category": "lifecycle",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -942,7 +1133,9 @@
         "otel": {
           "kind": "event",
           "category": "lifecycle",
-          "files": ["src/components/EditorLayout.tsx"]
+          "files": [
+            "src/components/EditorLayout.tsx"
+          ]
         }
       }
     },
@@ -978,7 +1171,9 @@
         "otel": {
           "kind": "event",
           "category": "render",
-          "files": ["src/components/EditorLayout.tsx"]
+          "files": [
+            "src/components/EditorLayout.tsx"
+          ]
         }
       }
     },
@@ -1014,7 +1209,9 @@
         "otel": {
           "kind": "event",
           "category": "io",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -1045,7 +1242,9 @@
         "otel": {
           "kind": "event",
           "category": "lifecycle",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -1076,7 +1275,9 @@
         "otel": {
           "kind": "event",
           "category": "lifecycle",
-          "files": ["src/components/EditorLayout.tsx"]
+          "files": [
+            "src/components/EditorLayout.tsx"
+          ]
         }
       }
     },
@@ -1107,7 +1308,9 @@
         "otel": {
           "kind": "event",
           "category": "render",
-          "files": ["src/components/EditorLayout.tsx"]
+          "files": [
+            "src/components/EditorLayout.tsx"
+          ]
         }
       }
     },
@@ -1143,7 +1346,9 @@
         "otel": {
           "kind": "event",
           "category": "io",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -1174,7 +1379,9 @@
         "otel": {
           "kind": "event",
           "category": "lifecycle",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -1205,7 +1412,9 @@
         "otel": {
           "kind": "event",
           "category": "lifecycle",
-          "files": ["src/components/EditorLayout.tsx"]
+          "files": [
+            "src/components/EditorLayout.tsx"
+          ]
         }
       }
     },
@@ -1236,7 +1445,9 @@
         "otel": {
           "kind": "event",
           "category": "render",
-          "files": ["src/components/EditorLayout.tsx"]
+          "files": [
+            "src/components/EditorLayout.tsx"
+          ]
         }
       }
     },
@@ -1272,7 +1483,9 @@
         "otel": {
           "kind": "event",
           "category": "io",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -1303,7 +1516,9 @@
         "otel": {
           "kind": "event",
           "category": "lifecycle",
-          "files": ["src/contexts/RepositoryPageProvider.tsx"]
+          "files": [
+            "src/contexts/RepositoryPageProvider.tsx"
+          ]
         }
       }
     },
@@ -1334,7 +1549,9 @@
         "otel": {
           "kind": "event",
           "category": "lifecycle",
-          "files": ["src/components/EditorLayout.tsx"]
+          "files": [
+            "src/components/EditorLayout.tsx"
+          ]
         }
       }
     },
@@ -1365,7 +1582,9 @@
         "otel": {
           "kind": "event",
           "category": "render",
-          "files": ["src/components/EditorLayout.tsx"]
+          "files": [
+            "src/components/EditorLayout.tsx"
+          ]
         }
       }
     }
@@ -1378,7 +1597,9 @@
       "toNode": "file-tree-load",
       "toSide": "top",
       "label": "parallel",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "init-2",
@@ -1387,15 +1608,63 @@
       "toNode": "packages-load",
       "toSide": "top",
       "label": "parallel",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "tree-1",
       "fromNode": "file-tree-load",
+      "fromSide": "left",
+      "toNode": "file-tree-cache-hit",
+      "toSide": "top",
+      "label": "cached",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "tree-1b",
+      "fromNode": "file-tree-load",
+      "fromSide": "bottom",
+      "toNode": "file-tree-cache-miss",
+      "toSide": "top",
+      "label": "not cached",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "tree-1c",
+      "fromNode": "file-tree-cache-hit",
       "fromSide": "bottom",
       "toNode": "file-tree-success",
+      "toSide": "left",
+      "label": "fast path",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "tree-1d",
+      "fromNode": "file-tree-cache-miss",
+      "fromSide": "bottom",
+      "toNode": "file-tree-fetch-complete",
       "toSide": "top",
-      "pv": { "edgeType": "flow" }
+      "label": "fetch",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "tree-1e",
+      "fromNode": "file-tree-fetch-complete",
+      "fromSide": "bottom",
+      "toNode": "file-tree-success",
+      "toSide": "right",
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "tree-2",
@@ -1403,7 +1672,9 @@
       "fromSide": "right",
       "toNode": "file-tree-error",
       "toSide": "left",
-      "pv": { "edgeType": "error" }
+      "pv": {
+        "edgeType": "error"
+      }
     },
     {
       "id": "tree-3",
@@ -1412,7 +1683,9 @@
       "toNode": "state-file-tree",
       "toSide": "top",
       "label": "writes",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "tree-4",
@@ -1421,7 +1694,9 @@
       "toNode": "readme-auto-load",
       "toSide": "left",
       "label": "triggers",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "tree-5",
@@ -1430,7 +1705,9 @@
       "toNode": "panel-file-city",
       "toSide": "top",
       "label": "subscribes",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "pkg-1",
@@ -1438,7 +1715,9 @@
       "fromSide": "bottom",
       "toNode": "packages-success",
       "toSide": "top",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "pkg-2",
@@ -1446,7 +1725,9 @@
       "fromSide": "bottom",
       "toNode": "packages-error",
       "toSide": "top",
-      "pv": { "edgeType": "error" }
+      "pv": {
+        "edgeType": "error"
+      }
     },
     {
       "id": "pkg-3",
@@ -1455,7 +1736,9 @@
       "toNode": "state-packages",
       "toSide": "top",
       "label": "writes",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "pkg-4",
@@ -1464,7 +1747,9 @@
       "toNode": "panel-packages",
       "toSide": "top",
       "label": "subscribes",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "file-1",
@@ -1472,7 +1757,9 @@
       "fromSide": "bottom",
       "toNode": "file-content-load",
       "toSide": "top",
-      "pv": { "edgeType": "user-action" }
+      "pv": {
+        "edgeType": "user-action"
+      }
     },
     {
       "id": "file-2",
@@ -1480,7 +1767,9 @@
       "fromSide": "bottom",
       "toNode": "file-content-success",
       "toSide": "top",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "file-3",
@@ -1488,7 +1777,9 @@
       "fromSide": "right",
       "toNode": "file-content-error",
       "toSide": "left",
-      "pv": { "edgeType": "error" }
+      "pv": {
+        "edgeType": "error"
+      }
     },
     {
       "id": "file-4",
@@ -1497,7 +1788,9 @@
       "toNode": "state-active-file",
       "toSide": "top",
       "label": "writes",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "file-5",
@@ -1506,16 +1799,9 @@
       "toNode": "panel-editor",
       "toSide": "top",
       "label": "subscribes",
-      "pv": { "edgeType": "data-flow" }
-    },
-    {
-      "id": "readme-1",
-      "fromNode": "readme-auto-load",
-      "fromSide": "bottom",
-      "toNode": "file-content-load",
-      "toSide": "left",
-      "label": "auto",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "md-1",
@@ -1524,7 +1810,9 @@
       "toNode": "panel-markdown",
       "toSide": "left",
       "label": "subscribes",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "tour-1",
@@ -1533,7 +1821,9 @@
       "toNode": "tour-config-load",
       "toSide": "left",
       "label": "tour mode",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "tour-2",
@@ -1541,7 +1831,9 @@
       "fromSide": "bottom",
       "toNode": "tour-config-success",
       "toSide": "top",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "tour-3",
@@ -1549,7 +1841,9 @@
       "fromSide": "bottom",
       "toNode": "tour-step-navigate",
       "toSide": "top",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "tour-4",
@@ -1558,7 +1852,9 @@
       "toNode": "panel-tour",
       "toSide": "top",
       "label": "renders",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "story-1",
@@ -1567,7 +1863,9 @@
       "toNode": "storyboard-list-load",
       "toSide": "left",
       "label": "stories mode",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "story-2",
@@ -1575,7 +1873,9 @@
       "fromSide": "bottom",
       "toNode": "storyboard-list-success",
       "toSide": "top",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "story-3",
@@ -1583,7 +1883,9 @@
       "fromSide": "bottom",
       "toNode": "storyboard-select",
       "toSide": "top",
-      "pv": { "edgeType": "user-action" }
+      "pv": {
+        "edgeType": "user-action"
+      }
     },
     {
       "id": "story-4",
@@ -1592,7 +1894,9 @@
       "toNode": "panel-storyboard",
       "toSide": "top",
       "label": "renders",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "skill-1",
@@ -1601,7 +1905,9 @@
       "toNode": "skills-list-load",
       "toSide": "left",
       "label": "skills mode",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "skill-2",
@@ -1609,7 +1915,9 @@
       "fromSide": "bottom",
       "toNode": "skills-list-success",
       "toSide": "top",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "skill-3",
@@ -1617,7 +1925,9 @@
       "fromSide": "bottom",
       "toNode": "skill-select",
       "toSide": "top",
-      "pv": { "edgeType": "user-action" }
+      "pv": {
+        "edgeType": "user-action"
+      }
     },
     {
       "id": "skill-4",
@@ -1626,7 +1936,9 @@
       "toNode": "panel-skills",
       "toSide": "top",
       "label": "renders",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "quality-1",
@@ -1635,7 +1947,9 @@
       "toNode": "quality-data-load",
       "toSide": "left",
       "label": "quality mode",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "quality-2",
@@ -1643,7 +1957,9 @@
       "fromSide": "bottom",
       "toNode": "quality-data-success",
       "toSide": "top",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "quality-3",
@@ -1651,7 +1967,9 @@
       "fromSide": "bottom",
       "toNode": "lens-select",
       "toSide": "top",
-      "pv": { "edgeType": "user-action" }
+      "pv": {
+        "edgeType": "user-action"
+      }
     },
     {
       "id": "quality-4",
@@ -1660,7 +1978,9 @@
       "toNode": "panel-quality",
       "toSide": "top",
       "label": "renders",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "trace-1",
@@ -1669,7 +1989,9 @@
       "toNode": "traces-list-load",
       "toSide": "left",
       "label": "telemetry mode",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "trace-2",
@@ -1677,7 +1999,9 @@
       "fromSide": "bottom",
       "toNode": "traces-list-success",
       "toSide": "top",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "trace-3",
@@ -1685,7 +2009,9 @@
       "fromSide": "bottom",
       "toNode": "trace-select",
       "toSide": "top",
-      "pv": { "edgeType": "user-action" }
+      "pv": {
+        "edgeType": "user-action"
+      }
     },
     {
       "id": "trace-4",
@@ -1694,7 +2020,19 @@
       "toNode": "panel-traces",
       "toSide": "top",
       "label": "renders",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "edge-readme-auto-load-file-content-load-1773277609584",
+      "fromNode": "readme-auto-load",
+      "toNode": "file-content-load",
+      "fromSide": "right",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "flow"
+      }
     }
   ]
 }
