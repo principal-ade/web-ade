@@ -58,7 +58,7 @@ const treeEntrySchema = z.object({
   type: z.enum(['blob', 'tree', 'commit']), // 'commit' = git submodule
   sha: z.string(),
   size: z.number().optional(),
-  url: z.string(),
+  url: z.string().optional(), // Optional for submodules
 });
 
 const getTreeOutputSchema = z.object({
@@ -135,7 +135,7 @@ interface GitHubTreeItem {
   type: 'blob' | 'tree' | 'commit'; // 'commit' = git submodule
   sha: string;
   size?: number;
-  url: string;
+  url?: string; // Optional for submodules
 }
 
 interface GitHubTreeResponseRaw {
@@ -371,6 +371,27 @@ async function makeGitHubRequest<T>(
 // Router Definition
 // ============================================================================
 
+// Schema for featured repos response
+const featuredRepoSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  full_name: z.string(),
+  description: z.string().nullable(),
+  owner: z.object({
+    login: z.string(),
+    avatar_url: z.string(),
+  }),
+  stargazers_count: z.number(),
+  language: z.string().nullable(),
+  license: z.object({
+    spdx_id: z.string(),
+  }).nullable().optional(),
+  topics: z.array(z.string()).optional(),
+  html_url: z.string(),
+});
+
+const getFeaturedReposOutputSchema = z.array(featuredRepoSchema);
+
 export const githubRouter = router({
   /**
    * Read a file from a GitHub repository
@@ -466,7 +487,7 @@ export const githubRouter = router({
               type: 'blob' | 'tree' | 'commit'; // 'commit' = git submodule
               sha: string;
               size?: number;
-              url: string;
+              url?: string; // Optional for submodules
             }>;
             truncated: boolean;
           }
@@ -704,6 +725,96 @@ export const githubRouter = router({
           },
           treeSha: undefined,
         };
+      }
+    }),
+
+  /**
+   * Get featured repositories (fork parents from X-File-City org)
+   * Fetches repos forked by X-File-City and returns their parent repos
+   */
+  getFeaturedRepos: publicProcedure
+    .output(getFeaturedReposOutputSchema)
+    .query(async () => {
+      const userToken = await getGitHubToken();
+
+      interface GitHubOrgRepo {
+        id: number;
+        name: string;
+        full_name: string;
+        fork: boolean;
+        description: string | null;
+        owner: {
+          login: string;
+          avatar_url: string;
+        };
+        stargazers_count: number;
+        language: string | null;
+        license?: {
+          spdx_id: string;
+        } | null;
+        topics?: string[];
+        html_url: string;
+        parent?: {
+          id: number;
+          name: string;
+          full_name: string;
+          description: string | null;
+          owner: {
+            login: string;
+            avatar_url: string;
+          };
+          stargazers_count: number;
+          language: string | null;
+          license?: {
+            spdx_id: string;
+          } | null;
+          topics?: string[];
+          html_url: string;
+        };
+      }
+
+      try {
+        // Fetch repos from X-File-City org
+        const orgRepos = await makeGitHubRequest<GitHubOrgRepo[]>(
+          '/orgs/X-File-City/repos?per_page=100&sort=updated',
+          userToken
+        );
+
+        // Filter for forks only
+        const forks = orgRepos.filter((repo) => repo.fork);
+
+        // Fetch full repo info for each fork to get parent data
+        const limit = createLimiter(MAX_CONCURRENT_REQUESTS);
+        const parentRepos = await Promise.all(
+          forks.map((fork) =>
+            limit(async () => {
+              try {
+                const fullRepo = await makeGitHubRequest<GitHubOrgRepo>(
+                  `/repos/${fork.full_name}`,
+                  userToken
+                );
+                return fullRepo.parent || null;
+              } catch {
+                return null;
+              }
+            })
+          )
+        );
+
+        // Filter out nulls and dedupe by id
+        const seen = new Set<number>();
+        const uniqueParents = parentRepos
+          .filter((p): p is NonNullable<typeof p> => p !== null)
+          .filter((p) => {
+            if (seen.has(p.id)) return false;
+            seen.add(p.id);
+            return true;
+          });
+
+        return uniqueParents;
+      } catch (error) {
+        console.error('[getFeaturedRepos] Error fetching featured repos:', error);
+        return [];
       }
     }),
 });
