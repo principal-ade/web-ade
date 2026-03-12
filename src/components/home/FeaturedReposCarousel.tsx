@@ -113,7 +113,7 @@ export function FeaturedReposCarousel() {
   useEffect(() => {
     if (duplicatedEntries.length === 0) return;
 
-    const cardWidth = 220;
+    const cardWidth = 368;
     // Calculate which cards are visible based on scroll position
     const visibleStart = Math.floor(scrollPosition / cardWidth);
     const visibleEnd = visibleStart + 10; // Assume ~10 cards visible at once
@@ -130,7 +130,7 @@ export function FeaturedReposCarousel() {
   useEffect(() => {
     if (entries.length === 0 || isPaused) return;
 
-    const cardWidth = 220; // Card width + gap
+    const cardWidth = 368; // Card width + gap
     const totalWidth = entries.length * cardWidth;
 
     const interval = setInterval(() => {
@@ -154,7 +154,7 @@ export function FeaturedReposCarousel() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          height: '320px',
+          height: '480px',
           color: theme.colors.textMuted,
           fontFamily: theme.fonts.body,
         }}
@@ -178,32 +178,12 @@ export function FeaturedReposCarousel() {
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      {/* Header */}
-      <div
-        style={{
-          textAlign: 'center',
-          marginBottom: '16px',
-        }}
-      >
-        <span
-          style={{
-            fontSize: '14px',
-            color: theme.colors.textMuted,
-            fontFamily: theme.fonts.body,
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-          }}
-        >
-          Featured Repositories
-        </span>
-      </div>
-
       {/* Carousel container */}
       <div
         ref={containerRef}
         style={{
           display: 'flex',
-          gap: '20px',
+          gap: '48px',
           transform: `translateX(-${scrollPosition}px)`,
           transition: isPaused ? 'transform 0.3s ease-out' : 'none',
         }}
@@ -222,8 +202,8 @@ export function FeaturedReposCarousel() {
             >
               <div
                 style={{
-                  width: '200px',
-                  height: '280px',
+                  width: '320px',
+                  height: '450px',
                   transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                   cursor: 'pointer',
                 }}
@@ -240,15 +220,15 @@ export function FeaturedReposCarousel() {
                   <RepoCardStatic
                     repository={entry}
                     cardTheme="dark"
-                    width={200}
-                    height={280}
-                    spriteSize={140}
+                    width={320}
+                    height={450}
+                    spriteSize={280}
                   />
                 ) : (
                   <div
                     style={{
-                      width: 200,
-                      height: 280,
+                      width: 320,
+                      height: 450,
                       backgroundColor: '#1a1a2e',
                       border: '2px solid #4a4a6a',
                       borderRadius: '12px',
@@ -271,6 +251,26 @@ export function FeaturedReposCarousel() {
             </Link>
           );
         })}
+      </div>
+
+      {/* Label */}
+      <div
+        style={{
+          textAlign: 'center',
+          marginTop: '16px',
+        }}
+      >
+        <span
+          style={{
+            fontSize: '14px',
+            color: theme.colors.textMuted,
+            fontFamily: theme.fonts.body,
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+          }}
+        >
+          Featured Projects
+        </span>
       </div>
 
       {/* Fade edges */}
