@@ -49,6 +49,7 @@ function toAlexandriaEntry(repo: FeaturedRepo): AlexandriaEntryWithMetrics {
       id: repo.full_name,
       owner: repo.owner.login,
       name: repo.name,
+      description: repo.description || undefined,
       stars: repo.stargazers_count,
       license: repo.license?.spdx_id,
       primaryLanguage: repo.language || undefined,

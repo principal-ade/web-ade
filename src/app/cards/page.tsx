@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { EditorHeader } from '@/components/EditorHeader';
 import { HomePageProvider } from '@/contexts/HomePageProvider';
 import nextDynamic from 'next/dynamic';
 import type { AlexandriaEntryWithMetrics } from '@industry-theme/repository-composition-panels';
+import type { RepoSpritePackage } from '@industry-theme/repository-composition-panels';
+import { trpc } from '@/lib/trpc/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +20,7 @@ const RepoCardStatic = nextDynamic(
   { ssr: false }
 );
 
-// Sample data for the card
+// Sample data for single-package repo
 const SAMPLE_REPO: AlexandriaEntryWithMetrics = {
   name: 'react',
   path: '/facebook/react' as AlexandriaEntryWithMetrics['path'],
@@ -30,6 +32,7 @@ const SAMPLE_REPO: AlexandriaEntryWithMetrics = {
     id: 'facebook/react',
     owner: 'facebook',
     name: 'react',
+    description: 'The library for web and native user interfaces.',
     stars: 225000,
     license: 'MIT',
     primaryLanguage: 'TypeScript',
@@ -42,16 +45,55 @@ const SAMPLE_REPO: AlexandriaEntryWithMetrics = {
     lineCount: 450000,
     commitCount: 17234,
     contributors: 1650,
-    lastEditedAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+    lastEditedAt: new Date(Date.now() - 86400000).toISOString(),
     createdAt: '2013-05-24T00:00:00Z',
   },
+};
+
+// Sample monorepo data - openclaw/openclaw
+const SAMPLE_MONOREPO: AlexandriaEntryWithMetrics = {
+  name: 'openclaw',
+  path: '/openclaw/openclaw' as AlexandriaEntryWithMetrics['path'],
+  registeredAt: new Date().toISOString(),
+  hasViews: true,
+  viewCount: 128,
+  views: [],
+  github: {
+    id: 'openclaw/openclaw',
+    owner: 'openclaw',
+    name: 'openclaw',
+    description: 'Your own personal AI assistant. Any OS. Any Platform. The lobster way.',
+    stars: 307306,
+    license: 'MIT',
+    primaryLanguage: 'TypeScript',
+    topics: ['ai', 'assistant', 'crustacean', 'molty', 'openclaw'],
+    lastUpdated: new Date().toISOString(),
+    ownerAvatar: 'https://avatars.githubusercontent.com/u/198279852?v=4',
+  },
+  metrics: {
+    fileCount: 1245,
+    lineCount: 180000,
+    commitCount: 3421,
+    contributors: 89,
+    lastEditedAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+    createdAt: '2024-01-15T00:00:00Z',
+  },
+};
+
+// Language color mapping for packages
+const LANGUAGE_COLORS: Record<string, string> = {
+  TypeScript: '#3178c6',
+  JavaScript: '#f1e05a',
+  Python: '#3572A5',
+  Rust: '#dea584',
+  Go: '#00ADD8',
 };
 
 interface ComponentInfo {
   name: string;
   field: string;
   description: string;
-  visual?: string; // Where it appears visually on the card
+  visual?: string;
 }
 
 interface ApiGroup {
@@ -86,6 +128,12 @@ const API_GROUPS: ApiGroup[] = [
         visual: 'Bottom label',
       },
       {
+        name: 'Description',
+        field: 'github.description',
+        description: 'Repository description from GitHub',
+        visual: 'Card content area (if supported)',
+      },
+      {
         name: 'Stars',
         field: 'github.stars',
         description: 'GitHub star count',
@@ -108,6 +156,55 @@ const API_GROUPS: ApiGroup[] = [
         field: 'github.topics',
         description: 'Repository topic tags',
         visual: 'Not currently displayed',
+      },
+    ],
+  },
+  {
+    name: 'Package Discovery',
+    endpoint: 'trpc.github.getRepoPackages',
+    description: 'Monorepo package detection via PackageLayerModule',
+    components: [
+      {
+        name: 'Package Name',
+        field: 'packages[].name',
+        description: 'Package name from package.json',
+        visual: 'Individual building in sprite cluster',
+      },
+      {
+        name: 'Package Path',
+        field: 'packages[].path',
+        description: 'Path within the repository (e.g., packages/core)',
+        visual: 'Affects building position',
+      },
+      {
+        name: 'Package Size',
+        field: 'packages[].size',
+        description: 'Size multiplier based on file/line count',
+        visual: 'Building height/scale',
+      },
+      {
+        name: 'Package Importance',
+        field: 'packages[].importance',
+        description: 'Visual prominence (0-100, root packages higher)',
+        visual: 'Building position (center vs edge)',
+      },
+      {
+        name: 'Is Monorepo Root',
+        field: 'packageData.isMonorepoRoot',
+        description: 'Whether this is the workspace root',
+        visual: 'Central/largest building',
+      },
+      {
+        name: 'Is Workspace',
+        field: 'packageData.isWorkspace',
+        description: 'Whether this is a workspace package',
+        visual: 'Satellite buildings around root',
+      },
+      {
+        name: 'Dependencies',
+        field: 'packageData.dependencies',
+        description: 'Package dependencies from package.json',
+        visual: 'Not directly shown (used for metrics)',
       },
     ],
   },
@@ -212,10 +309,66 @@ const API_GROUPS: ApiGroup[] = [
   },
 ];
 
+type CardExample = 'single' | 'monorepo';
+
 function CardExplanationContent() {
   const { theme } = useTheme();
   const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
   const [expandedGroup, setExpandedGroup] = useState<string | null>('GitHub Repository API');
+  const [selectedExample, setSelectedExample] = useState<CardExample>('single');
+  const [packages, setPackages] = useState<RepoSpritePackage[]>([]);
+  const [packagesLoading, setPackagesLoading] = useState(false);
+  const [packagesError, setPackagesError] = useState<string | null>(null);
+
+  // Fetch packages for openclaw/openclaw when monorepo is selected
+  useEffect(() => {
+    if (selectedExample !== 'monorepo') {
+      setPackages([]);
+      return;
+    }
+
+    let mounted = true;
+    setPackagesLoading(true);
+    setPackagesError(null);
+
+    async function fetchPackages() {
+      try {
+        const data = await trpc.github.getRepoPackages.query({
+          owner: 'openclaw',
+          repo: 'openclaw',
+        });
+
+        if (!mounted) return;
+
+        // Transform PackageLayer[] to RepoSpritePackage[]
+        // Size is computed based on package type (root packages are larger)
+        const spritePackages: RepoSpritePackage[] = data.packages.map((pkg, idx) => ({
+          name: pkg.packageData?.name || pkg.name,
+          color: LANGUAGE_COLORS['TypeScript'] || '#3178c6',
+          size: pkg.packageData?.isMonorepoRoot ? 2.5 : 1.5 + (idx * 0.2),
+        }));
+
+        setPackages(spritePackages);
+      } catch (error) {
+        if (!mounted) return;
+        console.error('Failed to fetch packages:', error);
+        setPackagesError(error instanceof Error ? error.message : 'Failed to fetch packages');
+      } finally {
+        if (mounted) {
+          setPackagesLoading(false);
+        }
+      }
+    }
+
+    fetchPackages();
+
+    return () => {
+      mounted = false;
+    };
+  }, [selectedExample]);
+
+  const currentRepo = selectedExample === 'single' ? SAMPLE_REPO : SAMPLE_MONOREPO;
+  const currentPackages = selectedExample === 'monorepo' && packages.length > 0 ? packages : undefined;
 
   return (
     <div
@@ -433,19 +586,75 @@ function CardExplanationContent() {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
             backgroundColor: theme.colors.surface,
+            overflowY: 'auto',
           }}
         >
+          {/* Tab Switcher */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '8px',
+              marginBottom: '24px',
+              padding: '4px',
+              backgroundColor: theme.colors.background,
+              borderRadius: '8px',
+              border: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <button
+              onClick={() => setSelectedExample('single')}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontFamily: theme.fonts.body,
+                fontWeight: theme.fontWeights.medium,
+                backgroundColor:
+                  selectedExample === 'single' ? theme.colors.primary : 'transparent',
+                color:
+                  selectedExample === 'single'
+                    ? theme.colors.textOnPrimary
+                    : theme.colors.textMuted,
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Single Package
+            </button>
+            <button
+              onClick={() => setSelectedExample('monorepo')}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontFamily: theme.fonts.body,
+                fontWeight: theme.fontWeights.medium,
+                backgroundColor:
+                  selectedExample === 'monorepo' ? theme.colors.primary : 'transparent',
+                color:
+                  selectedExample === 'monorepo'
+                    ? theme.colors.textOnPrimary
+                    : theme.colors.textMuted,
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Monorepo
+            </button>
+          </div>
+
           <p
             style={{
               fontSize: `${theme.fontSizes[1]}px`,
               color: theme.colors.textMuted,
-              marginBottom: '24px',
+              marginBottom: '16px',
               fontFamily: theme.fonts.body,
             }}
           >
-            RepoCardStatic Preview
+            {selectedExample === 'single' ? 'Single Package Card' : 'Monorepo Card (Multiple Buildings)'}
           </p>
 
           {/* The Card */}
@@ -457,7 +666,8 @@ function CardExplanationContent() {
             }}
           >
             <RepoCardStatic
-              repository={SAMPLE_REPO}
+              repository={currentRepo}
+              packages={currentPackages}
               cardTheme="dark"
               width={320}
               height={450}
@@ -465,6 +675,7 @@ function CardExplanationContent() {
             />
           </div>
 
+          {/* Info Card */}
           <div
             style={{
               marginTop: '24px',
@@ -473,6 +684,7 @@ function CardExplanationContent() {
               backgroundColor: theme.colors.background,
               border: `1px solid ${theme.colors.border}`,
               maxWidth: '320px',
+              width: '100%',
             }}
           >
             <p
@@ -481,19 +693,46 @@ function CardExplanationContent() {
                 color: theme.colors.textMuted,
                 margin: 0,
                 fontFamily: theme.fonts.body,
-                lineHeight: 1.5,
+                lineHeight: 1.6,
               }}
             >
-              <strong style={{ color: theme.colors.text }}>Sample:</strong> facebook/react
+              <strong style={{ color: theme.colors.text }}>Repo:</strong>{' '}
+              {currentRepo.github?.owner}/{currentRepo.github?.name}
+              <br />
+              <strong style={{ color: theme.colors.text }}>Description:</strong>{' '}
+              {currentRepo.github?.description || 'N/A'}
               <br />
               <strong style={{ color: theme.colors.text }}>Stars:</strong>{' '}
-              {SAMPLE_REPO.github?.stars?.toLocaleString()}
+              {currentRepo.github?.stars?.toLocaleString()}
               <br />
               <strong style={{ color: theme.colors.text }}>Files:</strong>{' '}
-              {SAMPLE_REPO.metrics?.fileCount?.toLocaleString()}
+              {currentRepo.metrics?.fileCount?.toLocaleString()}
               <br />
               <strong style={{ color: theme.colors.text }}>Language:</strong>{' '}
-              {SAMPLE_REPO.github?.primaryLanguage}
+              {currentRepo.github?.primaryLanguage}
+              {selectedExample === 'monorepo' && (
+                <>
+                  <br />
+                  <br />
+                  <strong style={{ color: theme.colors.text }}>Packages:</strong>
+                  <br />
+                  {packagesLoading && (
+                    <span style={{ fontStyle: 'italic' }}>Loading packages...</span>
+                  )}
+                  {packagesError && (
+                    <span style={{ color: theme.colors.error }}>Error: {packagesError}</span>
+                  )}
+                  {!packagesLoading && !packagesError && currentPackages && currentPackages.map((pkg, idx) => (
+                    <span key={pkg.name}>
+                      • {pkg.name}
+                      {idx < currentPackages.length - 1 && <br />}
+                    </span>
+                  ))}
+                  {!packagesLoading && !packagesError && (!currentPackages || currentPackages.length === 0) && (
+                    <span style={{ fontStyle: 'italic' }}>No packages found</span>
+                  )}
+                </>
+              )}
             </p>
           </div>
 
