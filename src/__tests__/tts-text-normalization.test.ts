@@ -43,6 +43,32 @@ describe('normalizeTextForTTS', () => {
     });
   });
 
+  describe('.js to .javascript expansion', () => {
+    it('expands .js file extension', () => {
+      expect(normalizeTextForTTS('Open index.js')).toBe('Open index.javascript');
+    });
+
+    it('expands .js at end of string', () => {
+      expect(normalizeTextForTTS('The file is main.js')).toBe(
+        'The file is main.javascript'
+      );
+    });
+
+    it('expands multiple .js occurrences', () => {
+      expect(normalizeTextForTTS('app.js and utils.js')).toBe(
+        'app.javascript and utils.javascript'
+      );
+    });
+
+    it('does not expand .json', () => {
+      expect(normalizeTextForTTS('package.json')).toBe('package.json');
+    });
+
+    it('does not expand .jsx', () => {
+      expect(normalizeTextForTTS('Component.jsx')).toBe('Component.jsx');
+    });
+  });
+
   describe('@ symbol removal', () => {
     it('removes @ from scoped packages', () => {
       expect(normalizeTextForTTS('@scope/package')).toBe('scope package');

@@ -4,7 +4,7 @@ import React, { useMemo, useEffect, useState, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Search, X } from 'lucide-react';
 import type { AlexandriaEntryWithMetrics } from '@industry-theme/repository-composition-panels';
 import { trpc } from '@/lib/trpc/client';
 
@@ -81,12 +81,14 @@ export function FeaturedReposGrid() {
   const [featuredRepos, setFeaturedRepos] = useState<FeaturedRepo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(10);
+  const [searchFilter, setSearchFilter] = useState('');
   const [languageFilter, setLanguageFilter] = useState<string>('all');
   const [sortOption, setSortOption] = useState<SortOption>('stars');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const languageDropdownRef = useRef<HTMLDivElement>(null);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const handleLoadMore = () => {
     setVisibleCount((prev) => Math.min(prev + 10, featuredRepos.length));
@@ -130,6 +132,17 @@ export function FeaturedReposGrid() {
   const filteredAndSortedRepos = useMemo(() => {
     let repos = [...featuredRepos];
 
+    // Apply text search filter
+    if (searchFilter.trim()) {
+      const searchLower = searchFilter.toLowerCase().trim();
+      repos = repos.filter((repo) => {
+        const nameMatch = repo.full_name.toLowerCase().includes(searchLower);
+        const descMatch = repo.description?.toLowerCase().includes(searchLower);
+        const topicsMatch = repo.topics?.some((t) => t.toLowerCase().includes(searchLower));
+        return nameMatch || descMatch || topicsMatch;
+      });
+    }
+
     // Apply language filter
     if (languageFilter !== 'all') {
       repos = repos.filter((repo) => repo.language === languageFilter);
@@ -149,7 +162,7 @@ export function FeaturedReposGrid() {
     }
 
     return repos;
-  }, [featuredRepos, languageFilter, sortOption]);
+  }, [featuredRepos, searchFilter, languageFilter, sortOption]);
 
   // Transform to Alexandria entries
   const entries = useMemo(() => {
@@ -163,7 +176,7 @@ export function FeaturedReposGrid() {
   // Reset visible count when filter changes
   useEffect(() => {
     setVisibleCount(10);
-  }, [languageFilter, sortOption]);
+  }, [searchFilter, languageFilter, sortOption]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -296,8 +309,85 @@ export function FeaturedReposGrid() {
             display: 'flex',
             gap: '12px',
             flexWrap: 'wrap',
+            alignItems: 'center',
           }}
         >
+        {/* Search Input */}
+        <div style={{ position: 'relative' }}>
+          <Search
+            size={16}
+            style={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: theme.colors.textMuted,
+              pointerEvents: 'none',
+            }}
+          />
+          <input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Filter projects..."
+            value={searchFilter}
+            onChange={(e) => setSearchFilter(e.target.value)}
+            style={{
+              width: '200px',
+              padding: '8px 32px 8px 36px',
+              fontSize: '14px',
+              fontFamily: theme.fonts.body,
+              color: theme.colors.text,
+              background: theme.colors.surface,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '8px',
+              outline: 'none',
+              transition: 'border-color 0.2s ease',
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = theme.colors.primary;
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = theme.colors.border;
+            }}
+          />
+          {searchFilter && (
+            <button
+              onClick={() => {
+                setSearchFilter('');
+                searchInputRef.current?.focus();
+              }}
+              style={{
+                position: 'absolute',
+                right: '8px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '20px',
+                height: '20px',
+                padding: 0,
+                border: 'none',
+                borderRadius: '50%',
+                background: theme.colors.border,
+                color: theme.colors.textMuted,
+                cursor: 'pointer',
+                transition: 'background 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = theme.colors.primary;
+                e.currentTarget.style.color = theme.colors.text;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = theme.colors.border;
+                e.currentTarget.style.color = theme.colors.textMuted;
+              }}
+            >
+              <X size={12} />
+            </button>
+          )}
+        </div>
+
         {/* Language Filter */}
         <div ref={languageDropdownRef} style={{ position: 'relative' }}>
           <button
@@ -481,7 +571,7 @@ export function FeaturedReposGrid() {
       </div>
 
       {/* No results message */}
-      {entries.length === 0 && languageFilter !== 'all' && (
+      {entries.length === 0 && (searchFilter.trim() || languageFilter !== 'all') && (
         <div
           style={{
             textAlign: 'center',
@@ -491,9 +581,15 @@ export function FeaturedReposGrid() {
             fontSize: '16px',
           }}
         >
-          No projects found for {languageFilter}.{' '}
+          No projects found
+          {searchFilter.trim() && ` matching "${searchFilter.trim()}"`}
+          {languageFilter !== 'all' && ` for ${languageFilter}`}
+          .{' '}
           <button
-            onClick={() => setLanguageFilter('all')}
+            onClick={() => {
+              setSearchFilter('');
+              setLanguageFilter('all');
+            }}
             style={{
               background: 'none',
               border: 'none',
@@ -504,7 +600,7 @@ export function FeaturedReposGrid() {
               textDecoration: 'underline',
             }}
           >
-            Clear filter
+            Clear filters
           </button>
         </div>
       )}

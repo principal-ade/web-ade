@@ -26,6 +26,8 @@ export function normalizeTextForTTS(text: string): string {
     .replace(/`/g, '')
     // Remove @ symbols (scoped packages, path aliases)
     .replace(/@/g, '')
+    // Expand .js to .javascript for better pronunciation
+    .replace(/\.js\b/g, '.javascript')
     // Replace path-like structures (word/word/) with spaces
     // This handles cases like "src/components/" → "src components"
     .replace(/(\w+)\/+/g, '$1 ')
