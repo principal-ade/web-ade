@@ -266,7 +266,8 @@ export function FeaturedReposGrid() {
     );
   }
 
-  if (entries.length === 0) {
+  // Only hide if there are no featured repos at all (not when filters yield no results)
+  if (featuredRepos.length === 0) {
     return null;
   }
 
