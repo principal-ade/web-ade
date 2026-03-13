@@ -16,6 +16,14 @@ const RepoCardStatic = dynamic(
   { ssr: false }
 );
 
+const CardBack = dynamic(
+  () =>
+    import('@industry-theme/repository-composition-panels').then(
+      (mod) => mod.CardBack
+    ),
+  { ssr: false }
+);
+
 interface FeaturedRepo {
   id: number;
   name: string;
@@ -155,12 +163,23 @@ export function FeaturedReposCarousel() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          gap: '48px',
           height: '480px',
-          color: theme.colors.textMuted,
-          fontFamily: theme.fonts.body,
+          overflow: 'hidden',
         }}
       >
-        Loading featured repositories...
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              flexShrink: 0,
+              opacity: i === 2 ? 1 : 0.6,
+              transform: i === 2 ? 'scale(1)' : 'scale(0.9)',
+            }}
+          >
+            <CardBack width={320} height={450} />
+          </div>
+        ))}
       </div>
     );
   }
@@ -226,27 +245,7 @@ export function FeaturedReposCarousel() {
                     spriteSize={280}
                   />
                 ) : (
-                  <div
-                    style={{
-                      width: 320,
-                      height: 450,
-                      backgroundColor: '#1a1a2e',
-                      border: '2px solid #4a4a6a',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 70,
-                        height: 70,
-                        backgroundColor: '#4a4a6a40',
-                        borderRadius: '8px',
-                      }}
-                    />
-                  </div>
+                  <CardBack width={320} height={450} />
                 )}
               </div>
             </Link>
