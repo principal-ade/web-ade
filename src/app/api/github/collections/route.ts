@@ -354,8 +354,9 @@ export async function POST(request: NextRequest) {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    // Save each collection as a separate file
-    const savePromises = collectionsWithMembers.map(async (collection) => {
+    // Save each collection as a separate file - sequentially to avoid SHA conflicts
+    const results: { success: boolean; error?: string }[] = [];
+    for (const collection of collectionsWithMembers) {
       const filename = `${COLLECTIONS_DIR}/${collection.id}.json`;
       const existingFile = await getFile<CollectionFile>(token, user.login, repoName, filename);
 
@@ -364,10 +365,10 @@ export async function POST(request: NextRequest) {
         collection,
       };
 
-      return saveFile(token, user.login, repoName, filename, collectionFile, existingFile.sha);
-    });
+      const result = await saveFile(token, user.login, repoName, filename, collectionFile, existingFile.sha);
+      results.push(result);
+    }
 
-    const results = await Promise.all(savePromises);
     const failures = results.filter(r => !r.success);
 
     if (failures.length > 0) {
@@ -420,11 +421,13 @@ export async function PUT(request: NextRequest) {
     const collections: Collection[] = body.collections || [];
     const memberships: CollectionMembership[] = body.memberships || [];
     const visibility: CollectionVisibility = body.visibility || 'public';
+    const changedCollectionIds: string[] | undefined = body.changedCollectionIds;
     const repoName = getRepoName(visibility);
 
     console.log('[API] PUT /api/github/collections', {
       collectionsCount: collections.length,
       membershipsCount: memberships.length,
+      changedCollectionIds,
       visibility,
       memberships: memberships.map(m => ({ collectionId: m.collectionId, repositoryId: m.repositoryId })),
     });
@@ -432,12 +435,18 @@ export async function PUT(request: NextRequest) {
     // Merge memberships into collections
     const collectionsWithMembers = mergeCollectionsWithMemberships(collections, memberships);
 
+    // If changedCollectionIds provided, only save those collections
+    const collectionsToSave = changedCollectionIds
+      ? collectionsWithMembers.filter(c => changedCollectionIds.includes(c.id))
+      : collectionsWithMembers;
+
     console.log('[API] After merge:', {
       collectionsWithMembers: collectionsWithMembers.map(c => ({
         id: c.id,
         name: c.name,
         membersCount: c.members.length,
       })),
+      collectionsToSave: collectionsToSave.map(c => c.id),
     });
 
     // Check if repo exists
@@ -450,8 +459,9 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Save each collection as a separate file
-    const savePromises = collectionsWithMembers.map(async (collection) => {
+    // Save each collection as a separate file - sequentially to avoid SHA conflicts
+    const results: { success: boolean; error?: string }[] = [];
+    for (const collection of collectionsToSave) {
       const filename = `${COLLECTIONS_DIR}/${collection.id}.json`;
       const existingFile = await getFile<CollectionFile>(token, user.login, repoName, filename);
 
@@ -460,10 +470,10 @@ export async function PUT(request: NextRequest) {
         collection,
       };
 
-      return saveFile(token, user.login, repoName, filename, collectionFile, existingFile.sha);
-    });
+      const result = await saveFile(token, user.login, repoName, filename, collectionFile, existingFile.sha);
+      results.push(result);
+    }
 
-    const results = await Promise.all(savePromises);
     const failures = results.filter(r => !r.success);
 
     if (failures.length > 0) {

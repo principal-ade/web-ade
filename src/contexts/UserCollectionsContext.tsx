@@ -118,10 +118,12 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
   }, [collections]);
 
   // Save collections to GitHub (memberships are inside collections.members)
+  // changedCollectionIds: optional array of collection IDs that changed (for partial saves)
   const saveToGitHub = useCallback(async (
     newCollections: Collection[],
     repoExists: boolean,
-    targetVisibility: CollectionVisibility = 'public'
+    targetVisibility: CollectionVisibility = 'public',
+    changedCollectionIds?: string[]
   ): Promise<{ repoUrl?: string }> => {
     setSaving(true);
     try {
@@ -140,6 +142,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
           collections: newCollections,
           memberships: allMemberships,
           visibility: targetVisibility,
+          ...(changedCollectionIds && { changedCollectionIds }),
         }),
       });
 
@@ -265,8 +268,8 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
           });
         }
 
-        // Save to GitHub first, then update state
-        const result = await saveToGitHub(newCollections, gitHubRepoExists, visibility);
+        // Save to GitHub first, then update state (only save the new collection)
+        const result = await saveToGitHub(newCollections, gitHubRepoExists, visibility, [newCollection.id]);
 
         emit('collection.create.github.commit');
 
@@ -305,8 +308,8 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       // Update state immediately (optimistic update) to keep UI in sync
       setCollections(newCollections);
 
-      // Save to GitHub in background
-      const result = await saveToGitHub(newCollections, gitHubRepoExists, visibility);
+      // Save to GitHub in background (only save the changed collection)
+      const result = await saveToGitHub(newCollections, gitHubRepoExists, visibility, [id]);
 
       if (result.repoUrl && !gitHubRepoExists) {
         setGitHubRepoExists(true);
@@ -375,8 +378,8 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       // Update ref immediately so subsequent calls have latest data
       collectionsRef.current = newCollections;
 
-      // Save to GitHub first, then update state
-      const result = await saveToGitHub(newCollections, gitHubRepoExists, visibility);
+      // Save to GitHub first, then update state (only save the changed collection)
+      const result = await saveToGitHub(newCollections, gitHubRepoExists, visibility, [collectionId]);
       setCollections(newCollections);
 
       if (result.repoUrl && !gitHubRepoExists) {
@@ -403,8 +406,8 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       // Update ref immediately
       collectionsRef.current = newCollections;
 
-      // Save to GitHub first, then update state
-      const result = await saveToGitHub(newCollections, gitHubRepoExists, visibility);
+      // Save to GitHub first, then update state (only save the changed collection)
+      const result = await saveToGitHub(newCollections, gitHubRepoExists, visibility, [collectionId]);
       setCollections(newCollections);
 
       if (result.repoUrl && !gitHubRepoExists) {
@@ -443,8 +446,8 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       // This prevents the snap-back issue during drag-and-drop
       setCollections(newCollections);
 
-      // Save to GitHub in background
-      const result = await saveToGitHub(newCollections, gitHubRepoExists, visibility);
+      // Save to GitHub in background (only save the changed collection)
+      const result = await saveToGitHub(newCollections, gitHubRepoExists, visibility, [collectionId]);
 
       if (result.repoUrl && !gitHubRepoExists) {
         setGitHubRepoExists(true);
