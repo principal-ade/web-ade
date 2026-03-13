@@ -74,10 +74,14 @@ export function FeaturedReposCarousel() {
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollPosition, setScrollPosition] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
   const [featuredRepos, setFeaturedRepos] = useState<FeaturedRepo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [renderedCount, setRenderedCount] = useState(RENDER_BATCH_SIZE);
+
+  // Drag state
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ x: number; scrollPos: number } | null>(null);
+  const hasDraggedRef = useRef(false);
 
   // Fetch featured repos on mount
   useEffect(() => {
@@ -137,7 +141,7 @@ export function FeaturedReposCarousel() {
 
   // Auto-scroll animation
   useEffect(() => {
-    if (entries.length === 0 || isPaused) return;
+    if (entries.length === 0 || isDragging) return;
 
     const cardWidth = 368; // Card width + gap
     const totalWidth = entries.length * cardWidth;
@@ -154,32 +158,127 @@ export function FeaturedReposCarousel() {
     }, 16); // ~60fps
 
     return () => clearInterval(interval);
-  }, [entries.length, isPaused]);
+  }, [entries.length, isDragging]);
+
+  // Handle drag start
+  const handleDragStart = (clientX: number) => {
+    setIsDragging(true);
+    hasDraggedRef.current = false;
+    dragStartRef.current = { x: clientX, scrollPos: scrollPosition };
+  };
+
+  // Handle drag move
+  const handleDragMove = (clientX: number) => {
+    if (!isDragging || !dragStartRef.current) return;
+
+    const delta = dragStartRef.current.x - clientX;
+    if (Math.abs(delta) > 5) {
+      hasDraggedRef.current = true;
+    }
+
+    const cardWidth = 368;
+    // Use 5 as fallback count during loading state (15 cards / 3 for looping)
+    const cardCount = entries.length > 0 ? entries.length : 5;
+    const totalWidth = cardCount * cardWidth;
+    let newPos = dragStartRef.current.scrollPos + delta;
+
+    // Wrap around for infinite scroll
+    while (newPos < 0) newPos += totalWidth;
+    while (newPos >= totalWidth) newPos -= totalWidth;
+
+    setScrollPosition(newPos);
+  };
+
+  // Handle drag end
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    dragStartRef.current = null;
+  };
+
+  // Mouse event handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleDragStart(e.clientX);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    handleDragMove(e.clientX);
+  };
+
+  const handleMouseUp = () => {
+    handleDragEnd();
+  };
+
+  const handleMouseLeave = () => {
+    if (isDragging) {
+      handleDragEnd();
+    }
+  };
+
+  // Touch event handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (touch) {
+      handleDragStart(touch.clientX);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (touch) {
+      handleDragMove(touch.clientX);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    handleDragEnd();
+  };
+
+  // Prevent link navigation if we just dragged
+  const handleLinkClick = (e: React.MouseEvent) => {
+    if (hasDraggedRef.current) {
+      e.preventDefault();
+      hasDraggedRef.current = false;
+    }
+  };
 
   if (isLoading) {
     return (
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '48px',
-          height: '480px',
+          width: '100%',
           overflow: 'hidden',
+          padding: '16px 0',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          userSelect: 'none',
         }}
+        onMouseLeave={handleMouseLeave}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={i}
-            style={{
-              flexShrink: 0,
-              opacity: i === 2 ? 1 : 0.6,
-              transform: i === 2 ? 'scale(1)' : 'scale(0.9)',
-            }}
-          >
-            <CardBack width={320} height={450} />
-          </div>
-        ))}
+        <div
+          style={{
+            display: 'flex',
+            gap: '48px',
+            transform: `translateX(-${scrollPosition}px)`,
+            transition: 'none',
+          }}
+        >
+          {Array.from({ length: 15 }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                flexShrink: 0,
+              }}
+            >
+              <CardBack width={320} height={450} />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -194,9 +293,16 @@ export function FeaturedReposCarousel() {
         width: '100%',
         overflow: 'hidden',
         padding: '16px 0',
+        cursor: isDragging ? 'grabbing' : 'grab',
+        userSelect: 'none',
       }}
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
+      onMouseLeave={handleMouseLeave}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Carousel container */}
       <div
@@ -205,7 +311,7 @@ export function FeaturedReposCarousel() {
           display: 'flex',
           gap: '48px',
           transform: `translateX(-${scrollPosition}px)`,
-          transition: isPaused ? 'transform 0.3s ease-out' : 'none',
+          transition: 'none',
         }}
       >
         {duplicatedEntries.map((entry, index) => {
@@ -215,6 +321,8 @@ export function FeaturedReposCarousel() {
             <Link
               key={`${entry.name}-${index}`}
               href={`/${entry.github?.owner}/${entry.name}`}
+              onClick={handleLinkClick}
+              draggable={false}
               style={{
                 textDecoration: 'none',
                 flexShrink: 0,
