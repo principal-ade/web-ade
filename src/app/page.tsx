@@ -57,6 +57,11 @@ function HomePageContent() {
   const [speechSupported, setSpeechSupported] = useState(false);
   const [recentRepos, setRecentRepos] = useState<string[]>([]);
   const [recentOwners, setRecentOwners] = useState<string[]>([]);
+  const [showSearch, setShowSearch] = useState(false);
+
+  const handleToggleSearch = useCallback(() => {
+    setShowSearch((prev) => !prev);
+  }, []);
 
   // Load recent items from localStorage on mount and listen for updates
   useEffect(() => {
@@ -93,11 +98,13 @@ function HomePageContent() {
     >
       <EditorHeader
         onOpenWithMic={speechSupported ? handleOpenWithMic : undefined}
+        showSearch={showSearch}
+        onToggleSearch={handleToggleSearch}
       />
 
       {/* Main Content */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        <WelcomePanel />
+        <WelcomePanel showSearch={showSearch} />
       </div>
 
       {/* Global Command Palette (Cmd+Shift+P) */}

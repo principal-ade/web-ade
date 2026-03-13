@@ -5,6 +5,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { Search, X, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { FeaturedReposCarousel } from './FeaturedReposCarousel';
+import { FeaturedReposGrid } from './FeaturedReposGrid';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHomepageState } from '@/hooks/useHomepageState';
@@ -64,7 +65,11 @@ interface UserGitHubRepo {
   updated_at: string;
 }
 
-export function CenteredSearchLayout() {
+interface CenteredSearchLayoutProps {
+  showSearch?: boolean;
+}
+
+export function CenteredSearchLayout({ showSearch = false }: CenteredSearchLayoutProps) {
   const { theme } = useTheme();
   const { isAuthenticated } = useAuth();
   const router = useRouter();
@@ -194,6 +199,23 @@ export function CenteredSearchLayout() {
 
   const shouldShowDropdown = showDropdown && !searchQuery.trim() && recentRepos.length > 0;
 
+  // If search mode is off, show the grid of cards
+  if (!showSearch) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          overflow: 'hidden',
+        }}
+      >
+        <FeaturedReposGrid />
+      </div>
+    );
+  }
+
+  // Search mode is on - show the search interface
   return (
     <div
       style={{
@@ -203,32 +225,17 @@ export function CenteredSearchLayout() {
         overflow: 'hidden',
       }}
     >
-      {/* Fixed Header Section */}
+      {/* Search Header Section */}
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           padding: '32px 24px 0',
-          paddingTop: 'min(20vh, 160px)',
+          paddingTop: 'min(15vh, 120px)',
           flexShrink: 0,
         }}
       >
-        {/* Title */}
-        <h1
-          style={{
-            margin: 0,
-            marginBottom: '24px',
-            fontSize: '42px',
-            fontWeight: theme.fontWeights.bold,
-            fontFamily: theme.fonts.body,
-          }}
-        >
-          <span style={{ color: theme.colors.text }}>Principal</span>
-          {' '}
-          <span style={{ color: theme.colors.primary }}>AI</span>
-        </h1>
-
         {/* Large Centered Search Bar with Dropdown */}
         <div
           ref={searchContainerRef}
@@ -236,7 +243,6 @@ export function CenteredSearchLayout() {
             position: 'relative',
             width: '100%',
             maxWidth: '600px',
-            marginTop: '12px',
           }}
         >
           <Search

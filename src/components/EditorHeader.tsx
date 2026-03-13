@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Palette, GitCommit, ArrowLeftRight, X, Star, Rss, Menu, Package, Activity } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Palette, GitCommit, ArrowLeftRight, X, Star, Rss, Menu, Package, Activity, Search } from 'lucide-react';
 import { UserAvatarMenu } from './UserAvatarMenu';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
@@ -38,6 +38,9 @@ interface EditorHeaderProps {
   onOpenMobileSidebar?: () => void;
   // Voice input
   onOpenWithMic?: () => void;
+  // Search toggle (home page)
+  showSearch?: boolean;
+  onToggleSearch?: () => void;
 }
 
 export function EditorHeader({
@@ -57,6 +60,8 @@ export function EditorHeader({
   onClearColorMode,
   onOpenMobileSidebar,
   onOpenWithMic: _onOpenWithMic,
+  showSearch = false,
+  onToggleSearch,
 }: EditorHeaderProps = {}) {
   const { theme } = useTheme();
   const { cycleTheme, currentThemeName } = useGlobalTheme();
@@ -341,21 +346,35 @@ export function EditorHeader({
             </Link>
           </div>
         )}
-        {/* Feed button - only show on home page */}
+        {/* Principal AI title and search toggle - only show on home page */}
         {!repositoryName && !ownerOnly && (
-          <Link
-            href="/activity"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-all hover:opacity-80"
-            style={{
-              background: theme.colors.surface,
-              color: theme.colors.text,
-              border: `1px solid ${theme.colors.border}`,
-              textDecoration: 'none',
-            }}
-          >
-            <Rss className="w-4 h-4" />
-            <span>Feed</span>
-          </Link>
+          <div className="flex items-center gap-3">
+            {/* Search toggle button */}
+            {onToggleSearch && (
+              <button
+                onClick={onToggleSearch}
+                className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+                style={{
+                  background: showSearch ? theme.colors.primary : theme.colors.secondary,
+                  color: showSearch ? theme.colors.textOnPrimary : theme.colors.text,
+                }}
+                title={showSearch ? 'Hide search' : 'Show search'}
+              >
+                <Search className="w-4 h-4" />
+              </button>
+            )}
+            {/* Principal AI title */}
+            <h1
+              className="text-xl font-bold m-0"
+              style={{
+                fontFamily: theme.fonts.body,
+              }}
+            >
+              <span style={{ color: theme.colors.text }}>Principal</span>
+              {' '}
+              <span style={{ color: theme.colors.primary }}>AI</span>
+            </h1>
+          </div>
         )}
       </div>
 
@@ -489,6 +508,21 @@ export function EditorHeader({
             </button>
           )}
         </div>
+
+        {/* Feed button - only on home page */}
+        {!repositoryName && !ownerOnly && (
+          <Link
+            href="/activity"
+            className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+            style={{
+              background: theme.colors.secondary,
+              color: theme.colors.text,
+            }}
+            title="Activity Feed"
+          >
+            <Rss className="w-4 h-4" />
+          </Link>
+        )}
 
         {/* Discord Link - only on home page */}
         {!repositoryName && !ownerOnly && (
