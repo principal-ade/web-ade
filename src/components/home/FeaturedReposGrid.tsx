@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { ChevronDown } from 'lucide-react';
 import type { AlexandriaEntryWithMetrics } from '@industry-theme/repository-composition-panels';
 import { trpc } from '@/lib/trpc/client';
+
+type SortOption = 'stars' | 'name-asc' | 'name-desc';
 
 // Dynamic import to avoid SSR issues with PixiJS (requires document)
 const RepoCardStatic = dynamic(
@@ -78,6 +81,12 @@ export function FeaturedReposGrid() {
   const [featuredRepos, setFeaturedRepos] = useState<FeaturedRepo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(10);
+  const [languageFilter, setLanguageFilter] = useState<string>('all');
+  const [sortOption, setSortOption] = useState<SortOption>('stars');
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const languageDropdownRef = useRef<HTMLDivElement>(null);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
 
   const handleLoadMore = () => {
     setVisibleCount((prev) => Math.min(prev + 10, featuredRepos.length));
@@ -109,14 +118,72 @@ export function FeaturedReposGrid() {
     };
   }, []);
 
+  // Extract unique languages for filter dropdown
+  const availableLanguages = useMemo(() => {
+    const languages = featuredRepos
+      .map((repo) => repo.language)
+      .filter((lang): lang is string => lang !== null);
+    return [...new Set(languages)].sort();
+  }, [featuredRepos]);
+
+  // Filter and sort repos
+  const filteredAndSortedRepos = useMemo(() => {
+    let repos = [...featuredRepos];
+
+    // Apply language filter
+    if (languageFilter !== 'all') {
+      repos = repos.filter((repo) => repo.language === languageFilter);
+    }
+
+    // Apply sorting
+    switch (sortOption) {
+      case 'stars':
+        repos.sort((a, b) => b.stargazers_count - a.stargazers_count);
+        break;
+      case 'name-asc':
+        repos.sort((a, b) => a.full_name.toLowerCase().localeCompare(b.full_name.toLowerCase()));
+        break;
+      case 'name-desc':
+        repos.sort((a, b) => b.full_name.toLowerCase().localeCompare(a.full_name.toLowerCase()));
+        break;
+    }
+
+    return repos;
+  }, [featuredRepos, languageFilter, sortOption]);
+
   // Transform to Alexandria entries
   const entries = useMemo(() => {
-    if (!featuredRepos) return [];
-    return featuredRepos.map(toAlexandriaEntry);
-  }, [featuredRepos]);
+    if (!filteredAndSortedRepos) return [];
+    return filteredAndSortedRepos.map(toAlexandriaEntry);
+  }, [filteredAndSortedRepos]);
 
   const visibleEntries = entries.slice(0, visibleCount);
   const hasMore = visibleCount < entries.length;
+
+  // Reset visible count when filter changes
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [languageFilter, sortOption]);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        languageDropdownRef.current &&
+        !languageDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowLanguageDropdown(false);
+      }
+      if (
+        sortDropdownRef.current &&
+        !sortDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowSortDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Generate stable random values for loading animation
   const loadingAnimations = useMemo(() =>
@@ -200,21 +267,250 @@ export function FeaturedReposGrid() {
         overflow: 'auto',
       }}
     >
-      {/* Header */}
-      <h2
+      {/* Header with Filter and Sort Controls */}
+      <div
         style={{
-          margin: '0 0 24px 0',
-          fontSize: '24px',
-          fontWeight: theme.fontWeights.semibold,
-          color: theme.colors.text,
-          fontFamily: theme.fonts.body,
-          textAlign: 'center',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '24px',
+          flexWrap: 'wrap',
+          gap: '16px',
         }}
       >
-        Featured Projects
-      </h2>
+        <h2
+          style={{
+            margin: 0,
+            fontSize: '24px',
+            fontWeight: theme.fontWeights.semibold,
+            color: theme.colors.text,
+            fontFamily: theme.fonts.body,
+          }}
+        >
+          Featured Projects
+        </h2>
+
+        {/* Filter and Sort Controls */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '12px',
+            flexWrap: 'wrap',
+          }}
+        >
+        {/* Language Filter */}
+        <div ref={languageDropdownRef} style={{ position: 'relative' }}>
+          <button
+            onClick={() => {
+              setShowLanguageDropdown(!showLanguageDropdown);
+              setShowSortDropdown(false);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 16px',
+              fontSize: '14px',
+              fontFamily: theme.fonts.body,
+              fontWeight: theme.fontWeights.medium,
+              color: theme.colors.text,
+              background: theme.colors.surface,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'border-color 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = theme.colors.primary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = theme.colors.border;
+            }}
+          >
+            Language: {languageFilter === 'all' ? 'All' : languageFilter}
+            <ChevronDown size={16} />
+          </button>
+          {showLanguageDropdown && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: '4px',
+                minWidth: '150px',
+                background: theme.colors.surface,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                zIndex: 100,
+                maxHeight: '300px',
+                overflow: 'auto',
+              }}
+            >
+              <div
+                onClick={() => {
+                  setLanguageFilter('all');
+                  setShowLanguageDropdown(false);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontFamily: theme.fonts.body,
+                  color: languageFilter === 'all' ? theme.colors.primary : theme.colors.text,
+                  cursor: 'pointer',
+                  transition: 'background 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = `${theme.colors.border}40`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                All Languages
+              </div>
+              {availableLanguages.map((lang) => (
+                <div
+                  key={lang}
+                  onClick={() => {
+                    setLanguageFilter(lang);
+                    setShowLanguageDropdown(false);
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '14px',
+                    fontFamily: theme.fonts.body,
+                    color: languageFilter === lang ? theme.colors.primary : theme.colors.text,
+                    cursor: 'pointer',
+                    transition: 'background 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = `${theme.colors.border}40`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  {lang}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Sort Dropdown */}
+        <div ref={sortDropdownRef} style={{ position: 'relative' }}>
+          <button
+            onClick={() => {
+              setShowSortDropdown(!showSortDropdown);
+              setShowLanguageDropdown(false);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 16px',
+              fontSize: '14px',
+              fontFamily: theme.fonts.body,
+              fontWeight: theme.fontWeights.medium,
+              color: theme.colors.text,
+              background: theme.colors.surface,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'border-color 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = theme.colors.primary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = theme.colors.border;
+            }}
+          >
+            Sort: {sortOption === 'stars' ? 'Stars' : sortOption === 'name-asc' ? 'Name (A-Z)' : 'Name (Z-A)'}
+            <ChevronDown size={16} />
+          </button>
+          {showSortDropdown && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: '4px',
+                minWidth: '150px',
+                background: theme.colors.surface,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                zIndex: 100,
+              }}
+            >
+              {[
+                { value: 'stars' as const, label: 'Stars' },
+                { value: 'name-asc' as const, label: 'Name (A-Z)' },
+                { value: 'name-desc' as const, label: 'Name (Z-A)' },
+              ].map((option) => (
+                <div
+                  key={option.value}
+                  onClick={() => {
+                    setSortOption(option.value);
+                    setShowSortDropdown(false);
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '14px',
+                    fontFamily: theme.fonts.body,
+                    color: sortOption === option.value ? theme.colors.primary : theme.colors.text,
+                    cursor: 'pointer',
+                    transition: 'background 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = `${theme.colors.border}40`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  {option.label}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        </div>
+      </div>
+
+      {/* No results message */}
+      {entries.length === 0 && languageFilter !== 'all' && (
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '48px 24px',
+            color: theme.colors.textMuted,
+            fontFamily: theme.fonts.body,
+            fontSize: '16px',
+          }}
+        >
+          No projects found for {languageFilter}.{' '}
+          <button
+            onClick={() => setLanguageFilter('all')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: theme.colors.primary,
+              cursor: 'pointer',
+              fontFamily: theme.fonts.body,
+              fontSize: '16px',
+              textDecoration: 'underline',
+            }}
+          >
+            Clear filter
+          </button>
+        </div>
+      )}
 
       {/* Grid */}
+      {entries.length > 0 && (
       <div
         style={{
           display: 'grid',
@@ -260,6 +556,7 @@ export function FeaturedReposGrid() {
           </Link>
         ))}
       </div>
+      )}
 
       {/* Load More button */}
       {hasMore && (
