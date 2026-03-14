@@ -122,3 +122,57 @@ export function getS3Url(key: string): string {
   // Otherwise use direct S3 URL
   return `https://${BUCKET_NAME}.s3.amazonaws.com/${key}`;
 }
+
+/**
+ * Result of checking cache with fallback
+ */
+export interface CacheCheckResult {
+  /** Whether audio was found in cache */
+  cached: boolean;
+  /** The S3 key to use (legacy if found, otherwise content-based) */
+  key: string;
+  /** Whether the cached version was from legacy key */
+  isLegacy: boolean;
+}
+
+/**
+ * Checks S3 cache with fallback to legacy key format
+ *
+ * For backward compatibility, checks the legacy key first (commit-based).
+ * If not found, returns the new content-based key for generation.
+ *
+ * @param contentKey - New content-based S3 key
+ * @param legacyKey - Old commit-based S3 key
+ * @returns Cache check result with key to use
+ */
+export async function checkS3CacheWithFallback(
+  contentKey: string,
+  legacyKey: string
+): Promise<CacheCheckResult> {
+  // Check legacy key first for backward compatibility
+  const legacyCached = await checkS3Cache(legacyKey);
+  if (legacyCached) {
+    return {
+      cached: true,
+      key: legacyKey,
+      isLegacy: true,
+    };
+  }
+
+  // Check content-based key
+  const contentCached = await checkS3Cache(contentKey);
+  if (contentCached) {
+    return {
+      cached: true,
+      key: contentKey,
+      isLegacy: false,
+    };
+  }
+
+  // Not cached - use content-based key for new uploads
+  return {
+    cached: false,
+    key: contentKey,
+    isLegacy: false,
+  };
+}

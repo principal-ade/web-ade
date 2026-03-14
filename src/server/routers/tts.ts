@@ -10,7 +10,7 @@ import { router, publicProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
 
 // Import existing TTS utilities
-import { validateTTSRequest, generateS3Key } from '@/lib/tts/key-generator';
+import { validateTTSRequest, generateS3Key, generateLegacyS3Key } from '@/lib/tts/key-generator';
 import { fetchTourFromGitHub, getStepDescription, normalizeTextForTTS } from '@/lib/tts/github-fetcher';
 import { checkS3Cache, uploadToS3, getS3Url } from '@/lib/tts/s3-cache';
 import { generateAudio, mergeTTSOptions } from '@/lib/tts/elevenlabs-client';
@@ -92,21 +92,21 @@ export const ttsRouter = router({
       // Merge options with defaults
       const options = mergeTTSOptions({ voice, speed });
 
-      // Generate S3 key for caching
-      const s3Key = await generateS3Key(owner, repo, path, commitSha, stepId, options);
+      // Generate legacy S3 key first (doesn't need content - fast path check)
+      const legacyKey = await generateLegacyS3Key(owner, repo, path, commitSha, stepId, options);
 
-      // Check cache first
-      const isCached = await checkS3Cache(s3Key);
-      if (isCached) {
-        console.log('[tRPC TTS] Cache hit:', s3Key);
+      // Check legacy cache first (fast path - no GitHub fetch needed)
+      const legacyCached = await checkS3Cache(legacyKey);
+      if (legacyCached) {
+        console.log('[tRPC TTS] Legacy cache hit:', legacyKey);
         return {
-          audioUrl: getS3Url(s3Key),
+          audioUrl: getS3Url(legacyKey),
           cached: true,
           generatedAt: new Date().toISOString(),
         };
       }
 
-      console.log('[tRPC TTS] Cache miss, generating audio:', { owner, repo, stepId });
+      console.log('[tRPC TTS] Legacy cache miss, fetching tour:', { owner, repo, stepId });
 
       try {
         // Fetch tour from GitHub
@@ -115,16 +115,32 @@ export const ttsRouter = router({
         // Get step description
         const stepDescription = getStepDescription(tour, stepId);
 
+        // Generate content-based S3 key
+        const contentKey = await generateS3Key(owner, repo, stepDescription, options);
+
+        // Check content-based cache
+        const contentCached = await checkS3Cache(contentKey);
+        if (contentCached) {
+          console.log('[tRPC TTS] Content cache hit:', contentKey);
+          return {
+            audioUrl: getS3Url(contentKey),
+            cached: true,
+            generatedAt: new Date().toISOString(),
+          };
+        }
+
+        console.log('[tRPC TTS] Cache miss, generating audio:', { owner, repo, stepId });
+
         // Generate audio
         const audioBuffer = await generateAudio(stepDescription, options);
 
-        // Upload to S3
-        await uploadToS3(s3Key, audioBuffer);
+        // Upload to S3 (always use content-based key for new uploads)
+        await uploadToS3(contentKey, audioBuffer);
 
-        console.log('[tRPC TTS] Audio generated and cached:', s3Key);
+        console.log('[tRPC TTS] Audio generated and cached:', contentKey);
 
         return {
-          audioUrl: getS3Url(s3Key),
+          audioUrl: getS3Url(contentKey),
           cached: false,
           generatedAt: new Date().toISOString(),
         };
@@ -206,22 +222,8 @@ export const ttsRouter = router({
         // Process each step
         for (const step of tour.steps) {
           const stepId = step.id;
-          const s3Key = await generateS3Key(owner, repo, path, commitSha, stepId, options);
 
-          // Check cache
-          const isCached = await checkS3Cache(s3Key);
-          if (isCached) {
-            steps.push({
-              stepId,
-              audioUrl: getS3Url(s3Key),
-              cached: true,
-              status: 'ready',
-            });
-            cachedCount++;
-            continue;
-          }
-
-          // Get text content for this step
+          // Get text content for this step first - we need it for content-based key
           const text = step.narration || step.description || step.content;
           if (!text) {
             console.warn('[tRPC TTS Batch] Skipping step with no text:', stepId);
@@ -235,15 +237,50 @@ export const ttsRouter = router({
             continue;
           }
 
+          // Normalize text
+          const normalizedText = normalizeTextForTTS(text);
+
+          // Generate both content-based and legacy keys
+          const contentKey = await generateS3Key(owner, repo, normalizedText, options);
+          const legacyKey = await generateLegacyS3Key(owner, repo, path, commitSha, stepId, options);
+
+          // Check legacy cache first for backward compatibility
+          const legacyCached = await checkS3Cache(legacyKey);
+          if (legacyCached) {
+            console.log('[tRPC TTS Batch] Legacy cache hit:', stepId);
+            steps.push({
+              stepId,
+              audioUrl: getS3Url(legacyKey),
+              cached: true,
+              status: 'ready',
+            });
+            cachedCount++;
+            continue;
+          }
+
+          // Check content-based cache
+          const contentCached = await checkS3Cache(contentKey);
+          if (contentCached) {
+            console.log('[tRPC TTS Batch] Content cache hit:', stepId);
+            steps.push({
+              stepId,
+              audioUrl: getS3Url(contentKey),
+              cached: true,
+              status: 'ready',
+            });
+            cachedCount++;
+            continue;
+          }
+
           try {
-            // Normalize and generate
-            const normalizedText = normalizeTextForTTS(text);
+            // Generate audio
             const audioBuffer = await generateAudio(normalizedText, options);
-            await uploadToS3(s3Key, audioBuffer);
+            // Always upload to content-based key for new uploads
+            await uploadToS3(contentKey, audioBuffer);
 
             steps.push({
               stepId,
-              audioUrl: getS3Url(s3Key),
+              audioUrl: getS3Url(contentKey),
               cached: false,
               status: 'ready',
             });

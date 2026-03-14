@@ -15,7 +15,7 @@ import {
   TTSErrorCode,
   TTSError,
 } from '@/lib/tts/types';
-import { validateTTSRequest, generateS3Key } from '@/lib/tts/key-generator';
+import { validateTTSRequest, generateS3Key, generateLegacyS3Key } from '@/lib/tts/key-generator';
 import {
   fetchTourFromGitHub,
   getStepDescription,
@@ -94,8 +94,8 @@ export async function POST(request: NextRequest) {
       speed: body.speed,
     });
 
-    // Generate S3 key for this specific audio file
-    const s3Key = await generateS3Key(
+    // Generate legacy S3 key first (doesn't need content - fast path check)
+    const legacyKey = await generateLegacyS3Key(
       body.owner,
       body.repo,
       body.path,
@@ -104,18 +104,19 @@ export async function POST(request: NextRequest) {
       options
     );
 
-    // Check S3 cache first (fast path)
-    const isCached = await checkS3Cache(s3Key);
+    // Check legacy cache first (fast path - no GitHub fetch needed)
+    const legacyCached = await checkS3Cache(legacyKey);
 
-    if (isCached) {
-      // Cache hit - return immediately
-      const audioUrl = getS3Url(s3Key);
+    if (legacyCached) {
+      // Legacy cache hit - return immediately
+      const audioUrl = getS3Url(legacyKey);
 
       // Emit cache hit event
       span.addEvent('tts.cache.hit', {
-        'tts.s3Key': s3Key,
+        'tts.s3Key': legacyKey,
         'tts.audioUrl': audioUrl,
         'tts.cached': true,
+        'tts.isLegacy': true,
       });
 
       const durationMs = Date.now() - startTime;
@@ -144,18 +145,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Cache miss - need to generate audio
-    console.log('[TTS Generate] Cache miss, generating audio:', {
+    // Legacy cache miss - need to fetch tour to check content-based cache
+    console.log('[TTS Generate] Legacy cache miss, fetching tour:', {
       owner: body.owner,
       repo: body.repo,
       path: body.path,
       stepId: body.stepId,
-    });
-
-    // Emit cache miss event
-    span.addEvent('tts.cache.miss', {
-      'tts.s3Key': s3Key,
-      'tts.cached': false,
     });
 
     // Fetch tour from GitHub (security layer)
@@ -174,6 +169,69 @@ export async function POST(request: NextRequest) {
       'tts.tourId': tour.id,
       'tts.stepDescription': stepDescription,
       'tts.textLength': stepDescription.length,
+    });
+
+    // Generate content-based S3 key
+    const contentKey = await generateS3Key(
+      body.owner,
+      body.repo,
+      stepDescription,
+      options
+    );
+
+    // Check content-based cache
+    const contentCached = await checkS3Cache(contentKey);
+
+    if (contentCached) {
+      // Content cache hit - return immediately
+      const audioUrl = getS3Url(contentKey);
+
+      // Emit cache hit event
+      span.addEvent('tts.cache.hit', {
+        'tts.s3Key': contentKey,
+        'tts.audioUrl': audioUrl,
+        'tts.cached': true,
+        'tts.isLegacy': false,
+      });
+
+      const durationMs = Date.now() - startTime;
+
+      // Emit request complete event
+      span.addEvent('tts.request.complete', {
+        'tts.audioUrl': audioUrl,
+        'tts.cached': true,
+        'tts.durationMs': durationMs,
+      });
+
+      span.end();
+
+      const response: TTSGenerateResponse = {
+        audioUrl,
+        cached: true,
+        generatedAt: new Date().toISOString(),
+      };
+
+      return addCorsHeaders(
+        NextResponse.json(response, {
+          headers: {
+            'Cache-Control': 'public, max-age=31536000', // 1 year
+          },
+        })
+      );
+    }
+
+    // Neither cache hit - need to generate audio
+    console.log('[TTS Generate] Cache miss, generating audio:', {
+      owner: body.owner,
+      repo: body.repo,
+      path: body.path,
+      stepId: body.stepId,
+    });
+
+    // Emit cache miss event
+    span.addEvent('tts.cache.miss', {
+      'tts.s3Key': contentKey,
+      'tts.cached': false,
     });
 
     // Generate audio using ElevenLabs
@@ -197,8 +255,8 @@ export async function POST(request: NextRequest) {
       'tts.model': options.model,
     });
 
-    // Upload to S3 for caching
-    const audioUrl = await uploadToS3(s3Key, audioBuffer, {
+    // Upload to S3 for caching (always use content-based key for new uploads)
+    const audioUrl = await uploadToS3(contentKey, audioBuffer, {
       'tour-id': tour.id,
       'step-id': body.stepId,
       'generation-time-ms': generationTime.toString(),
@@ -207,7 +265,7 @@ export async function POST(request: NextRequest) {
 
     // Emit audio uploaded event
     span.addEvent('tts.audio.uploaded', {
-      'tts.s3Key': s3Key,
+      'tts.s3Key': contentKey,
       'tts.audioUrl': audioUrl,
       'tts.audioSizeBytes': audioBuffer.length,
     });

@@ -22,13 +22,46 @@ export async function generateContentHash(content: string): Promise<string> {
 }
 
 /**
- * Generates S3 key for TTS audio file
+ * Generates stable S3 key for TTS audio file based on content
+ *
+ * Pattern: /tts-audio/{owner}/{repo}/content/{content-hash}-{options-hash}.mp3
+ *
+ * - content-hash: First 12 chars of SHA-256(normalized step text) - stable across commits
+ * - options-hash: First 12 chars of SHA-256(voice-speed-model) - separates different audio variants
+ *
+ * This key is stable across commits as long as the step text doesn't change.
+ *
+ * @param owner - Repository owner
+ * @param repo - Repository name
+ * @param stepText - Normalized step text content
+ * @param options - TTS options (voice, speed)
+ * @returns S3 object key
+ */
+export async function generateS3Key(
+  owner: string,
+  repo: string,
+  stepText: string,
+  options: TTSOptions
+): Promise<string> {
+  // Hash the actual content for stable keys across commits
+  const contentHash = await generateContentHash(stepText);
+
+  // Hash options (voice + speed + model) for different audio variants
+  const optionsString = `${options.voice}-${options.speed}-${options.model}`;
+  const optionsHash = await generateContentHash(optionsString);
+
+  return `tts-audio/${owner}/${repo}/content/${contentHash}-${optionsHash}.mp3`;
+}
+
+/**
+ * Generates legacy S3 key for backward compatibility
  *
  * Pattern: /tts-audio/{owner}/{repo}/{file-hash}/{step-id}-{options-hash}.mp3
  *
- * - file-hash: First 12 chars of SHA-256(path:commitSha) - ensures cache invalidation
+ * - file-hash: First 12 chars of SHA-256(path:commitSha) - old format tied to commits
  * - options-hash: First 12 chars of SHA-256(voice-speed-model) - separates different audio variants
  *
+ * @deprecated Use generateS3Key with content-based hashing instead
  * @param owner - Repository owner
  * @param repo - Repository name
  * @param path - Path to tour file in repo
@@ -37,7 +70,7 @@ export async function generateContentHash(content: string): Promise<string> {
  * @param options - TTS options (voice, speed)
  * @returns S3 object key
  */
-export async function generateS3Key(
+export async function generateLegacyS3Key(
   owner: string,
   repo: string,
   path: string,
@@ -45,7 +78,7 @@ export async function generateS3Key(
   stepId: string,
   options: TTSOptions
 ): Promise<string> {
-  // Hash file location (path + commitSha) for cache invalidation when content changes
+  // Hash file location (path + commitSha) - old format
   const fileHash = await generateContentHash(`${path}:${commitSha}`);
 
   // Hash options (voice + speed + model) for different audio variants

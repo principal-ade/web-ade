@@ -15,9 +15,9 @@ import {
   TTSBatchResponse,
   TTSErrorCode,
 } from '@/lib/tts/types';
-import { validateTTSRequest, generateS3Key } from '@/lib/tts/key-generator';
+import { validateTTSRequest, generateS3Key, generateLegacyS3Key } from '@/lib/tts/key-generator';
 import { fetchTourFromGitHub } from '@/lib/tts/github-fetcher';
-import { checkS3Cache, getS3Url, uploadToS3 } from '@/lib/tts/s3-cache';
+import { checkS3CacheWithFallback, getS3Url, uploadToS3 } from '@/lib/tts/s3-cache';
 import { mergeTTSOptions, generateAudio } from '@/lib/tts/elevenlabs-client';
 import removeMd from 'remove-markdown';
 
@@ -109,7 +109,34 @@ export async function POST(request: NextRequest) {
     let previousText: string | undefined;
 
     for (const step of tour.steps) {
-      const s3Key = await generateS3Key(
+      // Get step text first - we need it for the content-based key
+      const rawText = step.narration || step.description || step.content || '';
+
+      if (!rawText.trim()) {
+        console.warn('[TTS Batch] Skipping step with no text:', step.id);
+        steps.push({
+          stepId: step.id,
+          audioUrl: '',
+          cached: false,
+          status: 'generating',
+        });
+        continue;
+      }
+
+      // Normalize text for TTS
+      let text = step.narration ? rawText : removeMd(rawText);
+      text = normalizeTextForTTS(text);
+      const trimmedText = text.trim();
+
+      // Generate both content-based and legacy keys
+      const contentKey = await generateS3Key(
+        body.owner,
+        body.repo,
+        trimmedText,
+        options
+      );
+
+      const legacyKey = await generateLegacyS3Key(
         body.owner,
         body.repo,
         body.path,
@@ -118,60 +145,43 @@ export async function POST(request: NextRequest) {
         options
       );
 
-      let cached = await checkS3Cache(s3Key);
-      const audioUrl = getS3Url(s3Key);
+      // Check cache with fallback to legacy key
+      const cacheResult = await checkS3CacheWithFallback(contentKey, legacyKey);
+      let cached = cacheResult.cached;
+      const audioUrl = getS3Url(cacheResult.key);
+
+      if (cacheResult.isLegacy) {
+        console.log('[TTS Batch] Using legacy cached audio:', step.id);
+      }
 
       // If not cached, generate the audio
       if (!cached) {
-        // Use narration if available (pre-written TTS-friendly), otherwise fall back to description or content
-        const rawText = step.narration || step.description || step.content || '';
+        console.log('[TTS Batch] Generating audio for step:', step.id, {
+          withContext: !!previousText,
+        });
 
-        if (!rawText.trim()) {
-          console.warn('[TTS Batch] Skipping step with no text:', step.id);
-          // Keep cached=false so status will be 'generating'
-        } else {
-          console.log('[TTS Batch] Generating audio for step:', step.id, {
-            withContext: !!previousText,
-          });
+        try {
+          // Pass previous step's text for contextual continuity
+          const audioBuffer = await generateAudio(trimmedText, options, previousText);
+          // Always upload to content-based key for new audio
+          await uploadToS3(contentKey, audioBuffer);
+          cached = true;
 
-          try {
-            // Strip markdown syntax for TTS (unless using pre-written narration)
-            let text = step.narration ? rawText : removeMd(rawText);
-
-            // Normalize text for TTS (remove trailing slashes, clean up paths)
-            text = normalizeTextForTTS(text);
-
-            const trimmedText = text.trim();
-
-            // Pass previous step's text for contextual continuity
-            const audioBuffer = await generateAudio(trimmedText, options, previousText);
-            await uploadToS3(s3Key, audioBuffer);
-            cached = true;
-
-            // Store this text for the next step's context
-            previousText = trimmedText;
-
-            console.log('[TTS Batch] Generated and cached:', step.id);
-          } catch (error) {
-            console.error('[TTS Batch] Failed to generate step:', step.id, error);
-            // Continue with other steps even if one fails
-          }
-        }
-      } else {
-        // Even if cached, we should load the text for context continuity
-        const rawText = step.narration || step.description || step.content || '';
-        if (rawText.trim()) {
-          let text = step.narration ? rawText : removeMd(rawText);
-          text = normalizeTextForTTS(text);
-          previousText = text.trim();
+          console.log('[TTS Batch] Generated and cached:', step.id);
+        } catch (error) {
+          console.error('[TTS Batch] Failed to generate step:', step.id, error);
+          // Continue with other steps even if one fails
         }
       }
+
+      // Store this text for the next step's context
+      previousText = trimmedText;
 
       const status: 'ready' | 'generating' = cached ? 'ready' : 'generating';
 
       steps.push({
         stepId: step.id,
-        audioUrl,
+        audioUrl: cached ? audioUrl : getS3Url(contentKey),
         cached,
         status,
       });
