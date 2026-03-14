@@ -8,7 +8,7 @@ import { ChevronDown, Search, X } from 'lucide-react';
 import type { AlexandriaEntryWithMetrics } from '@industry-theme/repository-composition-panels';
 import { trpc } from '@/lib/trpc/client';
 
-type SortOption = 'stars' | 'name-asc' | 'name-desc';
+type SortOption = 'stars' | 'name-asc' | 'name-desc' | 'newest' | 'oldest';
 
 // Dynamic import to avoid SSR issues with PixiJS (requires document)
 const RepoCardStatic = dynamic(
@@ -43,6 +43,7 @@ interface FeaturedRepo {
   } | null;
   topics?: string[];
   html_url: string;
+  created_at?: string;
 }
 
 /**
@@ -65,6 +66,7 @@ function toAlexandriaEntry(repo: FeaturedRepo): AlexandriaEntryWithMetrics {
       license: repo.license?.spdx_id,
       primaryLanguage: repo.language || undefined,
       topics: repo.topics,
+      createdAt: repo.created_at,
       lastUpdated: new Date().toISOString(),
     },
   };
@@ -158,6 +160,20 @@ export function FeaturedReposGrid() {
         break;
       case 'name-desc':
         repos.sort((a, b) => b.full_name.toLowerCase().localeCompare(a.full_name.toLowerCase()));
+        break;
+      case 'newest':
+        repos.sort((a, b) => {
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return dateB - dateA;
+        });
+        break;
+      case 'oldest':
+        repos.sort((a, b) => {
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return dateA - dateB;
+        });
         break;
     }
 
@@ -518,7 +534,7 @@ export function FeaturedReposGrid() {
               e.currentTarget.style.borderColor = theme.colors.border;
             }}
           >
-            Sort: {sortOption === 'stars' ? 'Stars' : sortOption === 'name-asc' ? 'Name (A-Z)' : 'Name (Z-A)'}
+            Sort: {sortOption === 'stars' ? 'Stars' : sortOption === 'name-asc' ? 'Name (A-Z)' : sortOption === 'name-desc' ? 'Name (Z-A)' : sortOption === 'newest' ? 'Newest' : 'Oldest'}
             <ChevronDown size={16} />
           </button>
           {showSortDropdown && (
@@ -540,6 +556,8 @@ export function FeaturedReposGrid() {
                 { value: 'stars' as const, label: 'Stars' },
                 { value: 'name-asc' as const, label: 'Name (A-Z)' },
                 { value: 'name-desc' as const, label: 'Name (Z-A)' },
+                { value: 'newest' as const, label: 'Newest' },
+                { value: 'oldest' as const, label: 'Oldest' },
               ].map((option) => (
                 <div
                   key={option.value}
