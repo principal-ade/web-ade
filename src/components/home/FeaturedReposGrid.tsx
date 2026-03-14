@@ -666,6 +666,7 @@ export function FeaturedReposGrid() {
                 width={CARD_MAX_WIDTH}
                 height={Math.round(CARD_MAX_WIDTH / CARD_ASPECT_RATIO)}
                 spriteSize={200}
+                customImage={`/api/file-city/${entry.github?.owner}/${entry.name}`}
               />
             </div>
           </Link>

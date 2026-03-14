@@ -310,12 +310,14 @@ const API_GROUPS: ApiGroup[] = [
 ];
 
 type CardExample = 'single' | 'monorepo';
+type VisualizationMode = 'sprite' | 'fileCity';
 
 function CardExplanationContent() {
   const { theme } = useTheme();
   const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
   const [expandedGroup, setExpandedGroup] = useState<string | null>('GitHub Repository API');
   const [selectedExample, setSelectedExample] = useState<CardExample>('single');
+  const [visualizationMode, setVisualizationMode] = useState<VisualizationMode>('sprite');
   const [packages, setPackages] = useState<RepoSpritePackage[]>([]);
   const [packagesLoading, setPackagesLoading] = useState(false);
   const [packagesError, setPackagesError] = useState<string | null>(null);
@@ -646,6 +648,62 @@ function CardExplanationContent() {
             </button>
           </div>
 
+          {/* Visualization Mode Toggle */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '8px',
+              marginBottom: '24px',
+              padding: '4px',
+              backgroundColor: theme.colors.background,
+              borderRadius: '8px',
+              border: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <button
+              onClick={() => setVisualizationMode('sprite')}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontFamily: theme.fonts.body,
+                fontWeight: theme.fontWeights.medium,
+                backgroundColor:
+                  visualizationMode === 'sprite' ? theme.colors.primary : 'transparent',
+                color:
+                  visualizationMode === 'sprite'
+                    ? theme.colors.textOnPrimary
+                    : theme.colors.textMuted,
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Sprite
+            </button>
+            <button
+              onClick={() => setVisualizationMode('fileCity')}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontFamily: theme.fonts.body,
+                fontWeight: theme.fontWeights.medium,
+                backgroundColor:
+                  visualizationMode === 'fileCity' ? theme.colors.primary : 'transparent',
+                color:
+                  visualizationMode === 'fileCity'
+                    ? theme.colors.textOnPrimary
+                    : theme.colors.textMuted,
+                transition: 'all 0.15s ease',
+              }}
+            >
+              File City
+            </button>
+          </div>
+
           <p
             style={{
               fontSize: `${theme.fontSizes[1]}px`,
@@ -672,6 +730,7 @@ function CardExplanationContent() {
               width={320}
               height={450}
               spriteSize={280}
+              customImage={visualizationMode === 'fileCity' ? `/api/file-city/${currentRepo.github?.owner}/${currentRepo.github?.name}` : undefined}
             />
           </div>
 
