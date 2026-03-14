@@ -40,6 +40,7 @@ interface FeaturedRepo {
   } | null;
   topics?: string[];
   html_url: string;
+  created_at?: string;
 }
 
 /**
@@ -62,6 +63,7 @@ function toAlexandriaEntry(repo: FeaturedRepo): AlexandriaEntryWithMetrics {
       license: repo.license?.spdx_id,
       primaryLanguage: repo.language || undefined,
       topics: repo.topics,
+      createdAt: repo.created_at,
       lastUpdated: new Date().toISOString(),
     },
   };

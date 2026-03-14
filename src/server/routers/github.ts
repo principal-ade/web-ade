@@ -388,6 +388,7 @@ const featuredRepoSchema = z.object({
   }).nullable().optional(),
   topics: z.array(z.string()).optional(),
   html_url: z.string(),
+  created_at: z.string().optional(),
 });
 
 const getFeaturedReposOutputSchema = z.array(featuredRepoSchema);
@@ -770,6 +771,7 @@ export const githubRouter = router({
           } | null;
           topics?: string[];
           html_url: string;
+          created_at?: string;
         };
       }
 
