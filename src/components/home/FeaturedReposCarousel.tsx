@@ -16,10 +16,10 @@ const RepoCardStatic = dynamic(
   { ssr: false }
 );
 
-const CardBack = dynamic(
+const CardBackCodeCity = dynamic(
   () =>
     import('@industry-theme/repository-composition-panels').then(
-      (mod) => mod.CardBack
+      (mod) => mod.CardBackCodeCity
     ),
   { ssr: false }
 );
@@ -277,7 +277,7 @@ export function FeaturedReposCarousel() {
                 flexShrink: 0,
               }}
             >
-              <CardBack width={320} height={450} />
+              <CardBackCodeCity width={320} />
             </div>
           ))}
         </div>
@@ -355,7 +355,7 @@ export function FeaturedReposCarousel() {
                     spriteSize={280}
                   />
                 ) : (
-                  <CardBack width={320} height={450} />
+                  <CardBackCodeCity width={320} />
                 )}
               </div>
             </Link>

@@ -19,10 +19,10 @@ const RepoCardStatic = dynamic(
   { ssr: false }
 );
 
-const CardBack = dynamic(
+const CardBackCodeCity = dynamic(
   () =>
     import('@industry-theme/repository-composition-panels').then(
-      (mod) => mod.CardBack
+      (mod) => mod.CardBackCodeCity
     ),
   { ssr: false }
 );
@@ -274,7 +274,7 @@ export function FeaturedReposGrid() {
                 animationDelay: `${anim.delay}s`,
               }}
             >
-              <CardBack width={CARD_MAX_WIDTH} height={CARD_MAX_WIDTH / CARD_ASPECT_RATIO} />
+              <CardBackCodeCity width={CARD_MAX_WIDTH} />
             </div>
           ))}
         </div>
@@ -666,7 +666,7 @@ export function FeaturedReposGrid() {
                 width={CARD_MAX_WIDTH}
                 height={Math.round(CARD_MAX_WIDTH / CARD_ASPECT_RATIO)}
                 spriteSize={200}
-                customImage={`/api/file-city/${entry.github?.owner}/${entry.name}`}
+                customImage={`/api/file-city/${entry.github?.owner}/${entry.name}?nocache=1`}
               />
             </div>
           </Link>
