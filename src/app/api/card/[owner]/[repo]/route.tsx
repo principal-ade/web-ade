@@ -94,6 +94,12 @@ interface GitHubRepo {
   created_at?: string;
 }
 
+interface GitHubUser {
+  login: string;
+  name: string | null;
+  avatar_url: string;
+}
+
 interface GitHubTree {
   tree: Array<{ type: string }>;
 }
@@ -114,17 +120,23 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     console.log('[Card API] Generating card:', { owner, repo });
 
-    // Fetch repo data
-    const repoResponse = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}`,
-      {
+    // Fetch repo data and owner profile in parallel
+    const [repoResponse, ownerResponse] = await Promise.all([
+      fetch(`https://api.github.com/repos/${owner}/${repo}`, {
         headers: {
           Accept: 'application/vnd.github.v3+json',
           'User-Agent': 'web-ade-card-generator',
         },
         next: { revalidate: 3600 },
-      }
-    );
+      }),
+      fetch(`https://api.github.com/users/${owner}`, {
+        headers: {
+          Accept: 'application/vnd.github.v3+json',
+          'User-Agent': 'web-ade-card-generator',
+        },
+        next: { revalidate: 3600 },
+      }),
+    ]);
 
     if (!repoResponse.ok) {
       return new Response(JSON.stringify({ error: 'Repository not found' }), {
@@ -134,6 +146,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     const repoData: GitHubRepo = await repoResponse.json();
+    const ownerData: GitHubUser | null = ownerResponse.ok ? await ownerResponse.json() : null;
+    const ownerDisplayName = ownerData?.name ?? owner;
 
     // Fetch file count
     let fileCount = 0;
@@ -213,18 +227,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: 0,
-                marginLeft: -12,
-                marginRight: -12,
-                marginTop: -8,
-                minHeight: 24,
-                position: 'relative',
-                zIndex: 2,
+                alignItems: 'center',
+                marginBottom: 8,
               }}
             >
               {/* Owner */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative', zIndex: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <img
                   src={`https://github.com/${owner}.png?size=80`}
                   alt={owner}
@@ -233,10 +241,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                   style={{
                     borderRight: '1px solid rgba(255,255,255,0.3)',
                     borderBottom: '1px solid rgba(255,255,255,0.3)',
-                    marginBottom: -12,
                     backgroundColor: cardBorder,
-                    position: 'relative',
-                    zIndex: 10,
                   }}
                 />
                 <span
@@ -247,7 +252,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                     alignSelf: 'flex-end',
                   }}
                 >
-                  {owner}
+                  {ownerDisplayName}
                 </span>
               </div>
 
