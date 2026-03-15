@@ -19,12 +19,24 @@ const RepoCardStatic = dynamic(
   { ssr: false }
 );
 
+// Simple placeholder shown while CardBackCodeCity loads
+const CardPlaceholder = () => (
+  <div
+    style={{
+      width: '100%',
+      height: '100%',
+      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%)',
+      border: '1px solid rgba(255,255,255,0.1)',
+    }}
+  />
+);
+
 const CardBackCodeCity = dynamic(
   () =>
     import('@industry-theme/repository-composition-panels').then(
       (mod) => mod.CardBackCodeCity
     ),
-  { ssr: false }
+  { ssr: false, loading: () => <CardPlaceholder /> }
 );
 
 interface FeaturedRepo {
@@ -105,6 +117,7 @@ export function FeaturedReposGrid() {
   const [sortOption, setSortOption] = useState<SortOption>('stars');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [revealedCount, setRevealedCount] = useState(0);
   const languageDropdownRef = useRef<HTMLDivElement>(null);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -211,6 +224,24 @@ export function FeaturedReposGrid() {
     setVisibleCount(10);
   }, [searchFilter, languageFilter, sortOption]);
 
+  // Staggered card flip reveal animation after loading completes
+  useEffect(() => {
+    if (isLoading) {
+      setRevealedCount(0);
+      return;
+    }
+
+    // Start revealing cards one by one
+    const totalCards = Math.min(visibleCount, entries.length);
+    if (revealedCount >= totalCards) return;
+
+    const timer = setTimeout(() => {
+      setRevealedCount((prev) => prev + 1);
+    }, 80); // 80ms between each card flip
+
+    return () => clearTimeout(timer);
+  }, [isLoading, revealedCount, visibleCount, entries.length]);
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -239,68 +270,8 @@ export function FeaturedReposGrid() {
     })),
   []);
 
-  if (isLoading) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%',
-          padding: '32px',
-          overflow: 'auto',
-        }}
-      >
-        {/* Header */}
-        <h2
-          style={{
-            margin: '0 0 24px 0',
-            fontSize: '24px',
-            fontWeight: theme.fontWeights.semibold,
-            color: theme.colors.text,
-            fontFamily: theme.fonts.body,
-            textAlign: 'center',
-          }}
-        >
-          Featured Projects
-        </h2>
-
-        {/* Loading grid */}
-        <style>
-          {`
-            @keyframes cardBounce {
-              0%, 100% { transform: translateY(0); }
-              50% { transform: translateY(-12px); }
-            }
-          `}
-        </style>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: `repeat(auto-fit, minmax(${CARD_MIN_WIDTH}px, ${CARD_MAX_WIDTH}px))`,
-            gap: `${CARD_GAP}px`,
-            justifyContent: 'center',
-          }}
-        >
-          {loadingAnimations.map((anim, i) => (
-            <div
-              key={i}
-              style={{
-                aspectRatio: `${CARD_ASPECT_RATIO}`,
-                width: '100%',
-                animation: `cardBounce ${anim.duration}s ease-in-out infinite`,
-                animationDelay: `${anim.delay}s`,
-              }}
-            >
-              <CardBackCodeCity width={CARD_MAX_WIDTH} />
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // Only hide if there are no featured repos at all (not when filters yield no results)
-  if (featuredRepos.length === 0) {
+  // Only hide if there are no featured repos at all and not loading
+  if (!isLoading && featuredRepos.length === 0) {
     return null;
   }
 
@@ -344,6 +315,9 @@ export function FeaturedReposGrid() {
             gap: '12px',
             flexWrap: 'wrap',
             alignItems: 'center',
+            opacity: isLoading ? 0.5 : 1,
+            pointerEvents: isLoading ? 'none' : 'auto',
+            transition: 'opacity 0.2s ease',
           }}
         >
         {/* Search Input */}
@@ -607,7 +581,7 @@ export function FeaturedReposGrid() {
       </div>
 
       {/* No results message */}
-      {entries.length === 0 && (searchFilter.trim() || languageFilter !== 'all') && (
+      {!isLoading && entries.length === 0 && (searchFilter.trim() || languageFilter !== 'all') && (
         <div
           style={{
             textAlign: 'center',
@@ -641,8 +615,35 @@ export function FeaturedReposGrid() {
         </div>
       )}
 
-      {/* Grid */}
-      {entries.length > 0 && (
+      {/* Grid with flip animation */}
+      <style>
+        {`
+          .card-flip-container {
+            perspective: 1000px;
+          }
+          .card-flip-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+          }
+          .card-flip-inner.flipped {
+            transform: rotateY(180deg);
+          }
+          .card-flip-front,
+          .card-flip-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+          }
+          .card-flip-back {
+            transform: rotateY(180deg);
+          }
+        `}
+      </style>
       <div
         style={{
           display: 'grid',
@@ -652,47 +653,78 @@ export function FeaturedReposGrid() {
           flex: 1,
         }}
       >
-        {visibleEntries.map((entry) => (
-          <Link
-            key={entry.name}
-            href={`/${entry.forkOwner || entry.github?.owner}/${entry.forkName || entry.name}?config=tour`}
-            style={{
-              textDecoration: 'none',
-              aspectRatio: `${CARD_ASPECT_RATIO}`,
-            }}
-          >
+        {isLoading ? (
+          // Loading state - show card backs
+          loadingAnimations.map((_, i) => (
             <div
-              style={{
-                width: '100%',
-                height: '100%',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-8px) scale(1.02)';
-                e.currentTarget.style.boxShadow = '0 12px 24px rgba(0, 0, 0, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
+              key={`loading-${i}`}
+              className="card-flip-container"
+              style={{ aspectRatio: `${CARD_ASPECT_RATIO}` }}
             >
-              <RepoCardStatic
-                repository={entry}
-                cardTheme="dark"
-                width={CARD_MAX_WIDTH}
-                height={Math.round(CARD_MAX_WIDTH / CARD_ASPECT_RATIO)}
-                spriteSize={200}
-                customImage={`/api/file-city/${entry.forkOwner || entry.github?.owner}/${entry.forkName || entry.github?.name}?nocache=1`}
-              />
+              <div className="card-flip-inner">
+                <div className="card-flip-front">
+                  <CardBackCodeCity width={CARD_MAX_WIDTH} />
+                </div>
+              </div>
             </div>
-          </Link>
-        ))}
+          ))
+        ) : (
+          // Loaded state - flip cards to reveal content
+          visibleEntries.map((entry, index) => {
+            const isRevealed = index < revealedCount;
+            return (
+              <div
+                key={entry.name}
+                className="card-flip-container"
+                style={{ aspectRatio: `${CARD_ASPECT_RATIO}` }}
+              >
+                <div className={`card-flip-inner ${isRevealed ? 'flipped' : ''}`}>
+                  {/* Front - Card back (shown initially) */}
+                  <div className="card-flip-front">
+                    <CardBackCodeCity width={CARD_MAX_WIDTH} />
+                  </div>
+                  {/* Back - Real card (shown after flip) */}
+                  <div className="card-flip-back">
+                    <Link
+                      href={`/${entry.forkOwner || entry.github?.owner}/${entry.forkName || entry.name}?config=tour`}
+                      style={{ textDecoration: 'none', display: 'block', width: '100%', height: '100%' }}
+                    >
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                          cursor: 'pointer',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-8px) scale(1.02)';
+                          e.currentTarget.style.boxShadow = '0 12px 24px rgba(0, 0, 0, 0.3)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      >
+                        <RepoCardStatic
+                          repository={entry}
+                          cardTheme="dark"
+                          width={CARD_MAX_WIDTH}
+                          height={Math.round(CARD_MAX_WIDTH / CARD_ASPECT_RATIO)}
+                          spriteSize={200}
+                          customImage={`/api/file-city/${entry.forkOwner || entry.github?.owner}/${entry.forkName || entry.github?.name}?nocache=1`}
+                        />
+                      </div>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
-      )}
 
-      {/* Load More button */}
-      {hasMore && (
+      {/* Load More button - show after all visible cards are revealed */}
+      {!isLoading && hasMore && revealedCount >= visibleEntries.length && (
         <div
           style={{
             display: 'flex',
