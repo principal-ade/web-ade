@@ -389,6 +389,7 @@ const featuredRepoSchema = z.object({
   topics: z.array(z.string()).optional(),
   html_url: z.string(),
   created_at: z.string().optional(),
+  forkOwner: z.string().optional(),
 });
 
 const getFeaturedReposOutputSchema = z.array(featuredRepoSchema);
@@ -787,7 +788,7 @@ export const githubRouter = router({
 
         // Fetch full repo info for each fork to get parent data
         const limit = createLimiter(MAX_CONCURRENT_REQUESTS);
-        const parentRepos = await Promise.all(
+        const reposWithForkInfo = await Promise.all(
           forks.map((fork) =>
             limit(async () => {
               try {
@@ -795,7 +796,12 @@ export const githubRouter = router({
                   `/repos/${fork.full_name}`,
                   userToken
                 );
-                return fullRepo.parent || null;
+                if (!fullRepo.parent) return null;
+                // Return parent repo with forkOwner attached
+                return {
+                  ...fullRepo.parent,
+                  forkOwner: fork.owner.login,
+                };
               } catch {
                 return null;
               }
@@ -805,7 +811,7 @@ export const githubRouter = router({
 
         // Filter out nulls and dedupe by id
         const seen = new Set<number>();
-        const uniqueParents = parentRepos
+        const uniqueParents = reposWithForkInfo
           .filter((p): p is NonNullable<typeof p> => p !== null)
           .filter((p) => {
             if (seen.has(p.id)) return false;

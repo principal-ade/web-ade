@@ -44,22 +44,25 @@ interface FeaturedRepo {
   topics?: string[];
   html_url: string;
   created_at?: string;
+  forkOwner?: string;
 }
 
 /**
  * Transform GitHub API repo data to AlexandriaEntryWithMetrics format
+ * Uses forkOwner for navigation when available (to navigate to X-File-City forks)
  */
 function toAlexandriaEntry(repo: FeaturedRepo): AlexandriaEntryWithMetrics {
+  const navigationOwner = repo.forkOwner || repo.owner.login;
   return {
     name: repo.name,
-    path: `/${repo.full_name}` as AlexandriaEntryWithMetrics['path'],
+    path: `/${navigationOwner}/${repo.name}` as AlexandriaEntryWithMetrics['path'],
     registeredAt: new Date().toISOString(),
     hasViews: false,
     viewCount: 0,
     views: [],
     github: {
       id: repo.full_name,
-      owner: repo.owner.login,
+      owner: navigationOwner,
       name: repo.name,
       description: repo.description || undefined,
       stars: repo.stargazers_count,
@@ -638,7 +641,7 @@ export function FeaturedReposGrid() {
         {visibleEntries.map((entry) => (
           <Link
             key={entry.name}
-            href={`/${entry.github?.owner}/${entry.name}`}
+            href={`/${entry.github?.owner}/${entry.name}?config=tour`}
             style={{
               textDecoration: 'none',
               aspectRatio: `${CARD_ASPECT_RATIO}`,

@@ -14,7 +14,6 @@ import {
 } from '@principal-ai/file-city-builder';
 import {
   createDrawContext,
-  clearCanvas,
   drawDistricts,
   drawBuildings,
   RenderMode,
@@ -24,7 +23,7 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type CompatibleContext = any;
 
-const BACKGROUND_COLOR = '#1a1a2e';
+const DEFAULT_DIRECTORY_COLOR = '#111827';
 
 export interface RenderOptions {
   owner: string;
@@ -44,12 +43,18 @@ async function fetchGitHubTree(
 ): Promise<GitHubTreeResponse> {
   const treeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
 
-  const response = await fetch(treeUrl, {
-    headers: {
-      'User-Agent': 'web-ade',
-      Accept: 'application/vnd.github.v3+json',
-    },
-  });
+  const headers: Record<string, string> = {
+    'User-Agent': 'web-ade',
+    Accept: 'application/vnd.github.v3+json',
+  };
+
+  // Add authentication if token is available
+  const token = process.env.GITHUB_TOKEN;
+  if (token) {
+    headers['Authorization'] = `token ${token}`;
+  }
+
+  const response = await fetch(treeUrl, { headers });
 
   if (!response.ok) {
     throw new Error(
@@ -97,12 +102,9 @@ export async function renderFileCityPng(options: RenderOptions): Promise<Buffer>
     paddingRight: 2,
   });
 
-  // 5. Create canvas and render
+  // 5. Create canvas and render (transparent background)
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d') as CompatibleContext;
-
-  // Clear background
-  clearCanvas(ctx, width, height, BACKGROUND_COLOR);
 
   // Create draw context with scaling
   const padding = Math.min(width, height) * 0.05; // 5% padding
@@ -114,7 +116,17 @@ export async function renderFileCityPng(options: RenderOptions): Promise<Buffer>
     ctx,
     cityData.districts,
     drawContext.worldToCanvas,
-    drawContext.scale
+    drawContext.scale,
+    undefined, // highlightedDirectories
+    undefined, // hoveredDirectories
+    undefined, // hoveredDistrict
+    true, // fullSize
+    undefined, // selectedPaths
+    undefined, // changedFiles
+    undefined, // theme
+    undefined, // customColorFn
+    DEFAULT_DIRECTORY_COLOR, // defaultDirectoryColor
+    false // showDirectoryLabels
   );
 
   // Draw buildings on top
