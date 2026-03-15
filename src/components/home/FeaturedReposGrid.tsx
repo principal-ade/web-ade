@@ -4,9 +4,45 @@ import React, { useMemo, useEffect, useState, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { ChevronDown, Search, X } from 'lucide-react';
+import { ChevronDown, Search, X, CreditCard } from 'lucide-react';
 import type { AlexandriaEntryWithMetrics } from '@industry-theme/repository-composition-panels';
 import { trpc } from '@/lib/trpc/client';
+import { useRouter } from 'next/navigation';
+
+/**
+ * Parse a GitHub URL and extract owner/repo
+ * Supports formats:
+ * - https://github.com/owner/repo
+ * - http://github.com/owner/repo
+ * - github.com/owner/repo
+ * - owner/repo (if it looks like a repo path)
+ */
+function parseGitHubUrl(input: string): { owner: string; repo: string } | null {
+  const trimmed = input.trim();
+
+  // Try to parse as URL first
+  const urlPatterns = [
+    /^https?:\/\/github\.com\/([^/]+)\/([^/]+)/i,
+    /^github\.com\/([^/]+)\/([^/]+)/i,
+  ];
+
+  for (const pattern of urlPatterns) {
+    const match = trimmed.match(pattern);
+    if (match && match[1] && match[2]) {
+      // Clean repo name (remove .git suffix, query params, etc.)
+      const repo = match[2].replace(/\.git$/, '').split(/[?#]/)[0];
+      return { owner: match[1], repo: repo || '' };
+    }
+  }
+
+  // Try owner/repo format (must have exactly one slash, no spaces, valid chars)
+  const repoPathMatch = trimmed.match(/^([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)$/);
+  if (repoPathMatch && repoPathMatch[1] && repoPathMatch[2]) {
+    return { owner: repoPathMatch[1], repo: repoPathMatch[2] };
+  }
+
+  return null;
+}
 
 type SortOption = 'stars' | 'name-asc' | 'name-desc' | 'newest' | 'oldest';
 
@@ -111,6 +147,7 @@ const CARD_GAP = 32;
 
 export function FeaturedReposGrid() {
   const { theme } = useTheme();
+  const router = useRouter();
   const [featuredRepos, setFeaturedRepos] = useState<FeaturedRepo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(10);
@@ -124,6 +161,43 @@ export function FeaturedReposGrid() {
   const languageDropdownRef = useRef<HTMLDivElement>(null);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Make your Card modal state
+  const [showCardModal, setShowCardModal] = useState(false);
+  const [cardRepoInput, setCardRepoInput] = useState('');
+  const [cardInputError, setCardInputError] = useState<string | null>(null);
+  const cardInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle card modal submission
+  const handleCardSubmit = () => {
+    const parsed = parseGitHubUrl(cardRepoInput);
+    if (parsed && parsed.repo) {
+      setShowCardModal(false);
+      setCardRepoInput('');
+      setCardInputError(null);
+      router.push(`/card/${parsed.owner}/${parsed.repo}`);
+    } else {
+      setCardInputError('Please enter a valid GitHub repository (e.g., owner/repo or https://github.com/owner/repo)');
+    }
+  };
+
+  // Handle Enter key in card modal input
+  const handleCardInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleCardSubmit();
+    } else if (e.key === 'Escape') {
+      setShowCardModal(false);
+      setCardRepoInput('');
+      setCardInputError(null);
+    }
+  };
+
+  // Focus input when modal opens
+  useEffect(() => {
+    if (showCardModal && cardInputRef.current) {
+      cardInputRef.current.focus();
+    }
+  }, [showCardModal]);
 
   const handleLoadMore = () => {
     setVisibleCount((prev) => Math.min(prev + 10, featuredRepos.length));
@@ -350,17 +424,50 @@ export function FeaturedReposGrid() {
           gap: '16px',
         }}
       >
-        <h2
-          style={{
-            margin: 0,
-            fontSize: '24px',
-            fontWeight: theme.fontWeights.semibold,
-            color: theme.colors.text,
-            fontFamily: theme.fonts.body,
-          }}
-        >
-          Featured Projects
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: '24px',
+              fontWeight: theme.fontWeights.semibold,
+              color: theme.colors.text,
+              fontFamily: theme.fonts.body,
+            }}
+          >
+            Featured Projects
+          </h2>
+
+          {/* Make your Card button */}
+          <button
+            onClick={() => setShowCardModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 16px',
+              fontSize: '14px',
+              fontFamily: theme.fonts.body,
+              fontWeight: theme.fontWeights.medium,
+              color: theme.colors.textOnPrimary,
+              background: theme.colors.primary,
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'opacity 0.2s ease, transform 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.9';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            <CreditCard size={16} />
+            Make your Card
+          </button>
+        </div>
 
         {/* Filter and Sort Controls */}
         <div
@@ -811,6 +918,205 @@ export function FeaturedReposGrid() {
           >
             Load More
           </button>
+        </div>
+      )}
+
+      {/* Make your Card Modal */}
+      {showCardModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '24px',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowCardModal(false);
+              setCardRepoInput('');
+              setCardInputError(null);
+            }
+          }}
+        >
+          <div
+            style={{
+              background: theme.colors.surface,
+              borderRadius: '16px',
+              padding: '32px',
+              width: '100%',
+              maxWidth: '500px',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              border: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '24px',
+              }}
+            >
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: '20px',
+                  fontWeight: theme.fontWeights.semibold,
+                  color: theme.colors.text,
+                  fontFamily: theme.fonts.body,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
+              >
+                <CreditCard size={24} style={{ color: theme.colors.primary }} />
+                Make your Card
+              </h3>
+              <button
+                onClick={() => {
+                  setShowCardModal(false);
+                  setCardRepoInput('');
+                  setCardInputError(null);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px',
+                  padding: 0,
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: theme.colors.secondary,
+                  color: theme.colors.textMuted,
+                  cursor: 'pointer',
+                  transition: 'background 0.15s ease, color 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = theme.colors.border;
+                  e.currentTarget.style.color = theme.colors.text;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = theme.colors.secondary;
+                  e.currentTarget.style.color = theme.colors.textMuted;
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Description */}
+            <p
+              style={{
+                margin: '0 0 20px',
+                fontSize: '14px',
+                color: theme.colors.textMuted,
+                fontFamily: theme.fonts.body,
+                lineHeight: 1.5,
+              }}
+            >
+              Enter a GitHub repository to generate a shareable card with your project&apos;s stats and a unique visualization.
+            </p>
+
+            {/* Input */}
+            <div style={{ position: 'relative', marginBottom: '16px' }}>
+              <Search
+                size={18}
+                style={{
+                  position: 'absolute',
+                  left: '16px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: theme.colors.textMuted,
+                  pointerEvents: 'none',
+                }}
+              />
+              <input
+                ref={cardInputRef}
+                type="text"
+                placeholder="owner/repo or https://github.com/owner/repo"
+                value={cardRepoInput}
+                onChange={(e) => {
+                  setCardRepoInput(e.target.value);
+                  setCardInputError(null);
+                }}
+                onKeyDown={handleCardInputKeyDown}
+                style={{
+                  width: '100%',
+                  padding: '14px 16px 14px 48px',
+                  fontSize: '16px',
+                  fontFamily: theme.fonts.body,
+                  color: theme.colors.text,
+                  background: theme.colors.background,
+                  border: `2px solid ${cardInputError ? '#ef4444' : theme.colors.border}`,
+                  borderRadius: '12px',
+                  outline: 'none',
+                  transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                  boxSizing: 'border-box',
+                }}
+                onFocus={(e) => {
+                  if (!cardInputError) {
+                    e.currentTarget.style.borderColor = theme.colors.primary;
+                    e.currentTarget.style.boxShadow = `0 0 0 4px ${theme.colors.primary}20`;
+                  }
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = cardInputError ? '#ef4444' : theme.colors.border;
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              />
+            </div>
+
+            {/* Error message */}
+            {cardInputError && (
+              <p
+                style={{
+                  margin: '0 0 16px',
+                  fontSize: '13px',
+                  color: '#ef4444',
+                  fontFamily: theme.fonts.body,
+                }}
+              >
+                {cardInputError}
+              </p>
+            )}
+
+            {/* Submit button */}
+            <button
+              onClick={handleCardSubmit}
+              style={{
+                width: '100%',
+                padding: '14px 24px',
+                fontSize: '16px',
+                fontWeight: theme.fontWeights.medium,
+                fontFamily: theme.fonts.body,
+                color: theme.colors.textOnPrimary,
+                background: theme.colors.primary,
+                border: 'none',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                transition: 'opacity 0.2s ease, transform 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.9';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              Generate Card
+            </button>
+          </div>
         </div>
       )}
     </div>

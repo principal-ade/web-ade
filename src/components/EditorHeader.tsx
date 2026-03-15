@@ -346,35 +346,18 @@ export function EditorHeader({
             </Link>
           </div>
         )}
-        {/* Principal AI title and search toggle - only show on home page */}
+        {/* Principal AI title - only show on home page */}
         {!repositoryName && !ownerOnly && (
-          <div className="flex items-center gap-3">
-            {/* Search toggle button */}
-            {onToggleSearch && (
-              <button
-                onClick={onToggleSearch}
-                className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
-                style={{
-                  background: showSearch ? theme.colors.primary : theme.colors.secondary,
-                  color: showSearch ? theme.colors.textOnPrimary : theme.colors.text,
-                }}
-                title={showSearch ? 'Hide search' : 'Show search'}
-              >
-                <Search className="w-4 h-4" />
-              </button>
-            )}
-            {/* Principal AI title */}
-            <h1
-              className="text-xl font-bold m-0"
-              style={{
-                fontFamily: theme.fonts.body,
-              }}
-            >
-              <span style={{ color: theme.colors.text }}>Principal</span>
-              {' '}
-              <span style={{ color: theme.colors.primary }}>AI</span>
-            </h1>
-          </div>
+          <h1
+            className="text-xl font-bold m-0"
+            style={{
+              fontFamily: theme.fonts.body,
+            }}
+          >
+            <span style={{ color: theme.colors.text }}>Principal</span>
+            {' '}
+            <span style={{ color: theme.colors.primary }}>AI</span>
+          </h1>
         )}
       </div>
 
@@ -508,6 +491,21 @@ export function EditorHeader({
             </button>
           )}
         </div>
+
+        {/* Search toggle button - only on home page */}
+        {!repositoryName && !ownerOnly && onToggleSearch && (
+          <button
+            onClick={onToggleSearch}
+            className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+            style={{
+              background: showSearch ? theme.colors.primary : theme.colors.secondary,
+              color: showSearch ? theme.colors.textOnPrimary : theme.colors.text,
+            }}
+            title={showSearch ? 'Hide search' : 'Show search'}
+          >
+            <Search className="w-4 h-4" />
+          </button>
+        )}
 
         {/* Feed button - only on home page */}
         {!repositoryName && !ownerOnly && (
