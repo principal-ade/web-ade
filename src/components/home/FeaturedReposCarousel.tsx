@@ -80,6 +80,7 @@ function toAlexandriaEntry(repo: FeaturedRepo, fileCount?: number): FeaturedEntr
       topics: repo.topics,
       createdAt: repo.created_at,
       lastUpdated: new Date().toISOString(),
+      ownerDisplayName: (repo.owner as { name?: string }).name ?? undefined,
     },
     metrics: fileCount !== undefined ? { fileCount } : undefined,
   };
