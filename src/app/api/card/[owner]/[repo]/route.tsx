@@ -143,9 +143,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       ? languageColors[repoData.language] || DEFAULT_COLOR
       : DEFAULT_COLOR;
 
-    // Build File City URL
+    // Build File City URL - use forwarded host header for proper URL in Lambda/Amplify
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const host = request.headers.get('host');
+    const protocol = request.headers.get('x-forwarded-proto') || 'https';
     const baseUrl =
       process.env.NEXT_PUBLIC_BASE_URL ||
+      (forwardedHost ? `${protocol}://${forwardedHost}` : null) ||
+      (host ? `${protocol}://${host}` : null) ||
       `${request.nextUrl.protocol}//${request.nextUrl.host}`;
     const fileCityUrl = `${baseUrl}/api/file-city/${owner}/${repo}?width=400&height=300&nocache=1`;
 
@@ -154,6 +159,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       owner,
       repo,
       duration: `${duration}ms`,
+      baseUrl,
     });
 
     return new ImageResponse(
