@@ -57,6 +57,16 @@ export default function CardPreview({ owner, repo, imageUrl, shareUrl }: CardPre
   const [repoInput, setRepoInput] = useState('');
   const [inputError, setInputError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // Reset imageLoaded when imageUrl changes, and check if already loaded
+  useEffect(() => {
+    setImageLoaded(false);
+    // Check if image is already loaded (cached)
+    if (imgRef.current?.complete && imgRef.current?.naturalHeight > 0) {
+      setImageLoaded(true);
+    }
+  }, [imageUrl]);
 
   const handleRepoSubmit = () => {
     const parsed = parseGitHubUrl(repoInput);
@@ -303,6 +313,7 @@ export default function CardPreview({ owner, repo, imageUrl, shareUrl }: CardPre
           </div>
         )}
         <img
+          ref={imgRef}
           src={imageUrl}
           alt={`${owner}/${repo} card`}
           style={{
