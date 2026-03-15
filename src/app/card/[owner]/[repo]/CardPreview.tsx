@@ -7,9 +7,38 @@
  * Shows users exactly what will appear when they share on Twitter.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Search } from 'lucide-react';
+
+/**
+ * Parse a GitHub URL and extract owner/repo
+ */
+function parseGitHubUrl(input: string): { owner: string; repo: string } | null {
+  const trimmed = input.trim();
+
+  const urlPatterns = [
+    /^https?:\/\/github\.com\/([^/]+)\/([^/]+)/i,
+    /^github\.com\/([^/]+)\/([^/]+)/i,
+  ];
+
+  for (const pattern of urlPatterns) {
+    const match = trimmed.match(pattern);
+    if (match && match[1] && match[2]) {
+      const repo = match[2].replace(/\.git$/, '').split(/[?#]/)[0];
+      return { owner: match[1], repo: repo || '' };
+    }
+  }
+
+  const repoPathMatch = trimmed.match(/^([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)$/);
+  if (repoPathMatch && repoPathMatch[1] && repoPathMatch[2]) {
+    return { owner: repoPathMatch[1], repo: repoPathMatch[2] };
+  }
+
+  return null;
+}
 
 interface CardPreviewProps {
   owner: string;
@@ -20,8 +49,38 @@ interface CardPreviewProps {
 
 export default function CardPreview({ owner, repo, imageUrl, shareUrl }: CardPreviewProps) {
   const { theme } = useTheme();
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Repo input state
+  const [repoInput, setRepoInput] = useState('');
+  const [inputError, setInputError] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleRepoSubmit = () => {
+    const parsed = parseGitHubUrl(repoInput);
+    if (parsed && parsed.repo) {
+      setRepoInput('');
+      setInputError(false);
+      router.push(`/card/${parsed.owner}/${parsed.repo}`);
+    } else if (repoInput.trim()) {
+      setInputError(true);
+    }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleRepoSubmit();
+    }
+  };
+
+  // Clear error when input changes
+  useEffect(() => {
+    if (inputError && repoInput) {
+      setInputError(false);
+    }
+  }, [repoInput, inputError]);
 
   const handleCopyLink = async () => {
     try {
@@ -67,38 +126,139 @@ export default function CardPreview({ owner, repo, imageUrl, shareUrl }: CardPre
           marginBottom: '32px',
         }}
       >
-        <Link
-          href="/"
+        <div
           style={{
-            color: theme.colors.textMuted,
-            textDecoration: 'none',
-            fontSize: `${theme.fontSizes[1]}px`,
-            fontFamily: theme.fonts.body,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: '24px',
+            flexWrap: 'wrap',
           }}
         >
-          &larr; Back to home
-        </Link>
-        <h1
-          style={{
-            fontSize: `${theme.fontSizes[4]}px`,
-            fontWeight: theme.fontWeights.bold,
-            color: theme.colors.text,
-            marginTop: '16px',
-            marginBottom: '8px',
-            fontFamily: theme.fonts.heading,
-          }}
-        >
-          {owner}/{repo}
-        </h1>
-        <p
-          style={{
-            fontSize: `${theme.fontSizes[1]}px`,
-            color: theme.colors.textMuted,
-            fontFamily: theme.fonts.body,
-          }}
-        >
-          Share this card on Twitter - the preview below shows exactly what others will see.
-        </p>
+          <div>
+            <Link
+              href="/"
+              style={{
+                color: theme.colors.textMuted,
+                textDecoration: 'none',
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontFamily: theme.fonts.body,
+              }}
+            >
+              &larr; Back to home
+            </Link>
+            <h1
+              style={{
+                fontSize: `${theme.fontSizes[4]}px`,
+                fontWeight: theme.fontWeights.bold,
+                color: theme.colors.text,
+                marginTop: '16px',
+                marginBottom: '8px',
+                fontFamily: theme.fonts.heading,
+              }}
+            >
+              {owner}/{repo}
+            </h1>
+            <p
+              style={{
+                fontSize: `${theme.fontSizes[1]}px`,
+                color: theme.colors.textMuted,
+                fontFamily: theme.fonts.body,
+                margin: 0,
+              }}
+            >
+              Share this card on Twitter - the preview below shows exactly what others will see.
+            </p>
+          </div>
+
+          {/* Repo Input */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+            }}
+          >
+            <label
+              style={{
+                fontSize: '12px',
+                color: theme.colors.textMuted,
+                fontFamily: theme.fonts.body,
+              }}
+            >
+              Generate another card
+            </label>
+            <div style={{ position: 'relative', display: 'flex', gap: '8px' }}>
+              <div style={{ position: 'relative' }}>
+                <Search
+                  size={16}
+                  style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: theme.colors.textMuted,
+                    pointerEvents: 'none',
+                  }}
+                />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder="owner/repo"
+                  value={repoInput}
+                  onChange={(e) => setRepoInput(e.target.value)}
+                  onKeyDown={handleInputKeyDown}
+                  style={{
+                    width: '220px',
+                    padding: '10px 12px 10px 36px',
+                    fontSize: '14px',
+                    fontFamily: theme.fonts.body,
+                    color: theme.colors.text,
+                    background: theme.colors.surface,
+                    border: `2px solid ${inputError ? '#ef4444' : theme.colors.border}`,
+                    borderRadius: '8px',
+                    outline: 'none',
+                    transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                  }}
+                  onFocus={(e) => {
+                    if (!inputError) {
+                      e.currentTarget.style.borderColor = theme.colors.primary;
+                      e.currentTarget.style.boxShadow = `0 0 0 3px ${theme.colors.primary}20`;
+                    }
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = inputError ? '#ef4444' : theme.colors.border;
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                />
+              </div>
+              <button
+                onClick={handleRepoSubmit}
+                style={{
+                  padding: '10px 16px',
+                  fontSize: '14px',
+                  fontWeight: theme.fontWeights.medium,
+                  fontFamily: theme.fonts.body,
+                  color: theme.colors.textOnPrimary,
+                  background: theme.colors.primary,
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s ease',
+                  whiteSpace: 'nowrap',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+              >
+                Go
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Card Preview */}
