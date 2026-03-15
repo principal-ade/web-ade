@@ -37,6 +37,7 @@ const SAMPLE_REPO: AlexandriaEntryWithMetrics = {
     license: 'MIT',
     primaryLanguage: 'TypeScript',
     topics: ['javascript', 'frontend', 'ui', 'declarative'],
+    createdAt: '2013-05-24T00:00:00Z',
     lastUpdated: new Date().toISOString(),
     ownerAvatar: 'https://avatars.githubusercontent.com/u/69631?v=4',
   },
@@ -67,6 +68,7 @@ const SAMPLE_MONOREPO: AlexandriaEntryWithMetrics = {
     license: 'MIT',
     primaryLanguage: 'TypeScript',
     topics: ['ai', 'assistant', 'crustacean', 'molty', 'openclaw'],
+    createdAt: '2024-01-15T00:00:00Z',
     lastUpdated: new Date().toISOString(),
     ownerAvatar: 'https://avatars.githubusercontent.com/u/198279852?v=4',
   },
@@ -730,7 +732,7 @@ function CardExplanationContent() {
               width={320}
               height={450}
               spriteSize={280}
-              customImage={visualizationMode === 'fileCity' ? `/api/file-city/${currentRepo.github?.owner}/${currentRepo.github?.name}` : undefined}
+              customImage={visualizationMode === 'fileCity' ? `/api/file-city/${currentRepo.github?.owner}/${currentRepo.github?.name}?nocache=1` : undefined}
             />
           </div>
 
