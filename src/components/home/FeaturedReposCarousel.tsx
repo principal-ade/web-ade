@@ -58,7 +58,7 @@ interface FeaturedEntry extends AlexandriaEntryWithMetrics {
  * Uses forkOwner/forkName for navigation when available (to navigate to X-File-City forks)
  * Preserves parent owner info for display (avatar, etc.)
  */
-function toAlexandriaEntry(repo: FeaturedRepo): FeaturedEntry {
+function toAlexandriaEntry(repo: FeaturedRepo, fileCount?: number): FeaturedEntry {
   return {
     name: repo.name, // Display name (parent repo name)
     path: `/${repo.forkOwner || repo.owner.login}/${repo.forkName || repo.name}` as AlexandriaEntryWithMetrics['path'],
@@ -81,6 +81,7 @@ function toAlexandriaEntry(repo: FeaturedRepo): FeaturedEntry {
       createdAt: repo.created_at,
       lastUpdated: new Date().toISOString(),
     },
+    metrics: fileCount !== undefined ? { fileCount } : undefined,
   };
 }
 
@@ -94,6 +95,7 @@ export function FeaturedReposCarousel() {
   const [featuredRepos, setFeaturedRepos] = useState<FeaturedRepo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [renderedCount, setRenderedCount] = useState(RENDER_BATCH_SIZE);
+  const [fileCounts, setFileCounts] = useState<Record<string, number>>({});
 
   // Drag state
   const [isDragging, setIsDragging] = useState(false);
@@ -126,11 +128,62 @@ export function FeaturedReposCarousel() {
     };
   }, []);
 
-  // Transform to Alexandria entries
+  // Fetch file counts for repos (uses shared cache with file-city renderer)
+  useEffect(() => {
+    if (featuredRepos.length === 0) return;
+
+    let mounted = true;
+
+    async function fetchFileCounts() {
+      const newCounts: Record<string, number> = {};
+
+      // Fetch in parallel with a concurrency limit
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < featuredRepos.length; i += BATCH_SIZE) {
+        const batch = featuredRepos.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          batch.map(async (repo) => {
+            const owner = repo.forkOwner || repo.owner.login;
+            const name = repo.forkName || repo.name;
+            const key = repo.full_name;
+
+            try {
+              const tree = await trpc.github.getTree.query({
+                owner,
+                repo: name,
+              });
+              if (mounted) {
+                // Count only files (blobs), not directories (trees)
+                const fileCount = tree.tree.filter((item) => item.type === 'blob').length;
+                newCounts[key] = fileCount;
+              }
+            } catch (error) {
+              console.warn(`Failed to fetch tree for ${owner}/${name}:`, error);
+            }
+          })
+        );
+
+        // Update state after each batch for progressive loading
+        if (mounted && Object.keys(newCounts).length > 0) {
+          setFileCounts((prev) => ({ ...prev, ...newCounts }));
+        }
+      }
+    }
+
+    fetchFileCounts();
+
+    return () => {
+      mounted = false;
+    };
+  }, [featuredRepos]);
+
+  // Transform to Alexandria entries (with file counts when available)
   const entries = useMemo(() => {
     if (!featuredRepos) return [];
-    return featuredRepos.map(toAlexandriaEntry);
-  }, [featuredRepos]);
+    return featuredRepos.map((repo) =>
+      toAlexandriaEntry(repo, fileCounts[repo.full_name])
+    );
+  }, [featuredRepos, fileCounts]);
 
   // Duplicate entries for seamless looping
   const duplicatedEntries = useMemo(() => {
@@ -143,7 +196,7 @@ export function FeaturedReposCarousel() {
   useEffect(() => {
     if (duplicatedEntries.length === 0) return;
 
-    const cardWidth = 368;
+    const cardWidth = 323; // 275 card width + 48 gap
     // Calculate which cards are visible based on scroll position
     const visibleStart = Math.floor(scrollPosition / cardWidth);
     const visibleEnd = visibleStart + 10; // Assume ~10 cards visible at once
@@ -160,7 +213,7 @@ export function FeaturedReposCarousel() {
   useEffect(() => {
     if (entries.length === 0 || isDragging) return;
 
-    const cardWidth = 368; // Card width + gap
+    const cardWidth = 323; // 275 card width + 48 gap // Card width + gap
     const totalWidth = entries.length * cardWidth;
 
     const interval = setInterval(() => {
@@ -193,7 +246,7 @@ export function FeaturedReposCarousel() {
       hasDraggedRef.current = true;
     }
 
-    const cardWidth = 368;
+    const cardWidth = 323; // 275 card width + 48 gap
     // Use 5 as fallback count during loading state (15 cards / 3 for looping)
     const cardCount = entries.length > 0 ? entries.length : 5;
     const totalWidth = cardCount * cardWidth;
@@ -292,7 +345,7 @@ export function FeaturedReposCarousel() {
                 flexShrink: 0,
               }}
             >
-              <CardBackCodeCity width={320} />
+              <CardBackCodeCity width={275} />
             </div>
           ))}
         </div>
@@ -347,7 +400,7 @@ export function FeaturedReposCarousel() {
             >
               <div
                 style={{
-                  width: '320px',
+                  width: '275px',
                   height: '450px',
                   transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                   cursor: 'pointer',
@@ -365,12 +418,12 @@ export function FeaturedReposCarousel() {
                   <RepoCardStatic
                     repository={entry}
                     cardTheme="dark"
-                    width={320}
+                    width={275}
                     height={450}
-                    spriteSize={280}
+                    spriteSize={240}
                   />
                 ) : (
-                  <CardBackCodeCity width={320} />
+                  <CardBackCodeCity width={275} />
                 )}
               </div>
             </Link>

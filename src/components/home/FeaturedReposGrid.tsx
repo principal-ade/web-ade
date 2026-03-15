@@ -73,7 +73,7 @@ interface FeaturedEntry extends AlexandriaEntryWithMetrics {
  * Uses forkOwner/forkName for navigation when available (to navigate to X-File-City forks)
  * Preserves parent owner info for display (avatar, etc.)
  */
-function toAlexandriaEntry(repo: FeaturedRepo): FeaturedEntry {
+function toAlexandriaEntry(repo: FeaturedRepo, fileCount?: number): FeaturedEntry {
   const navigationOwner = repo.forkOwner || repo.owner.login;
   const navigationName = repo.forkName || repo.name;
   return {
@@ -98,13 +98,14 @@ function toAlexandriaEntry(repo: FeaturedRepo): FeaturedEntry {
       createdAt: repo.created_at,
       lastUpdated: new Date().toISOString(),
     },
+    metrics: fileCount !== undefined ? { fileCount } : undefined,
   };
 }
 
 // Card dimensions
 const CARD_MIN_WIDTH = 180;
 const CARD_MAX_WIDTH = 280;
-const CARD_ASPECT_RATIO = 7 / 10; // width / height
+const CARD_ASPECT_RATIO = 6 / 10; // width / height (matches CardBackCodeCity 6 cols / 10 rows)
 const CARD_GAP = 32;
 
 export function FeaturedReposGrid() {
@@ -118,6 +119,7 @@ export function FeaturedReposGrid() {
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [revealedCount, setRevealedCount] = useState(0);
+  const [fileCounts, setFileCounts] = useState<Record<string, number>>({});
   const languageDropdownRef = useRef<HTMLDivElement>(null);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -151,6 +153,55 @@ export function FeaturedReposGrid() {
       mounted = false;
     };
   }, []);
+
+  // Fetch file counts for repos (uses shared cache with file-city renderer)
+  useEffect(() => {
+    if (featuredRepos.length === 0) return;
+
+    let mounted = true;
+
+    async function fetchFileCounts() {
+      const newCounts: Record<string, number> = {};
+
+      // Fetch in parallel with a concurrency limit
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < featuredRepos.length; i += BATCH_SIZE) {
+        const batch = featuredRepos.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          batch.map(async (repo) => {
+            const owner = repo.forkOwner || repo.owner.login;
+            const name = repo.forkName || repo.name;
+            const key = repo.full_name;
+
+            try {
+              const tree = await trpc.github.getTree.query({
+                owner,
+                repo: name,
+              });
+              if (mounted) {
+                // Count only files (blobs), not directories (trees)
+                const fileCount = tree.tree.filter((item) => item.type === 'blob').length;
+                newCounts[key] = fileCount;
+              }
+            } catch (error) {
+              console.warn(`Failed to fetch tree for ${owner}/${name}:`, error);
+            }
+          })
+        );
+
+        // Update state after each batch for progressive loading
+        if (mounted && Object.keys(newCounts).length > 0) {
+          setFileCounts((prev) => ({ ...prev, ...newCounts }));
+        }
+      }
+    }
+
+    fetchFileCounts();
+
+    return () => {
+      mounted = false;
+    };
+  }, [featuredRepos]);
 
   // Extract unique languages for filter dropdown
   const availableLanguages = useMemo(() => {
@@ -210,11 +261,13 @@ export function FeaturedReposGrid() {
     return repos;
   }, [featuredRepos, searchFilter, languageFilter, sortOption]);
 
-  // Transform to Alexandria entries
+  // Transform to Alexandria entries (with file counts when available)
   const entries = useMemo(() => {
     if (!filteredAndSortedRepos) return [];
-    return filteredAndSortedRepos.map(toAlexandriaEntry);
-  }, [filteredAndSortedRepos]);
+    return filteredAndSortedRepos.map((repo) =>
+      toAlexandriaEntry(repo, fileCounts[repo.full_name])
+    );
+  }, [filteredAndSortedRepos, fileCounts]);
 
   const visibleEntries = entries.slice(0, visibleCount);
   const hasMore = visibleCount < entries.length;

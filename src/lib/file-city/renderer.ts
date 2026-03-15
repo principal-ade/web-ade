@@ -12,6 +12,7 @@ import {
   getFilesFromGitHubTree,
   type GitHubTreeResponse,
 } from '@principal-ai/file-city-builder';
+import { gitTreeCache } from '@/lib/git-tree-cache';
 import {
   createDrawContext,
   drawDistricts,
@@ -73,7 +74,8 @@ async function getDefaultBranch(
 }
 
 /**
- * Fetch the file tree from GitHub API
+ * Fetch the file tree from GitHub API (with caching)
+ * Uses the shared gitTreeCache to avoid redundant API calls
  */
 async function fetchGitHubTree(
   owner: string,
@@ -85,6 +87,15 @@ async function fetchGitHubTree(
   // If ref is HEAD, resolve to the actual default branch name
   const branch = ref === 'HEAD' ? await getDefaultBranch(owner, repo) : ref;
 
+  // Check cache first
+  const cacheKey = `${owner}/${repo}/${branch}`;
+  const cached = gitTreeCache.get<GitHubTreeResponse>(cacheKey);
+  if (cached) {
+    console.log('[File City] Tree cache hit:', cacheKey);
+    return cached;
+  }
+
+  // Cache miss - fetch from GitHub
   const treeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
   const response = await fetch(treeUrl, { headers });
 
@@ -94,7 +105,14 @@ async function fetchGitHubTree(
     );
   }
 
-  return response.json() as Promise<GitHubTreeResponse>;
+  const treeData = await response.json() as GitHubTreeResponse;
+
+  // Cache by both the lookup key and the tree SHA (immutable)
+  gitTreeCache.set(cacheKey, treeData);
+  gitTreeCache.set(treeData.sha, treeData);
+  console.log('[File City] Tree cached:', cacheKey, 'sha:', treeData.sha);
+
+  return treeData;
 }
 
 /**
