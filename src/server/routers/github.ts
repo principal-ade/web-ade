@@ -390,6 +390,7 @@ const featuredRepoSchema = z.object({
   html_url: z.string(),
   created_at: z.string().optional(),
   forkOwner: z.string().optional(),
+  forkName: z.string().optional(),
 });
 
 const getFeaturedReposOutputSchema = z.array(featuredRepoSchema);
@@ -797,10 +798,12 @@ export const githubRouter = router({
                   userToken
                 );
                 if (!fullRepo.parent) return null;
-                // Return parent repo with forkOwner attached
+                // Return parent repo with fork info attached
+                // Use fork's name and owner for navigation (fork may have different name than parent)
                 return {
                   ...fullRepo.parent,
                   forkOwner: fork.owner.login,
+                  forkName: fork.name,
                 };
               } catch {
                 return null;

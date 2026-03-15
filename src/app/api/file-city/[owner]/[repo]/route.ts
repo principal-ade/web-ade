@@ -34,7 +34,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams;
-    const branch = searchParams.get('branch') || 'main';
+    const branch = searchParams.get('branch') || 'HEAD';
     const width = parseInt(searchParams.get('width') || '400', 10);
     const height = parseInt(searchParams.get('height') || '400', 10);
 

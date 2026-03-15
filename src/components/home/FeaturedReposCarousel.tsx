@@ -42,25 +42,37 @@ interface FeaturedRepo {
   html_url: string;
   created_at?: string;
   forkOwner?: string;
+  forkName?: string;
+}
+
+/**
+ * Extended entry type with fork navigation info
+ */
+interface FeaturedEntry extends AlexandriaEntryWithMetrics {
+  forkOwner?: string;
+  forkName?: string;
 }
 
 /**
  * Transform GitHub API repo data to AlexandriaEntryWithMetrics format
- * Uses forkOwner for navigation when available (to navigate to X-File-City forks)
+ * Uses forkOwner/forkName for navigation when available (to navigate to X-File-City forks)
+ * Preserves parent owner info for display (avatar, etc.)
  */
-function toAlexandriaEntry(repo: FeaturedRepo): AlexandriaEntryWithMetrics {
-  const navigationOwner = repo.forkOwner || repo.owner.login;
+function toAlexandriaEntry(repo: FeaturedRepo): FeaturedEntry {
   return {
-    name: repo.name,
-    path: `/${navigationOwner}/${repo.name}` as AlexandriaEntryWithMetrics['path'],
+    name: repo.name, // Display name (parent repo name)
+    path: `/${repo.forkOwner || repo.owner.login}/${repo.forkName || repo.name}` as AlexandriaEntryWithMetrics['path'],
     registeredAt: new Date().toISOString(),
     hasViews: false,
     viewCount: 0,
     views: [],
+    // Fork info for navigation
+    forkOwner: repo.forkOwner,
+    forkName: repo.forkName,
     github: {
       id: repo.full_name,
-      owner: navigationOwner,
-      name: repo.name,
+      owner: repo.owner.login, // Keep parent owner for display (avatar)
+      name: repo.name, // Keep parent name for display
       description: repo.description || undefined,
       stars: repo.stargazers_count,
       license: repo.license?.spdx_id,
@@ -325,7 +337,7 @@ export function FeaturedReposCarousel() {
           return (
             <Link
               key={`${entry.name}-${index}`}
-              href={`/${entry.github?.owner}/${entry.name}?config=tour`}
+              href={`/${entry.forkOwner || entry.github?.owner}/${entry.forkName || entry.name}?config=tour`}
               onClick={handleLinkClick}
               draggable={false}
               style={{

@@ -34,26 +34,58 @@ export interface RenderOptions {
 }
 
 /**
- * Fetch the file tree from GitHub API
+ * Get headers for GitHub API requests
  */
-async function fetchGitHubTree(
-  owner: string,
-  repo: string,
-  branch: string
-): Promise<GitHubTreeResponse> {
-  const treeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
-
+function getGitHubHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     'User-Agent': 'web-ade',
     Accept: 'application/vnd.github.v3+json',
   };
 
-  // Add authentication if token is available
   const token = process.env.GITHUB_TOKEN;
   if (token) {
     headers['Authorization'] = `token ${token}`;
   }
 
+  return headers;
+}
+
+/**
+ * Get the default branch for a repository
+ */
+async function getDefaultBranch(
+  owner: string,
+  repo: string
+): Promise<string> {
+  const headers = getGitHubHeaders();
+  const url = `https://api.github.com/repos/${owner}/${repo}`;
+
+  const response = await fetch(url, { headers });
+
+  if (!response.ok) {
+    throw new Error(
+      `GitHub API error fetching repo: ${response.status} ${response.statusText}`
+    );
+  }
+
+  const data = (await response.json()) as { default_branch: string };
+  return data.default_branch;
+}
+
+/**
+ * Fetch the file tree from GitHub API
+ */
+async function fetchGitHubTree(
+  owner: string,
+  repo: string,
+  ref: string
+): Promise<GitHubTreeResponse> {
+  const headers = getGitHubHeaders();
+
+  // If ref is HEAD, resolve to the actual default branch name
+  const branch = ref === 'HEAD' ? await getDefaultBranch(owner, repo) : ref;
+
+  const treeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
   const response = await fetch(treeUrl, { headers });
 
   if (!response.ok) {
@@ -75,7 +107,7 @@ export async function renderFileCityPng(options: RenderOptions): Promise<Buffer>
   const {
     owner,
     repo,
-    branch = 'main',
+    branch = 'HEAD',
     width = 400,
     height = 400,
   } = options;
