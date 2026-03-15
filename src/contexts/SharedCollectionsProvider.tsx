@@ -364,6 +364,7 @@ export function SharedCollectionsProvider({
           lastUpdated: repoDetails?.updated_at ?? new Date().toISOString(),
           primaryLanguage: repoDetails?.language ?? undefined,
           description: repoDetails?.description ?? undefined,
+          ownerDisplayName: (repoDetails?.owner as { name?: string })?.name ?? undefined,
         },
         lastChecked: undefined,
         lastOpenedAt: undefined,

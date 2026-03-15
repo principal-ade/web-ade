@@ -224,7 +224,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
               }}
             >
               {/* Owner */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative', zIndex: 10 }}>
                 <img
                   src={`https://github.com/${owner}.png?size=80`}
                   alt={owner}
@@ -235,6 +235,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                     borderBottom: '1px solid rgba(255,255,255,0.3)',
                     marginBottom: -12,
                     backgroundColor: cardBorder,
+                    position: 'relative',
+                    zIndex: 10,
                   }}
                 />
                 <span
@@ -280,6 +282,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 border: `2px solid ${cardHighlight}`,
                 position: 'relative',
                 overflow: 'hidden',
+                zIndex: 1,
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -309,7 +312,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                     color: '#e0e0e0',
                   }}
                 >
-                  📄 {formatCount(fileCount)}
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                    <path d="M3 1h7l3 3v11H3V1z" stroke="#94a3b8" strokeWidth="1.5" fill="none"/>
+                    <path d="M10 1v3h3" stroke="#94a3b8" strokeWidth="1.5" fill="none"/>
+                  </svg>
+                  {formatCount(fileCount)}
                 </div>
               )}
             </div>

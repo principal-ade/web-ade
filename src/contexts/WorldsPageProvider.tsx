@@ -741,6 +741,7 @@ export function WorldsPageProvider({
           description: repoDetails?.description ?? undefined,
           license: typeof repoDetails?.license === 'string' ? repoDetails.license : undefined,
           ownerAvatar: repoDetails?.owner?.avatar_url ?? undefined,
+          ownerDisplayName: (repoDetails?.owner as { name?: string })?.name ?? undefined,
         },
         lastChecked: undefined,
         lastOpenedAt: undefined,

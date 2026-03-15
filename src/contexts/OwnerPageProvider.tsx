@@ -330,6 +330,7 @@ export function OwnerPageProvider({
         description: repo.description || undefined,
         license: typeof repo.license === 'string' ? repo.license : repo.license?.spdx_id,
         ownerAvatar: repo.owner?.avatar_url,
+        ownerDisplayName: extendedOwnerInfo?.name ?? undefined,
       },
       lastChecked: undefined,
       lastOpenedAt: undefined,
@@ -345,7 +346,7 @@ export function OwnerPageProvider({
       },
       packages: collectionRepoPackages[repo.full_name] || undefined,
     }));
-  }, [first10Repos, initialOwner, collectionRepoPackages]);
+  }, [first10Repos, initialOwner, collectionRepoPackages, extendedOwnerInfo]);
 
   // ===== EXPLICIT SLICES (migrated from Map) =====
 
