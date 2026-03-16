@@ -143,15 +143,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       ? languageColors[repoData.language] || DEFAULT_COLOR
       : DEFAULT_COLOR;
 
-    // Build File City URL - use forwarded host header for proper URL in Lambda/Amplify
-    const forwardedHost = request.headers.get('x-forwarded-host');
-    const host = request.headers.get('host');
-    const protocol = request.headers.get('x-forwarded-proto') || 'https';
+    // Build File City URL - use APP_URL env var or forwarded host header for Lambda/Amplify
     const baseUrl =
+      process.env.APP_URL ||
       process.env.NEXT_PUBLIC_BASE_URL ||
-      (forwardedHost ? `${protocol}://${forwardedHost}` : null) ||
-      (host ? `${protocol}://${host}` : null) ||
-      `${request.nextUrl.protocol}//${request.nextUrl.host}`;
+      `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('x-forwarded-host') || request.headers.get('host') || request.nextUrl.host}`;
     const fileCityUrl = `${baseUrl}/api/file-city/${owner}/${repo}?width=400&height=300&nocache=1`;
 
     const duration = Date.now() - startTime;
