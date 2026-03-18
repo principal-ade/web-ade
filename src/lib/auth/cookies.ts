@@ -91,19 +91,27 @@ export async function setAuthCookies(tokens: TokenData): Promise<void> {
 }
 
 /**
- * Gets GitHub token from HTTP-only cookie, with fallback to GITHUB_TOKEN env var
- * @returns GitHub token or null
+ * Gets GitHub token from HTTP-only cookie (user's authenticated token only)
+ * @returns GitHub token or null if user is not authenticated
  */
 export async function getGitHubToken(): Promise<string | null> {
   const cookieStore = await cookies();
-  const cookieToken = cookieStore.get('github_token')?.value;
+  return cookieStore.get('github_token')?.value ?? null;
+}
 
-  // Fallback to environment variable for local development
-  if (!cookieToken && process.env.GITHUB_TOKEN) {
-    return process.env.GITHUB_TOKEN;
+/**
+ * Gets GitHub token for API calls, with fallback to GITHUB_TOKEN env var
+ * Use this for GitHub API calls that don't require user authentication.
+ * WARNING: Do NOT use this for determining user identity - use getGitHubToken() instead.
+ * @returns GitHub token (user's or fallback) or null
+ */
+export async function getGitHubApiToken(): Promise<string | null> {
+  const userToken = await getGitHubToken();
+  if (userToken) {
+    return userToken;
   }
-
-  return cookieToken ?? null;
+  // Fallback to environment variable for unauthenticated API access
+  return process.env.GITHUB_TOKEN ?? null;
 }
 
 /**
