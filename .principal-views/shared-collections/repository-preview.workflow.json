@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/shared-collections/shared-collections.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "shared.repository",
   "name": "Repository Preview",
   "description": "Click a repository on the map to preview in File City",

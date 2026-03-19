@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/owner/owner.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "owner.page.init",
   "name": "Page Initialization",
   "description": "Owner page loads and initiates repository fetching",

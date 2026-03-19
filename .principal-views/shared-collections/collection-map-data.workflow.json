@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/shared-collections/shared-collections.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "shared.panel.collection-map",
   "name": "Collection Map Data",
   "description": "Data hydration flows that feed the Collection Map Panel",

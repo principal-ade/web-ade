@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/repository/repository.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "repo.panel.storyboard.render",
   "name": "Stories Layout",
   "description": "Stories layout shows workflow storyboards and scenarios",

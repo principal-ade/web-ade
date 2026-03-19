@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/worlds/worlds.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "worlds.panel.overworld-map",
   "name": "Overworld Map Data",
   "description": "Data hydration flows that feed the Overworld Map Panel",

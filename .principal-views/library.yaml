@@ -23,5 +23,13 @@ resources:
       - "auth-me"
       - "next.js"
 
+scopes:
+  auth-me:
+    color: "#10B981"
+    description: "Authentication and user session management"
+  next.js:
+    color: "#000000"
+    description: "Next.js framework instrumentation"
+
 nodeComponents: {}
 edgeComponents: {}

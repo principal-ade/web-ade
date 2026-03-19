@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/worlds/worlds.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "worlds.collection.switch",
   "name": "Collection Switch",
   "description": "Switch between collections in the Worlds page",

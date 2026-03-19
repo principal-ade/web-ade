@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/package-repository-lookup/package-repository-lookup.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "api.packages.repository-lookup.batch",
   "name": "Batch Package Repository Lookup",
   "description": "Look up repository URLs for multiple packages in batch",

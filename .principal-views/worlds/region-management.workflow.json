@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/worlds/worlds.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "worlds.region",
   "name": "Region Management",
   "description": "Create and manage custom regions on the overworld map",

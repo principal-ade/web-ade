@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/repository/repository.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "repo.panel.traces.render",
   "name": "Telemetry Layout",
   "description": "Telemetry layout shows OpenTelemetry traces and spans",

@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/owner/owner.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "owner.view-mode.switch",
   "name": "View Mode Switching",
   "description": "User switches between Default and World layout modes",

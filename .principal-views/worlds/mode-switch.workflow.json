@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/worlds/worlds.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "worlds.mode",
   "name": "View Mode Switch",
   "description": "Switch between Manage and Explore modes on the Worlds page",

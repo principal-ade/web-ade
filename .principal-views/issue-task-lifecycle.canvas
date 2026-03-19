@@ -74,7 +74,11 @@
       "height": 50,
       "color": "#f59e0b",
       "label": "issue:selected",
-      "shape": "rectangle"
+      "shape": "rectangle",
+      "event": {
+        "name": "issue.selected",
+        "attributes": {}
+      }
     },
     {
       "id": "panel-context",
@@ -169,7 +173,11 @@
       "height": 50,
       "color": "#f59e0b",
       "label": "issue:push-to-backlog",
-      "shape": "rectangle"
+      "shape": "rectangle",
+      "event": {
+        "name": "issue.push-to-backlog",
+        "attributes": {}
+      }
     },
     {
       "id": "build-task-markdown",
@@ -222,7 +230,11 @@
       "height": 50,
       "color": "#f59e0b",
       "label": "issue:task-created",
-      "shape": "rectangle"
+      "shape": "rectangle",
+      "event": {
+        "name": "task.created",
+        "attributes": {}
+      }
     },
     {
       "id": "kanban-panel",

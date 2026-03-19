@@ -18,8 +18,7 @@
   "nodes": [
     {
       "id": "single-started",
-      "type": "text",
-      "text": "# Lookup Started\n\nLookup package repository",
+      "type": "otel-event",
       "x": -500,
       "y": 50,
       "width": 200,
@@ -27,31 +26,39 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "package.lookup.single.started",
-          "attributes": {
-            "packageName": { "type": "string", "description": "Package name", "required": true },
-            "system": { "type": "string", "description": "Package system (npm, pypi, etc)", "required": true }
-          }
-        },
         "references": [
           "src/app/api/packages/repository-lookup/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/packages/repository-lookup/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "packageName": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "system": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Lookup Started",
+      "event": {
+        "name": "package.lookup.single.started",
+        "attributes": {
+          "packageName": {
+            "type": "string",
+            "description": "Package name",
             "required": true
           },
           "system": {
             "type": "string",
+            "description": "Package system (npm, pypi, etc)",
             "required": true
           }
         }
@@ -59,8 +66,7 @@
     },
     {
       "id": "single-npm-registry",
-      "type": "text",
-      "text": "# NPM Registry Fetch\n\nFetch from npm registry",
+      "type": "otel-event",
       "x": -500,
       "y": 180,
       "width": 200,
@@ -68,26 +74,28 @@
       "color": "#6d28d9",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "package.lookup.npm-registry",
-          "attributes": {
-            "packageName": { "type": "string", "description": "Package name", "required": true }
-          }
-        },
         "references": [
           "src/app/api/packages/repository-lookup/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/app/api/packages/repository-lookup/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#8b5cf6",
         "stroke": "#6d28d9",
         "dataSchema": {
           "packageName": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "NPM Registry Fetch",
+      "event": {
+        "name": "package.lookup.npm-registry",
+        "attributes": {
+          "packageName": {
+            "type": "string",
+            "description": "Package name",
             "required": true
           }
         }
@@ -95,8 +103,7 @@
     },
     {
       "id": "single-npm-registry-hit",
-      "type": "text",
-      "text": "# NPM Registry Hit\n\nRepository found in npm registry",
+      "type": "otel-event",
       "x": -600,
       "y": 300,
       "width": 200,
@@ -104,31 +111,39 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "package.lookup.npm-registry.hit",
-          "attributes": {
-            "packageName": { "type": "string", "description": "Package name", "required": true },
-            "repository": { "type": "string", "description": "Repository URL", "required": true }
-          }
-        },
         "references": [
           "src/app/api/packages/repository-lookup/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/app/api/packages/repository-lookup/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "packageName": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "repository": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "NPM Registry Hit",
+      "event": {
+        "name": "package.lookup.npm-registry.hit",
+        "attributes": {
+          "packageName": {
+            "type": "string",
+            "description": "Package name",
             "required": true
           },
           "repository": {
             "type": "string",
+            "description": "Repository URL",
             "required": true
           }
         }
@@ -136,8 +151,7 @@
     },
     {
       "id": "single-npm-registry-miss",
-      "type": "text",
-      "text": "# NPM Registry Miss\n\nNo repository in npm, fallback to deps.dev",
+      "type": "otel-event",
       "x": -400,
       "y": 300,
       "width": 200,
@@ -145,26 +159,28 @@
       "color": "#d97706",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "package.lookup.npm-registry.miss",
-          "attributes": {
-            "packageName": { "type": "string", "description": "Package name", "required": true }
-          }
-        },
         "references": [
           "src/app/api/packages/repository-lookup/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/app/api/packages/repository-lookup/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#f59e0b",
         "stroke": "#d97706",
         "dataSchema": {
           "packageName": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "NPM Registry Miss",
+      "event": {
+        "name": "package.lookup.npm-registry.miss",
+        "attributes": {
+          "packageName": {
+            "type": "string",
+            "description": "Package name",
             "required": true
           }
         }
@@ -172,8 +188,7 @@
     },
     {
       "id": "single-depsdev",
-      "type": "text",
-      "text": "# Deps.dev API Fetch\n\nFetch from deps.dev API",
+      "type": "otel-event",
       "x": -230,
       "y": 180,
       "width": 200,
@@ -181,32 +196,40 @@
       "color": "#6d28d9",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "package.lookup.depsdev",
-          "attributes": {
-            "packageName": { "type": "string", "description": "Package name", "required": true },
-            "system": { "type": "string", "description": "Package system", "required": true }
-          }
-        },
         "references": [
           "src/app/api/packages/repository-lookup/route.ts",
           "src/app/api/packages/repository-lookup/batch/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/app/api/packages/repository-lookup/route.ts", "src/app/api/packages/repository-lookup/batch/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#8b5cf6",
         "stroke": "#6d28d9",
         "dataSchema": {
           "packageName": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "system": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Deps.dev API Fetch",
+      "event": {
+        "name": "package.lookup.depsdev",
+        "attributes": {
+          "packageName": {
+            "type": "string",
+            "description": "Package name",
             "required": true
           },
           "system": {
             "type": "string",
+            "description": "Package system",
             "required": true
           }
         }
@@ -214,8 +237,7 @@
     },
     {
       "id": "single-depsdev-direct",
-      "type": "text",
-      "text": "# Deps.dev Direct\n\nDirect fetch from deps.dev (non-npm)",
+      "type": "otel-event",
       "x": -230,
       "y": 300,
       "width": 200,
@@ -223,31 +245,39 @@
       "color": "#6d28d9",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "package.lookup.depsdev.direct",
-          "attributes": {
-            "packageName": { "type": "string", "description": "Package name", "required": true },
-            "system": { "type": "string", "description": "Package system", "required": true }
-          }
-        },
         "references": [
           "src/app/api/packages/repository-lookup/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/app/api/packages/repository-lookup/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#8b5cf6",
         "stroke": "#6d28d9",
         "dataSchema": {
           "packageName": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "system": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Deps.dev Direct",
+      "event": {
+        "name": "package.lookup.depsdev.direct",
+        "attributes": {
+          "packageName": {
+            "type": "string",
+            "description": "Package name",
             "required": true
           },
           "system": {
             "type": "string",
+            "description": "Package system",
             "required": true
           }
         }
@@ -255,8 +285,7 @@
     },
     {
       "id": "single-success",
-      "type": "text",
-      "text": "# Repository Found\n\nRepository found",
+      "type": "otel-event",
       "x": -365,
       "y": 330,
       "width": 200,
@@ -264,41 +293,61 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "package.lookup.single.success",
-          "attributes": {
-            "packageName": { "type": "string", "description": "Package name", "required": true },
-            "repository": { "type": "string", "description": "Repository URL", "required": true },
-            "source": { "type": "string", "description": "Data source", "required": true },
-            "version": { "type": "string", "description": "Package version", "required": false }
-          }
-        },
         "references": [
           "src/app/api/packages/repository-lookup/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/packages/repository-lookup/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "packageName": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "repository": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "source": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "version": {
+            "type": "string",
+            "required": false,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Repository Found",
+      "event": {
+        "name": "package.lookup.single.success",
+        "attributes": {
+          "packageName": {
+            "type": "string",
+            "description": "Package name",
             "required": true
           },
           "repository": {
             "type": "string",
+            "description": "Repository URL",
             "required": true
           },
           "source": {
             "type": "string",
+            "description": "Data source",
             "required": true
           },
           "version": {
             "type": "string",
+            "description": "Package version",
             "required": false
           }
         }
@@ -306,8 +355,7 @@
     },
     {
       "id": "single-not-found",
-      "type": "text",
-      "text": "# Repository Not Found\n\nRepository not found",
+      "type": "otel-event",
       "x": -135,
       "y": 330,
       "width": 200,
@@ -315,31 +363,39 @@
       "color": "#d97706",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "package.lookup.single.not-found",
-          "attributes": {
-            "packageName": { "type": "string", "description": "Package name", "required": true },
-            "system": { "type": "string", "description": "Package system", "required": true }
-          }
-        },
         "references": [
           "src/app/api/packages/repository-lookup/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/packages/repository-lookup/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#f59e0b",
         "stroke": "#d97706",
         "dataSchema": {
           "packageName": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "system": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Repository Not Found",
+      "event": {
+        "name": "package.lookup.single.not-found",
+        "attributes": {
+          "packageName": {
+            "type": "string",
+            "description": "Package name",
             "required": true
           },
           "system": {
             "type": "string",
+            "description": "Package system",
             "required": true
           }
         }
@@ -347,8 +403,7 @@
     },
     {
       "id": "single-validation-error",
-      "type": "text",
-      "text": "# Validation Error\n\nInvalid parameters",
+      "type": "otel-event",
       "x": -690,
       "y": 50,
       "width": 180,
@@ -356,26 +411,28 @@
       "color": "#dc2626",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "package.lookup.single.validation-error",
-          "attributes": {
-            "error": { "type": "string", "description": "Validation error", "required": true }
-          }
-        },
         "references": [
           "src/app/api/packages/repository-lookup/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/app/api/packages/repository-lookup/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#ef4444",
         "stroke": "#dc2626",
         "dataSchema": {
           "error": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Validation Error",
+      "event": {
+        "name": "package.lookup.single.validation-error",
+        "attributes": {
+          "error": {
+            "type": "string",
+            "description": "Validation error",
             "required": true
           }
         }
@@ -383,8 +440,7 @@
     },
     {
       "id": "single-error",
-      "type": "text",
-      "text": "# Lookup Failed\n\nLookup failed",
+      "type": "otel-event",
       "x": -690,
       "y": 330,
       "width": 180,
@@ -392,26 +448,28 @@
       "color": "#dc2626",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "package.lookup.single.error",
-          "attributes": {
-            "error.message": { "type": "string", "description": "Error message", "required": true }
-          }
-        },
         "references": [
           "src/app/api/packages/repository-lookup/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/app/api/packages/repository-lookup/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#ef4444",
         "stroke": "#dc2626",
         "dataSchema": {
           "error.message": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Lookup Failed",
+      "event": {
+        "name": "package.lookup.single.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
             "required": true
           }
         }
@@ -419,8 +477,7 @@
     },
     {
       "id": "batch-started",
-      "type": "text",
-      "text": "# Batch Lookup Started\n\nBatch lookup packages",
+      "type": "otel-event",
       "x": 150,
       "y": 50,
       "width": 200,
@@ -428,31 +485,39 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "package.lookup.batch.started",
-          "attributes": {
-            "packageCount": { "type": "number", "description": "Number of packages", "required": true },
-            "concurrency": { "type": "number", "description": "Concurrency level", "required": false }
-          }
-        },
         "references": [
           "src/app/api/packages/repository-lookup/batch/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/packages/repository-lookup/batch/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "packageCount": {
             "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          },
+          "concurrency": {
+            "type": "number",
+            "required": false,
+            "description": "Field value",
+            "placeholder": "0"
+          }
+        }
+      },
+      "label": "Batch Lookup Started",
+      "event": {
+        "name": "package.lookup.batch.started",
+        "attributes": {
+          "packageCount": {
+            "type": "number",
+            "description": "Number of packages",
             "required": true
           },
           "concurrency": {
             "type": "number",
+            "description": "Concurrency level",
             "required": false
           }
         }
@@ -460,8 +525,7 @@
     },
     {
       "id": "batch-process",
-      "type": "text",
-      "text": "# Processing Batch\n\nProcessing batch",
+      "type": "otel-event",
       "x": 150,
       "y": 180,
       "width": 200,
@@ -469,26 +533,28 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "package.lookup.batch.process",
-          "attributes": {
-            "batchSize": { "type": "number", "description": "Batch size", "required": true }
-          }
-        },
         "references": [
           "src/app/api/packages/repository-lookup/batch/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/app/api/packages/repository-lookup/batch/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8",
         "dataSchema": {
           "batchSize": {
             "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          }
+        }
+      },
+      "label": "Processing Batch",
+      "event": {
+        "name": "package.lookup.batch.process",
+        "attributes": {
+          "batchSize": {
+            "type": "number",
+            "description": "Batch size",
             "required": true
           }
         }
@@ -496,8 +562,7 @@
     },
     {
       "id": "batch-success",
-      "type": "text",
-      "text": "# Batch Completed\n\nBatch completed",
+      "type": "otel-event",
       "x": 150,
       "y": 330,
       "width": 200,
@@ -505,41 +570,61 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "package.lookup.batch.success",
-          "attributes": {
-            "total": { "type": "number", "description": "Total packages", "required": true },
-            "found": { "type": "number", "description": "Found count", "required": true },
-            "notFound": { "type": "number", "description": "Not found count", "required": true },
-            "errors": { "type": "number", "description": "Error count", "required": true }
-          }
-        },
         "references": [
           "src/app/api/packages/repository-lookup/batch/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/packages/repository-lookup/batch/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "total": {
             "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          },
+          "found": {
+            "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          },
+          "notFound": {
+            "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          },
+          "errors": {
+            "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          }
+        }
+      },
+      "label": "Batch Completed",
+      "event": {
+        "name": "package.lookup.batch.success",
+        "attributes": {
+          "total": {
+            "type": "number",
+            "description": "Total packages",
             "required": true
           },
           "found": {
             "type": "number",
+            "description": "Found count",
             "required": true
           },
           "notFound": {
             "type": "number",
+            "description": "Not found count",
             "required": true
           },
           "errors": {
             "type": "number",
+            "description": "Error count",
             "required": true
           }
         }
@@ -547,8 +632,7 @@
     },
     {
       "id": "batch-validation-error",
-      "type": "text",
-      "text": "# Batch Validation Error\n\nInvalid request",
+      "type": "otel-event",
       "x": 380,
       "y": 50,
       "width": 180,
@@ -556,26 +640,28 @@
       "color": "#dc2626",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "package.lookup.batch.validation-error",
-          "attributes": {
-            "error": { "type": "string", "description": "Validation error", "required": true }
-          }
-        },
         "references": [
           "src/app/api/packages/repository-lookup/batch/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/app/api/packages/repository-lookup/batch/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#ef4444",
         "stroke": "#dc2626",
         "dataSchema": {
           "error": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Batch Validation Error",
+      "event": {
+        "name": "package.lookup.batch.validation-error",
+        "attributes": {
+          "error": {
+            "type": "string",
+            "description": "Validation error",
             "required": true
           }
         }
@@ -583,8 +669,7 @@
     },
     {
       "id": "batch-error",
-      "type": "text",
-      "text": "# Batch Failed\n\nBatch failed",
+      "type": "otel-event",
       "x": 380,
       "y": 330,
       "width": 180,
@@ -592,26 +677,28 @@
       "color": "#dc2626",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "package.lookup.batch.error",
-          "attributes": {
-            "error.message": { "type": "string", "description": "Error message", "required": true }
-          }
-        },
         "references": [
           "src/app/api/packages/repository-lookup/batch/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/app/api/packages/repository-lookup/batch/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#ef4444",
         "stroke": "#dc2626",
         "dataSchema": {
           "error.message": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Batch Failed",
+      "event": {
+        "name": "package.lookup.batch.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
             "required": true
           }
         }

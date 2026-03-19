@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/tts-generation/tts-generation.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "api.tts.generate",
   "name": "TTS Generation",
   "description": "Text-to-speech audio generation with caching and error handling",

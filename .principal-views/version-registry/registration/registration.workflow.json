@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/version-registry/version-registry.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "api.version-registry.register",
   "name": "Version Registration",
   "description": "Register a new version-to-commit mapping for deployment tracking",

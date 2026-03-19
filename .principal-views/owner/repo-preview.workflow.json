@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/owner/owner.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "owner.repo.preview",
   "name": "Repository Preview",
   "description": "User clicks a repository to preview its structure",

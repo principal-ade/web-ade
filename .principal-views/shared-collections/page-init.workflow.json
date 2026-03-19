@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/shared-collections/shared-collections.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "shared.page",
   "name": "Shared Collections Page Init",
   "description": "Initialize the shared collections page for viewing another user's collections",

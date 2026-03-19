@@ -24,8 +24,7 @@
   "nodes": [
     {
       "id": "page-init-started",
-      "type": "text",
-      "text": "# Page Init Started\n\nWorlds page begins loading",
+      "type": "otel-event",
       "x": -400,
       "y": 0,
       "width": 200,
@@ -33,33 +32,28 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.page.init.started",
-          "attributes": {
-            "urlCollectionId": {
-              "type": "string",
-              "description": "Collection ID from URL query param (if any)",
-              "required": false
-            }
-          }
-        },
         "references": [
           "src/app/worlds/page.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/worlds/page.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a"
+      },
+      "label": "Page Init Started",
+      "event": {
+        "name": "worlds.page.init.started",
+        "attributes": {
+          "urlCollectionId": {
+            "type": "string",
+            "description": "Collection ID from URL query param (if any)",
+            "required": false
+          }
+        }
       }
     },
     {
       "id": "page-auth-check",
-      "type": "text",
-      "text": "# Auth Check\n\nVerify user authentication",
+      "type": "otel-event",
       "x": -400,
       "y": 150,
       "width": 200,
@@ -67,33 +61,28 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.page.auth.check",
-          "attributes": {
-            "isAuthenticated": {
-              "type": "boolean",
-              "description": "Whether user is authenticated",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/worlds/page.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/app/worlds/page.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8"
+      },
+      "label": "Auth Check",
+      "event": {
+        "name": "worlds.page.auth.check",
+        "attributes": {
+          "isAuthenticated": {
+            "type": "boolean",
+            "description": "Whether user is authenticated",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "page-unauthenticated",
-      "type": "text",
-      "text": "# Unauthenticated\n\nShow login prompt",
+      "type": "otel-event",
       "x": -100,
       "y": 150,
       "width": 200,
@@ -101,33 +90,28 @@
       "color": "#d97706",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.page.unauthenticated",
-          "attributes": {
-            "redirectUrl": {
-              "type": "string",
-              "description": "URL user will be redirected to after login",
-              "required": false
-            }
-          }
-        },
         "references": [
           "src/app/worlds/page.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/worlds/page.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#f59e0b",
         "stroke": "#d97706"
+      },
+      "label": "Unauthenticated",
+      "event": {
+        "name": "worlds.page.unauthenticated",
+        "attributes": {
+          "redirectUrl": {
+            "type": "string",
+            "description": "URL user will be redirected to after login",
+            "required": false
+          }
+        }
       }
     },
     {
       "id": "page-collections-load",
-      "type": "text",
-      "text": "# Load Collections\n\nFetch user's collections",
+      "type": "otel-event",
       "x": -400,
       "y": 300,
       "width": 200,
@@ -135,34 +119,29 @@
       "color": "#6d28d9",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.page.collections.load",
-          "attributes": {
-            "username": {
-              "type": "string",
-              "description": "Username loading collections",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/worlds/page.tsx",
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/app/worlds/page.tsx", "src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#8b5cf6",
         "stroke": "#6d28d9"
+      },
+      "label": "Load Collections",
+      "event": {
+        "name": "worlds.page.collections.load",
+        "attributes": {
+          "username": {
+            "type": "string",
+            "description": "Username loading collections",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "page-collection-select",
-      "type": "text",
-      "text": "# Select Collection\n\nAuto-select first or from URL",
+      "type": "otel-event",
       "x": -400,
       "y": 450,
       "width": 200,
@@ -170,38 +149,33 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.page.collection.select",
-          "attributes": {
-            "collectionId": {
-              "type": "string",
-              "description": "Selected collection ID",
-              "required": true
-            },
-            "source": {
-              "type": "string",
-              "description": "Selection source: 'url' or 'auto'",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/worlds/page.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/app/worlds/page.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8"
+      },
+      "label": "Select Collection",
+      "event": {
+        "name": "worlds.page.collection.select",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Selected collection ID",
+            "required": true
+          },
+          "source": {
+            "type": "string",
+            "description": "Selection source: 'url' or 'auto'",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "page-no-collections",
-      "type": "text",
-      "text": "# No Collections\n\nShow create prompt",
+      "type": "otel-event",
       "x": -100,
       "y": 450,
       "width": 200,
@@ -209,33 +183,28 @@
       "color": "#4b5563",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.page.no-collections",
-          "attributes": {
-            "username": {
-              "type": "string",
-              "description": "Username with no collections",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/worlds/page.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/worlds/page.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#6b7280",
         "stroke": "#4b5563"
+      },
+      "label": "No Collections",
+      "event": {
+        "name": "worlds.page.no-collections",
+        "attributes": {
+          "username": {
+            "type": "string",
+            "description": "Username with no collections",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "page-init-success",
-      "type": "text",
-      "text": "# Page Ready\n\nWorlds page initialized",
+      "type": "otel-event",
       "x": -400,
       "y": 600,
       "width": 200,
@@ -243,44 +212,39 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.page.init.success",
-          "attributes": {
-            "collectionId": {
-              "type": "string",
-              "description": "Active collection ID",
-              "required": true
-            },
-            "repositoryCount": {
-              "type": "number",
-              "description": "Number of repositories in collection",
-              "required": true
-            },
-            "viewMode": {
-              "type": "string",
-              "description": "Initial view mode: 'manage' or 'explore'",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/worlds/page.tsx",
           "src/app/worlds/CollectionsPageContent.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/worlds/page.tsx", "src/app/worlds/CollectionsPageContent.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a"
+      },
+      "label": "Page Ready",
+      "event": {
+        "name": "worlds.page.init.success",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Active collection ID",
+            "required": true
+          },
+          "repositoryCount": {
+            "type": "number",
+            "description": "Number of repositories in collection",
+            "required": true
+          },
+          "viewMode": {
+            "type": "string",
+            "description": "Initial view mode: 'manage' or 'explore'",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "page-init-error",
-      "type": "text",
-      "text": "# Init Error\n\nPage failed to load",
+      "type": "otel-event",
       "x": -100,
       "y": 300,
       "width": 200,
@@ -288,33 +252,28 @@
       "color": "#dc2626",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.page.init.error",
-          "attributes": {
-            "error.message": {
-              "type": "string",
-              "description": "Error message",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/worlds/page.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/app/worlds/page.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#ef4444",
         "stroke": "#dc2626"
+      },
+      "label": "Init Error",
+      "event": {
+        "name": "worlds.page.init.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "hydrate-github-repos-start",
-      "type": "text",
-      "text": "# Fetch GitHub Repos\n\nLoad user's owned/starred/org repos",
+      "type": "otel-event",
       "x": -700,
       "y": 450,
       "width": 220,
@@ -322,33 +281,28 @@
       "color": "#6d28d9",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.hydrate.github-repos.start",
-          "attributes": {
-            "isAuthenticated": {
-              "type": "boolean",
-              "description": "Whether user is authenticated",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/WorldsPageProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/contexts/WorldsPageProvider.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#8b5cf6",
         "stroke": "#6d28d9"
+      },
+      "label": "Fetch GitHub Repos",
+      "event": {
+        "name": "worlds.hydrate.github-repos.start",
+        "attributes": {
+          "isAuthenticated": {
+            "type": "boolean",
+            "description": "Whether user is authenticated",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "hydrate-github-repos-success",
-      "type": "text",
-      "text": "# GitHub Repos Loaded\n\nowned, starred, orgs ready",
+      "type": "otel-event",
       "x": -700,
       "y": 600,
       "width": 220,
@@ -356,43 +310,38 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.hydrate.github-repos.success",
-          "attributes": {
-            "ownedCount": {
-              "type": "number",
-              "description": "Number of owned repos",
-              "required": true
-            },
-            "starredCount": {
-              "type": "number",
-              "description": "Number of starred repos",
-              "required": true
-            },
-            "orgCount": {
-              "type": "number",
-              "description": "Number of organizations",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/WorldsPageProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/contexts/WorldsPageProvider.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a"
+      },
+      "label": "GitHub Repos Loaded",
+      "event": {
+        "name": "worlds.hydrate.github-repos.success",
+        "attributes": {
+          "ownedCount": {
+            "type": "number",
+            "description": "Number of owned repos",
+            "required": true
+          },
+          "starredCount": {
+            "type": "number",
+            "description": "Number of starred repos",
+            "required": true
+          },
+          "orgCount": {
+            "type": "number",
+            "description": "Number of organizations",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "hydrate-repo-details-start",
-      "type": "text",
-      "text": "# Fetch Repo Details\n\nStart loading collection repos",
+      "type": "otel-event",
       "x": -700,
       "y": 750,
       "width": 220,
@@ -400,38 +349,33 @@
       "color": "#6d28d9",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.hydrate.repo-details.start",
-          "attributes": {
-            "collectionId": {
-              "type": "string",
-              "description": "Collection being hydrated",
-              "required": true
-            },
-            "repositoryCount": {
-              "type": "number",
-              "description": "Total repos to load",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/WorldsPageProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/contexts/WorldsPageProvider.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#8b5cf6",
         "stroke": "#6d28d9"
+      },
+      "label": "Fetch Repo Details",
+      "event": {
+        "name": "worlds.hydrate.repo-details.start",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection being hydrated",
+            "required": true
+          },
+          "repositoryCount": {
+            "type": "number",
+            "description": "Total repos to load",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "hydrate-repo-details-item",
-      "type": "text",
-      "text": "# Repo Detail Loaded\n\nSingle repo info received",
+      "type": "otel-event",
       "x": -700,
       "y": 900,
       "width": 220,
@@ -439,43 +383,38 @@
       "color": "#0891b2",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.hydrate.repo-details.item",
-          "attributes": {
-            "repositoryId": {
-              "type": "string",
-              "description": "Repository that loaded",
-              "required": true
-            },
-            "completedCount": {
-              "type": "number",
-              "description": "Number of repos loaded so far",
-              "required": true
-            },
-            "totalCount": {
-              "type": "number",
-              "description": "Total repos to load",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/WorldsPageProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/contexts/WorldsPageProvider.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#06b6d4",
         "stroke": "#0891b2"
+      },
+      "label": "Repo Detail Loaded",
+      "event": {
+        "name": "worlds.hydrate.repo-details.item",
+        "attributes": {
+          "repositoryId": {
+            "type": "string",
+            "description": "Repository that loaded",
+            "required": true
+          },
+          "completedCount": {
+            "type": "number",
+            "description": "Number of repos loaded so far",
+            "required": true
+          },
+          "totalCount": {
+            "type": "number",
+            "description": "Total repos to load",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "hydrate-repo-details-complete",
-      "type": "text",
-      "text": "# All Repo Details Done\n\nAll collection repos loaded",
+      "type": "otel-event",
       "x": -700,
       "y": 1050,
       "width": 220,
@@ -483,43 +422,38 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.hydrate.repo-details.complete",
-          "attributes": {
-            "collectionId": {
-              "type": "string",
-              "description": "Collection that finished loading",
-              "required": true
-            },
-            "loadedCount": {
-              "type": "number",
-              "description": "Number of repos successfully loaded",
-              "required": true
-            },
-            "failedCount": {
-              "type": "number",
-              "description": "Number of repos that failed to load",
-              "required": false
-            }
-          }
-        },
         "references": [
           "src/contexts/WorldsPageProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/contexts/WorldsPageProvider.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a"
+      },
+      "label": "All Repo Details Done",
+      "event": {
+        "name": "worlds.hydrate.repo-details.complete",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection that finished loading",
+            "required": true
+          },
+          "loadedCount": {
+            "type": "number",
+            "description": "Number of repos successfully loaded",
+            "required": true
+          },
+          "failedCount": {
+            "type": "number",
+            "description": "Number of repos that failed to load",
+            "required": false
+          }
+        }
       }
     },
     {
       "id": "hydrate-packages-start",
-      "type": "text",
-      "text": "# Fetch Packages\n\nStart loading repo packages",
+      "type": "otel-event",
       "x": -420,
       "y": 750,
       "width": 220,
@@ -527,38 +461,33 @@
       "color": "#6d28d9",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.hydrate.packages.start",
-          "attributes": {
-            "collectionId": {
-              "type": "string",
-              "description": "Collection being hydrated",
-              "required": true
-            },
-            "repositoryCount": {
-              "type": "number",
-              "description": "Total repos to fetch packages for",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/WorldsPageProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/contexts/WorldsPageProvider.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#8b5cf6",
         "stroke": "#6d28d9"
+      },
+      "label": "Fetch Packages",
+      "event": {
+        "name": "worlds.hydrate.packages.start",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection being hydrated",
+            "required": true
+          },
+          "repositoryCount": {
+            "type": "number",
+            "description": "Total repos to fetch packages for",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "hydrate-packages-item",
-      "type": "text",
-      "text": "# Packages Loaded\n\nSingle repo packages received",
+      "type": "otel-event",
       "x": -420,
       "y": 900,
       "width": 220,
@@ -566,38 +495,33 @@
       "color": "#0891b2",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.hydrate.packages.item",
-          "attributes": {
-            "repositoryId": {
-              "type": "string",
-              "description": "Repository that loaded",
-              "required": true
-            },
-            "packageCount": {
-              "type": "number",
-              "description": "Number of packages in repo",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/WorldsPageProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/contexts/WorldsPageProvider.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#06b6d4",
         "stroke": "#0891b2"
+      },
+      "label": "Packages Loaded",
+      "event": {
+        "name": "worlds.hydrate.packages.item",
+        "attributes": {
+          "repositoryId": {
+            "type": "string",
+            "description": "Repository that loaded",
+            "required": true
+          },
+          "packageCount": {
+            "type": "number",
+            "description": "Number of packages in repo",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "hydrate-packages-complete",
-      "type": "text",
-      "text": "# All Packages Done\n\nAll repo packages loaded",
+      "type": "otel-event",
       "x": -420,
       "y": 1050,
       "width": 220,
@@ -605,38 +529,33 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.hydrate.packages.complete",
-          "attributes": {
-            "collectionId": {
-              "type": "string",
-              "description": "Collection that finished loading",
-              "required": true
-            },
-            "totalPackages": {
-              "type": "number",
-              "description": "Total packages across all repos",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/WorldsPageProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/contexts/WorldsPageProvider.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a"
+      },
+      "label": "All Packages Done",
+      "event": {
+        "name": "worlds.hydrate.packages.complete",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection that finished loading",
+            "required": true
+          },
+          "totalPackages": {
+            "type": "number",
+            "description": "Total packages across all repos",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "repo-select-started",
-      "type": "text",
-      "text": "# Repo Selected\n\nUser clicks repository",
+      "type": "otel-event",
       "x": 200,
       "y": 0,
       "width": 200,
@@ -644,39 +563,34 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.repository.select.started",
-          "attributes": {
-            "repositoryId": {
-              "type": "string",
-              "description": "Repository ID (owner/repo)",
-              "required": true
-            },
-            "collectionId": {
-              "type": "string",
-              "description": "Current collection ID",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/worlds/page.tsx",
           "src/contexts/WorldsPageProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/worlds/page.tsx", "src/contexts/WorldsPageProvider.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a"
+      },
+      "label": "Repo Selected",
+      "event": {
+        "name": "worlds.repository.select.started",
+        "attributes": {
+          "repositoryId": {
+            "type": "string",
+            "description": "Repository ID (owner/repo)",
+            "required": true
+          },
+          "collectionId": {
+            "type": "string",
+            "description": "Current collection ID",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "repo-deselect",
-      "type": "text",
-      "text": "# Repo Deselected\n\nUser clears selection",
+      "type": "otel-event",
       "x": 450,
       "y": 0,
       "width": 200,
@@ -684,33 +598,28 @@
       "color": "#4b5563",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.repository.deselect",
-          "attributes": {
-            "previousRepositoryId": {
-              "type": "string",
-              "description": "Previously selected repository",
-              "required": false
-            }
-          }
-        },
         "references": [
           "src/contexts/WorldsPageProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/contexts/WorldsPageProvider.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#6b7280",
         "stroke": "#4b5563"
+      },
+      "label": "Repo Deselected",
+      "event": {
+        "name": "worlds.repository.deselect",
+        "attributes": {
+          "previousRepositoryId": {
+            "type": "string",
+            "description": "Previously selected repository",
+            "required": false
+          }
+        }
       }
     },
     {
       "id": "repo-file-tree-load",
-      "type": "text",
-      "text": "# Load File Tree\n\nFetch repository structure",
+      "type": "otel-event",
       "x": 200,
       "y": 150,
       "width": 200,
@@ -718,33 +627,28 @@
       "color": "#6d28d9",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.repository.file-tree.load",
-          "attributes": {
-            "repositoryId": {
-              "type": "string",
-              "description": "Repository being loaded",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/WorldsPageProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/contexts/WorldsPageProvider.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#8b5cf6",
         "stroke": "#6d28d9"
+      },
+      "label": "Load File Tree",
+      "event": {
+        "name": "worlds.repository.file-tree.load",
+        "attributes": {
+          "repositoryId": {
+            "type": "string",
+            "description": "Repository being loaded",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "repo-select-success",
-      "type": "text",
-      "text": "# File City Ready\n\nRepository visualization loaded",
+      "type": "otel-event",
       "x": 200,
       "y": 300,
       "width": 200,
@@ -752,38 +656,33 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.repository.select.success",
-          "attributes": {
-            "repositoryId": {
-              "type": "string",
-              "description": "Selected repository",
-              "required": true
-            },
-            "fileCount": {
-              "type": "number",
-              "description": "Number of files in tree",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/WorldsPageProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/contexts/WorldsPageProvider.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a"
+      },
+      "label": "File City Ready",
+      "event": {
+        "name": "worlds.repository.select.success",
+        "attributes": {
+          "repositoryId": {
+            "type": "string",
+            "description": "Selected repository",
+            "required": true
+          },
+          "fileCount": {
+            "type": "number",
+            "description": "Number of files in tree",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "repo-select-error",
-      "type": "text",
-      "text": "# Load Error\n\nFile tree failed to load",
+      "type": "otel-event",
       "x": 450,
       "y": 150,
       "width": 200,
@@ -791,38 +690,33 @@
       "color": "#dc2626",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.repository.select.error",
-          "attributes": {
-            "repositoryId": {
-              "type": "string",
-              "description": "Repository that failed",
-              "required": true
-            },
-            "error.message": {
-              "type": "string",
-              "description": "Error message",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/WorldsPageProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/contexts/WorldsPageProvider.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#ef4444",
         "stroke": "#dc2626"
+      },
+      "label": "Load Error",
+      "event": {
+        "name": "worlds.repository.select.error",
+        "attributes": {
+          "repositoryId": {
+            "type": "string",
+            "description": "Repository that failed",
+            "required": true
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "collection-switch-started",
-      "type": "text",
-      "text": "# Switch Collection\n\nUser selects collection",
+      "type": "otel-event",
       "x": 200,
       "y": 450,
       "width": 200,
@@ -830,39 +724,34 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.collection.switch.started",
-          "attributes": {
-            "fromCollectionId": {
-              "type": "string",
-              "description": "Previous collection ID",
-              "required": false
-            },
-            "toCollectionId": {
-              "type": "string",
-              "description": "New collection ID",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/worlds/page.tsx",
           "src/app/worlds/CollectionsPageContent.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/worlds/page.tsx", "src/app/worlds/CollectionsPageContent.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a"
+      },
+      "label": "Switch Collection",
+      "event": {
+        "name": "worlds.collection.switch.started",
+        "attributes": {
+          "fromCollectionId": {
+            "type": "string",
+            "description": "Previous collection ID",
+            "required": false
+          },
+          "toCollectionId": {
+            "type": "string",
+            "description": "New collection ID",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "collection-repos-load",
-      "type": "text",
-      "text": "# Load Repos\n\nFetch collection repositories",
+      "type": "otel-event",
       "x": 200,
       "y": 600,
       "width": 200,
@@ -870,38 +759,33 @@
       "color": "#6d28d9",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.collection.repos.load",
-          "attributes": {
-            "collectionId": {
-              "type": "string",
-              "description": "Collection being loaded",
-              "required": true
-            },
-            "repositoryCount": {
-              "type": "number",
-              "description": "Number of repositories",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/WorldsPageProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/contexts/WorldsPageProvider.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#8b5cf6",
         "stroke": "#6d28d9"
+      },
+      "label": "Load Repos",
+      "event": {
+        "name": "worlds.collection.repos.load",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection being loaded",
+            "required": true
+          },
+          "repositoryCount": {
+            "type": "number",
+            "description": "Number of repositories",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "collection-switch-success",
-      "type": "text",
-      "text": "# Collection Ready\n\nCollection loaded",
+      "type": "otel-event",
       "x": 200,
       "y": 750,
       "width": 200,
@@ -909,43 +793,38 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.collection.switch.success",
-          "attributes": {
-            "collectionId": {
-              "type": "string",
-              "description": "Active collection ID",
-              "required": true
-            },
-            "collectionName": {
-              "type": "string",
-              "description": "Collection name",
-              "required": true
-            },
-            "repositoryCount": {
-              "type": "number",
-              "description": "Number of repositories",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/worlds/page.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/worlds/page.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a"
+      },
+      "label": "Collection Ready",
+      "event": {
+        "name": "worlds.collection.switch.success",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Active collection ID",
+            "required": true
+          },
+          "collectionName": {
+            "type": "string",
+            "description": "Collection name",
+            "required": true
+          },
+          "repositoryCount": {
+            "type": "number",
+            "description": "Number of repositories",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "mode-switch",
-      "type": "text",
-      "text": "# Mode Switch\n\nToggle Manage/Explore",
+      "type": "otel-event",
       "x": 500,
       "y": 450,
       "width": 200,
@@ -953,38 +832,33 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.mode.switch",
-          "attributes": {
-            "fromMode": {
-              "type": "string",
-              "description": "Previous mode",
-              "required": true
-            },
-            "toMode": {
-              "type": "string",
-              "description": "New mode: 'manage' or 'explore'",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/worlds/CollectionsPageContent.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/app/worlds/CollectionsPageContent.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8"
+      },
+      "label": "Mode Switch",
+      "event": {
+        "name": "worlds.mode.switch",
+        "attributes": {
+          "fromMode": {
+            "type": "string",
+            "description": "Previous mode",
+            "required": true
+          },
+          "toMode": {
+            "type": "string",
+            "description": "New mode: 'manage' or 'explore'",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "region-create",
-      "type": "text",
-      "text": "# Create Region\n\nUser creates map region",
+      "type": "otel-event",
       "x": 500,
       "y": 600,
       "width": 200,
@@ -992,43 +866,38 @@
       "color": "#0891b2",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.region.create",
-          "attributes": {
-            "collectionId": {
-              "type": "string",
-              "description": "Collection ID",
-              "required": true
-            },
-            "regionName": {
-              "type": "string",
-              "description": "Region name",
-              "required": true
-            },
-            "regionId": {
-              "type": "string",
-              "description": "Created region ID",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/WorldsPageProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/contexts/WorldsPageProvider.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#06b6d4",
         "stroke": "#0891b2"
+      },
+      "label": "Create Region",
+      "event": {
+        "name": "worlds.region.create",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection ID",
+            "required": true
+          },
+          "regionName": {
+            "type": "string",
+            "description": "Region name",
+            "required": true
+          },
+          "regionId": {
+            "type": "string",
+            "description": "Created region ID",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "region-assign-repo",
-      "type": "text",
-      "text": "# Assign to Region\n\nAssign repo to region",
+      "type": "otel-event",
       "x": 500,
       "y": 750,
       "width": 200,
@@ -1036,43 +905,38 @@
       "color": "#0891b2",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.region.assign",
-          "attributes": {
-            "collectionId": {
-              "type": "string",
-              "description": "Collection ID",
-              "required": true
-            },
-            "repositoryId": {
-              "type": "string",
-              "description": "Repository being assigned",
-              "required": true
-            },
-            "regionId": {
-              "type": "string",
-              "description": "Target region ID",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/WorldsPageProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/contexts/WorldsPageProvider.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#06b6d4",
         "stroke": "#0891b2"
+      },
+      "label": "Assign to Region",
+      "event": {
+        "name": "worlds.region.assign",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection ID",
+            "required": true
+          },
+          "repositoryId": {
+            "type": "string",
+            "description": "Repository being assigned",
+            "required": true
+          },
+          "regionId": {
+            "type": "string",
+            "description": "Target region ID",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "state-repo-details",
-      "type": "text",
-      "text": "# collectionRepoDetails\n\nState: repo metadata for sprites",
+      "type": "otel-event",
       "x": -560,
       "y": 1200,
       "width": 220,
@@ -1080,33 +944,28 @@
       "color": "#ca8a04",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.state.repo-details.updated",
-          "attributes": {
-            "repositoryCount": {
-              "type": "number",
-              "description": "Number of repos in state",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/WorldsPageProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "state",
-          "files": ["src/contexts/WorldsPageProvider.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#eab308",
         "stroke": "#ca8a04"
+      },
+      "label": "collectionRepoDetails",
+      "event": {
+        "name": "worlds.state.repo-details.updated",
+        "attributes": {
+          "repositoryCount": {
+            "type": "number",
+            "description": "Number of repos in state",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "state-packages",
-      "type": "text",
-      "text": "# packagesData\n\nState: package counts for sizing",
+      "type": "otel-event",
       "x": -280,
       "y": 1200,
       "width": 220,
@@ -1114,38 +973,33 @@
       "color": "#ca8a04",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.state.packages.updated",
-          "attributes": {
-            "repositoryCount": {
-              "type": "number",
-              "description": "Number of repos with packages",
-              "required": true
-            },
-            "totalPackages": {
-              "type": "number",
-              "description": "Total package count",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/WorldsPageProvider.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "state",
-          "files": ["src/contexts/WorldsPageProvider.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#eab308",
         "stroke": "#ca8a04"
+      },
+      "label": "packagesData",
+      "event": {
+        "name": "worlds.state.packages.updated",
+        "attributes": {
+          "repositoryCount": {
+            "type": "number",
+            "description": "Number of repos with packages",
+            "required": true
+          },
+          "totalPackages": {
+            "type": "number",
+            "description": "Total package count",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "panel-overworld-map",
-      "type": "text",
-      "text": "# Overworld Map Panel\n\nRenders collection as map",
+      "type": "otel-event",
       "x": -420,
       "y": 1350,
       "width": 220,
@@ -1153,32 +1007,28 @@
       "color": "#059669",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "worlds.panel.overworld-map.render",
-          "attributes": {
-            "repositoryCount": {
-              "type": "number",
-              "description": "Repos rendered on map",
-              "required": true
-            },
-            "regionsCount": {
-              "type": "number",
-              "description": "Regions on map",
-              "required": false
-            }
-          }
-        },
         "references": [
           "src/app/worlds/CollectionsPageContent.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "render",
-          "files": ["src/app/worlds/CollectionsPageContent.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#10b981",
         "stroke": "#059669"
+      },
+      "label": "Overworld Map Panel",
+      "event": {
+        "name": "worlds.panel.overworld-map.render",
+        "attributes": {
+          "repositoryCount": {
+            "type": "number",
+            "description": "Repos rendered on map",
+            "required": true
+          },
+          "regionsCount": {
+            "type": "number",
+            "description": "Regions on map",
+            "required": false
+          }
+        }
       }
     }
   ],

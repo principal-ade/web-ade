@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/collections/collections.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "api.collections.import",
   "name": "Import Collection/World",
   "description": "Import another user's collection into your own collections",

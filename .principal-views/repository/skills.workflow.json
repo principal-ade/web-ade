@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/repository/repository.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "repo.panel.skills.render",
   "name": "Skills Layout",
   "description": "Skills layout shows available Claude skills in the repository",

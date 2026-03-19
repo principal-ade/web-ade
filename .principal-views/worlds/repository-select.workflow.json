@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/worlds/worlds.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "worlds.repository",
   "name": "Repository Selection",
   "description": "Select a repository from the overworld map to view in File City",

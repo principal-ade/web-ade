@@ -15,8 +15,7 @@
   "nodes": [
     {
       "id": "load-started",
-      "type": "text",
-      "text": "# Load Started\n\nLoad user's collections",
+      "type": "otel-event",
       "x": -229,
       "y": 732,
       "width": 200,
@@ -24,33 +23,28 @@
       "color": "#16a34a",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "collections.load.started",
-          "attributes": {
-            "username": {
-              "type": "string",
-              "description": "Username loading collections",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a"
+      },
+      "label": "Load Started",
+      "event": {
+        "name": "collections.load.started",
+        "attributes": {
+          "username": {
+            "type": "string",
+            "description": "Username loading collections",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "load-github-fetch",
-      "type": "text",
-      "text": "# GitHub Fetch\n\nFetch from GitHub repo",
+      "type": "otel-event",
       "x": -246,
       "y": 900,
       "width": 200,
@@ -58,31 +52,29 @@
       "color": "#6d28d9",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "collections.load.github.fetch",
-          "attributes": {
-            "repoUrl": {
-              "type": "string",
-              "description": "GitHub repository URL",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx",
           "src/app/api/github/collections/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/contexts/UserCollectionsContext.tsx", "src/app/api/github/collections/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#8b5cf6",
         "stroke": "#6d28d9",
         "dataSchema": {
           "repoUrl": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "GitHub Fetch",
+      "event": {
+        "name": "collections.load.github.fetch",
+        "attributes": {
+          "repoUrl": {
+            "type": "string",
+            "description": "GitHub repository URL",
             "required": true
           }
         }
@@ -90,8 +82,7 @@
     },
     {
       "id": "load-success",
-      "type": "text",
-      "text": "# Load Success\n\nCollections loaded",
+      "type": "otel-event",
       "x": -398,
       "y": 1092,
       "width": 200,
@@ -99,39 +90,39 @@
       "color": "#16a34a",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "collections.load.success",
-          "attributes": {
-            "collectionCount": {
-              "type": "number",
-              "description": "Number of collections loaded",
-              "required": true
-            },
-            "membershipCount": {
-              "type": "number",
-              "description": "Number of memberships loaded",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "collectionCount": {
             "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          },
+          "membershipCount": {
+            "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          }
+        }
+      },
+      "label": "Load Success",
+      "event": {
+        "name": "collections.load.success",
+        "attributes": {
+          "collectionCount": {
+            "type": "number",
+            "description": "Number of collections loaded",
             "required": true
           },
           "membershipCount": {
             "type": "number",
+            "description": "Number of memberships loaded",
             "required": true
           }
         }
@@ -139,8 +130,7 @@
     },
     {
       "id": "load-not-found",
-      "type": "text",
-      "text": "# GitHub Not Found\n\nRepo doesn't exist yet",
+      "type": "otel-event",
       "x": -70,
       "y": 1089,
       "width": 200,
@@ -148,33 +138,28 @@
       "color": "#4b5563",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "collections.load.github.not-found",
-          "attributes": {
-            "reason": {
-              "type": "string",
-              "description": "Reason repository was not found",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/api/github/collections/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/github/collections/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#6b7280",
         "stroke": "#4b5563"
+      },
+      "label": "GitHub Not Found",
+      "event": {
+        "name": "collections.load.github.not-found",
+        "attributes": {
+          "reason": {
+            "type": "string",
+            "description": "Reason repository was not found",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "load-unauthorized",
-      "type": "text",
-      "text": "# Load Unauthorized\n\nNot authenticated",
+      "type": "otel-event",
       "x": 85,
       "y": 732,
       "width": 200,
@@ -182,33 +167,28 @@
       "color": "#dc2626",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "collections.load.unauthorized",
-          "attributes": {
-            "reason": {
-              "type": "string",
-              "description": "Reason for unauthorized access",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/api/github/collections/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/app/api/github/collections/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#ef4444",
         "stroke": "#dc2626"
+      },
+      "label": "Load Unauthorized",
+      "event": {
+        "name": "collections.load.unauthorized",
+        "attributes": {
+          "reason": {
+            "type": "string",
+            "description": "Reason for unauthorized access",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "load-error",
-      "type": "text",
-      "text": "# Load Error\n\nLoad failed",
+      "type": "otel-event",
       "x": 81,
       "y": 899,
       "width": 200,
@@ -216,30 +196,28 @@
       "color": "#dc2626",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "collections.load.error",
-          "attributes": {
-            "error.message": {
-              "type": "string",
-              "description": "Error message",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#ef4444",
         "stroke": "#dc2626",
         "dataSchema": {
           "error.message": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Load Error",
+      "event": {
+        "name": "collections.load.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
             "required": true
           }
         }
@@ -247,8 +225,7 @@
     },
     {
       "id": "create-started",
-      "type": "text",
-      "text": "# Create Started\n\nCreate new collection",
+      "type": "otel-event",
       "x": -531,
       "y": -138,
       "width": 200,
@@ -256,48 +233,50 @@
       "color": "#16a34a",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "collection.create.started",
-          "attributes": {
-            "collectionName": {
-              "type": "string",
-              "description": "Name of the collection being created",
-              "required": true
-            },
-            "icon": {
-              "type": "string",
-              "description": "Icon for the collection",
-              "required": false
-            },
-            "description": {
-              "type": "string",
-              "description": "Collection description",
-              "required": false
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "collectionName": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "icon": {
+            "type": "string",
+            "required": false,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "description": {
+            "type": "string",
+            "required": false,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Create Started",
+      "event": {
+        "name": "collection.create.started",
+        "attributes": {
+          "collectionName": {
+            "type": "string",
+            "description": "Name of the collection being created",
             "required": true
           },
           "icon": {
             "type": "string",
+            "description": "Icon for the collection",
             "required": false
           },
           "description": {
             "type": "string",
+            "description": "Collection description",
             "required": false
           }
         }
@@ -305,8 +284,7 @@
     },
     {
       "id": "create-validate",
-      "type": "text",
-      "text": "# Validate Data\n\nValidate collection data",
+      "type": "otel-event",
       "x": -541,
       "y": 45,
       "width": 200,
@@ -314,38 +292,33 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "collection.create.validate",
-          "attributes": {
-            "collectionName": {
-              "type": "string",
-              "description": "Name being validated",
-              "required": true
-            },
-            "icon": {
-              "type": "string",
-              "description": "Icon being validated",
-              "required": false
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8"
+      },
+      "label": "Validate Data",
+      "event": {
+        "name": "collection.create.validate",
+        "attributes": {
+          "collectionName": {
+            "type": "string",
+            "description": "Name being validated",
+            "required": true
+          },
+          "icon": {
+            "type": "string",
+            "description": "Icon being validated",
+            "required": false
+          }
+        }
       }
     },
     {
       "id": "create-github-update",
-      "type": "text",
-      "text": "# Update GitHub Repo\n\nUpdate existing repo",
+      "type": "otel-event",
       "x": -343,
       "y": 197,
       "width": 180,
@@ -353,33 +326,28 @@
       "color": "#6d28d9",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "collection.create.github.update",
-          "attributes": {
-            "repoUrl": {
-              "type": "string",
-              "description": "GitHub repository URL being updated",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#8b5cf6",
         "stroke": "#6d28d9"
+      },
+      "label": "Update GitHub Repo",
+      "event": {
+        "name": "collection.create.github.update",
+        "attributes": {
+          "repoUrl": {
+            "type": "string",
+            "description": "GitHub repository URL being updated",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "create-github-init",
-      "type": "text",
-      "text": "# Initialize GitHub Repo\n\nInitialize new repo",
+      "type": "otel-event",
       "x": -752,
       "y": 198,
       "width": 180,
@@ -387,30 +355,28 @@
       "color": "#6d28d9",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "collection.create.github.init",
-          "attributes": {
-            "repoUrl": {
-              "type": "string",
-              "description": "GitHub repository URL being initialized",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#8b5cf6",
         "stroke": "#6d28d9",
         "dataSchema": {
           "repoUrl": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Initialize GitHub Repo",
+      "event": {
+        "name": "collection.create.github.init",
+        "attributes": {
+          "repoUrl": {
+            "type": "string",
+            "description": "GitHub repository URL being initialized",
             "required": true
           }
         }
@@ -418,8 +384,7 @@
     },
     {
       "id": "create-github-commit",
-      "type": "text",
-      "text": "# Commit to GitHub\n\nCommit collections data",
+      "type": "otel-event",
       "x": -547,
       "y": 374,
       "width": 200,
@@ -427,33 +392,28 @@
       "color": "#6d28d9",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "collection.create.github.commit",
-          "attributes": {
-            "commitSha": {
-              "type": "string",
-              "description": "Git commit SHA",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#8b5cf6",
         "stroke": "#6d28d9"
+      },
+      "label": "Commit to GitHub",
+      "event": {
+        "name": "collection.create.github.commit",
+        "attributes": {
+          "commitSha": {
+            "type": "string",
+            "description": "Git commit SHA",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "create-success",
-      "type": "text",
-      "text": "# Create Success\n\nCollection created",
+      "type": "otel-event",
       "x": -527,
       "y": 538,
       "width": 200,
@@ -461,30 +421,28 @@
       "color": "#16a34a",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "collection.create.success",
-          "attributes": {
-            "collectionId": {
-              "type": "string",
-              "description": "ID of the created collection",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "collectionId": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Create Success",
+      "event": {
+        "name": "collection.create.success",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "ID of the created collection",
             "required": true
           }
         }
@@ -492,8 +450,7 @@
     },
     {
       "id": "create-validation-error",
-      "type": "text",
-      "text": "# Validation Error\n\nValidation failed",
+      "type": "otel-event",
       "x": -205,
       "y": 43,
       "width": 200,
@@ -501,39 +458,39 @@
       "color": "#d97706",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "collection.create.validation-error",
-          "attributes": {
-            "error.field": {
-              "type": "string",
-              "description": "Field that failed validation",
-              "required": true
-            },
-            "error.message": {
-              "type": "string",
-              "description": "Validation error message",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#f59e0b",
         "stroke": "#d97706",
         "dataSchema": {
           "error.field": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "error.message": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Validation Error",
+      "event": {
+        "name": "collection.create.validation-error",
+        "attributes": {
+          "error.field": {
+            "type": "string",
+            "description": "Field that failed validation",
             "required": true
           },
           "error.message": {
             "type": "string",
+            "description": "Validation error message",
             "required": true
           }
         }
@@ -541,8 +498,7 @@
     },
     {
       "id": "create-unauthorized",
-      "type": "text",
-      "text": "# Create Unauthorized\n\nNot authenticated",
+      "type": "otel-event",
       "x": -205,
       "y": -139,
       "width": 200,
@@ -550,33 +506,28 @@
       "color": "#dc2626",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "collection.create.unauthorized",
-          "attributes": {
-            "reason": {
-              "type": "string",
-              "description": "Reason for unauthorized access",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#ef4444",
         "stroke": "#dc2626"
+      },
+      "label": "Create Unauthorized",
+      "event": {
+        "name": "collection.create.unauthorized",
+        "attributes": {
+          "reason": {
+            "type": "string",
+            "description": "Reason for unauthorized access",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "create-error",
-      "type": "text",
-      "text": "# Create Error\n\nOperation failed",
+      "type": "otel-event",
       "x": -151,
       "y": 373,
       "width": 200,
@@ -584,30 +535,28 @@
       "color": "#dc2626",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "collection.create.error",
-          "attributes": {
-            "error.message": {
-              "type": "string",
-              "description": "Error message",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#ef4444",
         "stroke": "#dc2626",
         "dataSchema": {
           "error.message": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Create Error",
+      "event": {
+        "name": "collection.create.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
             "required": true
           }
         }
@@ -615,8 +564,7 @@
     },
     {
       "id": "import-started",
-      "type": "text",
-      "text": "# Import Started\n\nImport shared collection",
+      "type": "otel-event",
       "x": 516,
       "y": 16,
       "width": 200,
@@ -624,39 +572,39 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "collection.import.started",
-          "attributes": {
-            "sourceUsername": {
-              "type": "string",
-              "description": "Username of source collection owner",
-              "required": true
-            },
-            "collectionName": {
-              "type": "string",
-              "description": "Name of collection being imported",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "sourceUsername": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "collectionName": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Import Started",
+      "event": {
+        "name": "collection.import.started",
+        "attributes": {
+          "sourceUsername": {
+            "type": "string",
+            "description": "Username of source collection owner",
             "required": true
           },
           "collectionName": {
             "type": "string",
+            "description": "Name of collection being imported",
             "required": true
           }
         }
@@ -664,8 +612,7 @@
     },
     {
       "id": "import-fetch-source",
-      "type": "text",
-      "text": "# Fetch Source\n\nFetch source collection",
+      "type": "otel-event",
       "x": 499,
       "y": 173,
       "width": 200,
@@ -673,33 +620,28 @@
       "color": "#6d28d9",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "collection.import.fetch-source",
-          "attributes": {
-            "sourceUrl": {
-              "type": "string",
-              "description": "URL of the source collection",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#8b5cf6",
         "stroke": "#6d28d9"
+      },
+      "label": "Fetch Source",
+      "event": {
+        "name": "collection.import.fetch-source",
+        "attributes": {
+          "sourceUrl": {
+            "type": "string",
+            "description": "URL of the source collection",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "import-create-copy",
-      "type": "text",
-      "text": "# Create Copy\n\nCreate collection copy",
+      "type": "otel-event",
       "x": 503,
       "y": 306,
       "width": 200,
@@ -707,30 +649,28 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "collection.import.create-copy",
-          "attributes": {
-            "newCollectionName": {
-              "type": "string",
-              "description": "Name for the new collection copy",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8",
         "dataSchema": {
           "newCollectionName": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Create Copy",
+      "event": {
+        "name": "collection.import.create-copy",
+        "attributes": {
+          "newCollectionName": {
+            "type": "string",
+            "description": "Name for the new collection copy",
             "required": true
           }
         }
@@ -738,8 +678,7 @@
     },
     {
       "id": "import-copy-memberships",
-      "type": "text",
-      "text": "# Copy Memberships\n\nCopy repository memberships",
+      "type": "otel-event",
       "x": 492,
       "y": 456,
       "width": 200,
@@ -747,30 +686,28 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "collection.import.copy-memberships",
-          "attributes": {
-            "membershipCount": {
-              "type": "number",
-              "description": "Number of memberships copied",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8",
         "dataSchema": {
           "membershipCount": {
             "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          }
+        }
+      },
+      "label": "Copy Memberships",
+      "event": {
+        "name": "collection.import.copy-memberships",
+        "attributes": {
+          "membershipCount": {
+            "type": "number",
+            "description": "Number of memberships copied",
             "required": true
           }
         }
@@ -778,8 +715,7 @@
     },
     {
       "id": "import-github-sync",
-      "type": "text",
-      "text": "# Sync to GitHub\n\nSync to user's GitHub",
+      "type": "otel-event",
       "x": 508,
       "y": 607,
       "width": 200,
@@ -787,33 +723,28 @@
       "color": "#6d28d9",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "collection.import.github.sync",
-          "attributes": {
-            "syncStatus": {
-              "type": "string",
-              "description": "Status of the GitHub sync operation",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#8b5cf6",
         "stroke": "#6d28d9"
+      },
+      "label": "Sync to GitHub",
+      "event": {
+        "name": "collection.import.github.sync",
+        "attributes": {
+          "syncStatus": {
+            "type": "string",
+            "description": "Status of the GitHub sync operation",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "import-success",
-      "type": "text",
-      "text": "# Import Success\n\nImport completed",
+      "type": "otel-event",
       "x": 529,
       "y": 745,
       "width": 200,
@@ -821,30 +752,28 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "collection.import.success",
-          "attributes": {
-            "newCollectionId": {
-              "type": "string",
-              "description": "ID of the imported collection",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "newCollectionId": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Import Success",
+      "event": {
+        "name": "collection.import.success",
+        "attributes": {
+          "newCollectionId": {
+            "type": "string",
+            "description": "ID of the imported collection",
             "required": true
           }
         }
@@ -852,8 +781,7 @@
     },
     {
       "id": "import-duplicate-check",
-      "type": "text",
-      "text": "# Duplicate Check\n\nAlready imported",
+      "type": "otel-event",
       "x": 799,
       "y": 169,
       "width": 200,
@@ -861,33 +789,28 @@
       "color": "#4b5563",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "collection.import.duplicate-check",
-          "attributes": {
-            "isDuplicate": {
-              "type": "boolean",
-              "description": "Whether collection is already imported",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#6b7280",
         "stroke": "#4b5563"
+      },
+      "label": "Duplicate Check",
+      "event": {
+        "name": "collection.import.duplicate-check",
+        "attributes": {
+          "isDuplicate": {
+            "type": "boolean",
+            "description": "Whether collection is already imported",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "import-not-found",
-      "type": "text",
-      "text": "# Import Not Found\n\nSource not found",
+      "type": "otel-event",
       "x": 823,
       "y": 312,
       "width": 200,
@@ -895,33 +818,28 @@
       "color": "#d97706",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "collection.import.not-found",
-          "attributes": {
-            "reason": {
-              "type": "string",
-              "description": "Reason source collection was not found",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#f59e0b",
         "stroke": "#d97706"
+      },
+      "label": "Import Not Found",
+      "event": {
+        "name": "collection.import.not-found",
+        "attributes": {
+          "reason": {
+            "type": "string",
+            "description": "Reason source collection was not found",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "import-unauthorized",
-      "type": "text",
-      "text": "# Import Unauthorized\n\nNot authenticated",
+      "type": "otel-event",
       "x": 808,
       "y": 11,
       "width": 200,
@@ -929,33 +847,28 @@
       "color": "#dc2626",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "collection.import.unauthorized",
-          "attributes": {
-            "reason": {
-              "type": "string",
-              "description": "Reason for unauthorized access",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#ef4444",
         "stroke": "#dc2626"
+      },
+      "label": "Import Unauthorized",
+      "event": {
+        "name": "collection.import.unauthorized",
+        "attributes": {
+          "reason": {
+            "type": "string",
+            "description": "Reason for unauthorized access",
+            "required": true
+          }
+        }
       }
     },
     {
       "id": "import-error",
-      "type": "text",
-      "text": "# Import Error\n\nImport failed",
+      "type": "otel-event",
       "x": 834,
       "y": 606,
       "width": 200,
@@ -963,30 +876,28 @@
       "color": "#dc2626",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "collection.import.error",
-          "attributes": {
-            "error.message": {
-              "type": "string",
-              "description": "Error message",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/UserCollectionsContext.tsx"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/contexts/UserCollectionsContext.tsx"]
-        },
         "shape": "rectangle",
         "fill": "#ef4444",
         "stroke": "#dc2626",
         "dataSchema": {
           "error.message": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Import Error",
+      "event": {
+        "name": "collection.import.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
             "required": true
           }
         }

@@ -19,8 +19,7 @@
   "nodes": [
     {
       "id": "registration-started",
-      "type": "text",
-      "text": "# Registration Started\n\nVersion registration request received",
+      "type": "otel-event",
       "x": 100,
       "y": 50,
       "width": 200,
@@ -28,46 +27,72 @@
       "color": "#16a34a",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "version.registration.started",
-          "attributes": {
-            "service.name": { "type": "string", "description": "Service name", "required": true },
-            "version": { "type": "string", "description": "Version string", "required": true },
-            "repository.url": { "type": "string", "description": "Repository URL", "required": true },
-            "environment": { "type": "string", "description": "Deployment environment", "required": true },
-            "git.sha": { "type": "string", "description": "Git commit SHA", "required": true }
-          }
-        },
         "references": [
           "src/app/api/versions/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/versions/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "service.name": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "version": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "repository.url": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "environment": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "git.sha": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Registration Started",
+      "event": {
+        "name": "version.registration.started",
+        "attributes": {
+          "service.name": {
+            "type": "string",
+            "description": "Service name",
             "required": true
           },
           "version": {
             "type": "string",
+            "description": "Version string",
             "required": true
           },
           "repository.url": {
             "type": "string",
+            "description": "Repository URL",
             "required": true
           },
           "environment": {
             "type": "string",
+            "description": "Deployment environment",
             "required": true
           },
           "git.sha": {
             "type": "string",
+            "description": "Git commit SHA",
             "required": true
           }
         }
@@ -75,8 +100,7 @@
     },
     {
       "id": "registration-validated",
-      "type": "text",
-      "text": "# Validated\n\nRequest validated successfully",
+      "type": "otel-event",
       "x": 89,
       "y": 199,
       "width": 200,
@@ -84,36 +108,50 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "version.registration.validated",
-          "attributes": {
-            "customer.id": { "type": "string", "description": "Customer ID", "required": true },
-            "service.name": { "type": "string", "description": "Service name", "required": true },
-            "version": { "type": "string", "description": "Version string", "required": true }
-          }
-        },
         "references": [
           "src/lib/version-registry/version-manager.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/lib/version-registry/version-manager.ts"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8",
         "dataSchema": {
           "customer.id": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "service.name": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "version": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Validated",
+      "event": {
+        "name": "version.registration.validated",
+        "attributes": {
+          "customer.id": {
+            "type": "string",
+            "description": "Customer ID",
             "required": true
           },
           "service.name": {
             "type": "string",
+            "description": "Service name",
             "required": true
           },
           "version": {
             "type": "string",
+            "description": "Version string",
             "required": true
           }
         }
@@ -121,8 +159,7 @@
     },
     {
       "id": "registration-s3-stored",
-      "type": "text",
-      "text": "# Stored to S3\n\nVersion mapping stored to S3",
+      "type": "otel-event",
       "x": 92,
       "y": 350,
       "width": 200,
@@ -130,36 +167,50 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "version.registration.s3.stored",
-          "attributes": {
-            "s3.key": { "type": "string", "description": "S3 object key", "required": true },
-            "s3.bucket": { "type": "string", "description": "S3 bucket name", "required": true },
-            "already.exists": { "type": "boolean", "description": "Whether mapping already existed", "required": false }
-          }
-        },
         "references": [
           "src/lib/version-registry/s3-storage.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/lib/version-registry/s3-storage.ts"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8",
         "dataSchema": {
           "s3.key": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "s3.bucket": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "already.exists": {
+            "type": "boolean",
+            "required": false,
+            "description": "Field value",
+            "placeholder": "true/false"
+          }
+        }
+      },
+      "label": "Stored to S3",
+      "event": {
+        "name": "version.registration.s3.stored",
+        "attributes": {
+          "s3.key": {
+            "type": "string",
+            "description": "S3 object key",
             "required": true
           },
           "s3.bucket": {
             "type": "string",
+            "description": "S3 bucket name",
             "required": true
           },
           "already.exists": {
             "type": "boolean",
+            "description": "Whether mapping already existed",
             "required": false
           }
         }
@@ -167,8 +218,7 @@
     },
     {
       "id": "schematic-fetching",
-      "type": "text",
-      "text": "# Fetching Schematic\n\nFetching schematic from GitHub at commit SHA",
+      "type": "otel-event",
       "x": 91,
       "y": 498,
       "width": 200,
@@ -176,36 +226,50 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "version.registration.schematic.fetching",
-          "attributes": {
-            "repository.url": { "type": "string", "description": "Repository URL", "required": true },
-            "git.sha": { "type": "string", "description": "Git commit SHA", "required": true },
-            "schematic.cached": { "type": "boolean", "description": "Whether schematic is cached", "required": false }
-          }
-        },
         "references": [
           "src/lib/version-registry/version-manager.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/lib/version-registry/version-manager.ts"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8",
         "dataSchema": {
           "repository.url": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "git.sha": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "schematic.cached": {
+            "type": "boolean",
+            "required": false,
+            "description": "Field value",
+            "placeholder": "true/false"
+          }
+        }
+      },
+      "label": "Fetching Schematic",
+      "event": {
+        "name": "version.registration.schematic.fetching",
+        "attributes": {
+          "repository.url": {
+            "type": "string",
+            "description": "Repository URL",
             "required": true
           },
           "git.sha": {
             "type": "string",
+            "description": "Git commit SHA",
             "required": true
           },
           "schematic.cached": {
             "type": "boolean",
+            "description": "Whether schematic is cached",
             "required": false
           }
         }
@@ -213,8 +277,7 @@
     },
     {
       "id": "schematic-fetched",
-      "type": "text",
-      "text": "# Schematic Fetched\n\nSchematic fetched from GitHub successfully",
+      "type": "otel-event",
       "x": 91,
       "y": 649,
       "width": 200,
@@ -222,46 +285,72 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "version.registration.schematic.fetched",
-          "attributes": {
-            "schematic.id": { "type": "string", "description": "Schematic ID", "required": true },
-            "canvases.count": { "type": "number", "description": "Number of canvases", "required": true },
-            "storyboards.count": { "type": "number", "description": "Number of storyboards", "required": true },
-            "workflows.count": { "type": "number", "description": "Number of workflows", "required": true },
-            "errors.count": { "type": "number", "description": "Number of errors", "required": false }
-          }
-        },
         "references": [
           "src/lib/version-registry/schematic-fetcher.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/lib/version-registry/schematic-fetcher.ts"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8",
         "dataSchema": {
           "schematic.id": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "canvases.count": {
+            "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          },
+          "storyboards.count": {
+            "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          },
+          "workflows.count": {
+            "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          },
+          "errors.count": {
+            "type": "number",
+            "required": false,
+            "description": "Field value",
+            "placeholder": "0"
+          }
+        }
+      },
+      "label": "Schematic Fetched",
+      "event": {
+        "name": "version.registration.schematic.fetched",
+        "attributes": {
+          "schematic.id": {
+            "type": "string",
+            "description": "Schematic ID",
             "required": true
           },
           "canvases.count": {
             "type": "number",
+            "description": "Number of canvases",
             "required": true
           },
           "storyboards.count": {
             "type": "number",
+            "description": "Number of storyboards",
             "required": true
           },
           "workflows.count": {
             "type": "number",
+            "description": "Number of workflows",
             "required": true
           },
           "errors.count": {
             "type": "number",
+            "description": "Number of errors",
             "required": false
           }
         }
@@ -269,8 +358,7 @@
     },
     {
       "id": "schematic-stored",
-      "type": "text",
-      "text": "# Schematic Stored\n\nSchematic stored to S3",
+      "type": "otel-event",
       "x": 86,
       "y": 801,
       "width": 200,
@@ -278,36 +366,50 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "version.registration.schematic.stored",
-          "attributes": {
-            "s3.key": { "type": "string", "description": "S3 object key", "required": true },
-            "s3.bucket": { "type": "string", "description": "S3 bucket name", "required": true },
-            "schematic.id": { "type": "string", "description": "Schematic ID", "required": true }
-          }
-        },
         "references": [
           "src/lib/version-registry/s3-storage.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/lib/version-registry/s3-storage.ts"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8",
         "dataSchema": {
           "s3.key": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "s3.bucket": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "schematic.id": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Schematic Stored",
+      "event": {
+        "name": "version.registration.schematic.stored",
+        "attributes": {
+          "s3.key": {
+            "type": "string",
+            "description": "S3 object key",
             "required": true
           },
           "s3.bucket": {
             "type": "string",
+            "description": "S3 bucket name",
             "required": true
           },
           "schematic.id": {
             "type": "string",
+            "description": "Schematic ID",
             "required": true
           }
         }
@@ -315,8 +417,7 @@
     },
     {
       "id": "registration-complete",
-      "type": "text",
-      "text": "# Registration Complete\n\nVersion registered successfully",
+      "type": "otel-event",
       "x": 97,
       "y": 954,
       "width": 200,
@@ -324,36 +425,50 @@
       "color": "#16a34a",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "version.registration.complete",
-          "attributes": {
-            "registration.id": { "type": "string", "description": "Registration ID", "required": true },
-            "schematic.id": { "type": "string", "description": "Schematic ID", "required": true },
-            "duration.ms": { "type": "number", "description": "Duration in milliseconds", "required": false }
-          }
-        },
         "references": [
           "src/app/api/versions/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/versions/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "registration.id": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "schematic.id": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "duration.ms": {
+            "type": "number",
+            "required": false,
+            "description": "Field value",
+            "placeholder": "0"
+          }
+        }
+      },
+      "label": "Registration Complete",
+      "event": {
+        "name": "version.registration.complete",
+        "attributes": {
+          "registration.id": {
+            "type": "string",
+            "description": "Registration ID",
             "required": true
           },
           "schematic.id": {
             "type": "string",
+            "description": "Schematic ID",
             "required": true
           },
           "duration.ms": {
             "type": "number",
+            "description": "Duration in milliseconds",
             "required": false
           }
         }
@@ -361,8 +476,7 @@
     },
     {
       "id": "registration-complete-no-schematic",
-      "type": "text",
-      "text": "# Registration Complete (No Schematic)\n\nVersion registered without schematic",
+      "type": "otel-event",
       "x": 97,
       "y": 1080,
       "width": 200,
@@ -370,31 +484,39 @@
       "color": "#16a34a",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "version.registration.complete-no-schematic",
-          "attributes": {
-            "registration.id": { "type": "string", "description": "Registration ID", "required": true },
-            "duration.ms": { "type": "number", "description": "Duration in milliseconds", "required": false }
-          }
-        },
         "references": [
           "src/app/api/versions/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/versions/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "registration.id": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "duration.ms": {
+            "type": "number",
+            "required": false,
+            "description": "Field value",
+            "placeholder": "0"
+          }
+        }
+      },
+      "label": "Registration Complete (No Schematic)",
+      "event": {
+        "name": "version.registration.complete-no-schematic",
+        "attributes": {
+          "registration.id": {
+            "type": "string",
+            "description": "Registration ID",
             "required": true
           },
           "duration.ms": {
             "type": "number",
+            "description": "Duration in milliseconds",
             "required": false
           }
         }
@@ -402,8 +524,7 @@
     },
     {
       "id": "registration-schematic-error",
-      "type": "text",
-      "text": "# Schematic Error\n\nSchematic fetch failed (mapping still valid)",
+      "type": "otel-event",
       "x": 410,
       "y": 800,
       "width": 200,
@@ -411,31 +532,39 @@
       "color": "#d97706",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "version.registration.schematic-error",
-          "attributes": {
-            "error.type": { "type": "string", "description": "Error type", "required": true },
-            "error.message": { "type": "string", "description": "Error message", "required": true }
-          }
-        },
         "references": [
           "src/lib/version-registry/version-manager.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/lib/version-registry/version-manager.ts"]
-        },
         "shape": "rectangle",
         "fill": "#f59e0b",
         "stroke": "#d97706",
         "dataSchema": {
           "error.type": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "error.message": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Schematic Error",
+      "event": {
+        "name": "version.registration.schematic-error",
+        "attributes": {
+          "error.type": {
+            "type": "string",
+            "description": "Error type",
             "required": true
           },
           "error.message": {
             "type": "string",
+            "description": "Error message",
             "required": true
           }
         }
@@ -443,8 +572,7 @@
     },
     {
       "id": "registration-error",
-      "type": "text",
-      "text": "# Registration Error\n\nVersion registration failed",
+      "type": "otel-event",
       "x": 410,
       "y": 358,
       "width": 200,
@@ -452,47 +580,73 @@
       "color": "#dc2626",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "version.registration.error",
-          "attributes": {
-            "error.type": { "type": "string", "description": "Error type", "required": true },
-            "error.message": { "type": "string", "description": "Error message", "required": true },
-            "error.stage": { "type": "string", "description": "Stage where error occurred", "required": true },
-            "service.name": { "type": "string", "description": "Service name", "required": false },
-            "version": { "type": "string", "description": "Version string", "required": false }
-          }
-        },
         "references": [
           "src/app/api/versions/route.ts",
           "src/lib/version-registry/version-manager.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/app/api/versions/route.ts", "src/lib/version-registry/version-manager.ts"]
-        },
         "shape": "rectangle",
         "fill": "#ef4444",
         "stroke": "#dc2626",
         "dataSchema": {
           "error.type": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "error.message": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "error.stage": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "service.name": {
+            "type": "string",
+            "required": false,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "version": {
+            "type": "string",
+            "required": false,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Registration Error",
+      "event": {
+        "name": "version.registration.error",
+        "attributes": {
+          "error.type": {
+            "type": "string",
+            "description": "Error type",
             "required": true
           },
           "error.message": {
             "type": "string",
+            "description": "Error message",
             "required": true
           },
           "error.stage": {
             "type": "string",
+            "description": "Stage where error occurred",
             "required": true
           },
           "service.name": {
             "type": "string",
+            "description": "Service name",
             "required": false
           },
           "version": {
             "type": "string",
+            "description": "Version string",
             "required": false
           }
         }
@@ -500,8 +654,7 @@
     },
     {
       "id": "lookup-started",
-      "type": "text",
-      "text": "# Lookup Started\n\nVersion lookup request received",
+      "type": "otel-event",
       "x": 1137,
       "y": 172,
       "width": 200,
@@ -509,41 +662,61 @@
       "color": "#16a34a",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "version.lookup.started",
-          "attributes": {
-            "customer.id": { "type": "string", "description": "Customer ID", "required": true },
-            "service.name": { "type": "string", "description": "Service name", "required": true },
-            "version": { "type": "string", "description": "Version string", "required": true },
-            "environment": { "type": "string", "description": "Deployment environment", "required": true }
-          }
-        },
         "references": [
           "src/app/api/versions/lookup/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/versions/lookup/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "customer.id": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "service.name": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "version": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "environment": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Lookup Started",
+      "event": {
+        "name": "version.lookup.started",
+        "attributes": {
+          "customer.id": {
+            "type": "string",
+            "description": "Customer ID",
             "required": true
           },
           "service.name": {
             "type": "string",
+            "description": "Service name",
             "required": true
           },
           "version": {
             "type": "string",
+            "description": "Version string",
             "required": true
           },
           "environment": {
             "type": "string",
+            "description": "Deployment environment",
             "required": true
           }
         }
@@ -551,8 +724,7 @@
     },
     {
       "id": "lookup-s3-retrieved",
-      "type": "text",
-      "text": "# Retrieved from S3\n\nVersion mapping retrieved from S3",
+      "type": "otel-event",
       "x": 1138,
       "y": 386,
       "width": 200,
@@ -560,41 +732,61 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "version.lookup.s3.retrieved",
-          "attributes": {
-            "s3.key": { "type": "string", "description": "S3 object key", "required": true },
-            "git.sha": { "type": "string", "description": "Git commit SHA", "required": true },
-            "repository.url": { "type": "string", "description": "Repository URL", "required": true },
-            "deployed.at": { "type": "string", "description": "Deployment timestamp", "required": true }
-          }
-        },
         "references": [
           "src/lib/version-registry/s3-storage.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/lib/version-registry/s3-storage.ts"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8",
         "dataSchema": {
           "s3.key": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "git.sha": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "repository.url": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "deployed.at": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Retrieved from S3",
+      "event": {
+        "name": "version.lookup.s3.retrieved",
+        "attributes": {
+          "s3.key": {
+            "type": "string",
+            "description": "S3 object key",
             "required": true
           },
           "git.sha": {
             "type": "string",
+            "description": "Git commit SHA",
             "required": true
           },
           "repository.url": {
             "type": "string",
+            "description": "Repository URL",
             "required": true
           },
           "deployed.at": {
             "type": "string",
+            "description": "Deployment timestamp",
             "required": true
           }
         }
@@ -602,8 +794,7 @@
     },
     {
       "id": "lookup-complete",
-      "type": "text",
-      "text": "# Lookup Complete\n\nVersion lookup successful",
+      "type": "otel-event",
       "x": 1138,
       "y": 596,
       "width": 200,
@@ -611,31 +802,39 @@
       "color": "#16a34a",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "version.lookup.complete",
-          "attributes": {
-            "git.sha": { "type": "string", "description": "Git commit SHA", "required": true },
-            "duration.ms": { "type": "number", "description": "Duration in milliseconds", "required": false }
-          }
-        },
         "references": [
           "src/app/api/versions/lookup/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/versions/lookup/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "git.sha": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "duration.ms": {
+            "type": "number",
+            "required": false,
+            "description": "Field value",
+            "placeholder": "0"
+          }
+        }
+      },
+      "label": "Lookup Complete",
+      "event": {
+        "name": "version.lookup.complete",
+        "attributes": {
+          "git.sha": {
+            "type": "string",
+            "description": "Git commit SHA",
             "required": true
           },
           "duration.ms": {
             "type": "number",
+            "description": "Duration in milliseconds",
             "required": false
           }
         }
@@ -643,8 +842,7 @@
     },
     {
       "id": "lookup-not-found",
-      "type": "text",
-      "text": "# Not Found\n\nVersion not registered",
+      "type": "otel-event",
       "x": 1470,
       "y": 262,
       "width": 200,
@@ -652,37 +850,51 @@
       "color": "#d97706",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "version.lookup.not_found",
-          "attributes": {
-            "customer.id": { "type": "string", "description": "Customer ID", "required": true },
-            "service.name": { "type": "string", "description": "Service name", "required": true },
-            "version": { "type": "string", "description": "Version string", "required": true }
-          }
-        },
         "references": [
           "src/app/api/versions/lookup/route.ts",
           "src/lib/version-registry/s3-storage.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/app/api/versions/lookup/route.ts", "src/lib/version-registry/s3-storage.ts"]
-        },
         "shape": "rectangle",
         "fill": "#f59e0b",
         "stroke": "#d97706",
         "dataSchema": {
           "customer.id": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "service.name": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "version": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Not Found",
+      "event": {
+        "name": "version.lookup.not_found",
+        "attributes": {
+          "customer.id": {
+            "type": "string",
+            "description": "Customer ID",
             "required": true
           },
           "service.name": {
             "type": "string",
+            "description": "Service name",
             "required": true
           },
           "version": {
             "type": "string",
+            "description": "Version string",
             "required": true
           }
         }
@@ -690,8 +902,7 @@
     },
     {
       "id": "lookup-error",
-      "type": "text",
-      "text": "# Lookup Error\n\nVersion lookup failed",
+      "type": "otel-event",
       "x": 1471,
       "y": 93,
       "width": 200,
@@ -699,37 +910,51 @@
       "color": "#dc2626",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "version.lookup.error",
-          "attributes": {
-            "error.type": { "type": "string", "description": "Error type", "required": true },
-            "error.message": { "type": "string", "description": "Error message", "required": true },
-            "error.stage": { "type": "string", "description": "Stage where error occurred", "required": true }
-          }
-        },
         "references": [
           "src/app/api/versions/lookup/route.ts",
           "src/lib/version-registry/version-manager.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/app/api/versions/lookup/route.ts", "src/lib/version-registry/version-manager.ts"]
-        },
         "shape": "rectangle",
         "fill": "#ef4444",
         "stroke": "#dc2626",
         "dataSchema": {
           "error.type": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "error.message": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "error.stage": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Lookup Error",
+      "event": {
+        "name": "version.lookup.error",
+        "attributes": {
+          "error.type": {
+            "type": "string",
+            "description": "Error type",
             "required": true
           },
           "error.message": {
             "type": "string",
+            "description": "Error message",
             "required": true
           },
           "error.stage": {
             "type": "string",
+            "description": "Stage where error occurred",
             "required": true
           }
         }
@@ -737,8 +962,7 @@
     },
     {
       "id": "list-started",
-      "type": "text",
-      "text": "# List Started\n\nVersion list request received",
+      "type": "otel-event",
       "x": 678,
       "y": 292,
       "width": 200,
@@ -746,26 +970,28 @@
       "color": "#16a34a",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "version.list.started",
-          "attributes": {
-            "customer.id": { "type": "string", "description": "Customer ID", "required": true }
-          }
-        },
         "references": [
           "src/app/api/versions/list/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/versions/list/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "customer.id": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "List Started",
+      "event": {
+        "name": "version.list.started",
+        "attributes": {
+          "customer.id": {
+            "type": "string",
+            "description": "Customer ID",
             "required": true
           }
         }
@@ -773,8 +999,7 @@
     },
     {
       "id": "list-s3-retrieved",
-      "type": "text",
-      "text": "# Retrieved from S3\n\nAll registrations fetched from S3",
+      "type": "otel-event",
       "x": 678,
       "y": 465,
       "width": 200,
@@ -782,31 +1007,39 @@
       "color": "#2563eb",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "version.list.s3.retrieved",
-          "attributes": {
-            "customer.id": { "type": "string", "description": "Customer ID", "required": true },
-            "registration.count": { "type": "number", "description": "Number of registrations", "required": true }
-          }
-        },
         "references": [
           "src/lib/version-registry/s3-storage.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/lib/version-registry/s3-storage.ts"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#2563eb",
         "dataSchema": {
           "customer.id": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "registration.count": {
+            "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          }
+        }
+      },
+      "label": "Retrieved from S3",
+      "event": {
+        "name": "version.list.s3.retrieved",
+        "attributes": {
+          "customer.id": {
+            "type": "string",
+            "description": "Customer ID",
             "required": true
           },
           "registration.count": {
             "type": "number",
+            "description": "Number of registrations",
             "required": true
           }
         }
@@ -814,8 +1047,7 @@
     },
     {
       "id": "list-complete",
-      "type": "text",
-      "text": "# List Complete\n\nVersion list successful",
+      "type": "otel-event",
       "x": 678,
       "y": 675,
       "width": 200,
@@ -823,31 +1055,39 @@
       "color": "#16a34a",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "version.list.complete",
-          "attributes": {
-            "customer.id": { "type": "string", "description": "Customer ID", "required": true },
-            "registration.count": { "type": "number", "description": "Number of registrations", "required": true }
-          }
-        },
         "references": [
           "src/app/api/versions/list/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/versions/list/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "customer.id": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "registration.count": {
+            "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          }
+        }
+      },
+      "label": "List Complete",
+      "event": {
+        "name": "version.list.complete",
+        "attributes": {
+          "customer.id": {
+            "type": "string",
+            "description": "Customer ID",
             "required": true
           },
           "registration.count": {
             "type": "number",
+            "description": "Number of registrations",
             "required": true
           }
         }
@@ -855,8 +1095,7 @@
     },
     {
       "id": "list-error",
-      "type": "text",
-      "text": "# List Error\n\nVersion list failed",
+      "type": "otel-event",
       "x": 921,
       "y": 291,
       "width": 200,
@@ -864,37 +1103,51 @@
       "color": "#dc2626",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "version.list.error",
-          "attributes": {
-            "error.type": { "type": "string", "description": "Error type", "required": true },
-            "error.message": { "type": "string", "description": "Error message", "required": true },
-            "error.stage": { "type": "string", "description": "Stage where error occurred", "required": true }
-          }
-        },
         "references": [
           "src/app/api/versions/list/route.ts",
           "src/lib/version-registry/s3-storage.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/app/api/versions/list/route.ts", "src/lib/version-registry/s3-storage.ts"]
-        },
         "shape": "rectangle",
         "fill": "#ef4444",
         "stroke": "#dc2626",
         "dataSchema": {
           "error.type": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "error.message": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "error.stage": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "List Error",
+      "event": {
+        "name": "version.list.error",
+        "attributes": {
+          "error.type": {
+            "type": "string",
+            "description": "Error type",
             "required": true
           },
           "error.message": {
             "type": "string",
+            "description": "Error message",
             "required": true
           },
           "error.stage": {
             "type": "string",
+            "description": "Stage where error occurred",
             "required": true
           }
         }

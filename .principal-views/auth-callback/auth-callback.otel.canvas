@@ -15,8 +15,7 @@
   "nodes": [
     {
       "id": "auth-started",
-      "type": "text",
-      "text": "# Callback Started\n\nOAuth callback request received",
+      "type": "otel-event",
       "x": 100,
       "y": 50,
       "width": 200,
@@ -24,41 +23,61 @@
       "color": "#16a34a",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "auth.callback.started",
-          "attributes": {
-            "request.has_state": { "type": "boolean", "description": "Request has state parameter", "required": true },
-            "request.has_code": { "type": "boolean", "description": "Request has auth code", "required": true },
-            "request.has_workos_cookie": { "type": "boolean", "description": "Request has WorkOS cookie", "required": true },
-            "request.has_auth_error": { "type": "boolean", "description": "Request has auth error", "required": false }
-          }
-        },
         "references": [
           "src/app/api/auth/callback/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/auth/callback/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "request.has_state": {
             "type": "boolean",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "true/false"
+          },
+          "request.has_code": {
+            "type": "boolean",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "true/false"
+          },
+          "request.has_workos_cookie": {
+            "type": "boolean",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "true/false"
+          },
+          "request.has_auth_error": {
+            "type": "boolean",
+            "required": false,
+            "description": "Field value",
+            "placeholder": "true/false"
+          }
+        }
+      },
+      "label": "Callback Started",
+      "event": {
+        "name": "auth.callback.started",
+        "attributes": {
+          "request.has_state": {
+            "type": "boolean",
+            "description": "Request has state parameter",
             "required": true
           },
           "request.has_code": {
             "type": "boolean",
+            "description": "Request has auth code",
             "required": true
           },
           "request.has_workos_cookie": {
             "type": "boolean",
+            "description": "Request has WorkOS cookie",
             "required": true
           },
           "request.has_auth_error": {
             "type": "boolean",
+            "description": "Request has auth error",
             "required": false
           }
         }
@@ -66,8 +85,7 @@
     },
     {
       "id": "state-validated",
-      "type": "text",
-      "text": "# State Validated\n\nState parameter decoded and validated",
+      "type": "otel-event",
       "x": 100,
       "y": 250,
       "width": 200,
@@ -75,36 +93,50 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "auth.state.validated",
-          "attributes": {
-            "state.csrf": { "type": "string", "description": "CSRF token from state", "required": true },
-            "state.has_redirect": { "type": "boolean", "description": "State has redirect path", "required": true },
-            "flow.type": { "type": "string", "description": "Authentication flow type", "required": true }
-          }
-        },
         "references": [
           "src/app/api/auth/callback/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/app/api/auth/callback/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8",
         "dataSchema": {
           "state.csrf": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "state.has_redirect": {
+            "type": "boolean",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "true/false"
+          },
+          "flow.type": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "State Validated",
+      "event": {
+        "name": "auth.state.validated",
+        "attributes": {
+          "state.csrf": {
+            "type": "string",
+            "description": "CSRF token from state",
             "required": true
           },
           "state.has_redirect": {
             "type": "boolean",
+            "description": "State has redirect path",
             "required": true
           },
           "flow.type": {
             "type": "string",
+            "description": "Authentication flow type",
             "required": true
           }
         }
@@ -112,8 +144,7 @@
     },
     {
       "id": "tokens-received",
-      "type": "text",
-      "text": "# Tokens Received\n\nAuthentication tokens obtained",
+      "type": "otel-event",
       "x": 100,
       "y": 450,
       "width": 200,
@@ -121,46 +152,72 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "auth.tokens.received",
-          "attributes": {
-            "tokens.source": { "type": "string", "description": "Token source", "required": true },
-            "tokens.has_github_token": { "type": "boolean", "description": "Has GitHub token", "required": true },
-            "tokens.has_workos_token": { "type": "boolean", "description": "Has WorkOS token", "required": true },
-            "tokens.has_refresh_token": { "type": "boolean", "description": "Has refresh token", "required": true },
-            "user.id": { "type": "string", "description": "User ID", "required": false }
-          }
-        },
         "references": [
           "src/app/api/auth/callback/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/app/api/auth/callback/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8",
         "dataSchema": {
           "tokens.source": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "tokens.has_github_token": {
+            "type": "boolean",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "true/false"
+          },
+          "tokens.has_workos_token": {
+            "type": "boolean",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "true/false"
+          },
+          "tokens.has_refresh_token": {
+            "type": "boolean",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "true/false"
+          },
+          "user.id": {
+            "type": "string",
+            "required": false,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Tokens Received",
+      "event": {
+        "name": "auth.tokens.received",
+        "attributes": {
+          "tokens.source": {
+            "type": "string",
+            "description": "Token source",
             "required": true
           },
           "tokens.has_github_token": {
             "type": "boolean",
+            "description": "Has GitHub token",
             "required": true
           },
           "tokens.has_workos_token": {
             "type": "boolean",
+            "description": "Has WorkOS token",
             "required": true
           },
           "tokens.has_refresh_token": {
             "type": "boolean",
+            "description": "Has refresh token",
             "required": true
           },
           "user.id": {
             "type": "string",
+            "description": "User ID",
             "required": false
           }
         }
@@ -168,8 +225,7 @@
     },
     {
       "id": "tokens-received-pkce",
-      "type": "text",
-      "text": "# Tokens via PKCE\n\nExchanged code verifier for tokens",
+      "type": "otel-event",
       "x": 0,
       "y": 550,
       "width": 200,
@@ -177,26 +233,28 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "auth.tokens.received.pkce",
-          "attributes": {
-            "user.id": { "type": "string", "description": "User ID", "required": true }
-          }
-        },
         "references": [
           "src/app/api/auth/callback/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/app/api/auth/callback/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8",
         "dataSchema": {
           "user.id": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Tokens via PKCE",
+      "event": {
+        "name": "auth.tokens.received.pkce",
+        "attributes": {
+          "user.id": {
+            "type": "string",
+            "description": "User ID",
             "required": true
           }
         }
@@ -204,8 +262,7 @@
     },
     {
       "id": "tokens-received-cookie",
-      "type": "text",
-      "text": "# Tokens via Cookie\n\nParsed session data from cookie",
+      "type": "otel-event",
       "x": 220,
       "y": 550,
       "width": 200,
@@ -213,26 +270,28 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "auth.tokens.received.cookie",
-          "attributes": {
-            "user.id": { "type": "string", "description": "User ID", "required": true }
-          }
-        },
         "references": [
           "src/app/api/auth/callback/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/app/api/auth/callback/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8",
         "dataSchema": {
           "user.id": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Tokens via Cookie",
+      "event": {
+        "name": "auth.tokens.received.cookie",
+        "attributes": {
+          "user.id": {
+            "type": "string",
+            "description": "User ID",
             "required": true
           }
         }
@@ -240,8 +299,7 @@
     },
     {
       "id": "cookies-set",
-      "type": "text",
-      "text": "# Cookies Set\n\nHTTP-only auth cookies created",
+      "type": "otel-event",
       "x": 100,
       "y": 650,
       "width": 200,
@@ -249,26 +307,28 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "auth.cookies.set",
-          "attributes": {
-            "cookies.count": { "type": "number", "description": "Number of cookies set", "required": true }
-          }
-        },
         "references": [
           "src/app/api/auth/callback/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/app/api/auth/callback/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8",
         "dataSchema": {
           "cookies.count": {
             "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          }
+        }
+      },
+      "label": "Cookies Set",
+      "event": {
+        "name": "auth.cookies.set",
+        "attributes": {
+          "cookies.count": {
+            "type": "number",
+            "description": "Number of cookies set",
             "required": true
           }
         }
@@ -276,8 +336,7 @@
     },
     {
       "id": "callback-complete",
-      "type": "text",
-      "text": "# Callback Complete\n\nAuthentication successful",
+      "type": "otel-event",
       "x": 100,
       "y": 850,
       "width": 200,
@@ -285,36 +344,50 @@
       "color": "#16a34a",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "auth.callback.complete",
-          "attributes": {
-            "redirect.path": { "type": "string", "description": "Redirect path", "required": true },
-            "redirect.source": { "type": "string", "description": "Redirect source", "required": true },
-            "duration.ms": { "type": "number", "description": "Duration in milliseconds", "required": false }
-          }
-        },
         "references": [
           "src/app/api/auth/callback/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/auth/callback/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "redirect.path": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "redirect.source": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "duration.ms": {
+            "type": "number",
+            "required": false,
+            "description": "Field value",
+            "placeholder": "0"
+          }
+        }
+      },
+      "label": "Callback Complete",
+      "event": {
+        "name": "auth.callback.complete",
+        "attributes": {
+          "redirect.path": {
+            "type": "string",
+            "description": "Redirect path",
             "required": true
           },
           "redirect.source": {
             "type": "string",
+            "description": "Redirect source",
             "required": true
           },
           "duration.ms": {
             "type": "number",
+            "description": "Duration in milliseconds",
             "required": false
           }
         }
@@ -322,8 +395,7 @@
     },
     {
       "id": "callback-error",
-      "type": "text",
-      "text": "# Callback Error\n\nAuthentication failed",
+      "type": "otel-event",
       "x": 450,
       "y": 50,
       "width": 200,
@@ -331,41 +403,61 @@
       "color": "#dc2626",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "auth.callback.error",
-          "attributes": {
-            "error.type": { "type": "string", "description": "Error type", "required": true },
-            "error.message": { "type": "string", "description": "Error message", "required": true },
-            "error.stage": { "type": "string", "description": "Stage where error occurred", "required": true },
-            "error.status_code": { "type": "number", "description": "HTTP status code", "required": false }
-          }
-        },
         "references": [
           "src/app/api/auth/callback/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/app/api/auth/callback/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#ef4444",
         "stroke": "#dc2626",
         "dataSchema": {
           "error.type": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "error.message": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "error.stage": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "error.status_code": {
+            "type": "number",
+            "required": false,
+            "description": "Field value",
+            "placeholder": "0"
+          }
+        }
+      },
+      "label": "Callback Error",
+      "event": {
+        "name": "auth.callback.error",
+        "attributes": {
+          "error.type": {
+            "type": "string",
+            "description": "Error type",
             "required": true
           },
           "error.message": {
             "type": "string",
+            "description": "Error message",
             "required": true
           },
           "error.stage": {
             "type": "string",
+            "description": "Stage where error occurred",
             "required": true
           },
           "error.status_code": {
             "type": "number",
+            "description": "HTTP status code",
             "required": false
           }
         }

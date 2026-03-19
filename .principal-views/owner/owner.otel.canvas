@@ -21,8 +21,7 @@
   "nodes": [
     {
       "id": "page-init",
-      "type": "text",
-      "text": "# Page Init\n\nOwner page loads",
+      "type": "otel-event",
       "x": -400,
       "y": 0,
       "width": 200,
@@ -30,35 +29,30 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.page.init",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "GitHub owner (user/org)",
-              "required": true
-            },
-            "project": {
-              "type": "string",
-              "description": "Initial project from URL query",
-              "required": false
-            }
-          }
-        },
         "references": [
           "src/app/[owner]/page.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/[owner]/page.tsx"]
+        ]
+      },
+      "label": "Page Init",
+      "event": {
+        "name": "owner.page.init",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "GitHub owner (user/org)",
+            "required": true
+          },
+          "project": {
+            "type": "string",
+            "description": "Initial project from URL query",
+            "required": false
+          }
         }
       }
     },
     {
       "id": "owner-repos-load",
-      "type": "text",
-      "text": "# Load Repositories\n\nFetch owner's repos",
+      "type": "otel-event",
       "x": -400,
       "y": 150,
       "width": 200,
@@ -66,30 +60,25 @@
       "color": "#6d28d9",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.repos.load",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "GitHub owner",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/OwnerPageProvider.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/contexts/OwnerPageProvider.tsx"]
+        ]
+      },
+      "label": "Load Repositories",
+      "event": {
+        "name": "owner.repos.load",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "GitHub owner",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "owner-repos-success",
-      "type": "text",
-      "text": "# Repos Ready\n\nRepositories loaded",
+      "type": "otel-event",
       "x": -400,
       "y": 300,
       "width": 200,
@@ -97,36 +86,31 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.repos.success",
-          "attributes": {
-            "repoCount": {
-              "type": "number",
-              "description": "Number of repositories",
-              "required": true
-            },
-            "ownerInfo": {
-              "type": "object",
-              "description": "Owner metadata",
-              "required": false,
-              "display": false
-            }
-          }
-        },
         "references": [
           "src/contexts/OwnerPageProvider.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/contexts/OwnerPageProvider.tsx"]
+        ]
+      },
+      "label": "Repos Ready",
+      "event": {
+        "name": "owner.repos.success",
+        "attributes": {
+          "repoCount": {
+            "type": "number",
+            "description": "Number of repositories",
+            "required": true
+          },
+          "ownerInfo": {
+            "type": "object",
+            "description": "Owner metadata",
+            "required": false,
+            "display": false
+          }
         }
       }
     },
     {
       "id": "owner-repos-error",
-      "type": "text",
-      "text": "# Repos Error\n\nFailed to load repos",
+      "type": "otel-event",
       "x": -150,
       "y": 150,
       "width": 200,
@@ -134,30 +118,25 @@
       "color": "#dc2626",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.repos.error",
-          "attributes": {
-            "error.message": {
-              "type": "string",
-              "description": "Error message",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/OwnerPageProvider.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/contexts/OwnerPageProvider.tsx"]
+        ]
+      },
+      "label": "Repos Error",
+      "event": {
+        "name": "owner.repos.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "state-owner-repos",
-      "type": "text",
-      "text": "# ownerRepositories\n\nState: owner's repos",
+      "type": "otel-event",
       "x": -400,
       "y": 450,
       "width": 200,
@@ -165,30 +144,25 @@
       "color": "#ca8a04",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.state.repos.updated",
-          "attributes": {
-            "repoCount": {
-              "type": "number",
-              "description": "Repositories in state",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/OwnerPageProvider.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "state",
-          "files": ["src/contexts/OwnerPageProvider.tsx"]
+        ]
+      },
+      "label": "ownerRepositories",
+      "event": {
+        "name": "owner.state.repos.updated",
+        "attributes": {
+          "repoCount": {
+            "type": "number",
+            "description": "Repositories in state",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "panel-owner-repos",
-      "type": "text",
-      "text": "# Repositories Panel\n\nShows owner's repos",
+      "type": "otel-event",
       "x": -400,
       "y": 600,
       "width": 200,
@@ -196,30 +170,25 @@
       "color": "#059669",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.panel.repos.render",
-          "attributes": {
-            "repoCount": {
-              "type": "number",
-              "description": "Repos rendered",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/[owner]/OwnerPageContent.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "render",
-          "files": ["src/app/[owner]/OwnerPageContent.tsx"]
+        ]
+      },
+      "label": "Repositories Panel",
+      "event": {
+        "name": "owner.panel.repos.render",
+        "attributes": {
+          "repoCount": {
+            "type": "number",
+            "description": "Repos rendered",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "repo-auto-select",
-      "type": "text",
-      "text": "# Auto-select First\n\nAuto-select first repo",
+      "type": "otel-event",
       "x": -150,
       "y": 300,
       "width": 200,
@@ -227,30 +196,25 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.repo.auto-select",
-          "attributes": {
-            "fullName": {
-              "type": "string",
-              "description": "Auto-selected repo full name",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/[owner]/OwnerPageContent.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "operation",
-          "files": ["src/app/[owner]/OwnerPageContent.tsx"]
+        ]
+      },
+      "label": "Auto-select First",
+      "event": {
+        "name": "owner.repo.auto-select",
+        "attributes": {
+          "fullName": {
+            "type": "string",
+            "description": "Auto-selected repo full name",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "repo-preview",
-      "type": "text",
-      "text": "# Preview Repository\n\nUser clicks repo",
+      "type": "otel-event",
       "x": 100,
       "y": 0,
       "width": 200,
@@ -258,30 +222,25 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.repo.preview",
-          "attributes": {
-            "fullName": {
-              "type": "string",
-              "description": "Repository full name",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/[owner]/OwnerPageContent.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/[owner]/OwnerPageContent.tsx"]
+        ]
+      },
+      "label": "Preview Repository",
+      "event": {
+        "name": "owner.repo.preview",
+        "attributes": {
+          "fullName": {
+            "type": "string",
+            "description": "Repository full name",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "file-tree-load",
-      "type": "text",
-      "text": "# Load File Tree\n\nFetch repo structure",
+      "type": "otel-event",
       "x": 100,
       "y": 150,
       "width": 200,
@@ -289,35 +248,30 @@
       "color": "#6d28d9",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.file-tree.load",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/OwnerPageProvider.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/contexts/OwnerPageProvider.tsx"]
+        ]
+      },
+      "label": "Load File Tree",
+      "event": {
+        "name": "owner.file-tree.load",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "file-tree-success",
-      "type": "text",
-      "text": "# File Tree Ready\n\nTree loaded",
+      "type": "otel-event",
       "x": 100,
       "y": 300,
       "width": 200,
@@ -325,30 +279,25 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.file-tree.success",
-          "attributes": {
-            "fileCount": {
-              "type": "number",
-              "description": "Files in tree",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/OwnerPageProvider.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/contexts/OwnerPageProvider.tsx"]
+        ]
+      },
+      "label": "File Tree Ready",
+      "event": {
+        "name": "owner.file-tree.success",
+        "attributes": {
+          "fileCount": {
+            "type": "number",
+            "description": "Files in tree",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "file-tree-error",
-      "type": "text",
-      "text": "# File Tree Error\n\nFailed to load tree",
+      "type": "otel-event",
       "x": 350,
       "y": 150,
       "width": 200,
@@ -356,30 +305,25 @@
       "color": "#dc2626",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.file-tree.error",
-          "attributes": {
-            "error.message": {
-              "type": "string",
-              "description": "Error message",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/OwnerPageProvider.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/contexts/OwnerPageProvider.tsx"]
+        ]
+      },
+      "label": "File Tree Error",
+      "event": {
+        "name": "owner.file-tree.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "state-file-tree",
-      "type": "text",
-      "text": "# fileTree\n\nState: repo structure",
+      "type": "otel-event",
       "x": 100,
       "y": 450,
       "width": 200,
@@ -387,30 +331,25 @@
       "color": "#ca8a04",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.state.file-tree.updated",
-          "attributes": {
-            "fileCount": {
-              "type": "number",
-              "description": "Files in state",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/contexts/OwnerPageProvider.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "state",
-          "files": ["src/contexts/OwnerPageProvider.tsx"]
+        ]
+      },
+      "label": "fileTree",
+      "event": {
+        "name": "owner.state.file-tree.updated",
+        "attributes": {
+          "fileCount": {
+            "type": "number",
+            "description": "Files in state",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "panel-file-city",
-      "type": "text",
-      "text": "# File City Panel\n\nVisualizes repo",
+      "type": "otel-event",
       "x": 100,
       "y": 600,
       "width": 200,
@@ -418,30 +357,25 @@
       "color": "#059669",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.panel.file-city.render",
-          "attributes": {
-            "fileCount": {
-              "type": "number",
-              "description": "Files rendered",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/[owner]/OwnerPageContent.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "render",
-          "files": ["src/app/[owner]/OwnerPageContent.tsx"]
+        ]
+      },
+      "label": "File City Panel",
+      "event": {
+        "name": "owner.panel.file-city.render",
+        "attributes": {
+          "fileCount": {
+            "type": "number",
+            "description": "Files rendered",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "canvas-check",
-      "type": "text",
-      "text": "# Check Canvas\n\nCheck for architecture.canvas",
+      "type": "otel-event",
       "x": 350,
       "y": 300,
       "width": 200,
@@ -449,35 +383,30 @@
       "color": "#6d28d9",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.canvas.check",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/[owner]/OwnerPageContent.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "io",
-          "files": ["src/app/[owner]/OwnerPageContent.tsx"]
+        ]
+      },
+      "label": "Check Canvas",
+      "event": {
+        "name": "owner.canvas.check",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "canvas-exists",
-      "type": "text",
-      "text": "# Canvas Found\n\nAuto-load canvas",
+      "type": "otel-event",
       "x": 350,
       "y": 450,
       "width": 200,
@@ -485,30 +414,25 @@
       "color": "#16a34a",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.canvas.found",
-          "attributes": {
-            "configPath": {
-              "type": "string",
-              "description": "Path to canvas file",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/[owner]/OwnerPageContent.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/[owner]/OwnerPageContent.tsx"]
+        ]
+      },
+      "label": "Canvas Found",
+      "event": {
+        "name": "owner.canvas.found",
+        "attributes": {
+          "configPath": {
+            "type": "string",
+            "description": "Path to canvas file",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "panel-visual-validation",
-      "type": "text",
-      "text": "# Visual Validation\n\nArchitecture panel",
+      "type": "otel-event",
       "x": 350,
       "y": 600,
       "width": 200,
@@ -516,30 +440,25 @@
       "color": "#059669",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.panel.vv.render",
-          "attributes": {
-            "configId": {
-              "type": "string",
-              "description": "Active config ID",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/[owner]/OwnerPageContent.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "render",
-          "files": ["src/app/[owner]/OwnerPageContent.tsx"]
+        ]
+      },
+      "label": "Visual Validation",
+      "event": {
+        "name": "owner.panel.vv.render",
+        "attributes": {
+          "configId": {
+            "type": "string",
+            "description": "Active config ID",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "view-mode-switch",
-      "type": "text",
-      "text": "# View Mode Switch\n\nDefault ↔ World",
+      "type": "otel-event",
       "x": 600,
       "y": 0,
       "width": 200,
@@ -547,35 +466,30 @@
       "color": "#0891b2",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.view-mode.switch",
-          "attributes": {
-            "fromMode": {
-              "type": "string",
-              "description": "Previous mode",
-              "required": true
-            },
-            "toMode": {
-              "type": "string",
-              "description": "New mode",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/[owner]/OwnerPageContent.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/[owner]/OwnerPageContent.tsx"]
+        ]
+      },
+      "label": "View Mode Switch",
+      "event": {
+        "name": "owner.view-mode.switch",
+        "attributes": {
+          "fromMode": {
+            "type": "string",
+            "description": "Previous mode",
+            "required": true
+          },
+          "toMode": {
+            "type": "string",
+            "description": "New mode",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "layout-default",
-      "type": "text",
-      "text": "# Default Layout\n\nRepos / City / Quality",
+      "type": "otel-event",
       "x": 600,
       "y": 150,
       "width": 200,
@@ -583,30 +497,25 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.layout.default",
-          "attributes": {
-            "panels": {
-              "type": "array",
-              "description": "Active panel IDs",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/[owner]/OwnerPageContent.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/[owner]/OwnerPageContent.tsx"]
+        ]
+      },
+      "label": "Default Layout",
+      "event": {
+        "name": "owner.layout.default",
+        "attributes": {
+          "panels": {
+            "type": "array",
+            "description": "Active panel IDs",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "layout-world",
-      "type": "text",
-      "text": "# World Layout\n\nRepos / Map / City",
+      "type": "otel-event",
       "x": 850,
       "y": 150,
       "width": 200,
@@ -614,30 +523,25 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.layout.world",
-          "attributes": {
-            "panels": {
-              "type": "array",
-              "description": "Active panel IDs",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/[owner]/OwnerPageContent.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/[owner]/OwnerPageContent.tsx"]
+        ]
+      },
+      "label": "World Layout",
+      "event": {
+        "name": "owner.layout.world",
+        "attributes": {
+          "panels": {
+            "type": "array",
+            "description": "Active panel IDs",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "panel-collection-map",
-      "type": "text",
-      "text": "# Collection Map\n\nWorld map panel",
+      "type": "otel-event",
       "x": 850,
       "y": 300,
       "width": 200,
@@ -645,30 +549,25 @@
       "color": "#059669",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.panel.collection-map.render",
-          "attributes": {
-            "repoCount": {
-              "type": "number",
-              "description": "Repos on map",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/[owner]/OwnerPageContent.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "render",
-          "files": ["src/app/[owner]/OwnerPageContent.tsx"]
+        ]
+      },
+      "label": "Collection Map",
+      "event": {
+        "name": "owner.panel.collection-map.render",
+        "attributes": {
+          "repoCount": {
+            "type": "number",
+            "description": "Repos on map",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "panel-quality",
-      "type": "text",
-      "text": "# Quality Panel\n\nCode quality metrics",
+      "type": "otel-event",
       "x": 600,
       "y": 300,
       "width": 200,
@@ -676,30 +575,25 @@
       "color": "#059669",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.panel.quality.render",
-          "attributes": {
-            "lensCount": {
-              "type": "number",
-              "description": "Quality lenses",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/[owner]/OwnerPageContent.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "render",
-          "files": ["src/app/[owner]/OwnerPageContent.tsx"]
+        ]
+      },
+      "label": "Quality Panel",
+      "event": {
+        "name": "owner.panel.quality.render",
+        "attributes": {
+          "lensCount": {
+            "type": "number",
+            "description": "Quality lenses",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "panel-packages",
-      "type": "text",
-      "text": "# Packages Panel\n\nPackage composition",
+      "type": "otel-event",
       "x": 600,
       "y": 450,
       "width": 200,
@@ -707,30 +601,25 @@
       "color": "#059669",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.panel.packages.render",
-          "attributes": {
-            "packageCount": {
-              "type": "number",
-              "description": "Packages",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/[owner]/OwnerPageContent.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "render",
-          "files": ["src/app/[owner]/OwnerPageContent.tsx"]
+        ]
+      },
+      "label": "Packages Panel",
+      "event": {
+        "name": "owner.panel.packages.render",
+        "attributes": {
+          "packageCount": {
+            "type": "number",
+            "description": "Packages",
+            "required": true
+          }
         }
       }
     },
     {
       "id": "repo-navigate",
-      "type": "text",
-      "text": "# Navigate to Repo\n\nOpen full repo page",
+      "type": "otel-event",
       "x": -150,
       "y": 450,
       "width": 200,
@@ -738,26 +627,23 @@
       "color": "#0891b2",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "owner.repo.navigate",
-          "attributes": {
-            "fullName": {
-              "type": "string",
-              "description": "Repository full name",
-              "required": true
-            }
-          }
-        },
         "references": [
           "src/app/[owner]/OwnerPageContent.tsx"
-        ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/[owner]/OwnerPageContent.tsx"]
+        ]
+      },
+      "label": "Navigate to Repo",
+      "event": {
+        "name": "owner.repo.navigate",
+        "attributes": {
+          "fullName": {
+            "type": "string",
+            "description": "Repository full name",
+            "required": true
+          }
         }
       }
-    }  ],
+    }
+  ],
   "edges": [
     {
       "id": "init-1",
@@ -765,7 +651,9 @@
       "fromSide": "bottom",
       "toNode": "owner-repos-load",
       "toSide": "top",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "repos-1",
@@ -773,7 +661,9 @@
       "fromSide": "bottom",
       "toNode": "owner-repos-success",
       "toSide": "top",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "repos-2",
@@ -781,7 +671,9 @@
       "fromSide": "right",
       "toNode": "owner-repos-error",
       "toSide": "left",
-      "pv": { "edgeType": "error" }
+      "pv": {
+        "edgeType": "error"
+      }
     },
     {
       "id": "repos-3",
@@ -790,7 +682,9 @@
       "toNode": "state-owner-repos",
       "toSide": "top",
       "label": "writes",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "repos-4",
@@ -799,7 +693,9 @@
       "toNode": "repo-auto-select",
       "toSide": "left",
       "label": "triggers",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "repos-5",
@@ -808,7 +704,9 @@
       "toNode": "panel-owner-repos",
       "toSide": "top",
       "label": "subscribes",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "auto-1",
@@ -817,7 +715,9 @@
       "toNode": "repo-preview",
       "toSide": "left",
       "label": "auto",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "preview-1",
@@ -825,7 +725,9 @@
       "fromSide": "bottom",
       "toNode": "file-tree-load",
       "toSide": "top",
-      "pv": { "edgeType": "user-action" }
+      "pv": {
+        "edgeType": "user-action"
+      }
     },
     {
       "id": "preview-2",
@@ -834,7 +736,9 @@
       "toNode": "canvas-check",
       "toSide": "left",
       "label": "parallel",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "tree-1",
@@ -842,7 +746,9 @@
       "fromSide": "bottom",
       "toNode": "file-tree-success",
       "toSide": "top",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "tree-2",
@@ -850,7 +756,9 @@
       "fromSide": "right",
       "toNode": "file-tree-error",
       "toSide": "left",
-      "pv": { "edgeType": "error" }
+      "pv": {
+        "edgeType": "error"
+      }
     },
     {
       "id": "tree-3",
@@ -859,7 +767,9 @@
       "toNode": "state-file-tree",
       "toSide": "top",
       "label": "writes",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "tree-4",
@@ -868,7 +778,9 @@
       "toNode": "panel-file-city",
       "toSide": "top",
       "label": "subscribes",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "canvas-1",
@@ -876,7 +788,9 @@
       "fromSide": "bottom",
       "toNode": "canvas-exists",
       "toSide": "top",
-      "pv": { "edgeType": "flow" }
+      "pv": {
+        "edgeType": "flow"
+      }
     },
     {
       "id": "canvas-2",
@@ -885,7 +799,9 @@
       "toNode": "panel-visual-validation",
       "toSide": "top",
       "label": "emits vv:config:selected",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "mode-1",
@@ -894,7 +810,9 @@
       "toNode": "layout-default",
       "toSide": "top",
       "label": "default",
-      "pv": { "edgeType": "user-action" }
+      "pv": {
+        "edgeType": "user-action"
+      }
     },
     {
       "id": "mode-2",
@@ -903,7 +821,9 @@
       "toNode": "layout-world",
       "toSide": "top",
       "label": "world",
-      "pv": { "edgeType": "user-action" }
+      "pv": {
+        "edgeType": "user-action"
+      }
     },
     {
       "id": "layout-1",
@@ -912,7 +832,9 @@
       "toNode": "panel-quality",
       "toSide": "top",
       "label": "renders",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "layout-2",
@@ -921,7 +843,9 @@
       "toNode": "panel-packages",
       "toSide": "top",
       "label": "renders",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "layout-3",
@@ -930,7 +854,9 @@
       "toNode": "panel-collection-map",
       "toSide": "top",
       "label": "renders",
-      "pv": { "edgeType": "data-flow" }
+      "pv": {
+        "edgeType": "data-flow"
+      }
     },
     {
       "id": "nav-1",
@@ -939,7 +865,9 @@
       "toNode": "repo-navigate",
       "toSide": "bottom",
       "label": "double-click",
-      "pv": { "edgeType": "user-action" }
+      "pv": {
+        "edgeType": "user-action"
+      }
     }
   ]
 }

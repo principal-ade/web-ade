@@ -18,8 +18,7 @@
   "nodes": [
     {
       "id": "http-request",
-      "type": "text",
-      "text": "# GET /api/auth/me\n\nHTTP request to get current user",
+      "type": "otel-event",
       "x": 100,
       "y": 50,
       "width": 250,
@@ -27,30 +26,29 @@
       "color": "#3b82f6",
       "pv": {
         "status": "approved",
-        "event": {
-          "name": "http.request.start",
-          "attributes": {
-            "http.method": { "type": "string" },
-            "http.route": { "type": "string" }
-          }
-        },
         "references": [
           "src/app/api/auth/me/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "http",
-          "files": ["src/app/api/auth/me/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#dbeafe",
         "stroke": "#3b82f6"
+      },
+      "label": "GET /api/auth/me",
+      "event": {
+        "name": "http.request.start",
+        "attributes": {
+          "http.method": {
+            "type": "string"
+          },
+          "http.route": {
+            "type": "string"
+          }
+        }
       }
     },
     {
       "id": "get-token",
-      "type": "text",
-      "text": "# Get GitHub Token\n\nRead token from HTTP-only cookie",
+      "type": "otel-event",
       "x": 100,
       "y": 200,
       "width": 250,
@@ -58,29 +56,26 @@
       "color": "#f59e0b",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "auth.me.get_token",
-          "attributes": {
-            "has_token": { "type": "boolean" }
-          }
-        },
         "references": [
           "src/app/api/auth/me/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "auth",
-          "files": ["src/app/api/auth/me/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#fef3c7",
         "stroke": "#f59e0b"
+      },
+      "label": "Get GitHub Token",
+      "event": {
+        "name": "auth.me.get_token",
+        "attributes": {
+          "has_token": {
+            "type": "boolean"
+          }
+        }
       }
     },
     {
       "id": "fetch-github-user",
-      "type": "text",
-      "text": "# Fetch GitHub User\n\nCall GitHub API /user endpoint",
+      "type": "otel-event",
       "x": 100,
       "y": 350,
       "width": 250,
@@ -88,29 +83,26 @@
       "color": "#8b5cf6",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "auth.me.fetch_github",
-          "attributes": {
-            "response.status": { "type": "number" }
-          }
-        },
         "references": [
           "src/app/api/auth/me/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "external",
-          "files": ["src/app/api/auth/me/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#ede9fe",
         "stroke": "#8b5cf6"
+      },
+      "label": "Fetch GitHub User",
+      "event": {
+        "name": "auth.me.fetch_github",
+        "attributes": {
+          "response.status": {
+            "type": "number"
+          }
+        }
       }
     },
     {
       "id": "sync-token",
-      "type": "text",
-      "text": "# Sync Token\n\nOptionally sync from auth server",
+      "type": "otel-event",
       "x": 450,
       "y": 350,
       "width": 220,
@@ -118,29 +110,26 @@
       "color": "#f59e0b",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "auth.me.sync_token",
-          "attributes": {
-            "synced": { "type": "boolean" }
-          }
-        },
         "references": [
           "src/app/api/auth/me/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "auth",
-          "files": ["src/app/api/auth/me/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#fef3c7",
         "stroke": "#f59e0b"
+      },
+      "label": "Sync Token",
+      "event": {
+        "name": "auth.me.sync_token",
+        "attributes": {
+          "synced": {
+            "type": "boolean"
+          }
+        }
       }
     },
     {
       "id": "return-user",
-      "type": "text",
-      "text": "# Return User Data\n\nRespond with user profile (no tokens)",
+      "type": "otel-event",
       "x": 100,
       "y": 500,
       "width": 250,
@@ -148,44 +137,49 @@
       "color": "#22c55e",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "auth.me.success",
-          "attributes": {
-            "user.login": { "type": "string" },
-            "user.id": { "type": "number" }
-          }
-        },
         "references": [
           "src/app/api/auth/me/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/auth/me/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#d1fae5",
         "stroke": "#22c55e",
         "dataSchema": {
           "isAuthenticated": {
             "type": "boolean",
-            "required": true
+            "required": true,
+            "description": "Field value",
+            "placeholder": "true/false"
           },
           "user.login": {
             "type": "string",
-            "required": true
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
           },
           "user.id": {
             "type": "number",
-            "required": true
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          }
+        }
+      },
+      "label": "Return User Data",
+      "event": {
+        "name": "auth.me.success",
+        "attributes": {
+          "user.login": {
+            "type": "string"
+          },
+          "user.id": {
+            "type": "number"
           }
         }
       }
     },
     {
       "id": "unauthenticated",
-      "type": "text",
-      "text": "# Not Authenticated\n\nNo valid token found",
+      "type": "otel-event",
       "x": 450,
       "y": 200,
       "width": 220,
@@ -193,29 +187,26 @@
       "color": "#ef4444",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "auth.me.unauthenticated",
-          "attributes": {
-            "reason": { "type": "string" }
-          }
-        },
         "references": [
           "src/app/api/auth/me/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "auth",
-          "files": ["src/app/api/auth/me/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#fee2e2",
         "stroke": "#ef4444"
+      },
+      "label": "Not Authenticated",
+      "event": {
+        "name": "auth.me.unauthenticated",
+        "attributes": {
+          "reason": {
+            "type": "string"
+          }
+        }
       }
     },
     {
       "id": "error",
-      "type": "text",
-      "text": "# Error\n\nFailed to fetch user data",
+      "type": "otel-event",
       "x": 450,
       "y": 500,
       "width": 220,
@@ -223,32 +214,36 @@
       "color": "#ef4444",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "auth.me.error",
-          "attributes": {
-            "error.type": { "type": "string" },
-            "error.message": { "type": "string" }
-          }
-        },
         "references": [
           "src/app/api/auth/me/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/app/api/auth/me/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#fee2e2",
         "stroke": "#ef4444",
         "dataSchema": {
           "error.type": {
             "type": "string",
-            "required": true
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
           },
           "error.message": {
             "type": "string",
-            "required": true
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Error",
+      "event": {
+        "name": "auth.me.error",
+        "attributes": {
+          "error.type": {
+            "type": "string"
+          },
+          "error.message": {
+            "type": "string"
           }
         }
       }

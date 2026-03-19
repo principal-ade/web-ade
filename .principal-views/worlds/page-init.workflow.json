@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/worlds/worlds.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "worlds.page",
   "name": "Worlds Page Initialization",
   "description": "Initialize the Worlds page with authentication and collection loading",

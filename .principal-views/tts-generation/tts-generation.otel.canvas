@@ -27,8 +27,7 @@
   "nodes": [
     {
       "id": "tts-request-started",
-      "type": "text",
-      "text": "# TTS Request Started\n\nTTS generation request initiated\n\n**Attributes:**\n- owner\n- repo\n- path\n- stepId\n- commitSha\n- dictionaryId (optional)",
+      "type": "otel-event",
       "x": 100,
       "y": 50,
       "width": 200,
@@ -41,64 +40,61 @@
         "shape": "rectangle",
         "fill": "#dbeafe",
         "stroke": "#3b82f6",
-        "references": ["src/app/api/tts/generate/route.ts"],
-        "event": {
-          "name": "tts.request.started",
-          "description": "Emitted when a TTS generation request is received",
-          "attributes": {
-            "tts.owner": {
-              "type": "string",
-              "description": "GitHub repository owner",
-              "required": true
-            },
-            "tts.repo": {
-              "type": "string",
-              "description": "GitHub repository name",
-              "required": true
-            },
-            "tts.path": {
-              "type": "string",
-              "description": "Path to tour file in repository",
-              "required": true
-            },
-            "tts.stepId": {
-              "type": "string",
-              "description": "Tour step ID to generate audio for",
-              "required": true
-            },
-            "tts.commitSha": {
-              "type": "string",
-              "description": "Git commit SHA for cache key",
-              "required": true
-            },
-            "tts.voice": {
-              "type": "string",
-              "description": "ElevenLabs voice ID",
-              "required": false
-            },
-            "tts.speed": {
-              "type": "number",
-              "description": "Playback speed (0.5-2.0)",
-              "required": false
-            },
-            "tts.dictionaryId": {
-              "type": "string",
-              "description": "ElevenLabs pronunciation dictionary ID if specified",
-              "required": false
-            }
+        "references": [
+          "src/app/api/tts/generate/route.ts"
+        ]
+      },
+      "label": "TTS Request Started",
+      "event": {
+        "name": "tts.request.started",
+        "description": "Emitted when a TTS generation request is received",
+        "attributes": {
+          "tts.owner": {
+            "type": "string",
+            "description": "GitHub repository owner",
+            "required": true
+          },
+          "tts.repo": {
+            "type": "string",
+            "description": "GitHub repository name",
+            "required": true
+          },
+          "tts.path": {
+            "type": "string",
+            "description": "Path to tour file in repository",
+            "required": true
+          },
+          "tts.stepId": {
+            "type": "string",
+            "description": "Tour step ID to generate audio for",
+            "required": true
+          },
+          "tts.commitSha": {
+            "type": "string",
+            "description": "Git commit SHA for cache key",
+            "required": true
+          },
+          "tts.voice": {
+            "type": "string",
+            "description": "ElevenLabs voice ID",
+            "required": false
+          },
+          "tts.speed": {
+            "type": "number",
+            "description": "Playback speed (0.5-2.0)",
+            "required": false
+          },
+          "tts.dictionaryId": {
+            "type": "string",
+            "description": "ElevenLabs pronunciation dictionary ID if specified",
+            "required": false
           }
-        },
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/tts/generate/route.ts"]
         }
       }
     },
     {
       "id": "tts-cache-hit",
-      "type": "text",
-      "text": "# TTS Cache Hit\n\nAudio found in S3 cache\n\n**Attributes:**\n- s3Key\n- audioUrl\n- cached: true",
+      "type": "otel-event",
       "x": 450,
       "y": 50,
       "width": 200,
@@ -111,39 +107,36 @@
         "shape": "rectangle",
         "fill": "#d1fae5",
         "stroke": "#22c55e",
-        "references": ["src/app/api/tts/generate/route.ts"],
-        "event": {
-          "name": "tts.cache.hit",
-          "description": "Emitted when cached audio is found in S3",
-          "attributes": {
-            "tts.s3Key": {
-              "type": "string",
-              "description": "S3 key for the cached audio file",
-              "required": true
-            },
-            "tts.audioUrl": {
-              "type": "string",
-              "description": "Public URL to cached audio",
-              "required": true
-            },
-            "tts.cached": {
-              "type": "boolean",
-              "description": "Always true for cache hits",
-              "required": true
-            }
+        "references": [
+          "src/app/api/tts/generate/route.ts"
+        ]
+      },
+      "label": "TTS Cache Hit",
+      "event": {
+        "name": "tts.cache.hit",
+        "description": "Emitted when cached audio is found in S3",
+        "attributes": {
+          "tts.s3Key": {
+            "type": "string",
+            "description": "S3 key for the cached audio file",
+            "required": true
+          },
+          "tts.audioUrl": {
+            "type": "string",
+            "description": "Public URL to cached audio",
+            "required": true
+          },
+          "tts.cached": {
+            "type": "boolean",
+            "description": "Always true for cache hits",
+            "required": true
           }
-        },
-        "otel": {
-          "kind": "event",
-          "category": "cache",
-          "files": ["src/app/api/tts/generate/route.ts"]
         }
       }
     },
     {
       "id": "tts-cache-miss",
-      "type": "text",
-      "text": "# TTS Cache Miss\n\nAudio not in cache, need to generate\n\n**Attributes:**\n- s3Key\n- cached: false",
+      "type": "otel-event",
       "x": 100,
       "y": 200,
       "width": 200,
@@ -156,34 +149,31 @@
         "shape": "rectangle",
         "fill": "#fef3c7",
         "stroke": "#f59e0b",
-        "references": ["src/app/api/tts/generate/route.ts"],
-        "event": {
-          "name": "tts.cache.miss",
-          "description": "Emitted when audio is not found in S3 cache",
-          "attributes": {
-            "tts.s3Key": {
-              "type": "string",
-              "description": "S3 key that was checked",
-              "required": true
-            },
-            "tts.cached": {
-              "type": "boolean",
-              "description": "Always false for cache misses",
-              "required": true
-            }
+        "references": [
+          "src/app/api/tts/generate/route.ts"
+        ]
+      },
+      "label": "TTS Cache Miss",
+      "event": {
+        "name": "tts.cache.miss",
+        "description": "Emitted when audio is not found in S3 cache",
+        "attributes": {
+          "tts.s3Key": {
+            "type": "string",
+            "description": "S3 key that was checked",
+            "required": true
+          },
+          "tts.cached": {
+            "type": "boolean",
+            "description": "Always false for cache misses",
+            "required": true
           }
-        },
-        "otel": {
-          "kind": "event",
-          "category": "cache",
-          "files": ["src/app/api/tts/generate/route.ts"]
         }
       }
     },
     {
       "id": "tts-tour-fetched",
-      "type": "text",
-      "text": "# Tour Fetched\n\nTour file fetched from GitHub\n\n**Attributes:**\n- tourId\n- stepDescription\n- textLength",
+      "type": "otel-event",
       "x": 100,
       "y": 350,
       "width": 200,
@@ -196,39 +186,36 @@
         "shape": "rectangle",
         "fill": "#e0e7ff",
         "stroke": "#6366f1",
-        "references": ["src/lib/tts/github-fetcher.ts"],
-        "event": {
-          "name": "tts.tour.fetched",
-          "description": "Emitted when tour file is successfully fetched from GitHub",
-          "attributes": {
-            "tts.tourId": {
-              "type": "string",
-              "description": "Tour file identifier",
-              "required": true
-            },
-            "tts.stepDescription": {
-              "type": "string",
-              "description": "Text content of the step to convert to speech",
-              "required": true
-            },
-            "tts.textLength": {
-              "type": "number",
-              "description": "Character count of step description",
-              "required": true
-            }
+        "references": [
+          "src/lib/tts/github-fetcher.ts"
+        ]
+      },
+      "label": "Tour Fetched",
+      "event": {
+        "name": "tts.tour.fetched",
+        "description": "Emitted when tour file is successfully fetched from GitHub",
+        "attributes": {
+          "tts.tourId": {
+            "type": "string",
+            "description": "Tour file identifier",
+            "required": true
+          },
+          "tts.stepDescription": {
+            "type": "string",
+            "description": "Text content of the step to convert to speech",
+            "required": true
+          },
+          "tts.textLength": {
+            "type": "number",
+            "description": "Character count of step description",
+            "required": true
           }
-        },
-        "otel": {
-          "kind": "event",
-          "category": "data",
-          "files": ["src/lib/tts/github-fetcher.ts"]
         }
       }
     },
     {
       "id": "tts-audio-generated",
-      "type": "text",
-      "text": "# Audio Generated\n\nAudio generated by ElevenLabs\n\n**Attributes:**\n- generationTimeMs\n- textLength\n- audioSizeBytes",
+      "type": "otel-event",
       "x": 100,
       "y": 500,
       "width": 200,
@@ -241,49 +228,46 @@
         "shape": "rectangle",
         "fill": "#fce7f3",
         "stroke": "#ec4899",
-        "references": ["src/lib/tts/elevenlabs-client.ts"],
-        "event": {
-          "name": "tts.audio.generated",
-          "description": "Emitted when ElevenLabs successfully generates audio",
-          "attributes": {
-            "tts.generationTimeMs": {
-              "type": "number",
-              "description": "Time taken to generate audio in milliseconds",
-              "required": true
-            },
-            "tts.textLength": {
-              "type": "number",
-              "description": "Character count of input text",
-              "required": true
-            },
-            "tts.audioSizeBytes": {
-              "type": "number",
-              "description": "Size of generated audio buffer in bytes",
-              "required": true
-            },
-            "tts.voice": {
-              "type": "string",
-              "description": "Voice ID used for generation",
-              "required": false
-            },
-            "tts.model": {
-              "type": "string",
-              "description": "ElevenLabs model ID used",
-              "required": false
-            }
+        "references": [
+          "src/lib/tts/elevenlabs-client.ts"
+        ]
+      },
+      "label": "Audio Generated",
+      "event": {
+        "name": "tts.audio.generated",
+        "description": "Emitted when ElevenLabs successfully generates audio",
+        "attributes": {
+          "tts.generationTimeMs": {
+            "type": "number",
+            "description": "Time taken to generate audio in milliseconds",
+            "required": true
+          },
+          "tts.textLength": {
+            "type": "number",
+            "description": "Character count of input text",
+            "required": true
+          },
+          "tts.audioSizeBytes": {
+            "type": "number",
+            "description": "Size of generated audio buffer in bytes",
+            "required": true
+          },
+          "tts.voice": {
+            "type": "string",
+            "description": "Voice ID used for generation",
+            "required": false
+          },
+          "tts.model": {
+            "type": "string",
+            "description": "ElevenLabs model ID used",
+            "required": false
           }
-        },
-        "otel": {
-          "kind": "event",
-          "category": "processing",
-          "files": ["src/lib/tts/elevenlabs-client.ts"]
         }
       }
     },
     {
       "id": "tts-audio-uploaded",
-      "type": "text",
-      "text": "# Audio Uploaded to S3\n\nGenerated audio uploaded to S3\n\n**Attributes:**\n- s3Key\n- audioUrl\n- audioSizeBytes",
+      "type": "otel-event",
       "x": 100,
       "y": 650,
       "width": 200,
@@ -296,39 +280,36 @@
         "shape": "rectangle",
         "fill": "#fef3c7",
         "stroke": "#f59e0b",
-        "references": ["src/lib/tts/s3-cache.ts"],
-        "event": {
-          "name": "tts.audio.uploaded",
-          "description": "Emitted when generated audio is uploaded to S3",
-          "attributes": {
-            "tts.s3Key": {
-              "type": "string",
-              "description": "S3 key where audio was stored",
-              "required": true
-            },
-            "tts.audioUrl": {
-              "type": "string",
-              "description": "Public URL to uploaded audio",
-              "required": true
-            },
-            "tts.audioSizeBytes": {
-              "type": "number",
-              "description": "Size of uploaded audio in bytes",
-              "required": true
-            }
+        "references": [
+          "src/lib/tts/s3-cache.ts"
+        ]
+      },
+      "label": "Audio Uploaded to S3",
+      "event": {
+        "name": "tts.audio.uploaded",
+        "description": "Emitted when generated audio is uploaded to S3",
+        "attributes": {
+          "tts.s3Key": {
+            "type": "string",
+            "description": "S3 key where audio was stored",
+            "required": true
+          },
+          "tts.audioUrl": {
+            "type": "string",
+            "description": "Public URL to uploaded audio",
+            "required": true
+          },
+          "tts.audioSizeBytes": {
+            "type": "number",
+            "description": "Size of uploaded audio in bytes",
+            "required": true
           }
-        },
-        "otel": {
-          "kind": "event",
-          "category": "storage",
-          "files": ["src/lib/tts/s3-cache.ts"]
         }
       }
     },
     {
       "id": "tts-request-complete",
-      "type": "text",
-      "text": "# TTS Request Complete\n\nTTS generation completed successfully\n\n**Attributes:**\n- audioUrl\n- cached\n- durationMs",
+      "type": "otel-event",
       "x": 450,
       "y": 650,
       "width": 200,
@@ -341,39 +322,36 @@
         "shape": "rectangle",
         "fill": "#d1fae5",
         "stroke": "#22c55e",
-        "references": ["src/app/api/tts/generate/route.ts"],
-        "event": {
-          "name": "tts.request.complete",
-          "description": "Emitted when TTS request completes successfully",
-          "attributes": {
-            "tts.audioUrl": {
-              "type": "string",
-              "description": "Final audio URL returned to client",
-              "required": true
-            },
-            "tts.cached": {
-              "type": "boolean",
-              "description": "Whether audio was served from cache",
-              "required": true
-            },
-            "tts.durationMs": {
-              "type": "number",
-              "description": "Total request duration in milliseconds",
-              "required": true
-            }
+        "references": [
+          "src/app/api/tts/generate/route.ts"
+        ]
+      },
+      "label": "TTS Request Complete",
+      "event": {
+        "name": "tts.request.complete",
+        "description": "Emitted when TTS request completes successfully",
+        "attributes": {
+          "tts.audioUrl": {
+            "type": "string",
+            "description": "Final audio URL returned to client",
+            "required": true
+          },
+          "tts.cached": {
+            "type": "boolean",
+            "description": "Whether audio was served from cache",
+            "required": true
+          },
+          "tts.durationMs": {
+            "type": "number",
+            "description": "Total request duration in milliseconds",
+            "required": true
           }
-        },
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/tts/generate/route.ts"]
         }
       }
     },
     {
       "id": "tts-error-tour-not-found",
-      "type": "text",
-      "text": "# Error: Tour Not Found\n\nTour file not found on GitHub\n\n**Attributes:**\n- errorCode\n- errorMessage\n- httpStatus: 404",
+      "type": "otel-event",
       "x": 450,
       "y": 350,
       "width": 200,
@@ -386,54 +364,51 @@
         "shape": "rectangle",
         "fill": "#fee2e2",
         "stroke": "#ef4444",
-        "references": ["src/lib/tts/github-fetcher.ts"],
-        "event": {
-          "name": "tts.error.tour_not_found",
-          "description": "Emitted when tour file is not found on GitHub",
-          "attributes": {
-            "tts.errorCode": {
-              "type": "string",
-              "description": "Error code (TOUR_NOT_FOUND)",
-              "required": true
-            },
-            "tts.errorMessage": {
-              "type": "string",
-              "description": "Human-readable error message",
-              "required": true
-            },
-            "tts.httpStatus": {
-              "type": "number",
-              "description": "HTTP status code (404)",
-              "required": true
-            },
-            "tts.owner": {
-              "type": "string",
-              "description": "GitHub repository owner",
-              "required": true
-            },
-            "tts.repo": {
-              "type": "string",
-              "description": "GitHub repository name",
-              "required": true
-            },
-            "tts.path": {
-              "type": "string",
-              "description": "Path that was not found",
-              "required": true
-            }
+        "references": [
+          "src/lib/tts/github-fetcher.ts"
+        ]
+      },
+      "label": "Error: Tour Not Found",
+      "event": {
+        "name": "tts.error.tour_not_found",
+        "description": "Emitted when tour file is not found on GitHub",
+        "attributes": {
+          "tts.errorCode": {
+            "type": "string",
+            "description": "Error code (TOUR_NOT_FOUND)",
+            "required": true
+          },
+          "tts.errorMessage": {
+            "type": "string",
+            "description": "Human-readable error message",
+            "required": true
+          },
+          "tts.httpStatus": {
+            "type": "number",
+            "description": "HTTP status code (404)",
+            "required": true
+          },
+          "tts.owner": {
+            "type": "string",
+            "description": "GitHub repository owner",
+            "required": true
+          },
+          "tts.repo": {
+            "type": "string",
+            "description": "GitHub repository name",
+            "required": true
+          },
+          "tts.path": {
+            "type": "string",
+            "description": "Path that was not found",
+            "required": true
           }
-        },
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/lib/tts/github-fetcher.ts"]
         }
       }
     },
     {
       "id": "tts-error-step-not-found",
-      "type": "text",
-      "text": "# Error: Step Not Found\n\nStep ID not found in tour\n\n**Attributes:**\n- errorCode\n- errorMessage\n- stepId\n- httpStatus: 404",
+      "type": "otel-event",
       "x": 450,
       "y": 200,
       "width": 200,
@@ -446,44 +421,41 @@
         "shape": "rectangle",
         "fill": "#fee2e2",
         "stroke": "#ef4444",
-        "references": ["src/lib/tts/github-fetcher.ts"],
-        "event": {
-          "name": "tts.error.step_not_found",
-          "description": "Emitted when requested step ID is not found in tour",
-          "attributes": {
-            "tts.errorCode": {
-              "type": "string",
-              "description": "Error code (STEP_NOT_FOUND)",
-              "required": true
-            },
-            "tts.errorMessage": {
-              "type": "string",
-              "description": "Human-readable error message",
-              "required": true
-            },
-            "tts.stepId": {
-              "type": "string",
-              "description": "Step ID that was not found",
-              "required": true
-            },
-            "tts.httpStatus": {
-              "type": "number",
-              "description": "HTTP status code (404)",
-              "required": true
-            }
+        "references": [
+          "src/lib/tts/github-fetcher.ts"
+        ]
+      },
+      "label": "Error: Step Not Found",
+      "event": {
+        "name": "tts.error.step_not_found",
+        "description": "Emitted when requested step ID is not found in tour",
+        "attributes": {
+          "tts.errorCode": {
+            "type": "string",
+            "description": "Error code (STEP_NOT_FOUND)",
+            "required": true
+          },
+          "tts.errorMessage": {
+            "type": "string",
+            "description": "Human-readable error message",
+            "required": true
+          },
+          "tts.stepId": {
+            "type": "string",
+            "description": "Step ID that was not found",
+            "required": true
+          },
+          "tts.httpStatus": {
+            "type": "number",
+            "description": "HTTP status code (404)",
+            "required": true
           }
-        },
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/lib/tts/github-fetcher.ts"]
         }
       }
     },
     {
       "id": "tts-error-rate-limit",
-      "type": "text",
-      "text": "# Error: Rate Limit\n\nElevenLabs API rate limit exceeded\n\n**Attributes:**\n- errorCode\n- errorMessage\n- retryAfter\n- httpStatus: 429",
+      "type": "otel-event",
       "x": 450,
       "y": 500,
       "width": 200,
@@ -496,44 +468,41 @@
         "shape": "rectangle",
         "fill": "#fee2e2",
         "stroke": "#ef4444",
-        "references": ["src/lib/tts/elevenlabs-client.ts"],
-        "event": {
-          "name": "tts.error.rate_limit",
-          "description": "Emitted when ElevenLabs API rate limit is exceeded",
-          "attributes": {
-            "tts.errorCode": {
-              "type": "string",
-              "description": "Error code (RATE_LIMIT_EXCEEDED)",
-              "required": true
-            },
-            "tts.errorMessage": {
-              "type": "string",
-              "description": "Human-readable error message",
-              "required": true
-            },
-            "tts.retryAfter": {
-              "type": "number",
-              "description": "Seconds to wait before retrying",
-              "required": true
-            },
-            "tts.httpStatus": {
-              "type": "number",
-              "description": "HTTP status code (429)",
-              "required": true
-            }
+        "references": [
+          "src/lib/tts/elevenlabs-client.ts"
+        ]
+      },
+      "label": "Error: Rate Limit",
+      "event": {
+        "name": "tts.error.rate_limit",
+        "description": "Emitted when ElevenLabs API rate limit is exceeded",
+        "attributes": {
+          "tts.errorCode": {
+            "type": "string",
+            "description": "Error code (RATE_LIMIT_EXCEEDED)",
+            "required": true
+          },
+          "tts.errorMessage": {
+            "type": "string",
+            "description": "Human-readable error message",
+            "required": true
+          },
+          "tts.retryAfter": {
+            "type": "number",
+            "description": "Seconds to wait before retrying",
+            "required": true
+          },
+          "tts.httpStatus": {
+            "type": "number",
+            "description": "HTTP status code (429)",
+            "required": true
           }
-        },
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/lib/tts/elevenlabs-client.ts"]
         }
       }
     },
     {
       "id": "tts-dictionary-applied",
-      "type": "text",
-      "text": "# Dictionary Applied\n\nPronunciation dictionary applied to text\n\n**Attributes:**\n- dictionaryId\n- dictionaryName\n- termsMatched",
+      "type": "otel-event",
       "x": -100,
       "y": 425,
       "width": 200,
@@ -546,39 +515,36 @@
         "shape": "rectangle",
         "fill": "#ede9fe",
         "stroke": "#8b5cf6",
-        "references": ["src/lib/tts/dictionary-processor.ts"],
-        "event": {
-          "name": "tts.dictionary.applied",
-          "description": "Emitted when a pronunciation dictionary is applied to the text",
-          "attributes": {
-            "tts.dictionaryId": {
-              "type": "string",
-              "description": "ElevenLabs pronunciation dictionary ID",
-              "required": true
-            },
-            "tts.dictionaryName": {
-              "type": "string",
-              "description": "Human-readable dictionary name",
-              "required": false
-            },
-            "tts.termsMatched": {
-              "type": "number",
-              "description": "Number of terms from dictionary that matched in text",
-              "required": true
-            }
+        "references": [
+          "src/lib/tts/dictionary-processor.ts"
+        ]
+      },
+      "label": "Dictionary Applied",
+      "event": {
+        "name": "tts.dictionary.applied",
+        "description": "Emitted when a pronunciation dictionary is applied to the text",
+        "attributes": {
+          "tts.dictionaryId": {
+            "type": "string",
+            "description": "ElevenLabs pronunciation dictionary ID",
+            "required": true
+          },
+          "tts.dictionaryName": {
+            "type": "string",
+            "description": "Human-readable dictionary name",
+            "required": false
+          },
+          "tts.termsMatched": {
+            "type": "number",
+            "description": "Number of terms from dictionary that matched in text",
+            "required": true
           }
-        },
-        "otel": {
-          "kind": "event",
-          "category": "processing",
-          "files": ["src/lib/tts/dictionary-processor.ts"]
         }
       }
     },
     {
       "id": "tts-dictionary-skipped",
-      "type": "text",
-      "text": "# No Dictionary\n\nNo pronunciation dictionary specified\n\n**Attributes:**\n- dictionaryUsed: false",
+      "type": "otel-event",
       "x": 100,
       "y": 425,
       "width": 150,
@@ -591,22 +557,20 @@
         "shape": "rectangle",
         "fill": "#f1f5f9",
         "stroke": "#94a3b8",
-        "references": ["src/lib/tts/dictionary-processor.ts"],
-        "event": {
-          "name": "tts.dictionary.skipped",
-          "description": "Emitted when no dictionary is specified for the request",
-          "attributes": {
-            "tts.dictionaryUsed": {
-              "type": "boolean",
-              "description": "Always false when skipped",
-              "required": true
-            }
+        "references": [
+          "src/lib/tts/dictionary-processor.ts"
+        ]
+      },
+      "label": "No Dictionary",
+      "event": {
+        "name": "tts.dictionary.skipped",
+        "description": "Emitted when no dictionary is specified for the request",
+        "attributes": {
+          "tts.dictionaryUsed": {
+            "type": "boolean",
+            "description": "Always false when skipped",
+            "required": true
           }
-        },
-        "otel": {
-          "kind": "event",
-          "category": "processing",
-          "files": ["src/lib/tts/dictionary-processor.ts"]
         }
       }
     }

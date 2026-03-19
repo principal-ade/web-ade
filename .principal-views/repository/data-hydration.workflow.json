@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/repository/repository.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "repo.panel.file-city.render",
   "name": "Data Hydration",
   "description": "Data flows that hydrate state and render to panels",

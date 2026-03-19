@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/authentication/authentication.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "api.auth.token-status",
   "name": "Token Status Check",
   "description": "JWT token expiry information for proactive refresh",

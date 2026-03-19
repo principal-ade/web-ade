@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/repository/repository.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "repo.panel.markdown.render",
   "name": "Overview Layout",
   "description": "Overview layout shows README/markdown with File City and packages",

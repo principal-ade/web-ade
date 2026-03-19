@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/version-registry/version-registry.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "api.version-registry.lookup",
   "name": "Version Lookup",
   "description": "Look up git commit SHA for a registered version",

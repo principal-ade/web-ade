@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/collections/collections.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "api.github.collections.create",
   "name": "Create Collection/World",
   "description": "Create a new collection and save to GitHub",

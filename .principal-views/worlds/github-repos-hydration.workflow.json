@@ -1,7 +1,6 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/worlds/worlds.otel.canvas",
-  "mode": "span-tree",
   "spanPattern": "worlds.hydrate.github",
   "name": "GitHub Repos Hydration",
   "description": "Load user's GitHub repositories (owned, starred, orgs) for the Add Repository picker",

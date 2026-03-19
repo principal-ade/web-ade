@@ -1,0 +1,180 @@
+{
+  "pv": {
+    "name": "Span Conventions",
+    "version": "1.0.0",
+    "markdown": ".principal-views/architecture.md",
+    "edgeTypes": {
+      "flow": {
+        "label": "Flow"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "api-auth",
+      "type": "otel-span-convention",
+      "x": 0,
+      "y": 0,
+      "width": 200,
+      "height": 80,
+      "color": "#22C55E",
+      "label": "API Auth",
+      "otel": {
+        "status": "implemented",
+        "spanPattern": "api.auth.*"
+      }
+    },
+    {
+      "id": "api-collections",
+      "type": "otel-span-convention",
+      "x": 220,
+      "y": 0,
+      "width": 200,
+      "height": 80,
+      "color": "#3B82F6",
+      "label": "API Collections",
+      "otel": {
+        "status": "implemented",
+        "spanPattern": "api.collections.*"
+      }
+    },
+    {
+      "id": "api-github",
+      "type": "otel-span-convention",
+      "x": 440,
+      "y": 0,
+      "width": 200,
+      "height": 80,
+      "color": "#8B5CF6",
+      "label": "API GitHub",
+      "otel": {
+        "status": "implemented",
+        "spanPattern": "api.github.*"
+      }
+    },
+    {
+      "id": "api-packages",
+      "type": "otel-span-convention",
+      "x": 0,
+      "y": 100,
+      "width": 200,
+      "height": 80,
+      "color": "#F59E0B",
+      "label": "API Packages",
+      "otel": {
+        "status": "implemented",
+        "spanPattern": "api.packages.*"
+      }
+    },
+    {
+      "id": "api-tts",
+      "type": "otel-span-convention",
+      "x": 220,
+      "y": 100,
+      "width": 200,
+      "height": 80,
+      "color": "#EC4899",
+      "label": "API TTS",
+      "otel": {
+        "status": "implemented",
+        "spanPattern": "api.tts.*"
+      }
+    },
+    {
+      "id": "api-version-registry",
+      "type": "otel-span-convention",
+      "x": 440,
+      "y": 100,
+      "width": 200,
+      "height": 80,
+      "color": "#14B8A6",
+      "label": "API Version Registry",
+      "otel": {
+        "status": "implemented",
+        "spanPattern": "api.version-registry.*"
+      }
+    },
+    {
+      "id": "executing-api",
+      "type": "otel-span-convention",
+      "x": 0,
+      "y": 200,
+      "width": 200,
+      "height": 80,
+      "color": "#6366F1",
+      "label": "Executing API",
+      "otel": {
+        "status": "implemented",
+        "spanPattern": "executing api route*"
+      }
+    },
+    {
+      "id": "owner-page",
+      "type": "otel-span-convention",
+      "x": 220,
+      "y": 200,
+      "width": 200,
+      "height": 80,
+      "color": "#EF4444",
+      "label": "Owner Page",
+      "otel": {
+        "status": "implemented",
+        "spanPattern": "owner.*"
+      }
+    },
+    {
+      "id": "repo-page",
+      "type": "otel-span-convention",
+      "x": 440,
+      "y": 200,
+      "width": 200,
+      "height": 80,
+      "color": "#10B981",
+      "label": "Repo Page",
+      "otel": {
+        "status": "implemented",
+        "spanPattern": "repo.*"
+      }
+    },
+    {
+      "id": "shared-page",
+      "type": "otel-span-convention",
+      "x": 0,
+      "y": 300,
+      "width": 200,
+      "height": 80,
+      "color": "#F97316",
+      "label": "Shared Page",
+      "otel": {
+        "status": "implemented",
+        "spanPattern": "shared.*"
+      }
+    },
+    {
+      "id": "worlds-page",
+      "type": "otel-span-convention",
+      "x": 220,
+      "y": 300,
+      "width": 200,
+      "height": 80,
+      "color": "#06B6D4",
+      "label": "Worlds Page",
+      "otel": {
+        "status": "implemented",
+        "spanPattern": "worlds.*"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-1",
+      "fromNode": "api-auth",
+      "toNode": "api-collections",
+      "fromSide": "right",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "flow"
+      }
+    }
+  ]
+}

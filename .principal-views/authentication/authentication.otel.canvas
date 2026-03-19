@@ -15,8 +15,7 @@
   "nodes": [
     {
       "id": "token-check-started",
-      "type": "text",
-      "text": "# Token Check Started\n\nToken status request received",
+      "type": "otel-event",
       "x": 100,
       "y": 50,
       "width": 200,
@@ -24,26 +23,28 @@
       "color": "#16a34a",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "token.check.started",
-          "attributes": {
-            "request.timestamp": { "type": "number", "description": "Request timestamp", "required": true }
-          }
-        },
         "references": [
           "src/app/api/auth/token-status/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/auth/token-status/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "request.timestamp": {
             "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          }
+        }
+      },
+      "label": "Token Check Started",
+      "event": {
+        "name": "token.check.started",
+        "attributes": {
+          "request.timestamp": {
+            "type": "number",
+            "description": "Request timestamp",
             "required": true
           }
         }
@@ -51,8 +52,7 @@
     },
     {
       "id": "token-check-authenticated",
-      "type": "text",
-      "text": "# Authenticated\n\nValid token found - authenticated",
+      "type": "otel-event",
       "x": 100,
       "y": 250,
       "width": 200,
@@ -60,41 +60,61 @@
       "color": "#16a34a",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "token.check.authenticated",
-          "attributes": {
-            "authenticated": { "type": "boolean", "description": "Is authenticated", "required": true },
-            "expiresAt": { "type": "number", "description": "Expiration timestamp", "required": true },
-            "expiresIn": { "type": "number", "description": "Expires in seconds", "required": true },
-            "shouldRefresh": { "type": "boolean", "description": "Should refresh token", "required": true }
-          }
-        },
         "references": [
           "src/app/api/auth/token-status/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/auth/token-status/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#22c55e",
         "stroke": "#16a34a",
         "dataSchema": {
           "authenticated": {
             "type": "boolean",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "true/false"
+          },
+          "expiresAt": {
+            "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          },
+          "expiresIn": {
+            "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          },
+          "shouldRefresh": {
+            "type": "boolean",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "true/false"
+          }
+        }
+      },
+      "label": "Authenticated",
+      "event": {
+        "name": "token.check.authenticated",
+        "attributes": {
+          "authenticated": {
+            "type": "boolean",
+            "description": "Is authenticated",
             "required": true
           },
           "expiresAt": {
             "type": "number",
+            "description": "Expiration timestamp",
             "required": true
           },
           "expiresIn": {
             "type": "number",
+            "description": "Expires in seconds",
             "required": true
           },
           "shouldRefresh": {
             "type": "boolean",
+            "description": "Should refresh token",
             "required": true
           }
         }
@@ -102,8 +122,7 @@
     },
     {
       "id": "token-check-authenticated-expiring",
-      "type": "text",
-      "text": "# Authenticated (Expiring)\n\nValid token but expiring soon - refresh recommended",
+      "type": "otel-event",
       "x": 100,
       "y": 450,
       "width": 200,
@@ -111,41 +130,61 @@
       "color": "#d97706",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "token.check.authenticated-expiring",
-          "attributes": {
-            "authenticated": { "type": "boolean", "description": "Is authenticated", "required": true },
-            "expiresAt": { "type": "number", "description": "Expiration timestamp", "required": true },
-            "expiresIn": { "type": "number", "description": "Expires in seconds", "required": true },
-            "shouldRefresh": { "type": "boolean", "description": "Should refresh token", "required": true }
-          }
-        },
         "references": [
           "src/app/api/auth/token-status/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/auth/token-status/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#f59e0b",
         "stroke": "#d97706",
         "dataSchema": {
           "authenticated": {
             "type": "boolean",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "true/false"
+          },
+          "expiresAt": {
+            "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          },
+          "expiresIn": {
+            "type": "number",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "0"
+          },
+          "shouldRefresh": {
+            "type": "boolean",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "true/false"
+          }
+        }
+      },
+      "label": "Authenticated (Expiring)",
+      "event": {
+        "name": "token.check.authenticated-expiring",
+        "attributes": {
+          "authenticated": {
+            "type": "boolean",
+            "description": "Is authenticated",
             "required": true
           },
           "expiresAt": {
             "type": "number",
+            "description": "Expiration timestamp",
             "required": true
           },
           "expiresIn": {
             "type": "number",
+            "description": "Expires in seconds",
             "required": true
           },
           "shouldRefresh": {
             "type": "boolean",
+            "description": "Should refresh token",
             "required": true
           }
         }
@@ -153,8 +192,7 @@
     },
     {
       "id": "token-check-unauthenticated",
-      "type": "text",
-      "text": "# Unauthenticated\n\nNo valid token - unauthenticated",
+      "type": "otel-event",
       "x": 450,
       "y": 250,
       "width": 200,
@@ -162,26 +200,28 @@
       "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "token.check.unauthenticated",
-          "attributes": {
-            "authenticated": { "type": "boolean", "description": "Is authenticated", "required": true }
-          }
-        },
         "references": [
           "src/app/api/auth/token-status/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "lifecycle",
-          "files": ["src/app/api/auth/token-status/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#3b82f6",
         "stroke": "#1d4ed8",
         "dataSchema": {
           "authenticated": {
             "type": "boolean",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "true/false"
+          }
+        }
+      },
+      "label": "Unauthenticated",
+      "event": {
+        "name": "token.check.unauthenticated",
+        "attributes": {
+          "authenticated": {
+            "type": "boolean",
+            "description": "Is authenticated",
             "required": true
           }
         }
@@ -189,8 +229,7 @@
     },
     {
       "id": "token-check-error",
-      "type": "text",
-      "text": "# Token Check Error\n\nError during token check",
+      "type": "otel-event",
       "x": 450,
       "y": 450,
       "width": 200,
@@ -198,31 +237,39 @@
       "color": "#dc2626",
       "pv": {
         "status": "implemented",
-        "event": {
-          "name": "token.check.error",
-          "attributes": {
-            "error.type": { "type": "string", "description": "Error type", "required": true },
-            "error.message": { "type": "string", "description": "Error message", "required": true }
-          }
-        },
         "references": [
           "src/app/api/auth/token-status/route.ts"
         ],
-        "otel": {
-          "kind": "event",
-          "category": "error",
-          "files": ["src/app/api/auth/token-status/route.ts"]
-        },
         "shape": "rectangle",
         "fill": "#ef4444",
         "stroke": "#dc2626",
         "dataSchema": {
           "error.type": {
             "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          },
+          "error.message": {
+            "type": "string",
+            "required": true,
+            "description": "Field value",
+            "placeholder": "value"
+          }
+        }
+      },
+      "label": "Token Check Error",
+      "event": {
+        "name": "token.check.error",
+        "attributes": {
+          "error.type": {
+            "type": "string",
+            "description": "Error type",
             "required": true
           },
           "error.message": {
             "type": "string",
+            "description": "Error message",
             "required": true
           }
         }

@@ -1,0 +1,54 @@
+{
+  "pv": {
+    "name": "Instrumentation Scopes",
+    "version": "1.0.0",
+    "markdown": ".principal-views/architecture.md",
+    "edgeTypes": {
+      "dependency": {
+        "label": "Dependency"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "auth-me-scope",
+      "type": "otel-scope",
+      "x": 0,
+      "y": 0,
+      "width": 220,
+      "height": 100,
+      "color": "#10B981",
+      "label": "Auth Me",
+      "description": "Authentication and user session management",
+      "otel": {
+        "scope": "auth-me"
+      }
+    },
+    {
+      "id": "nextjs-scope",
+      "type": "otel-scope",
+      "x": 250,
+      "y": 0,
+      "width": 220,
+      "height": 100,
+      "color": "#000000",
+      "label": "Next.js",
+      "description": "Next.js framework instrumentation",
+      "otel": {
+        "scope": "next.js"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "nextjs-to-auth",
+      "fromNode": "nextjs-scope",
+      "toNode": "auth-me-scope",
+      "fromSide": "left",
+      "toSide": "right",
+      "pv": {
+        "edgeType": "dependency"
+      }
+    }
+  ]
+}
