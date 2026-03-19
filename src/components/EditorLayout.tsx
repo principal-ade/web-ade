@@ -96,9 +96,6 @@ const StoryboardListPanelLoader = principalViewPanels.find(
 const CanvasEditorPanelLoader = principalViewPanels.find(
   (p) => p.metadata?.id === 'principal-ai.canvas-editor'
 )!.component;
-const WorkflowScenariosPanelLoader = principalViewPanels.find(
-  (p) => p.metadata?.id === 'principal-ai.workflow-scenarios'
-)!.component;
 const TraceListPanelLoader = principalViewPanels.find(
   (p) => p.metadata?.id === 'principal-ai.trace-list'
 )!.component;
@@ -924,10 +921,10 @@ function EditorLayoutContent({
             canvasName: payload.canvasName,
           });
 
-          // Switch to workflow-scenarios panel in the middle slot
+          // Switch to canvas-editor panel in the middle slot (has workflow scenarios functionality)
           setLayout((prev) => ({
             ...prev,
-            middle: 'workflow-scenarios',
+            middle: 'canvas-editor',
           }));
         }
       }),
@@ -940,13 +937,13 @@ function EditorLayoutContent({
           middle: 'canvas-list',
         }));
       }),
-      // Workflow focus event - switch to workflow scenarios panel
+      // Workflow focus event - switch to canvas-editor panel (has workflow scenarios functionality)
       events.on('workflow:focus', (event) => {
         const payload = event.payload as { id: string; name: string; path: string };
         console.log('[EditorLayout] Workflow focus requested:', payload);
         setLayout((prev) => ({
           ...prev,
-          middle: 'workflow-scenarios',
+          middle: 'canvas-editor',
         }));
       }),
       // Trace selection event - update selected trace for trace details panel
@@ -1891,52 +1888,6 @@ function EditorLayoutContent({
               workflowFileInfo: selectedWorkflowData.workflowFileInfo,
             })}
           />
-        </div>
-      ),
-    },
-    {
-      id: 'workflow-scenarios',
-      label: 'Workflow Scenarios',
-      icon: <FileText size={16} />,
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          {selectedCanvasData ? (
-            <WorkflowScenariosPanelLoader
-              {...({
-                context,
-                actions: enhancedActions,
-                events,
-                selectedCanvasId: selectedCanvasData.canvasId,
-                canvasPath: selectedCanvasData.canvasPath,
-                canvasName: selectedCanvasData.canvasName,
-                canvasFileInfo: selectedCanvasData.canvasFileInfo,
-                ...(selectedWorkflowData && {
-                  selectedWorkflowId: selectedWorkflowData.workflowId,
-                  workflowPath: selectedWorkflowData.workflowPath,
-                  workflowTemplate: selectedWorkflowData.workflow,
-                  workflowFileInfo: selectedWorkflowData.workflowFileInfo,
-                }),
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              } as any)}
-            />
-          ) : (
-            <div
-              className="h-full w-full flex flex-col items-center justify-center p-8 text-center"
-              style={{ color: theme.colors.textMuted }}
-            >
-              <FileText size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
-              <h3 style={{
-                fontSize: theme.fontSizes[4],
-                marginBottom: '0.5rem',
-                color: theme.colors.text
-              }}>
-                No Canvas Selected
-              </h3>
-              <p style={{ fontSize: theme.fontSizes[2], maxWidth: '400px' }}>
-                Select a canvas and workflow from the Storyboard List to view scenarios
-              </p>
-            </div>
-          )}
         </div>
       ),
     },
