@@ -1,0 +1,1067 @@
+{
+  "pv": {
+    "name": "Stories Layout",
+    "version": "1.0.0",
+    "markdown": ".principal-views/stories-layout/stories-layout.md",
+    "edgeTypes": {
+      "flow": {
+        "label": "Flow"
+      },
+      "error": {
+        "label": "Error Path"
+      },
+      "user-action": {
+        "label": "User Action"
+      },
+      "data-flow": {
+        "label": "Data Flow"
+      },
+      "event": {
+        "label": "Event Bus"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "layout-switch-stories",
+      "type": "otel-event",
+      "x": 0,
+      "y": 0,
+      "width": 220,
+      "height": 90,
+      "color": "#0891b2",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "src/components/LayoutConfigDropdown.tsx",
+          "src/components/EditorLayout.tsx"
+        ]
+      },
+      "label": "Switch to Stories Layout",
+      "event": {
+        "name": "stories.layout.switch",
+        "attributes": {
+          "layoutId": {
+            "type": "string",
+            "description": "Layout ID (stories)",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "storyboard-list-panel-mount",
+      "type": "otel-event",
+      "x": 0,
+      "y": 150,
+      "width": 220,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ]
+      },
+      "label": "Storyboard List Panel Mount",
+      "event": {
+        "name": "stories.panel.storyboard-list.mount",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "canvases-load",
+      "type": "otel-event",
+      "x": 0,
+      "y": 300,
+      "width": 220,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ]
+      },
+      "label": "Load OTEL Canvases",
+      "event": {
+        "name": "stories.canvases.load",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "canvases-success",
+      "type": "otel-event",
+      "x": 0,
+      "y": 450,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ]
+      },
+      "label": "Canvases Ready",
+      "event": {
+        "name": "stories.canvases.success",
+        "attributes": {
+          "canvasCount": {
+            "type": "number",
+            "description": "Number of canvases found",
+            "required": true
+          },
+          "workflowCount": {
+            "type": "number",
+            "description": "Number of workflows found",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "canvases-error",
+      "type": "otel-event",
+      "x": 280,
+      "y": 300,
+      "width": 220,
+      "height": 90,
+      "color": "#dc2626",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx"
+        ]
+      },
+      "label": "Canvases Load Error",
+      "event": {
+        "name": "stories.canvases.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "canvas-select",
+      "type": "otel-event",
+      "x": 0,
+      "y": 600,
+      "width": 220,
+      "height": 90,
+      "color": "#0891b2",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "src/contexts/RepositoryPageProvider.tsx",
+          "src/components/EditorLayout.tsx"
+        ]
+      },
+      "label": "Select Canvas",
+      "event": {
+        "name": "stories.canvas.select",
+        "attributes": {
+          "canvasPath": {
+            "type": "string",
+            "description": "Path to selected canvas",
+            "required": true
+          },
+          "canvasName": {
+            "type": "string",
+            "description": "Canvas display name",
+            "required": true
+          },
+          "openMode": {
+            "type": "string",
+            "description": "How to open (view or edit)",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "emit-open-canvas",
+      "type": "otel-event",
+      "x": 0,
+      "y": 750,
+      "width": 220,
+      "height": 90,
+      "color": "#ea580c",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "packages/principal-ai/principal-view-panels/src/storyboard-list-panel/StoryboardListPanel.tsx"
+        ]
+      },
+      "label": "Emit openCanvas Event",
+      "event": {
+        "name": "stories.event.openCanvas",
+        "attributes": {
+          "source": {
+            "type": "string",
+            "description": "Event source (storyboard-list-panel)",
+            "required": true
+          },
+          "action": {
+            "type": "string",
+            "description": "Action type (openCanvas)",
+            "required": true
+          },
+          "canvas.path": {
+            "type": "string",
+            "description": "Canvas file path",
+            "required": true
+          },
+          "canvas.id": {
+            "type": "string",
+            "description": "Canvas ID",
+            "required": true
+          },
+          "openMode": {
+            "type": "string",
+            "description": "Open mode (view/edit)",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "editor-layout-receive",
+      "type": "otel-event",
+      "x": 300,
+      "y": 750,
+      "width": 220,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ]
+      },
+      "label": "EditorLayout Receives Event",
+      "event": {
+        "name": "stories.editor.receive.openCanvas",
+        "attributes": {
+          "canvasPath": {
+            "type": "string",
+            "description": "Canvas file path",
+            "required": true
+          },
+          "openMode": {
+            "type": "string",
+            "description": "Open mode",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "store-canvas-data",
+      "type": "otel-event",
+      "x": 300,
+      "y": 900,
+      "width": 220,
+      "height": 90,
+      "color": "#ca8a04",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ]
+      },
+      "label": "Store Canvas Data",
+      "event": {
+        "name": "stories.state.selectedCanvasData",
+        "attributes": {
+          "canvasPath": {
+            "type": "string",
+            "description": "Canvas file path",
+            "required": true
+          },
+          "canvasId": {
+            "type": "string",
+            "description": "Canvas ID",
+            "required": true
+          },
+          "canvasName": {
+            "type": "string",
+            "description": "Canvas display name",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "workflow-select",
+      "type": "otel-event",
+      "x": 600,
+      "y": 600,
+      "width": 220,
+      "height": 90,
+      "color": "#0891b2",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ]
+      },
+      "label": "Select Workflow",
+      "event": {
+        "name": "stories.workflow.select",
+        "attributes": {
+          "workflowPath": {
+            "type": "string",
+            "description": "Path to workflow file",
+            "required": true
+          },
+          "workflowId": {
+            "type": "string",
+            "description": "Workflow ID",
+            "required": true
+          },
+          "scenarioCount": {
+            "type": "number",
+            "description": "Number of scenarios in workflow",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "emit-open-workflow-scenarios",
+      "type": "otel-event",
+      "x": 600,
+      "y": 750,
+      "width": 220,
+      "height": 90,
+      "color": "#ea580c",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "src/types/panel-events.ts",
+          "src/components/EditorLayout.tsx"
+        ]
+      },
+      "label": "Emit openWorkflowScenarios",
+      "event": {
+        "name": "stories.event.openWorkflowScenarios",
+        "attributes": {
+          "action": {
+            "type": "string",
+            "description": "Action type (openWorkflowScenarios)",
+            "required": true
+          },
+          "workflowId": {
+            "type": "string",
+            "description": "Workflow ID",
+            "required": true
+          },
+          "workflowPath": {
+            "type": "string",
+            "description": "Path to workflow file",
+            "required": true
+          },
+          "canvasId": {
+            "type": "string",
+            "description": "Canvas ID",
+            "required": true
+          },
+          "canvasPath": {
+            "type": "string",
+            "description": "Canvas file path",
+            "required": true
+          },
+          "scenarioCount": {
+            "type": "number",
+            "description": "Number of scenarios in workflow",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "editor-layout-receive-workflow",
+      "type": "otel-event",
+      "x": 900,
+      "y": 750,
+      "width": 220,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ]
+      },
+      "label": "EditorLayout Receives Workflow",
+      "event": {
+        "name": "stories.editor.receive.openWorkflowScenarios",
+        "attributes": {
+          "workflowId": {
+            "type": "string",
+            "description": "Workflow ID",
+            "required": true
+          },
+          "workflowPath": {
+            "type": "string",
+            "description": "Workflow file path",
+            "required": true
+          },
+          "scenarioCount": {
+            "type": "number",
+            "description": "Number of scenarios",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "store-workflow-data",
+      "type": "otel-event",
+      "x": 900,
+      "y": 900,
+      "width": 220,
+      "height": 90,
+      "color": "#ca8a04",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ]
+      },
+      "label": "Store Workflow Data",
+      "event": {
+        "name": "stories.state.selectedWorkflowData",
+        "attributes": {
+          "workflowId": {
+            "type": "string",
+            "description": "Workflow ID",
+            "required": true
+          },
+          "workflowPath": {
+            "type": "string",
+            "description": "Workflow file path",
+            "required": true
+          },
+          "scenarioCount": {
+            "type": "number",
+            "description": "Number of scenarios",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "scenario-select",
+      "type": "otel-event",
+      "x": 600,
+      "y": 900,
+      "width": 220,
+      "height": 90,
+      "color": "#0891b2",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ]
+      },
+      "label": "Select Scenario",
+      "event": {
+        "name": "stories.scenario.select",
+        "attributes": {
+          "scenarioId": {
+            "type": "string",
+            "description": "Scenario ID",
+            "required": true
+          },
+          "scenarioName": {
+            "type": "string",
+            "description": "Scenario display name",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "build-storyboard-context",
+      "type": "otel-event",
+      "x": 300,
+      "y": 1050,
+      "width": 220,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ]
+      },
+      "label": "Build Storyboard Context",
+      "event": {
+        "name": "stories.context.build",
+        "attributes": {
+          "canvasPath": {
+            "type": "string",
+            "description": "Canvas file path",
+            "required": true
+          },
+          "hasWorkflow": {
+            "type": "boolean",
+            "description": "Whether workflow is selected",
+            "required": true
+          },
+          "hasScenario": {
+            "type": "boolean",
+            "description": "Whether scenario is selected",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "emit-context-update",
+      "type": "otel-event",
+      "x": 300,
+      "y": 1200,
+      "width": 220,
+      "height": 90,
+      "color": "#ea580c",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ]
+      },
+      "label": "Emit storyboard:context:update",
+      "event": {
+        "name": "stories.event.context.update",
+        "attributes": {
+          "source": {
+            "type": "string",
+            "description": "Event source (editor-layout)",
+            "required": true
+          },
+          "type": {
+            "type": "string",
+            "description": "Event type (storyboard:context:update)",
+            "required": true
+          },
+          "hasContext": {
+            "type": "boolean",
+            "description": "Whether context payload is present",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "file-city-receive-context",
+      "type": "otel-event",
+      "x": 600,
+      "y": 1200,
+      "width": 220,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "packages/industry-theme/file-city-panel/src/FileCityPanel.tsx"
+        ]
+      },
+      "label": "File City Receives Context",
+      "event": {
+        "name": "stories.file-city.receive.context",
+        "attributes": {
+          "nodeCount": {
+            "type": "number",
+            "description": "Number of nodes to highlight",
+            "required": true
+          },
+          "hasHighlights": {
+            "type": "boolean",
+            "description": "Whether highlights are present",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "file-city-apply-highlights",
+      "type": "otel-event",
+      "x": 600,
+      "y": 1350,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "packages/industry-theme/file-city-panel/src/FileCityPanel.tsx"
+        ]
+      },
+      "label": "Apply Storyboard Highlights",
+      "event": {
+        "name": "stories.file-city.highlights.apply",
+        "attributes": {
+          "highlightedFiles": {
+            "type": "number",
+            "description": "Number of files highlighted",
+            "required": true
+          },
+          "colorMode": {
+            "type": "string",
+            "description": "Color mode used",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "canvas-editor-panel-render",
+      "type": "otel-event",
+      "x": 0,
+      "y": 900,
+      "width": 220,
+      "height": 90,
+      "color": "#059669",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "packages/principal-ai/principal-view-panels/src/canvas-editor-panel/CanvasEditorPanel.tsx"
+        ]
+      },
+      "label": "Canvas Editor Panel Render",
+      "event": {
+        "name": "stories.panel.canvas-editor.render",
+        "attributes": {
+          "canvasPath": {
+            "type": "string",
+            "description": "Canvas being displayed",
+            "required": true
+          },
+          "nodeCount": {
+            "type": "number",
+            "description": "Number of nodes in canvas",
+            "required": true
+          },
+          "edgeCount": {
+            "type": "number",
+            "description": "Number of edges in canvas",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "file-city-panel-render",
+      "type": "otel-event",
+      "x": 600,
+      "y": 1500,
+      "width": 220,
+      "height": 90,
+      "color": "#059669",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "packages/industry-theme/file-city-panel/src/FileCityPanel.tsx"
+        ]
+      },
+      "label": "File City Panel Render",
+      "event": {
+        "name": "stories.panel.file-city.render",
+        "attributes": {
+          "fileCount": {
+            "type": "number",
+            "description": "Total files rendered",
+            "required": true
+          },
+          "highlightedCount": {
+            "type": "number",
+            "description": "Files with storyboard highlights",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "node-click",
+      "type": "otel-event",
+      "x": -300,
+      "y": 900,
+      "width": 220,
+      "height": 90,
+      "color": "#0891b2",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "packages/principal-ai/principal-view-panels/src/canvas-editor-panel/CanvasEditorPanel.tsx"
+        ]
+      },
+      "label": "Canvas Node Click",
+      "event": {
+        "name": "stories.canvas.node.click",
+        "attributes": {
+          "nodeId": {
+            "type": "string",
+            "description": "Clicked node ID",
+            "required": true
+          },
+          "nodeType": {
+            "type": "string",
+            "description": "Node type (otel-event, etc.)",
+            "required": true
+          },
+          "hasReferences": {
+            "type": "boolean",
+            "description": "Whether node has file references",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "emit-focus-files",
+      "type": "otel-event",
+      "x": -300,
+      "y": 1050,
+      "width": 220,
+      "height": 90,
+      "color": "#ea580c",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "packages/principal-ai/principal-view-panels/src/canvas-editor-panel/CanvasEditorPanel.tsx"
+        ]
+      },
+      "label": "Emit Focus Files Event",
+      "event": {
+        "name": "stories.event.focus.files",
+        "attributes": {
+          "source": {
+            "type": "string",
+            "description": "Event source (canvas-editor)",
+            "required": true
+          },
+          "filePaths": {
+            "type": "array",
+            "description": "File paths to focus",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "file-city-focus",
+      "type": "otel-event",
+      "x": -300,
+      "y": 1200,
+      "width": 220,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "approved",
+        "references": [
+          "packages/industry-theme/file-city-panel/src/FileCityPanel.tsx"
+        ]
+      },
+      "label": "File City Focus on Files",
+      "event": {
+        "name": "stories.file-city.focus",
+        "attributes": {
+          "focusedFiles": {
+            "type": "number",
+            "description": "Number of files being focused",
+            "required": true
+          },
+          "cameraAnimation": {
+            "type": "boolean",
+            "description": "Whether camera animates to focus",
+            "required": true
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "layout-1",
+      "fromNode": "layout-switch-stories",
+      "fromSide": "bottom",
+      "toNode": "storyboard-list-panel-mount",
+      "toSide": "top",
+      "label": "triggers",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "load-1",
+      "fromNode": "storyboard-list-panel-mount",
+      "fromSide": "bottom",
+      "toNode": "canvases-load",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "load-2",
+      "fromNode": "canvases-load",
+      "fromSide": "bottom",
+      "toNode": "canvases-success",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "load-3",
+      "fromNode": "canvases-load",
+      "fromSide": "right",
+      "toNode": "canvases-error",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "select-1",
+      "fromNode": "canvases-success",
+      "fromSide": "bottom",
+      "toNode": "canvas-select",
+      "toSide": "top",
+      "label": "user action",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "select-2",
+      "fromNode": "canvas-select",
+      "fromSide": "bottom",
+      "toNode": "emit-open-canvas",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "event-1",
+      "fromNode": "emit-open-canvas",
+      "fromSide": "right",
+      "toNode": "editor-layout-receive",
+      "toSide": "left",
+      "label": "event bus",
+      "pv": {
+        "edgeType": "event"
+      }
+    },
+    {
+      "id": "store-1",
+      "fromNode": "editor-layout-receive",
+      "fromSide": "bottom",
+      "toNode": "store-canvas-data",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "render-1",
+      "fromNode": "emit-open-canvas",
+      "fromSide": "bottom",
+      "toNode": "canvas-editor-panel-render",
+      "toSide": "top",
+      "label": "middle panel",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "workflow-1",
+      "fromNode": "canvases-success",
+      "fromSide": "right",
+      "toNode": "workflow-select",
+      "toSide": "top",
+      "label": "user action",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "workflow-2",
+      "fromNode": "workflow-select",
+      "fromSide": "bottom",
+      "toNode": "emit-open-workflow-scenarios",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "workflow-3",
+      "fromNode": "emit-open-workflow-scenarios",
+      "fromSide": "right",
+      "toNode": "editor-layout-receive-workflow",
+      "toSide": "left",
+      "label": "event bus",
+      "pv": {
+        "edgeType": "event"
+      }
+    },
+    {
+      "id": "workflow-4",
+      "fromNode": "editor-layout-receive-workflow",
+      "fromSide": "bottom",
+      "toNode": "store-workflow-data",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "workflow-5",
+      "fromNode": "emit-open-workflow-scenarios",
+      "fromSide": "bottom",
+      "toNode": "scenario-select",
+      "toSide": "top",
+      "label": "user action",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "workflow-6",
+      "fromNode": "store-workflow-data",
+      "fromSide": "bottom",
+      "toNode": "build-storyboard-context",
+      "toSide": "right",
+      "label": "triggers",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "context-1",
+      "fromNode": "store-canvas-data",
+      "fromSide": "bottom",
+      "toNode": "build-storyboard-context",
+      "toSide": "top",
+      "label": "triggers",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "context-2",
+      "fromNode": "scenario-select",
+      "fromSide": "bottom",
+      "toNode": "build-storyboard-context",
+      "toSide": "left",
+      "label": "triggers",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "context-3",
+      "fromNode": "build-storyboard-context",
+      "fromSide": "bottom",
+      "toNode": "emit-context-update",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "context-4",
+      "fromNode": "emit-context-update",
+      "fromSide": "right",
+      "toNode": "file-city-receive-context",
+      "toSide": "left",
+      "label": "event bus",
+      "pv": {
+        "edgeType": "event"
+      }
+    },
+    {
+      "id": "highlight-1",
+      "fromNode": "file-city-receive-context",
+      "fromSide": "bottom",
+      "toNode": "file-city-apply-highlights",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "render-2",
+      "fromNode": "file-city-apply-highlights",
+      "fromSide": "bottom",
+      "toNode": "file-city-panel-render",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "click-1",
+      "fromNode": "canvas-editor-panel-render",
+      "fromSide": "left",
+      "toNode": "node-click",
+      "toSide": "right",
+      "label": "user action",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "click-2",
+      "fromNode": "node-click",
+      "fromSide": "bottom",
+      "toNode": "emit-focus-files",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "focus-1",
+      "fromNode": "emit-focus-files",
+      "fromSide": "bottom",
+      "toNode": "file-city-focus",
+      "toSide": "top",
+      "label": "event bus",
+      "pv": {
+        "edgeType": "event"
+      }
+    }
+  ]
+}
