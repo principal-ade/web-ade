@@ -42,7 +42,8 @@ import { layoutTools } from '@principal-ade/utcp-panel-event';
 import type { FormattedResults } from '@principal-ai/codebase-quality-lenses';
 import { minimatch } from 'minimatch';
 import { GitFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
-import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
+import type { StoryboardContextSliceData, ExtendedCanvas, WorkflowTemplate, WorkflowScenario } from '@principal-ai/principal-view-core';
+import { buildStoryboardContext } from '@principal-ai/principal-view-core';
 import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode, HighlightLayer } from '@industry-theme/file-city-panel';
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from './AuthContext';
@@ -308,7 +309,12 @@ export function RepositoryPageProvider({
   const [repoCapabilities] = useState<RepoCapabilitiesSliceData | null>(null);
 
   // State for storyboard context
-  const [storyboardContextData] = useState<StoryboardContextSliceData | null>(null);
+  const [parsedCanvases, setParsedCanvases] = useState<Map<string, ExtendedCanvas>>(new Map());
+  const [parsedWorkflows, _setParsedWorkflows] = useState<Map<string, WorkflowTemplate>>(new Map());
+  const [selectedCanvasPath, setSelectedCanvasPath] = useState<string | null>(null);
+  const [selectedWorkflowPath, setSelectedWorkflowPath] = useState<string | null>(null);
+  const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null);
+  // Note: storyboardContextLoading tracks canvas loading (reuses otelHighlightLoading)
 
   // State for telemetry traces
   const [telemetryTraces] = useState<TelemetryTrace[]>([]);
@@ -328,6 +334,50 @@ export function RepositoryPageProvider({
 
   // State for enabled color modes
   const [enabledColorModes] = useState<ColorMode[]>([]);
+
+  // Build storyboard context from selection
+  const storyboardContextData = useMemo<StoryboardContextSliceData | null>(() => {
+    if (!selectedCanvasPath) {
+      return null;
+    }
+
+    const canvas = parsedCanvases.get(selectedCanvasPath);
+    if (!canvas) {
+      return null;
+    }
+
+    // Build storyboard reference from canvas path
+    const canvasName = canvas.pv?.name || selectedCanvasPath.split('/').pop()?.replace('.otel.canvas', '') || 'Storyboard';
+    const storyboardId = selectedCanvasPath.replace(/[^a-zA-Z0-9]/g, '-');
+
+    // Get workflow if selected
+    let workflow: { template: WorkflowTemplate; path: string } | undefined;
+    let scenario: WorkflowScenario | undefined;
+
+    if (selectedWorkflowPath) {
+      const workflowTemplate = parsedWorkflows.get(selectedWorkflowPath);
+      if (workflowTemplate) {
+        workflow = { template: workflowTemplate, path: selectedWorkflowPath };
+
+        // Get scenario if selected
+        if (selectedScenarioId) {
+          scenario = workflowTemplate.scenarios.find(s => s.id === selectedScenarioId);
+        }
+      }
+    }
+
+    return buildStoryboardContext({
+      canvas,
+      storyboard: {
+        id: storyboardId,
+        name: canvasName,
+        path: selectedCanvasPath,
+      },
+      canvasType: 'otel',
+      workflow,
+      scenario,
+    });
+  }, [selectedCanvasPath, selectedWorkflowPath, selectedScenarioId, parsedCanvases, parsedWorkflows]);
 
   // Explicit slice: fileTree (typed for File City and other panels)
   const fileTreeSlice = useMemo<DataSlice<FileTree>>(
@@ -484,11 +534,11 @@ export function RepositoryPageProvider({
       scope: 'repository' as const,
       name: 'storyboardContext',
       data: storyboardContextData,
-      loading: false,
+      loading: otelHighlightLoading, // Canvas loading state
       error: null,
       refresh: async () => { /* no-op */ },
     }),
-    [storyboardContextData]
+    [storyboardContextData, otelHighlightLoading]
   );
 
   // Explicit slice: telemetry
@@ -699,6 +749,7 @@ export function RepositoryPageProvider({
 
       try {
         const canvases: ParsedOtelCanvas[] = [];
+        const canvasMap = new Map<string, ExtendedCanvas>();
 
         for (const canvasPath of otelCanvasPaths) {
           try {
@@ -707,12 +758,16 @@ export function RepositoryPageProvider({
               repo,
               path: canvasPath,
             });
-            const content = JSON.parse(data.content);
+            const content = JSON.parse(data.content) as ExtendedCanvas;
             canvases.push({ path: canvasPath, content });
+            canvasMap.set(canvasPath, content);
           } catch (error) {
             console.warn(`[RepositoryPageProvider] Failed to parse ${canvasPath}:`, error);
           }
         }
+
+        // Store parsed canvases for storyboard context
+        setParsedCanvases(canvasMap);
 
         if (canvases.length > 0) {
           const layers = buildOtelHighlightLayers(canvases, {
@@ -1024,6 +1079,22 @@ export function RepositoryPageProvider({
     const unsubscribe = events.on('file-city:color-mode:select', (event) => {
       const payload = event.payload as { mode: ColorMode };
       setSelectedColorMode(payload.mode);
+    });
+
+    return unsubscribe;
+  }, [events]);
+
+  // Listen for storyboard selection events from storyboard-list-panel
+  useEffect(() => {
+    const unsubscribe = events.on('custom', (event) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const payload = event.payload as any;
+      if (event.source === 'storyboard-list-panel' && payload?.action === 'openCanvas' && payload?.canvas?.path) {
+        setSelectedCanvasPath(payload.canvas.path);
+        // Clear workflow and scenario when canvas changes
+        setSelectedWorkflowPath(null);
+        setSelectedScenarioId(null);
+      }
     });
 
     return unsubscribe;

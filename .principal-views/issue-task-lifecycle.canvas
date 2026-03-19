@@ -67,17 +67,14 @@
     },
     {
       "id": "issue-selected-event",
-      "type": "text",
+      "type": "otel-event",
       "x": -204,
       "y": 254,
       "width": 200,
       "height": 50,
       "color": "#f59e0b",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle"
-      },
-      "text": "issue:selected"
+      "label": "issue:selected",
+      "shape": "rectangle"
     },
     {
       "id": "panel-context",
@@ -165,17 +162,14 @@
     },
     {
       "id": "push-to-backlog-event",
-      "type": "text",
+      "type": "otel-event",
       "x": 544,
       "y": 409,
       "width": 220,
       "height": 50,
       "color": "#f59e0b",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle"
-      },
-      "text": "issue:push-to-backlog"
+      "label": "issue:push-to-backlog",
+      "shape": "rectangle"
     },
     {
       "id": "build-task-markdown",
@@ -221,17 +215,14 @@
     },
     {
       "id": "task-created-event",
-      "type": "text",
+      "type": "otel-event",
       "x": 330,
       "y": 720,
       "width": 200,
       "height": 50,
       "color": "#f59e0b",
-      "pv": {
-        "nodeType": "event",
-        "shape": "rectangle"
-      },
-      "text": "issue:task-created"
+      "label": "issue:task-created",
+      "shape": "rectangle"
     },
     {
       "id": "kanban-panel",
