@@ -36,7 +36,8 @@
           "auth.me.get_token": "Checking for GitHub token (has_token: {{has_token}})",
           "auth.me.unauthenticated": "No valid token found: {{reason}}"
         }
-      }
+      },
+      "filterDefault": true
     },
     {
       "id": "error",
