@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/stories-layout/stories-layout.otel.canvas",
+  "spanPattern": "stories.panel.storyboard-list.mount",
+  "name": "Layout Initialization",
+  "description": "Stories layout switch and panel mounting",
+  "scenarios": [
+    {
+      "id": "layout-switch-mount",
+      "description": "User switches to Stories layout and storyboard panel mounts",
+      "priority": 1,
+      "template": {
+        "summary": "[Stories] Layout initialized for {{owner}}/{{repo}}",
+        "events": {
+          "stories.layout.switch": "Switched to Stories layout ({{layoutId}})",
+          "stories.panel.storyboard-list.mount": "Storyboard list panel mounted for {{owner}}/{{repo}}"
+        }
+      }
+    }
+  ]
+}

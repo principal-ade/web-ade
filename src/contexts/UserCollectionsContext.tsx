@@ -22,7 +22,7 @@ import {
 } from 'react';
 import type { Collection, CollectionMembership } from '@principal-ai/alexandria-collections';
 import { useAuth } from './AuthContext';
-import { withTelemetrySpan } from '@/lib/telemetry';
+import { withSpan } from '@/lib/telemetry';
 import type { CollectionVisibility } from '@/lib/collections/github-repo-manager';
 
 /** Repository info with optional source repository for forks */
@@ -168,18 +168,18 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    await withTelemetrySpan('api.github.collections.load', async (emit) => {
+    await withSpan('api.github.collections.load', async (span) => {
       try {
         setLoading(true);
         setError(null);
 
-        emit('collections.load.started');
+        span.addEvent('collections.load.started');
 
         const response = await fetch('/api/github/collections');
 
         if (!response.ok) {
           if (response.status === 401) {
-            emit('collections.load.unauthorized');
+            span.addEvent('collections.load.unauthorized');
             setCollections([]);
             setGitHubRepoExists(false);
             setGitHubRepoUrl(null);
@@ -191,9 +191,9 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         const data = await response.json();
 
         if (!data.exists) {
-          emit('collections.load.github.not-found');
+          span.addEvent('collections.load.github.not-found');
         } else {
-          emit('collections.load.github.fetch', {
+          span.addEvent('collections.load.github.fetch', {
             repoUrl: data.repoUrl || 'unknown',
           });
         }
@@ -210,13 +210,13 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
           0
         );
 
-        emit('collections.load.success', {
+        span.addEvent('collections.load.success', {
           collectionCount: (data.collections || []).length,
           membershipCount,
         });
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Failed to load collections'));
-        emit('collections.load.error', {
+        span.addEvent('collections.load.error', {
           'error.message': err instanceof Error ? err.message : 'Unknown error',
         });
         throw err;
@@ -234,14 +234,14 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
   // Create a new collection
   const createCollection = useCallback(
     async (name: string, description?: string, icon?: string): Promise<Collection> => {
-      return await withTelemetrySpan('api.github.collections.create', async (emit) => {
-        emit('collection.create.started', {
+      return await withSpan('api.github.collections.create', async (span) => {
+        span.addEvent('collection.create.started', {
           collectionName: name,
           ...(icon && { icon }),
           ...(description && { description }),
         });
 
-        emit('collection.create.validate');
+        span.addEvent('collection.create.validate');
 
         const now = Date.now();
         const newCollection: Collection = {
@@ -261,9 +261,9 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
 
         // Emit appropriate GitHub event based on whether repo exists
         if (gitHubRepoExists) {
-          emit('collection.create.github.update');
+          span.addEvent('collection.create.github.update');
         } else {
-          emit('collection.create.github.init', {
+          span.addEvent('collection.create.github.init', {
             repoUrl: gitHubRepoUrl || 'creating',
           });
         }
@@ -271,7 +271,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
         // Save to GitHub first, then update state (only save the new collection)
         const result = await saveToGitHub(newCollections, gitHubRepoExists, visibility, [newCollection.id]);
 
-        emit('collection.create.github.commit');
+        span.addEvent('collection.create.github.commit');
 
         // Update ref immediately
         collectionsRef.current = newCollections;
@@ -283,7 +283,7 @@ export function UserCollectionsProvider({ children }: { children: ReactNode }) {
           setGitHubRepoUrl(result.repoUrl);
         }
 
-        emit('collection.create.success', {
+        span.addEvent('collection.create.success', {
           collectionId: newCollection.id,
         });
 

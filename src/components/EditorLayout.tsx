@@ -41,6 +41,7 @@ import { buildStoryboardContext, type StoryboardReference } from '@principal-ai/
 import { parseTaskMarkdown, serializeTaskMarkdown, DEFAULT_TASK_STATUSES } from '@backlog-md/core';
 import { markTourAsShown } from '@/lib/tourStorage';
 import type { OpenWorkflowScenariosPayload } from '@/types/panel-events';
+import { withSpanSync } from '@/lib/telemetry';
 
 // Static panel imports for type safety
 import dynamic from 'next/dynamic';
@@ -326,11 +327,26 @@ function EditorLayoutContent({
 
   // Handle layout configuration change
   const handleLayoutConfigChange = useCallback((config: LayoutConfig) => {
+    // Telemetry: layout switch (only emit for stories layout)
+    if (config.id === 'stories' && githubRepo && githubRepo.includes('/')) {
+      const [owner, repo] = githubRepo.split('/');
+      // Span: stories.panel.storyboard-list.mount (spanPattern from layout-init.workflow.json)
+      withSpanSync('stories.panel.storyboard-list.mount', (span) => {
+        span.addEvent('stories.layout.switch', {
+          layoutId: config.id,
+        });
+        span.addEvent('stories.panel.storyboard-list.mount', {
+          owner: owner!,
+          repo: repo!,
+        });
+      });
+    }
+
     onLayoutConfigIdChange(config.id);
     setLayout(config.layout);
     setLeftSidebarCollapsed(config.collapsed.left);
     setRightSidebarCollapsed(config.collapsed.right);
-  }, [onLayoutConfigIdChange, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed]);
+  }, [onLayoutConfigIdChange, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed, githubRepo]);
 
   // Handle vim mode toggle
   const handleVimModeToggle = useCallback(() => {
@@ -907,6 +923,30 @@ function EditorLayoutContent({
             return;
           }
 
+          // Span: stories.state.selectedCanvasData (spanPattern from canvas-editor.workflow.json)
+          withSpanSync('stories.state.selectedCanvasData', (span) => {
+            // Event: receive openWorkflowScenarios
+            span.addEvent('stories.editor.receive.openWorkflowScenarios', {
+              workflowId: payload.workflowId,
+              workflowPath: payload.workflowPath,
+              scenarioCount: payload.workflowTemplate.scenarios.length,
+            });
+
+            // Event: workflow data stored
+            span.addEvent('stories.state.selectedWorkflowData', {
+              workflowId: payload.workflowId,
+              workflowPath: payload.workflowPath,
+              scenarioCount: payload.workflowTemplate.scenarios.length,
+            });
+
+            // Event: canvas data stored
+            span.addEvent('stories.state.selectedCanvasData', {
+              canvasId: payload.canvasId,
+              canvasPath: payload.canvasPath || '',
+              canvasName: payload.canvasName || '',
+            });
+          });
+
           // Now TypeScript knows payload is OpenWorkflowScenariosPayload
           setSelectedWorkflowData({
             workflowId: payload.workflowId,
@@ -1472,6 +1512,22 @@ function EditorLayoutContent({
 
           // Store canvas data
           if (payload.canvas) {
+            // Span: stories.state.selectedCanvasData (spanPattern from canvas-editor.workflow.json)
+            withSpanSync('stories.state.selectedCanvasData', (span) => {
+              // Event: receive openCanvas
+              span.addEvent('stories.editor.receive.openCanvas', {
+                canvasPath: payload.canvas?.path || '',
+                openMode: payload.openMode || 'view',
+              });
+
+              // Event: canvas data stored
+              span.addEvent('stories.state.selectedCanvasData', {
+                canvasId: payload.canvasId || payload.canvas.id,
+                canvasPath: payload.canvas.path,
+                canvasName: payload.canvas.name || payload.canvas.id,
+              });
+            });
+
             setSelectedCanvasData({
               canvasId: payload.canvasId || payload.canvas.id,
               canvasPath: payload.canvas.path,
@@ -1500,6 +1556,7 @@ function EditorLayoutContent({
               workflow: payload.workflow,
               workflowFileInfo: payload.workflowFileInfo || null,
             });
+
             setLayout((prev) => ({
               ...prev,
               middle: 'canvas-editor', // Use canvas-editor with workflow props instead of workflow-scenarios
@@ -1630,24 +1687,41 @@ function EditorLayoutContent({
           path: selectedCanvasData.canvasPath,
         };
 
-        // Build storyboard context (with or without workflow)
-        const storyboardContext = buildStoryboardContext({
-          canvas,
-          storyboard: storyboardRef,
-          workflow: (selectedWorkflowData?.workflow && selectedWorkflowData?.workflowPath) ? {
-            template: selectedWorkflowData.workflow,
-            path: selectedWorkflowData.workflowPath,
-          } : undefined,
-        });
+        // Span: stories.event.context.update (spanPattern from context-propagation.workflow.json)
+        withSpanSync('stories.event.context.update', (span) => {
+          // Event: building storyboard context
+          span.addEvent('stories.context.build', {
+            canvasPath: selectedCanvasData.canvasPath,
+            hasWorkflow: !!(selectedWorkflowData?.workflow && selectedWorkflowData?.workflowPath),
+            hasScenario: false, // TODO: track selected scenario
+          });
 
-        console.log('[EditorLayout] Built storyboard context:', storyboardContext);
+          // Build storyboard context (with or without workflow)
+          const storyboardContext = buildStoryboardContext({
+            canvas,
+            storyboard: storyboardRef,
+            workflow: (selectedWorkflowData?.workflow && selectedWorkflowData?.workflowPath) ? {
+              template: selectedWorkflowData.workflow,
+              path: selectedWorkflowData.workflowPath,
+            } : undefined,
+          });
 
-        // Emit the context update
-        events.emit({
-          type: 'storyboard:context:update',
-          source: 'editor-layout',
-          timestamp: Date.now(),
-          payload: storyboardContext,
+          console.log('[EditorLayout] Built storyboard context:', storyboardContext);
+
+          // Event: emitting context update
+          span.addEvent('stories.event.context.update', {
+            source: 'editor-layout',
+            type: 'storyboard:context:update',
+            hasContext: !!storyboardContext,
+          });
+
+          // Emit the context update
+          events.emit({
+            type: 'storyboard:context:update',
+            source: 'editor-layout',
+            timestamp: Date.now(),
+            payload: storyboardContext,
+          });
         });
       } catch (error) {
         console.error('[EditorLayout] Failed to build storyboard context:', error);

@@ -1,0 +1,34 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/stories-layout/stories-layout.otel.canvas",
+  "spanPattern": "stories.state.selectedCanvasData",
+  "name": "Canvas Editor Flow",
+  "description": "EditorLayout receives canvas open event and updates state",
+  "scenarios": [
+    {
+      "id": "receive-open-canvas",
+      "description": "EditorLayout receives openCanvas event from StoryboardListPanel",
+      "priority": 1,
+      "template": {
+        "summary": "[Stories] Canvas opened: {{canvasName}} at {{canvasPath}}",
+        "events": {
+          "stories.editor.receive.openCanvas": "EditorLayout received canvas: {{canvasPath}} (mode: {{openMode}})",
+          "stories.state.selectedCanvasData": "Stored canvas data: {{canvasId}} ({{canvasName}}) at {{canvasPath}}"
+        }
+      }
+    },
+    {
+      "id": "receive-open-workflow-scenarios",
+      "description": "EditorLayout receives openWorkflowScenarios event from TraceListPanel",
+      "priority": 2,
+      "template": {
+        "summary": "[Stories] Workflow opened: {{workflowId}} with {{scenarioCount}} scenarios",
+        "events": {
+          "stories.editor.receive.openWorkflowScenarios": "EditorLayout received workflow: {{workflowId}} at {{workflowPath}} ({{scenarioCount}} scenarios)",
+          "stories.state.selectedWorkflowData": "Stored workflow data: {{workflowId}} at {{workflowPath}} ({{scenarioCount}} scenarios)",
+          "stories.state.selectedCanvasData": "Stored canvas data: {{canvasId}} ({{canvasName}}) at {{canvasPath}}"
+        }
+      }
+    }
+  ]
+}

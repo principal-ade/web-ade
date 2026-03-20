@@ -48,6 +48,7 @@ import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceDat
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from './AuthContext';
 import { buildOtelHighlightLayers, type ParsedOtelCanvas } from '@/lib/otel-coverage/buildOtelHighlightLayers';
+import { withSpan } from '@/lib/telemetry';
 
 // Host-provided tools
 const hostTools: PanelTool[] = [
@@ -748,38 +749,54 @@ export function RepositoryPageProvider({
       setOtelHighlightLoading(true);
 
       try {
-        const canvases: ParsedOtelCanvas[] = [];
-        const canvasMap = new Map<string, ExtendedCanvas>();
-
-        for (const canvasPath of otelCanvasPaths) {
-          try {
-            const data = await trpc.github.readFile.query({
-              owner,
-              repo,
-              path: canvasPath,
-            });
-            const content = JSON.parse(data.content) as ExtendedCanvas;
-            canvases.push({ path: canvasPath, content });
-            canvasMap.set(canvasPath, content);
-          } catch (error) {
-            console.warn(`[RepositoryPageProvider] Failed to parse ${canvasPath}:`, error);
-          }
-        }
-
-        // Store parsed canvases for storyboard context
-        setParsedCanvases(canvasMap);
-
-        if (canvases.length > 0) {
-          const layers = buildOtelHighlightLayers(canvases, {
-            showDraft: false,
-            showApproved: true,
-            showImplemented: true,
+        // Wrap canvas loading in a span (spanPattern from canvas-loading.workflow.json)
+        await withSpan('stories.canvases.success', async (span) => {
+          // Event: loading started
+          span.addEvent('stories.canvases.load', {
+            owner,
+            repo,
           });
-          setOtelHighlightLayers(layers);
-          console.log(`[RepositoryPageProvider] Built ${layers.length} OTEL highlight layers from ${canvases.length} canvas files`);
-        }
+
+          const canvases: ParsedOtelCanvas[] = [];
+          const canvasMap = new Map<string, ExtendedCanvas>();
+
+          for (const canvasPath of otelCanvasPaths) {
+            try {
+              const data = await trpc.github.readFile.query({
+                owner,
+                repo,
+                path: canvasPath,
+              });
+              const content = JSON.parse(data.content) as ExtendedCanvas;
+              canvases.push({ path: canvasPath, content });
+              canvasMap.set(canvasPath, content);
+            } catch (error) {
+              console.warn(`[RepositoryPageProvider] Failed to parse ${canvasPath}:`, error);
+            }
+          }
+
+          // Store parsed canvases for storyboard context
+          setParsedCanvases(canvasMap);
+
+          if (canvases.length > 0) {
+            const layers = buildOtelHighlightLayers(canvases, {
+              showDraft: false,
+              showApproved: true,
+              showImplemented: true,
+            });
+            setOtelHighlightLayers(layers);
+            console.log(`[RepositoryPageProvider] Built ${layers.length} OTEL highlight layers from ${canvases.length} canvas files`);
+          }
+
+          // Event: canvases loaded successfully
+          span.addEvent('stories.canvases.success', {
+            canvasCount: canvases.length,
+            workflowCount: 0, // TODO: count workflows when workflow loading is added
+          });
+        });
       } catch (error) {
         console.error('[RepositoryPageProvider] Failed to fetch OTEL canvases:', error);
+        // Error is recorded by withSpan automatically
       } finally {
         setOtelHighlightLoading(false);
       }

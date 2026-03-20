@@ -49,6 +49,7 @@
     "@opentelemetry/sdk-metrics": "^2.5.0",
     "@opentelemetry/sdk-node": "^0.211.0",
     "@opentelemetry/sdk-trace-base": "^2.5.0",
+    "@opentelemetry/sdk-trace-web": "^2.6.0",
     "@opentelemetry/semantic-conventions": "^1.39.0",
     "@principal-ade/code-quality-panels": "^0.2.0",
     "@principal-ade/dynamic-file-tree": "^0.2.27",

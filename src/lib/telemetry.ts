@@ -1,175 +1,133 @@
 /**
  * Client-Side Telemetry Utility
  *
- * Provides simple event emission for client-side telemetry.
- * Events are sent to OTEL collector for processing and visualization.
+ * Uses OpenTelemetry API for proper span/event instrumentation.
+ * Events are emitted WITHIN spans, not standalone.
+ *
+ * Pattern:
+ *   const span = telemetry.startSpan('stories.canvases.success');
+ *   span.addEvent('stories.canvases.load', { owner: 'foo', repo: 'bar' });
+ *   span.addEvent('stories.canvases.success', { canvasCount: 5 });
+ *   span.end();
  */
 
-interface TelemetryEvent {
-  name: string;
-  attributes?: Record<string, string | number | boolean>;
-  timestamp?: number;
+// Initialize browser OTEL provider (no-op on server)
+import './otel-browser-init';
+
+import { trace, type Span, SpanStatusCode } from '@opentelemetry/api';
+
+const TRACER_NAME = 'web-ade';
+const TRACER_VERSION = '1.0.0';
+
+/**
+ * Get the tracer instance for web-ade
+ */
+export function getTracer() {
+  return trace.getTracer(TRACER_NAME, TRACER_VERSION);
 }
 
-interface TelemetrySpan {
-  traceId: string;
-  spanId: string;
-  name: string;
-  events: TelemetryEvent[];
-  startTime: number;
-  endTime?: number;
+/**
+ * Start a new span for a workflow operation.
+ * The spanName should match the spanPattern from your workflow.json
+ *
+ * @example
+ * const span = startSpan('stories.canvases.success');
+ * span.addEvent('stories.canvases.load', { owner, repo });
+ * span.addEvent('stories.canvases.success', { canvasCount: 5 });
+ * span.end();
+ */
+export function startSpan(spanName: string, attributes?: Record<string, string | number | boolean>): Span {
+  const tracer = getTracer();
+  return tracer.startSpan(spanName, { attributes });
 }
 
+/**
+ * Execute a function within a span context.
+ * Automatically handles span start/end and error recording.
+ *
+ * @example
+ * await withSpan('stories.canvases.success', async (span) => {
+ *   span.addEvent('stories.canvases.load', { owner, repo });
+ *   const result = await loadCanvases();
+ *   span.addEvent('stories.canvases.success', { canvasCount: result.length });
+ *   return result;
+ * });
+ */
+export async function withSpan<T>(
+  spanName: string,
+  fn: (span: Span) => Promise<T>,
+  attributes?: Record<string, string | number | boolean>
+): Promise<T> {
+  const span = startSpan(spanName, attributes);
+
+  try {
+    const result = await fn(span);
+    span.setStatus({ code: SpanStatusCode.OK });
+    return result;
+  } catch (error) {
+    span.setStatus({
+      code: SpanStatusCode.ERROR,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    span.recordException(error instanceof Error ? error : new Error(String(error)));
+    throw error;
+  } finally {
+    span.end();
+  }
+}
+
+/**
+ * Synchronous version of withSpan for non-async operations
+ */
+export function withSpanSync<T>(
+  spanName: string,
+  fn: (span: Span) => T,
+  attributes?: Record<string, string | number | boolean>
+): T {
+  const span = startSpan(spanName, attributes);
+
+  try {
+    const result = fn(span);
+    span.setStatus({ code: SpanStatusCode.OK });
+    return result;
+  } catch (error) {
+    span.setStatus({
+      code: SpanStatusCode.ERROR,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    span.recordException(error instanceof Error ? error : new Error(String(error)));
+    throw error;
+  } finally {
+    span.end();
+  }
+}
+
+// Legacy compatibility - deprecated, use startSpan + span.addEvent instead
 class TelemetryCollector {
-  private currentSpan: TelemetrySpan | null = null;
-  private collectorUrl = '/api/telemetry/collect'; // We'll create this endpoint
+  private currentSpan: Span | null = null;
 
-  /**
-   * Generate a random hex ID
-   */
-  private generateId(bytes: number): string {
-    const hex = Array.from(crypto.getRandomValues(new Uint8Array(bytes)))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
-    return hex;
-  }
-
-  /**
-   * Start a new telemetry span
-   */
   startSpan(name: string): void {
-    this.currentSpan = {
-      traceId: this.generateId(16), // 16 bytes = 32 hex chars
-      spanId: this.generateId(8),   // 8 bytes = 16 hex chars
-      name,
-      events: [],
-      startTime: Date.now(),
-    };
+    this.currentSpan = startSpan(name);
   }
 
-  /**
-   * Emit a telemetry event in the current span
-   */
   emitEvent(name: string, attributes?: Record<string, string | number | boolean>): void {
     if (!this.currentSpan) {
       console.warn('[Telemetry] No active span. Call startSpan() first.');
       return;
     }
-
-    this.currentSpan.events.push({
-      name,
-      attributes,
-      timestamp: Date.now(),
-    });
+    this.currentSpan.addEvent(name, attributes);
   }
 
-  /**
-   * End the current span and send to collector
-   */
-  async endSpan(): Promise<void> {
-    if (!this.currentSpan) {
-      return;
+  endSpan(): void {
+    if (this.currentSpan) {
+      this.currentSpan.end();
+      this.currentSpan = null;
     }
-
-    this.currentSpan.endTime = Date.now();
-    const span = this.currentSpan;
-    this.currentSpan = null;
-
-    // Convert to OTLP format
-    const otlpData = {
-      resourceSpans: [{
-        resource: {
-          attributes: [
-            { key: 'service.name', value: { stringValue: 'web-ade' } },
-            { key: 'service.version', value: { stringValue: '0.1.0' } },
-            { key: 'deployment.environment.name', value: { stringValue: 'production' } },
-          ],
-        },
-        scopeSpans: [{
-          scope: {
-            name: 'web-ade',
-            version: '1.0.0',
-          },
-          spans: [{
-            traceId: span.traceId,
-            spanId: span.spanId,
-            name: span.name,
-            kind: 2, // SPAN_KIND_SERVER
-            startTimeUnixNano: String(span.startTime * 1000000),
-            endTimeUnixNano: String((span.endTime || Date.now()) * 1000000),
-            attributes: [],
-            events: span.events.map(event => ({
-              timeUnixNano: String((event.timestamp || Date.now()) * 1000000),
-              name: event.name,
-              attributes: Object.entries(event.attributes || {}).map(([key, value]) => ({
-                key,
-                value: this.convertAttributeValue(value),
-              })),
-            })),
-            status: { code: 1 }, // STATUS_CODE_OK
-          }],
-        }],
-      }],
-    };
-
-    // Send to collector (fire and forget for now)
-    try {
-      await fetch(this.collectorUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(otlpData),
-      });
-    } catch (error) {
-      console.warn('[Telemetry] Failed to send to collector:', error);
-    }
-  }
-
-  /**
-   * Convert attribute value to OTLP format
-   */
-  private convertAttributeValue(value: string | number | boolean) {
-    if (typeof value === 'string') {
-      return { stringValue: value };
-    } else if (typeof value === 'number') {
-      if (Number.isInteger(value)) {
-        return { intValue: value };
-      }
-      return { doubleValue: value };
-    } else if (typeof value === 'boolean') {
-      return { boolValue: value };
-    }
-    return { stringValue: String(value) };
   }
 }
 
-// Singleton instance
-const telemetry = new TelemetryCollector();
+// Legacy singleton for backwards compatibility
+export const telemetry = new TelemetryCollector();
 
-/**
- * Helper to run a function within a telemetry span
- */
-export async function withTelemetrySpan<T>(
-  spanName: string,
-  fn: (emit: (eventName: string, attrs?: Record<string, string | number | boolean>) => void) => Promise<T>
-): Promise<T> {
-  telemetry.startSpan(spanName);
-
-  const emit = (eventName: string, attrs?: Record<string, string | number | boolean>) => {
-    telemetry.emitEvent(eventName, attrs);
-  };
-
-  try {
-    const result = await fn(emit);
-    await telemetry.endSpan();
-    return result;
-  } catch (error) {
-    // Emit error event before ending span
-    emit('error', {
-      'error.message': error instanceof Error ? error.message : String(error),
-    });
-    await telemetry.endSpan();
-    throw error;
-  }
-}
-
-export { telemetry };
+// Re-export types
+export { type Span, SpanStatusCode };

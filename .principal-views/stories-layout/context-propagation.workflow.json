@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/stories-layout/stories-layout.otel.canvas",
+  "spanPattern": "stories.event.context.update",
+  "name": "Context Propagation",
+  "description": "EditorLayout builds and emits storyboard context",
+  "scenarios": [
+    {
+      "id": "context-build-emit",
+      "description": "Build storyboard context and emit update event",
+      "priority": 1,
+      "template": {
+        "summary": "[Stories] Context built for {{canvasPath}} (workflow: {{hasWorkflow}})",
+        "events": {
+          "stories.context.build": "Building storyboard context for {{canvasPath}} (workflow: {{hasWorkflow}}, scenario: {{hasScenario}})",
+          "stories.event.context.update": "Emitting {{type}} from {{source}} (hasContext: {{hasContext}})"
+        }
+      }
+    }
+  ]
+}

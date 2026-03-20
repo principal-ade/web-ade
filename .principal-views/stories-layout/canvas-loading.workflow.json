@@ -1,0 +1,33 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/stories-layout/stories-layout.otel.canvas",
+  "spanPattern": "stories.canvases.success",
+  "name": "Canvas Loading",
+  "description": "Loading canvases and workflows from repository",
+  "scenarios": [
+    {
+      "id": "canvases-load-success",
+      "description": "Successfully load canvases for repository",
+      "priority": 1,
+      "template": {
+        "summary": "[Stories] Loaded {{canvasCount}} canvases, {{workflowCount}} workflows",
+        "events": {
+          "stories.canvases.load": "Loading canvases for {{owner}}/{{repo}}",
+          "stories.canvases.success": "Found {{canvasCount}} canvases, {{workflowCount}} workflows"
+        }
+      }
+    },
+    {
+      "id": "canvases-load-error",
+      "description": "Failed to load canvases",
+      "priority": 2,
+      "template": {
+        "summary": "[Stories] Canvas load failed: {{error.message}}",
+        "events": {
+          "stories.canvases.load": "Loading canvases for {{owner}}/{{repo}}",
+          "stories.canvases.error": "Failed to load canvases: {{error.message}}"
+        }
+      }
+    }
+  ]
+}
