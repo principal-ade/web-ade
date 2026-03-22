@@ -1984,7 +1984,7 @@ function EditorLayoutContent({
         </div>
       ),
     },
-  ], [context, enhancedActions, events, theme.colors.textMuted, theme.colors.text, theme.fontSizes, selectedCanvasData, selectedWorkflowData, selectedTrace]);
+  ], [context, enhancedActions, events, theme.colors.textMuted, selectedCanvasData, selectedWorkflowData, selectedTrace]);
 
   // File editing panels - now use the standard panel framework pattern
   const fileEditingPanels = useMemo(() => [

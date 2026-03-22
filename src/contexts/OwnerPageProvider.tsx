@@ -1050,7 +1050,7 @@ export function OwnerPageProvider({
         alert('Adding repositories to collections on profile pages is coming soon!');
       },
     }),
-    [adapters, events, currentOwner, selectedCollection, onRepositoryClicked, githubRepo]
+    [adapters, events, selectedCollection, onRepositoryClicked, githubRepo]
   );
 
   // Clear color mode

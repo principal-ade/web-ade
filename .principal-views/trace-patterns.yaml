@@ -1,0 +1,19 @@
+version: 1.0.0
+patterns:
+  - id: pattern-27b14cff
+    name: GET /api/trpc/[trpc]/route
+    description: Cards on the homepage
+    rootSpans:
+      - name: GET /api/trpc/[trpc]/route
+        children:
+          - name: executing api route (app) /api/trpc/[trpc]/route
+            children:
+              - name: repo.file-tree.load
+                children:
+                  - name: fetch GET https://api.github.com/repos/X-File-City/ghostty/commits/HEAD
+                  - name: fetch GET https://api.github.com/repos/X-File-City/ghostty/git/trees/3cc01155bf3c903d533e6896aa378e36357bd278?recursive=1
+          - name: resolve page components
+          - name: start response
+    filterDefault: true
+    createdAt: '2026-03-20T20:18:36.302Z'
+    sampleTraceId: f2352eb770734a6211197f2674c4e22b
