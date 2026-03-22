@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/stories-layout/stories-layout.otel.canvas",
+  "spanPattern": "stories.canvas.node.click",
+  "name": "Node Interaction",
+  "description": "User clicks on canvas nodes to focus related files",
+  "scenarios": [
+    {
+      "id": "click-node-focus-files",
+      "description": "User clicks a canvas node and File City focuses on related files",
+      "priority": 1,
+      "template": {
+        "summary": "[Stories] Clicked node {{nodeId}} - focusing {{focusedFiles}} files",
+        "events": {
+          "stories.canvas.node.click": "User clicked node {{nodeId}} (type: {{nodeType}}, hasReferences: {{hasReferences}})",
+          "stories.event.focus.files": "Emitting focus files event from {{source}} for files: {{filePaths}}",
+          "stories.file-city.focus": "File City focusing on {{focusedFiles}} files (cameraAnimation: {{cameraAnimation}})"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/stories-layout/stories-layout.otel.canvas",
+  "spanPattern": "stories.file-city.receive.context",
+  "name": "File City Context",
+  "description": "File City panel receives and applies storyboard context",
+  "scenarios": [
+    {
+      "id": "receive-apply-highlights",
+      "description": "File City receives context and applies highlights",
+      "priority": 1,
+      "template": {
+        "summary": "[Stories] File City highlighted {{highlightedFiles}} files",
+        "events": {
+          "stories.file-city.receive.context": "File City received context with {{nodeCount}} nodes (hasHighlights: {{hasHighlights}})",
+          "stories.file-city.highlights.apply": "Applied highlights to {{highlightedFiles}} files (colorMode: {{colorMode}})",
+          "stories.panel.file-city.render": "File City rendered {{fileCount}} files with {{highlightedCount}} highlighted"
+        }
+      }
+    }
+  ]
+}

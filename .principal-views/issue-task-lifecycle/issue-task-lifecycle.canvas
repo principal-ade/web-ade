@@ -16,8 +16,8 @@
         "label": "Context/State",
         "description": "React context state management"
       },
-      "event": {
-        "label": "Event",
+      "panel-event": {
+        "label": "Panel Event",
         "description": "Panel event emission"
       },
       "file-system": {
@@ -67,18 +67,17 @@
     },
     {
       "id": "issue-selected-event",
-      "type": "otel-event",
+      "type": "text",
       "x": -204,
       "y": 254,
       "width": 200,
       "height": 50,
       "color": "#f59e0b",
-      "label": "issue:selected",
-      "shape": "rectangle",
-      "event": {
-        "name": "issue.selected",
-        "attributes": {}
-      }
+      "pv": {
+        "nodeType": "panel-event",
+        "shape": "rectangle"
+      },
+      "text": "issue:selected"
     },
     {
       "id": "panel-context",
@@ -166,18 +165,17 @@
     },
     {
       "id": "push-to-backlog-event",
-      "type": "otel-event",
+      "type": "text",
       "x": 544,
       "y": 409,
       "width": 220,
       "height": 50,
       "color": "#f59e0b",
-      "label": "issue:push-to-backlog",
-      "shape": "rectangle",
-      "event": {
-        "name": "issue.push-to-backlog",
-        "attributes": {}
-      }
+      "pv": {
+        "nodeType": "panel-event",
+        "shape": "rectangle"
+      },
+      "text": "issue:push-to-backlog"
     },
     {
       "id": "build-task-markdown",
@@ -223,18 +221,17 @@
     },
     {
       "id": "task-created-event",
-      "type": "otel-event",
+      "type": "text",
       "x": 330,
       "y": 720,
       "width": 200,
       "height": 50,
       "color": "#f59e0b",
-      "label": "issue:task-created",
-      "shape": "rectangle",
-      "event": {
-        "name": "task.created",
-        "attributes": {}
-      }
+      "pv": {
+        "nodeType": "panel-event",
+        "shape": "rectangle"
+      },
+      "text": "issue:task-created"
     },
     {
       "id": "kanban-panel",

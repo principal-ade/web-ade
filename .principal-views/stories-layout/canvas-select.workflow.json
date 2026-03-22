@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/stories-layout/stories-layout.otel.canvas",
+  "spanPattern": "stories.canvas.select",
+  "name": "Canvas Selection",
+  "description": "User selects a canvas from the storyboard list",
+  "scenarios": [
+    {
+      "id": "select-canvas-from-list",
+      "description": "User clicks on a canvas in the storyboard list panel",
+      "priority": 1,
+      "template": {
+        "summary": "[Stories] Selected canvas: {{canvasName}}",
+        "events": {
+          "stories.canvas.select": "User selected canvas: {{canvasName}} at {{canvasPath}} (mode: {{openMode}})",
+          "stories.event.openCanvas": "Emitting openCanvas ({{action}}) from {{source}} for canvas {{canvas.id}} at {{canvas.path}} (mode: {{openMode}})",
+          "stories.panel.canvas-editor.render": "Canvas editor rendered {{canvasPath}} with {{nodeCount}} nodes and {{edgeCount}} edges"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/stories-layout/stories-layout.otel.canvas",
+  "spanPattern": "stories.workflow.select",
+  "name": "Workflow Selection",
+  "description": "User selects a workflow and scenario from the canvas",
+  "scenarios": [
+    {
+      "id": "select-workflow",
+      "description": "User clicks on a workflow in the trace list panel",
+      "priority": 1,
+      "template": {
+        "summary": "[Stories] Selected workflow: {{workflowId}} with {{scenarioCount}} scenarios",
+        "events": {
+          "stories.workflow.select": "User selected workflow: {{workflowId}} at {{workflowPath}} ({{scenarioCount}} scenarios)",
+          "stories.event.openWorkflowScenarios": "Emitting openWorkflowScenarios ({{action}}) for workflow {{workflowId}} at {{workflowPath}} on canvas {{canvasId}} at {{canvasPath}} ({{scenarioCount}} scenarios)"
+        }
+      }
+    },
+    {
+      "id": "select-scenario",
+      "description": "User selects a scenario within a workflow",
+      "priority": 2,
+      "template": {
+        "summary": "[Stories] Selected scenario: {{scenarioName}}",
+        "events": {
+          "stories.scenario.select": "User selected scenario: {{scenarioName}} ({{scenarioId}})"
+        }
+      }
+    }
+  ]
+}
