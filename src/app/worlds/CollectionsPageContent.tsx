@@ -15,7 +15,6 @@ import {
   ResponsiveConfigurablePanelLayout,
   PanelLayout,
 } from "@principal-ade/panel-layouts";
-import '@principal-ade/panel-layouts/styles.css';
 import { FolderOpen, Share2, Check, Settings, Clock, GitFork, User, Library, ArrowRight, X, Home, Star, Users, Search, Map, PanelRight, PanelRightClose, Plus } from 'lucide-react';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { iconMap } from '@/components/collections/CollectionModal';
@@ -572,10 +571,6 @@ export function CollectionsPageContent({
               ? { left: 20, middle: 60, right: 20 }
               : { left: 25, middle: 50, right: 25 }
             }
-            minSizes={viewMode === 'manage'
-              ? { left: 20, middle: 30, right: 20 }
-              : { left: 15, middle: 30, right: 15 }
-            }
             collapsiblePanels={{ left: true, right: true }}
             collapsed={{ left: leftCollapsed, right: rightCollapsed }}
             onRightCollapseComplete={() => setRightCollapsed(true)}
@@ -592,10 +587,6 @@ export function CollectionsPageContent({
             defaultSizes={viewMode === 'manage'
               ? { left: 20, middle: 60, right: 20 }
               : { left: 25, middle: 50, right: 25 }
-            }
-            minSizes={viewMode === 'manage'
-              ? { left: 20, middle: 30, right: 20 }
-              : { left: 15, middle: 30, right: 15 }
             }
             collapsiblePanels={{ left: true, right: true }}
             collapsed={{ left: leftCollapsed, right: rightCollapsed }}

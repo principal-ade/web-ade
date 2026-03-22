@@ -15,7 +15,6 @@ import {
   ResponsiveConfigurablePanelLayout,
   PanelLayout,
 } from "@principal-ade/panel-layouts";
-import '@principal-ade/panel-layouts/styles.css';
 import {
   Layers,
   ExternalLink,
@@ -200,7 +199,6 @@ function SharedCollectionsContent({
             panels={panels}
             layout={layout}
             defaultSizes={{ left: 20, middle: 55, right: 25 }}
-            minSizes={{ left: 15, middle: 40, right: 20 }}
             collapsiblePanels={{ left: true, right: true }}
             collapsed={{ left: false, right: false }}
             showCollapseButtons={false}
@@ -213,7 +211,6 @@ function SharedCollectionsContent({
             layout={layout}
             isEditMode={false}
             defaultSizes={{ left: 20, middle: 55, right: 25 }}
-            minSizes={{ left: 15, middle: 40, right: 20 }}
             collapsiblePanels={{ left: true, right: true }}
             collapsed={{ left: false, right: false }}
             showCollapseButtons={false}

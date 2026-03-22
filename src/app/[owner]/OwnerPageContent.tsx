@@ -18,7 +18,6 @@ import {
   ResponsiveConfigurablePanelLayout,
   PanelLayout,
 } from "@principal-ade/panel-layouts";
-import '@principal-ade/panel-layouts/styles.css';
 import {
   PanelLeftClose,
   PanelLeftOpen,
@@ -528,11 +527,6 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
               middle: 50,
               right: 25,
             }}
-            minSizes={{
-              left: 15,
-              middle: 30,
-              right: 15,
-            }}
             collapsiblePanels={{
               left: true,
               right: true,
@@ -554,11 +548,6 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
               left: 25,
               middle: 50,
               right: 25,
-            }}
-            minSizes={{
-              left: 15,
-              middle: 30,
-              right: 15,
             }}
             collapsiblePanels={{
               left: true,

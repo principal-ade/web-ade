@@ -463,11 +463,6 @@ export const ResponsiveLayoutMiddle: Story = {
               middle: 50,
               right: 25,
             }}
-            minSizes={{
-              left: 15,
-              middle: 30,
-              right: 15,
-            }}
             collapsiblePanels={{
               left: true,
               right: true,

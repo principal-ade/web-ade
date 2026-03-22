@@ -4,7 +4,6 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useCallback } from "react";
 import { OwnerPageProvider } from "@/contexts/OwnerPageProvider";
-import '@principal-ade/panel-layouts/styles.css';
 import { OwnerPageContent } from './OwnerPageContent';
 
 function OwnerPageWrapper({ owner }: { owner: string }) {

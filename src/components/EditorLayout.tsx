@@ -23,7 +23,6 @@ import { layoutConfigs, LayoutConfig } from './LayoutConfigDropdown';
 import { AIChatPanel } from './AIChatPanel';
 import { PendingChangesProvider, usePendingChanges } from '@/contexts/PendingChangesContext';
 import { useVFS } from '@/contexts/VFSContext';
-import '@principal-ade/panel-layouts/styles.css';
 import '@principal-ade/industry-themed-ai-sdk-panel/styles.css';
 // CSS removed from principal-view-panels exports - styles now bundled in JS
 import { useAuth } from '@/contexts/AuthContext';
@@ -2236,11 +2235,6 @@ function EditorLayoutContent({
                 middle: 50,
                 right: 25,
               }}
-              minSizes={{
-                left: 15,
-                middle: 30,
-                right: 20,
-              }}
               collapsiblePanels={{
                 left: true,
                 right: true,
@@ -2263,11 +2257,6 @@ function EditorLayoutContent({
                 left: 25,
                 middle: 50,
                 right: 25,
-              }}
-              minSizes={{
-                left: 15,
-                middle: 30,
-                right: 20,
               }}
               collapsiblePanels={{
                 left: true,

@@ -8,7 +8,6 @@ import { useUserCollections } from "@/contexts/UserCollectionsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { CollectionModal } from "@/components/collections/CollectionModal";
 import { AddRepositoryModal } from "@/components/collections/AddRepositoryModal";
-import '@principal-ade/panel-layouts/styles.css';
 import { Plus, Layers } from 'lucide-react';
 import type { Collection } from '@principal-ai/alexandria-collections';
 import { CollectionsPageContent } from './CollectionsPageContent';

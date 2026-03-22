@@ -13,7 +13,6 @@ import {
   ResponsiveConfigurablePanelLayout,
   PanelLayout,
 } from '@principal-ade/panel-layouts';
-import '@principal-ade/panel-layouts/styles.css';
 import {
   Calendar,
   Home,
@@ -379,11 +378,6 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
               middle: 40,
               right: 30,
             }}
-            minSizes={{
-              left: 20,
-              middle: 20,
-              right: 20,
-            }}
             collapsiblePanels={{
               left: false,
               right: false,
@@ -405,11 +399,6 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
               left: 30,
               middle: 40,
               right: 30,
-            }}
-            minSizes={{
-              left: 20,
-              middle: 20,
-              right: 20,
             }}
             collapsiblePanels={{
               left: false,
