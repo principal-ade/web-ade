@@ -69,19 +69,6 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     );
   }, [filteredRepoSummaries, timeFilter]);
 
-  // Split into recent and older
-  const { recentRepos, olderRepos } = useMemo(() => {
-    const now = new Date();
-    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const recent = timeFilteredSummaries.filter(
-      (s) => s.latestCommitAt >= twentyFourHoursAgo
-    );
-    const older = timeFilteredSummaries.filter(
-      (s) => s.latestCommitAt < twentyFourHoursAgo
-    );
-    return { recentRepos: recent, olderRepos: older };
-  }, [timeFilteredSummaries]);
-
   // Build heatmap commits from all repo summaries
   const heatmapCommits = useMemo<CommitTimestamp[]>(() => {
     const commits: CommitTimestamp[] = [];
@@ -334,65 +321,16 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
               </p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
-              {/* Recent repos (last 24h) */}
-              {recentRepos.length > 0 && (
-                <div>
-                  <div
-                    style={{
-                      fontSize: theme.fontSizes[1],
-                      fontWeight: 600,
-                      color: theme.colors.textMuted,
-                      marginBottom: spacing.sm,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                    }}
-                  >
-                    Last 24 Hours
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-                    {recentRepos.map((summary) => (
-                      <RepoActivityCard
-                        key={summary.fullName}
-                        summary={summary}
-                        isExpanded={expandedRepos.has(summary.fullName)}
-                        onToggleExpand={() => toggleExpanded(summary.fullName)}
-                        onOpen={() => handleRepoOpen(summary)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Older repos */}
-              {olderRepos.length > 0 && (
-                <div>
-                  <div
-                    style={{
-                      fontSize: theme.fontSizes[1],
-                      fontWeight: 600,
-                      color: theme.colors.textMuted,
-                      marginBottom: spacing.sm,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                    }}
-                  >
-                    Earlier
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-                    {olderRepos.map((summary) => (
-                      <RepoActivityCard
-                        key={summary.fullName}
-                        summary={summary}
-                        isExpanded={expandedRepos.has(summary.fullName)}
-                        onToggleExpand={() => toggleExpanded(summary.fullName)}
-                        onOpen={() => handleRepoOpen(summary)}
-                        dimmed
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
+              {timeFilteredSummaries.map((summary) => (
+                <RepoActivityCard
+                  key={summary.fullName}
+                  summary={summary}
+                  isExpanded={expandedRepos.has(summary.fullName)}
+                  onToggleExpand={() => toggleExpanded(summary.fullName)}
+                  onOpen={() => handleRepoOpen(summary)}
+                />
+              ))}
             </div>
           )}
         </div>

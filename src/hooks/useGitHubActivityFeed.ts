@@ -97,18 +97,24 @@ export function useGitHubActivityFeed(
 
             if (commits.length === 0) return;
 
-            const activityCommits: ActivityCommit[] = commits.map((commit) => ({
-              repoOwner: repo.owner,
-              repoName: repo.repo,
-              sha: commit.sha,
-              message: commit.commit.message.split('\n')[0] ?? '', // First line only
-              author: commit.commit.author.name,
-              authorEmail: commit.commit.author.email,
-              authorAvatarUrl: commit.author?.avatar_url || null,
-              date: commit.commit.author.date,
-              additions: commit.stats?.additions,
-              deletions: commit.stats?.deletions,
-            }));
+            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+            const activityCommits: ActivityCommit[] = commits
+              .filter((commit) => new Date(commit.commit.author.date) >= twentyFourHoursAgo)
+              .map((commit) => ({
+                repoOwner: repo.owner,
+                repoName: repo.repo,
+                sha: commit.sha,
+                message: commit.commit.message.split('\n')[0] ?? '', // First line only
+                author: commit.commit.author.name,
+                authorEmail: commit.commit.author.email,
+                authorAvatarUrl: commit.author?.avatar_url || null,
+                date: commit.commit.author.date,
+                additions: commit.stats?.additions,
+                deletions: commit.stats?.deletions,
+              }));
+
+            if (activityCommits.length === 0) return;
 
             const latestCommit = activityCommits[0];
             if (latestCommit) {
