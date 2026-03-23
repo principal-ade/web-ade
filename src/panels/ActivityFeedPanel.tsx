@@ -73,7 +73,10 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<GitHubSearchRepo[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [addingRepo, setAddingRepo] = useState<string | null>(null);
+
+  // Selected repo from search (replaces feed with single repo)
+  const [selectedRepo, setSelectedRepo] = useState<GitHubSearchRepo | null>(null);
+  const [selectedRepoLoading, setSelectedRepoLoading] = useState(false);
 
   // Time filter from heatmap
   const [timeFilter, setTimeFilter] = useState<{ start: Date; end: Date } | null>(null);
@@ -121,31 +124,49 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Handle adding a repo from search results
-  const handleAddRepo = useCallback(async (repo: GitHubSearchRepo) => {
-    setAddingRepo(repo.full_name);
-    await addRepo(repo.owner.login, repo.name);
-    setAddingRepo(null);
+  // Handle selecting a repo from search results
+  const handleSelectRepo = useCallback(async (repo: GitHubSearchRepo) => {
+    setSelectedRepo(repo);
+    setSelectedRepoLoading(true);
     setSearchQuery('');
     setSearchResults([]);
+    // Fetch activity for this repo
+    await addRepo(repo.owner.login, repo.name);
+    setSelectedRepoLoading(false);
   }, [addRepo]);
+
+  // Clear selected repo to go back to featured repos
+  const clearSelectedRepo = useCallback(() => {
+    setSelectedRepo(null);
+  }, []);
+
+  // Get summaries to display (either selected repo or all featured)
+  const displaySummaries = useMemo(() => {
+    if (selectedRepo) {
+      // Show only the selected repo
+      return repoSummaries.filter(
+        (s) => s.fullName.toLowerCase() === selectedRepo.full_name.toLowerCase()
+      );
+    }
+    return repoSummaries;
+  }, [repoSummaries, selectedRepo]);
 
   // Filter repos by time (from heatmap click)
   const timeFilteredSummaries = useMemo(() => {
-    if (!timeFilter) return repoSummaries;
+    if (!timeFilter) return displaySummaries;
 
-    return repoSummaries.filter((summary) =>
+    return displaySummaries.filter((summary) =>
       summary.commits.some((commit) => {
         const commitDate = new Date(commit.date);
         return commitDate >= timeFilter.start && commitDate < timeFilter.end;
       })
     );
-  }, [repoSummaries, timeFilter]);
+  }, [displaySummaries, timeFilter]);
 
-  // Build heatmap commits from all repo summaries
+  // Build heatmap commits from displayed summaries
   const heatmapCommits = useMemo<CommitTimestamp[]>(() => {
     const commits: CommitTimestamp[] = [];
-    for (const summary of repoSummaries) {
+    for (const summary of displaySummaries) {
       for (const commit of summary.commits) {
         commits.push({
           timestamp: commit.date,
@@ -154,7 +175,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
       }
     }
     return commits;
-  }, [repoSummaries]);
+  }, [displaySummaries]);
 
   // Toggle card expansion
   const toggleExpanded = (fullName: string) => {
@@ -313,88 +334,67 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-                {searchResults.map((repo) => {
-                  const alreadyInFeed = repoSummaries.some(
-                    (s) => s.fullName.toLowerCase() === repo.full_name.toLowerCase()
-                  );
-                  const isAdding = addingRepo === repo.full_name;
-
-                  return (
-                    <button
-                      key={repo.id}
-                      onClick={() => !alreadyInFeed && !isAdding && handleAddRepo(repo)}
-                      disabled={alreadyInFeed || isAdding}
+                {searchResults.map((repo) => (
+                  <button
+                    key={repo.id}
+                    onClick={() => handleSelectRepo(repo)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: spacing.sm,
+                      padding: spacing.sm,
+                      backgroundColor: 'transparent',
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'background-color 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = theme.colors.surface;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={repo.owner.avatar_url}
+                      alt={repo.owner.login}
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: spacing.sm,
-                        padding: spacing.sm,
-                        backgroundColor: alreadyInFeed ? theme.colors.surface : 'transparent',
-                        border: `1px solid ${theme.colors.border}`,
-                        borderRadius: 6,
-                        cursor: alreadyInFeed ? 'default' : 'pointer',
-                        textAlign: 'left',
-                        opacity: alreadyInFeed ? 0.5 : 1,
-                        transition: 'background-color 0.15s ease',
+                        width: 24,
+                        height: 24,
+                        borderRadius: 4,
+                        flexShrink: 0,
                       }}
-                      onMouseEnter={(e) => {
-                        if (!alreadyInFeed) {
-                          e.currentTarget.style.backgroundColor = theme.colors.surface;
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!alreadyInFeed) {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                        }
-                      }}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={repo.owner.avatar_url}
-                        alt={repo.owner.login}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
                         style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: 4,
-                          flexShrink: 0,
+                          fontSize: theme.fontSizes[1],
+                          fontWeight: 500,
+                          color: theme.colors.text,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                         }}
-                      />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: theme.fontSizes[1],
-                            fontWeight: 500,
-                            color: theme.colors.text,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {repo.name}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: theme.fontSizes[0],
-                            color: theme.colors.textMuted,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {repo.owner.login}
-                        </div>
+                      >
+                        {repo.name}
                       </div>
-                      {isAdding && (
-                        <Loader2 size={14} style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
-                      )}
-                      {alreadyInFeed && (
-                        <span style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted }}>
-                          Added
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[0],
+                          color: theme.colors.textMuted,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {repo.owner.login}
+                      </div>
+                    </div>
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -409,6 +409,42 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
             padding: spacing.md,
           }}
         >
+          {/* Selected repo header */}
+          {selectedRepo && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.sm,
+                marginBottom: spacing.md,
+              }}
+            >
+              <button
+                onClick={clearSelectedRepo}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  padding: `${spacing.xs}px ${spacing.sm}px`,
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: 4,
+                  color: theme.colors.textMuted,
+                  cursor: 'pointer',
+                  fontSize: theme.fontSizes[1],
+                }}
+              >
+                ← Back to feed
+              </button>
+              <span style={{ fontSize: theme.fontSizes[2], fontWeight: 600, color: theme.colors.text }}>
+                {selectedRepo.full_name}
+              </span>
+              {selectedRepoLoading && (
+                <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+              )}
+            </div>
+          )}
+
           {/* Time filter indicator */}
           {timeFilter && (
             <div
@@ -476,10 +512,10 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
             >
               <FolderGit2 size={48} style={{ marginBottom: spacing.md, opacity: 0.5 }} />
               <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>
-                {timeFilter ? 'No commits in this time range' : 'No recent activity'}
+                {timeFilter ? 'No commits in this time range' : selectedRepo ? 'No commits in the last 24 hours' : 'No recent activity'}
               </p>
               <p style={{ margin: `${spacing.xs}px 0 0`, fontSize: theme.fontSizes[1] }}>
-                {timeFilter ? 'Try selecting a different time block' : 'Commits from featured repositories will appear here'}
+                {timeFilter ? 'Try selecting a different time block' : selectedRepo ? 'This repository has no recent commits' : 'Commits from featured repositories will appear here'}
               </p>
             </div>
           ) : (
