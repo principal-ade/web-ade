@@ -35,6 +35,30 @@ export const FEATURED_REPOS: FeaturedRepo[] = [
     owner: 'Dimillian',
     repo: 'CodexMonitor',
   },
+  {
+    owner: 'ubicloud',
+    repo: 'ubicloud',
+  },
+  {
+    owner: 'different-ai',
+    repo: 'openwork',
+  },
+  {
+    owner: 'ghostty-org',
+    repo: 'ghostty',
+  },
+  {
+    owner: 'rivet-dev',
+    repo: 'secure-exec',
+  },
+  {
+    owner: 'yazinsai',
+    repo: 'OpenOats',
+  },
+  {
+    owner: 'tigerbeetle',
+    repo: 'tigerbeetle',
+  },
 ];
 
 /**
