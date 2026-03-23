@@ -226,29 +226,6 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
     ? typewriterText
     : displayedCommit?.message ?? '';
 
-  // Calculate aggregate stats (all commits or up to hovered)
-  const displayedStats = useMemo(() => {
-    const activeIndex = isAnimating ? animationCommitIndex : hoveredCommitIndex;
-    let additions = 0;
-    let deletions = 0;
-
-    // If hovering/animating, sum from oldest to current index
-    // Otherwise sum all commits
-    const endIndex = activeIndex !== null ? activeIndex : summary.commits.length - 1;
-
-    for (let i = summary.commits.length - 1; i >= 0 && i >= (summary.commits.length - 1 - endIndex); i--) {
-      const commit = summary.commits[i];
-      if (!commit) continue;
-      const stats = commitStats.get(commit.sha);
-      if (stats) {
-        additions += stats.additions;
-        deletions += stats.deletions;
-      }
-    }
-
-    return { additions, deletions };
-  }, [commitStats, summary.commits, hoveredCommitIndex, animationCommitIndex, isAnimating]);
-
   // Total aggregate stats (all commits)
   const totalStats = useMemo(() => {
     let additions = 0;
@@ -608,7 +585,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             </div>
           </div>
 
-          {/* Cumulative line count stats */}
+          {/* Total line count stats */}
           {(totalStats.additions > 0 || totalStats.deletions > 0) && (
             <div
               style={{
@@ -620,33 +597,31 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             >
               {/* Stats bars */}
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, flex: 1 }}>
-                {displayedStats.additions > 0 && (
+                {totalStats.additions > 0 && (
                   <div
                     style={{
                       height: 6,
                       backgroundColor: theme.colors.success,
                       borderRadius: 3,
                       minWidth: 6,
-                      width: `${Math.min(100, (displayedStats.additions / (totalStats.additions + totalStats.deletions)) * 100)}%`,
-                      transition: 'width 0.15s ease',
+                      width: `${Math.min(100, (totalStats.additions / (totalStats.additions + totalStats.deletions)) * 100)}%`,
                     }}
                   />
                 )}
-                {displayedStats.deletions > 0 && (
+                {totalStats.deletions > 0 && (
                   <div
                     style={{
                       height: 6,
                       backgroundColor: theme.colors.error,
                       borderRadius: 3,
                       minWidth: 6,
-                      width: `${Math.min(100, (displayedStats.deletions / (totalStats.additions + totalStats.deletions)) * 100)}%`,
-                      transition: 'width 0.15s ease',
+                      width: `${Math.min(100, (totalStats.deletions / (totalStats.additions + totalStats.deletions)) * 100)}%`,
                     }}
                   />
                 )}
               </div>
 
-              {/* Cumulative stats numbers */}
+              {/* Total stats numbers */}
               <div
                 style={{
                   display: 'flex',
@@ -657,14 +632,14 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                   flexShrink: 0,
                 }}
               >
-                {displayedStats.additions > 0 && (
+                {totalStats.additions > 0 && (
                   <span style={{ color: theme.colors.success }}>
-                    +{displayedStats.additions.toLocaleString()}
+                    +{totalStats.additions.toLocaleString()}
                   </span>
                 )}
-                {displayedStats.deletions > 0 && (
+                {totalStats.deletions > 0 && (
                   <span style={{ color: theme.colors.error }}>
-                    -{displayedStats.deletions.toLocaleString()}
+                    -{totalStats.deletions.toLocaleString()}
                   </span>
                 )}
               </div>
