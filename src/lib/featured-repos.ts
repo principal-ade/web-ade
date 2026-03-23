@@ -15,7 +15,18 @@ export const FEATURED_REPOS: FeaturedRepo[] = [
     repo: 'gstack',
     description: 'Full-stack web application template',
   },
-  // Add more repos here as needed
+  {
+    owner: 'pingdotgg',
+    repo: 't3code',
+  },
+  {
+    owner: 'iamlukethedev',
+    repo: 'Claw3D',
+  },
+  {
+    owner: 'openclaw',
+    repo: 'openclaw',
+  },
 ];
 
 /**
