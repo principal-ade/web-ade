@@ -27,6 +27,10 @@ export const FEATURED_REPOS: FeaturedRepo[] = [
     owner: 'openclaw',
     repo: 'openclaw',
   },
+  {
+    owner: 'paperclipai',
+    repo: 'paperclip',
+  },
 ];
 
 /**
