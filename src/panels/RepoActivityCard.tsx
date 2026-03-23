@@ -215,6 +215,9 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
   // Changed files for highlight layers
   const [changedFiles, setChangedFiles] = useState<Map<string, 'added' | 'modified' | 'removed'>>(new Map());
 
+  // Line count stats per commit
+  const [commitStats, setCommitStats] = useState<Map<string, { additions: number; deletions: number }>>(new Map());
+
   // Get the commit to display (animation > hovered > most recent)
   const displayedCommitIndex = animationCommitIndex ?? hoveredCommitIndex ?? 0;
   const displayedCommit = summary.commits[displayedCommitIndex];
@@ -222,6 +225,45 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
   const displayedMessage = isAnimating && typewriterText !== null
     ? typewriterText
     : displayedCommit?.message ?? '';
+
+  // Calculate aggregate stats (all commits or up to hovered)
+  const displayedStats = useMemo(() => {
+    const activeIndex = isAnimating ? animationCommitIndex : hoveredCommitIndex;
+    let additions = 0;
+    let deletions = 0;
+
+    // If hovering/animating, sum from oldest to current index
+    // Otherwise sum all commits
+    const endIndex = activeIndex !== null ? activeIndex : summary.commits.length - 1;
+
+    for (let i = summary.commits.length - 1; i >= 0 && i >= (summary.commits.length - 1 - endIndex); i--) {
+      const commit = summary.commits[i];
+      if (!commit) continue;
+      const stats = commitStats.get(commit.sha);
+      if (stats) {
+        additions += stats.additions;
+        deletions += stats.deletions;
+      }
+    }
+
+    return { additions, deletions };
+  }, [commitStats, summary.commits, hoveredCommitIndex, animationCommitIndex, isAnimating]);
+
+  // Total aggregate stats (all commits)
+  const totalStats = useMemo(() => {
+    let additions = 0;
+    let deletions = 0;
+
+    for (const commit of summary.commits) {
+      const stats = commitStats.get(commit.sha);
+      if (stats) {
+        additions += stats.additions;
+        deletions += stats.deletions;
+      }
+    }
+
+    return { additions, deletions };
+  }, [commitStats, summary.commits]);
 
   // Fetch tree data for File City
   useEffect(() => {
@@ -264,6 +306,47 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
       cancelled = true;
     };
   }, [summary.owner, summary.repo, summary.fullName]);
+
+  // Batch fetch stats for all commits
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchAllStats = async () => {
+      const statsMap = new Map<string, { additions: number; deletions: number }>();
+
+      await Promise.all(
+        summary.commits.map(async (commit) => {
+          try {
+            const response = await fetch(
+              `/api/github/repo/${summary.owner}/${summary.repo}/commits/${commit.sha}`
+            );
+
+            if (!response.ok || cancelled) return;
+
+            const data = await response.json();
+            if (data.stats) {
+              statsMap.set(commit.sha, {
+                additions: data.stats.additions || 0,
+                deletions: data.stats.deletions || 0,
+              });
+            }
+          } catch (err) {
+            console.warn(`[RepoActivityCard] Failed to fetch stats for ${commit.sha}:`, err);
+          }
+        })
+      );
+
+      if (!cancelled) {
+        setCommitStats(statsMap);
+      }
+    };
+
+    fetchAllStats();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [summary.commits, summary.owner, summary.repo]);
 
   // Fetch changed files for the displayed commit
   useEffect(() => {
@@ -648,6 +731,69 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             {isAnimating && <span style={{ opacity: 0.5 }}>|</span>}
           </div>
 
+          {/* Line count stats */}
+          {(totalStats.additions > 0 || totalStats.deletions > 0) && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.md,
+                marginBottom: spacing.sm,
+              }}
+            >
+              {/* Stats bars */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, flex: 1 }}>
+                {displayedStats.additions > 0 && (
+                  <div
+                    style={{
+                      height: 6,
+                      backgroundColor: theme.colors.success,
+                      borderRadius: 3,
+                      minWidth: 6,
+                      width: `${Math.min(100, (displayedStats.additions / (totalStats.additions + totalStats.deletions)) * 100)}%`,
+                      transition: 'width 0.15s ease',
+                    }}
+                  />
+                )}
+                {displayedStats.deletions > 0 && (
+                  <div
+                    style={{
+                      height: 6,
+                      backgroundColor: theme.colors.error,
+                      borderRadius: 3,
+                      minWidth: 6,
+                      width: `${Math.min(100, (displayedStats.deletions / (totalStats.additions + totalStats.deletions)) * 100)}%`,
+                      transition: 'width 0.15s ease',
+                    }}
+                  />
+                )}
+              </div>
+
+              {/* Stats numbers */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: 'monospace',
+                  flexShrink: 0,
+                }}
+              >
+                {displayedStats.additions > 0 && (
+                  <span style={{ color: theme.colors.success }}>
+                    +{displayedStats.additions.toLocaleString()}
+                  </span>
+                )}
+                {displayedStats.deletions > 0 && (
+                  <span style={{ color: theme.colors.error }}>
+                    -{displayedStats.deletions.toLocaleString()}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Spacer to push controls to bottom */}
           <div style={{ flex: 1 }} />
 
@@ -789,41 +935,63 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             backgroundColor: theme.colors.background,
           }}
         >
-          {summary.commits.slice(1).map((commit, index) => (
-            <div
-              key={commit.sha}
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: spacing.sm,
-                padding: `${spacing.xs}px 0`,
-                borderTop: index > 0 ? `1px solid ${theme.colors.border}` : 'none',
-              }}
-            >
-              <code
+          {summary.commits.slice(1).map((commit, index) => {
+            const stats = commitStats.get(commit.sha);
+            return (
+              <div
+                key={commit.sha}
                 style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: 'monospace',
-                  color: theme.colors.textMuted,
-                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                  padding: `${spacing.xs}px 0`,
+                  borderTop: index > 0 ? `1px solid ${theme.colors.border}` : 'none',
                 }}
               >
-                {commit.sha.slice(0, 7)}
-              </code>
-              <span
-                style={{
-                  fontSize: theme.fontSizes[1],
-                  color: theme.colors.text,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  flex: 1,
-                }}
-              >
-                {commit.message}
-              </span>
-            </div>
-          ))}
+                <code
+                  style={{
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: 'monospace',
+                    color: theme.colors.textMuted,
+                    flexShrink: 0,
+                  }}
+                >
+                  {commit.sha.slice(0, 7)}
+                </code>
+                <span
+                  style={{
+                    fontSize: theme.fontSizes[1],
+                    color: theme.colors.text,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    flex: 1,
+                  }}
+                >
+                  {commit.message}
+                </span>
+                {stats && (stats.additions > 0 || stats.deletions > 0) && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: spacing.xs,
+                      fontSize: theme.fontSizes[0],
+                      fontFamily: 'monospace',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {stats.additions > 0 && (
+                      <span style={{ color: theme.colors.success }}>+{stats.additions}</span>
+                    )}
+                    {stats.deletions > 0 && (
+                      <span style={{ color: theme.colors.error }}>-{stats.deletions}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
