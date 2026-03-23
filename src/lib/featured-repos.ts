@@ -31,6 +31,10 @@ export const FEATURED_REPOS: FeaturedRepo[] = [
     owner: 'paperclipai',
     repo: 'paperclip',
   },
+  {
+    owner: 'Dimillian',
+    repo: 'CodexMonitor',
+  },
 ];
 
 /**
