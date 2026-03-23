@@ -5,7 +5,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { Search, X, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { FeaturedReposCarousel } from './FeaturedReposCarousel';
-import { FeaturedReposGrid } from './FeaturedReposGrid';
+import { ActivityFeedPanel } from '@/panels/ActivityFeedPanel';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHomepageState } from '@/hooks/useHomepageState';
@@ -199,7 +199,7 @@ export function CenteredSearchLayout({ showSearch = false }: CenteredSearchLayou
 
   const shouldShowDropdown = showDropdown && !searchQuery.trim() && recentRepos.length > 0;
 
-  // If search mode is off, show the grid of cards
+  // If search mode is off, show the activity feed
   if (!showSearch) {
     return (
       <div
@@ -210,7 +210,7 @@ export function CenteredSearchLayout({ showSearch = false }: CenteredSearchLayou
           overflow: 'hidden',
         }}
       >
-        <FeaturedReposGrid />
+        <ActivityFeedPanel />
       </div>
     );
   }
