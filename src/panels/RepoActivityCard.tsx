@@ -608,6 +608,69 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             </div>
           </div>
 
+          {/* Cumulative line count stats */}
+          {(totalStats.additions > 0 || totalStats.deletions > 0) && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.md,
+                marginBottom: spacing.sm,
+              }}
+            >
+              {/* Stats bars */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, flex: 1 }}>
+                {displayedStats.additions > 0 && (
+                  <div
+                    style={{
+                      height: 6,
+                      backgroundColor: theme.colors.success,
+                      borderRadius: 3,
+                      minWidth: 6,
+                      width: `${Math.min(100, (displayedStats.additions / (totalStats.additions + totalStats.deletions)) * 100)}%`,
+                      transition: 'width 0.15s ease',
+                    }}
+                  />
+                )}
+                {displayedStats.deletions > 0 && (
+                  <div
+                    style={{
+                      height: 6,
+                      backgroundColor: theme.colors.error,
+                      borderRadius: 3,
+                      minWidth: 6,
+                      width: `${Math.min(100, (displayedStats.deletions / (totalStats.additions + totalStats.deletions)) * 100)}%`,
+                      transition: 'width 0.15s ease',
+                    }}
+                  />
+                )}
+              </div>
+
+              {/* Cumulative stats numbers */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: 'monospace',
+                  flexShrink: 0,
+                }}
+              >
+                {displayedStats.additions > 0 && (
+                  <span style={{ color: theme.colors.success }}>
+                    +{displayedStats.additions.toLocaleString()}
+                  </span>
+                )}
+                {displayedStats.deletions > 0 && (
+                  <span style={{ color: theme.colors.error }}>
+                    -{displayedStats.deletions.toLocaleString()}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Commit dots - grouped in rows of 10 with connecting line */}
           <div style={{ marginBottom: spacing.md }}>
             {Array.from({ length: Math.ceil(summary.commits.length / 10) }).map((_, rowIndex) => {
@@ -680,7 +743,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             })}
           </div>
 
-          {/* Commit hash + author avatar */}
+          {/* Commit hash + author avatar + per-commit stats */}
           <div
             style={{
               display: 'flex',
@@ -715,6 +778,30 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             >
               {displayedCommit?.sha.slice(0, 7)}
             </code>
+            {/* Per-commit stats */}
+            {displayedCommit && (() => {
+              const stats = commitStats.get(displayedCommit.sha);
+              if (!stats || (stats.additions === 0 && stats.deletions === 0)) return null;
+              return (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing.xs,
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: 'monospace',
+                    marginLeft: spacing.xs,
+                  }}
+                >
+                  {stats.additions > 0 && (
+                    <span style={{ color: theme.colors.success }}>+{stats.additions}</span>
+                  )}
+                  {stats.deletions > 0 && (
+                    <span style={{ color: theme.colors.error }}>-{stats.deletions}</span>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Commit message */}
@@ -730,69 +817,6 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             {displayedMessage || (isAnimating ? '' : 'No commits')}
             {isAnimating && <span style={{ opacity: 0.5 }}>|</span>}
           </div>
-
-          {/* Line count stats */}
-          {(totalStats.additions > 0 || totalStats.deletions > 0) && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.md,
-                marginBottom: spacing.sm,
-              }}
-            >
-              {/* Stats bars */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, flex: 1 }}>
-                {displayedStats.additions > 0 && (
-                  <div
-                    style={{
-                      height: 6,
-                      backgroundColor: theme.colors.success,
-                      borderRadius: 3,
-                      minWidth: 6,
-                      width: `${Math.min(100, (displayedStats.additions / (totalStats.additions + totalStats.deletions)) * 100)}%`,
-                      transition: 'width 0.15s ease',
-                    }}
-                  />
-                )}
-                {displayedStats.deletions > 0 && (
-                  <div
-                    style={{
-                      height: 6,
-                      backgroundColor: theme.colors.error,
-                      borderRadius: 3,
-                      minWidth: 6,
-                      width: `${Math.min(100, (displayedStats.deletions / (totalStats.additions + totalStats.deletions)) * 100)}%`,
-                      transition: 'width 0.15s ease',
-                    }}
-                  />
-                )}
-              </div>
-
-              {/* Stats numbers */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: spacing.sm,
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: 'monospace',
-                  flexShrink: 0,
-                }}
-              >
-                {displayedStats.additions > 0 && (
-                  <span style={{ color: theme.colors.success }}>
-                    +{displayedStats.additions.toLocaleString()}
-                  </span>
-                )}
-                {displayedStats.deletions > 0 && (
-                  <span style={{ color: theme.colors.error }}>
-                    -{displayedStats.deletions.toLocaleString()}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Spacer to push controls to bottom */}
           <div style={{ flex: 1 }} />
