@@ -167,10 +167,75 @@ export function useGitHubActivityFeed(
     return loadActivityFeed();
   }, [loadActivityFeed]);
 
+  // Add a single repo to the feed dynamically
+  const addRepo = useCallback(async (owner: string, repo: string) => {
+    // Check if already in feed
+    const exists = repoSummaries.some(
+      (s) => s.owner.toLowerCase() === owner.toLowerCase() && s.repo.toLowerCase() === repo.toLowerCase()
+    );
+    if (exists) return;
+
+    try {
+      const response = await fetch(
+        `/api/github/repo/${owner}/${repo}/commits?per_page=${commitsPerRepo}`
+      );
+
+      if (!response.ok) {
+        console.warn(`Failed to fetch commits for ${owner}/${repo}: ${response.status}`);
+        return;
+      }
+
+      const data = await response.json();
+      const commits: GitHubCommitResponse[] = data.commits || [];
+
+      if (commits.length === 0) return;
+
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+      const activityCommits: ActivityCommit[] = commits
+        .filter((commit) => new Date(commit.commit.author.date) >= twentyFourHoursAgo)
+        .map((commit) => ({
+          repoOwner: owner,
+          repoName: repo,
+          sha: commit.sha,
+          message: commit.commit.message.split('\n')[0] ?? '',
+          author: commit.commit.author.name,
+          authorEmail: commit.commit.author.email,
+          authorAvatarUrl: commit.author?.avatar_url || null,
+          date: commit.commit.author.date,
+          additions: commit.stats?.additions,
+          deletions: commit.stats?.deletions,
+        }));
+
+      if (activityCommits.length === 0) return;
+
+      const latestCommit = activityCommits[0];
+      if (latestCommit) {
+        const newSummary: RepoActivitySummary = {
+          owner,
+          repo,
+          fullName: `${owner}/${repo}`,
+          commits: activityCommits,
+          latestCommitAt: new Date(latestCommit.date),
+          commitCount: activityCommits.length,
+        };
+
+        setRepoSummaries((prev) => {
+          const updated = [...prev, newSummary];
+          updated.sort((a, b) => b.latestCommitAt.getTime() - a.latestCommitAt.getTime());
+          return updated;
+        });
+      }
+    } catch (err) {
+      console.warn(`Error fetching commits for ${owner}/${repo}:`, err);
+    }
+  }, [repoSummaries, commitsPerRepo]);
+
   return {
     repoSummaries,
     loading,
     error,
     refresh,
+    addRepo,
   };
 }

@@ -10,13 +10,44 @@
  * - Right: Hourly activity heatmap
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderGit2, Search, X } from 'lucide-react';
+import { FolderGit2, Search, X, Loader2 } from 'lucide-react';
 import { useGitHubActivityFeed, type RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
 import { FEATURED_REPOS } from '@/lib/featured-repos';
 import { RepoActivityCard } from './RepoActivityCard';
 import { HourlyActivityHeatmap, type CommitTimestamp } from '@/components/HourlyActivityHeatmap';
+
+interface GitHubSearchRepo {
+  id: number;
+  name: string;
+  full_name: string;
+  owner: {
+    login: string;
+    avatar_url: string;
+  };
+  description: string | null;
+}
+
+function parseGitHubUrl(input: string): { owner: string; repo: string } | null {
+  const trimmed = input.trim();
+  const urlPatterns = [
+    /^https?:\/\/github\.com\/([^/]+)\/([^/]+)/i,
+    /^github\.com\/([^/]+)\/([^/]+)/i,
+  ];
+  for (const pattern of urlPatterns) {
+    const match = trimmed.match(pattern);
+    if (match && match[1] && match[2]) {
+      const repo = match[2].replace(/\.git$/, '').split(/[?#]/)[0];
+      return { owner: match[1], repo: repo || '' };
+    }
+  }
+  const repoPathMatch = trimmed.match(/^([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)$/);
+  if (repoPathMatch && repoPathMatch[1] && repoPathMatch[2]) {
+    return { owner: repoPathMatch[1], repo: repoPathMatch[2] };
+  }
+  return null;
+}
 
 export interface ActivityFeedPanelProps {
   className?: string;
@@ -26,7 +57,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   className,
 }) => {
   const { theme } = useTheme();
-  const { repoSummaries, loading, error } = useGitHubActivityFeed(FEATURED_REPOS, 10);
+  const { repoSummaries, loading, error, addRepo } = useGitHubActivityFeed(FEATURED_REPOS, 10);
 
   const spacing = {
     xs: 4,
@@ -40,34 +71,76 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<GitHubSearchRepo[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [addingRepo, setAddingRepo] = useState<string | null>(null);
 
   // Time filter from heatmap
   const [timeFilter, setTimeFilter] = useState<{ start: Date; end: Date } | null>(null);
 
-  // Filter repos by search query
-  const filteredRepoSummaries = useMemo(() => {
-    if (!searchQuery.trim()) return repoSummaries;
+  // Debounced GitHub search
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
 
-    const query = searchQuery.toLowerCase();
-    return repoSummaries.filter(
-      (s) =>
-        s.repo.toLowerCase().includes(query) ||
-        s.owner.toLowerCase().includes(query) ||
-        s.fullName.toLowerCase().includes(query)
-    );
-  }, [repoSummaries, searchQuery]);
+    setSearchLoading(true);
+    const timer = setTimeout(async () => {
+      const parsed = parseGitHubUrl(searchQuery);
+      if (parsed && parsed.repo) {
+        // Direct repo lookup
+        try {
+          const response = await fetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}`);
+          if (response.ok) {
+            const data = await response.json();
+            setSearchResults([data]);
+          } else {
+            setSearchResults([]);
+          }
+        } catch {
+          setSearchResults([]);
+        }
+      } else {
+        // Search API
+        try {
+          const response = await fetch(`/api/github/search?q=${encodeURIComponent(searchQuery)}&per_page=10`);
+          if (response.ok) {
+            const data = await response.json();
+            setSearchResults(data.items || []);
+          } else {
+            setSearchResults([]);
+          }
+        } catch {
+          setSearchResults([]);
+        }
+      }
+      setSearchLoading(false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Handle adding a repo from search results
+  const handleAddRepo = useCallback(async (repo: GitHubSearchRepo) => {
+    setAddingRepo(repo.full_name);
+    await addRepo(repo.owner.login, repo.name);
+    setAddingRepo(null);
+    setSearchQuery('');
+    setSearchResults([]);
+  }, [addRepo]);
 
   // Filter repos by time (from heatmap click)
   const timeFilteredSummaries = useMemo(() => {
-    if (!timeFilter) return filteredRepoSummaries;
+    if (!timeFilter) return repoSummaries;
 
-    return filteredRepoSummaries.filter((summary) =>
+    return repoSummaries.filter((summary) =>
       summary.commits.some((commit) => {
         const commitDate = new Date(commit.date);
         return commitDate >= timeFilter.start && commitDate < timeFilter.end;
       })
     );
-  }, [filteredRepoSummaries, timeFilter]);
+  }, [repoSummaries, timeFilter]);
 
   // Build heatmap commits from all repo summaries
   const heatmapCommits = useMemo<CommitTimestamp[]>(() => {
@@ -165,7 +238,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search repositories..."
+                placeholder="Search GitHub or paste a link..."
                 style={{
                   flex: 1,
                   border: 'none',
@@ -196,7 +269,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
             </div>
           </div>
 
-          {/* Search info */}
+          {/* Search results */}
           <div style={{ width: 300, flex: 1, overflow: 'auto', padding: `0 ${spacing.md}px ${spacing.md}px` }}>
             {!searchQuery.trim() ? (
               <div
@@ -212,9 +285,22 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                 }}
               >
                 <Search size={32} style={{ marginBottom: spacing.sm, opacity: 0.3 }} />
-                <span>Search featured repos</span>
+                <span>Search GitHub to add repos</span>
               </div>
-            ) : filteredRepoSummaries.length === 0 ? (
+            ) : searchLoading ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: spacing.md,
+                  color: theme.colors.textMuted,
+                }}
+              >
+                <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+              </div>
+            ) : searchResults.length === 0 ? (
               <div
                 style={{
                   padding: spacing.md,
@@ -226,13 +312,89 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                 No results for &quot;{searchQuery}&quot;
               </div>
             ) : (
-              <div
-                style={{
-                  fontSize: theme.fontSizes[0],
-                  color: theme.colors.textMuted,
-                }}
-              >
-                {filteredRepoSummaries.length} result{filteredRepoSummaries.length !== 1 ? 's' : ''}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+                {searchResults.map((repo) => {
+                  const alreadyInFeed = repoSummaries.some(
+                    (s) => s.fullName.toLowerCase() === repo.full_name.toLowerCase()
+                  );
+                  const isAdding = addingRepo === repo.full_name;
+
+                  return (
+                    <button
+                      key={repo.id}
+                      onClick={() => !alreadyInFeed && !isAdding && handleAddRepo(repo)}
+                      disabled={alreadyInFeed || isAdding}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: spacing.sm,
+                        padding: spacing.sm,
+                        backgroundColor: alreadyInFeed ? theme.colors.surface : 'transparent',
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: 6,
+                        cursor: alreadyInFeed ? 'default' : 'pointer',
+                        textAlign: 'left',
+                        opacity: alreadyInFeed ? 0.5 : 1,
+                        transition: 'background-color 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!alreadyInFeed) {
+                          e.currentTarget.style.backgroundColor = theme.colors.surface;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!alreadyInFeed) {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={repo.owner.avatar_url}
+                        alt={repo.owner.login}
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 4,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: theme.fontSizes[1],
+                            fontWeight: 500,
+                            color: theme.colors.text,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {repo.name}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: theme.fontSizes[0],
+                            color: theme.colors.textMuted,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {repo.owner.login}
+                        </div>
+                      </div>
+                      {isAdding && (
+                        <Loader2 size={14} style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+                      )}
+                      {alreadyInFeed && (
+                        <span style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted }}>
+                          Added
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
