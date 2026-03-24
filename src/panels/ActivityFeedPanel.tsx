@@ -18,6 +18,7 @@ import { useGitHubActivityFeed, type RepoActivitySummary } from '@/hooks/useGitH
 import { FEATURED_REPOS } from '@/lib/featured-repos';
 import { RepoActivityCard } from './RepoActivityCard';
 import { HourlyActivityHeatmap, type CommitTimestamp } from '@/components/HourlyActivityHeatmap';
+import { MobileActivityFeed } from '@/components/home/MobileActivityFeed';
 
 // Quarter helpers (matching heatmap)
 type DayQuarter = 'Night' | 'Morning' | 'Afternoon' | 'Evening';
@@ -397,20 +398,29 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
         backgroundColor: theme.colors.background,
       }}
     >
-      {/* 3-Column Content */}
+      {/* Mobile only: Vertical swipe feed */}
+      <div className="md:hidden" style={{ flex: 1, overflow: 'hidden' }}>
+        <MobileActivityFeed
+          summaries={timeFilteredSummaries}
+          loading={loading}
+          error={error}
+        />
+      </div>
+
+      {/* Tablet & Desktop: 3-Column Content */}
       <div
+        className="hidden md:flex"
         style={{
           flex: 1,
-          display: 'flex',
           overflow: 'hidden',
         }}
       >
-        {/* Left column - Heatmap */}
+        {/* Left column - Heatmap (desktop only) */}
         <div
+          className="hidden lg:flex"
           style={{
             flex: 1,
             minWidth: 200,
-            display: 'flex',
             flexDirection: 'column',
             alignItems: 'flex-end',
             overflow: 'hidden',
@@ -436,12 +446,12 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
 
         {/* Center column - Feed */}
         <div
-          className="activity-feed-scroll"
+          className="activity-feed-scroll w-full lg:w-[800px] px-4 lg:px-0"
           style={{
-            width: 800,
             flexShrink: 0,
             overflow: 'auto',
-            padding: spacing.md,
+            paddingTop: spacing.md,
+            paddingBottom: spacing.md,
             scrollbarWidth: 'none', // Firefox
             msOverflowStyle: 'none', // IE/Edge
           }}
@@ -630,12 +640,12 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
           )}
         </div>
 
-        {/* Right column - Search */}
+        {/* Right column - Search (desktop only) */}
         <div
+          className="hidden lg:flex"
           style={{
             flex: 1,
             minWidth: 200,
-            display: 'flex',
             flexDirection: 'column',
             alignItems: 'flex-start',
             overflow: 'hidden',

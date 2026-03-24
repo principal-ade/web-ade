@@ -510,14 +510,15 @@ export function EditorHeader({
             href="https://discord.gg/G3qdcC2DXq"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center px-3 h-8 rounded-md transition-all hover:opacity-80 text-sm font-medium"
+            className="flex items-center justify-center px-2 lg:px-3 h-8 rounded-md transition-all hover:opacity-80 text-sm font-medium"
             style={{
               background: '#5865F2',
               color: '#fff',
             }}
             title="Join our Discord"
           >
-            Join Community
+            <span className="hidden lg:inline">Join Community</span>
+            <span className="lg:hidden">Discord</span>
           </a>
         )}
 
@@ -535,6 +536,22 @@ export function EditorHeader({
             <Mic className="w-4 h-4" />
           </button>
         )} */}
+
+        {/* Feed button - only show on repo pages */}
+        {repositoryName && (
+          <Link
+            href="/"
+            className="flex items-center justify-center px-3 h-8 rounded-md transition-all hover:opacity-80 text-sm font-medium"
+            style={{
+              background: theme.colors.secondary,
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+            }}
+            title="Go to feed"
+          >
+            Feed
+          </Link>
+        )}
 
         {/* User Avatar Menu */}
         <UserAvatarMenu />

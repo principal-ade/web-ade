@@ -71,6 +71,7 @@ export const layoutConfigs: LayoutConfig[] = [
       left: false,
       right: false,
     },
+    hidden: true,
   },
   {
     id: 'quality-debug',
@@ -84,6 +85,7 @@ export const layoutConfigs: LayoutConfig[] = [
       left: false,
       right: false,
     },
+    hidden: true,
   },
   {
     id: 'kanban',

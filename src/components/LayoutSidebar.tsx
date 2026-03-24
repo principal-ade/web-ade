@@ -10,7 +10,6 @@ import {
   BookOpen,
   FileCode,
   Hexagon,
-  Home,
   Palette,
   X,
   Zap,
@@ -20,7 +19,6 @@ import {
 import Link from 'next/link';
 import { Logo } from '@principal-ai/logo-component';
 import { layoutConfigs, LayoutConfig } from './LayoutConfigDropdown';
-import { LocalFolderButton } from './LocalFolderButton';
 
 const layoutIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   tour: Map,
@@ -62,7 +60,7 @@ export function LayoutSidebar({
   badges,
   mobileOpen,
   onMobileClose,
-  currentRepoId,
+  currentRepoId: _currentRepoId,
   layoutConfigs: propLayoutConfigs,
 }: LayoutSidebarProps) {
   const { theme } = useTheme();
@@ -221,18 +219,6 @@ export function LayoutSidebar({
               );
             })}
           </nav>
-
-          {/* GitHub/Local Toggle */}
-          {currentRepoId && (
-            <div
-              style={{
-                borderTop: `1px solid ${theme.colors.border}`,
-              }}
-              className="flex items-center justify-center py-2"
-            >
-              <LocalFolderButton currentRepoId={currentRepoId} />
-            </div>
-          )}
 
           {/* Theme Toggle */}
           <div style={{ borderTop: `1px solid ${theme.colors.border}` }}>
@@ -420,59 +406,6 @@ export function LayoutSidebar({
           );
         })}
       </nav>
-
-      {/* Home Link */}
-      <div
-        style={{
-          borderTop: `1px solid ${theme.colors.border}`,
-        }}
-      >
-        <Link
-          href="/"
-          className="w-full flex items-center h-10 transition-colors"
-          style={{
-            minWidth: `${SIDEBAR_EXPANDED_WIDTH}px`,
-            background: 'transparent',
-            color: theme.colors.text,
-            textDecoration: 'none',
-          }}
-          title={collapsed ? 'Home' : undefined}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = theme.colors.backgroundSecondary;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-          }}
-        >
-          <div
-            className="flex items-center justify-center flex-shrink-0"
-            style={{ width: `${ICON_CONTAINER_WIDTH}px` }}
-          >
-            <Home className="w-5 h-5" />
-          </div>
-          <span
-            style={{
-              whiteSpace: 'nowrap',
-              fontFamily: theme.fonts.body,
-              fontSize: theme.fontSizes[2],
-            }}
-          >
-            Home
-          </span>
-        </Link>
-      </div>
-
-      {/* GitHub/Local Toggle */}
-      {currentRepoId && (
-        <div
-          style={{
-            borderTop: `1px solid ${theme.colors.border}`,
-          }}
-          className="flex items-center justify-center py-2"
-        >
-          <LocalFolderButton currentRepoId={currentRepoId} />
-        </div>
-      )}
 
       {/* Theme Toggle */}
       <div
