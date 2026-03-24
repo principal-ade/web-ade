@@ -7,6 +7,7 @@ export interface ActivityCommit {
   sha: string;
   message: string;
   author: string;
+  authorLogin: string | null;
   authorEmail: string;
   authorAvatarUrl: string | null;
   date: string; // ISO date string
@@ -135,6 +136,7 @@ export function useGitHubActivityFeed(
                 sha: commit.sha,
                 message: commit.commit.message.split('\n')[0] ?? '', // First line only
                 author: commit.commit.author.name,
+                authorLogin: commit.author?.login || null,
                 authorEmail: commit.commit.author.email,
                 authorAvatarUrl: commit.author?.avatar_url || null,
                 date: commit.commit.author.date,
@@ -249,6 +251,7 @@ export function useGitHubActivityFeed(
           sha: commit.sha,
           message: commit.commit.message.split('\n')[0] ?? '',
           author: commit.commit.author.name,
+          authorLogin: commit.author?.login || null,
           authorEmail: commit.commit.author.email,
           authorAvatarUrl: commit.author?.avatar_url || null,
           date: commit.commit.author.date,

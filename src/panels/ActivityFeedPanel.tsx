@@ -12,7 +12,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderGit2, Search, X, Loader2, ArrowLeft } from 'lucide-react';
+import { FolderGit2, Search, X, Loader2, ArrowLeft, Globe, Building2, MapPin } from 'lucide-react';
 import { Logo } from '@principal-ai/logo-component';
 import { useGitHubActivityFeed, type RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
 import { FEATURED_REPOS } from '@/lib/featured-repos';
@@ -158,6 +158,20 @@ interface GitHubSearchRepo {
   description: string | null;
 }
 
+interface GitHubUserProfile {
+  login: string;
+  name: string | null;
+  bio: string | null;
+  blog: string | null;
+  twitter_username: string | null;
+  company: string | null;
+  location: string | null;
+  html_url: string;
+  avatar_url: string;
+  public_repos: number;
+  followers: number;
+}
+
 function parseGitHubUrl(input: string): { owner: string; repo: string } | null {
   const trimmed = input.trim();
   const urlPatterns = [
@@ -248,6 +262,11 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   // Selected repo from search (replaces feed with single repo)
   const [selectedRepo, setSelectedRepo] = useState<GitHubSearchRepo | null>(null);
   const [selectedRepoLoading, setSelectedRepoLoading] = useState(false);
+
+  // Selected author (shows profile in right column)
+  const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
+  const [authorProfile, setAuthorProfile] = useState<GitHubUserProfile | null>(null);
+  const [authorLoading, setAuthorLoading] = useState(false);
 
   // Time filter from heatmap
   const [timeFilter, setTimeFilter] = useState<{ start: Date; end: Date } | null>(null);
@@ -370,6 +389,45 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   const handleRepoOpen = (summary: RepoActivitySummary) => {
     window.open(`/${summary.owner}/${summary.repo}`, '_blank');
   };
+
+  // Handle author click - fetch profile
+  const handleAuthorClick = useCallback((username: string) => {
+    setSelectedAuthor(username);
+    setSearchQuery(''); // Clear search when viewing author
+  }, []);
+
+  // Fetch author profile when selected
+  useEffect(() => {
+    if (!selectedAuthor) {
+      setAuthorProfile(null);
+      return;
+    }
+
+    let cancelled = false;
+    setAuthorLoading(true);
+
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch(`https://api.github.com/users/${selectedAuthor}`);
+        if (response.ok && !cancelled) {
+          const data = await response.json();
+          setAuthorProfile(data);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch author profile:', err);
+      } finally {
+        if (!cancelled) {
+          setAuthorLoading(false);
+        }
+      }
+    };
+
+    fetchProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedAuthor]);
 
   // Handle heatmap block click
   const handleHeatmapBlockClick = useCallback((start: Date, end: Date, count: number) => {
@@ -630,6 +688,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                           isExpanded={expandedRepos.has(`${group.dateKey}-${summary.fullName}`)}
                           onToggleExpand={() => toggleExpanded(`${group.dateKey}-${summary.fullName}`)}
                           onOpen={() => handleRepoOpen(summary)}
+                          onAuthorClick={handleAuthorClick}
                         />
                       ))}
                     </div>
@@ -700,9 +759,269 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
             </div>
           </div>
 
-          {/* Search results */}
+          {/* Search results or Author profile */}
           <div style={{ width: 300, flex: 1, overflow: 'auto', padding: `0 ${spacing.md}px ${spacing.md}px` }}>
-            {!searchQuery.trim() ? (
+            {selectedAuthor && !searchQuery.trim() ? (
+              // Author profile view
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: spacing.md,
+                }}
+              >
+                {/* Back button */}
+                <button
+                  onClick={() => setSelectedAuthor(null)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing.xs,
+                    padding: `${spacing.xs}px ${spacing.sm}px`,
+                    backgroundColor: 'transparent',
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: 4,
+                    color: theme.colors.textMuted,
+                    cursor: 'pointer',
+                    fontSize: theme.fontSizes[1],
+                    alignSelf: 'flex-start',
+                  }}
+                >
+                  <ArrowLeft size={14} />
+                  Back
+                </button>
+
+                {authorLoading ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: spacing.lg,
+                    }}
+                  >
+                    <Loader2 size={24} style={{ animation: 'spin 1s linear infinite' }} color={theme.colors.primary} />
+                  </div>
+                ) : authorProfile ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: spacing.md,
+                      padding: spacing.md,
+                      backgroundColor: theme.colors.surface,
+                      borderRadius: 12,
+                      border: `1px solid ${theme.colors.border}`,
+                    }}
+                  >
+                    {/* Avatar */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={authorProfile.avatar_url}
+                      alt={authorProfile.login}
+                      style={{
+                        width: 80,
+                        height: 80,
+                        borderRadius: '50%',
+                        border: `3px solid ${theme.colors.primary}`,
+                      }}
+                    />
+
+                    {/* Name and username */}
+                    <div style={{ textAlign: 'center' }}>
+                      {authorProfile.name && (
+                        <div
+                          style={{
+                            fontSize: theme.fontSizes[3],
+                            fontWeight: 600,
+                            color: theme.colors.text,
+                          }}
+                        >
+                          {authorProfile.name}
+                        </div>
+                      )}
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[1],
+                          color: theme.colors.textMuted,
+                        }}
+                      >
+                        @{authorProfile.login}
+                      </div>
+                    </div>
+
+                    {/* Bio */}
+                    {authorProfile.bio && (
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[1],
+                          color: theme.colors.text,
+                          textAlign: 'center',
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {authorProfile.bio}
+                      </div>
+                    )}
+
+                    {/* Stats */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: spacing.lg,
+                        fontSize: theme.fontSizes[1],
+                      }}
+                    >
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontWeight: 600, color: theme.colors.text }}>
+                          {authorProfile.public_repos}
+                        </div>
+                        <div style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[0] }}>
+                          repos
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontWeight: 600, color: theme.colors.text }}>
+                          {authorProfile.followers}
+                        </div>
+                        <div style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[0] }}>
+                          followers
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Social links */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: spacing.sm,
+                        width: '100%',
+                      }}
+                    >
+                      {/* GitHub profile */}
+                      <a
+                        href={authorProfile.html_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: spacing.sm,
+                          padding: spacing.sm,
+                          backgroundColor: theme.colors.background,
+                          borderRadius: 6,
+                          color: theme.colors.text,
+                          textDecoration: 'none',
+                          fontSize: theme.fontSizes[1],
+                        }}
+                      >
+                        <FolderGit2 size={16} />
+                        GitHub Profile
+                      </a>
+
+                      {/* Twitter/X */}
+                      {authorProfile.twitter_username && (
+                        <a
+                          href={`https://twitter.com/${authorProfile.twitter_username}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: spacing.sm,
+                            padding: spacing.sm,
+                            backgroundColor: theme.colors.background,
+                            borderRadius: 6,
+                            color: theme.colors.text,
+                            textDecoration: 'none',
+                            fontSize: theme.fontSizes[1],
+                          }}
+                        >
+                          <span style={{ fontSize: 16 }}>𝕏</span>
+                          @{authorProfile.twitter_username}
+                        </a>
+                      )}
+
+                      {/* Website/Blog */}
+                      {authorProfile.blog && (
+                        <a
+                          href={authorProfile.blog.startsWith('http') ? authorProfile.blog : `https://${authorProfile.blog}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: spacing.sm,
+                            padding: spacing.sm,
+                            backgroundColor: theme.colors.background,
+                            borderRadius: 6,
+                            color: theme.colors.text,
+                            textDecoration: 'none',
+                            fontSize: theme.fontSizes[1],
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          <Globe size={14} />
+                          {authorProfile.blog.replace(/^https?:\/\//, '')}
+                        </a>
+                      )}
+
+                      {/* Company */}
+                      {authorProfile.company && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: spacing.sm,
+                            padding: spacing.sm,
+                            backgroundColor: theme.colors.background,
+                            borderRadius: 6,
+                            color: theme.colors.textMuted,
+                            fontSize: theme.fontSizes[1],
+                          }}
+                        >
+                          <Building2 size={14} />
+                          {authorProfile.company}
+                        </div>
+                      )}
+
+                      {/* Location */}
+                      {authorProfile.location && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: spacing.sm,
+                            padding: spacing.sm,
+                            backgroundColor: theme.colors.background,
+                            borderRadius: 6,
+                            color: theme.colors.textMuted,
+                            fontSize: theme.fontSizes[1],
+                          }}
+                        >
+                          <MapPin size={14} />
+                          {authorProfile.location}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      padding: spacing.md,
+                      textAlign: 'center',
+                      color: theme.colors.textMuted,
+                    }}
+                  >
+                    Could not load profile
+                  </div>
+                )}
+              </div>
+            ) : !searchQuery.trim() ? (
               <div
                 style={{
                   display: 'flex',

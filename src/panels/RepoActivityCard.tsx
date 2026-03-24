@@ -34,6 +34,7 @@ interface RepoActivityCardProps {
   onToggleExpand: () => void;
   onOpen: () => void;
   dimmed?: boolean;
+  onAuthorClick?: (username: string) => void;
 }
 
 /**
@@ -185,6 +186,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
   onToggleExpand,
   onOpen,
   dimmed = false,
+  onAuthorClick,
 }) => {
   const { theme } = useTheme();
   const hasMoreCommits = summary.commits.length > 1;
@@ -196,8 +198,9 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
     lg: 24,
   };
 
-  // Hover state for commit dots
+  // Hover and selection state for commit dots
   const [hoveredCommitIndex, setHoveredCommitIndex] = useState<number | null>(null);
+  const [selectedCommitIndex, setSelectedCommitIndex] = useState<number>(0);
 
   // Avatar load state
   const [avatarLoaded, setAvatarLoaded] = useState(true);
@@ -218,8 +221,11 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
   // Line count stats per commit
   const [commitStats, setCommitStats] = useState<Map<string, { additions: number; deletions: number; filesChanged: number }>>(new Map());
 
-  // Get the commit to display (animation > hovered > most recent)
-  const displayedCommitIndex = animationCommitIndex ?? hoveredCommitIndex ?? 0;
+  // Files changed per commit
+  const [commitFiles, setCommitFiles] = useState<Map<string, Array<{ filename: string; status: string; additions: number; deletions: number }>>>(new Map());
+
+  // Get the commit to display (animation > hovered > selected)
+  const displayedCommitIndex = animationCommitIndex ?? hoveredCommitIndex ?? selectedCommitIndex;
   const displayedCommit = summary.commits[displayedCommitIndex];
   const displayedTime = new Date(displayedCommit?.date ?? summary.latestCommitAt);
   const displayedMessage = isAnimating && typewriterText !== null
@@ -268,12 +274,13 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
     };
   }, [summary.owner, summary.repo, summary.fullName]);
 
-  // Batch fetch stats for all commits
+  // Batch fetch stats and files for all commits
   useEffect(() => {
     let cancelled = false;
 
     const fetchAllStats = async () => {
       const statsMap = new Map<string, { additions: number; deletions: number; filesChanged: number }>();
+      const filesMap = new Map<string, Array<{ filename: string; status: string; additions: number; deletions: number }>>();
 
       await Promise.all(
         summary.commits.map(async (commit) => {
@@ -292,6 +299,14 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 filesChanged: data.files?.length || 0,
               });
             }
+            if (data.files) {
+              filesMap.set(commit.sha, data.files.map((f: { filename: string; status: string; additions: number; deletions: number }) => ({
+                filename: f.filename,
+                status: f.status,
+                additions: f.additions || 0,
+                deletions: f.deletions || 0,
+              })));
+            }
           } catch (err) {
             console.warn(`[RepoActivityCard] Failed to fetch stats for ${commit.sha}:`, err);
           }
@@ -300,6 +315,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
 
       if (!cancelled) {
         setCommitStats(statsMap);
+        setCommitFiles(filesMap);
       }
     };
 
@@ -604,7 +620,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                   {/* Author avatars with expanded hover targets */}
                   {rowCommits.map((commit, index) => {
                     const globalIndex = rowIndex * 10 + index;
-                    const activeIndex = isAnimating ? animationCommitIndex : (hoveredCommitIndex ?? 0);
+                    const activeIndex = isAnimating ? animationCommitIndex : (hoveredCommitIndex ?? selectedCommitIndex);
                     const isDisplayed = globalIndex === activeIndex;
                     const isFilled = activeIndex !== null && globalIndex >= activeIndex;
 
@@ -613,6 +629,11 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                         key={commit.sha}
                         onMouseEnter={() => !isAnimating && setHoveredCommitIndex(globalIndex)}
                         onMouseLeave={() => !isAnimating && setHoveredCommitIndex(null)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedCommitIndex(globalIndex);
+                          if (commit.authorLogin) onAuthorClick?.(commit.authorLogin);
+                        }}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -670,32 +691,45 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
               marginBottom: spacing.xs,
             }}
           >
-            {/* Author avatar */}
-            {displayedCommit?.authorAvatarUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={displayedCommit.authorAvatarUrl}
-                alt={displayedCommit.author}
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
-                  flexShrink: 0,
-                }}
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            )}
-            <span
+            {/* Clickable author avatar + name */}
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                if (displayedCommit?.authorLogin) onAuthorClick?.(displayedCommit.authorLogin);
+              }}
               style={{
-                fontSize: theme.fontSizes[2],
-                color: theme.colors.text,
-                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.xs,
+                cursor: displayedCommit?.authorLogin ? 'pointer' : 'default',
               }}
             >
-              {displayedCommit?.author}
-            </span>
+              {displayedCommit?.authorAvatarUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={displayedCommit.authorAvatarUrl}
+                  alt={displayedCommit.author}
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    flexShrink: 0,
+                  }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              )}
+              <span
+                style={{
+                  fontSize: theme.fontSizes[2],
+                  color: theme.colors.text,
+                  fontWeight: 500,
+                }}
+              >
+                {displayedCommit?.author}
+              </span>
+            </div>
             {/* Per-commit stats */}
             {displayedCommit && (() => {
               const stats = commitStats.get(displayedCommit.sha);
@@ -885,94 +919,71 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
         </div>
       </div>
 
-      {/* Expanded commits list */}
-      {isExpanded && summary.commits.length > 1 && (
-        <div
-          style={{
-            borderTop: `1px solid ${theme.colors.border}`,
-            padding: spacing.md,
-            backgroundColor: theme.colors.background,
-          }}
-        >
-          {summary.commits.slice(1).map((commit, index) => {
-            const stats = commitStats.get(commit.sha);
-            return (
+      {/* Expanded file list for displayed commit */}
+      {isExpanded && displayedCommit && (() => {
+        const files = commitFiles.get(displayedCommit.sha) || [];
+        if (files.length === 0) return null;
+        return (
+          <div
+            style={{
+              borderTop: `1px solid ${theme.colors.border}`,
+              padding: spacing.md,
+              backgroundColor: theme.colors.background,
+              maxHeight: 200,
+              overflowY: 'auto',
+            }}
+          >
+            {files.map((file) => (
               <div
-                key={commit.sha}
+                key={file.filename}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: spacing.sm,
-                  padding: `${spacing.xs}px 0`,
-                  borderTop: index > 0 ? `1px solid ${theme.colors.border}` : 'none',
+                  padding: `2px 0`,
+                  fontSize: theme.fontSizes[0],
                 }}
               >
-                {commit.authorAvatarUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={commit.authorAvatarUrl}
-                    alt={commit.author}
-                    style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: '50%',
-                      flexShrink: 0,
-                    }}
-                  />
-                )}
                 <span
                   style={{
-                    fontSize: theme.fontSizes[0],
-                    color: theme.colors.text,
-                    fontWeight: 500,
+                    color: file.status === 'added' ? theme.colors.success
+                      : file.status === 'removed' ? theme.colors.error
+                      : theme.colors.warning,
+                    width: 12,
+                    textAlign: 'center',
                     flexShrink: 0,
                   }}
                 >
-                  {commit.author}
+                  {file.status === 'added' ? '+' : file.status === 'removed' ? '-' : '~'}
                 </span>
                 <span
                   style={{
-                    fontSize: theme.fontSizes[1],
                     color: theme.colors.text,
+                    fontFamily: 'monospace',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
                     flex: 1,
                   }}
                 >
-                  {commit.message}
+                  {file.filename}
                 </span>
-                {stats && (stats.additions > 0 || stats.deletions > 0 || stats.filesChanged > 0) && (
-                  <div
-                    style={{
-                      fontSize: theme.fontSizes[0],
-                      flexShrink: 0,
-                      color: theme.colors.textMuted,
-                    }}
-                  >
-                    {stats.additions > 0 && (
-                      <span style={{ color: theme.colors.success }}>
-                        +{stats.additions}
-                      </span>
+                {(file.additions > 0 || file.deletions > 0) && (
+                  <span style={{ flexShrink: 0, color: theme.colors.textMuted }}>
+                    {file.additions > 0 && (
+                      <span style={{ color: theme.colors.success }}>+{file.additions}</span>
                     )}
-                    {stats.additions > 0 && stats.deletions > 0 && ' '}
-                    {stats.deletions > 0 && (
-                      <span style={{ color: theme.colors.error }}>
-                        -{stats.deletions}
-                      </span>
+                    {file.additions > 0 && file.deletions > 0 && ' '}
+                    {file.deletions > 0 && (
+                      <span style={{ color: theme.colors.error }}>-{file.deletions}</span>
                     )}
-                    {(stats.additions > 0 || stats.deletions > 0) && stats.filesChanged > 0 && (
-                      <span style={{ color: theme.colors.primary }}>
-                        {' '}in {stats.filesChanged} file{stats.filesChanged !== 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </div>
+                  </span>
                 )}
               </div>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 };
