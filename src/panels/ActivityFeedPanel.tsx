@@ -402,13 +402,17 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
 
         {/* Center column - Feed */}
         <div
+          className="activity-feed-scroll"
           style={{
             width: 800,
             flexShrink: 0,
             overflow: 'auto',
             padding: spacing.md,
+            scrollbarWidth: 'none', // Firefox
+            msOverflowStyle: 'none', // IE/Edge
           }}
         >
+          <style>{`.activity-feed-scroll::-webkit-scrollbar { display: none; }`}</style>
           {/* Selected repo header */}
           {selectedRepo && (
             <div
