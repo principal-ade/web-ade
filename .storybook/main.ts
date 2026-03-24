@@ -1,4 +1,8 @@
 import type { StorybookConfig } from "@storybook/nextjs-vite";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const config: StorybookConfig = {
   "stories": [
@@ -18,6 +22,17 @@ const config: StorybookConfig = {
   },
   "staticDirs": [
     "../public"
-  ]
+  ],
+  async viteFinal(config) {
+    config.resolve = config.resolve || {};
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "@": path.resolve(__dirname, "../src"),
+      // Mock File City packages to avoid bundling issues
+      "@principal-ai/file-city-react": path.resolve(__dirname, "./mocks/file-city-react.tsx"),
+    };
+
+    return config;
+  },
 };
 export default config;

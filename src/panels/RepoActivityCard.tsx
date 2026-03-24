@@ -216,7 +216,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
   const [changedFiles, setChangedFiles] = useState<Map<string, 'added' | 'modified' | 'removed'>>(new Map());
 
   // Line count stats per commit
-  const [commitStats, setCommitStats] = useState<Map<string, { additions: number; deletions: number }>>(new Map());
+  const [commitStats, setCommitStats] = useState<Map<string, { additions: number; deletions: number; filesChanged: number }>>(new Map());
 
   // Get the commit to display (animation > hovered > most recent)
   const displayedCommitIndex = animationCommitIndex ?? hoveredCommitIndex ?? 0;
@@ -225,22 +225,6 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
   const displayedMessage = isAnimating && typewriterText !== null
     ? typewriterText
     : displayedCommit?.message ?? '';
-
-  // Total aggregate stats (all commits)
-  const totalStats = useMemo(() => {
-    let additions = 0;
-    let deletions = 0;
-
-    for (const commit of summary.commits) {
-      const stats = commitStats.get(commit.sha);
-      if (stats) {
-        additions += stats.additions;
-        deletions += stats.deletions;
-      }
-    }
-
-    return { additions, deletions };
-  }, [commitStats, summary.commits]);
 
   // Fetch tree data for File City
   useEffect(() => {
@@ -289,7 +273,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
     let cancelled = false;
 
     const fetchAllStats = async () => {
-      const statsMap = new Map<string, { additions: number; deletions: number }>();
+      const statsMap = new Map<string, { additions: number; deletions: number; filesChanged: number }>();
 
       await Promise.all(
         summary.commits.map(async (commit) => {
@@ -301,10 +285,11 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             if (!response.ok || cancelled) return;
 
             const data = await response.json();
-            if (data.stats) {
+            if (data.stats || data.files) {
               statsMap.set(commit.sha, {
-                additions: data.stats.additions || 0,
-                deletions: data.stats.deletions || 0,
+                additions: data.stats?.additions || 0,
+                deletions: data.stats?.deletions || 0,
+                filesChanged: data.files?.length || 0,
               });
             }
           } catch (err) {
@@ -585,67 +570,6 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             </div>
           </div>
 
-          {/* Total line count stats */}
-          {(totalStats.additions > 0 || totalStats.deletions > 0) && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.md,
-                marginBottom: spacing.sm,
-              }}
-            >
-              {/* Stats bars */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, flex: 1 }}>
-                {totalStats.additions > 0 && (
-                  <div
-                    style={{
-                      height: 6,
-                      backgroundColor: theme.colors.success,
-                      borderRadius: 3,
-                      minWidth: 6,
-                      width: `${Math.min(100, (totalStats.additions / (totalStats.additions + totalStats.deletions)) * 100)}%`,
-                    }}
-                  />
-                )}
-                {totalStats.deletions > 0 && (
-                  <div
-                    style={{
-                      height: 6,
-                      backgroundColor: theme.colors.error,
-                      borderRadius: 3,
-                      minWidth: 6,
-                      width: `${Math.min(100, (totalStats.deletions / (totalStats.additions + totalStats.deletions)) * 100)}%`,
-                    }}
-                  />
-                )}
-              </div>
-
-              {/* Total stats numbers */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: spacing.sm,
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: 'monospace',
-                  flexShrink: 0,
-                }}
-              >
-                {totalStats.additions > 0 && (
-                  <span style={{ color: theme.colors.success }}>
-                    +{totalStats.additions.toLocaleString()}
-                  </span>
-                )}
-                {totalStats.deletions > 0 && (
-                  <span style={{ color: theme.colors.error }}>
-                    -{totalStats.deletions.toLocaleString()}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* Commit dots - grouped in rows of 10 with connecting line */}
           <div style={{ marginBottom: spacing.md }}>
             {Array.from({ length: Math.ceil(summary.commits.length / 10) }).map((_, rowIndex) => {
@@ -744,36 +668,53 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 }}
               />
             )}
-            <code
+            <span
               style={{
                 fontSize: theme.fontSizes[0],
-                fontFamily: 'monospace',
-                color: theme.colors.textMuted,
+                color: theme.colors.text,
+                fontWeight: 500,
               }}
             >
-              {displayedCommit?.sha.slice(0, 7)}
-            </code>
+              {displayedCommit?.author}
+            </span>
             {/* Per-commit stats */}
             {displayedCommit && (() => {
               const stats = commitStats.get(displayedCommit.sha);
-              if (!stats || (stats.additions === 0 && stats.deletions === 0)) return null;
+              if (!stats) return null;
+              const parts: React.ReactNode[] = [];
+              if (stats.additions > 0) {
+                parts.push(
+                  <span key="add" style={{ color: theme.colors.success }}>
+                    added {stats.additions} line{stats.additions !== 1 ? 's' : ''}
+                  </span>
+                );
+              }
+              if (stats.deletions > 0) {
+                parts.push(
+                  <span key="del" style={{ color: theme.colors.error }}>
+                    removed {stats.deletions} line{stats.deletions !== 1 ? 's' : ''}
+                  </span>
+                );
+              }
+              if (stats.filesChanged > 0) {
+                parts.push(
+                  <span key="files" style={{ color: theme.colors.primary }}>
+                    in {stats.filesChanged} file{stats.filesChanged !== 1 ? 's' : ''}
+                  </span>
+                );
+              }
+              if (parts.length === 0) return null;
               return (
                 <div
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: spacing.xs,
                     fontSize: theme.fontSizes[0],
-                    fontFamily: 'monospace',
                     marginLeft: spacing.xs,
+                    color: theme.colors.textMuted,
                   }}
                 >
-                  {stats.additions > 0 && (
-                    <span style={{ color: theme.colors.success }}>+{stats.additions}</span>
-                  )}
-                  {stats.deletions > 0 && (
-                    <span style={{ color: theme.colors.error }}>-{stats.deletions}</span>
-                  )}
+                  {parts.reduce((acc, part, i) => (
+                    <>{acc}{i > 0 ? ' ' : ''}{part}</>
+                  ), <></>)}
                 </div>
               );
             })()}
@@ -826,7 +767,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 }}
               >
                 {isAnimating ? <Square size={12} /> : <Play size={12} />}
-                <span>{isAnimating ? 'Stop' : 'Animate'}</span>
+                <span>{isAnimating ? 'Stop' : 'Review'}</span>
               </button>
             )}
 
@@ -947,16 +888,29 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                   borderTop: index > 0 ? `1px solid ${theme.colors.border}` : 'none',
                 }}
               >
-                <code
+                {commit.authorAvatarUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={commit.authorAvatarUrl}
+                    alt={commit.author}
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
+                <span
                   style={{
                     fontSize: theme.fontSizes[0],
-                    fontFamily: 'monospace',
-                    color: theme.colors.textMuted,
+                    color: theme.colors.text,
+                    fontWeight: 500,
                     flexShrink: 0,
                   }}
                 >
-                  {commit.sha.slice(0, 7)}
-                </code>
+                  {commit.author}
+                </span>
                 <span
                   style={{
                     fontSize: theme.fontSizes[1],
@@ -969,22 +923,29 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 >
                   {commit.message}
                 </span>
-                {stats && (stats.additions > 0 || stats.deletions > 0) && (
+                {stats && (stats.additions > 0 || stats.deletions > 0 || stats.filesChanged > 0) && (
                   <div
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: spacing.xs,
                       fontSize: theme.fontSizes[0],
-                      fontFamily: 'monospace',
                       flexShrink: 0,
+                      color: theme.colors.textMuted,
                     }}
                   >
                     {stats.additions > 0 && (
-                      <span style={{ color: theme.colors.success }}>+{stats.additions}</span>
+                      <span style={{ color: theme.colors.success }}>
+                        +{stats.additions}
+                      </span>
                     )}
+                    {stats.additions > 0 && stats.deletions > 0 && ' '}
                     {stats.deletions > 0 && (
-                      <span style={{ color: theme.colors.error }}>-{stats.deletions}</span>
+                      <span style={{ color: theme.colors.error }}>
+                        -{stats.deletions}
+                      </span>
+                    )}
+                    {(stats.additions > 0 || stats.deletions > 0) && stats.filesChanged > 0 && (
+                      <span style={{ color: theme.colors.primary }}>
+                        {' '}in {stats.filesChanged} file{stats.filesChanged !== 1 ? 's' : ''}
+                      </span>
                     )}
                   </div>
                 )}

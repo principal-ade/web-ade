@@ -7,11 +7,10 @@
  * Features File City at top, repo info in middle, commits below.
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { User, ExternalLink, ChevronDown, ChevronUp, FolderGit2 } from 'lucide-react';
+import { User, FolderGit2 } from 'lucide-react';
 import type { RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
-import Link from 'next/link';
 import { trpc } from '@/lib/trpc/client';
 import {
   ArchitectureMapHighlightLayers,
@@ -166,13 +165,16 @@ function buildFileTreeFromGitHub(
 export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
   const { theme } = useTheme();
   const [avatarLoaded, setAvatarLoaded] = useState(true);
-  const [showAllCommits, setShowAllCommits] = useState(false);
-  const [commitStats, setCommitStats] = useState<Map<string, { additions: number; deletions: number }>>(new Map());
+  const [activeCommitIndex, setActiveCommitIndex] = useState(0);
+  const commitsContainerRef = useRef<HTMLDivElement>(null);
 
   // File City state
   const [cityData, setCityData] = useState<CityData | null>(null);
   const [cityLoading, setCityLoading] = useState(true);
   const [changedFiles, setChangedFiles] = useState<Map<string, 'added' | 'modified' | 'removed'>>(new Map());
+
+  // Commit stats (additions, deletions, file count)
+  const [commitStats, setCommitStats] = useState<Map<string, { additions: number; deletions: number; filesChanged: number }>>(new Map());
 
   const spacing = {
     xs: 4,
@@ -181,28 +183,22 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
     lg: 24,
   };
 
-  // Total aggregate stats
-  const totalStats = useMemo(() => {
-    let additions = 0;
-    let deletions = 0;
-
-    for (const commit of summary.commits) {
-      const stats = commitStats.get(commit.sha);
-      if (stats) {
-        additions += stats.additions;
-        deletions += stats.deletions;
-      }
-    }
-
-    return { additions, deletions };
-  }, [commitStats, summary.commits]);
+  // Handle scroll to update active commit indicator
+  const handleCommitScroll = () => {
+    if (!commitsContainerRef.current) return;
+    const container = commitsContainerRef.current;
+    const scrollLeft = container.scrollLeft;
+    const cardWidth = container.offsetWidth;
+    const index = Math.round(scrollLeft / cardWidth);
+    setActiveCommitIndex(Math.min(index, summary.commits.length - 1));
+  };
 
   // Batch fetch stats for all commits
   useEffect(() => {
     let cancelled = false;
 
     const fetchAllStats = async () => {
-      const statsMap = new Map<string, { additions: number; deletions: number }>();
+      const statsMap = new Map<string, { additions: number; deletions: number; filesChanged: number }>();
 
       await Promise.all(
         summary.commits.map(async (commit) => {
@@ -214,10 +210,11 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
             if (!response.ok || cancelled) return;
 
             const data = await response.json();
-            if (data.stats) {
+            if (data.stats || data.files) {
               statsMap.set(commit.sha, {
-                additions: data.stats.additions || 0,
-                deletions: data.stats.deletions || 0,
+                additions: data.stats?.additions || 0,
+                deletions: data.stats?.deletions || 0,
+                filesChanged: data.files?.length || 0,
               });
             }
           } catch (err) {
@@ -278,7 +275,7 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
     };
   }, [summary.owner, summary.repo, summary.fullName]);
 
-  // Fetch changed files for the latest commit
+  // Fetch changed files for the latest commit (for File City highlights)
   const latestCommit = summary.commits[0];
 
   useEffect(() => {
@@ -385,8 +382,6 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
 
     return layers;
   }, [changedFiles]);
-  const displayedCommits = showAllCommits ? summary.commits : summary.commits.slice(0, 3);
-  const hasMoreCommits = summary.commits.length > 3;
 
   return (
     <div
@@ -399,6 +394,12 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
         overflow: 'hidden',
       }}
     >
+      {/* Hide scrollbar for webkit */}
+      <style>{`
+        .mobile-commits-carousel::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
       {/* File City Section - Top (square based on width) */}
       <div
         style={{
@@ -438,12 +439,15 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
         )}
       </div>
 
-      {/* Content Section - Scrollable */}
+      {/* Content Section */}
       <div
         style={{
           flex: 1,
-          overflow: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
           padding: spacing.md,
+          paddingBottom: 0,
         }}
       >
         {/* Header with avatar and repo name */}
@@ -458,8 +462,8 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
           {/* Avatar */}
           <div
             style={{
-              width: 64,
-              height: 64,
+              width: 56,
+              height: 56,
               borderRadius: '50%',
               backgroundColor: theme.colors.surface,
               border: `1px solid ${theme.colors.border}`,
@@ -483,11 +487,11 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
                 onError={() => setAvatarLoaded(false)}
               />
             ) : (
-              <User size={32} color={theme.colors.textMuted} />
+              <User size={28} color={theme.colors.textMuted} />
             )}
           </div>
 
-          {/* Name and stats */}
+          {/* Name and commit count */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2
               style={{
@@ -514,278 +518,179 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
           </div>
         </div>
 
-        {/* Line stats bar */}
-        {(totalStats.additions > 0 || totalStats.deletions > 0) && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: spacing.md,
-              marginBottom: spacing.md,
-              padding: spacing.sm,
-              backgroundColor: theme.colors.surface,
-              borderRadius: 8,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, flex: 1 }}>
-              {totalStats.additions > 0 && (
-                <div
-                  style={{
-                    height: 8,
-                    backgroundColor: theme.colors.success,
-                    borderRadius: 4,
-                    minWidth: 8,
-                    width: `${Math.min(100, (totalStats.additions / (totalStats.additions + totalStats.deletions)) * 100)}%`,
-                  }}
-                />
-              )}
-              {totalStats.deletions > 0 && (
-                <div
-                  style={{
-                    height: 8,
-                    backgroundColor: theme.colors.error,
-                    borderRadius: 4,
-                    minWidth: 8,
-                    width: `${Math.min(100, (totalStats.deletions / (totalStats.additions + totalStats.deletions)) * 100)}%`,
-                  }}
-                />
-              )}
-            </div>
+        {/* Horizontal swipeable commits carousel */}
+        <div
+          ref={commitsContainerRef}
+          className="mobile-commits-carousel"
+          onScroll={handleCommitScroll}
+          style={{
+            flex: 1,
+            display: 'flex',
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            scrollSnapType: 'x mandatory',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            gap: spacing.md,
+            paddingBottom: spacing.md,
+          }}
+        >
+          {summary.commits.map((commit) => (
             <div
+              key={commit.sha}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.sm,
-                fontSize: theme.fontSizes[1],
-                fontFamily: 'monospace',
                 flexShrink: 0,
-              }}
-            >
-              {totalStats.additions > 0 && (
-                <span style={{ color: theme.colors.success }}>
-                  +{totalStats.additions.toLocaleString()}
-                </span>
-              )}
-              {totalStats.deletions > 0 && (
-                <span style={{ color: theme.colors.error }}>
-                  -{totalStats.deletions.toLocaleString()}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Latest commit highlight */}
-        {latestCommit && (
-          <div
-            style={{
-              padding: spacing.md,
-              backgroundColor: theme.colors.surface,
-              borderRadius: 8,
-              marginBottom: spacing.md,
-              border: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            <div
-              style={{
+                width: '100%',
+                scrollSnapAlign: 'start',
+                padding: spacing.md,
+                backgroundColor: theme.colors.surface,
+                borderRadius: 12,
+                border: `1px solid ${theme.colors.border}`,
                 display: 'flex',
-                alignItems: 'center',
-                gap: spacing.sm,
-                marginBottom: spacing.sm,
+                flexDirection: 'column',
               }}
             >
-              {latestCommit.authorAvatarUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={latestCommit.authorAvatarUrl}
-                  alt={latestCommit.author}
-                  style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: '50%',
-                  }}
-                />
-              )}
-              <span
-                style={{
-                  fontSize: theme.fontSizes[1],
-                  color: theme.colors.text,
-                  fontWeight: 500,
-                }}
-              >
-                {latestCommit.author}
-              </span>
-              <span
-                style={{
-                  fontSize: theme.fontSizes[0],
-                  color: theme.colors.textMuted,
-                  marginLeft: 'auto',
-                }}
-              >
-                {formatRelativeTime(new Date(latestCommit.date))}
-              </span>
-            </div>
-            <div
-              style={{
-                fontSize: theme.fontSizes[2],
-                color: theme.colors.text,
-                lineHeight: 1.4,
-              }}
-            >
-              {latestCommit.message}
-            </div>
-            <code
-              style={{
-                display: 'block',
-                marginTop: spacing.sm,
-                fontSize: theme.fontSizes[0],
-                fontFamily: 'monospace',
-                color: theme.colors.textMuted,
-              }}
-            >
-              {latestCommit.sha.slice(0, 7)}
-            </code>
-          </div>
-        )}
-
-        {/* Other commits */}
-        {displayedCommits.length > 1 && (
-          <div
-            style={{
-              backgroundColor: theme.colors.surface,
-              borderRadius: 8,
-              border: `1px solid ${theme.colors.border}`,
-              overflow: 'hidden',
-            }}
-          >
-            {displayedCommits.slice(1).map((commit, index) => {
-              const stats = commitStats.get(commit.sha);
-              return (
-                <div
-                  key={commit.sha}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: spacing.sm,
-                    padding: spacing.sm,
-                    borderTop: index > 0 ? `1px solid ${theme.colors.border}` : 'none',
-                  }}
-                >
-                  {commit.authorAvatarUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={commit.authorAvatarUrl}
-                      alt={commit.author}
-                      style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: '50%',
-                        flexShrink: 0,
-                      }}
-                    />
-                  )}
-                  <span
-                    style={{
-                      fontSize: theme.fontSizes[1],
-                      color: theme.colors.text,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      flex: 1,
-                    }}
-                  >
-                    {commit.message}
-                  </span>
-                  {stats && (stats.additions > 0 || stats.deletions > 0) && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: spacing.xs,
-                        fontSize: theme.fontSizes[0],
-                        fontFamily: 'monospace',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {stats.additions > 0 && (
-                        <span style={{ color: theme.colors.success }}>+{stats.additions}</span>
-                      )}
-                      {stats.deletions > 0 && (
-                        <span style={{ color: theme.colors.error }}>-{stats.deletions}</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-
-            {/* Show more/less button */}
-            {hasMoreCommits && (
-              <button
-                onClick={() => setShowAllCommits(!showAllCommits)}
+              {/* Commit author and time */}
+              <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: spacing.xs,
-                  width: '100%',
-                  padding: spacing.sm,
-                  backgroundColor: theme.colors.background,
-                  border: 'none',
-                  borderTop: `1px solid ${theme.colors.border}`,
-                  color: theme.colors.primary,
-                  fontSize: theme.fontSizes[1],
-                  cursor: 'pointer',
+                  gap: spacing.sm,
+                  marginBottom: spacing.sm,
                 }}
               >
-                {showAllCommits ? (
-                  <>
-                    <ChevronUp size={16} />
-                    Show less
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown size={16} />
-                    Show {summary.commits.length - 3} more
-                  </>
+                {commit.authorAvatarUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={commit.authorAvatarUrl}
+                    alt={commit.author}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: '50%',
+                    }}
+                  />
                 )}
-              </button>
-            )}
+                <span
+                  style={{
+                    fontSize: theme.fontSizes[1],
+                    color: theme.colors.text,
+                    fontWeight: 500,
+                  }}
+                >
+                  {commit.author}
+                </span>
+                <span
+                  style={{
+                    fontSize: theme.fontSizes[0],
+                    color: theme.colors.textMuted,
+                    marginLeft: 'auto',
+                  }}
+                >
+                  {formatRelativeTime(new Date(commit.date))}
+                </span>
+              </div>
+
+              {/* Commit message */}
+              <div
+                style={{
+                  flex: 1,
+                  fontSize: theme.fontSizes[2],
+                  color: theme.colors.text,
+                  lineHeight: 1.5,
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 4,
+                  WebkitBoxOrient: 'vertical',
+                }}
+              >
+                {commit.message}
+              </div>
+
+              {/* Commit stats and SHA */}
+              <div
+                style={{
+                  marginTop: spacing.sm,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <code
+                  style={{
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: 'monospace',
+                    color: theme.colors.textMuted,
+                  }}
+                >
+                  {commit.sha.slice(0, 7)}
+                </code>
+                {(() => {
+                  const stats = commitStats.get(commit.sha);
+                  if (!stats) return null;
+                  if (stats.additions === 0 && stats.deletions === 0 && stats.filesChanged === 0) return null;
+                  return (
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        color: theme.colors.textMuted,
+                      }}
+                    >
+                      {stats.additions > 0 && (
+                        <span style={{ color: theme.colors.success }}>
+                          added {stats.additions} line{stats.additions !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {stats.additions > 0 && stats.deletions > 0 && ' '}
+                      {stats.deletions > 0 && (
+                        <span style={{ color: theme.colors.error }}>
+                          removed {stats.deletions} line{stats.deletions !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {(stats.additions > 0 || stats.deletions > 0) && stats.filesChanged > 0 && ' '}
+                      {stats.filesChanged > 0 && (
+                        <span style={{ color: theme.colors.primary }}>
+                          in {stats.filesChanged} file{stats.filesChanged !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Carousel dots indicator */}
+        {summary.commits.length > 1 && (
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: spacing.xs,
+              paddingBottom: spacing.md,
+            }}
+          >
+            {summary.commits.map((commit, index) => (
+              <div
+                key={commit.sha}
+                style={{
+                  width: index === activeCommitIndex ? 16 : 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: index === activeCommitIndex
+                    ? theme.colors.primary
+                    : theme.colors.border,
+                  transition: 'all 0.2s ease',
+                }}
+              />
+            ))}
           </div>
         )}
       </div>
 
-      {/* Fixed bottom action bar */}
-      <div
-        style={{
-          flexShrink: 0,
-          padding: spacing.md,
-          paddingBottom: `calc(${spacing.md}px + env(safe-area-inset-bottom, 0px))`,
-          backgroundColor: theme.colors.surface,
-          borderTop: `1px solid ${theme.colors.border}`,
-        }}
-      >
-        <Link
-          href={`/${summary.owner}/${summary.repo}`}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: spacing.sm,
-            width: '100%',
-            padding: `${spacing.md}px`,
-            backgroundColor: theme.colors.primary,
-            color: theme.colors.textOnPrimary,
-            borderRadius: 8,
-            fontSize: theme.fontSizes[2],
-            fontWeight: 600,
-            textDecoration: 'none',
-          }}
-        >
-          <ExternalLink size={20} />
-          Open Repository
-        </Link>
-      </div>
     </div>
   );
 };
