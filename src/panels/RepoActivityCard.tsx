@@ -570,8 +570,8 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             </div>
           </div>
 
-          {/* Commit dots - grouped in rows of 10 with connecting line */}
-          <div style={{ marginBottom: spacing.md }}>
+          {/* Commit avatars - grouped in rows of 10 with connecting line (only show if multiple commits) */}
+          {summary.commits.length > 1 && <div style={{ marginBottom: spacing.md }}>
             {Array.from({ length: Math.ceil(summary.commits.length / 10) }).map((_, rowIndex) => {
               const rowCommits = summary.commits.slice(rowIndex * 10, (rowIndex + 1) * 10);
               return (
@@ -582,8 +582,8 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                     display: 'flex',
                     flexDirection: 'row-reverse',
                     alignItems: 'center',
-                    marginBottom: rowIndex < Math.ceil(summary.commits.length / 10) - 1 ? spacing.xs : 0,
-                    height: 24,
+                    marginBottom: rowIndex < Math.ceil(summary.commits.length / 10) - 1 ? spacing.sm : 0,
+                    height: 28,
                   }}
                 >
                   {/* Connecting line */}
@@ -601,12 +601,12 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                       }}
                     />
                   )}
-                  {/* Dots with expanded hover targets */}
+                  {/* Author avatars with expanded hover targets */}
                   {rowCommits.map((commit, index) => {
                     const globalIndex = rowIndex * 10 + index;
                     const activeIndex = isAnimating ? animationCommitIndex : (hoveredCommitIndex ?? 0);
                     const isDisplayed = globalIndex === activeIndex;
-                    const isFilled = activeIndex !== null && globalIndex <= activeIndex;
+                    const isFilled = activeIndex !== null && globalIndex >= activeIndex;
 
                     return (
                       <div
@@ -623,26 +623,45 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                           zIndex: 1,
                         }}
                       >
-                        <div
-                          style={{
-                            width: 14,
-                            height: 14,
-                            borderRadius: '50%',
-                            backgroundColor: isDisplayed ? theme.colors.primary : theme.colors.textMuted,
-                            opacity: isFilled ? 1 : 0.3,
-                            border: `2px solid ${theme.colors.surface}`,
-                            transition: 'opacity 0.15s ease, background-color 0.15s ease',
-                          }}
-                        />
+                        {commit.authorAvatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={commit.authorAvatarUrl}
+                            alt={commit.author}
+                            style={{
+                              width: 20,
+                              height: 20,
+                              borderRadius: '50%',
+                              opacity: isFilled ? 1 : 0.4,
+                              border: isDisplayed
+                                ? `2px solid ${theme.colors.primary}`
+                                : `2px solid ${theme.colors.surface}`,
+                              transition: 'opacity 0.15s ease, border-color 0.15s ease',
+                              boxSizing: 'content-box',
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: 20,
+                              height: 20,
+                              borderRadius: '50%',
+                              backgroundColor: isDisplayed ? theme.colors.primary : theme.colors.textMuted,
+                              opacity: isFilled ? 1 : 0.4,
+                              border: `2px solid ${theme.colors.surface}`,
+                              transition: 'opacity 0.15s ease, background-color 0.15s ease',
+                            }}
+                          />
+                        )}
                       </div>
                     );
                   })}
                 </div>
               );
             })}
-          </div>
+          </div>}
 
-          {/* Commit hash + author avatar + per-commit stats */}
+          {/* Author avatar + per-commit stats */}
           <div
             style={{
               display: 'flex',
@@ -670,7 +689,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             )}
             <span
               style={{
-                fontSize: theme.fontSizes[0],
+                fontSize: theme.fontSizes[2],
                 color: theme.colors.text,
                 fontWeight: 500,
               }}
@@ -723,7 +742,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
           {/* Commit message */}
           <div
             style={{
-              fontSize: theme.fontSizes[1],
+              fontSize: theme.fontSizes[2],
               color: (isAnimating || hoveredCommitIndex !== null) ? theme.colors.primary : theme.colors.text,
               marginBottom: spacing.sm,
               transition: 'color 0.15s ease',
