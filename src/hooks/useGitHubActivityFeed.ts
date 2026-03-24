@@ -165,27 +165,25 @@ export function useGitHubActivityFeed(
         })
       );
 
-      // Merge unchanged repos with updated ones
-      const summaries = [...updatedSummaries];
-      if (useEtags && unchangedRepoKeys.size > 0) {
-        // Keep existing summaries for unchanged repos
-        setRepoSummaries((prev) => {
-          for (const existing of prev) {
-            if (unchangedRepoKeys.has(existing.fullName)) {
-              summaries.push(existing);
-            }
-          }
-          summaries.sort((a, b) => b.latestCommitAt.getTime() - a.latestCommitAt.getTime());
-          return summaries;
-        });
-        return;
-      }
-
       if (signal.aborted) return;
 
-      // Sort by latest commit (most recent first)
-      summaries.sort((a, b) => b.latestCommitAt.getTime() - a.latestCommitAt.getTime());
-      setRepoSummaries(summaries);
+      // Build final summaries: updated repos + unchanged repos from previous state
+      const updatedRepoKeys = new Set(updatedSummaries.map(s => s.fullName));
+
+      setRepoSummaries((prev) => {
+        const finalSummaries = [...updatedSummaries];
+
+        // Add unchanged repos from previous state (304 responses)
+        for (const existing of prev) {
+          if (unchangedRepoKeys.has(existing.fullName) && !updatedRepoKeys.has(existing.fullName)) {
+            finalSummaries.push(existing);
+          }
+        }
+
+        // Sort by latest commit (most recent first)
+        finalSummaries.sort((a, b) => b.latestCommitAt.getTime() - a.latestCommitAt.getTime());
+        return finalSummaries;
+      });
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
         return;
