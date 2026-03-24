@@ -19,6 +19,133 @@ import { FEATURED_REPOS } from '@/lib/featured-repos';
 import { RepoActivityCard } from './RepoActivityCard';
 import { HourlyActivityHeatmap, type CommitTimestamp } from '@/components/HourlyActivityHeatmap';
 
+// Quarter helpers (matching heatmap)
+type DayQuarter = 'Night' | 'Morning' | 'Afternoon' | 'Evening';
+
+const getQuarter = (date: Date): DayQuarter => {
+  const hour = date.getHours();
+  if (hour >= 0 && hour < 6) return 'Night';
+  if (hour >= 6 && hour < 12) return 'Morning';
+  if (hour >= 12 && hour < 18) return 'Afternoon';
+  return 'Evening';
+};
+
+const getGreeting = (quarter: DayQuarter): string => {
+  switch (quarter) {
+    case 'Night': return 'Welcome Night Owls';
+    case 'Morning': return 'Good Morning';
+    case 'Afternoon': return 'Good Afternoon';
+    case 'Evening': return 'Good Evening';
+  }
+};
+
+const getQuarterLabel = (quarter: DayQuarter): string => {
+  switch (quarter) {
+    case 'Night': return 'Night Shift';
+    default: return quarter;
+  }
+};
+
+interface QuarterGroup {
+  quarter: DayQuarter;
+  date: Date;
+  dateKey: string;
+  isFirst: boolean;
+  summaries: RepoActivitySummary[];
+  commitCount: number;
+}
+
+// Group summaries by quarter, splitting repos that span multiple quarters
+function groupSummariesByQuarter(summaries: RepoActivitySummary[]): QuarterGroup[] {
+  const quarterMap = new Map<string, {
+    quarter: DayQuarter;
+    date: Date;
+    summaryMap: Map<string, RepoActivitySummary>;
+    commitCount: number;
+  }>();
+
+  // Process each summary
+  for (const summary of summaries) {
+    for (const commit of summary.commits) {
+      const commitDate = new Date(commit.date);
+      const quarter = getQuarter(commitDate);
+      const dateKey = `${commitDate.getFullYear()}-${commitDate.getMonth()}-${commitDate.getDate()}-${quarter}`;
+
+      if (!quarterMap.has(dateKey)) {
+        // Create a representative date for this quarter
+        const quarterDate = new Date(commitDate);
+        quarterDate.setMinutes(0, 0, 0);
+        quarterMap.set(dateKey, {
+          quarter,
+          date: quarterDate,
+          summaryMap: new Map(),
+          commitCount: 0,
+        });
+      }
+
+      const group = quarterMap.get(dateKey)!;
+      group.commitCount++;
+
+      // Add or update the summary for this repo in this quarter
+      if (!group.summaryMap.has(summary.fullName)) {
+        group.summaryMap.set(summary.fullName, {
+          ...summary,
+          commits: [],
+          commitCount: 0,
+          latestCommitAt: commitDate,
+        });
+      }
+
+      const quarterSummary = group.summaryMap.get(summary.fullName)!;
+      quarterSummary.commits.push(commit);
+      quarterSummary.commitCount++;
+      if (commitDate > quarterSummary.latestCommitAt) {
+        quarterSummary.latestCommitAt = commitDate;
+      }
+    }
+  }
+
+  // Convert to array and sort by time (most recent first)
+  const groups: QuarterGroup[] = [];
+  for (const [dateKey, group] of quarterMap) {
+    const summaryList = Array.from(group.summaryMap.values())
+      .sort((a, b) => new Date(b.latestCommitAt).getTime() - new Date(a.latestCommitAt).getTime());
+
+    groups.push({
+      quarter: group.quarter,
+      date: group.date,
+      dateKey,
+      isFirst: false,
+      summaries: summaryList,
+      commitCount: group.commitCount,
+    });
+  }
+
+  // Sort by date (most recent first)
+  groups.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+  // Mark the first one
+  if (groups.length > 0) {
+    groups[0]!.isFirst = true;
+  }
+
+  return groups;
+}
+
+function formatQuarterDate(date: Date): string | null {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) {
+    return null;
+  } else if (date.toDateString() === yesterday.toDateString()) {
+    return 'Yesterday';
+  } else {
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+}
+
 interface GitHubSearchRepo {
   id: number;
   name: string;
@@ -205,6 +332,11 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
       })
     );
   }, [displaySummaries, timeFilter]);
+
+  // Group summaries by quarter
+  const quarterGroups = useMemo(() => {
+    return groupSummariesByQuarter(timeFilteredSummaries);
+  }, [timeFilteredSummaries]);
 
   // Build heatmap commits from displayed summaries
   const heatmapCommits = useMemo<CommitTimestamp[]>(() => {
@@ -403,7 +535,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
             </div>
           )}
 
-          {timeFilteredSummaries.length === 0 && !loading ? (
+          {quarterGroups.length === 0 && !loading ? (
             <div
               style={{
                 display: 'flex',
@@ -425,16 +557,75 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
               </p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
-              {timeFilteredSummaries.map((summary) => (
-                <RepoActivityCard
-                  key={summary.fullName}
-                  summary={summary}
-                  isExpanded={expandedRepos.has(summary.fullName)}
-                  onToggleExpand={() => toggleExpanded(summary.fullName)}
-                  onOpen={() => handleRepoOpen(summary)}
-                />
-              ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
+              {quarterGroups.map((group, groupIndex) => {
+                const dateLabel = formatQuarterDate(group.date);
+                const label = group.isFirst ? getGreeting(group.quarter) : getQuarterLabel(group.quarter);
+
+                return (
+                  <div key={group.dateKey}>
+                    {/* Quarter header */}
+                    <div
+                      style={{
+                        paddingTop: groupIndex > 0 ? spacing.sm : 0,
+                        paddingBottom: spacing.sm,
+                        borderTop: groupIndex > 0 ? `1px solid ${theme.colors.border}` : undefined,
+                        marginTop: groupIndex > 0 ? spacing.sm : 0,
+                      }}
+                    >
+                      {dateLabel && (
+                        <div
+                          style={{
+                            fontSize: theme.fontSizes[0],
+                            color: theme.colors.textMuted,
+                            marginBottom: spacing.xs,
+                          }}
+                        >
+                          {dateLabel}
+                        </div>
+                      )}
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'baseline',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: theme.fontSizes[2],
+                            fontWeight: 600,
+                            color: theme.colors.text,
+                          }}
+                        >
+                          {label}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: theme.fontSizes[0],
+                            color: theme.colors.textMuted,
+                          }}
+                        >
+                          {group.commitCount} commit{group.commitCount !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Cards for this quarter */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
+                      {group.summaries.map((summary) => (
+                        <RepoActivityCard
+                          key={`${group.dateKey}-${summary.fullName}`}
+                          summary={summary}
+                          isExpanded={expandedRepos.has(`${group.dateKey}-${summary.fullName}`)}
+                          onToggleExpand={() => toggleExpanded(`${group.dateKey}-${summary.fullName}`)}
+                          onOpen={() => handleRepoOpen(summary)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

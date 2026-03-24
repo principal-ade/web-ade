@@ -35,6 +35,31 @@ const formatHour = (hour: number): string => {
   return `${displayHour} ${period}`;
 };
 
+type DayQuarter = 'Night' | 'Morning' | 'Afternoon' | 'Evening';
+
+const getQuarter = (hour: number): DayQuarter => {
+  if (hour >= 0 && hour < 6) return 'Night';
+  if (hour >= 6 && hour < 12) return 'Morning';
+  if (hour >= 12 && hour < 18) return 'Afternoon';
+  return 'Evening';
+};
+
+const getGreeting = (quarter: DayQuarter): string => {
+  switch (quarter) {
+    case 'Night': return 'Welcome Night Owls';
+    case 'Morning': return 'Good Morning';
+    case 'Afternoon': return 'Good Afternoon';
+    case 'Evening': return 'Good Evening';
+  }
+};
+
+const getQuarterLabel = (quarter: DayQuarter): string => {
+  switch (quarter) {
+    case 'Night': return 'Night Shift';
+    default: return quarter;
+  }
+};
+
 const getHourKey = (date: Date): string => {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}`;
 };
@@ -46,7 +71,7 @@ const getBlockKey = (date: Date): string => {
 
 export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
   commits,
-  loading = false,
+  loading: _loading = false,
   onBlockClick,
   selectedBlock = null,
 }) => {
@@ -103,8 +128,9 @@ export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
     return Math.max(1, Math.floor(availableHeight / rowHeight));
   }, [dimensions.height, cellSize]);
 
-  const { blockMap, maxCount } = useMemo(() => {
+  const { blockMap, maxCount, quarterCounts } = useMemo(() => {
     const map = new Map<string, number>();
+    const quarters = new Map<string, number>();
     let max = 0;
 
     commits.forEach(({ timestamp }) => {
@@ -113,9 +139,13 @@ export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
       const count = (map.get(key) || 0) + 1;
       map.set(key, count);
       max = Math.max(max, count);
+
+      // Count commits per quarter (date + quarter)
+      const quarterKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${getQuarter(date.getHours())}`;
+      quarters.set(quarterKey, (quarters.get(quarterKey) || 0) + 1);
     });
 
-    return { blockMap: map, maxCount: max };
+    return { blockMap: map, maxCount: max, quarterCounts: quarters };
   }, [commits]);
 
   const hourRows = useMemo(() => {
@@ -215,13 +245,13 @@ export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
     return `${formatTime(start)} - ${formatTime(end)}`;
   };
 
-  const formatDate = (date: Date): string => {
+  const formatDate = (date: Date): string | null => {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
     if (date.toDateString() === today.toDateString()) {
-      return 'Today';
+      return null; // No label for today
     } else if (date.toDateString() === yesterday.toDateString()) {
       return 'Yesterday';
     } else {
@@ -229,14 +259,29 @@ export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
     }
   };
 
-  const getDaySeparator = (currentRow: typeof hourRows[0], prevRow: typeof hourRows[0] | null): string | null => {
-    if (!prevRow) {
-      return formatDate(currentRow.date);
+  const getSeparator = (
+    currentRow: typeof hourRows[0],
+    prevRow: typeof hourRows[0] | null,
+    isFirst: boolean
+  ): { label: string; commitCount: number; dateLabel?: string } | null => {
+    const currentQuarter = getQuarter(currentRow.date.getHours());
+    const prevQuarter = prevRow ? getQuarter(prevRow.date.getHours()) : null;
+    const isNewDay = !prevRow || currentRow.date.toDateString() !== prevRow.date.toDateString();
+    const isNewQuarter = !prevRow || currentQuarter !== prevQuarter;
+
+    if (!isNewDay && !isNewQuarter) return null;
+
+    const quarterKey = `${currentRow.date.getFullYear()}-${currentRow.date.getMonth()}-${currentRow.date.getDate()}-${currentQuarter}`;
+    const commitCount = quarterCounts.get(quarterKey) || 0;
+
+    // Only the first separator gets "Good Morning" style, rest just show quarter name
+    const label = isFirst ? getGreeting(currentQuarter) : getQuarterLabel(currentQuarter);
+
+    const dateLabel = formatDate(currentRow.date);
+    if (isNewDay && dateLabel) {
+      return { label, commitCount, dateLabel };
     }
-    if (currentRow.date.toDateString() !== prevRow.date.toDateString()) {
-      return formatDate(currentRow.date);
-    }
-    return null;
+    return { label, commitCount };
   };
 
   const spacing = {
@@ -255,37 +300,6 @@ export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
         overflow: 'hidden',
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: spacing.sm,
-          flexShrink: 0,
-        }}
-      >
-        <span
-          style={{
-            fontSize: theme.fontSizes[1],
-            fontWeight: 600,
-            color: theme.colors.textMuted,
-          }}
-        >
-          Activity
-        </span>
-        {!loading && commits.length > 0 && (
-          <span
-            style={{
-              fontSize: theme.fontSizes[0],
-              color: theme.colors.textMuted,
-            }}
-          >
-            {commits.length} commits
-          </span>
-        )}
-      </div>
-
       {/* Grid */}
       <div
         style={{
@@ -298,23 +312,56 @@ export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
       >
         {hourRows.map((row, rowIndex) => {
           const prevRow = rowIndex > 0 ? hourRows[rowIndex - 1] ?? null : null;
-          const daySeparator = getDaySeparator(row, prevRow);
+          const separator = getSeparator(row, prevRow, rowIndex === 0);
 
           return (
             <React.Fragment key={row.hourKey}>
-              {/* Day separator */}
-              {daySeparator && (
+              {/* Day or quarter separator */}
+              {separator && (
                 <div
                   style={{
-                    fontSize: theme.fontSizes[0],
-                    color: theme.colors.textMuted,
-                    paddingTop: rowIndex > 0 ? spacing.xs : 0,
+                    paddingTop: rowIndex > 0 ? spacing.sm : 0,
                     paddingBottom: spacing.xs,
                     borderTop: rowIndex > 0 ? `1px solid ${theme.colors.border}` : undefined,
-                    marginTop: rowIndex > 0 ? spacing.xs : 0,
+                    marginTop: rowIndex > 0 ? spacing.sm : 0,
                   }}
                 >
-                  {daySeparator}
+                  {separator.dateLabel && (
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        color: theme.colors.textMuted,
+                        marginBottom: spacing.xs,
+                      }}
+                    >
+                      {separator.dateLabel}
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'baseline',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[2],
+                        fontWeight: 600,
+                        color: theme.colors.text,
+                      }}
+                    >
+                      {separator.label}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        color: theme.colors.textMuted,
+                      }}
+                    >
+                      {separator.commitCount} commit{separator.commitCount !== 1 ? 's' : ''}
+                    </div>
+                  </div>
                 </div>
               )}
 
