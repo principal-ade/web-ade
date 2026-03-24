@@ -57,7 +57,49 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   className,
 }) => {
   const { theme } = useTheme();
-  const { repoSummaries, loading, error, addRepo } = useGitHubActivityFeed(FEATURED_REPOS, 10);
+  const { repoSummaries, loading, error, addRepo, refresh } = useGitHubActivityFeed(FEATURED_REPOS, 10);
+
+  // Poll for updates every 60 seconds when tab is visible
+  useEffect(() => {
+    const POLL_INTERVAL = 60 * 1000; // 60 seconds
+    let intervalId: NodeJS.Timeout | null = null;
+
+    const startPolling = () => {
+      if (intervalId) return;
+      intervalId = setInterval(() => {
+        refresh();
+      }, POLL_INTERVAL);
+    };
+
+    const stopPolling = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        // Refresh immediately when tab becomes visible
+        refresh();
+        startPolling();
+      }
+    };
+
+    // Start polling if tab is visible
+    if (!document.hidden) {
+      startPolling();
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refresh]);
 
   const spacing = {
     xs: 4,
@@ -192,7 +234,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
 
   // Handle opening repo (navigate to repo page)
   const handleRepoOpen = (summary: RepoActivitySummary) => {
-    window.location.href = `/${summary.owner}/${summary.repo}`;
+    window.open(`/${summary.owner}/${summary.repo}`, '_blank');
   };
 
   // Handle heatmap block click

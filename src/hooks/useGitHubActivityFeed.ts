@@ -58,7 +58,10 @@ export function useGitHubActivityFeed(
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const loadActivityFeed = useCallback(async () => {
+  // Store ETags per repo for conditional requests
+  const etagsRef = useRef<Map<string, string>>(new Map());
+
+  const loadActivityFeed = useCallback(async (useEtags = false) => {
     if (repos.length === 0) {
       setRepoSummaries([]);
       setLoading(false);
@@ -76,20 +79,45 @@ export function useGitHubActivityFeed(
     setError(null);
 
     try {
-      const summaries: RepoActivitySummary[] = [];
+      // Track which repos had changes
+      const updatedSummaries: RepoActivitySummary[] = [];
+      const unchangedRepoKeys = new Set<string>();
 
       // Fetch commits for each repo in parallel
       await Promise.all(
         repos.map(async (repo) => {
+          const repoKey = `${repo.owner}/${repo.repo}`;
           try {
+            const headers: Record<string, string> = {};
+
+            // Send ETag for conditional request if we have one
+            if (useEtags) {
+              const etag = etagsRef.current.get(repoKey);
+              if (etag) {
+                headers['If-None-Match'] = etag;
+              }
+            }
+
             const response = await fetch(
               `/api/github/repo/${repo.owner}/${repo.repo}/commits?per_page=${commitsPerRepo}`,
-              { signal }
+              { signal, headers }
             );
 
-            if (!response.ok) {
-              console.warn(`Failed to fetch commits for ${repo.owner}/${repo.repo}: ${response.status}`);
+            // 304 Not Modified - keep existing data
+            if (response.status === 304) {
+              unchangedRepoKeys.add(repoKey);
               return;
+            }
+
+            if (!response.ok) {
+              console.warn(`Failed to fetch commits for ${repoKey}: ${response.status}`);
+              return;
+            }
+
+            // Store new ETag
+            const newEtag = response.headers.get('ETag');
+            if (newEtag) {
+              etagsRef.current.set(repoKey, newEtag);
             }
 
             const data = await response.json();
@@ -118,10 +146,10 @@ export function useGitHubActivityFeed(
 
             const latestCommit = activityCommits[0];
             if (latestCommit) {
-              summaries.push({
+              updatedSummaries.push({
                 owner: repo.owner,
                 repo: repo.repo,
-                fullName: `${repo.owner}/${repo.repo}`,
+                fullName: repoKey,
                 commits: activityCommits,
                 latestCommitAt: new Date(latestCommit.date),
                 commitCount: activityCommits.length,
@@ -132,10 +160,26 @@ export function useGitHubActivityFeed(
             if (err instanceof Error && err.name === 'AbortError') {
               return; // Request was cancelled
             }
-            console.warn(`Error fetching commits for ${repo.owner}/${repo.repo}:`, err);
+            console.warn(`Error fetching commits for ${repoKey}:`, err);
           }
         })
       );
+
+      // Merge unchanged repos with updated ones
+      const summaries = [...updatedSummaries];
+      if (useEtags && unchangedRepoKeys.size > 0) {
+        // Keep existing summaries for unchanged repos
+        setRepoSummaries((prev) => {
+          for (const existing of prev) {
+            if (unchangedRepoKeys.has(existing.fullName)) {
+              summaries.push(existing);
+            }
+          }
+          summaries.sort((a, b) => b.latestCommitAt.getTime() - a.latestCommitAt.getTime());
+          return summaries;
+        });
+        return;
+      }
 
       if (signal.aborted) return;
 
@@ -163,8 +207,15 @@ export function useGitHubActivityFeed(
     };
   }, [loadActivityFeed]);
 
+  // Refresh with ETags (efficient polling)
   const refresh = useCallback(() => {
-    return loadActivityFeed();
+    return loadActivityFeed(true);
+  }, [loadActivityFeed]);
+
+  // Force refresh without ETags (full reload)
+  const forceRefresh = useCallback(() => {
+    etagsRef.current.clear();
+    return loadActivityFeed(false);
   }, [loadActivityFeed]);
 
   // Add a single repo to the feed dynamically
@@ -236,6 +287,7 @@ export function useGitHubActivityFeed(
     loading,
     error,
     refresh,
+    forceRefresh,
     addRepo,
   };
 }
