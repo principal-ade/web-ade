@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, Home, FolderOpen, Calendar, User, LogIn } from 'lucide-react';
+import { LogOut, Home, FolderOpen, Calendar, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -18,7 +18,6 @@ export function UserAvatarMenu() {
   const { theme } = useTheme();
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [loggedOutMenuOpen, setLoggedOutMenuOpen] = useState(false);
   const [organizations, setOrganizations] = useState<UserOrganization[]>([]);
   const [orgsLoading, setOrgsLoading] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -27,18 +26,17 @@ export function UserAvatarMenu() {
 
   // Close user menu when clicking outside
   useEffect(() => {
-    if (!userMenuOpen && !loggedOutMenuOpen) return;
+    if (!userMenuOpen) return;
 
     function handleClickOutside(event: MouseEvent) {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setUserMenuOpen(false);
-        setLoggedOutMenuOpen(false);
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [userMenuOpen, loggedOutMenuOpen]);
+  }, [userMenuOpen]);
 
   // Fetch organizations when menu opens
   useEffect(() => {
@@ -72,56 +70,17 @@ export function UserAvatarMenu() {
 
   if (!isAuthenticated || !user) {
     return (
-      <div className="relative" ref={userMenuRef}>
-        <button
-          onClick={() => setLoggedOutMenuOpen(!loggedOutMenuOpen)}
-          className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
-          style={{
-            background: theme.colors.primary,
-            color: theme.colors.textOnPrimary,
-          }}
-          title="User Menu"
-        >
-          <User size={16} />
-        </button>
-
-        {/* Dropdown Menu */}
-        {loggedOutMenuOpen && (
-          <div
-            className="absolute right-0 top-full mt-1 py-1 rounded-md shadow-lg border min-w-[160px] z-50"
-            style={{
-              background: theme.colors.background,
-              borderColor: theme.colors.border,
-            }}
-          >
-            {/* Login */}
-            <button
-              onClick={() => {
-                setLoggedOutMenuOpen(false);
-                login();
-              }}
-              className="flex items-center gap-2 px-3 py-2 text-sm w-full transition-colors hover:opacity-80"
-              style={{ color: theme.colors.text }}
-            >
-              <LogIn className="w-4 h-4" />
-              Login
-            </button>
-
-            {/* Home - hide when already on home page */}
-            {!isHomePage && (
-              <Link
-                href="/"
-                className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
-                style={{ color: theme.colors.text }}
-                onClick={() => setLoggedOutMenuOpen(false)}
-              >
-                <Home className="w-4 h-4" />
-                Home
-              </Link>
-            )}
-          </div>
-        )}
-      </div>
+      <button
+        onClick={() => login()}
+        className="flex items-center justify-center px-3 h-8 rounded-md transition-all hover:opacity-80 text-sm font-medium"
+        style={{
+          background: theme.colors.primary,
+          color: theme.colors.textOnPrimary,
+        }}
+        title="Login"
+      >
+        Login
+      </button>
     );
   }
 
