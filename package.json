@@ -67,7 +67,7 @@
     "@principal-ai/control-tower-core": "^0.2.1",
     "@principal-ai/file-city-builder": "^0.4.2",
     "@principal-ai/file-city-server": "^0.3.6",
-    "@principal-ai/logo-component": "^0.1.5",
+    "@principal-ai/logo-component": "^0.1.7",
     "@principal-ai/principal-view-cli": "^0.15.13",
     "@principal-ai/principal-view-core": "^0.26.0",
     "@principal-ai/quality-lens-registry": "^0.3.3",

@@ -226,8 +226,8 @@
     {
       "id": "tokens-received-pkce",
       "type": "otel-event",
-      "x": 0,
-      "y": 550,
+      "x": -57,
+      "y": 618,
       "width": 200,
       "height": 100,
       "color": "#1d4ed8",
@@ -263,8 +263,8 @@
     {
       "id": "tokens-received-cookie",
       "type": "otel-event",
-      "x": 220,
-      "y": 550,
+      "x": 268,
+      "y": 618,
       "width": 200,
       "height": 100,
       "color": "#1d4ed8",
@@ -300,8 +300,8 @@
     {
       "id": "cookies-set",
       "type": "otel-event",
-      "x": 100,
-      "y": 650,
+      "x": 97,
+      "y": 785,
       "width": 200,
       "height": 100,
       "color": "#1d4ed8",
@@ -337,8 +337,8 @@
     {
       "id": "callback-complete",
       "type": "otel-event",
-      "x": 100,
-      "y": 850,
+      "x": 97,
+      "y": 963,
       "width": 200,
       "height": 100,
       "color": "#16a34a",

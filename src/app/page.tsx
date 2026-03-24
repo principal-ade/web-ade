@@ -3,6 +3,7 @@
 import { EditorHeader } from "@/components/EditorHeader";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import { WelcomePanel } from "@/components/WelcomePanel";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import type { CommandPaletteData } from "@/components/GlobalCommandPalette";
@@ -91,6 +92,8 @@ function HomePageContent() {
         background: theme.colors.background
       }}
     >
+      <LoadingOverlay />
+
       <EditorHeader
         onOpenWithMic={speechSupported ? handleOpenWithMic : undefined}
       />
