@@ -187,8 +187,8 @@ export function EditorHeader({
           paddingBottom: '0.5rem',
         }}
       >
-      {/* Inner wrapper to match feed panel width */}
-      <div className="flex items-center justify-between" style={{ maxWidth: 1350, margin: '0 auto' }}>
+      {/* Inner wrapper - constrained width only on home page to match feed panel */}
+      <div className="flex items-center justify-between" style={!repositoryName && !ownerOnly ? { maxWidth: 1350, margin: '0 auto' } : undefined}>
       {/* Left section: Logo/Avatar and Repository info */}
       <div className="flex items-center gap-3 flex-shrink-0 flex-1">
         {/* Show repo name on repo pages */}
