@@ -78,6 +78,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@upstash/redis": "^1.37.0",
     "ai": "^5.0.0",
     "canvas": "^3.2.1",
     "eslint": "^9",

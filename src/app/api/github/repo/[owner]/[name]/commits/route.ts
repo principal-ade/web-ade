@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import { getGitHubToken } from "@/lib/auth/cookies";
 import { CACHE_TTL, CACHE_TAGS, GitHubApiError } from "@/lib/github-cache";
+import { getCached, setCachedAsync, getCommitsCacheKey } from "@/lib/redis-cache";
 import type { GitHubCommit } from "@/types/api";
 
 function addCorsHeaders(response: NextResponse) {
@@ -109,9 +110,29 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const userToken = await getGitHubToken();
   const token = userToken || process.env.GITHUB_TOKEN || null;
 
+  // Check Redis cache first
+  const redisKey = getCommitsCacheKey(owner, name, perPage, page, sha);
+  const cachedFromRedis = await getCached<GitHubCommit[]>(redisKey);
+
+  if (cachedFromRedis) {
+    const jsonResponse = NextResponse.json(
+      { commits: cachedFromRedis },
+      {
+        headers: {
+          "Cache-Control": `public, s-maxage=${CACHE_TTL.COMMITS}, stale-while-revalidate=${CACHE_TTL.COMMITS * 2}`,
+          "X-Cache-Source": "redis",
+        },
+      }
+    );
+    return addCorsHeaders(jsonResponse);
+  }
+
   try {
     // Use server-side caching - all clients share this cache
     const commits = await getCachedCommits(owner, name, perPage, page, sha, token);
+
+    // Store in Redis asynchronously (fire and forget)
+    setCachedAsync(redisKey, commits, 1200); // 20 min in Redis
 
     // Return commits with cache headers for CDN/browser
     const jsonResponse = NextResponse.json(
@@ -119,6 +140,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       {
         headers: {
           "Cache-Control": `public, s-maxage=${CACHE_TTL.COMMITS}, stale-while-revalidate=${CACHE_TTL.COMMITS * 2}`,
+          "X-Cache-Source": "nextjs",
         },
       }
     );

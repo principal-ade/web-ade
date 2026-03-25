@@ -16,6 +16,12 @@ import {
   storeTreeInS3CacheAsync,
   type GitHubTreeResponse,
 } from '@/lib/github-tree-s3-cache';
+import {
+  getCached,
+  setCachedAsync,
+  getRefShaCacheKey,
+  getTreeCacheKey,
+} from '@/lib/redis-cache';
 import { PackageLayerModule } from '@principal-ai/codebase-composition';
 import type { FileTree, FileInfo, DirectoryInfo } from '@principal-ai/repository-abstraction';
 
@@ -452,10 +458,11 @@ export const githubRouter = router({
    *
    * Cache strategy (in order of speed):
    * 1. In-memory cache (~0ms) - warm Lambda instances
-   * 2. S3 cache (~50ms) - persists across Lambda invocations
-   * 3. GitHub API (500-3000ms) - source of truth
+   * 2. Redis cache (~5-10ms) - shared across Lambda instances, 20 min TTL
+   * 3. S3 cache (~50ms) - persists across Lambda invocations, 7 day TTL
+   * 4. GitHub API (500-3000ms) - source of truth
    *
-   * SHA-based keys are immutable, so S3 cache can be long-lived (7 days)
+   * Also caches ref→SHA mapping in Redis (20 min TTL) to avoid GitHub API calls
    */
   getTree: publicProcedure
     .input(getTreeInputSchema)
@@ -488,19 +495,29 @@ export const githubRouter = router({
             return cachedTree;
           }
 
-          // 2. Resolve ref to actual commit SHA
+          // 2. Resolve ref to actual commit SHA (check Redis first)
           let resolvedSha: string;
-          try {
-            interface GitHubCommitResponse {
-              sha: string;
+          const refCacheKey = getRefShaCacheKey(owner, repo, ref);
+          const cachedSha = await getCached<string>(refCacheKey);
+
+          if (cachedSha) {
+            resolvedSha = cachedSha;
+            span.addEvent('repo.ref.cache.hit', { 'cache.type': 'redis' });
+          } else {
+            try {
+              interface GitHubCommitResponse {
+                sha: string;
+              }
+              const refData = await makeGitHubRequest<GitHubCommitResponse>(
+                `/repos/${owner}/${repo}/commits/${ref}`,
+                userToken
+              );
+              resolvedSha = refData.sha;
+              // Cache ref→SHA mapping for 20 min
+              setCachedAsync(refCacheKey, resolvedSha, 1200);
+            } catch {
+              resolvedSha = ref;
             }
-            const refData = await makeGitHubRequest<GitHubCommitResponse>(
-              `/repos/${owner}/${repo}/commits/${ref}`,
-              userToken
-            );
-            resolvedSha = refData.sha;
-          } catch {
-            resolvedSha = ref;
           }
 
           // 3. Check in-memory cache with resolved SHA
@@ -519,12 +536,33 @@ export const githubRouter = router({
             return cachedBySha;
           }
 
-          // 4. Check S3 cache (persists across Lambda invocations)
+          // 4. Check Redis cache (faster than S3, shared across Lambdas)
+          const treeCacheKey = getTreeCacheKey(owner, repo, resolvedSha);
+          const redisCached = await getCached<GitHubTreeResponse>(treeCacheKey);
+          if (redisCached) {
+            gitTreeCache.set(shaCacheKey, redisCached);
+            gitTreeCache.set(memCacheKey, redisCached);
+
+            const durationMs = Date.now() - startTime;
+            span.addEvent('repo.file-tree.cache.hit', {
+              'cache.key': treeCacheKey,
+              'cache.type': 'redis',
+              'tree.fileCount': redisCached.tree.length,
+              'durationMs': durationMs,
+            });
+            span.setAttribute('cache.hit', true);
+            span.setAttribute('cache.type', 'redis');
+            span.end();
+            return redisCached;
+          }
+
+          // 5. Check S3 cache (persists across Lambda invocations)
           const s3Cached = await getTreeFromS3Cache(owner, repo, resolvedSha);
           if (s3Cached) {
-            // Store in memory for subsequent requests in this instance
+            // Store in memory and Redis for subsequent requests
             gitTreeCache.set(shaCacheKey, s3Cached);
             gitTreeCache.set(memCacheKey, s3Cached);
+            setCachedAsync(treeCacheKey, s3Cached, 1200); // 20 min in Redis
 
             const durationMs = Date.now() - startTime;
             span.addEvent('repo.file-tree.cache.hit', {
@@ -539,20 +577,23 @@ export const githubRouter = router({
             return s3Cached;
           }
 
-          // 5. Fetch from GitHub API (slowest)
+          // 6. Fetch from GitHub API (slowest)
           const treeData = await makeGitHubRequest<GitHubTreeResponse>(
             `/repos/${owner}/${repo}/git/trees/${resolvedSha}?recursive=1`,
             userToken
           );
 
-          // Store in both caches
+          // Store in all caches
           if (treeData && treeData.sha) {
             // In-memory (sync)
             gitTreeCache.set(shaCacheKey, treeData);
             gitTreeCache.set(memCacheKey, treeData);
             gitTreeCache.set(treeData.sha, treeData);
 
-            // S3 (async - don't block response)
+            // Redis (async - faster cross-Lambda access)
+            setCachedAsync(treeCacheKey, treeData, 1200); // 20 min
+
+            // S3 (async - long-term persistence)
             storeTreeInS3CacheAsync(owner, repo, resolvedSha, treeData);
           }
 

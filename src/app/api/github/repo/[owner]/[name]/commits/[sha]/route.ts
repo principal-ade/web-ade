@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGitHubToken } from "@/lib/auth/cookies";
+import { getCached, setCachedAsync, getCommitDetailCacheKey } from "@/lib/redis-cache";
 import type { GitHubCommitDetailResponse } from "@/types/api";
+
+const CACHE_TTL_24H = 86400; // 24 hours in seconds
 
 function addCorsHeaders(response: NextResponse) {
   response.headers.set("Access-Control-Allow-Origin", "*");
@@ -38,6 +41,20 @@ interface RouteParams {
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   const { owner, name, sha } = await params;
 
+  // Check Redis cache first (SHA-based, immutable, 24h TTL)
+  const cacheKey = getCommitDetailCacheKey(owner, name, sha);
+  const cached = await getCached<GitHubCommitDetailResponse>(cacheKey);
+
+  if (cached) {
+    const jsonResponse = NextResponse.json(cached, {
+      headers: {
+        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=172800",
+        "X-Cache-Source": "redis",
+      },
+    });
+    return addCorsHeaders(jsonResponse);
+  }
+
   // Get user's GitHub token from cookies
   const userToken = await getGitHubToken();
   const token = userToken || process.env.GITHUB_TOKEN || null;
@@ -72,10 +89,14 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
     const commit: GitHubCommitDetailResponse = await response.json();
 
+    // Cache in Redis (24h TTL - commits are immutable)
+    setCachedAsync(cacheKey, commit, CACHE_TTL_24H);
+
     // Return commit with cache headers
     const jsonResponse = NextResponse.json(commit, {
       headers: {
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=172800",
+        "X-Cache-Source": "github",
       },
     });
 
