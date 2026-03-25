@@ -11,6 +11,11 @@ import { TRPCError } from '@trpc/server';
 import { cookies } from 'next/headers';
 import { trace } from '@opentelemetry/api';
 import { gitTreeCache } from '@/lib/git-tree-cache';
+import {
+  getTreeFromS3Cache,
+  storeTreeInS3CacheAsync,
+  type GitHubTreeResponse,
+} from '@/lib/github-tree-s3-cache';
 import { PackageLayerModule } from '@principal-ai/codebase-composition';
 import type { FileTree, FileInfo, DirectoryInfo } from '@principal-ai/repository-abstraction';
 
@@ -443,7 +448,14 @@ export const githubRouter = router({
 
   /**
    * Get the file tree for a GitHub repository
-   * Returns the recursive tree structure with in-memory caching by SHA
+   * Returns the recursive tree structure with multi-layer caching
+   *
+   * Cache strategy (in order of speed):
+   * 1. In-memory cache (~0ms) - warm Lambda instances
+   * 2. S3 cache (~50ms) - persists across Lambda invocations
+   * 3. GitHub API (500-3000ms) - source of truth
+   *
+   * SHA-based keys are immutable, so S3 cache can be long-lived (7 days)
    */
   getTree: publicProcedure
     .input(getTreeInputSchema)
@@ -461,7 +473,22 @@ export const githubRouter = router({
         try {
           const userToken = await getGitHubToken();
 
-          // First resolve the ref to actual commit SHA to ensure cache freshness
+          // 1. Check in-memory cache first (fastest)
+          const memCacheKey = `${owner}/${repo}/${ref}`;
+          const cachedTree = gitTreeCache.get<GitHubTreeResponse>(memCacheKey);
+          if (cachedTree) {
+            span.addEvent('repo.file-tree.cache.hit', {
+              'cache.key': memCacheKey,
+              'cache.type': 'memory',
+              'tree.fileCount': cachedTree.tree.length,
+            });
+            span.setAttribute('cache.hit', true);
+            span.setAttribute('cache.type', 'memory');
+            span.end();
+            return cachedTree;
+          }
+
+          // 2. Resolve ref to actual commit SHA
           let resolvedSha: string;
           try {
             interface GitHubCommitResponse {
@@ -473,69 +500,63 @@ export const githubRouter = router({
             );
             resolvedSha = refData.sha;
           } catch {
-            // If we can't resolve the ref, fall back to using the ref directly
             resolvedSha = ref;
           }
 
-          const cacheKey = `${owner}/${repo}/${resolvedSha}`;
-          span.setAttribute('cache.key', cacheKey);
-
-          // Check in-memory cache first using the resolved SHA
-          interface GitHubTreeResponse {
-            sha: string;
-            url: string;
-            tree: Array<{
-              path: string;
-              mode: string;
-              type: 'blob' | 'tree' | 'commit'; // 'commit' = git submodule
-              sha: string;
-              size?: number;
-              url?: string; // Optional for submodules
-            }>;
-            truncated: boolean;
+          // 3. Check in-memory cache with resolved SHA
+          const shaCacheKey = `${owner}/${repo}/${resolvedSha}`;
+          const cachedBySha = gitTreeCache.get<GitHubTreeResponse>(shaCacheKey);
+          if (cachedBySha) {
+            gitTreeCache.set(memCacheKey, cachedBySha);
+            span.addEvent('repo.file-tree.cache.hit', {
+              'cache.key': shaCacheKey,
+              'cache.type': 'memory-sha',
+              'tree.fileCount': cachedBySha.tree.length,
+            });
+            span.setAttribute('cache.hit', true);
+            span.setAttribute('cache.type', 'memory-sha');
+            span.end();
+            return cachedBySha;
           }
 
-          const cachedTree = gitTreeCache.get<GitHubTreeResponse>(cacheKey);
-          if (cachedTree) {
-            const durationMs = Date.now() - startTime;
+          // 4. Check S3 cache (persists across Lambda invocations)
+          const s3Cached = await getTreeFromS3Cache(owner, repo, resolvedSha);
+          if (s3Cached) {
+            // Store in memory for subsequent requests in this instance
+            gitTreeCache.set(shaCacheKey, s3Cached);
+            gitTreeCache.set(memCacheKey, s3Cached);
 
-            // Emit cache hit event
+            const durationMs = Date.now() - startTime;
             span.addEvent('repo.file-tree.cache.hit', {
-              'cache.key': cacheKey,
-              'tree.sha': cachedTree.sha,
-              'tree.fileCount': cachedTree.tree.length,
-              'cache.hit': true,
+              'cache.key': shaCacheKey,
+              'cache.type': 's3',
+              'tree.fileCount': s3Cached.tree.length,
               'durationMs': durationMs,
             });
-
             span.setAttribute('cache.hit', true);
-            span.setAttribute('tree.fileCount', cachedTree.tree.length);
+            span.setAttribute('cache.type', 's3');
             span.end();
-            return cachedTree;
+            return s3Cached;
           }
 
-          // Emit cache miss event
-          span.addEvent('repo.file-tree.cache.miss', {
-            'cache.key': cacheKey,
-            'cache.hit': false,
-          });
-          span.setAttribute('cache.hit', false);
-
-          // Not in cache, fetch from GitHub using the resolved SHA
+          // 5. Fetch from GitHub API (slowest)
           const treeData = await makeGitHubRequest<GitHubTreeResponse>(
             `/repos/${owner}/${repo}/git/trees/${resolvedSha}?recursive=1`,
             userToken
           );
 
-          // Cache by both the cache key and the tree SHA
+          // Store in both caches
           if (treeData && treeData.sha) {
-            gitTreeCache.set(cacheKey, treeData);
+            // In-memory (sync)
+            gitTreeCache.set(shaCacheKey, treeData);
+            gitTreeCache.set(memCacheKey, treeData);
             gitTreeCache.set(treeData.sha, treeData);
+
+            // S3 (async - don't block response)
+            storeTreeInS3CacheAsync(owner, repo, resolvedSha, treeData);
           }
 
           const durationMs = Date.now() - startTime;
-
-          // Emit fetch complete event
           span.addEvent('repo.file-tree.fetch.complete', {
             'tree.sha': treeData.sha,
             'tree.fileCount': treeData.tree.length,
@@ -544,6 +565,7 @@ export const githubRouter = router({
           });
 
           span.setAttribute('tree.fileCount', treeData.tree.length);
+          span.setAttribute('cache.hit', false);
           span.end();
           return treeData;
         } catch (error) {

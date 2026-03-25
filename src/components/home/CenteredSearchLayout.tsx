@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Search, X, Clock } from 'lucide-react';
 import Link from 'next/link';
-import { FeaturedReposCarousel } from './FeaturedReposCarousel';
 import { ActivityFeedPanel } from '@/panels/ActivityFeedPanel';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -407,24 +406,6 @@ export function CenteredSearchLayout({ showSearch = false }: CenteredSearchLayou
           )}
         </div>
       </div>
-
-      {/* Featured Repos Carousel - shown when not searching */}
-      {!searchQuery.trim() && (
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '24px',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
-        >
-          <FeaturedReposCarousel />
-        </div>
-      )}
 
       {/* Scrollable Content Area - only shown when searching */}
       {searchQuery.trim() && (

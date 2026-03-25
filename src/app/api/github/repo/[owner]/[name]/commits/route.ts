@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import { getGitHubToken } from "@/lib/auth/cookies";
+import { CACHE_TTL, CACHE_TAGS, GitHubApiError } from "@/lib/github-cache";
 import type { GitHubCommit } from "@/types/api";
 
 function addCorsHeaders(response: NextResponse) {
@@ -26,17 +28,18 @@ interface RouteParams {
   }>;
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
-  const { owner, name } = await params;
-  const searchParams = request.nextUrl.searchParams;
-  const perPage = Math.min(parseInt(searchParams.get("per_page") || "30"), 100);
-  const page = parseInt(searchParams.get("page") || "1");
-  const sha = searchParams.get("sha") || undefined; // Branch or commit SHA to start from
-
-  // Get user's GitHub token from cookies
-  const userToken = await getGitHubToken();
-  const token = userToken || process.env.GITHUB_TOKEN || null;
-
+/**
+ * Fetch commits from GitHub with server-side caching
+ * Uses shared cache for public repos to reduce API calls across all clients
+ */
+async function fetchCommitsFromGitHub(
+  owner: string,
+  name: string,
+  perPage: number,
+  page: number,
+  sha: string | undefined,
+  token: string | null
+): Promise<GitHubCommit[]> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github.v3+json",
     "User-Agent": "WebADE/1.0",
@@ -46,72 +49,98 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     headers["Authorization"] = `token ${token}`;
   }
 
-  // Forward ETag for conditional requests
-  const clientEtag = request.headers.get("If-None-Match");
-  if (clientEtag) {
-    headers["If-None-Match"] = clientEtag;
+  const queryParams = new URLSearchParams({
+    per_page: perPage.toString(),
+    page: page.toString(),
+  });
+  if (sha) {
+    queryParams.set("sha", sha);
   }
 
-  try {
-    // Build query parameters
-    const queryParams = new URLSearchParams({
-      per_page: perPage.toString(),
-      page: page.toString(),
-    });
-    if (sha) {
-      queryParams.set("sha", sha);
-    }
+  const response = await fetch(
+    `${GITHUB_API_BASE}/repos/${owner}/${name}/commits?${queryParams}`,
+    { headers }
+  );
 
-    const response = await fetch(
-      `${GITHUB_API_BASE}/repos/${owner}/${name}/commits?${queryParams}`,
-      { headers },
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new GitHubApiError(
+      errorData.message || `GitHub API error: ${response.status}`,
+      response.status
     );
+  }
 
-    // Handle 304 Not Modified - forward it to client
-    if (response.status === 304) {
-      const notModifiedResponse = new NextResponse(null, { status: 304 });
-      return addCorsHeaders(notModifiedResponse);
+  return response.json();
+}
+
+/**
+ * Get cached commits - shared cache for public repos
+ * All clients polling the same repo share this cache entry
+ */
+function getCachedCommits(
+  owner: string,
+  name: string,
+  perPage: number,
+  page: number,
+  sha: string | undefined,
+  token: string | null
+): Promise<GitHubCommit[]> {
+  // Cache key includes query params but NOT token (shared cache for public repos)
+  const cacheKey = `commits:${owner}/${name}:${perPage}:${page}:${sha || 'HEAD'}`;
+
+  return unstable_cache(
+    () => fetchCommitsFromGitHub(owner, name, perPage, page, sha, token),
+    [cacheKey],
+    {
+      revalidate: CACHE_TTL.COMMITS,
+      tags: [CACHE_TAGS.GITHUB_API, CACHE_TAGS.COMMITS, `commits:${owner}/${name}`],
     }
+  )();
+}
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return addCorsHeaders(
-        NextResponse.json(
-          {
-            error: errorData.message || `GitHub API error: ${response.status}`,
-            status: response.status,
-          },
-          { status: response.status },
-        ),
-      );
-    }
+export async function GET(request: NextRequest, { params }: RouteParams) {
+  const { owner, name } = await params;
+  const searchParams = request.nextUrl.searchParams;
+  const perPage = Math.min(parseInt(searchParams.get("per_page") || "30"), 100);
+  const page = parseInt(searchParams.get("page") || "1");
+  const sha = searchParams.get("sha") || undefined;
 
-    const commits: GitHubCommit[] = await response.json();
+  // Get user's GitHub token from cookies, fall back to server token
+  const userToken = await getGitHubToken();
+  const token = userToken || process.env.GITHUB_TOKEN || null;
 
-    // Get ETag from GitHub response
-    const etag = response.headers.get("ETag");
+  try {
+    // Use server-side caching - all clients share this cache
+    const commits = await getCachedCommits(owner, name, perPage, page, sha, token);
 
-    // Return commits with cache headers and ETag
-    const responseHeaders: Record<string, string> = {
-      "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-    };
-    if (etag) {
-      responseHeaders["ETag"] = etag;
-    }
-
+    // Return commits with cache headers for CDN/browser
     const jsonResponse = NextResponse.json(
       { commits },
-      { headers: responseHeaders },
+      {
+        headers: {
+          "Cache-Control": `public, s-maxage=${CACHE_TTL.COMMITS}, stale-while-revalidate=${CACHE_TTL.COMMITS * 2}`,
+        },
+      }
     );
 
     return addCorsHeaders(jsonResponse);
   } catch (error) {
     console.error("[commits API] Error fetching commits:", error);
+
+    if (error instanceof GitHubApiError) {
+      return addCorsHeaders(
+        NextResponse.json(
+          { error: error.message, status: error.status },
+          { status: error.status }
+        )
+      );
+    }
+
     return addCorsHeaders(
       NextResponse.json(
         { error: "Failed to fetch commits" },
-        { status: 500 },
-      ),
+        { status: 500 }
+      )
     );
   }
 }
