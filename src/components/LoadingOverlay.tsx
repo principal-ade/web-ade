@@ -171,26 +171,74 @@ export function LoadingOverlay({
             />
           </div>
         ) : (
-          <OpenTypeTextReveal
-            text="Principal AI"
-            fontUrl={FONT_URL}
-            fontSize={64}
-            width={550}
-            height={140}
-            chaosMode="fragmented"
-            showChartIntro={true}
-            chartPattern="latency"
-            chartDuration={1.5}
-            chartTransitionDuration={0.8}
-            chaosDuration={0.5}
-            dotsDuration={1}
-            flowDuration={1.5}
-            color={theme.colors.primary}
-            particleColor={theme.colors.text}
-            strokeWidth={1.5}
-            loop={false}
-            showGlow={true}
-          />
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}
+          >
+            <OpenTypeTextReveal
+              text="Welcome"
+              fontUrl={FONT_URL}
+              fontSize={48}
+              width={400}
+              height={100}
+              chaosMode="fragmented"
+              showChartIntro={true}
+              chartPattern="latency"
+              chartDuration={2}
+              chartTransitionDuration={1}
+              chaosDuration={0.7}
+              dotsDuration={1.3}
+              flowDuration={2}
+              color={theme.colors.text}
+              particleColor={theme.colors.textMuted}
+              strokeWidth={1.5}
+              loop={false}
+              showGlow={true}
+            />
+            <OpenTypeTextReveal
+              text="To"
+              fontUrl={FONT_URL}
+              fontSize={32}
+              width={100}
+              height={60}
+              chaosMode="fragmented"
+              showChartIntro={true}
+              chartPattern="latency"
+              chartDuration={2}
+              chartTransitionDuration={1}
+              chaosDuration={0.4}
+              dotsDuration={1}
+              flowDuration={1.5}
+              color={theme.colors.textMuted}
+              particleColor={theme.colors.textMuted}
+              strokeWidth={1}
+              loop={false}
+              showGlow={false}
+            />
+            <OpenTypeTextReveal
+              text="Principal AI"
+              fontUrl={FONT_URL}
+              fontSize={64}
+              width={550}
+              height={140}
+              chaosMode="fragmented"
+              showChartIntro={true}
+              chartPattern="latency"
+              chartDuration={2}
+              chartTransitionDuration={1}
+              chaosDuration={0.7}
+              dotsDuration={1.3}
+              flowDuration={2}
+              color={theme.colors.primary}
+              particleColor={theme.colors.text}
+              strokeWidth={1.5}
+              loop={false}
+              showGlow={true}
+            />
+          </div>
         )}
       </div>
     </div>
