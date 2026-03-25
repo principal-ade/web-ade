@@ -499,14 +499,56 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
         transition: 'opacity 0.15s ease, box-shadow 0.15s ease',
       }}
     >
-      {/* Horizontal layout: content left, image right */}
+      {/* Horizontal layout: image left, content right */}
       <div
         style={{
           display: 'flex',
           minHeight: 300,
         }}
       >
-        {/* Summary info - left half */}
+        {/* File City image - left side */}
+        <div
+          style={{
+            width: 300,
+            height: 300,
+            backgroundColor: theme.colors.background,
+            borderRight: `1px solid ${theme.colors.border}`,
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            cursor: 'pointer',
+          }}
+          onDoubleClick={onOpen}
+        >
+          {cityLoading ? (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: spacing.sm,
+                color: theme.colors.textMuted,
+              }}
+            >
+              <FolderGit2 size={32} style={{ opacity: 0.5 }} />
+              <span style={{ fontSize: theme.fontSizes[0] }}>Loading...</span>
+            </div>
+          ) : cityData ? (
+            <ArchitectureMapHighlightLayers
+              cityData={cityData}
+              highlightLayers={highlightLayers}
+              fullSize
+              showFileNames={false}
+              canvasBackgroundColor={theme.colors.background}
+            />
+          ) : (
+            <FolderGit2 size={64} color={theme.colors.textMuted} style={{ opacity: 0.3 }} />
+          )}
+        </div>
+
+        {/* Summary info - right side */}
         <div
           style={{
             flex: 1,
@@ -872,48 +914,6 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
               </button>
             )}
           </div>
-        </div>
-
-        {/* File City image - right half */}
-        <div
-          style={{
-            width: 300,
-            height: 300,
-            backgroundColor: theme.colors.background,
-            borderLeft: `1px solid ${theme.colors.border}`,
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            cursor: 'pointer',
-          }}
-          onDoubleClick={onOpen}
-        >
-          {cityLoading ? (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: spacing.sm,
-                color: theme.colors.textMuted,
-              }}
-            >
-              <FolderGit2 size={32} style={{ opacity: 0.5 }} />
-              <span style={{ fontSize: theme.fontSizes[0] }}>Loading...</span>
-            </div>
-          ) : cityData ? (
-            <ArchitectureMapHighlightLayers
-              cityData={cityData}
-              highlightLayers={highlightLayers}
-              fullSize
-              showFileNames={false}
-              canvasBackgroundColor={theme.colors.background}
-            />
-          ) : (
-            <FolderGit2 size={64} color={theme.colors.textMuted} style={{ opacity: 0.3 }} />
-          )}
         </div>
       </div>
 

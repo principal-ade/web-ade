@@ -22,6 +22,8 @@ export interface HourlyActivityHeatmapProps {
   loading?: boolean;
   onBlockClick?: (startTime: Date, endTime: Date, count: number) => void;
   selectedBlock?: string | null;
+  /** Hour key (YYYY-M-D-H format) of the currently visible hour in the feed */
+  activeHourKey?: string | null;
 }
 
 const HOUR_LABEL_WIDTH = 48;
@@ -74,6 +76,7 @@ export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
   loading: _loading = false,
   onBlockClick,
   selectedBlock = null,
+  activeHourKey = null,
 }) => {
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -378,10 +381,12 @@ export const HourlyActivityHeatmap: React.FC<HourlyActivityHeatmapProps> = ({
                   style={{
                     width: HOUR_LABEL_WIDTH,
                     fontSize: theme.fontSizes[0],
-                    color: theme.colors.textMuted,
+                    color: activeHourKey === row.hourKey ? theme.colors.primary : theme.colors.textMuted,
+                    fontWeight: activeHourKey === row.hourKey ? 600 : 400,
                     textAlign: 'right',
                     paddingRight: spacing.xs,
                     flexShrink: 0,
+                    transition: 'color 0.2s ease, font-weight 0.2s ease',
                   }}
                 >
                   {row.hourLabel}

@@ -10,7 +10,7 @@
  * - Right: Hourly activity heatmap
  */
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { FolderGit2, Search, X, Loader2, ArrowLeft, Globe, Building2, MapPin } from 'lucide-react';
 import { Logo } from '@principal-ai/logo-component';
@@ -20,35 +20,23 @@ import { RepoActivityCard } from './RepoActivityCard';
 import { HourlyActivityHeatmap, type CommitTimestamp } from '@/components/HourlyActivityHeatmap';
 import { MobileActivityFeed } from '@/components/home/MobileActivityFeed';
 
-// Quarter helpers (matching heatmap)
-type DayQuarter = 'Night' | 'Morning' | 'Afternoon' | 'Evening';
-
-const getQuarter = (date: Date): DayQuarter => {
-  const hour = date.getHours();
-  if (hour >= 0 && hour < 6) return 'Night';
-  if (hour >= 6 && hour < 12) return 'Morning';
-  if (hour >= 12 && hour < 18) return 'Afternoon';
-  return 'Evening';
+// Hour helpers for grouping
+const getGreetingForHour = (hour: number): string => {
+  if (hour >= 0 && hour < 6) return 'Welcome Night Owls';
+  if (hour >= 6 && hour < 12) return 'Good Morning';
+  if (hour >= 12 && hour < 18) return 'Good Afternoon';
+  return 'Good Evening';
 };
 
-const getGreeting = (quarter: DayQuarter): string => {
-  switch (quarter) {
-    case 'Night': return 'Welcome Night Owls';
-    case 'Morning': return 'Good Morning';
-    case 'Afternoon': return 'Good Afternoon';
-    case 'Evening': return 'Good Evening';
-  }
+const formatHourLabel = (hour: number): string => {
+  if (hour === 0) return '12 AM';
+  if (hour === 12) return '12 PM';
+  if (hour < 12) return `${hour} AM`;
+  return `${hour - 12} PM`;
 };
 
-const getQuarterLabel = (quarter: DayQuarter): string => {
-  switch (quarter) {
-    case 'Night': return 'Night Shift';
-    default: return quarter;
-  }
-};
-
-interface QuarterGroup {
-  quarter: DayQuarter;
+interface HourGroup {
+  hour: number;
   date: Date;
   dateKey: string;
   isFirst: boolean;
@@ -56,10 +44,10 @@ interface QuarterGroup {
   commitCount: number;
 }
 
-// Group summaries by quarter, splitting repos that span multiple quarters
-function groupSummariesByQuarter(summaries: RepoActivitySummary[]): QuarterGroup[] {
-  const quarterMap = new Map<string, {
-    quarter: DayQuarter;
+// Group summaries by hour, splitting repos that span multiple hours
+function groupSummariesByHour(summaries: RepoActivitySummary[]): HourGroup[] {
+  const hourMap = new Map<string, {
+    hour: number;
     date: Date;
     summaryMap: Map<string, RepoActivitySummary>;
     commitCount: number;
@@ -69,25 +57,25 @@ function groupSummariesByQuarter(summaries: RepoActivitySummary[]): QuarterGroup
   for (const summary of summaries) {
     for (const commit of summary.commits) {
       const commitDate = new Date(commit.date);
-      const quarter = getQuarter(commitDate);
-      const dateKey = `${commitDate.getFullYear()}-${commitDate.getMonth()}-${commitDate.getDate()}-${quarter}`;
+      const hour = commitDate.getHours();
+      const dateKey = `${commitDate.getFullYear()}-${commitDate.getMonth()}-${commitDate.getDate()}-${hour}`;
 
-      if (!quarterMap.has(dateKey)) {
-        // Create a representative date for this quarter
-        const quarterDate = new Date(commitDate);
-        quarterDate.setMinutes(0, 0, 0);
-        quarterMap.set(dateKey, {
-          quarter,
-          date: quarterDate,
+      if (!hourMap.has(dateKey)) {
+        // Create a representative date for this hour
+        const hourDate = new Date(commitDate);
+        hourDate.setMinutes(0, 0, 0);
+        hourMap.set(dateKey, {
+          hour,
+          date: hourDate,
           summaryMap: new Map(),
           commitCount: 0,
         });
       }
 
-      const group = quarterMap.get(dateKey)!;
+      const group = hourMap.get(dateKey)!;
       group.commitCount++;
 
-      // Add or update the summary for this repo in this quarter
+      // Add or update the summary for this repo in this hour
       if (!group.summaryMap.has(summary.fullName)) {
         group.summaryMap.set(summary.fullName, {
           ...summary,
@@ -97,23 +85,23 @@ function groupSummariesByQuarter(summaries: RepoActivitySummary[]): QuarterGroup
         });
       }
 
-      const quarterSummary = group.summaryMap.get(summary.fullName)!;
-      quarterSummary.commits.push(commit);
-      quarterSummary.commitCount++;
-      if (commitDate > quarterSummary.latestCommitAt) {
-        quarterSummary.latestCommitAt = commitDate;
+      const hourSummary = group.summaryMap.get(summary.fullName)!;
+      hourSummary.commits.push(commit);
+      hourSummary.commitCount++;
+      if (commitDate > hourSummary.latestCommitAt) {
+        hourSummary.latestCommitAt = commitDate;
       }
     }
   }
 
   // Convert to array and sort by time (most recent first)
-  const groups: QuarterGroup[] = [];
-  for (const [dateKey, group] of quarterMap) {
+  const groups: HourGroup[] = [];
+  for (const [dateKey, group] of hourMap) {
     const summaryList = Array.from(group.summaryMap.values())
       .sort((a, b) => new Date(b.latestCommitAt).getTime() - new Date(a.latestCommitAt).getTime());
 
     groups.push({
-      quarter: group.quarter,
+      hour: group.hour,
       date: group.date,
       dateKey,
       isFirst: false,
@@ -133,7 +121,7 @@ function groupSummariesByQuarter(summaries: RepoActivitySummary[]): QuarterGroup
   return groups;
 }
 
-function formatQuarterDate(date: Date): string | null {
+function formatDateLabel(date: Date): string | null {
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
@@ -271,6 +259,11 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   // Time filter from heatmap
   const [timeFilter, setTimeFilter] = useState<{ start: Date; end: Date } | null>(null);
 
+  // Active hour key for heatmap highlighting (tracks scroll position)
+  const [activeHourKey, setActiveHourKey] = useState<string | null>(null);
+  const hourGroupRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const feedScrollRef = useRef<HTMLDivElement>(null);
+
   // Debounced GitHub search
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -353,9 +346,9 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     );
   }, [displaySummaries, timeFilter]);
 
-  // Group summaries by quarter
-  const quarterGroups = useMemo(() => {
-    return groupSummariesByQuarter(timeFilteredSummaries);
+  // Group summaries by hour
+  const hourGroups = useMemo(() => {
+    return groupSummariesByHour(timeFilteredSummaries);
   }, [timeFilteredSummaries]);
 
   // Build heatmap commits from displayed summaries
@@ -446,6 +439,60 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     setTimeFilter(null);
   };
 
+  // Initialize active hour to first group when data loads
+  useEffect(() => {
+    if (hourGroups.length > 0) {
+      setActiveHourKey(hourGroups[0]!.dateKey);
+    }
+  }, [hourGroups]);
+
+  // Track which hour group is visible during scroll
+  useEffect(() => {
+    const scrollContainer = feedScrollRef.current;
+    if (!scrollContainer || hourGroups.length === 0) return;
+
+    // Handle scroll to top - reset to first group
+    const handleScroll = () => {
+      if (scrollContainer.scrollTop < 50 && hourGroups[0]) {
+        setActiveHourKey(hourGroups[0].dateKey);
+      }
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Find the topmost visible entry
+        const visibleEntries = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+
+        if (visibleEntries.length > 0) {
+          const topEntry = visibleEntries[0];
+          const hourKey = topEntry?.target.getAttribute('data-hour-key');
+          if (hourKey) {
+            setActiveHourKey(hourKey);
+          }
+        }
+      },
+      {
+        root: scrollContainer,
+        rootMargin: '-10% 0px -70% 0px', // Trigger when element is in top 30% of viewport
+        threshold: 0,
+      }
+    );
+
+    // Observe all hour group headers
+    hourGroupRefs.current.forEach((element) => {
+      observer.observe(element);
+    });
+
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      observer.disconnect();
+      scrollContainer.removeEventListener('scroll', handleScroll);
+    };
+  }, [hourGroups]);
+
   return (
     <div
       className={className}
@@ -498,12 +545,14 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
               loading={loading}
               onBlockClick={handleHeatmapBlockClick}
               selectedBlock={timeFilter?.start.toISOString() ?? null}
+              activeHourKey={activeHourKey}
             />
           </div>
         </div>
 
         {/* Center column - Feed */}
         <div
+          ref={feedScrollRef}
           className="activity-feed-scroll w-full lg:w-[800px] px-4 lg:px-0"
           style={{
             flexShrink: 0,
@@ -603,7 +652,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
             </div>
           )}
 
-          {quarterGroups.length === 0 && !loading ? (
+          {hourGroups.length === 0 && !loading ? (
             <div
               style={{
                 display: 'flex',
@@ -626,14 +675,22 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
-              {quarterGroups.map((group, groupIndex) => {
-                const dateLabel = formatQuarterDate(group.date);
-                const label = group.isFirst ? getGreeting(group.quarter) : getQuarterLabel(group.quarter);
+              {hourGroups.map((group, groupIndex) => {
+                const dateLabel = formatDateLabel(group.date);
+                const label = group.isFirst ? getGreetingForHour(group.hour) : formatHourLabel(group.hour);
 
                 return (
                   <div key={group.dateKey}>
-                    {/* Quarter header */}
+                    {/* Hour header */}
                     <div
+                      ref={(el) => {
+                        if (el) {
+                          hourGroupRefs.current.set(group.dateKey, el);
+                        } else {
+                          hourGroupRefs.current.delete(group.dateKey);
+                        }
+                      }}
+                      data-hour-key={group.dateKey}
                       style={{
                         paddingTop: groupIndex > 0 ? spacing.sm : 0,
                         paddingBottom: spacing.sm,
@@ -679,7 +736,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                       </div>
                     </div>
 
-                    {/* Cards for this quarter */}
+                    {/* Cards for this hour */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
                       {group.summaries.map((summary) => (
                         <RepoActivityCard
