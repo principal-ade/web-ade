@@ -4,21 +4,14 @@
  * MobileRepoCard
  *
  * Full-height vertical card for mobile swipe experience.
- * Features File City at top, repo info in middle, commits below.
+ * Features File City image at top, repo info in middle, commits below.
+ * Uses pre-rendered images instead of canvas for mobile performance.
  */
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { User, FolderGit2 } from 'lucide-react';
 import type { RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
-import { trpc } from '@/lib/trpc/client';
-import {
-  ArchitectureMapHighlightLayers,
-  MultiVersionCityBuilder,
-  type CityData,
-  type HighlightLayer,
-  type FileTree,
-} from '@principal-ai/file-city-react';
 
 interface MobileRepoCardProps {
   summary: RepoActivitySummary;
@@ -38,143 +31,24 @@ function formatRelativeTime(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-/**
- * Build FileTree from GitHub tree API response
- */
-function buildFileTreeFromGitHub(
-  tree: Array<{ path: string; type: string; size?: number }>,
-  owner: string,
-  repo: string,
-  sha: string
-): FileTree {
-  const allFiles = tree
-    .filter((item) => item.type === 'blob')
-    .map((item) => {
-      const pathParts = item.path.split('/');
-      const fileName = pathParts[pathParts.length - 1] ?? item.path;
-      const extension = fileName.includes('.') ? (fileName.split('.').pop() ?? '') : '';
-
-      return {
-        path: item.path,
-        name: fileName,
-        extension,
-        size: item.size || 0,
-        lastModified: new Date(),
-        isDirectory: false,
-        relativePath: item.path,
-      };
-    });
-
-  const dirMap = new Map<string, {
-    path: string;
-    name: string;
-    children: unknown[];
-    fileCount: number;
-    totalSize: number;
-    depth: number;
-    relativePath: string;
-  }>();
-
-  tree
-    .filter((item) => item.type === 'tree')
-    .forEach((item) => {
-      const pathParts = item.path.split('/');
-      const dirName = pathParts[pathParts.length - 1] ?? item.path;
-
-      dirMap.set(item.path, {
-        path: item.path,
-        name: dirName,
-        children: [],
-        fileCount: 0,
-        totalSize: 0,
-        depth: pathParts.length,
-        relativePath: item.path,
-      });
-    });
-
-  allFiles.forEach((file) => {
-    const pathParts = file.relativePath.split('/');
-    let currentPath = '';
-
-    for (let i = 0; i < pathParts.length - 1; i++) {
-      const part = pathParts[i];
-      if (!part) continue;
-      currentPath = currentPath ? `${currentPath}/${part}` : part;
-
-      if (!dirMap.has(currentPath)) {
-        dirMap.set(currentPath, {
-          path: currentPath,
-          name: part,
-          children: [],
-          fileCount: 0,
-          totalSize: 0,
-          depth: i + 1,
-          relativePath: currentPath,
-        });
-      }
-    }
-  });
-
-  const allDirectories = Array.from(dirMap.values());
-  let maxDepth = 0;
-  let totalSize = 0;
-
-  allFiles.forEach((file) => {
-    totalSize += file.size;
-  });
-
-  allDirectories.forEach((dir) => {
-    maxDepth = Math.max(maxDepth, dir.depth);
-  });
-
-  const rootDir = {
-    path: '',
-    name: repo,
-    children: [],
-    fileCount: allFiles.length,
-    totalSize,
-    depth: 0,
-    relativePath: '',
-  };
-
-  return {
-    sha,
-    root: rootDir,
-    allFiles,
-    allDirectories,
-    stats: {
-      totalFiles: allFiles.length,
-      totalDirectories: allDirectories.length,
-      totalSize,
-      maxDepth,
-    },
-    metadata: {
-      id: `github:${owner}/${repo}:${sha}`,
-      timestamp: new Date(),
-      sourceType: 'github',
-      sourceSha: sha,
-      sourceInfo: {
-        owner,
-        name: repo,
-        provider: 'github',
-      },
-    },
-  } as FileTree;
-}
-
 export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
   const { theme } = useTheme();
   const [avatarLoaded, setAvatarLoaded] = useState(true);
   const [activeCommitIndex, setActiveCommitIndex] = useState(0);
   const commitsContainerRef = useRef<HTMLDivElement>(null);
 
-  // File City state
-  const [cityData, setCityData] = useState<CityData | null>(null);
-  const [cityLoading, setCityLoading] = useState(true);
-  const [changedFiles, setChangedFiles] = useState<Map<string, 'added' | 'modified' | 'removed'>>(new Map());
+  // File City image state
+  const [cityImageLoaded, setCityImageLoaded] = useState(false);
+  const [cityImageError, setCityImageError] = useState(false);
 
   // Commit stats (additions, deletions, file count)
   const [commitStats, setCommitStats] = useState<Map<string, { additions: number; deletions: number; filesChanged: number }>>(new Map());
+
+  // File City image URL - include latest commit SHA for highlights
+  const latestCommit = summary.commits[0];
+  const fileCityImageUrl = latestCommit
+    ? `/api/file-city/${summary.owner}/${summary.repo}?width=800&height=800&commit=${latestCommit.sha}`
+    : `/api/file-city/${summary.owner}/${summary.repo}?width=800&height=800`;
 
   const spacing = {
     xs: 4,
@@ -235,153 +109,6 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
     };
   }, [summary.commits, summary.owner, summary.repo]);
 
-  // Fetch tree data for File City
-  useEffect(() => {
-    let cancelled = false;
-
-    const fetchTree = async () => {
-      setCityLoading(true);
-      try {
-        const treeData = await trpc.github.getTree.query({
-          owner: summary.owner,
-          repo: summary.repo,
-        });
-
-        if (cancelled) return;
-
-        const fileTree = buildFileTreeFromGitHub(
-          treeData.tree,
-          summary.owner,
-          summary.repo,
-          treeData.sha
-        );
-
-        const versionMap = new Map([['main', fileTree]]);
-        const { unionCity } = MultiVersionCityBuilder.build(versionMap);
-        setCityData(unionCity);
-      } catch (err) {
-        console.warn(`[MobileRepoCard] Failed to fetch tree for ${summary.fullName}:`, err);
-      } finally {
-        if (!cancelled) {
-          setCityLoading(false);
-        }
-      }
-    };
-
-    fetchTree();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [summary.owner, summary.repo, summary.fullName]);
-
-  // Fetch changed files for the latest commit (for File City highlights)
-  const latestCommit = summary.commits[0];
-
-  useEffect(() => {
-    if (!latestCommit) {
-      setChangedFiles(new Map());
-      return;
-    }
-
-    let cancelled = false;
-
-    const fetchCommitDetails = async () => {
-      try {
-        const response = await fetch(
-          `/api/github/repo/${summary.owner}/${summary.repo}/commits/${latestCommit.sha}`
-        );
-
-        if (!response.ok || cancelled) return;
-
-        const data = await response.json();
-        const files = data.files as Array<{ filename: string; status: string }> | undefined;
-
-        if (files && !cancelled) {
-          const fileMap = new Map<string, 'added' | 'modified' | 'removed'>();
-          for (const file of files) {
-            const status = file.status === 'added' ? 'added'
-              : file.status === 'removed' ? 'removed'
-              : 'modified';
-            fileMap.set(file.filename, status);
-          }
-          setChangedFiles(fileMap);
-        }
-      } catch (err) {
-        console.warn(`[MobileRepoCard] Failed to fetch commit details:`, err);
-      }
-    };
-
-    fetchCommitDetails();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [latestCommit, summary.owner, summary.repo]);
-
-  // Create highlight layers for changed files
-  const highlightLayers = useMemo<HighlightLayer[]>(() => {
-    if (changedFiles.size === 0) return [];
-
-    const addedFiles: string[] = [];
-    const modifiedFiles: string[] = [];
-    const removedFiles: string[] = [];
-
-    changedFiles.forEach((status, path) => {
-      if (status === 'added') addedFiles.push(path);
-      else if (status === 'modified') modifiedFiles.push(path);
-      else if (status === 'removed') removedFiles.push(path);
-    });
-
-    const layers: HighlightLayer[] = [];
-
-    if (addedFiles.length > 0) {
-      layers.push({
-        id: 'added',
-        name: 'Added',
-        enabled: true,
-        color: '#22c55e',
-        priority: 10,
-        items: addedFiles.map((path) => ({
-          path,
-          type: 'file' as const,
-          renderStrategy: 'glow' as const,
-        })),
-      });
-    }
-
-    if (modifiedFiles.length > 0) {
-      layers.push({
-        id: 'modified',
-        name: 'Modified',
-        enabled: true,
-        color: '#f59e0b',
-        priority: 9,
-        items: modifiedFiles.map((path) => ({
-          path,
-          type: 'file' as const,
-          renderStrategy: 'glow' as const,
-        })),
-      });
-    }
-
-    if (removedFiles.length > 0) {
-      layers.push({
-        id: 'removed',
-        name: 'Removed',
-        enabled: true,
-        color: '#ef4444',
-        priority: 8,
-        items: removedFiles.map((path) => ({
-          path,
-          type: 'file' as const,
-          renderStrategy: 'border' as const,
-        })),
-      });
-    }
-
-    return layers;
-  }, [changedFiles]);
 
   return (
     <div
@@ -480,7 +207,7 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
         </div>
       </div>
 
-      {/* File City Section */}
+      {/* File City Section - Uses pre-rendered image for mobile performance */}
       <div
         style={{
           width: '100%',
@@ -492,11 +219,13 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          overflow: 'hidden',
         }}
       >
-        {cityLoading ? (
+        {!cityImageLoaded && !cityImageError && (
           <div
             style={{
+              position: 'absolute',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -507,16 +236,24 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
             <FolderGit2 size={32} style={{ opacity: 0.5 }} />
             <span style={{ fontSize: theme.fontSizes[0] }}>Loading...</span>
           </div>
-        ) : cityData ? (
-          <ArchitectureMapHighlightLayers
-            cityData={cityData}
-            highlightLayers={highlightLayers}
-            fullSize
-            showFileNames={false}
-            canvasBackgroundColor={theme.colors.background}
-          />
-        ) : (
+        )}
+        {cityImageError ? (
           <FolderGit2 size={64} color={theme.colors.textMuted} style={{ opacity: 0.3 }} />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={fileCityImageUrl}
+            alt={`${summary.fullName} file structure`}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              opacity: cityImageLoaded ? 1 : 0,
+              transition: 'opacity 0.2s ease',
+            }}
+            onLoad={() => setCityImageLoaded(true)}
+            onError={() => setCityImageError(true)}
+          />
         )}
       </div>
 

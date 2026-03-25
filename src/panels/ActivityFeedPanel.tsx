@@ -190,6 +190,15 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   const { theme } = useTheme();
   const { repoSummaries, loading, error, addRepo, refresh } = useGitHubActivityFeed(FEATURED_REPOS, 10);
 
+  // Detect mobile to avoid rendering heavy desktop components
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Poll for updates every 60 seconds when tab is visible
   useEffect(() => {
     const POLL_INTERVAL = 60 * 1000; // 60 seconds
@@ -512,7 +521,8 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
         />
       </div>
 
-      {/* Tablet & Desktop: 3-Column Content */}
+      {/* Tablet & Desktop: 3-Column Content - only mount on non-mobile to avoid canvas memory issues */}
+      {!isMobile && (
       <div
         className="hidden md:flex"
         style={{
@@ -1265,6 +1275,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

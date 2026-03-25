@@ -32,6 +32,10 @@ export interface RenderOptions {
   branch?: string;
   width?: number;
   height?: number;
+  highlightFiles?: Array<{
+    path: string;
+    status: 'added' | 'modified' | 'removed';
+  }>;
 }
 
 /**
@@ -128,7 +132,15 @@ export async function renderFileCityPng(options: RenderOptions): Promise<Buffer>
     branch = 'HEAD',
     width = 400,
     height = 400,
+    highlightFiles,
   } = options;
+
+  // Convert highlight files to Map for drawBuildings
+  const changedFilesMap = highlightFiles
+    ? new Map<string, 'added' | 'modified' | 'deleted' | 'renamed'>(
+        highlightFiles.map(f => [f.path, f.status === 'removed' ? 'deleted' : f.status])
+      )
+    : undefined;
 
   // 1. Fetch GitHub tree
   const tree = await fetchGitHubTree(owner, repo, branch);
@@ -193,7 +205,8 @@ export async function renderFileCityPng(options: RenderOptions): Promise<Buffer>
     undefined, // theme
     undefined, // customColorFn
     false, // showFileNames - disabled for smaller images
-    true // fullSize
+    true, // fullSize
+    changedFilesMap // changedFiles - for commit highlights
   );
 
   // 6. Return PNG buffer

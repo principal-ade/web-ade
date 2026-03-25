@@ -113,7 +113,7 @@ export const MobileActivityFeed: React.FC<MobileActivityFeedProps> = ({
         .mobile-feed-scroll { scrollbar-width: none; -ms-overflow-style: none; }
       `}</style>
 
-      {summaries.slice(0, 2).map((summary) => (
+      {summaries.map((summary) => (
         <div
           key={summary.fullName}
           style={{
