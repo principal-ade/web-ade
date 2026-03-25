@@ -400,13 +400,94 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
           display: none;
         }
       `}</style>
-      {/* File City Section - Top (square based on width) */}
+
+      {/* Header with avatar and repo name - Above File City */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: spacing.md,
+          padding: spacing.md,
+          flexShrink: 0,
+        }}
+      >
+        {/* Avatar */}
+        <div
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: '50%',
+            backgroundColor: theme.colors.surface,
+            border: `1px solid ${theme.colors.border}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            overflow: 'hidden',
+          }}
+        >
+          {avatarLoaded ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={`https://github.com/${summary.owner}.png?size=128`}
+              alt={summary.owner}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+              onError={() => setAvatarLoaded(false)}
+            />
+          ) : (
+            <User size={24} color={theme.colors.textMuted} />
+          )}
+        </div>
+
+        {/* Name and commit count */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: theme.fontSizes[3],
+              fontWeight: 700,
+              color: theme.colors.text,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {summary.repo}
+          </h2>
+          <div
+            style={{
+              fontSize: theme.fontSizes[1],
+              color: theme.colors.textMuted,
+              marginTop: spacing.xs,
+            }}
+          >
+            {summary.owner} &middot; {summary.commitCount} commit{summary.commitCount !== 1 ? 's' : ''} in last {(() => {
+              const oldestCommit = summary.commits[summary.commits.length - 1];
+              if (!oldestCommit) return '';
+              const now = new Date();
+              const commitDate = new Date(oldestCommit.date);
+              const diffMs = now.getTime() - commitDate.getTime();
+              const diffMins = Math.floor(diffMs / (1000 * 60));
+              const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+              if (diffMins < 60) return `${diffMins} min${diffMins !== 1 ? 's' : ''}`;
+              return `${diffHours} hr${diffHours !== 1 ? 's' : ''}`;
+            })()}
+          </div>
+        </div>
+      </div>
+
+      {/* File City Section */}
       <div
         style={{
           width: '100%',
           aspectRatio: '1 / 1',
           flexShrink: 0,
           backgroundColor: theme.colors.background,
+          borderTop: `1px solid ${theme.colors.border}`,
           borderBottom: `1px solid ${theme.colors.border}`,
           display: 'flex',
           alignItems: 'center',
@@ -439,85 +520,15 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
         )}
       </div>
 
-      {/* Content Section */}
+      {/* Content Section - Commits */}
       <div
         style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          padding: spacing.md,
-          paddingBottom: 0,
         }}
       >
-        {/* Header with avatar and repo name */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: spacing.md,
-            marginBottom: spacing.md,
-          }}
-        >
-          {/* Avatar */}
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: '50%',
-              backgroundColor: theme.colors.surface,
-              border: `1px solid ${theme.colors.border}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              overflow: 'hidden',
-            }}
-          >
-            {avatarLoaded ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={`https://github.com/${summary.owner}.png?size=128`}
-                alt={summary.owner}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                }}
-                onError={() => setAvatarLoaded(false)}
-              />
-            ) : (
-              <User size={28} color={theme.colors.textMuted} />
-            )}
-          </div>
-
-          {/* Name and commit count */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h2
-              style={{
-                margin: 0,
-                fontSize: theme.fontSizes[4],
-                fontWeight: 700,
-                color: theme.colors.text,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {summary.repo}
-            </h2>
-            <div
-              style={{
-                fontSize: theme.fontSizes[1],
-                color: theme.colors.textMuted,
-                marginTop: spacing.xs,
-              }}
-            >
-              {summary.owner} &middot; {summary.commitCount} commit{summary.commitCount !== 1 ? 's' : ''}
-            </div>
-          </div>
-        </div>
-
         {/* Horizontal swipeable commits carousel */}
         <div
           ref={commitsContainerRef}
@@ -545,8 +556,6 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
                 scrollSnapAlign: 'start',
                 padding: spacing.md,
                 backgroundColor: theme.colors.surface,
-                borderRadius: 12,
-                border: `1px solid ${theme.colors.border}`,
                 display: 'flex',
                 flexDirection: 'column',
               }}
