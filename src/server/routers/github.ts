@@ -849,8 +849,8 @@ export const githubRouter = router({
           const response = await fetch(tourUrl, { method: 'HEAD' });
           const hasTour = response.ok;
 
+          // If tour exists and repo is a fork, cache under parent
           if (hasTour && repoInfo.fork && repoInfo.parent) {
-            // Cache under parent repo's key
             const parentOwner = repoInfo.parent.owner.login;
             const parentRepo = repoInfo.parent.name;
             const cacheKey = getTourAvailabilityCacheKey(parentOwner, parentRepo);
@@ -862,21 +862,14 @@ export const githubRouter = router({
               forkRepo: repo,
               checkedAt: new Date().toISOString(),
             }, TOUR_AVAILABILITY_TTL);
-
-            return {
-              hasTour: true,
-              tourPath: TOUR_PATH,
-              forkOwner: owner,
-              forkRepo: repo,
-              cached: false,
-            };
           }
 
+          // Return tour availability (even if we couldn't cache it)
           return {
-            hasTour: false,
-            tourPath: null,
-            forkOwner: null,
-            forkRepo: null,
+            hasTour,
+            tourPath: hasTour ? TOUR_PATH : null,
+            forkOwner: hasTour ? owner : null,
+            forkRepo: hasTour ? repo : null,
             cached: false,
           };
         } catch (error) {

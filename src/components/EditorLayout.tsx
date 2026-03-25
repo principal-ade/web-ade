@@ -38,7 +38,7 @@ import type { FileInfo } from '@principal-ai/repository-abstraction';
 import type { WorkflowTemplate, ExtendedCanvas, RegisteredTrace } from '@principal-ai/principal-view-core';
 import { buildStoryboardContext, type StoryboardReference } from '@principal-ai/principal-view-core';
 import { parseTaskMarkdown, serializeTaskMarkdown, DEFAULT_TASK_STATUSES } from '@backlog-md/core';
-import { markTourAsShown, hasTourBeenShown } from '@/lib/tourStorage';
+import { markTourAsShown } from '@/lib/tourStorage';
 import { trpc } from '@/lib/trpc/client';
 import type { OpenWorkflowScenariosPayload } from '@/types/panel-events';
 import { withSpanSync } from '@/lib/telemetry';
@@ -300,59 +300,30 @@ function EditorLayoutContent({
   // Check OTEL service status to conditionally show traces layout
   const { isAlive: serviceIsAlive } = useServiceStatus(serviceName);
 
-  // Tour availability state
-  const [tourAvailability, setTourAvailability] = useState<{
-    hasTour: boolean;
-    forkOwner: string | null;
-    forkRepo: string | null;
-    loading: boolean;
-  }>({ hasTour: false, forkOwner: null, forkRepo: null, loading: true });
-
-  // Check tour availability on mount
+  // Populate tour availability cache for tour org forks (fire and forget)
+  // This caches tour info under the parent repo so it can be looked up later
   useEffect(() => {
-    if (!githubRepo || !githubRepo.includes('/')) {
-      setTourAvailability({ hasTour: false, forkOwner: null, forkRepo: null, loading: false });
-      return;
-    }
+    if (!githubRepo || !githubRepo.includes('/')) return;
 
     const [owner, repo] = githubRepo.split('/');
-    if (!owner || !repo) {
-      setTourAvailability({ hasTour: false, forkOwner: null, forkRepo: null, loading: false });
-      return;
-    }
+    if (!owner || !repo) return;
 
-    const checkTour = async () => {
-      try {
-        const result = await trpc.github.checkTourAvailability.query({ owner, repo });
-        setTourAvailability({
-          hasTour: result.hasTour,
-          forkOwner: result.forkOwner,
-          forkRepo: result.forkRepo,
-          loading: false,
-        });
-      } catch (error) {
-        console.warn('[EditorLayout] Failed to check tour availability:', error);
-        setTourAvailability({ hasTour: false, forkOwner: null, forkRepo: null, loading: false });
-      }
-    };
-
-    checkTour();
+    // Fire and forget - just populate the cache
+    trpc.github.checkTourAvailability.query({ owner, repo }).catch((error) => {
+      console.warn('[EditorLayout] Failed to check tour availability:', error);
+    });
   }, [githubRepo]);
 
-  // Filter layout configs based on service status and tour availability
+  // Filter layout configs based on service status
   // Show traces layout only when OTEL heartbeat is successful
-  // Show tour layout only when a tour is available
   const filteredLayoutConfigs = useMemo(() => {
     return layoutConfigs.map(config => {
       if (config.id === 'traces') {
         return { ...config, hidden: !serviceIsAlive };
       }
-      if (config.id === 'tour') {
-        return { ...config, hidden: !tourAvailability.hasTour };
-      }
       return config;
     });
-  }, [serviceIsAlive, tourAvailability.hasTour]);
+  }, [serviceIsAlive]);
 
   // Listen for tour:exit event to mark tour as shown
   useEffect(() => {
@@ -367,30 +338,6 @@ function EditorLayoutContent({
 
     return cleanup;
   }, [events, githubRepo]);
-
-  // Auto-show tour for first-time visitors
-  useEffect(() => {
-    // Wait for tour availability check to complete
-    if (tourAvailability.loading) return;
-
-    // Only auto-show if tour is available
-    if (!tourAvailability.hasTour) return;
-
-    // Check if user has already seen the tour for this repo
-    if (!githubRepo || !githubRepo.includes('/')) return;
-    const [owner, repo] = githubRepo.split('/');
-    if (!owner || !repo) return;
-
-    // Skip if tour was already shown
-    if (hasTourBeenShown(owner, repo)) return;
-
-    // Auto-switch to tour layout
-    const tourConfig = layoutConfigs.find(c => c.id === 'tour');
-    if (tourConfig) {
-      console.log('[EditorLayout] Auto-showing tour for first-time visitor:', `${owner}/${repo}`);
-      onLayoutConfigIdChange('tour');
-    }
-  }, [tourAvailability.loading, tourAvailability.hasTour, githubRepo, onLayoutConfigIdChange]);
 
   // Handle layout configuration change
   const handleLayoutConfigChange = useCallback((config: LayoutConfig) => {
