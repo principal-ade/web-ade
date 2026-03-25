@@ -37,18 +37,31 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
   const [activeCommitIndex, setActiveCommitIndex] = useState(0);
   const commitsContainerRef = useRef<HTMLDivElement>(null);
 
-  // File City image state
-  const [cityImageLoaded, setCityImageLoaded] = useState(false);
-  const [cityImageError, setCityImageError] = useState(false);
+  // File City image state - track loaded images by commit SHA
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
   // Commit stats (additions, deletions, file count)
   const [commitStats, setCommitStats] = useState<Map<string, { additions: number; deletions: number; filesChanged: number }>>(new Map());
 
-  // File City image URL - include latest commit SHA for highlights
-  const latestCommit = summary.commits[0];
-  const fileCityImageUrl = latestCommit
-    ? `/api/file-city/${summary.owner}/${summary.repo}?width=800&height=800&commit=${latestCommit.sha}`
-    : `/api/file-city/${summary.owner}/${summary.repo}?width=800&height=800`;
+  // File City image URL based on active commit
+  const activeCommit = summary.commits[activeCommitIndex];
+  const baseImageUrl = `/api/file-city/${summary.owner}/${summary.repo}?width=800&height=800`;
+  const fileCityImageUrl = activeCommit
+    ? `${baseImageUrl}&commit=${activeCommit.sha}`
+    : baseImageUrl;
+
+  // Prefetch next commit's image
+  const nextCommit = summary.commits[activeCommitIndex + 1];
+  useEffect(() => {
+    if (nextCommit && !loadedImages.has(nextCommit.sha) && !imageErrors.has(nextCommit.sha)) {
+      const img = new Image();
+      img.src = `${baseImageUrl}&commit=${nextCommit.sha}`;
+      img.onload = () => {
+        setLoadedImages(prev => new Set(prev).add(nextCommit.sha));
+      };
+    }
+  }, [nextCommit, baseImageUrl, loadedImages, imageErrors]);
 
   const spacing = {
     xs: 4,
@@ -220,9 +233,10 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
+          position: 'relative',
         }}
       >
-        {!cityImageLoaded && !cityImageError && (
+        {activeCommit && !loadedImages.has(activeCommit.sha) && !imageErrors.has(activeCommit.sha) && (
           <div
             style={{
               position: 'absolute',
@@ -231,28 +245,38 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
               alignItems: 'center',
               gap: spacing.sm,
               color: theme.colors.textMuted,
+              zIndex: 1,
             }}
           >
             <FolderGit2 size={32} style={{ opacity: 0.5 }} />
             <span style={{ fontSize: theme.fontSizes[0] }}>Loading...</span>
           </div>
         )}
-        {cityImageError ? (
+        {activeCommit && imageErrors.has(activeCommit.sha) ? (
           <FolderGit2 size={64} color={theme.colors.textMuted} style={{ opacity: 0.3 }} />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img
+            key={activeCommit?.sha || 'no-commit'}
             src={fileCityImageUrl}
             alt={`${summary.fullName} file structure`}
             style={{
               width: '100%',
               height: '100%',
               objectFit: 'contain',
-              opacity: cityImageLoaded ? 1 : 0,
+              opacity: activeCommit && loadedImages.has(activeCommit.sha) ? 1 : 0,
               transition: 'opacity 0.2s ease',
             }}
-            onLoad={() => setCityImageLoaded(true)}
-            onError={() => setCityImageError(true)}
+            onLoad={() => {
+              if (activeCommit) {
+                setLoadedImages(prev => new Set(prev).add(activeCommit.sha));
+              }
+            }}
+            onError={() => {
+              if (activeCommit) {
+                setImageErrors(prev => new Set(prev).add(activeCommit.sha));
+              }
+            }}
           />
         )}
       </div>
