@@ -17,8 +17,10 @@ import {
   Play,
   Square,
   ExternalLink,
+  Sparkles,
 } from 'lucide-react';
 import type { RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
+import { CommitExplainModal } from '@/components/CommitExplainModal';
 import { trpc } from '@/lib/trpc/client';
 import {
   ArchitectureMapHighlightLayers,
@@ -223,6 +225,9 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
 
   // Files changed per commit
   const [commitFiles, setCommitFiles] = useState<Map<string, Array<{ filename: string; status: string; additions: number; deletions: number }>>>(new Map());
+
+  // Explain modal state
+  const [isExplainModalOpen, setIsExplainModalOpen] = useState(false);
 
   // Get the commit to display (animation > hovered > selected)
   const displayedCommitIndex = animationCommitIndex ?? hoveredCommitIndex ?? selectedCommitIndex;
@@ -888,6 +893,30 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
               <span>Open</span>
             </button>
 
+            {/* Explain button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExplainModalOpen(true);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.xs,
+                padding: `${spacing.xs}px ${spacing.sm}px`,
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.primary,
+                backgroundColor: 'transparent',
+                border: `1px solid ${theme.colors.primary}`,
+                borderRadius: 4,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <Sparkles size={12} />
+              <span>Explain</span>
+            </button>
+
             {/* Show details button */}
             {hasMoreCommits && (
               <button
@@ -982,6 +1011,14 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
           </div>
         );
       })()}
+
+      {/* Commit Explain Modal */}
+      <CommitExplainModal
+        isOpen={isExplainModalOpen}
+        onClose={() => setIsExplainModalOpen(false)}
+        commits={summary.commits}
+        repoName={summary.fullName}
+      />
     </div>
   );
 };
