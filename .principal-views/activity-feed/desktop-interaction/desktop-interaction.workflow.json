@@ -1,0 +1,54 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/activity-feed/activity-feed.otel.canvas",
+  "spanPattern": "activity-feed.desktop",
+  "name": "Desktop Feed Interaction",
+  "description": "User interactions on the desktop activity feed",
+  "scenarios": [
+    {
+      "id": "search-and-select",
+      "description": "User searches and selects a repository",
+      "priority": 1,
+      "template": {
+        "summary": "[Search] Selected {{repoFullName}}",
+        "events": {
+          "activity-feed.desktop.search.query": "Search (type: {{queryType}}): {{resultCount}} results",
+          "activity-feed.desktop.repo.select": "Selected {{repoFullName}} from {{source}}"
+        }
+      }
+    },
+    {
+      "id": "heatmap-filter",
+      "description": "User applies time filter via heatmap",
+      "priority": 2,
+      "template": {
+        "summary": "[Filter] Hour {{hour}} ({{commitCount}} commits)",
+        "events": {
+          "activity-feed.desktop.heatmap.filter": "Heatmap {{action}}: hour {{hour}} with {{commitCount}} commits"
+        }
+      }
+    },
+    {
+      "id": "author-profile",
+      "description": "User views an author's GitHub profile",
+      "priority": 3,
+      "template": {
+        "summary": "[Author] Viewing {{username}}",
+        "events": {
+          "activity-feed.desktop.author.view": "Viewing profile for @{{username}} (loaded: {{profileLoaded}})"
+        }
+      }
+    },
+    {
+      "id": "card-toggle",
+      "description": "User expands or collapses a repo card",
+      "priority": 4,
+      "template": {
+        "summary": "[Card] {{repoFullName}} {{isExpanded}}",
+        "events": {
+          "activity-feed.desktop.card.toggle": "Card {{repoFullName}}: expanded={{isExpanded}}"
+        }
+      }
+    }
+  ]
+}

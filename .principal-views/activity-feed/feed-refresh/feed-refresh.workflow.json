@@ -1,0 +1,34 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/activity-feed/activity-feed.otel.canvas",
+  "spanPattern": "activity-feed.refresh",
+  "name": "Activity Feed Refresh",
+  "description": "Background polling and manual refresh of feed data",
+  "scenarios": [
+    {
+      "id": "polling-update",
+      "description": "Polling refresh finds new commits",
+      "priority": 1,
+      "template": {
+        "summary": "[Refresh] {{updatedCount}} repos updated",
+        "events": {
+          "activity-feed.refresh.started": "Refresh triggered (trigger: {{trigger}}, ETags: {{useEtags}})",
+          "activity-feed.fetch.batch.started": "Fetching {{repoCount}} repos (ETags: {{useEtags}})",
+          "activity-feed.fetch.repo.loaded": "Repo {{repoFullName}}: {{commitCount}} commits (cached: {{wasNotModified}}, etag: {{hasEtag}})",
+          "activity-feed.refresh.complete": "Refresh done: {{updatedCount}} updated, {{unchangedCount}} unchanged"
+        }
+      }
+    },
+    {
+      "id": "visibility-change",
+      "description": "Tab visibility changes (pause or resume polling)",
+      "priority": 2,
+      "template": {
+        "summary": "[Visibility] {{pollingAction}}",
+        "events": {
+          "activity-feed.visibility.change": "Tab visibility: {{isVisible}} (action: {{pollingAction}})"
+        }
+      }
+    }
+  ]
+}

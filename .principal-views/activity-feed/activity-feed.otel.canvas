@@ -1,0 +1,952 @@
+{
+  "pv": {
+    "name": "Activity Feed",
+    "version": "1.0.0",
+    "markdown": ".principal-views/activity-feed/activity-feed.md",
+    "edgeTypes": {
+      "flow": {
+        "label": "Flow"
+      },
+      "error": {
+        "label": "Error Path"
+      },
+      "user-action": {
+        "label": "User Action"
+      },
+      "data-flow": {
+        "label": "Data Flow"
+      },
+      "conditional": {
+        "label": "Conditional"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "feed-init-started",
+      "type": "otel-event",
+      "x": 100,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "color": "#16a34a",
+      "label": "Feed Init Started",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/hooks/useGitHubActivityFeed.ts",
+          "src/panels/ActivityFeedPanel.tsx"
+        ],
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a"
+      },
+      "event": {
+        "name": "activity-feed.init.started",
+        "attributes": {
+          "repoCount": {
+            "type": "integer",
+            "description": "Number of featured repos to fetch",
+            "required": true
+          },
+          "commitsPerRepo": {
+            "type": "integer",
+            "description": "Max commits to fetch per repo (default: 10)",
+            "required": true
+          },
+          "isMobile": {
+            "type": "boolean",
+            "description": "Whether mobile view is active",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "feed-fetch-batch",
+      "type": "otel-event",
+      "x": 100,
+      "y": 200,
+      "width": 200,
+      "height": 100,
+      "color": "#6d28d9",
+      "label": "Batch Fetch Repos",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/hooks/useGitHubActivityFeed.ts"
+        ],
+        "shape": "rectangle",
+        "fill": "#8b5cf6",
+        "stroke": "#6d28d9"
+      },
+      "event": {
+        "name": "activity-feed.fetch.batch.started",
+        "attributes": {
+          "repoCount": {
+            "type": "integer",
+            "description": "Number of repos being fetched in parallel",
+            "required": true
+          },
+          "useEtags": {
+            "type": "boolean",
+            "description": "Whether ETags are being used for conditional requests",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "feed-fetch-repo-item",
+      "type": "otel-event",
+      "x": 100,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "color": "#0891b2",
+      "label": "Repo Commits Loaded",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/hooks/useGitHubActivityFeed.ts"
+        ],
+        "shape": "rectangle",
+        "fill": "#06b6d4",
+        "stroke": "#0891b2"
+      },
+      "event": {
+        "name": "activity-feed.fetch.repo.loaded",
+        "attributes": {
+          "repoFullName": {
+            "type": "string",
+            "description": "Repository full name (owner/repo)",
+            "required": true
+          },
+          "commitCount": {
+            "type": "integer",
+            "description": "Number of commits in last 24 hours",
+            "required": true
+          },
+          "wasNotModified": {
+            "type": "boolean",
+            "description": "Whether response was 304 Not Modified (cached)",
+            "required": false
+          },
+          "hasEtag": {
+            "type": "boolean",
+            "description": "Whether ETag was stored for future requests",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "feed-fetch-repo-error",
+      "type": "otel-event",
+      "x": 400,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "color": "#dc2626",
+      "label": "Repo Fetch Error",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/hooks/useGitHubActivityFeed.ts"
+        ],
+        "shape": "rectangle",
+        "fill": "#ef4444",
+        "stroke": "#dc2626"
+      },
+      "event": {
+        "name": "activity-feed.fetch.repo.error",
+        "attributes": {
+          "repoFullName": {
+            "type": "string",
+            "description": "Repository that failed to load",
+            "required": true
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
+          },
+          "httpStatus": {
+            "type": "integer",
+            "description": "HTTP status code if available",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "feed-init-success",
+      "type": "otel-event",
+      "x": 100,
+      "y": 500,
+      "width": 200,
+      "height": 100,
+      "color": "#16a34a",
+      "label": "Feed Ready",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/hooks/useGitHubActivityFeed.ts",
+          "src/panels/ActivityFeedPanel.tsx"
+        ],
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a"
+      },
+      "event": {
+        "name": "activity-feed.init.success",
+        "attributes": {
+          "repoCount": {
+            "type": "integer",
+            "description": "Number of repos with activity",
+            "required": true
+          },
+          "totalCommits": {
+            "type": "integer",
+            "description": "Total commits across all repos",
+            "required": true
+          },
+          "hourGroupCount": {
+            "type": "integer",
+            "description": "Number of hour groups for display",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "feed-init-empty",
+      "type": "otel-event",
+      "x": 400,
+      "y": 500,
+      "width": 200,
+      "height": 100,
+      "color": "#4b5563",
+      "label": "Feed Empty",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/panels/ActivityFeedPanel.tsx",
+          "src/components/home/MobileActivityFeed.tsx"
+        ],
+        "shape": "rectangle",
+        "fill": "#6b7280",
+        "stroke": "#4b5563"
+      },
+      "event": {
+        "name": "activity-feed.init.empty",
+        "attributes": {
+          "reason": {
+            "type": "string",
+            "description": "Why feed is empty: 'no-repos', 'no-recent-commits', 'time-filter'",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "feed-init-error",
+      "type": "otel-event",
+      "x": 400,
+      "y": 200,
+      "width": 200,
+      "height": 100,
+      "color": "#dc2626",
+      "label": "Init Error",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/hooks/useGitHubActivityFeed.ts"
+        ],
+        "shape": "rectangle",
+        "fill": "#ef4444",
+        "stroke": "#dc2626"
+      },
+      "event": {
+        "name": "activity-feed.init.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "feed-refresh-started",
+      "type": "otel-event",
+      "x": -200,
+      "y": 200,
+      "width": 200,
+      "height": 100,
+      "color": "#1d4ed8",
+      "label": "Refresh Started",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/hooks/useGitHubActivityFeed.ts",
+          "src/panels/ActivityFeedPanel.tsx"
+        ],
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "stroke": "#1d4ed8"
+      },
+      "event": {
+        "name": "activity-feed.refresh.started",
+        "attributes": {
+          "trigger": {
+            "type": "string",
+            "description": "What triggered refresh: 'polling', 'visibility', 'manual'",
+            "required": true
+          },
+          "useEtags": {
+            "type": "boolean",
+            "description": "Whether using ETags for conditional requests",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "feed-refresh-complete",
+      "type": "otel-event",
+      "x": -200,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "color": "#16a34a",
+      "label": "Refresh Complete",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/hooks/useGitHubActivityFeed.ts"
+        ],
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a"
+      },
+      "event": {
+        "name": "activity-feed.refresh.complete",
+        "attributes": {
+          "updatedCount": {
+            "type": "integer",
+            "description": "Number of repos that had new data",
+            "required": true
+          },
+          "unchangedCount": {
+            "type": "integer",
+            "description": "Number of repos with 304 Not Modified",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "feed-visibility-change",
+      "type": "otel-event",
+      "x": -200,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "color": "#4b5563",
+      "label": "Visibility Change",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/panels/ActivityFeedPanel.tsx"
+        ],
+        "shape": "rectangle",
+        "fill": "#6b7280",
+        "stroke": "#4b5563"
+      },
+      "event": {
+        "name": "activity-feed.visibility.change",
+        "attributes": {
+          "isVisible": {
+            "type": "boolean",
+            "description": "Whether tab is now visible",
+            "required": true
+          },
+          "pollingAction": {
+            "type": "string",
+            "description": "Action taken: 'start', 'stop', 'resume-with-refresh'",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "mobile-card-swipe",
+      "type": "otel-event",
+      "x": 100,
+      "y": 700,
+      "width": 200,
+      "height": 100,
+      "color": "#0891b2",
+      "label": "Card Swipe",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/components/home/MobileActivityFeed.tsx"
+        ],
+        "shape": "rectangle",
+        "fill": "#06b6d4",
+        "stroke": "#0891b2"
+      },
+      "event": {
+        "name": "activity-feed.mobile.card.swipe",
+        "attributes": {
+          "fromIndex": {
+            "type": "integer",
+            "description": "Previous card index",
+            "required": true
+          },
+          "toIndex": {
+            "type": "integer",
+            "description": "New card index",
+            "required": true
+          },
+          "repoFullName": {
+            "type": "string",
+            "description": "Repository now visible",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "mobile-commit-swipe",
+      "type": "otel-event",
+      "x": 100,
+      "y": 850,
+      "width": 200,
+      "height": 100,
+      "color": "#0891b2",
+      "label": "Commit Swipe",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/components/home/MobileRepoCard.tsx"
+        ],
+        "shape": "rectangle",
+        "fill": "#06b6d4",
+        "stroke": "#0891b2"
+      },
+      "event": {
+        "name": "activity-feed.mobile.commit.swipe",
+        "attributes": {
+          "repoFullName": {
+            "type": "string",
+            "description": "Repository being viewed",
+            "required": true
+          },
+          "fromCommitIndex": {
+            "type": "integer",
+            "description": "Previous commit index",
+            "required": true
+          },
+          "toCommitIndex": {
+            "type": "integer",
+            "description": "New commit index",
+            "required": true
+          },
+          "commitSha": {
+            "type": "string",
+            "description": "Commit SHA now visible",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "mobile-filecity-load",
+      "type": "otel-event",
+      "x": 100,
+      "y": 1000,
+      "width": 200,
+      "height": 100,
+      "color": "#16a34a",
+      "label": "File City Loaded",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/components/home/MobileRepoCard.tsx"
+        ],
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a"
+      },
+      "event": {
+        "name": "activity-feed.mobile.filecity.loaded",
+        "attributes": {
+          "repoFullName": {
+            "type": "string",
+            "description": "Repository being visualized",
+            "required": true
+          },
+          "commitSha": {
+            "type": "string",
+            "description": "Commit SHA highlighting changes",
+            "required": false
+          },
+          "wasPrefetched": {
+            "type": "boolean",
+            "description": "Whether image was prefetched",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "mobile-filecity-error",
+      "type": "otel-event",
+      "x": 400,
+      "y": 1000,
+      "width": 200,
+      "height": 100,
+      "color": "#dc2626",
+      "label": "File City Error",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/components/home/MobileRepoCard.tsx"
+        ],
+        "shape": "rectangle",
+        "fill": "#ef4444",
+        "stroke": "#dc2626"
+      },
+      "event": {
+        "name": "activity-feed.mobile.filecity.error",
+        "attributes": {
+          "repoFullName": {
+            "type": "string",
+            "description": "Repository that failed",
+            "required": true
+          },
+          "commitSha": {
+            "type": "string",
+            "description": "Commit SHA if applicable",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "mobile-stats-load",
+      "type": "otel-event",
+      "x": 400,
+      "y": 850,
+      "width": 200,
+      "height": 100,
+      "color": "#6d28d9",
+      "label": "Commit Stats Loaded",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/components/home/MobileRepoCard.tsx"
+        ],
+        "shape": "rectangle",
+        "fill": "#8b5cf6",
+        "stroke": "#6d28d9"
+      },
+      "event": {
+        "name": "activity-feed.mobile.stats.loaded",
+        "attributes": {
+          "repoFullName": {
+            "type": "string",
+            "description": "Repository being viewed",
+            "required": true
+          },
+          "commitCount": {
+            "type": "integer",
+            "description": "Number of commits with stats loaded",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "desktop-search-query",
+      "type": "otel-event",
+      "x": 700,
+      "y": 200,
+      "width": 200,
+      "height": 100,
+      "color": "#1d4ed8",
+      "label": "Search Query",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/panels/ActivityFeedPanel.tsx"
+        ],
+        "shape": "rectangle",
+        "fill": "#3b82f6",
+        "stroke": "#1d4ed8"
+      },
+      "event": {
+        "name": "activity-feed.desktop.search.query",
+        "attributes": {
+          "queryType": {
+            "type": "string",
+            "description": "Type of query: 'text', 'github-url', 'owner/repo'",
+            "required": true
+          },
+          "resultCount": {
+            "type": "integer",
+            "description": "Number of search results",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "desktop-repo-select",
+      "type": "otel-event",
+      "x": 700,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "color": "#16a34a",
+      "label": "Repo Selected",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/panels/ActivityFeedPanel.tsx"
+        ],
+        "shape": "rectangle",
+        "fill": "#22c55e",
+        "stroke": "#16a34a"
+      },
+      "event": {
+        "name": "activity-feed.desktop.repo.select",
+        "attributes": {
+          "repoFullName": {
+            "type": "string",
+            "description": "Repository selected from search",
+            "required": true
+          },
+          "source": {
+            "type": "string",
+            "description": "Selection source: 'search', 'featured'",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "desktop-heatmap-click",
+      "type": "otel-event",
+      "x": 700,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "color": "#0891b2",
+      "label": "Heatmap Filter",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/panels/ActivityFeedPanel.tsx"
+        ],
+        "shape": "rectangle",
+        "fill": "#06b6d4",
+        "stroke": "#0891b2"
+      },
+      "event": {
+        "name": "activity-feed.desktop.heatmap.filter",
+        "attributes": {
+          "action": {
+            "type": "string",
+            "description": "Filter action: 'apply', 'clear', 'toggle'",
+            "required": true
+          },
+          "hour": {
+            "type": "integer",
+            "description": "Hour being filtered (0-23)",
+            "required": false
+          },
+          "commitCount": {
+            "type": "integer",
+            "description": "Commits in selected time block",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "desktop-author-click",
+      "type": "otel-event",
+      "x": 700,
+      "y": 500,
+      "width": 200,
+      "height": 100,
+      "color": "#0891b2",
+      "label": "Author Profile View",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/panels/ActivityFeedPanel.tsx"
+        ],
+        "shape": "rectangle",
+        "fill": "#06b6d4",
+        "stroke": "#0891b2"
+      },
+      "event": {
+        "name": "activity-feed.desktop.author.view",
+        "attributes": {
+          "username": {
+            "type": "string",
+            "description": "GitHub username being viewed",
+            "required": true
+          },
+          "profileLoaded": {
+            "type": "boolean",
+            "description": "Whether profile was successfully loaded",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "desktop-card-expand",
+      "type": "otel-event",
+      "x": 700,
+      "y": 650,
+      "width": 200,
+      "height": 100,
+      "color": "#4b5563",
+      "label": "Card Expand/Collapse",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/panels/ActivityFeedPanel.tsx",
+          "src/panels/RepoActivityCard.tsx"
+        ],
+        "shape": "rectangle",
+        "fill": "#6b7280",
+        "stroke": "#4b5563"
+      },
+      "event": {
+        "name": "activity-feed.desktop.card.toggle",
+        "attributes": {
+          "repoFullName": {
+            "type": "string",
+            "description": "Repository card toggled",
+            "required": true
+          },
+          "isExpanded": {
+            "type": "boolean",
+            "description": "New expansion state",
+            "required": true
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "init-1",
+      "fromNode": "feed-init-started",
+      "fromSide": "bottom",
+      "toNode": "feed-fetch-batch",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "init-2",
+      "fromNode": "feed-fetch-batch",
+      "fromSide": "bottom",
+      "toNode": "feed-fetch-repo-item",
+      "toSide": "top",
+      "label": "per repo",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "init-3",
+      "fromNode": "feed-fetch-batch",
+      "fromSide": "right",
+      "toNode": "feed-fetch-repo-error",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "init-4",
+      "fromNode": "feed-fetch-batch",
+      "fromSide": "right",
+      "toNode": "feed-init-error",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "init-5",
+      "fromNode": "feed-fetch-repo-item",
+      "fromSide": "bottom",
+      "toNode": "feed-init-success",
+      "toSide": "top",
+      "label": "all loaded",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "init-6",
+      "fromNode": "feed-fetch-repo-item",
+      "fromSide": "right",
+      "toNode": "feed-init-empty",
+      "toSide": "left",
+      "label": "no commits",
+      "pv": {
+        "edgeType": "conditional"
+      }
+    },
+    {
+      "id": "refresh-1",
+      "fromNode": "feed-visibility-change",
+      "fromSide": "bottom",
+      "toNode": "feed-refresh-started",
+      "toSide": "top",
+      "label": "visible",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "refresh-2",
+      "fromNode": "feed-refresh-started",
+      "fromSide": "bottom",
+      "toNode": "feed-refresh-complete",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "refresh-3",
+      "fromNode": "feed-refresh-started",
+      "fromSide": "right",
+      "toNode": "feed-fetch-batch",
+      "toSide": "left",
+      "label": "triggers",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "mobile-1",
+      "fromNode": "feed-init-success",
+      "fromSide": "bottom",
+      "toNode": "mobile-card-swipe",
+      "toSide": "top",
+      "label": "mobile UI",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "mobile-2",
+      "fromNode": "mobile-card-swipe",
+      "fromSide": "bottom",
+      "toNode": "mobile-commit-swipe",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "mobile-3",
+      "fromNode": "mobile-commit-swipe",
+      "fromSide": "bottom",
+      "toNode": "mobile-filecity-load",
+      "toSide": "top",
+      "label": "triggers",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "mobile-4",
+      "fromNode": "mobile-commit-swipe",
+      "fromSide": "right",
+      "toNode": "mobile-stats-load",
+      "toSide": "left",
+      "label": "parallel",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "mobile-5",
+      "fromNode": "mobile-filecity-load",
+      "fromSide": "right",
+      "toNode": "mobile-filecity-error",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "desktop-1",
+      "fromNode": "feed-init-success",
+      "fromSide": "right",
+      "toNode": "desktop-heatmap-click",
+      "toSide": "left",
+      "label": "desktop UI",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "desktop-2",
+      "fromNode": "desktop-heatmap-click",
+      "fromSide": "bottom",
+      "toNode": "desktop-search-query",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "desktop-3",
+      "fromNode": "desktop-search-query",
+      "fromSide": "bottom",
+      "toNode": "desktop-repo-select",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "desktop-4",
+      "fromNode": "desktop-repo-select",
+      "fromSide": "bottom",
+      "toNode": "desktop-author-click",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    },
+    {
+      "id": "desktop-5",
+      "fromNode": "desktop-author-click",
+      "fromSide": "bottom",
+      "toNode": "desktop-card-expand",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "user-action"
+      }
+    }
+  ]
+}

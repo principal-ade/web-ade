@@ -1,0 +1,46 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/activity-feed/activity-feed.otel.canvas",
+  "spanPattern": "activity-feed.mobile",
+  "name": "Mobile Feed Interaction",
+  "description": "User interactions on the mobile activity feed",
+  "scenarios": [
+    {
+      "id": "card-swipe",
+      "description": "User swipes vertically to view different repository",
+      "priority": 1,
+      "template": {
+        "summary": "[Swipe] Viewing {{repoFullName}}",
+        "events": {
+          "activity-feed.mobile.card.swipe": "Swiped from card {{fromIndex}} to {{toIndex}}: {{repoFullName}}",
+          "activity-feed.mobile.filecity.loaded": "File City loaded for {{repoFullName}} (prefetched: {{wasPrefetched}})",
+          "activity-feed.mobile.stats.loaded": "Stats loaded for {{repoFullName}}: {{commitCount}} commits"
+        }
+      }
+    },
+    {
+      "id": "commit-browse",
+      "description": "User swipes horizontally through commits",
+      "priority": 2,
+      "template": {
+        "summary": "[Commit] Viewing {{commitSha}} on {{repoFullName}}",
+        "events": {
+          "activity-feed.mobile.commit.swipe": "Commit swipe on {{repoFullName}}: {{fromCommitIndex}} -> {{toCommitIndex}} ({{commitSha}})",
+          "activity-feed.mobile.filecity.loaded": "File City updated for commit {{commitSha}} (prefetched: {{wasPrefetched}})"
+        }
+      }
+    },
+    {
+      "id": "filecity-error",
+      "description": "File City image fails to load",
+      "priority": 3,
+      "template": {
+        "summary": "[Error] File City failed for {{repoFullName}}",
+        "events": {
+          "activity-feed.mobile.commit.swipe": "Commit swipe on {{repoFullName}}: {{fromCommitIndex}} -> {{toCommitIndex}}",
+          "activity-feed.mobile.filecity.error": "File City error for {{repoFullName}} commit {{commitSha}}"
+        }
+      }
+    }
+  ]
+}

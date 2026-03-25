@@ -1,0 +1,63 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/activity-feed/activity-feed.otel.canvas",
+  "spanPattern": "activity-feed.load",
+  "name": "Activity Feed Load",
+  "description": "Initial load of the activity feed with featured repositories",
+  "scenarios": [
+    {
+      "id": "success",
+      "description": "Feed loads successfully with commits from featured repos",
+      "priority": 1,
+      "template": {
+        "summary": "[Success] Feed loaded with {{repoCount}} repos, {{totalCommits}} commits",
+        "events": {
+          "activity-feed.init.started": "Starting feed ({{repoCount}} repos, {{commitsPerRepo}} commits/repo, mobile: {{isMobile}})",
+          "activity-feed.fetch.batch.started": "Fetching {{repoCount}} repos in parallel (ETags: {{useEtags}})",
+          "activity-feed.fetch.repo.loaded": "Loaded {{repoFullName}}: {{commitCount}} commits (cached: {{wasNotModified}}, etag: {{hasEtag}})",
+          "activity-feed.init.success": "Feed ready: {{repoCount}} repos, {{totalCommits}} commits, {{hourGroupCount}} hour groups"
+        }
+      }
+    },
+    {
+      "id": "empty",
+      "description": "Feed loads but no recent commits found",
+      "priority": 2,
+      "template": {
+        "summary": "[Empty] No recent activity",
+        "events": {
+          "activity-feed.init.started": "Starting feed ({{repoCount}} repos, {{commitsPerRepo}} commits/repo, mobile: {{isMobile}})",
+          "activity-feed.fetch.batch.started": "Fetching {{repoCount}} repos in parallel (ETags: {{useEtags}})",
+          "activity-feed.init.empty": "Feed empty: {{reason}}"
+        }
+      }
+    },
+    {
+      "id": "partial-error",
+      "description": "Some repos fail to load but feed still displays",
+      "priority": 3,
+      "template": {
+        "summary": "[Partial] Some repos failed to load",
+        "events": {
+          "activity-feed.init.started": "Starting feed ({{repoCount}} repos, {{commitsPerRepo}} commits/repo, mobile: {{isMobile}})",
+          "activity-feed.fetch.batch.started": "Fetching {{repoCount}} repos in parallel (ETags: {{useEtags}})",
+          "activity-feed.fetch.repo.error": "Failed to load {{repoFullName}}: {{error.message}} (HTTP {{httpStatus}})",
+          "activity-feed.init.success": "Feed ready with partial data: {{repoCount}} repos"
+        }
+      }
+    },
+    {
+      "id": "error",
+      "description": "Feed fails to load entirely",
+      "priority": 4,
+      "template": {
+        "summary": "[Error] Feed failed to load",
+        "events": {
+          "activity-feed.init.started": "Starting feed ({{repoCount}} repos, {{commitsPerRepo}} commits/repo, mobile: {{isMobile}})",
+          "activity-feed.fetch.batch.started": "Fetching {{repoCount}} repos in parallel (ETags: {{useEtags}})",
+          "activity-feed.init.error": "Error: {{error.message}}"
+        }
+      }
+    }
+  ]
+}
