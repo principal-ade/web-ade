@@ -21,6 +21,7 @@ import {
   setCachedAsync,
   getRefShaCacheKey,
   getTreeCacheKey,
+  getTourAvailabilityCacheKey,
 } from '@/lib/redis-cache';
 import { PackageLayerModule } from '@principal-ai/codebase-composition';
 import type { FileTree, FileInfo, DirectoryInfo } from '@principal-ai/repository-abstraction';
@@ -405,6 +406,25 @@ const featuredRepoSchema = z.object({
 });
 
 const getFeaturedReposOutputSchema = z.array(featuredRepoSchema);
+
+// Schema for tour availability check
+const checkTourAvailabilityInputSchema = z.object({
+  owner: z.string().min(1),
+  repo: z.string().min(1),
+});
+
+const tourAvailabilitySchema = z.object({
+  hasTour: z.boolean(),
+  tourPath: z.string().nullable(),
+  forkOwner: z.string().nullable(),
+  forkRepo: z.string().nullable(),
+  cached: z.boolean(),
+});
+
+// Organizations that host tour forks
+const TOUR_ORGS = ['Principal-Forks', 'Telementry-Test', 'TheKicker25', 'X-File-City'];
+const TOUR_PATH = 'docs/tours/introduction.tour.json';
+const TOUR_AVAILABILITY_TTL = 86400; // 24 hours
 
 export const githubRouter = router({
   /**
@@ -792,6 +812,113 @@ export const githubRouter = router({
           treeSha: undefined,
         };
       }
+    }),
+
+  /**
+   * Check if a repository has a tour available
+   *
+   * For tour org forks: checks if tour exists and caches under parent repo
+   * For any repo: checks cache to see if a tour is available from a fork
+   */
+  checkTourAvailability: publicProcedure
+    .input(checkTourAvailabilityInputSchema)
+    .output(tourAvailabilitySchema)
+    .query(async ({ input }) => {
+      const { owner, repo } = input;
+      const userToken = await getGitHubToken();
+      const isTourOrg = TOUR_ORGS.includes(owner);
+
+      // If viewing a tour org fork, check if it has a tour and cache under parent
+      if (isTourOrg) {
+        // Check if tour file exists via HEAD request to raw.githubusercontent.com
+        try {
+          // First get repo info to find default branch
+          const repoInfo = await makeGitHubRequest<{
+            default_branch: string;
+            fork: boolean;
+            parent?: {
+              owner: { login: string };
+              name: string;
+              full_name: string;
+            };
+          }>(`/repos/${owner}/${repo}`, userToken);
+
+          const branch = repoInfo.default_branch || 'main';
+          const tourUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${TOUR_PATH}`;
+
+          const response = await fetch(tourUrl, { method: 'HEAD' });
+          const hasTour = response.ok;
+
+          if (hasTour && repoInfo.fork && repoInfo.parent) {
+            // Cache under parent repo's key
+            const parentOwner = repoInfo.parent.owner.login;
+            const parentRepo = repoInfo.parent.name;
+            const cacheKey = getTourAvailabilityCacheKey(parentOwner, parentRepo);
+
+            setCachedAsync(cacheKey, {
+              hasTour: true,
+              tourPath: TOUR_PATH,
+              forkOwner: owner,
+              forkRepo: repo,
+              checkedAt: new Date().toISOString(),
+            }, TOUR_AVAILABILITY_TTL);
+
+            return {
+              hasTour: true,
+              tourPath: TOUR_PATH,
+              forkOwner: owner,
+              forkRepo: repo,
+              cached: false,
+            };
+          }
+
+          return {
+            hasTour: false,
+            tourPath: null,
+            forkOwner: null,
+            forkRepo: null,
+            cached: false,
+          };
+        } catch (error) {
+          console.error(`[checkTourAvailability] Error checking tour for ${owner}/${repo}:`, error);
+          return {
+            hasTour: false,
+            tourPath: null,
+            forkOwner: null,
+            forkRepo: null,
+            cached: false,
+          };
+        }
+      }
+
+      // For non-tour-org repos, check if there's cached tour availability
+      const cacheKey = getTourAvailabilityCacheKey(owner, repo);
+      const cached = await getCached<{
+        hasTour: boolean;
+        tourPath: string;
+        forkOwner: string;
+        forkRepo: string;
+        checkedAt: string;
+      }>(cacheKey);
+
+      if (cached) {
+        return {
+          hasTour: cached.hasTour,
+          tourPath: cached.tourPath,
+          forkOwner: cached.forkOwner,
+          forkRepo: cached.forkRepo,
+          cached: true,
+        };
+      }
+
+      // No cached info - tour not known to be available
+      return {
+        hasTour: false,
+        tourPath: null,
+        forkOwner: null,
+        forkRepo: null,
+        cached: false,
+      };
     }),
 
   /**

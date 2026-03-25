@@ -153,3 +153,14 @@ export function getCommitDetailCacheKey(
 ): string {
   return `github:v1:commit:${owner}/${repo}:${sha}`;
 }
+
+/**
+ * Generate cache key for tour availability
+ * Keyed by PARENT repo - stores info about which fork has the tour
+ */
+export function getTourAvailabilityCacheKey(
+  parentOwner: string,
+  parentRepo: string
+): string {
+  return `tour-available:${parentOwner}/${parentRepo}`;
+}

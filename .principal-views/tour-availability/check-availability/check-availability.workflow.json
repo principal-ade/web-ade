@@ -1,0 +1,61 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/tour-availability/tour-availability.otel.canvas",
+  "spanPattern": "tour.availability.check",
+  "name": "Tour Availability Check",
+  "description": "Check if a fork repository has a tour and cache under parent repo",
+  "scenarios": [
+    {
+      "id": "cache-hit",
+      "description": "Tour availability already cached for parent repo",
+      "priority": 1,
+      "template": {
+        "summary": "[Cache Hit] Tour availability for {{parentRepo}}: {{hasTour}}",
+        "events": {
+          "tour.availability.check": "Checking tour for {{owner}}/{{repo}} (tour org: {{isTourOrg}})",
+          "tour.availability.cache.hit": "Found cached: {{parentRepo}} hasTour={{hasTour}} (fork: {{forkOwner}}/{{forkRepo}})"
+        }
+      }
+    },
+    {
+      "id": "tour-found-and-cached",
+      "description": "Tour discovered in fork and cached under parent",
+      "priority": 2,
+      "template": {
+        "summary": "[Tour Found] {{forkOwner}}/{{forkRepo}} has tour, cached for {{parentOwner}}/{{parentRepo}}",
+        "events": {
+          "tour.availability.check": "Checking tour for {{owner}}/{{repo}} (tour org: {{isTourOrg}})",
+          "tour.availability.cache.miss": "No cache for {{owner}}/{{repo}}, checking GitHub",
+          "tour.availability.tour.found": "Tour found at {{owner}}/{{repo}}: {{tourPath}}",
+          "tour.availability.parent.resolved": "Fork {{forkOwner}}/{{forkRepo}} -> Parent: {{parentOwner}}/{{parentRepo}}",
+          "tour.availability.cached": "Cached under {{cacheKey}}: hasTour={{hasTour}} (TTL: {{ttlSeconds}}s)"
+        }
+      }
+    },
+    {
+      "id": "tour-not-found",
+      "description": "No tour file exists in fork",
+      "priority": 3,
+      "template": {
+        "summary": "[No Tour] {{owner}}/{{repo}} has no tour file",
+        "events": {
+          "tour.availability.check": "Checking tour for {{owner}}/{{repo}} (tour org: {{isTourOrg}})",
+          "tour.availability.cache.miss": "No cache for {{owner}}/{{repo}}, checking GitHub",
+          "tour.availability.tour.not-found": "No tour at {{owner}}/{{repo}}"
+        }
+      }
+    },
+    {
+      "id": "check-error",
+      "description": "Error during tour availability check",
+      "priority": 4,
+      "template": {
+        "summary": "[Error] Tour check failed for {{owner}}/{{repo}}: {{error.message}}",
+        "events": {
+          "tour.availability.check": "Checking tour for {{owner}}/{{repo}}",
+          "tour.availability.error": "Error checking {{owner}}/{{repo}} at {{error.stage}}: {{error.message}}"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/tour-availability/tour-availability.otel.canvas",
+  "spanPattern": "tour.ui.page.load",
+  "name": "Tour UI Availability",
+  "description": "Frontend flow for checking tour availability and showing/hiding tour layout",
+  "scenarios": [
+    {
+      "id": "tour-available-auto-show",
+      "description": "Tour is available and auto-shown for first-time visitor",
+      "priority": 1,
+      "template": {
+        "summary": "[Auto-Show Tour] First visit to {{owner}}/{{repo}}, showing tour from {{forkOwner}}/{{forkRepo}}",
+        "events": {
+          "tour.ui.page.load": "Page loaded for {{owner}}/{{repo}}",
+          "tour.ui.check.start": "Checking tour availability for {{owner}}/{{repo}}",
+          "tour.ui.layout.show": "Tour layout shown for {{owner}}/{{repo}} (fork: {{forkOwner}}/{{forkRepo}})",
+          "tour.ui.auto-show": "Auto-showing tour for {{owner}}/{{repo}} from {{forkOwner}}/{{forkRepo}}"
+        }
+      }
+    },
+    {
+      "id": "tour-available-return-visit",
+      "description": "Tour is available but user has seen it before",
+      "priority": 2,
+      "template": {
+        "summary": "[Tour Available] {{owner}}/{{repo}} has tour (previously shown)",
+        "events": {
+          "tour.ui.page.load": "Page loaded for {{owner}}/{{repo}}",
+          "tour.ui.check.start": "Checking tour availability for {{owner}}/{{repo}}",
+          "tour.ui.layout.show": "Tour layout shown for {{owner}}/{{repo}} (fork: {{forkOwner}}/{{forkRepo}})",
+          "tour.ui.skip-auto-show": "Skipped auto-show for {{owner}}/{{repo}}: {{reason}}"
+        }
+      }
+    },
+    {
+      "id": "tour-not-available",
+      "description": "No tour available, layout option hidden",
+      "priority": 3,
+      "template": {
+        "summary": "[No Tour] {{owner}}/{{repo}} has no tour available",
+        "events": {
+          "tour.ui.page.load": "Page loaded for {{owner}}/{{repo}}",
+          "tour.ui.check.start": "Checking tour availability for {{owner}}/{{repo}}",
+          "tour.ui.layout.hide": "Tour layout hidden for {{owner}}/{{repo}}: {{reason}}"
+        }
+      }
+    }
+  ]
+}

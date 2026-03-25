@@ -1,0 +1,679 @@
+{
+  "pv": {
+    "name": "Tour Availability",
+    "version": "1.0.0",
+    "markdown": ".principal-views/tour-availability/tour-availability.md",
+    "edgeTypes": {
+      "flow": {
+        "label": "Flow"
+      },
+      "error": {
+        "label": "Error Path"
+      },
+      "cache": {
+        "label": "Cache Operation"
+      },
+      "ui-action": {
+        "label": "UI Action"
+      },
+      "trpc": {
+        "label": "tRPC Call"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "ui-page-load",
+      "type": "otel-event",
+      "x": -300,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "color": "#0891b2",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ]
+      },
+      "label": "Page Load",
+      "event": {
+        "name": "tour.ui.page.load",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "ui-check-availability",
+      "type": "otel-event",
+      "x": -300,
+      "y": 250,
+      "width": 200,
+      "height": 100,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ]
+      },
+      "label": "Check Availability",
+      "event": {
+        "name": "tour.ui.check.start",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "ui-layout-show",
+      "type": "otel-event",
+      "x": -300,
+      "y": 450,
+      "width": 200,
+      "height": 100,
+      "color": "#16a34a",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ]
+      },
+      "label": "Show Tour Layout",
+      "event": {
+        "name": "tour.ui.layout.show",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "forkOwner": {
+            "type": "string",
+            "description": "Fork owner with tour",
+            "required": true
+          },
+          "forkRepo": {
+            "type": "string",
+            "description": "Fork repo with tour",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "ui-layout-hide",
+      "type": "otel-event",
+      "x": -300,
+      "y": 650,
+      "width": 200,
+      "height": 100,
+      "color": "#6b7280",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ]
+      },
+      "label": "Hide Tour Layout",
+      "event": {
+        "name": "tour.ui.layout.hide",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why tour is hidden (no-tour, error)",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "ui-auto-show",
+      "type": "otel-event",
+      "x": -550,
+      "y": 450,
+      "width": 200,
+      "height": 100,
+      "color": "#f59e0b",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ]
+      },
+      "label": "Auto-Show Tour",
+      "event": {
+        "name": "tour.ui.auto-show",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "forkOwner": {
+            "type": "string",
+            "description": "Fork owner with tour",
+            "required": true
+          },
+          "forkRepo": {
+            "type": "string",
+            "description": "Fork repo with tour",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "ui-skip-auto-show",
+      "type": "otel-event",
+      "x": -550,
+      "y": 600,
+      "width": 200,
+      "height": 100,
+      "color": "#6b7280",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/components/EditorLayout.tsx"
+        ]
+      },
+      "label": "Skip Auto-Show",
+      "event": {
+        "name": "tour.ui.skip-auto-show",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why auto-show was skipped (previously-shown)",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "check-start",
+      "type": "otel-event",
+      "x": 100,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Check Tour Availability",
+      "event": {
+        "name": "tour.availability.check",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Fork owner (tour org)",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Fork repository name",
+            "required": true
+          },
+          "isTourOrg": {
+            "type": "boolean",
+            "description": "Whether owner is a known tour org",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "cache-hit",
+      "type": "otel-event",
+      "x": 100,
+      "y": 250,
+      "width": 200,
+      "height": 100,
+      "color": "#16a34a",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Cache Hit",
+      "event": {
+        "name": "tour.availability.cache.hit",
+        "attributes": {
+          "parentRepo": {
+            "type": "string",
+            "description": "Parent repo full name (owner/repo)",
+            "required": true
+          },
+          "hasTour": {
+            "type": "boolean",
+            "description": "Whether tour is available",
+            "required": true
+          },
+          "forkOwner": {
+            "type": "string",
+            "description": "Fork owner with tour",
+            "required": false
+          },
+          "forkRepo": {
+            "type": "string",
+            "description": "Fork repo with tour",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "cache-miss",
+      "type": "otel-event",
+      "x": 450,
+      "y": 250,
+      "width": 200,
+      "height": 100,
+      "color": "#ca8a04",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Cache Miss",
+      "event": {
+        "name": "tour.availability.cache.miss",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Fork owner being checked",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Fork repo being checked",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "tour-found",
+      "type": "otel-event",
+      "x": 450,
+      "y": 450,
+      "width": 200,
+      "height": 100,
+      "color": "#16a34a",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Tour Found",
+      "event": {
+        "name": "tour.availability.tour.found",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Fork owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Fork repo",
+            "required": true
+          },
+          "tourPath": {
+            "type": "string",
+            "description": "Path to tour file",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "tour-not-found",
+      "type": "otel-event",
+      "x": 800,
+      "y": 450,
+      "width": 200,
+      "height": 100,
+      "color": "#6b7280",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Tour Not Found",
+      "event": {
+        "name": "tour.availability.tour.not-found",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Fork owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Fork repo",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "parent-resolved",
+      "type": "otel-event",
+      "x": 450,
+      "y": 650,
+      "width": 200,
+      "height": 100,
+      "color": "#0891b2",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Parent Resolved",
+      "event": {
+        "name": "tour.availability.parent.resolved",
+        "attributes": {
+          "forkOwner": {
+            "type": "string",
+            "description": "Fork owner",
+            "required": true
+          },
+          "forkRepo": {
+            "type": "string",
+            "description": "Fork repo",
+            "required": true
+          },
+          "parentOwner": {
+            "type": "string",
+            "description": "Parent repo owner",
+            "required": true
+          },
+          "parentRepo": {
+            "type": "string",
+            "description": "Parent repo name",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "cached",
+      "type": "otel-event",
+      "x": 450,
+      "y": 850,
+      "width": 200,
+      "height": 100,
+      "color": "#16a34a",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Result Cached",
+      "event": {
+        "name": "tour.availability.cached",
+        "attributes": {
+          "cacheKey": {
+            "type": "string",
+            "description": "Cache key (parent repo)",
+            "required": true
+          },
+          "hasTour": {
+            "type": "boolean",
+            "description": "Whether tour is available",
+            "required": true
+          },
+          "ttlSeconds": {
+            "type": "number",
+            "description": "Cache TTL in seconds",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "error",
+      "type": "otel-event",
+      "x": 800,
+      "y": 250,
+      "width": 200,
+      "height": 100,
+      "color": "#dc2626",
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Check Error",
+      "event": {
+        "name": "tour.availability.error",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Fork owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Fork repo",
+            "required": true
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
+          },
+          "error.stage": {
+            "type": "string",
+            "description": "Stage where error occurred",
+            "required": true
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "ui-page-to-check",
+      "fromNode": "ui-page-load",
+      "fromSide": "bottom",
+      "toNode": "ui-check-availability",
+      "toSide": "top",
+      "label": "init",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "ui-check-to-backend",
+      "fromNode": "ui-check-availability",
+      "fromSide": "right",
+      "toNode": "check-start",
+      "toSide": "left",
+      "label": "tRPC query",
+      "pv": {
+        "edgeType": "trpc"
+      }
+    },
+    {
+      "id": "ui-check-to-show",
+      "fromNode": "ui-check-availability",
+      "fromSide": "bottom",
+      "toNode": "ui-layout-show",
+      "toSide": "top",
+      "label": "hasTour=true",
+      "pv": {
+        "edgeType": "ui-action"
+      }
+    },
+    {
+      "id": "ui-check-to-hide",
+      "fromNode": "ui-check-availability",
+      "fromSide": "bottom",
+      "toNode": "ui-layout-hide",
+      "toSide": "top",
+      "label": "hasTour=false",
+      "pv": {
+        "edgeType": "ui-action"
+      }
+    },
+    {
+      "id": "ui-show-to-auto",
+      "fromNode": "ui-layout-show",
+      "fromSide": "left",
+      "toNode": "ui-auto-show",
+      "toSide": "right",
+      "label": "first visit",
+      "pv": {
+        "edgeType": "ui-action"
+      }
+    },
+    {
+      "id": "ui-show-to-skip",
+      "fromNode": "ui-layout-show",
+      "fromSide": "left",
+      "toNode": "ui-skip-auto-show",
+      "toSide": "right",
+      "label": "return visit",
+      "pv": {
+        "edgeType": "ui-action"
+      }
+    },
+    {
+      "id": "check-to-cache-hit",
+      "fromNode": "check-start",
+      "fromSide": "bottom",
+      "toNode": "cache-hit",
+      "toSide": "top",
+      "label": "cached",
+      "pv": {
+        "edgeType": "cache"
+      }
+    },
+    {
+      "id": "check-to-cache-miss",
+      "fromNode": "check-start",
+      "fromSide": "right",
+      "toNode": "cache-miss",
+      "toSide": "top",
+      "label": "not cached",
+      "pv": {
+        "edgeType": "cache"
+      }
+    },
+    {
+      "id": "check-to-error",
+      "fromNode": "check-start",
+      "fromSide": "right",
+      "toNode": "error",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "cache-miss-to-found",
+      "fromNode": "cache-miss",
+      "fromSide": "bottom",
+      "toNode": "tour-found",
+      "toSide": "top",
+      "label": "tour exists",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "cache-miss-to-not-found",
+      "fromNode": "cache-miss",
+      "fromSide": "right",
+      "toNode": "tour-not-found",
+      "toSide": "top",
+      "label": "no tour",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "found-to-parent",
+      "fromNode": "tour-found",
+      "fromSide": "bottom",
+      "toNode": "parent-resolved",
+      "toSide": "top",
+      "label": "resolve parent",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "parent-to-cached",
+      "fromNode": "parent-resolved",
+      "fromSide": "bottom",
+      "toNode": "cached",
+      "toSide": "top",
+      "label": "store",
+      "pv": {
+        "edgeType": "cache"
+      }
+    }
+  ]
+}
