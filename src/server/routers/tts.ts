@@ -34,9 +34,11 @@ const batchGenerateInputSchema = z.object({
   owner: z.string().min(1),
   repo: z.string().min(1),
   path: z.string().min(1),
-  commitSha: z.string().min(1),
+  commitSha: z.string().optional(), // Optional when cacheOnly is true
   voice: z.string().optional(),
   speed: z.number().min(0.5).max(2).optional(),
+  /** When true, only return cached audio - don't generate new audio */
+  cacheOnly: z.boolean().optional(),
 });
 
 // ============================================================================
@@ -195,25 +197,27 @@ export const ttsRouter = router({
     .input(batchGenerateInputSchema)
     .output(batchOutputSchema)
     .mutation(async ({ input }) => {
-      const { owner, repo, path, commitSha, voice, speed } = input;
+      const { owner, repo, path, commitSha, voice, speed, cacheOnly } = input;
 
-      // Validate request
-      const validationError = validateTTSRequest({ owner, repo, path, commitSha, stepId: 'batch' });
-      if (validationError) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: validationError,
-        });
+      // Validate request (commitSha not required for cacheOnly mode)
+      if (!cacheOnly) {
+        const validationError = validateTTSRequest({ owner, repo, path, commitSha: commitSha || '', stepId: 'batch' });
+        if (validationError) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: validationError,
+          });
+        }
       }
 
       // Merge options with defaults
       const options = mergeTTSOptions({ voice, speed });
 
-      console.log('[tRPC TTS Batch] Processing tour:', { owner, repo, path });
+      console.log('[tRPC TTS Batch] Processing tour:', { owner, repo, path, cacheOnly });
 
       try {
-        // Fetch tour from GitHub
-        const tour = await fetchTourFromGitHub(owner, repo, path, commitSha);
+        // Fetch tour from GitHub (use HEAD for cacheOnly mode without commitSha)
+        const tour = await fetchTourFromGitHub(owner, repo, path, commitSha || 'HEAD');
 
         const steps: z.infer<typeof batchStepSchema>[] = [];
         let cachedCount = 0;
@@ -240,22 +244,24 @@ export const ttsRouter = router({
           // Normalize text
           const normalizedText = normalizeTextForTTS(text);
 
-          // Generate both content-based and legacy keys
+          // Generate content-based key (works without commitSha)
           const contentKey = await generateS3Key(owner, repo, normalizedText, options);
-          const legacyKey = await generateLegacyS3Key(owner, repo, path, commitSha, stepId, options);
 
-          // Check legacy cache first for backward compatibility
-          const legacyCached = await checkS3Cache(legacyKey);
-          if (legacyCached) {
-            console.log('[tRPC TTS Batch] Legacy cache hit:', stepId);
-            steps.push({
-              stepId,
-              audioUrl: getS3Url(legacyKey),
-              cached: true,
-              status: 'ready',
-            });
-            cachedCount++;
-            continue;
+          // Check legacy cache first for backward compatibility (only if we have commitSha)
+          if (commitSha) {
+            const legacyKey = await generateLegacyS3Key(owner, repo, path, commitSha, stepId, options);
+            const legacyCached = await checkS3Cache(legacyKey);
+            if (legacyCached) {
+              console.log('[tRPC TTS Batch] Legacy cache hit:', stepId);
+              steps.push({
+                stepId,
+                audioUrl: getS3Url(legacyKey),
+                cached: true,
+                status: 'ready',
+              });
+              cachedCount++;
+              continue;
+            }
           }
 
           // Check content-based cache
@@ -269,6 +275,19 @@ export const ttsRouter = router({
               status: 'ready',
             });
             cachedCount++;
+            continue;
+          }
+
+          // In cacheOnly mode, skip generation for uncached steps
+          if (cacheOnly) {
+            console.log('[tRPC TTS Batch] Cache miss (cacheOnly mode):', stepId);
+            steps.push({
+              stepId,
+              audioUrl: '',
+              cached: false,
+              status: 'failed',
+              error: 'Not cached (cacheOnly mode)',
+            });
             continue;
           }
 

@@ -421,10 +421,19 @@ const tourAvailabilitySchema = z.object({
   cached: z.boolean(),
 });
 
-// Organizations that host tour forks
-const TOUR_ORGS = ['Principal-Forks', 'Telementry-Test', 'TheKicker25', 'X-File-City'];
-const TOUR_PATH = 'docs/tours/introduction.tour.json';
+// Organizations that host tour forks (lowercase for case-insensitive comparison)
+const TOUR_ORGS = ['principal-forks', 'telementry-test', 'thekicker25', 'x-file-city'];
+const TOUR_PATH = 'docs/tours/introduction.tour.json'; // Fallback for direct API checks
 const TOUR_AVAILABILITY_TTL = 86400; // 24 hours
+
+// Schema for caching a detected tour
+const cacheTourAvailabilityInputSchema = z.object({
+  owner: z.string().min(1),
+  repo: z.string().min(1),
+  tourPath: z.string().min(1),
+  tourId: z.string().optional(),
+  tourName: z.string().optional(),
+});
 
 export const githubRouter = router({
   /**
@@ -826,7 +835,9 @@ export const githubRouter = router({
     .query(async ({ input }) => {
       const { owner, repo } = input;
       const userToken = await getGitHubToken();
-      const isTourOrg = TOUR_ORGS.includes(owner);
+      const isTourOrg = TOUR_ORGS.includes(owner.toLowerCase());
+
+      console.log(`[checkTourAvailability] Checking ${owner}/${repo}, isTourOrg=${isTourOrg}`);
 
       // If viewing a tour org fork, check if it has a tour and cache under parent
       if (isTourOrg) {
@@ -846,8 +857,10 @@ export const githubRouter = router({
           const branch = repoInfo.default_branch || 'main';
           const tourUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${TOUR_PATH}`;
 
+          console.log(`[checkTourAvailability] Checking tour URL: ${tourUrl}`);
           const response = await fetch(tourUrl, { method: 'HEAD' });
           const hasTour = response.ok;
+          console.log(`[checkTourAvailability] Tour exists: ${hasTour}, fork: ${repoInfo.fork}, hasParent: ${!!repoInfo.parent}`);
 
           // If tour exists and repo is a fork, cache under parent
           if (hasTour && repoInfo.fork && repoInfo.parent) {
@@ -855,6 +868,7 @@ export const githubRouter = router({
             const parentRepo = repoInfo.parent.name;
             const cacheKey = getTourAvailabilityCacheKey(parentOwner, parentRepo);
 
+            console.log(`[checkTourAvailability] Caching tour for parent ${parentOwner}/${parentRepo} under key: ${cacheKey}`);
             setCachedAsync(cacheKey, {
               hasTour: true,
               tourPath: TOUR_PATH,
@@ -886,6 +900,7 @@ export const githubRouter = router({
 
       // For non-tour-org repos, check if there's cached tour availability
       const cacheKey = getTourAvailabilityCacheKey(owner, repo);
+      console.log(`[checkTourAvailability] Checking cache for ${owner}/${repo} with key: ${cacheKey}`);
       const cached = await getCached<{
         hasTour: boolean;
         tourPath: string;
@@ -893,6 +908,8 @@ export const githubRouter = router({
         forkRepo: string;
         checkedAt: string;
       }>(cacheKey);
+
+      console.log(`[checkTourAvailability] Cache result:`, cached);
 
       if (cached) {
         return {
@@ -912,6 +929,65 @@ export const githubRouter = router({
         forkRepo: null,
         cached: false,
       };
+    }),
+
+  /**
+   * Cache tour availability when UI detects a tour
+   * Called when File City panel successfully loads a tour from the file tree
+   * Caches under parent repo so other users can discover the tour
+   */
+  cacheTourAvailability: publicProcedure
+    .input(cacheTourAvailabilityInputSchema)
+    .output(z.object({ cached: z.boolean(), parentRepo: z.string().nullable() }))
+    .mutation(async ({ input }) => {
+      const { owner, repo, tourPath, tourId, tourName } = input;
+      const userToken = await getGitHubToken();
+      const isTourOrg = TOUR_ORGS.includes(owner.toLowerCase());
+
+      console.log(`[cacheTourAvailability] Tour detected at ${owner}/${repo}/${tourPath}, isTourOrg=${isTourOrg}`);
+
+      // Only cache if this is a tour org fork
+      if (!isTourOrg) {
+        console.log(`[cacheTourAvailability] Not a tour org, skipping cache`);
+        return { cached: false, parentRepo: null };
+      }
+
+      try {
+        // Get repo info to find parent
+        const repoInfo = await makeGitHubRequest<{
+          fork: boolean;
+          parent?: {
+            owner: { login: string };
+            name: string;
+            full_name: string;
+          };
+        }>(`/repos/${owner}/${repo}`, userToken);
+
+        if (!repoInfo.fork || !repoInfo.parent) {
+          console.log(`[cacheTourAvailability] Not a fork or no parent, skipping cache`);
+          return { cached: false, parentRepo: null };
+        }
+
+        const parentOwner = repoInfo.parent.owner.login;
+        const parentRepo = repoInfo.parent.name;
+        const cacheKey = getTourAvailabilityCacheKey(parentOwner, parentRepo);
+
+        console.log(`[cacheTourAvailability] Caching tour for parent ${parentOwner}/${parentRepo} under key: ${cacheKey}`);
+        setCachedAsync(cacheKey, {
+          hasTour: true,
+          tourPath,
+          tourId: tourId || null,
+          tourName: tourName || null,
+          forkOwner: owner,
+          forkRepo: repo,
+          checkedAt: new Date().toISOString(),
+        }, TOUR_AVAILABILITY_TTL);
+
+        return { cached: true, parentRepo: `${parentOwner}/${parentRepo}` };
+      } catch (error) {
+        console.error(`[cacheTourAvailability] Error caching tour for ${owner}/${repo}:`, error);
+        return { cached: false, parentRepo: null };
+      }
     }),
 
   /**

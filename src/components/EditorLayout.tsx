@@ -300,19 +300,38 @@ function EditorLayoutContent({
   // Check OTEL service status to conditionally show traces layout
   const { isAlive: serviceIsAlive } = useServiceStatus(serviceName);
 
-  // Populate tour availability cache for tour org forks (fire and forget)
-  // This caches tour info under the parent repo so it can be looked up later
+  // Listen for tour:loaded event from File City panel and cache tour availability
+  // When a tour is detected in a fork, cache it under the parent repo
   useEffect(() => {
-    if (!githubRepo || !githubRepo.includes('/')) return;
+    if (!events || !githubRepo || !githubRepo.includes('/')) return;
 
     const [owner, repo] = githubRepo.split('/');
     if (!owner || !repo) return;
 
-    // Fire and forget - just populate the cache
-    trpc.github.checkTourAvailability.query({ owner, repo }).catch((error) => {
-      console.warn('[EditorLayout] Failed to check tour availability:', error);
+    const cleanup = events.on('tour:loaded', (event) => {
+      const payload = event.payload as { tourPath: string; tourId?: string; tourName?: string } | undefined;
+      if (!payload?.tourPath) return;
+
+      console.log(`[EditorLayout] Tour loaded at ${owner}/${repo}/${payload.tourPath}, caching...`);
+
+      // Fire and forget - cache the tour availability under parent repo
+      trpc.github.cacheTourAvailability.mutate({
+        owner,
+        repo,
+        tourPath: payload.tourPath,
+        tourId: payload.tourId,
+        tourName: payload.tourName,
+      }).then((result) => {
+        if (result.cached) {
+          console.log(`[EditorLayout] Tour cached for parent: ${result.parentRepo}`);
+        }
+      }).catch((error) => {
+        console.warn('[EditorLayout] Failed to cache tour availability:', error);
+      });
     });
-  }, [githubRepo]);
+
+    return cleanup;
+  }, [events, githubRepo]);
 
   // Filter layout configs based on service status
   // Show traces layout only when OTEL heartbeat is successful

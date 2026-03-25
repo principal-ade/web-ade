@@ -44,7 +44,7 @@ import { minimatch } from 'minimatch';
 import { GitFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData, ExtendedCanvas, WorkflowTemplate, WorkflowScenario } from '@principal-ai/principal-view-core';
 import { buildStoryboardContext } from '@principal-ai/principal-view-core';
-import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode, HighlightLayer } from '@industry-theme/file-city-panel';
+import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode, HighlightLayer, ForkTourSliceData } from '@industry-theme/file-city-panel';
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from './AuthContext';
 import { buildOtelHighlightLayers, type ParsedOtelCanvas } from '@/lib/otel-coverage/buildOtelHighlightLayers';
@@ -284,6 +284,11 @@ export function RepositoryPageProvider({
     loading: false,
   });
 
+  // State for fork tour (tour from a fork repo)
+  const [forkTourData, setForkTourData] = useState<ForkTourSliceData | null>(null);
+  const [forkTourLoading, setForkTourLoading] = useState(false);
+  const [forkTourError, setForkTourError] = useState<Error | null>(null);
+
   // State for quality metrics
   const [qualityData] = useState<QualitySliceData | null>(null);
   const [qualityLoading] = useState(false);
@@ -462,6 +467,19 @@ export function RepositoryPageProvider({
       refresh: async () => { /* no-op */ },
     }),
     [commits]
+  );
+
+  // Explicit slice: forkTour (tour from a fork repo)
+  const forkTourSlice = useMemo<DataSlice<ForkTourSliceData | null>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'forkTour',
+      data: forkTourData,
+      loading: forkTourLoading,
+      error: forkTourError,
+      refresh: async () => { /* no-op */ },
+    }),
+    [forkTourData, forkTourLoading, forkTourError]
   );
 
   // Explicit slice: quality
@@ -881,6 +899,55 @@ export function RepositoryPageProvider({
     fetchCommits();
   }, [githubRepo]);
 
+  // Fetch fork tour when repo changes (check if tour available in a fork)
+  useEffect(() => {
+    if (!githubRepo) {
+      setForkTourData(null);
+      return;
+    }
+
+    const [owner, repo] = githubRepo.split('/');
+    if (!owner || !repo) return;
+
+    const fetchForkTour = async () => {
+      setForkTourLoading(true);
+      setForkTourError(null);
+
+      try {
+        // Check if a tour is available from a fork
+        const availability = await trpc.github.checkTourAvailability.query({ owner, repo });
+
+        if (availability.hasTour && availability.forkOwner && availability.forkRepo && availability.tourPath) {
+          console.log(`[RepositoryPageProvider] Fork tour available from ${availability.forkOwner}/${availability.forkRepo}`);
+
+          // Fetch the tour content from the fork
+          const tourContent = await trpc.github.readFile.query({
+            owner: availability.forkOwner,
+            repo: availability.forkRepo,
+            path: availability.tourPath,
+          });
+
+          setForkTourData({
+            tourContent: tourContent.content,
+            forkOwner: availability.forkOwner,
+            forkRepo: availability.forkRepo,
+            tourPath: availability.tourPath,
+          });
+        } else {
+          setForkTourData(null);
+        }
+      } catch (error) {
+        console.warn('[RepositoryPageProvider] Failed to fetch fork tour:', error);
+        setForkTourError(error as Error);
+        setForkTourData(null);
+      } finally {
+        setForkTourLoading(false);
+      }
+    };
+
+    fetchForkTour();
+  }, [githubRepo]);
+
   // Fetch GitHub messages when authenticated
   useEffect(() => {
     if (!isAuthenticated || !githubRepo) {
@@ -996,6 +1063,7 @@ export function RepositoryPageProvider({
       fileCityColorModes: fileCityColorModesSlice,
       commitFiles: commitFilesSlice,
       agentHighlightLayers: agentHighlightLayersSlice,
+      forkTour: forkTourSlice,
 
       // ===== LEGACY METHODS (no-ops for interface compatibility) =====
       // All slices are now explicit - use typed properties above instead
@@ -1027,6 +1095,7 @@ export function RepositoryPageProvider({
       fileCityColorModesSlice,
       commitFilesSlice,
       agentHighlightLayersSlice,
+      forkTourSlice,
     ]
   );
 
@@ -1062,10 +1131,16 @@ export function RepositoryPageProvider({
       notifyPanels: (event) => {
         events.emit(event);
       },
-      fetchAudioUrls: async (context: { owner: string; repo: string; path: string; commitSha: string }) => {
+      fetchAudioUrls: async (context: { owner: string; repo: string; path: string; commitSha?: string; cacheOnly?: boolean }) => {
         try {
           // Use tRPC for type-safe API call
-          const data = await trpc.tts.batchGenerate.mutate(context);
+          const data = await trpc.tts.batchGenerate.mutate({
+            owner: context.owner,
+            repo: context.repo,
+            path: context.path,
+            commitSha: context.commitSha,
+            cacheOnly: context.cacheOnly,
+          });
 
           // Convert array of steps to Map<stepId, audioUrl>
           // Only include URLs where status='ready' (cached files that exist)

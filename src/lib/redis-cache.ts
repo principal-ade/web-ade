@@ -23,10 +23,12 @@ function getRedisClient(): Redis | null {
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (!url || !token) {
+    console.warn('[Redis] Not configured - UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN missing');
     return null;
   }
 
   try {
+    console.log('[Redis] Initializing client with URL:', url.substring(0, 30) + '...');
     redisClient = new Redis({ url, token });
     return redisClient;
   } catch (error) {
