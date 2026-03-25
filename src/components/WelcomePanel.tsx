@@ -1,18 +1,11 @@
 'use client';
 
 import React from 'react';
-import { CenteredSearchLayout } from './home/CenteredSearchLayout';
-
-interface WelcomePanelProps {
-  showSearch?: boolean;
-}
+import { ActivityFeedPanel } from '@/panels/ActivityFeedPanel';
 
 /**
- * WelcomePanel - Homepage with centered search
- *
- * Features a Google-style centered search bar with toggle buttons
- * for Your Repos and Search GitHub views.
+ * WelcomePanel - Homepage activity feed
  */
-export const WelcomePanel: React.FC<WelcomePanelProps> = ({ showSearch = false }) => {
-  return <CenteredSearchLayout showSearch={showSearch} />;
+export const WelcomePanel: React.FC = () => {
+  return <ActivityFeedPanel />;
 };

@@ -273,6 +273,12 @@ export function useGitHubActivityFeed(
         };
 
         setRepoSummaries((prev) => {
+          // Check for duplicates inside updater to handle race conditions
+          const exists = prev.some(
+            (s) => s.fullName.toLowerCase() === newSummary.fullName.toLowerCase()
+          );
+          if (exists) return prev;
+
           const updated = [...prev, newSummary];
           updated.sort((a, b) => b.latestCommitAt.getTime() - a.latestCommitAt.getTime());
           return updated;

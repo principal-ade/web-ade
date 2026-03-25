@@ -12,6 +12,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { FolderGit2, Search, X, Loader2, ArrowLeft, Globe, Building2, MapPin } from 'lucide-react';
 import { Logo } from '@principal-ai/logo-component';
 import { useGitHubActivityFeed, type RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
@@ -251,7 +252,12 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   // State for expanded cards
   const [expandedRepos, setExpandedRepos] = useState<Set<string>>(new Set());
 
-  // Search state
+  // URL param sync for shareable links
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const initialLoadHandled = useRef(false);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<GitHubSearchRepo[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -322,15 +328,55 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     setSelectedRepoLoading(true);
     setSearchQuery('');
     setSearchResults([]);
+
+    // Update URL with repo for sharing
+    router.replace(`${pathname}?q=${repo.full_name}`, { scroll: false });
+
     // Fetch activity for this repo
     await addRepo(repo.owner.login, repo.name);
     setSelectedRepoLoading(false);
-  }, [addRepo]);
+  }, [addRepo, pathname, router]);
 
   // Clear selected repo to go back to featured repos
   const clearSelectedRepo = useCallback(() => {
     setSelectedRepo(null);
-  }, []);
+    // Clear URL param
+    router.replace(pathname, { scroll: false });
+  }, [pathname, router]);
+
+  // Auto-select repo from URL param on initial load
+  useEffect(() => {
+    if (initialLoadHandled.current) return;
+
+    const urlQuery = searchParams.get('q');
+    if (!urlQuery) {
+      initialLoadHandled.current = true;
+      return;
+    }
+
+    const parsed = parseGitHubUrl(urlQuery);
+    if (parsed && parsed.repo) {
+      initialLoadHandled.current = true;
+
+      // Fetch and select the repo
+      (async () => {
+        setSelectedRepoLoading(true);
+        try {
+          const response = await fetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}`);
+          if (response.ok) {
+            const data = await response.json();
+            setSelectedRepo(data);
+            await addRepo(parsed.owner, parsed.repo);
+          }
+        } catch (err) {
+          console.warn('Failed to load repo from URL:', err);
+        }
+        setSelectedRepoLoading(false);
+      })();
+    } else {
+      initialLoadHandled.current = true;
+    }
+  }, [searchParams, addRepo]);
 
   // Get summaries to display (either selected repo or all featured)
   const displaySummaries = useMemo(() => {
