@@ -531,7 +531,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
               style={{
                 width: 56,
                 height: 56,
-                borderRadius: '50%',
+                borderRadius: 12,
                 backgroundColor: theme.colors.background,
                 border: `1px solid ${theme.colors.border}`,
                 display: 'flex',
@@ -599,24 +599,22 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                     flexDirection: 'row-reverse',
                     alignItems: 'center',
                     marginBottom: rowIndex < Math.ceil(summary.commits.length / 10) - 1 ? spacing.sm : 0,
-                    height: 28,
+                    height: 44,
                   }}
                 >
-                  {/* Connecting line */}
-                  {rowCommits.length > 1 && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        right: 0,
-                        top: '50%',
-                        height: 2,
-                        backgroundColor: theme.colors.border,
-                        transform: 'translateY(-50%)',
-                        zIndex: 0,
-                      }}
-                    />
-                  )}
+                  {/* Connecting line - extends left to card edge, trimmed on right */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: -spacing.md,
+                      right: `${100 / (2 * rowCommits.length)}%`,
+                      top: '50%',
+                      height: 1,
+                      backgroundColor: theme.colors.primary,
+                      transform: 'translateY(-50%)',
+                      zIndex: 0,
+                    }}
+                  />
                   {/* Author avatars with expanded hover targets */}
                   {rowCommits.map((commit, index) => {
                     const globalIndex = rowIndex * 10 + index;
@@ -650,8 +648,8 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                             src={commit.authorAvatarUrl}
                             alt={commit.author}
                             style={{
-                              width: 20,
-                              height: 20,
+                              width: 36,
+                              height: 36,
                               borderRadius: '50%',
                               opacity: isFilled ? 1 : 0.4,
                               border: isDisplayed
@@ -664,8 +662,8 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                         ) : (
                           <div
                             style={{
-                              width: 20,
-                              height: 20,
+                              width: 36,
+                              height: 36,
                               borderRadius: '50%',
                               backgroundColor: isDisplayed ? theme.colors.primary : theme.colors.textMuted,
                               opacity: isFilled ? 1 : 0.4,

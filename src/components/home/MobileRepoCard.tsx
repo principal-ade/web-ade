@@ -416,7 +416,7 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
           style={{
             width: 48,
             height: 48,
-            borderRadius: '50%',
+            borderRadius: 10,
             backgroundColor: theme.colors.surface,
             border: `1px solid ${theme.colors.border}`,
             display: 'flex',
