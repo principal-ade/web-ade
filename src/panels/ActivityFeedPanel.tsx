@@ -23,13 +23,6 @@ import { HourlyActivityHeatmap, type CommitTimestamp } from '@/components/Hourly
 import { MobileActivityFeed } from '@/components/home/MobileActivityFeed';
 
 // Hour helpers for grouping
-const getGreetingForHour = (hour: number): string => {
-  if (hour >= 0 && hour < 6) return 'Welcome Night Owls';
-  if (hour >= 6 && hour < 12) return 'Good Morning';
-  if (hour >= 12 && hour < 18) return 'Good Afternoon';
-  return 'Good Evening';
-};
-
 const formatHourLabel = (hour: number): string => {
   if (hour === 0) return '12 AM';
   if (hour === 12) return '12 PM';
@@ -734,7 +727,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
               {hourGroups.map((group, groupIndex) => {
                 const dateLabel = formatDateLabel(group.date);
-                const label = group.isFirst ? getGreetingForHour(group.hour) : formatHourLabel(group.hour);
+                const label = formatHourLabel(group.hour);
 
                 return (
                   <div key={group.dateKey}>

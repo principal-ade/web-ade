@@ -16,7 +16,6 @@ import {
   User,
   Play,
   Square,
-  ExternalLink,
   Sparkles,
 } from 'lucide-react';
 import type { RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
@@ -609,6 +608,10 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             {/* Name and time */}
             <div style={{ flex: 1, minWidth: 0 }}>
               <h4
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpen();
+                }}
                 style={{
                   margin: 0,
                   marginBottom: spacing.xs,
@@ -618,9 +621,10 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
+                  cursor: 'pointer',
                 }}
               >
-                {summary.owner}/{summary.repo}
+                {summary.repo}
               </h4>
               <span
                 style={{
@@ -869,30 +873,6 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 <span>{isAnimating ? 'Stop' : 'Review'}</span>
               </button>
             )}
-
-            {/* Open button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpen();
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.xs,
-                padding: `${spacing.xs}px ${spacing.sm}px`,
-                fontSize: theme.fontSizes[1],
-                color: theme.colors.primary,
-                backgroundColor: 'transparent',
-                border: `1px solid ${theme.colors.primary}`,
-                borderRadius: 4,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <ExternalLink size={12} />
-              <span>Open</span>
-            </button>
 
             {/* Explain button */}
             <button
