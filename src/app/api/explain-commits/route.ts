@@ -2,10 +2,37 @@
  * Explain Commits API Endpoint
  *
  * Generates AI-powered explanations of commits for different audience levels.
- * Uses streaming for responsive UI.
+ * Caches responses to avoid redundant API calls.
  */
 
 import { NextRequest } from 'next/server';
+import crypto from 'crypto';
+
+// Simple in-memory cache (persists across requests in the same server instance)
+const explanationCache = new Map<string, { text: string; timestamp: number }>();
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function getCacheKey(commits: CommitData[], audienceLevel: string, repoName: string): string {
+  const data = JSON.stringify({ commits, audienceLevel, repoName });
+  return crypto.createHash('sha256').update(data).digest('hex');
+}
+
+function getFromCache(key: string): string | null {
+  const entry = explanationCache.get(key);
+  if (!entry) return null;
+
+  // Check if expired
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    explanationCache.delete(key);
+    return null;
+  }
+
+  return entry.text;
+}
+
+function setCache(key: string, text: string): void {
+  explanationCache.set(key, { text, timestamp: Date.now() });
+}
 
 interface CommitData {
   sha: string;
@@ -20,6 +47,16 @@ interface ExplainRequest {
   commits: CommitData[];
   audienceLevel: 'maintainer' | 'non-technical';
   repoName: string;
+}
+
+interface GeminiResponse {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{
+        text?: string;
+      }>;
+    };
+  }>;
 }
 
 function buildPrompt(commits: CommitData[], audienceLevel: string, repoName: string): string {
@@ -81,12 +118,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const prompt = buildPrompt(commits, audienceLevel, repoName);
-    console.log('[explain-commits] Prompt:', prompt);
+    // Check cache first
+    const cacheKey = getCacheKey(commits, audienceLevel, repoName);
+    const cachedText = getFromCache(cacheKey);
 
-    // Use gemini-2.5-flash for fast responses
-    const model = 'gemini-2.5-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${apiKey}&alt=sse`;
+    if (cachedText) {
+      console.log('[explain-commits] Cache hit');
+      // Return cached response in SSE format
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ type: 'text', content: cachedText })}\n\n`)
+          );
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ type: 'done', cached: true })}\n\n`)
+          );
+          controller.close();
+        },
+      });
+
+      return new Response(stream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      });
+    }
+
+    console.log('[explain-commits] Cache miss, calling Gemini API');
+    const prompt = buildPrompt(commits, audienceLevel, repoName);
+
+    // Use gemini-2.5-flash-lite (non-streaming for reliability)
+    const model = 'gemini-2.5-flash-lite';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -116,65 +182,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Stream the response back
+    const data = (await response.json()) as GeminiResponse;
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!text) {
+      return new Response(
+        JSON.stringify({ error: 'No content in response' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Cache the response
+    setCache(cacheKey, text);
+    console.log('[explain-commits] Cached response');
+
+    // Return as SSE format for compatibility with existing modal
     const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
-
     const stream = new ReadableStream({
-      async start(controller) {
-        const reader = response.body?.getReader();
-        if (!reader) {
-          controller.close();
-          return;
-        }
-
-        let buffer = '';
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-
-            // Process SSE events
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const jsonStr = line.slice(6);
-                if (jsonStr === '[DONE]') continue;
-
-                try {
-                  const data = JSON.parse(jsonStr);
-                  const candidate = data.candidates?.[0];
-
-                  if (candidate?.content?.parts) {
-                    for (const part of candidate.content.parts) {
-                      if (part.text) {
-                        controller.enqueue(
-                          encoder.encode(`data: ${JSON.stringify({ type: 'text', content: part.text })}\n\n`)
-                        );
-                      }
-                    }
-                  }
-
-                  if (candidate?.finishReason) {
-                    controller.enqueue(
-                      encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`)
-                    );
-                  }
-                } catch (e) {
-                  console.error('Failed to parse Gemini SSE:', e, jsonStr);
-                }
-              }
-            }
-          }
-        } finally {
-          reader.releaseLock();
-          controller.close();
-        }
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ type: 'text', content: text })}\n\n`)
+        );
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`)
+        );
+        controller.close();
       },
     });
 

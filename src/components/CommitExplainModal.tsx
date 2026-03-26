@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { X, Loader2, ArrowLeft, Sparkles, Code, Users } from 'lucide-react';
+import { IndustryMarkdownSlide } from 'themed-markdown';
 import type { ActivityCommit } from '@/hooks/useGitHubActivityFeed';
 
 interface CommitExplainModalProps {
@@ -222,13 +223,14 @@ export function CommitExplainModal({
           )}
 
           {state === 'result' && (
-            <div className="space-y-4">
-              <div
-                className="text-sm leading-relaxed"
-                style={{ color: theme.colors.text }}
-              >
-                {explanation}
-              </div>
+            <div className="max-h-[400px] overflow-y-auto">
+              <IndustryMarkdownSlide
+                content={explanation}
+                theme={theme}
+                slideIdPrefix="commit-explain"
+                slideIndex={0}
+                transparentBackground
+              />
             </div>
           )}
 
