@@ -12,6 +12,20 @@ import crypto from 'crypto';
 const explanationCache = new Map<string, { text: string; timestamp: number }>();
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+// OpenRouter free models - ordered by preference (fast/simple first)
+const OPENROUTER_MODELS = [
+  'google/gemini-3.1-flash-lite-preview',
+  'deepseek/deepseek-r1:free',
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'google/gemini-3.1-flash-image-preview',
+] as const;
+
+// Track rate-limited models with cooldown
+const rateLimitedModels = new Map<string, number>();
+const RATE_LIMIT_COOLDOWN_MS = 60 * 1000; // 1 minute cooldown after rate limit
+
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+
 function getCacheKey(commits: CommitData[], audienceLevel: string, repoName: string): string {
   const data = JSON.stringify({ commits, audienceLevel, repoName });
   return crypto.createHash('sha256').update(data).digest('hex');
@@ -34,6 +48,118 @@ function setCache(key: string, text: string): void {
   explanationCache.set(key, { text, timestamp: Date.now() });
 }
 
+function getAvailableModels(): string[] {
+  const now = Date.now();
+  return OPENROUTER_MODELS.filter((model) => {
+    const rateLimitedUntil = rateLimitedModels.get(model);
+    if (!rateLimitedUntil) return true;
+    if (now > rateLimitedUntil) {
+      rateLimitedModels.delete(model);
+      return true;
+    }
+    return false;
+  });
+}
+
+function markModelRateLimited(model: string, retryAfterSeconds?: number): void {
+  const cooldown = retryAfterSeconds
+    ? retryAfterSeconds * 1000
+    : RATE_LIMIT_COOLDOWN_MS;
+  rateLimitedModels.set(model, Date.now() + cooldown);
+  console.log(`[explain-commits] Model ${model} rate limited, cooldown: ${cooldown}ms`);
+}
+
+function parseRetryAfter(errorText: string): number | undefined {
+  // Try to extract retry delay from error message
+  const match = errorText.match(/retry in ([\d.]+)s/i);
+  if (match && match[1]) {
+    return Math.ceil(parseFloat(match[1]));
+  }
+  return undefined;
+}
+
+interface OpenRouterApiResult {
+  success: boolean;
+  text?: string;
+  rateLimited?: boolean;
+  retryAfterSeconds?: number;
+  error?: string;
+}
+
+interface OpenRouterResponse {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+  error?: {
+    message?: string;
+    code?: number;
+  };
+}
+
+async function callOpenRouterApi(
+  model: string,
+  prompt: string,
+  apiKey: string
+): Promise<OpenRouterApiResult> {
+  try {
+    const response = await fetch(OPENROUTER_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://web-ade.dev',
+        'X-Title': 'Web ADE Commit Explainer',
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 512,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+
+      // Check for rate limit (429)
+      if (response.status === 429) {
+        const retryAfter = parseRetryAfter(errorText);
+        return {
+          success: false,
+          rateLimited: true,
+          retryAfterSeconds: retryAfter,
+          error: errorText,
+        };
+      }
+
+      return { success: false, error: errorText };
+    }
+
+    const data = (await response.json()) as OpenRouterResponse;
+
+    if (data.error) {
+      return { success: false, error: data.error.message || 'Unknown error' };
+    }
+
+    const text = data.choices?.[0]?.message?.content;
+
+    if (!text) {
+      return { success: false, error: 'No content in response' };
+    }
+
+    return { success: true, text };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+}
+
 interface CommitData {
   sha: string;
   message: string;
@@ -47,16 +173,6 @@ interface ExplainRequest {
   commits: CommitData[];
   audienceLevel: 'maintainer' | 'non-technical';
   repoName: string;
-}
-
-interface GeminiResponse {
-  candidates?: Array<{
-    content?: {
-      parts?: Array<{
-        text?: string;
-      }>;
-    };
-  }>;
 }
 
 function buildPrompt(commits: CommitData[], audienceLevel: string, repoName: string): string {
@@ -99,11 +215,11 @@ Start directly with the summary. No greetings or preamble.`;
 }
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
 
   if (!apiKey) {
     return new Response(
-      JSON.stringify({ error: 'GOOGLE_AI_API_KEY not configured' }),
+      JSON.stringify({ error: 'OPENROUTER_API_KEY not configured' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
@@ -147,50 +263,63 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    console.log('[explain-commits] Cache miss, calling Gemini API');
+    console.log('[explain-commits] Cache miss, calling OpenRouter API');
     const prompt = buildPrompt(commits, audienceLevel, repoName);
 
-    // Use gemini-2.5-flash-lite (non-streaming for reliability)
-    const model = 'gemini-2.5-flash-lite';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    // Get available models (not currently rate limited)
+    const availableModels = getAvailableModels();
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: prompt }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 512,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Gemini API error:', errorText);
+    if (availableModels.length === 0) {
+      console.error('[explain-commits] All models are rate limited');
       return new Response(
-        JSON.stringify({ error: 'Failed to generate explanation', details: errorText }),
-        { status: response.status, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: 'All AI models are currently rate limited. Please try again in a minute.',
+          retryAfter: 60,
+        }),
+        { status: 429, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    const data = (await response.json()) as GeminiResponse;
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    // Try models in order until one succeeds
+    let lastError: string | undefined;
+    let text: string | undefined;
+    let usedModel: string | undefined;
+
+    for (const model of availableModels) {
+      console.log(`[explain-commits] Trying model: ${model}`);
+      const result = await callOpenRouterApi(model, prompt, apiKey);
+
+      if (result.success && result.text) {
+        text = result.text;
+        usedModel = model;
+        console.log(`[explain-commits] Success with model: ${model}`);
+        break;
+      }
+
+      if (result.rateLimited) {
+        markModelRateLimited(model, result.retryAfterSeconds);
+        lastError = result.error;
+        // Continue to next model
+        continue;
+      }
+
+      // Non-rate-limit error - log and try next model
+      console.error(`[explain-commits] Model ${model} error:`, result.error);
+      lastError = result.error;
+    }
 
     if (!text) {
+      console.error('[explain-commits] All models failed, last error:', lastError);
       return new Response(
-        JSON.stringify({ error: 'No content in response' }),
+        JSON.stringify({
+          error: 'Failed to generate explanation',
+          details: lastError,
+        }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log(`[explain-commits] Generated with ${usedModel}`);
 
     // Cache the response
     setCache(cacheKey, text);
