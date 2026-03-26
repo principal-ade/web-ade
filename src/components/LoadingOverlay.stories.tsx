@@ -1,16 +1,43 @@
-'use client';
+import type { Meta, StoryObj } from '@storybook/react';
+import React from 'react';
+import { ThemeProvider } from '@principal-ade/industry-theme';
+import { LoadingOverlay } from './LoadingOverlay';
 
+/**
+ * A mock version of LoadingOverlay that accepts repoQuery as a prop
+ * instead of reading from URL search params (which requires Next.js context)
+ */
+function LoadingOverlayStory({
+  repoQuery,
+  minDisplayTime = 60000, // Long duration so animation doesn't fade in storybook
+  staggerDelay = 0.5, // Delay between each text reveal (in seconds)
+  onComplete,
+}: {
+  repoQuery?: string;
+  minDisplayTime?: number;
+  staggerDelay?: number;
+  onComplete?: () => void;
+}) {
+  return (
+    <LoadingOverlayInner
+      repoQuery={repoQuery}
+      minDisplayTime={minDisplayTime}
+      staggerDelay={staggerDelay}
+      onComplete={onComplete}
+    />
+  );
+}
+
+/**
+ * Internal component that duplicates LoadingOverlay logic but accepts repoQuery as prop
+ * This avoids the useSearchParams hook which requires Next.js routing context
+ */
 import { useState, useEffect } from 'react';
 import { OpenTypeTextReveal } from '@principal-ai/logo-component';
 import { useTheme } from '@principal-ade/industry-theme';
-import { useSearchParams } from 'next/navigation';
 
-// Font URL from CDN
 const FONT_URL = 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.ttf';
 
-/**
- * Parse a GitHub URL or owner/repo string
- */
 function parseRepoQuery(input: string): { owner: string; repo: string } | null {
   const trimmed = input.trim();
   const urlPatterns = [
@@ -31,44 +58,32 @@ function parseRepoQuery(input: string): { owner: string; repo: string } | null {
   return null;
 }
 
-interface LoadingOverlayProps {
-  /** Minimum time to show the overlay in ms (default: 5000) */
+function LoadingOverlayInner({
+  repoQuery,
+  minDisplayTime = 60000,
+  onComplete,
+  staggerDelay = 0.5, // Delay between each text reveal (in seconds)
+}: {
+  repoQuery?: string;
   minDisplayTime?: number;
-  /** Callback when overlay finishes and fades out */
   onComplete?: () => void;
-}
-
-/**
- * Full-screen loading overlay with animated "Principal AI" text reveal.
- * Shows a time-series chart that transforms into the text.
- */
-// Stagger delay between each line's reveal (in seconds)
-const STAGGER_DELAY = 0.5;
-
-export function LoadingOverlay({
-  minDisplayTime = 4000,
-  onComplete
-}: LoadingOverlayProps) {
+  staggerDelay?: number;
+}) {
   const { theme } = useTheme();
-  const searchParams = useSearchParams();
   const [isVisible, setIsVisible] = useState(true);
   const [isFadingOut, setIsFadingOut] = useState(false);
 
-  // Parse repo from URL query param
-  const queryParam = searchParams.get('q');
-  const repoInfo = queryParam ? parseRepoQuery(queryParam) : null;
+  const repoInfo = repoQuery ? parseRepoQuery(repoQuery) : null;
 
   useEffect(() => {
-    // Start fade out after minimum display time
     const fadeTimer = setTimeout(() => {
       setIsFadingOut(true);
     }, minDisplayTime);
 
-    // Remove from DOM after fade completes
     const removeTimer = setTimeout(() => {
       setIsVisible(false);
       onComplete?.();
-    }, minDisplayTime + 500); // 500ms fade duration
+    }, minDisplayTime + 500);
 
     return () => {
       clearTimeout(fadeTimer);
@@ -81,12 +96,11 @@ export function LoadingOverlay({
   return (
     <div
       style={{
-        position: 'fixed',
+        position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        zIndex: 9999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -144,7 +158,7 @@ export function LoadingOverlay({
             strokeWidth={1}
             loop={false}
             showGlow={false}
-            animationDelay={STAGGER_DELAY}
+            animationDelay={staggerDelay}
           />
           <OpenTypeTextReveal
             text="Principal AI"
@@ -165,7 +179,7 @@ export function LoadingOverlay({
             strokeWidth={1.5}
             loop={false}
             showGlow={true}
-            animationDelay={STAGGER_DELAY * 2}
+            animationDelay={staggerDelay * 2}
           />
         </div>
       ) : (
@@ -216,7 +230,7 @@ export function LoadingOverlay({
             strokeWidth={1}
             loop={false}
             showGlow={false}
-            animationDelay={STAGGER_DELAY}
+            animationDelay={staggerDelay}
           />
           <OpenTypeTextReveal
             text="Principal AI"
@@ -237,10 +251,144 @@ export function LoadingOverlay({
             strokeWidth={1.5}
             loop={false}
             showGlow={true}
-            animationDelay={STAGGER_DELAY * 2}
+            animationDelay={staggerDelay * 2}
           />
         </div>
       )}
     </div>
   );
 }
+
+const StoryWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <ThemeProvider>
+    <div
+      style={{
+        width: '100vw',
+        height: '100vh',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {children}
+    </div>
+  </ThemeProvider>
+);
+
+const meta: Meta<typeof LoadingOverlayStory> = {
+  title: 'Home/LoadingOverlay',
+  component: LoadingOverlayStory,
+  parameters: {
+    layout: 'fullscreen',
+  },
+  tags: ['autodocs'],
+  argTypes: {
+    repoQuery: {
+      control: 'text',
+      description: 'Repository query string (e.g., "owner/repo" or GitHub URL)',
+    },
+    minDisplayTime: {
+      control: { type: 'number', min: 1000, max: 120000, step: 1000 },
+      description: 'Minimum time to display overlay in milliseconds',
+    },
+    staggerDelay: {
+      control: { type: 'number', min: 0, max: 5, step: 0.1 },
+      description: 'Delay between each text reveal in seconds',
+    },
+  },
+};
+
+export default meta;
+type Story = StoryObj<typeof LoadingOverlayStory>;
+
+/**
+ * Default welcome animation shown when no repository is specified
+ */
+export const Default: Story = {
+  render: () => (
+    <StoryWrapper>
+      <LoadingOverlayStory />
+    </StoryWrapper>
+  ),
+};
+
+/**
+ * Animation when navigating to a specific repository
+ */
+export const WithRepository: Story = {
+  render: () => (
+    <StoryWrapper>
+      <LoadingOverlayStory repoQuery="anthropics/claude-code" />
+    </StoryWrapper>
+  ),
+};
+
+/**
+ * Animation with a GitHub URL as the query
+ */
+export const WithGitHubUrl: Story = {
+  render: () => (
+    <StoryWrapper>
+      <LoadingOverlayStory repoQuery="https://github.com/facebook/react" />
+    </StoryWrapper>
+  ),
+};
+
+/**
+ * Animation with a longer repository name
+ */
+export const LongRepoName: Story = {
+  render: () => (
+    <StoryWrapper>
+      <LoadingOverlayStory repoQuery="vercel/next.js" />
+    </StoryWrapper>
+  ),
+};
+
+/**
+ * Fast stagger (0.5s between reveals)
+ */
+export const FastStagger: Story = {
+  render: () => (
+    <StoryWrapper>
+      <LoadingOverlayStory staggerDelay={0.5} />
+    </StoryWrapper>
+  ),
+};
+
+/**
+ * Slow stagger (3s between reveals) for dramatic effect
+ */
+export const SlowStagger: Story = {
+  render: () => (
+    <StoryWrapper>
+      <LoadingOverlayStory staggerDelay={3} />
+    </StoryWrapper>
+  ),
+};
+
+/**
+ * No stagger - all text reveals simultaneously
+ */
+export const NoStagger: Story = {
+  render: () => (
+    <StoryWrapper>
+      <LoadingOverlayStory staggerDelay={0} />
+    </StoryWrapper>
+  ),
+};
+
+/**
+ * Interactive playground with controls
+ */
+export const Playground: Story = {
+  args: {
+    repoQuery: '',
+    minDisplayTime: 60000,
+    staggerDelay: 0.5,
+  },
+  render: (args) => (
+    <StoryWrapper>
+      <LoadingOverlayStory {...args} />
+    </StoryWrapper>
+  ),
+};
