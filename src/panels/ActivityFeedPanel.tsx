@@ -13,6 +13,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { FolderGit2, Search, X, Loader2, ArrowLeft, Globe, Building2, MapPin } from 'lucide-react';
+import { GitHubSearchingAnimation } from '@/components/home/GitHubSearchingAnimation';
 import { Logo } from '@principal-ai/logo-component';
 import { useGitHubActivityFeed, type RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
 import { FEATURED_REPOS } from '@/lib/featured-repos';
@@ -784,7 +785,11 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSearchQuery(value);
+                  if (value.trim()) setSearchLoading(true);
+                }}
                 placeholder="Search GitHub or paste a link..."
                 style={{
                   flex: 1,
@@ -1179,12 +1184,11 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  padding: spacing.md,
-                  color: theme.colors.textMuted,
+                  height: '100%',
+                  flex: 1,
                 }}
               >
-                <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
-                <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+                <GitHubSearchingAnimation size={120} />
               </div>
             ) : searchResults.length === 0 ? (
               <div
