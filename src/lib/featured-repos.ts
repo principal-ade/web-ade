@@ -59,6 +59,11 @@ export const FEATURED_REPOS: FeaturedRepo[] = [
     owner: 'tigerbeetle',
     repo: 'tigerbeetle',
   },
+  {
+    owner: 'Git-on-my-level',
+    repo: 'codex-autorunner',
+    description: 'Meta-harness for coordinating multiple AI agents',
+  },
 ];
 
 /**
