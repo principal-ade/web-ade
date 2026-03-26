@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import Link from 'next/link';
+import { GitHubSearchingAnimation } from './GitHubSearchingAnimation';
 
 interface GitHubRepo {
   id: number;
@@ -173,20 +174,18 @@ export function GitHubSearchResults({ searchQuery, userRepos = [] }: GitHubSearc
   const isLoading = pendingSearch || loading || directRepoLoading;
 
   if (isLoading) {
-    // Show fewer skeletons for URL lookups, more for search
-    const skeletonCount = parsedUrl ? 1 : 6;
     return (
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '16px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
           width: '100%',
+          paddingTop: 32,
+          paddingBottom: 32,
         }}
       >
-        {Array.from({ length: skeletonCount }, (_, i) => (
-          <SkeletonCard key={i} theme={theme} />
-        ))}
+        <GitHubSearchingAnimation size={140} />
       </div>
     );
   }
@@ -439,66 +438,4 @@ const RepoCard: React.FC<{
   );
 };
 
-const SkeletonCard: React.FC<{
-  theme: ReturnType<typeof useTheme>['theme'];
-}> = ({ theme }) => {
-  return (
-    <div
-      style={{
-        padding: '16px 20px',
-        borderRadius: '12px',
-        backgroundColor: theme.colors.surface,
-        border: `1px solid ${theme.colors.border}`,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div
-          style={{
-            width: 24,
-            height: 24,
-            borderRadius: '6px',
-            backgroundColor: theme.colors.border,
-            animation: 'pulse 1.5s ease-in-out infinite',
-          }}
-        />
-        <div
-          style={{
-            width: '70%',
-            height: 16,
-            borderRadius: '4px',
-            backgroundColor: theme.colors.border,
-            animation: 'pulse 1.5s ease-in-out infinite',
-          }}
-        />
-      </div>
-      <div
-        style={{
-          width: '100%',
-          height: 14,
-          borderRadius: '4px',
-          backgroundColor: theme.colors.border,
-          animation: 'pulse 1.5s ease-in-out infinite',
-        }}
-      />
-      <div
-        style={{
-          width: '50%',
-          height: 12,
-          borderRadius: '4px',
-          backgroundColor: theme.colors.border,
-          animation: 'pulse 1.5s ease-in-out infinite',
-        }}
-      />
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-      `}</style>
-    </div>
-  );
-};
 

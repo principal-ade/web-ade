@@ -2,7 +2,7 @@
 
 import { EditorHeader } from "@/components/EditorHeader";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
-import { WelcomePanel } from "@/components/WelcomePanel";
+import { ActivityFeedPanel } from "@/panels/ActivityFeedPanel";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { useTheme } from "@principal-ade/industry-theme";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -100,7 +100,7 @@ function HomePageContent() {
 
       {/* Main Content */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        <WelcomePanel />
+        <ActivityFeedPanel />
       </div>
 
       {/* Global Command Palette (Cmd+Shift+P) */}
