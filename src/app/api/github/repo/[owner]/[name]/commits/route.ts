@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { unstable_cache } from "next/cache";
 import { getGitHubToken } from "@/lib/auth/cookies";
-import { CACHE_TTL, CACHE_TAGS, GitHubApiError } from "@/lib/github-cache";
+import { CACHE_TTL, GitHubApiError } from "@/lib/github-cache";
 import { getCached, setCachedAsync, getCommitsCacheKey } from "@/lib/redis-cache";
 import type { GitHubCommit } from "@/types/api";
 
@@ -74,31 +73,6 @@ async function fetchCommitsFromGitHub(
   return response.json();
 }
 
-/**
- * Get cached commits - shared cache for public repos
- * All clients polling the same repo share this cache entry
- */
-function getCachedCommits(
-  owner: string,
-  name: string,
-  perPage: number,
-  page: number,
-  sha: string | undefined,
-  token: string | null
-): Promise<GitHubCommit[]> {
-  // Cache key includes query params but NOT token (shared cache for public repos)
-  const cacheKey = `commits:${owner}/${name}:${perPage}:${page}:${sha || 'HEAD'}`;
-
-  return unstable_cache(
-    () => fetchCommitsFromGitHub(owner, name, perPage, page, sha, token),
-    [cacheKey],
-    {
-      revalidate: CACHE_TTL.COMMITS,
-      tags: [CACHE_TAGS.GITHUB_API, CACHE_TAGS.COMMITS, `commits:${owner}/${name}`],
-    }
-  )();
-}
-
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const { owner, name } = await params;
   const searchParams = request.nextUrl.searchParams;
@@ -128,11 +102,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 
   try {
-    // Use server-side caching - all clients share this cache
-    const commits = await getCachedCommits(owner, name, perPage, page, sha, token);
+    // Fetch directly from GitHub (no unstable_cache layer)
+    const commits = await fetchCommitsFromGitHub(owner, name, perPage, page, sha, token);
 
-    // Store in Redis asynchronously (fire and forget)
-    setCachedAsync(redisKey, commits, 1200); // 20 min in Redis
+    // Store in Redis with same TTL as cache headers
+    setCachedAsync(redisKey, commits, CACHE_TTL.COMMITS);
 
     // Return commits with cache headers for CDN/browser
     const jsonResponse = NextResponse.json(
@@ -140,7 +114,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       {
         headers: {
           "Cache-Control": `public, s-maxage=${CACHE_TTL.COMMITS}, stale-while-revalidate=${CACHE_TTL.COMMITS * 2}`,
-          "X-Cache-Source": "nextjs",
+          "X-Cache-Source": "github",
         },
       }
     );
