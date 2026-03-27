@@ -1,0 +1,57 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/feed-collections/feed-collections.otel.canvas",
+  "spanPattern": "feed.collection",
+  "name": "Collection CRUD",
+  "description": "Create, update, and manage feed collections",
+  "scenarios": [
+    {
+      "id": "create-collection",
+      "description": "User creates a new collection (public or private)",
+      "priority": 1,
+      "template": {
+        "summary": "[Created] {{visibility}} collection '{{name}}'",
+        "events": {
+          "feed.collection.create.started": "Creating {{visibility}} collection '{{name}}'",
+          "feed.collection.s3.put": "Storing collection {{collectionId}} at {{s3Key}}",
+          "feed.collection.created": "Collection {{collectionId}} created by {{ownerGithubId}}"
+        }
+      }
+    },
+    {
+      "id": "add-repo",
+      "description": "User adds a repository to their collection",
+      "priority": 2,
+      "template": {
+        "summary": "[Added] {{owner}}/{{repo}} to collection",
+        "events": {
+          "feed.collection.repo.add": "Adding {{owner}}/{{repo}} to collection {{collectionId}}",
+          "feed.collection.s3.put": "Updating collection {{collectionId}} at {{s3Key}}"
+        }
+      }
+    },
+    {
+      "id": "remove-repo",
+      "description": "User removes a repository from their collection",
+      "priority": 3,
+      "template": {
+        "summary": "[Removed] {{owner}}/{{repo}} from collection",
+        "events": {
+          "feed.collection.repo.remove": "Removing {{owner}}/{{repo}} from collection {{collectionId}}",
+          "feed.collection.s3.put": "Updating collection {{collectionId}} at {{s3Key}}"
+        }
+      }
+    },
+    {
+      "id": "view-public-collection",
+      "description": "User views a public collection",
+      "priority": 4,
+      "template": {
+        "summary": "[Viewed] Public collection {{collectionId}}",
+        "events": {
+          "feed.collection.public.view": "Viewing public collection {{collectionId}} (viewer: {{viewerGithubId}})"
+        }
+      }
+    }
+  ]
+}

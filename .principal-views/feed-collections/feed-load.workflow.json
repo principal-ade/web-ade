@@ -1,0 +1,56 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/feed-collections/feed-collections.otel.canvas",
+  "spanPattern": "feed.load",
+  "name": "Feed Load",
+  "description": "Load personalized or default feed on home page",
+  "scenarios": [
+    {
+      "id": "personalized-success",
+      "description": "Authenticated user with subscribed collections loads their personalized feed",
+      "priority": 1,
+      "template": {
+        "summary": "[Success] Loaded personalized feed for user {{githubId}}",
+        "events": {
+          "feed.load.started": "Loading feed for {{githubId}} (authenticated: {{isAuthenticated}})",
+          "feed.profile.fetch": "Fetching profile for {{githubId}}",
+          "feed.profile.loaded": "Profile for {{githubId}} loaded: {{subscriptionCount}} subscriptions",
+          "feed.collections.fetch": "Fetching {{collectionIds}} collections",
+          "feed.collections.loaded": "Loaded {{collectionCount}} collections with {{totalRepos}} repos",
+          "feed.repos.merge": "Merged to {{uniqueRepoCount}} unique repos",
+          "feed.ready": "Feed ready: {{repoCount}} repos (source: {{source}})"
+        }
+      }
+    },
+    {
+      "id": "new-user-fallback",
+      "description": "Authenticated user with no profile yet falls back to featured",
+      "priority": 2,
+      "template": {
+        "summary": "[Fallback] New user {{githubId}} viewing featured repos",
+        "events": {
+          "feed.load.started": "Loading feed for {{githubId}} (authenticated: {{isAuthenticated}})",
+          "feed.profile.fetch": "Fetching profile for {{githubId}}",
+          "feed.profile.not-found": "No profile found for {{githubId}}",
+          "feed.fallback.featured": "Using {{repoCount}} featured repos",
+          "feed.ready": "Feed ready: {{repoCount}} repos (source: {{source}})"
+        }
+      }
+    },
+    {
+      "id": "empty-subscriptions",
+      "description": "User has profile but no subscriptions",
+      "priority": 3,
+      "template": {
+        "summary": "[Empty] User {{githubId}} has no subscriptions",
+        "events": {
+          "feed.load.started": "Loading feed for {{githubId}} (authenticated: {{isAuthenticated}})",
+          "feed.profile.fetch": "Fetching profile for {{githubId}}",
+          "feed.profile.loaded": "Profile for {{githubId}} loaded: {{subscriptionCount}} subscriptions",
+          "feed.fallback.featured": "Using {{repoCount}} featured repos",
+          "feed.ready": "Feed ready: {{repoCount}} repos (source: {{source}})"
+        }
+      }
+    }
+  ]
+}

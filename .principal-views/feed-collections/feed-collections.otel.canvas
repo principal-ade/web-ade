@@ -1,0 +1,858 @@
+{
+  "pv": {
+    "name": "Feed Collections",
+    "version": "1.0.0",
+    "markdown": ".principal-views/feed-collections/feed-collections.md",
+    "edgeTypes": {
+      "flow": {
+        "label": "Flow"
+      },
+      "error": {
+        "label": "Error Path"
+      },
+      "user-action": {
+        "label": "User Action"
+      },
+      "data-flow": {
+        "label": "Data Flow"
+      },
+      "s3": {
+        "label": "S3 Operation"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "feed-load-started",
+      "type": "otel-event",
+      "x": -400,
+      "y": 0,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/hooks/usePersonalizedFeed.ts"
+        ]
+      },
+      "label": "Feed Load Started",
+      "event": {
+        "name": "feed.load.started",
+        "attributes": {
+          "githubId": {
+            "type": "string",
+            "description": "User's GitHub ID",
+            "required": true
+          },
+          "isAuthenticated": {
+            "type": "boolean",
+            "description": "Whether user is logged in",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "fetch-user-profile",
+      "type": "otel-event",
+      "x": -400,
+      "y": 150,
+      "width": 220,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/lib/feed-collections/s3-storage.ts"
+        ]
+      },
+      "label": "Fetch User Profile",
+      "event": {
+        "name": "feed.profile.fetch",
+        "attributes": {
+          "githubId": {
+            "type": "string",
+            "description": "User's GitHub ID",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "profile-not-found",
+      "type": "otel-event",
+      "x": -100,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#d97706",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/lib/feed-collections/s3-storage.ts"
+        ]
+      },
+      "label": "Profile Not Found",
+      "event": {
+        "name": "feed.profile.not-found",
+        "attributes": {
+          "githubId": {
+            "type": "string",
+            "description": "User's GitHub ID",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "use-featured-repos",
+      "type": "otel-event",
+      "x": -100,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "color": "#4b5563",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/lib/featured-repos.ts"
+        ]
+      },
+      "label": "Use Featured Repos",
+      "event": {
+        "name": "feed.fallback.featured",
+        "attributes": {
+          "repoCount": {
+            "type": "number",
+            "description": "Number of featured repos",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "profile-loaded",
+      "type": "otel-event",
+      "x": -400,
+      "y": 300,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/lib/feed-collections/s3-storage.ts"
+        ]
+      },
+      "label": "Profile Loaded",
+      "event": {
+        "name": "feed.profile.loaded",
+        "attributes": {
+          "githubId": {
+            "type": "string",
+            "description": "User's GitHub ID",
+            "required": true
+          },
+          "subscriptionCount": {
+            "type": "number",
+            "description": "Number of subscribed collections",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "fetch-collections",
+      "type": "otel-event",
+      "x": -400,
+      "y": 450,
+      "width": 220,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/lib/feed-collections/s3-storage.ts"
+        ]
+      },
+      "label": "Fetch Collections",
+      "event": {
+        "name": "feed.collections.fetch",
+        "attributes": {
+          "collectionIds": {
+            "type": "array",
+            "description": "IDs of collections to fetch",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "collections-loaded",
+      "type": "otel-event",
+      "x": -400,
+      "y": 600,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/hooks/usePersonalizedFeed.ts"
+        ]
+      },
+      "label": "Collections Loaded",
+      "event": {
+        "name": "feed.collections.loaded",
+        "attributes": {
+          "collectionCount": {
+            "type": "number",
+            "description": "Number of collections loaded",
+            "required": true
+          },
+          "totalRepos": {
+            "type": "number",
+            "description": "Total repos across all collections",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "merge-repos",
+      "type": "otel-event",
+      "x": -400,
+      "y": 750,
+      "width": 220,
+      "height": 90,
+      "color": "#0891b2",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/hooks/usePersonalizedFeed.ts"
+        ]
+      },
+      "label": "Merge Repos",
+      "event": {
+        "name": "feed.repos.merge",
+        "attributes": {
+          "uniqueRepoCount": {
+            "type": "number",
+            "description": "Deduplicated repo count",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "feed-ready",
+      "type": "otel-event",
+      "x": -400,
+      "y": 900,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/panels/ActivityFeedPanel.tsx"
+        ]
+      },
+      "label": "Feed Ready",
+      "event": {
+        "name": "feed.ready",
+        "attributes": {
+          "repoCount": {
+            "type": "number",
+            "description": "Total repos in feed",
+            "required": true
+          },
+          "source": {
+            "type": "string",
+            "description": "Source: 'personalized' or 'featured'",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "collection-create-started",
+      "type": "otel-event",
+      "x": 200,
+      "y": 0,
+      "width": 220,
+      "height": 90,
+      "color": "#1d4ed8",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/app/api/feed/collections/route.ts"
+        ]
+      },
+      "label": "Create Collection",
+      "event": {
+        "name": "feed.collection.create.started",
+        "attributes": {
+          "name": {
+            "type": "string",
+            "description": "Collection name",
+            "required": true
+          },
+          "visibility": {
+            "type": "string",
+            "description": "public or private",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "collection-s3-put",
+      "type": "otel-event",
+      "x": 200,
+      "y": 150,
+      "width": 220,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/lib/feed-collections/s3-storage.ts"
+        ]
+      },
+      "label": "S3 Put Collection",
+      "event": {
+        "name": "feed.collection.s3.put",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection UUID",
+            "required": true
+          },
+          "s3Key": {
+            "type": "string",
+            "description": "S3 object key",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "collection-created",
+      "type": "otel-event",
+      "x": 200,
+      "y": 300,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/app/api/feed/collections/route.ts"
+        ]
+      },
+      "label": "Collection Created",
+      "event": {
+        "name": "feed.collection.created",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "New collection ID",
+            "required": true
+          },
+          "ownerGithubId": {
+            "type": "string",
+            "description": "Owner's GitHub ID",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "add-repo-to-collection",
+      "type": "otel-event",
+      "x": 200,
+      "y": 450,
+      "width": 220,
+      "height": 90,
+      "color": "#1d4ed8",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/app/api/feed/collections/[id]/repos/route.ts"
+        ]
+      },
+      "label": "Add Repo",
+      "event": {
+        "name": "feed.collection.repo.add",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection ID",
+            "required": true
+          },
+          "owner": {
+            "type": "string",
+            "description": "Repo owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repo name",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "remove-repo-from-collection",
+      "type": "otel-event",
+      "x": 200,
+      "y": 600,
+      "width": 220,
+      "height": 90,
+      "color": "#dc2626",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/app/api/feed/collections/[id]/repos/route.ts"
+        ]
+      },
+      "label": "Remove Repo",
+      "event": {
+        "name": "feed.collection.repo.remove",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection ID",
+            "required": true
+          },
+          "owner": {
+            "type": "string",
+            "description": "Repo owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repo name",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "subscribe-to-collection",
+      "type": "otel-event",
+      "x": 500,
+      "y": 0,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/app/api/feed/collections/[id]/subscribe/route.ts"
+        ]
+      },
+      "label": "Subscribe",
+      "event": {
+        "name": "feed.collection.subscribe",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection to subscribe to",
+            "required": true
+          },
+          "subscriberGithubId": {
+            "type": "string",
+            "description": "Subscriber's GitHub ID",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "unsubscribe-from-collection",
+      "type": "otel-event",
+      "x": 500,
+      "y": 150,
+      "width": 220,
+      "height": 90,
+      "color": "#dc2626",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/app/api/feed/collections/[id]/subscribe/route.ts"
+        ]
+      },
+      "label": "Unsubscribe",
+      "event": {
+        "name": "feed.collection.unsubscribe",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection to unsubscribe from",
+            "required": true
+          },
+          "subscriberGithubId": {
+            "type": "string",
+            "description": "Subscriber's GitHub ID",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "update-user-profile",
+      "type": "otel-event",
+      "x": 500,
+      "y": 300,
+      "width": 220,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/lib/feed-collections/s3-storage.ts"
+        ]
+      },
+      "label": "Update Profile",
+      "event": {
+        "name": "feed.profile.s3.put",
+        "attributes": {
+          "githubId": {
+            "type": "string",
+            "description": "User's GitHub ID",
+            "required": true
+          },
+          "subscriptionCount": {
+            "type": "number",
+            "description": "Updated subscription count",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "view-public-collection",
+      "type": "otel-event",
+      "x": 500,
+      "y": 450,
+      "width": 220,
+      "height": 90,
+      "color": "#0891b2",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/app/api/feed/collections/public/[id]/route.ts"
+        ]
+      },
+      "label": "View Public Collection",
+      "event": {
+        "name": "feed.collection.public.view",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Public collection ID",
+            "required": true
+          },
+          "viewerGithubId": {
+            "type": "string",
+            "description": "Viewer's GitHub ID (if authenticated)",
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "id": "collection-not-found",
+      "type": "otel-event",
+      "x": 500,
+      "y": 600,
+      "width": 220,
+      "height": 90,
+      "color": "#dc2626",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/lib/feed-collections/s3-storage.ts"
+        ]
+      },
+      "label": "Collection Not Found",
+      "event": {
+        "name": "feed.collection.not-found",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection ID that wasn't found",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "collection-access-denied",
+      "type": "otel-event",
+      "x": 750,
+      "y": 450,
+      "width": 220,
+      "height": 90,
+      "color": "#dc2626",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/app/api/feed/collections/[id]/route.ts"
+        ]
+      },
+      "label": "Access Denied",
+      "event": {
+        "name": "feed.collection.access-denied",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Private collection ID",
+            "required": true
+          },
+          "requestorGithubId": {
+            "type": "string",
+            "description": "Requestor's GitHub ID",
+            "required": true
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-1",
+      "fromNode": "feed-load-started",
+      "fromSide": "bottom",
+      "toNode": "fetch-user-profile",
+      "toSide": "top",
+      "label": "authenticated",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "load-2",
+      "fromNode": "feed-load-started",
+      "fromSide": "right",
+      "toNode": "use-featured-repos",
+      "toSide": "top",
+      "label": "anonymous",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "load-3",
+      "fromNode": "fetch-user-profile",
+      "fromSide": "right",
+      "toNode": "profile-not-found",
+      "toSide": "left",
+      "label": "404",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "load-4",
+      "fromNode": "profile-not-found",
+      "fromSide": "bottom",
+      "toNode": "use-featured-repos",
+      "toSide": "top",
+      "label": "fallback",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "load-5",
+      "fromNode": "fetch-user-profile",
+      "fromSide": "bottom",
+      "toNode": "profile-loaded",
+      "toSide": "top",
+      "label": "success",
+      "pv": {
+        "edgeType": "s3"
+      }
+    },
+    {
+      "id": "load-6",
+      "fromNode": "profile-loaded",
+      "fromSide": "bottom",
+      "toNode": "fetch-collections",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "load-7",
+      "fromNode": "fetch-collections",
+      "fromSide": "bottom",
+      "toNode": "collections-loaded",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "s3"
+      }
+    },
+    {
+      "id": "load-8",
+      "fromNode": "collections-loaded",
+      "fromSide": "bottom",
+      "toNode": "merge-repos",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "load-9",
+      "fromNode": "merge-repos",
+      "fromSide": "bottom",
+      "toNode": "feed-ready",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "load-10",
+      "fromNode": "use-featured-repos",
+      "fromSide": "bottom",
+      "toNode": "feed-ready",
+      "toSide": "right",
+      "label": "direct",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "create-1",
+      "fromNode": "collection-create-started",
+      "fromSide": "bottom",
+      "toNode": "collection-s3-put",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "create-2",
+      "fromNode": "collection-s3-put",
+      "fromSide": "bottom",
+      "toNode": "collection-created",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "s3"
+      }
+    },
+    {
+      "id": "sub-1",
+      "fromNode": "subscribe-to-collection",
+      "fromSide": "bottom",
+      "toNode": "update-user-profile",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "sub-2",
+      "fromNode": "unsubscribe-from-collection",
+      "fromSide": "bottom",
+      "toNode": "update-user-profile",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "repo-add-1",
+      "fromNode": "add-repo-to-collection",
+      "fromSide": "bottom",
+      "toNode": "collection-s3-put",
+      "toSide": "right",
+      "label": "update",
+      "pv": {
+        "edgeType": "s3"
+      }
+    },
+    {
+      "id": "repo-remove-1",
+      "fromNode": "remove-repo-from-collection",
+      "fromSide": "left",
+      "toNode": "collection-s3-put",
+      "toSide": "right",
+      "label": "update",
+      "pv": {
+        "edgeType": "s3"
+      }
+    },
+    {
+      "id": "public-1",
+      "fromNode": "view-public-collection",
+      "fromSide": "bottom",
+      "toNode": "collection-not-found",
+      "toSide": "top",
+      "label": "404",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "public-2",
+      "fromNode": "view-public-collection",
+      "fromSide": "right",
+      "toNode": "collection-access-denied",
+      "toSide": "left",
+      "label": "private",
+      "pv": {
+        "edgeType": "error"
+      }
+    }
+  ]
+}

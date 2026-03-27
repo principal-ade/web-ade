@@ -8,6 +8,7 @@
 import { router } from '../trpc';
 import { ttsRouter } from './tts';
 import { githubRouter } from './github';
+import { feedRouter } from './feed';
 
 /**
  * Main application router
@@ -16,9 +17,7 @@ import { githubRouter } from './github';
 export const appRouter = router({
   tts: ttsRouter,
   github: githubRouter,
-  // Add more routers as you migrate:
-  // auth: authRouter,
-  // etc.
+  feed: feedRouter,
 });
 
 // Export type definition for client

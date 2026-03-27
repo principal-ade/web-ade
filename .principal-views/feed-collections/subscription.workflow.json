@@ -1,0 +1,57 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/feed-collections/feed-collections.otel.canvas",
+  "spanPattern": "feed.collection",
+  "name": "Subscription",
+  "description": "Subscribe and unsubscribe from public collections",
+  "scenarios": [
+    {
+      "id": "subscribe-success",
+      "description": "User successfully subscribes to a public collection",
+      "priority": 1,
+      "template": {
+        "summary": "[Subscribed] User {{subscriberGithubId}} subscribed to collection {{collectionId}}",
+        "events": {
+          "feed.collection.subscribe": "User {{subscriberGithubId}} subscribing to {{collectionId}}",
+          "feed.profile.s3.put": "Updated profile for {{githubId}} with {{subscriptionCount}} subscriptions"
+        }
+      }
+    },
+    {
+      "id": "unsubscribe-success",
+      "description": "User unsubscribes from a collection",
+      "priority": 2,
+      "template": {
+        "summary": "[Unsubscribed] User {{subscriberGithubId}} removed collection {{collectionId}} from feed",
+        "events": {
+          "feed.collection.unsubscribe": "User {{subscriberGithubId}} unsubscribing from {{collectionId}}",
+          "feed.profile.s3.put": "Updated profile for {{githubId}} with {{subscriptionCount}} subscriptions"
+        }
+      }
+    },
+    {
+      "id": "view-collection-not-found",
+      "description": "User tries to view a non-existent collection",
+      "priority": 3,
+      "template": {
+        "summary": "[Not Found] Collection {{collectionId}} does not exist",
+        "events": {
+          "feed.collection.public.view": "Attempting to view collection {{collectionId}} (viewer: {{viewerGithubId}})",
+          "feed.collection.not-found": "Collection {{collectionId}} not found"
+        }
+      }
+    },
+    {
+      "id": "view-collection-access-denied",
+      "description": "User tries to view a private collection they don't own",
+      "priority": 4,
+      "template": {
+        "summary": "[Denied] Cannot view private collection {{collectionId}}",
+        "events": {
+          "feed.collection.public.view": "Attempting to view collection {{collectionId}} (viewer: {{viewerGithubId}})",
+          "feed.collection.access-denied": "Private collection {{collectionId}} - access denied for {{requestorGithubId}}"
+        }
+      }
+    }
+  ]
+}

@@ -17,7 +17,7 @@ import { FolderGit2, Search, X, Loader2, ArrowLeft, Globe, Building2, MapPin } f
 import { GitHubSearchingAnimation } from '@/components/home/GitHubSearchingAnimation';
 import { Logo } from '@principal-ai/logo-component';
 import { useGitHubActivityFeed, type RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
-import { FEATURED_REPOS } from '@/lib/featured-repos';
+import { usePersonalizedFeed } from '@/hooks/usePersonalizedFeed';
 import { RepoActivityCard } from './RepoActivityCard';
 import { HourlyActivityHeatmap, type CommitTimestamp } from '@/components/HourlyActivityHeatmap';
 import { MobileActivityFeed } from '@/components/home/MobileActivityFeed';
@@ -183,7 +183,15 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   className,
 }) => {
   const { theme } = useTheme();
-  const { repoSummaries, loading, error, addRepo, refresh } = useGitHubActivityFeed(FEATURED_REPOS, 10);
+
+  // Get personalized repos (falls back to featured if not authenticated)
+  const { repos: feedRepos, isLoading: feedLoading } = usePersonalizedFeed();
+
+  // Fetch activity for those repos
+  const { repoSummaries, loading, error, addRepo, refresh } = useGitHubActivityFeed(feedRepos, 10);
+
+  // Combined loading state
+  const isLoading = feedLoading || loading;
 
   // Detect mobile to avoid rendering heavy desktop components
   const [isMobile, setIsMobile] = useState(false);
@@ -556,7 +564,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
       <div className="md:hidden" style={{ flex: 1, overflow: 'hidden' }}>
         <MobileActivityFeed
           summaries={timeFilteredSummaries}
-          loading={loading}
+          loading={isLoading}
           error={error}
         />
       </div>
@@ -592,7 +600,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
           >
             <HourlyActivityHeatmap
               commits={heatmapCommits}
-              loading={loading}
+              loading={isLoading}
               onBlockClick={handleHeatmapBlockClick}
               selectedBlock={timeFilter?.start.toISOString() ?? null}
               activeHourKey={activeHourKey}
@@ -702,7 +710,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
             </div>
           )}
 
-          {hourGroups.length === 0 && !loading ? (
+          {hourGroups.length === 0 && !isLoading ? (
             <div
               style={{
                 display: 'flex',
