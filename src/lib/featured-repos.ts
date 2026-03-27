@@ -64,6 +64,10 @@ export const FEATURED_REPOS: FeaturedRepo[] = [
     repo: 'codex-autorunner',
     description: 'Meta-harness for coordinating multiple AI agents',
   },
+  {
+    owner: 'DevelopedByDev',
+    repo: 'overlay-web',
+  },
 ];
 
 /**
