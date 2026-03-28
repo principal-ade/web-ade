@@ -38,6 +38,7 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
   const [activeCommitIndex, setActiveCommitIndex] = useState(0);
   const commitsContainerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
+  const initialScrollLeft = useRef<number>(0);
 
   // File City image state - track loaded images by commit SHA
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
@@ -85,37 +86,36 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
   // Handle swipe on File City image to navigate commits
   const handleFileCityTouchStart = (e: React.TouchEvent) => {
     const touch = e.touches[0];
-    if (touch) {
+    if (touch && commitsContainerRef.current) {
       touchStartX.current = touch.clientX;
+      initialScrollLeft.current = commitsContainerRef.current.scrollLeft;
     }
   };
 
-  const handleFileCityTouchEnd = (e: React.TouchEvent) => {
+  const handleFileCityTouchMove = (e: React.TouchEvent) => {
     if (touchStartX.current === null || !commitsContainerRef.current) return;
 
-    const touch = e.changedTouches[0];
+    const touch = e.touches[0];
     if (!touch) return;
 
-    const touchEndX = touch.clientX;
-    const diff = touchStartX.current - touchEndX;
-    const threshold = 50; // Minimum swipe distance
+    const diff = touchStartX.current - touch.clientX;
+    // Move carousel as user drags (1:1 mapping)
+    commitsContainerRef.current.scrollLeft = initialScrollLeft.current + diff;
+  };
 
-    if (Math.abs(diff) > threshold) {
-      const cardWidth = commitsContainerRef.current.offsetWidth;
-      if (diff > 0 && activeCommitIndex < summary.commits.length - 1) {
-        // Swipe left - go to next commit
-        commitsContainerRef.current.scrollTo({
-          left: (activeCommitIndex + 1) * cardWidth,
-          behavior: 'smooth',
-        });
-      } else if (diff < 0 && activeCommitIndex > 0) {
-        // Swipe right - go to previous commit
-        commitsContainerRef.current.scrollTo({
-          left: (activeCommitIndex - 1) * cardWidth,
-          behavior: 'smooth',
-        });
-      }
-    }
+  const handleFileCityTouchEnd = () => {
+    if (!commitsContainerRef.current) return;
+
+    // Snap to nearest commit
+    const cardWidth = commitsContainerRef.current.offsetWidth;
+    const currentScroll = commitsContainerRef.current.scrollLeft;
+    const nearestIndex = Math.round(currentScroll / cardWidth);
+    const clampedIndex = Math.max(0, Math.min(nearestIndex, summary.commits.length - 1));
+
+    commitsContainerRef.current.scrollTo({
+      left: clampedIndex * cardWidth,
+      behavior: 'smooth',
+    });
 
     touchStartX.current = null;
   };
@@ -350,6 +350,7 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
       {/* Swipe gestures here control the commit carousel below */}
       <div
         onTouchStart={handleFileCityTouchStart}
+        onTouchMove={handleFileCityTouchMove}
         onTouchEnd={handleFileCityTouchEnd}
         style={{
           width: '100%',
