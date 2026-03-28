@@ -10,7 +10,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { User, FolderGit2 } from 'lucide-react';
+import { User } from 'lucide-react';
+import { Logo } from '@principal-ai/logo-component';
 import type { RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
 
 interface MobileRepoCardProps {
@@ -334,12 +335,11 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
               zIndex: 1,
             }}
           >
-            <FolderGit2 size={32} style={{ opacity: 0.5 }} />
-            <span style={{ fontSize: theme.fontSizes[0] }}>Loading...</span>
+            <Logo width={120} height={120} color={theme.colors.textMuted} opacity={0.6} />
           </div>
         )}
         {activeCommit && imageErrors.has(activeCommit.sha) ? (
-          <FolderGit2 size={64} color={theme.colors.textMuted} style={{ opacity: 0.3 }} />
+          <Logo width={80} height={80} color={theme.colors.textMuted} opacity={0.4} />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img
