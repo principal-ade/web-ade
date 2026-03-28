@@ -14,6 +14,7 @@ import { useVersionRegistry } from '@/hooks/useVersionRegistry';
 import { VersionRegistryModal } from './VersionRegistryModal';
 import { useServiceStatus } from '@/hooks/useServiceStatus';
 import { useLiveVersions } from '@/hooks/useLiveVersions';
+import { trackButtonClick } from '@/lib/analytics';
 
 interface EditorHeaderProps {
   currentLayoutConfigId?: string;
@@ -559,6 +560,7 @@ export function EditorHeader({
             href="https://apps.apple.com/us/app/principal-ai/id6761268899"
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => trackButtonClick('App Store Download', 'Mobile Header')}
             className="md:hidden flex items-center justify-center px-3 h-8 rounded-md transition-all hover:opacity-80 text-sm font-medium gap-1.5"
             style={{
               background: theme.colors.primary,
