@@ -69,6 +69,7 @@ export function EditorHeader({
   const [isStarLoading, setIsStarLoading] = useState(false);
   const [canInstallApp, setCanInstallApp] = useState(false);
   const [showRegistryModal, setShowRegistryModal] = useState(false);
+  const [isAppleDevice, setIsAppleDevice] = useState(false);
 
   // Fetch version registry data
   const customerId = repositoryName ? `${repositoryName.owner}/${repositoryName.repo}` : null;
@@ -106,6 +107,14 @@ export function EditorHeader({
       }
     }
   }, [pathname]);
+
+  // Detect Apple devices (iOS/iPadOS) for App Store button
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPad with desktop UA
+    setIsAppleDevice(isIOS);
+  }, []);
 
   // Global presence connection status (connects to __global_presence__ room)
   // Keep connection active even though UI is hidden
@@ -554,8 +563,8 @@ export function EditorHeader({
           </Link>
         )}
 
-        {/* App Store Download - only on home page, mobile only */}
-        {!repositoryName && !ownerOnly && (
+        {/* App Store Download - only on home page, mobile only, Apple devices only */}
+        {!repositoryName && !ownerOnly && isAppleDevice && (
           <a
             href="https://apps.apple.com/us/app/principal-ai/id6761268899"
             target="_blank"
