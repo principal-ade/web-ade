@@ -183,69 +183,76 @@ export function LoadingOverlay({
             opacity={0.9}
           />
           <div style={{ height: 24 }} />
-          <OpenTypeTextReveal
-            text="Welcome"
-            fontUrl={FONT_URL}
-            fontSize={48}
-            width={400}
-            height={100}
-            chaosMode="fragmented"
-            showChartIntro={true}
-            chartPattern="latency"
-            chartDuration={1}
-            chartTransitionDuration={0.5}
-            chaosDuration={0.3}
-            dotsDuration={0.6}
-            flowDuration={1}
-            color={theme.colors.text}
-            particleColor={theme.colors.textMuted}
-            strokeWidth={1.5}
-            loop={false}
-            showGlow={true}
-            animationDelay={0}
-          />
-          <OpenTypeTextReveal
-            text="To"
-            fontUrl={FONT_URL}
-            fontSize={32}
-            width={100}
-            height={60}
-            chaosMode="fragmented"
-            showChartIntro={true}
-            chartPattern="latency"
-            chartDuration={1}
-            chartTransitionDuration={0.5}
-            chaosDuration={0.2}
-            dotsDuration={0.5}
-            flowDuration={0.8}
-            color={theme.colors.textMuted}
-            particleColor={theme.colors.textMuted}
-            strokeWidth={1}
-            loop={false}
-            showGlow={false}
-            animationDelay={STAGGER_DELAY}
-          />
-          <OpenTypeTextReveal
-            text="Principal AI"
-            fontUrl={FONT_URL}
-            fontSize={64}
-            width={550}
-            height={140}
-            chaosMode="fragmented"
-            showChartIntro={true}
-            chartPattern="latency"
-            chartDuration={1}
-            chartTransitionDuration={0.5}
-            chaosDuration={0.3}
-            dotsDuration={0.6}
-            flowDuration={1}
-            color={theme.colors.primary}
-            particleColor={theme.colors.text}
-            strokeWidth={1.5}
-            loop={false}
-            showGlow={true}
-            animationDelay={STAGGER_DELAY * 2}
-          />
+          {/* Fixed-height containers prevent layout shift while fonts load */}
+          <div style={{ height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <OpenTypeTextReveal
+              text="Welcome"
+              fontUrl={FONT_URL}
+              fontSize={48}
+              width={400}
+              height={100}
+              chaosMode="fragmented"
+              showChartIntro={true}
+              chartPattern="latency"
+              chartDuration={1}
+              chartTransitionDuration={0.5}
+              chaosDuration={0.3}
+              dotsDuration={0.6}
+              flowDuration={1}
+              color={theme.colors.text}
+              particleColor={theme.colors.textMuted}
+              strokeWidth={1.5}
+              loop={false}
+              showGlow={true}
+              animationDelay={0}
+            />
+          </div>
+          <div style={{ height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <OpenTypeTextReveal
+              text="To"
+              fontUrl={FONT_URL}
+              fontSize={32}
+              width={100}
+              height={60}
+              chaosMode="fragmented"
+              showChartIntro={true}
+              chartPattern="latency"
+              chartDuration={1}
+              chartTransitionDuration={0.5}
+              chaosDuration={0.2}
+              dotsDuration={0.5}
+              flowDuration={0.8}
+              color={theme.colors.textMuted}
+              particleColor={theme.colors.textMuted}
+              strokeWidth={1}
+              loop={false}
+              showGlow={false}
+              animationDelay={STAGGER_DELAY}
+            />
+          </div>
+          <div style={{ height: 140, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <OpenTypeTextReveal
+              text="Principal AI"
+              fontUrl={FONT_URL}
+              fontSize={64}
+              width={550}
+              height={140}
+              chaosMode="fragmented"
+              showChartIntro={true}
+              chartPattern="latency"
+              chartDuration={1}
+              chartTransitionDuration={0.5}
+              chaosDuration={0.3}
+              dotsDuration={0.6}
+              flowDuration={1}
+              color={theme.colors.primary}
+              particleColor={theme.colors.text}
+              strokeWidth={1.5}
+              loop={false}
+              showGlow={true}
+              animationDelay={STAGGER_DELAY * 2}
+            />
+          </div>
         </div>
       )}
     </div>
