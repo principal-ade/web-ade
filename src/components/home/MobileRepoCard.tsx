@@ -37,6 +37,7 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
   const [avatarLoaded, setAvatarLoaded] = useState(true);
   const [activeCommitIndex, setActiveCommitIndex] = useState(0);
   const commitsContainerRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number | null>(null);
 
   // File City image state - track loaded images by commit SHA
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
@@ -79,6 +80,44 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
     const cardWidth = container.offsetWidth;
     const index = Math.round(scrollLeft / cardWidth);
     setActiveCommitIndex(Math.min(index, summary.commits.length - 1));
+  };
+
+  // Handle swipe on File City image to navigate commits
+  const handleFileCityTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (touch) {
+      touchStartX.current = touch.clientX;
+    }
+  };
+
+  const handleFileCityTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || !commitsContainerRef.current) return;
+
+    const touch = e.changedTouches[0];
+    if (!touch) return;
+
+    const touchEndX = touch.clientX;
+    const diff = touchStartX.current - touchEndX;
+    const threshold = 50; // Minimum swipe distance
+
+    if (Math.abs(diff) > threshold) {
+      const cardWidth = commitsContainerRef.current.offsetWidth;
+      if (diff > 0 && activeCommitIndex < summary.commits.length - 1) {
+        // Swipe left - go to next commit
+        commitsContainerRef.current.scrollTo({
+          left: (activeCommitIndex + 1) * cardWidth,
+          behavior: 'smooth',
+        });
+      } else if (diff < 0 && activeCommitIndex > 0) {
+        // Swipe right - go to previous commit
+        commitsContainerRef.current.scrollTo({
+          left: (activeCommitIndex - 1) * cardWidth,
+          behavior: 'smooth',
+        });
+      }
+    }
+
+    touchStartX.current = null;
   };
 
   // Batch fetch stats for all commits
@@ -308,7 +347,10 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
       )}
 
       {/* File City Section - Uses pre-rendered image for mobile performance */}
+      {/* Swipe gestures here control the commit carousel below */}
       <div
+        onTouchStart={handleFileCityTouchStart}
+        onTouchEnd={handleFileCityTouchEnd}
         style={{
           width: '100%',
           aspectRatio: '1 / 1',
@@ -321,6 +363,7 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
           justifyContent: 'center',
           overflow: 'hidden',
           position: 'relative',
+          touchAction: 'pan-y', // Allow vertical scroll, capture horizontal
         }}
       >
         {activeCommit && !loadedImages.has(activeCommit.sha) && !imageErrors.has(activeCommit.sha) && (
