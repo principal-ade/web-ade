@@ -46,6 +46,7 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
   // File City image state - track loaded images by commit SHA
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  const [displayedSha, setDisplayedSha] = useState<string | null>(null);
 
   // Commit stats (additions, deletions, file count)
   const [commitStats, setCommitStats] = useState<Map<string, { additions: number; deletions: number; filesChanged: number }>>(new Map());
@@ -54,17 +55,29 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
   const activeCommit = summary.commits[activeCommitIndex];
   const baseImageUrl = `/api/file-city/${summary.owner}/${summary.repo}?width=800&height=800`;
 
-  // Prefetch next commit's image
-  const nextCommit = summary.commits[activeCommitIndex + 1];
+  // Update displayed image when active commit's image is loaded
   useEffect(() => {
-    if (nextCommit && !loadedImages.has(nextCommit.sha) && !imageErrors.has(nextCommit.sha)) {
-      const img = new Image();
-      img.src = `${baseImageUrl}&commit=${nextCommit.sha}`;
-      img.onload = () => {
-        setLoadedImages(prev => new Set(prev).add(nextCommit.sha));
-      };
+    if (activeCommit && loadedImages.has(activeCommit.sha)) {
+      setDisplayedSha(activeCommit.sha);
     }
-  }, [nextCommit, baseImageUrl, loadedImages, imageErrors]);
+  }, [activeCommit, loadedImages]);
+
+  // Prefetch next and previous commit's images
+  const nextCommit = summary.commits[activeCommitIndex + 1];
+  const prevCommit = summary.commits[activeCommitIndex - 1];
+  useEffect(() => {
+    const prefetch = (commit: typeof nextCommit) => {
+      if (commit && !loadedImages.has(commit.sha) && !imageErrors.has(commit.sha)) {
+        const img = new Image();
+        img.src = `${baseImageUrl}&commit=${commit.sha}`;
+        img.onload = () => {
+          setLoadedImages(prev => new Set(prev).add(commit.sha));
+        };
+      }
+    };
+    prefetch(nextCommit);
+    prefetch(prevCommit);
+  }, [nextCommit, prevCommit, baseImageUrl, loadedImages, imageErrors]);
 
   const spacing = {
     xs: 4,
@@ -405,7 +418,7 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
           <Logo width={80} height={80} color={theme.colors.textMuted} opacity={0.4} />
         ) : (
           <>
-            {/* Render all commit images, stacked - only show active one */}
+            {/* Render all commit images, stacked - show displayedSha (last loaded) */}
             {summary.commits.map((commit) => (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -417,8 +430,8 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
                   width: '100%',
                   height: '100%',
                   objectFit: 'contain',
-                  opacity: commit.sha === activeCommit?.sha && loadedImages.has(commit.sha) ? 1 : 0,
-                  transition: 'opacity 0.15s ease',
+                  // Show this image if it's the displayed one (last successfully loaded active image)
+                  opacity: commit.sha === displayedSha ? 1 : 0,
                   pointerEvents: 'none',
                 }}
                 onLoad={() => {
