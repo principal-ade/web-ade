@@ -1166,12 +1166,13 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                   {/* Principal AI Title */}
                   <div
                     style={{
-                      color: theme.colors.primary,
                       fontSize: theme.fontSizes[3],
                       fontWeight: 600,
                     }}
                   >
-                    Principal AI
+                    <span style={{ color: theme.colors.text }}>Principal</span>
+                    {' '}
+                    <span style={{ color: theme.colors.primary }}>AI</span>
                   </div>
 
                   {/* Logo */}
