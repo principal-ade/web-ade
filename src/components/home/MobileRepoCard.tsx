@@ -220,6 +220,92 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
         </div>
       </div>
 
+      {/* Commit Timeline - Author avatars with connecting lines */}
+      {summary.commits.length > 1 && (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: `12px ${spacing.md}px`,
+            backgroundColor: theme.colors.surface,
+            flexShrink: 0,
+          }}
+        >
+          {summary.commits.map((commit, index) => (
+            <React.Fragment key={commit.sha}>
+              {/* Connecting line before avatar (except first) */}
+              {index > 0 && (
+                <div
+                  style={{
+                    width: 24,
+                    height: 2,
+                    backgroundColor: theme.colors.border,
+                    marginLeft: 4,
+                    marginRight: 4,
+                  }}
+                />
+              )}
+              {/* Author avatar */}
+              <button
+                onClick={() => {
+                  if (commitsContainerRef.current) {
+                    const cardWidth = commitsContainerRef.current.offsetWidth;
+                    commitsContainerRef.current.scrollTo({
+                      left: index * cardWidth,
+                      behavior: 'smooth',
+                    });
+                  }
+                }}
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: index === activeCommitIndex
+                    ? `2px solid ${theme.colors.primary}`
+                    : 'none',
+                  opacity: index === activeCommitIndex ? 1 : 0.5,
+                  cursor: 'pointer',
+                  padding: 0,
+                  background: 'none',
+                  flexShrink: 0,
+                }}
+              >
+                {commit.authorAvatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={commit.authorAvatarUrl}
+                    alt={commit.author}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      backgroundColor: theme.colors.border,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: theme.colors.textMuted,
+                    }}
+                  >
+                    {commit.author.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </button>
+            </React.Fragment>
+          ))}
+        </div>
+      )}
+
       {/* File City Section - Uses pre-rendered image for mobile performance */}
       <div
         style={{
@@ -433,32 +519,6 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
           ))}
         </div>
 
-        {/* Carousel dots indicator */}
-        {summary.commits.length > 1 && (
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: spacing.xs,
-              paddingBottom: spacing.md,
-            }}
-          >
-            {summary.commits.map((commit, index) => (
-              <div
-                key={commit.sha}
-                style={{
-                  width: index === activeCommitIndex ? 16 : 6,
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: index === activeCommitIndex
-                    ? theme.colors.primary
-                    : theme.colors.border,
-                  transition: 'all 0.2s ease',
-                }}
-              />
-            ))}
-          </div>
-        )}
       </div>
 
     </div>
