@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { OpenTypeTextReveal } from '@principal-ai/logo-component';
+import { OpenTypeTextReveal, Logo } from '@principal-ai/logo-component';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useSearchParams } from 'next/navigation';
 
@@ -176,6 +176,13 @@ export function LoadingOverlay({
             alignItems: 'center',
           }}
         >
+          <Logo
+            width={120}
+            height={120}
+            color={theme.colors.text}
+            opacity={0.9}
+          />
+          <div style={{ height: 24 }} />
           <OpenTypeTextReveal
             text="Welcome"
             fontUrl={FONT_URL}
