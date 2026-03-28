@@ -16,6 +16,8 @@ import type { RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
 
 interface MobileRepoCardProps {
   summary: RepoActivitySummary;
+  /** Hour label to display (e.g., "Good Morning", "2 PM") */
+  hourLabel?: string;
 }
 
 function formatRelativeTime(date: Date): string {
@@ -32,7 +34,7 @@ function formatRelativeTime(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
+export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary, hourLabel }) => {
   const { theme } = useTheme();
   const [avatarLoaded, setAvatarLoaded] = useState(true);
   const [activeCommitIndex, setActiveCommitIndex] = useState(0);
@@ -232,13 +234,35 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
         }
       `}</style>
 
+      {/* Hour Label */}
+      {hourLabel && (
+        <div
+          style={{
+            padding: `${spacing.md}px ${spacing.md}px ${spacing.xs}px`,
+            flexShrink: 0,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              color: theme.colors.textMuted,
+            }}
+          >
+            {hourLabel}
+          </span>
+        </div>
+      )}
+
       {/* Header with avatar and repo name - Above File City */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: spacing.md,
-          padding: spacing.md,
+          padding: hourLabel ? `0 ${spacing.md}px ${spacing.md}px` : spacing.md,
           flexShrink: 0,
         }}
       >

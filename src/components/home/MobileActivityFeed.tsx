@@ -5,13 +5,15 @@
  *
  * Vertical swipeable feed of repo cards for mobile.
  * Uses CSS snap scrolling for smooth swipe-up navigation.
+ * Groups repos by hour for a time-aware experience.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { FolderGit2, Loader2 } from 'lucide-react';
 import type { RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
 import { MobileRepoCard } from './MobileRepoCard';
+import { groupSummariesByHour } from '@/utils/activityGrouping';
 
 interface MobileActivityFeedProps {
   summaries: RepoActivitySummary[];
@@ -30,6 +32,9 @@ export const MobileActivityFeed: React.FC<MobileActivityFeedProps> = ({
     md: 16,
     lg: 24,
   };
+
+  // Group summaries by hour for time-aware display
+  const hourlyCards = useMemo(() => groupSummariesByHour(summaries), [summaries]);
 
   if (loading && summaries.length === 0) {
     return (
@@ -113,9 +118,9 @@ export const MobileActivityFeed: React.FC<MobileActivityFeedProps> = ({
         .mobile-feed-scroll { scrollbar-width: none; -ms-overflow-style: none; }
       `}</style>
 
-      {summaries.map((summary) => (
+      {hourlyCards.map((card) => (
         <div
-          key={summary.fullName}
+          key={card.key}
           style={{
             height: '100%',
             minHeight: '100%',
@@ -123,7 +128,7 @@ export const MobileActivityFeed: React.FC<MobileActivityFeedProps> = ({
             scrollSnapStop: 'always',
           }}
         >
-          <MobileRepoCard summary={summary} />
+          <MobileRepoCard summary={card.summary} hourLabel={card.hourLabel} />
         </div>
       ))}
 
@@ -141,9 +146,9 @@ export const MobileActivityFeed: React.FC<MobileActivityFeedProps> = ({
           zIndex: 10,
         }}
       >
-        {summaries.slice(0, 10).map((summary) => (
+        {hourlyCards.slice(0, 10).map((card) => (
           <div
-            key={summary.fullName}
+            key={card.key}
             style={{
               width: 6,
               height: 6,
@@ -151,10 +156,10 @@ export const MobileActivityFeed: React.FC<MobileActivityFeedProps> = ({
               backgroundColor: theme.colors.primary,
               opacity: 0.4,
             }}
-            title={summary.fullName}
+            title={`${card.summary.fullName} - ${card.hourLabel}`}
           />
         ))}
-        {summaries.length > 10 && (
+        {hourlyCards.length > 10 && (
           <div
             style={{
               fontSize: 8,
@@ -162,7 +167,7 @@ export const MobileActivityFeed: React.FC<MobileActivityFeedProps> = ({
               textAlign: 'center',
             }}
           >
-            +{summaries.length - 10}
+            +{hourlyCards.length - 10}
           </div>
         )}
       </div>
