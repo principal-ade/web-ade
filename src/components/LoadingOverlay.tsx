@@ -179,8 +179,8 @@ export function LoadingOverlay({
           <Logo
             width={120}
             height={120}
-            color={theme.colors.text}
-            particleColor={theme.colors.primary}
+            color={theme.colors.primary}
+            particleColor={theme.colors.text}
             opacity={0.9}
           />
           <div style={{ height: 24 }} />
