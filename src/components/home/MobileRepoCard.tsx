@@ -364,7 +364,7 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
           justifyContent: 'center',
           overflow: 'hidden',
           position: 'relative',
-          touchAction: 'pan-y', // Allow vertical scroll, capture horizontal
+          touchAction: 'none', // Capture all touch events for swipe handling
         }}
       >
         {activeCommit && !loadedImages.has(activeCommit.sha) && !imageErrors.has(activeCommit.sha) && (
@@ -430,11 +430,9 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
             display: 'flex',
             overflowX: 'auto',
             overflowY: 'hidden',
-            scrollSnapType: 'x mandatory',
             WebkitOverflowScrolling: 'touch',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
-            gap: spacing.md,
             paddingBottom: spacing.md,
           }}
         >
@@ -444,7 +442,6 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
               style={{
                 flexShrink: 0,
                 width: '100%',
-                scrollSnapAlign: 'start',
                 padding: spacing.md,
                 backgroundColor: theme.colors.surface,
                 display: 'flex',
