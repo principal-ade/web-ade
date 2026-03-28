@@ -39,6 +39,9 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
   const commitsContainerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const initialScrollLeft = useRef<number>(0);
+  const lastTouchX = useRef<number>(0);
+  const lastTouchTime = useRef<number>(0);
+  const velocity = useRef<number>(0);
 
   // File City image state - track loaded images by commit SHA
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
@@ -88,6 +91,9 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
     const touch = e.touches[0];
     if (touch && commitsContainerRef.current) {
       touchStartX.current = touch.clientX;
+      lastTouchX.current = touch.clientX;
+      lastTouchTime.current = Date.now();
+      velocity.current = 0;
       initialScrollLeft.current = commitsContainerRef.current.scrollLeft;
     }
   };
@@ -98,6 +104,14 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
     const touch = e.touches[0];
     if (!touch) return;
 
+    const now = Date.now();
+    const dt = now - lastTouchTime.current;
+    if (dt > 0) {
+      velocity.current = (lastTouchX.current - touch.clientX) / dt;
+    }
+    lastTouchX.current = touch.clientX;
+    lastTouchTime.current = now;
+
     const diff = touchStartX.current - touch.clientX;
     // Move carousel as user drags (1:1 mapping)
     commitsContainerRef.current.scrollLeft = initialScrollLeft.current + diff;
@@ -106,10 +120,15 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
   const handleFileCityTouchEnd = () => {
     if (!commitsContainerRef.current) return;
 
-    // Snap to nearest commit
     const cardWidth = commitsContainerRef.current.offsetWidth;
     const currentScroll = commitsContainerRef.current.scrollLeft;
-    const nearestIndex = Math.round(currentScroll / cardWidth);
+
+    // Apply momentum: velocity * multiplier gives projected final position
+    const momentum = velocity.current * 150;
+    const projectedScroll = currentScroll + momentum;
+
+    // Snap to nearest commit based on projected position
+    const nearestIndex = Math.round(projectedScroll / cardWidth);
     const clampedIndex = Math.max(0, Math.min(nearestIndex, summary.commits.length - 1));
 
     commitsContainerRef.current.scrollTo({
@@ -118,6 +137,7 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
     });
 
     touchStartX.current = null;
+    velocity.current = 0;
   };
 
   // Batch fetch stats for all commits
