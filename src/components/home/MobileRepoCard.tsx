@@ -38,10 +38,12 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
   const [activeCommitIndex, setActiveCommitIndex] = useState(0);
   const commitsContainerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
   const initialScrollLeft = useRef<number>(0);
   const lastTouchX = useRef<number>(0);
   const lastTouchTime = useRef<number>(0);
   const velocity = useRef<number>(0);
+  const isHorizontalSwipe = useRef<boolean | null>(null); // null = not determined yet
 
   // File City image state - track loaded images by commit SHA
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
@@ -101,18 +103,34 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
     const touch = e.touches[0];
     if (touch && commitsContainerRef.current) {
       touchStartX.current = touch.clientX;
+      touchStartY.current = touch.clientY;
       lastTouchX.current = touch.clientX;
       lastTouchTime.current = Date.now();
       velocity.current = 0;
+      isHorizontalSwipe.current = null; // Reset direction detection
       initialScrollLeft.current = commitsContainerRef.current.scrollLeft;
     }
   };
 
   const handleFileCityTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX.current === null || !commitsContainerRef.current) return;
+    if (touchStartX.current === null || touchStartY.current === null || !commitsContainerRef.current) return;
 
     const touch = e.touches[0];
     if (!touch) return;
+
+    // Determine swipe direction on first significant movement
+    if (isHorizontalSwipe.current === null) {
+      const deltaX = Math.abs(touch.clientX - touchStartX.current);
+      const deltaY = Math.abs(touch.clientY - touchStartY.current);
+      const threshold = 10; // Minimum movement to determine direction
+
+      if (deltaX > threshold || deltaY > threshold) {
+        isHorizontalSwipe.current = deltaX > deltaY;
+      }
+    }
+
+    // Only handle horizontal swipes - let vertical swipes bubble up
+    if (isHorizontalSwipe.current !== true) return;
 
     const now = Date.now();
     const dt = now - lastTouchTime.current;
@@ -128,26 +146,29 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
   };
 
   const handleFileCityTouchEnd = () => {
-    if (!commitsContainerRef.current) return;
+    // Only snap if it was a horizontal swipe
+    if (isHorizontalSwipe.current === true && commitsContainerRef.current) {
+      const cardWidth = commitsContainerRef.current.offsetWidth;
+      const currentScroll = commitsContainerRef.current.scrollLeft;
 
-    const cardWidth = commitsContainerRef.current.offsetWidth;
-    const currentScroll = commitsContainerRef.current.scrollLeft;
+      // Apply momentum: velocity * multiplier gives projected final position
+      const momentum = velocity.current * 150;
+      const projectedScroll = currentScroll + momentum;
 
-    // Apply momentum: velocity * multiplier gives projected final position
-    const momentum = velocity.current * 150;
-    const projectedScroll = currentScroll + momentum;
+      // Snap to nearest commit based on projected position
+      const nearestIndex = Math.round(projectedScroll / cardWidth);
+      const clampedIndex = Math.max(0, Math.min(nearestIndex, summary.commits.length - 1));
 
-    // Snap to nearest commit based on projected position
-    const nearestIndex = Math.round(projectedScroll / cardWidth);
-    const clampedIndex = Math.max(0, Math.min(nearestIndex, summary.commits.length - 1));
-
-    commitsContainerRef.current.scrollTo({
-      left: clampedIndex * cardWidth,
-      behavior: 'smooth',
-    });
+      commitsContainerRef.current.scrollTo({
+        left: clampedIndex * cardWidth,
+        behavior: 'smooth',
+      });
+    }
 
     touchStartX.current = null;
+    touchStartY.current = null;
     velocity.current = 0;
+    isHorizontalSwipe.current = null;
   };
 
   // Batch fetch stats for all commits
@@ -394,7 +415,7 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
           justifyContent: 'center',
           overflow: 'hidden',
           position: 'relative',
-          touchAction: 'none', // Capture all touch events for swipe handling
+          touchAction: 'pan-y', // Allow vertical scrolling, we handle horizontal
         }}
       >
         {/* Loading state - show logo when no images loaded yet */}
