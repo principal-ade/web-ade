@@ -53,9 +53,6 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
   // File City image URL based on active commit
   const activeCommit = summary.commits[activeCommitIndex];
   const baseImageUrl = `/api/file-city/${summary.owner}/${summary.repo}?width=800&height=800`;
-  const fileCityImageUrl = activeCommit
-    ? `${baseImageUrl}&commit=${activeCommit.sha}`
-    : baseImageUrl;
 
   // Prefetch next commit's image
   const nextCommit = summary.commits[activeCommitIndex + 1];
@@ -387,7 +384,8 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
           touchAction: 'none', // Capture all touch events for swipe handling
         }}
       >
-        {activeCommit && !loadedImages.has(activeCommit.sha) && !imageErrors.has(activeCommit.sha) && (
+        {/* Loading state - show logo when no images loaded yet */}
+        {loadedImages.size === 0 && !imageErrors.has(activeCommit?.sha || '') && (
           <div
             style={{
               position: 'absolute',
@@ -402,32 +400,36 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary }) => {
             <Logo width={120} height={120} color={theme.colors.textMuted} opacity={0.6} />
           </div>
         )}
+        {/* Error state */}
         {activeCommit && imageErrors.has(activeCommit.sha) ? (
           <Logo width={80} height={80} color={theme.colors.textMuted} opacity={0.4} />
         ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={activeCommit?.sha || 'no-commit'}
-            src={fileCityImageUrl}
-            alt={`${summary.fullName} file structure`}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              opacity: activeCommit && loadedImages.has(activeCommit.sha) ? 1 : 0,
-              transition: 'opacity 0.2s ease',
-            }}
-            onLoad={() => {
-              if (activeCommit) {
-                setLoadedImages(prev => new Set(prev).add(activeCommit.sha));
-              }
-            }}
-            onError={() => {
-              if (activeCommit) {
-                setImageErrors(prev => new Set(prev).add(activeCommit.sha));
-              }
-            }}
-          />
+          <>
+            {/* Render all commit images, stacked - only show active one */}
+            {summary.commits.map((commit) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={commit.sha}
+                src={`${baseImageUrl}&commit=${commit.sha}`}
+                alt={`${summary.fullName} file structure`}
+                style={{
+                  position: 'absolute',
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  opacity: commit.sha === activeCommit?.sha && loadedImages.has(commit.sha) ? 1 : 0,
+                  transition: 'opacity 0.15s ease',
+                  pointerEvents: 'none',
+                }}
+                onLoad={() => {
+                  setLoadedImages(prev => new Set(prev).add(commit.sha));
+                }}
+                onError={() => {
+                  setImageErrors(prev => new Set(prev).add(commit.sha));
+                }}
+              />
+            ))}
+          </>
         )}
       </div>
 
