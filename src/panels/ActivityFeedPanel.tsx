@@ -1175,7 +1175,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                   </div>
 
                   {/* Logo */}
-                  <Logo width={96} height={96} color={theme.colors.primary} />
+                  <Logo width={96} height={96} color={theme.colors.text} particleColor={theme.colors.primary} />
 
                   {/* Text */}
                   <div style={{ textAlign: 'center' }}>
