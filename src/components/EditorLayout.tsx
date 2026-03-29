@@ -229,6 +229,11 @@ function EditorLayoutContent({
   const handleToggleLeft = useCallback(() => {
     if (leftSidebarCollapsed) {
       panelLayoutRef.current?.expandPanel('left');
+      // After expand, ensure panel is at least 20% (library may restore to small size)
+      const currentLayout = panelLayoutRef.current?.getLayout();
+      if (currentLayout && currentLayout.left < 20) {
+        panelLayoutRef.current?.setLayout({ left: 25, middle: 50, right: currentLayout.right });
+      }
     } else {
       panelLayoutRef.current?.collapsePanel('left');
     }
@@ -238,6 +243,11 @@ function EditorLayoutContent({
   const handleToggleRight = useCallback(() => {
     if (rightSidebarCollapsed) {
       panelLayoutRef.current?.expandPanel('right');
+      // After expand, ensure panel is at least 20% (library may restore to small size)
+      const currentLayout = panelLayoutRef.current?.getLayout();
+      if (currentLayout && currentLayout.right < 20) {
+        panelLayoutRef.current?.setLayout({ left: currentLayout.left, middle: 50, right: 25 });
+      }
     } else {
       panelLayoutRef.current?.collapsePanel('right');
     }
