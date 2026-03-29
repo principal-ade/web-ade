@@ -473,7 +473,7 @@ export function EditorHeader({
               className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
               style={{
                 background: theme.colors.secondary,
-                color: theme.colors.text,
+                color: theme.colors.textOnPrimary,
               }}
               title="Swap middle and right panels"
             >
@@ -554,7 +554,7 @@ export function EditorHeader({
             className="flex items-center justify-center px-3 h-8 rounded-md transition-all hover:opacity-80 text-sm font-medium"
             style={{
               background: theme.colors.secondary,
-              color: theme.colors.text,
+              color: theme.colors.textOnPrimary,
               border: `1px solid ${theme.colors.border}`,
             }}
             title="Go to feed"
