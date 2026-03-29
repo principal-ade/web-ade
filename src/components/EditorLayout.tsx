@@ -226,6 +226,8 @@ function EditorLayoutContent({
   const panelLayoutRef = useRef<ConfigurablePanelLayoutHandle>(null);
 
   // Handlers for collapse/expand using imperative API
+  // Note: We only call the imperative API here, state is updated in the completion callbacks
+  // to avoid the flash caused by both imperative + prop-driven animations
   const handleToggleLeft = useCallback(() => {
     if (leftSidebarCollapsed) {
       panelLayoutRef.current?.expandPanel('left');
@@ -237,8 +239,7 @@ function EditorLayoutContent({
     } else {
       panelLayoutRef.current?.collapsePanel('left');
     }
-    setLeftSidebarCollapsed(prev => !prev);
-  }, [leftSidebarCollapsed, setLeftSidebarCollapsed]);
+  }, [leftSidebarCollapsed]);
 
   const handleToggleRight = useCallback(() => {
     if (rightSidebarCollapsed) {
@@ -251,8 +252,24 @@ function EditorLayoutContent({
     } else {
       panelLayoutRef.current?.collapsePanel('right');
     }
-    setRightSidebarCollapsed(prev => !prev);
-  }, [rightSidebarCollapsed, setRightSidebarCollapsed]);
+  }, [rightSidebarCollapsed]);
+
+  // Callbacks for when collapse/expand animations complete - update state here
+  const handleLeftCollapseComplete = useCallback(() => {
+    setLeftSidebarCollapsed(true);
+  }, [setLeftSidebarCollapsed]);
+
+  const handleLeftExpandComplete = useCallback(() => {
+    setLeftSidebarCollapsed(false);
+  }, [setLeftSidebarCollapsed]);
+
+  const handleRightCollapseComplete = useCallback(() => {
+    setRightSidebarCollapsed(true);
+  }, [setRightSidebarCollapsed]);
+
+  const handleRightExpandComplete = useCallback(() => {
+    setRightSidebarCollapsed(false);
+  }, [setRightSidebarCollapsed]);
 
   // State for selected canvas and workflow (for Stories view)
   const [selectedCanvasData, setSelectedCanvasData] = useState<{
@@ -2335,6 +2352,10 @@ function EditorLayoutContent({
                 right: rightSidebarCollapsed,
               }}
               showCollapseButtons={false}
+              onLeftCollapseComplete={handleLeftCollapseComplete}
+              onLeftExpandComplete={handleLeftExpandComplete}
+              onRightCollapseComplete={handleRightCollapseComplete}
+              onRightExpandComplete={handleRightExpandComplete}
             />
           )}
         </div>
