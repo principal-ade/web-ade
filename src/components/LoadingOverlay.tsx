@@ -46,7 +46,7 @@ interface LoadingOverlayProps {
 const STAGGER_DELAY = 0.5;
 
 export function LoadingOverlay({
-  minDisplayTime = 4000,
+  minDisplayTime = 5000,
   onComplete
 }: LoadingOverlayProps) {
   const { theme } = useTheme();
@@ -160,7 +160,7 @@ export function LoadingOverlay({
             chaosDuration={0.3}
             dotsDuration={0.6}
             flowDuration={1}
-            color={theme.colors.primary}
+            wordColors={[theme.colors.text, theme.colors.primary]}
             particleColor={theme.colors.text}
             strokeWidth={1.5}
             loop={false}
@@ -246,7 +246,7 @@ export function LoadingOverlay({
               chaosDuration={0.3}
               dotsDuration={0.6}
               flowDuration={1}
-              color={theme.colors.primary}
+              wordColors={[theme.colors.text, theme.colors.primary]}
               particleColor={theme.colors.text}
               strokeWidth={1.5}
               loop={false}
