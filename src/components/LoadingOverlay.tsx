@@ -180,7 +180,8 @@ export function LoadingOverlay({
             width={120}
             height={120}
             color={theme.colors.primary}
-            particleColor={theme.colors.text}
+            particleColor={theme.colors.accent}
+            letterColor={theme.colors.text}
             opacity={0.9}
           />
           <div style={{ height: 24 }} />
