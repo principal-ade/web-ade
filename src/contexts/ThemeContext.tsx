@@ -7,6 +7,7 @@ import {
   matrixTheme,
   matrixMinimalTheme,
   slateTheme,
+  slateNeonTheme,
   slateGoldTheme,
   enterpriseTheme,
   neuralPulseTheme,
@@ -19,6 +20,7 @@ import {
 
 export const availableThemes = [
   { name: 'Slate Gold', theme: slateGoldTheme },
+  { name: 'Slate Neon', theme: slateNeonTheme },
   { name: 'Landing Page', theme: landingPageTheme },
   { name: 'Landing Page Light', theme: landingPageLightTheme },
   { name: 'Terminal', theme: terminalTheme },
