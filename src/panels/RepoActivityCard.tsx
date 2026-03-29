@@ -473,10 +473,10 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
     setIsAnimating(true);
     animationRef.current.cancel = false;
 
-    // Start from oldest commit (highest index) to newest (index 0)
+    // Animate left-to-right following the visual order
     const commits = summary.commits;
 
-    for (let i = commits.length - 1; i >= 0; i--) {
+    for (let i = 0; i < commits.length; i++) {
       if (animationRef.current.cancel) break;
 
       const commit = commits[i];
