@@ -7,6 +7,10 @@ import {
   matrixTheme,
   matrixMinimalTheme,
   slateTheme,
+  slateGoldTheme,
+  enterpriseTheme,
+  neuralPulseTheme,
+  humanCentricTheme,
   landingPageTheme,
   landingPageLightTheme,
   overrideColors,
@@ -14,6 +18,7 @@ import {
 } from '@principal-ade/industry-theme';
 
 export const availableThemes = [
+  { name: 'Slate Gold', theme: slateGoldTheme },
   { name: 'Landing Page', theme: landingPageTheme },
   { name: 'Landing Page Light', theme: landingPageLightTheme },
   { name: 'Terminal', theme: terminalTheme },
@@ -21,6 +26,9 @@ export const availableThemes = [
   { name: 'Matrix', theme: matrixTheme },
   { name: 'Matrix Minimal', theme: matrixMinimalTheme },
   { name: 'Slate', theme: slateTheme },
+  { name: 'Enterprise', theme: enterpriseTheme },
+  { name: 'Neural Pulse', theme: neuralPulseTheme },
+  { name: 'Human-Centric', theme: humanCentricTheme },
 ] as const;
 
 // Themes to skip when cycling (light themes that might surprise users)
