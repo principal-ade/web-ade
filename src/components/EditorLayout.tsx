@@ -6,13 +6,14 @@ import {
   EditableConfigurablePanelLayout,
   AgentCommandPalette,
   useAgentCommandPalette,
+  ConfigurablePanelLayoutHandle,
 } from '@principal-ade/panel-layouts';
 import { globalPanelRegistry } from '@principal-ade/panel-framework-core';
 import { useTheme } from '@principal-ade/industry-theme';
 import { RepositoryPageProvider, useRepositoryPageProvider } from '@/contexts/RepositoryPageProvider';
 import { WebLLMProvider } from '@/contexts/WebLLMContext';
 import { GeminiProvider } from '@/contexts/GeminiContext';
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { EditorHeader } from './EditorHeader';
 import { SessionsPanel } from './SessionsPanel';
 import { AccessNotice, AccessStatus } from './AccessNotice';
@@ -220,6 +221,28 @@ function EditorLayoutContent({
     return false;
   });
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Ref for imperative panel layout control (collapse/expand)
+  const panelLayoutRef = useRef<ConfigurablePanelLayoutHandle>(null);
+
+  // Handlers for collapse/expand using imperative API
+  const handleToggleLeft = useCallback(() => {
+    if (leftSidebarCollapsed) {
+      panelLayoutRef.current?.expandPanel('left');
+    } else {
+      panelLayoutRef.current?.collapsePanel('left');
+    }
+    setLeftSidebarCollapsed(prev => !prev);
+  }, [leftSidebarCollapsed, setLeftSidebarCollapsed]);
+
+  const handleToggleRight = useCallback(() => {
+    if (rightSidebarCollapsed) {
+      panelLayoutRef.current?.expandPanel('right');
+    } else {
+      panelLayoutRef.current?.collapsePanel('right');
+    }
+    setRightSidebarCollapsed(prev => !prev);
+  }, [rightSidebarCollapsed, setRightSidebarCollapsed]);
 
   // State for selected canvas and workflow (for Stories view)
   const [selectedCanvasData, setSelectedCanvasData] = useState<{
@@ -2084,8 +2107,8 @@ function EditorLayoutContent({
             currentLayoutConfigId={currentLayoutConfigId}
             leftCollapsed={leftSidebarCollapsed}
             rightCollapsed={rightSidebarCollapsed}
-            onToggleLeft={() => setLeftSidebarCollapsed(prev => !prev)}
-            onToggleRight={() => setRightSidebarCollapsed(prev => !prev)}
+            onToggleLeft={handleToggleLeft}
+            onToggleRight={handleToggleRight}
             onSwapRightPanels={() => setLayout(prev => ({ ...prev, middle: prev.right, right: prev.middle }))}
             pendingChangesCount={isLocalMode ? 0 : effectivePendingChangesCount}
             onCommitClick={() => setIsCommitModalOpen(true)}
@@ -2234,8 +2257,8 @@ function EditorLayoutContent({
           currentLayoutConfigId={currentLayoutConfigId}
           leftCollapsed={leftSidebarCollapsed}
           rightCollapsed={rightSidebarCollapsed}
-          onToggleLeft={() => setLeftSidebarCollapsed(prev => !prev)}
-          onToggleRight={() => setRightSidebarCollapsed(prev => !prev)}
+          onToggleLeft={handleToggleLeft}
+          onToggleRight={handleToggleRight}
           onSwapRightPanels={() => setLayout(prev => ({ ...prev, middle: prev.right, right: prev.middle }))}
           pendingChangesCount={isLocalMode ? 0 : effectivePendingChangesCount}
           onCommitClick={() => setIsCommitModalOpen(true)}
@@ -2282,6 +2305,7 @@ function EditorLayoutContent({
             />
           ) : (
             <EditableConfigurablePanelLayout
+              ref={panelLayoutRef}
               theme={theme}
               panels={panels}
               layout={layout}
