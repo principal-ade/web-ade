@@ -247,7 +247,7 @@ export function LoadingOverlay({
               chaosDuration={0.3}
               dotsDuration={0.6}
               flowDuration={1}
-              wordColors={[theme.colors.text, theme.colors.accent]}
+              wordColors={[theme.colors.text, theme.colors.primary]}
               particleColor={theme.colors.text}
               strokeWidth={1.5}
               loop={false}

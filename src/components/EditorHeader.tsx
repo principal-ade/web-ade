@@ -363,7 +363,7 @@ export function EditorHeader({
           >
             <span style={{ color: theme.colors.text }}>Principal</span>
             {' '}
-            <span style={{ color: theme.colors.accent }}>AI</span>
+            <span style={{ color: theme.colors.primary }}>AI</span>
           </h1>
         )}
       </div>

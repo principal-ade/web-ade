@@ -1172,7 +1172,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                   >
                     <span style={{ color: theme.colors.text }}>Principal</span>
                     {' '}
-                    <span style={{ color: theme.colors.accent }}>AI</span>
+                    <span style={{ color: theme.colors.primary }}>AI</span>
                   </div>
 
                   {/* Logo */}
