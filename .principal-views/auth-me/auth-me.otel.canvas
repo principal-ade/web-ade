@@ -44,6 +44,9 @@
             "type": "string"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -71,6 +74,9 @@
             "type": "boolean"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -98,6 +104,9 @@
             "type": "number"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -125,6 +134,9 @@
             "type": "boolean"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -175,6 +187,9 @@
             "type": "number"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -202,6 +217,9 @@
             "type": "string"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -246,6 +264,9 @@
             "type": "string"
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     }
   ],

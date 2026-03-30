@@ -21,7 +21,8 @@
       "label": "Auth Me",
       "description": "Authentication and user session management",
       "otel": {
-        "scope": "auth-me"
+        "scope": "auth-me",
+        "status": "draft"
       }
     },
     {
@@ -35,7 +36,8 @@
       "label": "Next.js",
       "description": "Next.js framework instrumentation",
       "otel": {
-        "scope": "next.js"
+        "scope": "next.js",
+        "status": "draft"
       }
     }
   ],

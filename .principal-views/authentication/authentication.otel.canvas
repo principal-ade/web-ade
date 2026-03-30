@@ -48,6 +48,9 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -118,6 +121,9 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -188,6 +194,9 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -225,6 +234,9 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -273,6 +285,9 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     }
   ],

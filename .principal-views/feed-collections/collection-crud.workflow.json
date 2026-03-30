@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "canvas": ".principal-views/feed-collections/feed-collections.otel.canvas",
-  "spanPattern": "feed.collection",
+  "spanPattern": "feed.collection.crud",
   "name": "Collection CRUD",
   "description": "Create, update, and manage feed collections",
   "scenarios": [

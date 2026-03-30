@@ -90,6 +90,9 @@
             "required": false
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -132,6 +135,9 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -169,6 +175,9 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -211,6 +220,9 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -263,6 +275,9 @@
             "required": false
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -305,6 +320,9 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -347,6 +365,9 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -404,6 +425,9 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -451,6 +475,9 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -498,6 +525,9 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -540,6 +570,9 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
@@ -572,6 +605,9 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "status": "draft"
       }
     }
   ],
