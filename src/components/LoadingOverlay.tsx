@@ -179,8 +179,8 @@ export function LoadingOverlay({
           <Logo
             width={120}
             height={120}
-            color={theme.colors.primary}
-            particleColor={theme.colors.accent}
+            color={theme.colors.accent}
+            particleColor={theme.colors.primary}
             letterColor={theme.colors.text}
             opacity={0.9}
           />
@@ -201,7 +201,7 @@ export function LoadingOverlay({
               chaosDuration={0.3}
               dotsDuration={0.6}
               flowDuration={1}
-              color={theme.colors.text}
+              color={theme.colors.primary}
               particleColor={theme.colors.textMuted}
               strokeWidth={1.5}
               loop={false}
@@ -247,7 +247,7 @@ export function LoadingOverlay({
               chaosDuration={0.3}
               dotsDuration={0.6}
               flowDuration={1}
-              wordColors={[theme.colors.text, theme.colors.primary]}
+              wordColors={[theme.colors.text, theme.colors.accent]}
               particleColor={theme.colors.text}
               strokeWidth={1.5}
               loop={false}

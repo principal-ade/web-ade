@@ -403,7 +403,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
               className="flex items-center gap-2 transition-all hover:opacity-80"
               title="Home"
             >
-              <Logo width={32} height={32} color={theme.colors.primary} />
+              <Logo width={32} height={32} color={theme.colors.accent} particleColor={theme.colors.primary} letterColor={theme.colors.text} />
               <span
                 className="text-base font-semibold"
                 style={{
@@ -411,7 +411,7 @@ export function OwnerPageContent({ owner, onPreviewChange, initialPreviewedRepo 
                   color: theme.colors.text,
                 }}
               >
-                Principal <span style={{ color: theme.colors.primary }}>AI</span>
+                Principal <span style={{ color: theme.colors.accent }}>AI</span>
               </span>
               <span
                 style={{

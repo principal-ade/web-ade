@@ -363,7 +363,7 @@ export function EditorHeader({
           >
             <span style={{ color: theme.colors.text }}>Principal</span>
             {' '}
-            <span style={{ color: theme.colors.primary }}>AI</span>
+            <span style={{ color: theme.colors.accent }}>AI</span>
           </h1>
         )}
       </div>
@@ -572,8 +572,8 @@ export function EditorHeader({
             onClick={() => trackButtonClick('App Store Download', 'Mobile Header')}
             className="md:hidden flex items-center justify-center px-3 h-8 rounded-md transition-all hover:opacity-80 text-sm font-medium gap-1.5"
             style={{
-              background: theme.colors.primary,
-              color: theme.colors.textOnPrimary,
+              background: theme.colors.accent,
+              color: theme.colors.textOnAccent,
             }}
             title="Download on the App Store"
           >

@@ -345,7 +345,7 @@ function ActivityPageContent({ currentUser, selectedRepo, onRepoSelect }: Activi
             className="flex items-center transition-all hover:opacity-80"
             title="Home"
           >
-            <Logo width={32} height={32} color={theme.colors.primary} />
+            <Logo width={32} height={32} color={theme.colors.accent} particleColor={theme.colors.primary} letterColor={theme.colors.text} />
           </Link>
 
           <span

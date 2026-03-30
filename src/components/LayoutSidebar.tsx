@@ -150,9 +150,9 @@ export function LayoutSidebar({
               </Link>
             ) : (
               <div className="flex items-center gap-3">
-                <Logo width={28} height={28} color={theme.colors.primary} />
+                <Logo width={28} height={28} color={theme.colors.accent} particleColor={theme.colors.primary} letterColor={theme.colors.text} />
                 <span style={{ fontFamily: theme.fonts.heading, fontSize: theme.fontSizes[3], fontWeight: 600 }}>
-                  <span style={{ color: theme.colors.text }}>Principal</span>{' '}
+                  <span style={{ color: theme.colors.accent }}>Principal</span>{' '}
                   <span style={{ color: theme.colors.primary }}>AI</span>
                 </span>
               </div>
@@ -309,7 +309,7 @@ export function LayoutSidebar({
               style={{ width: `${ICON_CONTAINER_WIDTH}px`, height: '100%' }}
               title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
-              <Logo width={28} height={28} color={theme.colors.primary} />
+              <Logo width={28} height={28} color={theme.colors.accent} particleColor={theme.colors.primary} letterColor={theme.colors.text} />
             </button>
             <div
               className="flex items-center"
@@ -320,7 +320,7 @@ export function LayoutSidebar({
                 fontWeight: 600,
               }}
             >
-              <span style={{ color: theme.colors.text }}>Principal</span>
+              <span style={{ color: theme.colors.accent }}>Principal</span>
               {' '}
               <span style={{ color: theme.colors.primary }}>AI</span>
             </div>

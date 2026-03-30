@@ -431,15 +431,15 @@ export function CollectionsPageContent({
             className="flex items-center gap-2 transition-all hover:opacity-80"
             title="Home"
           >
-            <Logo width={28} height={28} color={theme.colors.primary} />
+            <Logo width={28} height={28} color={theme.colors.accent} particleColor={theme.colors.primary} letterColor={theme.colors.text} />
             <span
               style={{
-                color: theme.colors.text,
                 fontSize: `${theme.fontSizes[2]}px`,
                 fontWeight: theme.fontWeights.semibold,
               }}
             >
-              Principal AI
+              <span style={{ color: theme.colors.text }}>Principal</span>{' '}
+              <span style={{ color: theme.colors.accent }}>AI</span>
             </span>
             <span
               style={{
