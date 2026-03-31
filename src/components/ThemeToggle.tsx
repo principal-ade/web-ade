@@ -130,8 +130,8 @@ export function ThemeToggle() {
         onClick={cycleTheme}
         className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
         style={{
-          background: theme.colors.primary,
-          color: theme.colors.textOnPrimary,
+          background: theme.colors.accent,
+          color: theme.colors.textOnAccent,
           border: 'none',
           fontSize: theme.fontSizes[1],
           fontWeight: 600,
@@ -141,7 +141,7 @@ export function ThemeToggle() {
         onMouseEnter={(e) => {
           e.currentTarget.style.opacity = '0.9';
           e.currentTarget.style.transform = 'translateY(-1px)';
-          e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.primary}40`;
+          e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.accent}40`;
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.opacity = '1';

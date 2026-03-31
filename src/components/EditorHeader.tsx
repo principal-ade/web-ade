@@ -505,8 +505,8 @@ export function EditorHeader({
             onClick={cycleTheme}
             className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
             style={{
-              background: theme.colors.primary,
-              color: theme.colors.textOnPrimary,
+              background: theme.colors.accent,
+              color: theme.colors.textOnAccent,
             }}
             title={`Theme: ${currentThemeName} (click to cycle)`}
           >

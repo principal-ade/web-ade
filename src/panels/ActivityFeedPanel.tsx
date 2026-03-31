@@ -1159,7 +1159,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                     gap: spacing.lg * 1.5,
                     padding: `${spacing.lg * 2}px ${spacing.lg}px`,
                     borderRadius: 12,
-                    backgroundColor: `${theme.colors.primary}08`,
+                    backgroundColor: 'transparent',
                     border: `1px solid ${theme.colors.primary}20`,
                   }}
                 >
@@ -1180,10 +1180,9 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
 
                   {/* Text */}
                   <div style={{ textAlign: 'center' }}>
-                    <ArrowLeft size={20} color={theme.colors.primary} style={{ display: 'block', margin: `0 auto ${spacing.md}px auto` }} />
                     <div
                       style={{
-                        color: theme.colors.primary,
+                        color: theme.colors.text,
                         fontSize: theme.fontSizes[2],
                         fontWeight: 600,
                         marginBottom: spacing.lg,
@@ -1214,22 +1213,22 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                       alignItems: 'center',
                       justifyContent: 'center',
                       padding: `${spacing.sm + 4}px ${spacing.lg}px`,
-                      backgroundColor: theme.colors.accent,
-                      color: theme.colors.textOnAccent,
+                      backgroundColor: theme.colors.primary,
+                      color: theme.colors.textOnPrimary,
                       borderRadius: 8,
                       fontSize: theme.fontSizes[2],
                       fontWeight: 600,
                       textDecoration: 'none',
                       transition: 'all 0.15s ease',
-                      boxShadow: `0 2px 8px ${theme.colors.accent}30`,
+                      boxShadow: `0 2px 8px ${theme.colors.primary}30`,
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateY(-1px)';
-                      e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.accent}40`;
+                      e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.primary}40`;
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = `0 2px 8px ${theme.colors.accent}30`;
+                      e.currentTarget.style.boxShadow = `0 2px 8px ${theme.colors.primary}30`;
                     }}
                   >
                     Download
