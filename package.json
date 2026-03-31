@@ -65,7 +65,7 @@
     "@principal-ai/codebase-composition": "^0.2.48",
     "@principal-ai/codebase-quality-lenses": "^0.1.65",
     "@principal-ai/control-tower-core": "^0.2.1",
-    "@principal-ai/file-city-builder": "^0.4.2",
+    "@principal-ai/file-city-builder": "^0.4.4",
     "@principal-ai/file-city-server": "^0.3.7",
     "@principal-ai/logo-component": "^0.1.14",
     "@principal-ai/principal-view-cli": "^0.15.13",
