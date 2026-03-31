@@ -78,6 +78,7 @@ const USER_ACTIVITY_QUERY = `
           repository {
             nameWithOwner
             url
+            isPrivate
             owner {
               __typename
             }
@@ -99,6 +100,7 @@ const USER_ACTIVITY_QUERY = `
           url
           repository {
             nameWithOwner
+            isPrivate
             owner {
               __typename
             }
@@ -126,6 +128,7 @@ const USER_ACTIVITY_QUERY = `
           url
           repository {
             nameWithOwner
+            isPrivate
             owner {
               __typename
             }
@@ -153,6 +156,7 @@ const USER_ACTIVITY_QUERY = `
           url
           repository {
             nameWithOwner
+            isPrivate
             owner {
               __typename
             }
@@ -198,6 +202,7 @@ export interface ActivityEvent {
   repository: string;
   repositoryUrl?: string;
   ownerType?: 'User' | 'Organization';
+  isPrivate?: boolean;
   title?: string;
   url?: string;
   metadata?: {
@@ -255,7 +260,7 @@ interface GraphQLUser {
       }>;
     };
     commitContributionsByRepository: Array<{
-      repository: { nameWithOwner: string; url: string; owner: { __typename: string } };
+      repository: { nameWithOwner: string; url: string; isPrivate: boolean; owner: { __typename: string } };
       contributions: {
         nodes: Array<{ occurredAt: string; commitCount: number }>;
       };
@@ -267,7 +272,7 @@ interface GraphQLUser {
       number: number;
       mergedAt: string;
       url: string;
-      repository: { nameWithOwner: string; owner: { __typename: string } };
+      repository: { nameWithOwner: string; isPrivate: boolean; owner: { __typename: string } };
       additions: number;
       deletions: number;
       reactions: GraphQLReactions;
@@ -279,7 +284,7 @@ interface GraphQLUser {
       number: number;
       createdAt: string;
       url: string;
-      repository: { nameWithOwner: string; owner: { __typename: string } };
+      repository: { nameWithOwner: string; isPrivate: boolean; owner: { __typename: string } };
       reactions: GraphQLReactions;
     }>;
   };
@@ -291,7 +296,7 @@ interface GraphQLUser {
       createdAt: string;
       closedAt: string | null;
       url: string;
-      repository: { nameWithOwner: string; owner: { __typename: string } };
+      repository: { nameWithOwner: string; isPrivate: boolean; owner: { __typename: string } };
       timelineItems: {
         nodes: Array<{
           actor?: { login: string };
@@ -346,6 +351,7 @@ function normalizeActivity(user: GraphQLUser, fromDate: Date, viewerLogin: strin
         repository: repo.repository.nameWithOwner,
         repositoryUrl: repo.repository.url,
         ownerType: repo.repository.owner.__typename as 'User' | 'Organization',
+        isPrivate: repo.repository.isPrivate,
         metadata: {
           commitCount: contribution.commitCount,
         },
@@ -362,6 +368,7 @@ function normalizeActivity(user: GraphQLUser, fromDate: Date, viewerLogin: strin
       timestamp: pr.mergedAt,
       repository: pr.repository.nameWithOwner,
       ownerType: pr.repository.owner.__typename as 'User' | 'Organization',
+      isPrivate: pr.repository.isPrivate,
       title: pr.title,
       url: pr.url,
       metadata: {
@@ -382,6 +389,7 @@ function normalizeActivity(user: GraphQLUser, fromDate: Date, viewerLogin: strin
       timestamp: pr.createdAt,
       repository: pr.repository.nameWithOwner,
       ownerType: pr.repository.owner.__typename as 'User' | 'Organization',
+      isPrivate: pr.repository.isPrivate,
       title: pr.title,
       url: pr.url,
       metadata: {
@@ -405,6 +413,7 @@ function normalizeActivity(user: GraphQLUser, fromDate: Date, viewerLogin: strin
       timestamp: issue.createdAt,
       repository: issue.repository.nameWithOwner,
       ownerType: issue.repository.owner.__typename as 'User' | 'Organization',
+      isPrivate: issue.repository.isPrivate,
       title: issue.title,
       url: issue.url,
       metadata: {
