@@ -44,7 +44,7 @@ import { minimatch } from 'minimatch';
 import { GitFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData, ExtendedCanvas, WorkflowTemplate, WorkflowScenario } from '@principal-ai/principal-view-core';
 import { buildStoryboardContext } from '@principal-ai/principal-view-core';
-import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode, HighlightLayer, ForkTourSliceData } from '@industry-theme/file-city-panel';
+import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode, HighlightLayer, ForkTourSliceData, LineCountsSliceData } from '@industry-theme/file-city-panel';
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from './AuthContext';
 import { buildOtelHighlightLayers, type ParsedOtelCanvas } from '@/lib/otel-coverage/buildOtelHighlightLayers';
@@ -208,6 +208,7 @@ export interface RepositoryPageContextType {
   fileCityColorModes: DataSlice<FileCityColorModesSliceData>;
   commitFiles?: DataSlice<CommitFilesSliceData>;
   agentHighlightLayers?: DataSlice<HighlightLayer[]>;
+  lineCounts?: DataSlice<LineCountsSliceData | null>;
 }
 
 interface RepositoryPageProviderProps {
@@ -340,6 +341,11 @@ export function RepositoryPageProvider({
 
   // State for enabled color modes
   const [enabledColorModes] = useState<ColorMode[]>([]);
+
+  // State for line counts (for File City 3D building heights)
+  const [lineCountsData, setLineCountsData] = useState<LineCountsSliceData | null>(null);
+  const [lineCountsLoading, setLineCountsLoading] = useState(false);
+  const [lineCountsError, setLineCountsError] = useState<Error | null>(null);
 
   // Build storyboard context from selection
   const storyboardContextData = useMemo<StoryboardContextSliceData | null>(() => {
@@ -627,6 +633,19 @@ export function RepositoryPageProvider({
       refresh: async () => { /* no-op */ },
     }),
     [otelHighlightLayers, otelHighlightLoading]
+  );
+
+  // Explicit slice: lineCounts (for File City 3D building heights)
+  const lineCountsSlice = useMemo<DataSlice<LineCountsSliceData | null>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'lineCounts',
+      data: lineCountsData,
+      loading: lineCountsLoading,
+      error: lineCountsError,
+      refresh: async () => { /* no-op */ },
+    }),
+    [lineCountsData, lineCountsLoading, lineCountsError]
   );
 
   // Slices ref (now empty after full migration)
@@ -948,6 +967,51 @@ export function RepositoryPageProvider({
     fetchForkTour();
   }, [githubRepo]);
 
+  // Fetch line counts when githubRepo changes
+  useEffect(() => {
+    if (!githubRepo) {
+      setLineCountsData(null);
+      setLineCountsLoading(false);
+      return;
+    }
+
+    const [owner, repo] = githubRepo.split('/');
+    if (!owner || !repo) return;
+
+    setLineCountsLoading(true);
+    setLineCountsError(null);
+
+    const fetchLineCounts = async () => {
+      try {
+        const response = await fetch(`/api/line-counts/${owner}/${repo}`);
+        const data = await response.json();
+
+        if (data.available) {
+          setLineCountsData({
+            lineCounts: data.data.lineCounts,
+            status: 'available',
+          });
+          console.log('[RepositoryPageProvider] Line counts loaded:', Object.keys(data.data.lineCounts).length, 'files');
+        } else {
+          setLineCountsData({
+            lineCounts: {},
+            status: data.reason as 'too-large' | 'auth-required',
+            message: data.message,
+          });
+          console.log('[RepositoryPageProvider] Line counts unavailable:', data.reason);
+        }
+      } catch (error) {
+        console.error('[RepositoryPageProvider] Failed to fetch line counts:', error);
+        setLineCountsError(error instanceof Error ? error : new Error('Failed to fetch line counts'));
+        setLineCountsData(null);
+      } finally {
+        setLineCountsLoading(false);
+      }
+    };
+
+    fetchLineCounts();
+  }, [githubRepo]);
+
   // Fetch GitHub messages when authenticated
   useEffect(() => {
     if (!isAuthenticated || !githubRepo) {
@@ -1064,6 +1128,7 @@ export function RepositoryPageProvider({
       commitFiles: commitFilesSlice,
       agentHighlightLayers: agentHighlightLayersSlice,
       forkTour: forkTourSlice,
+      lineCounts: lineCountsSlice,
 
       // ===== LEGACY METHODS (no-ops for interface compatibility) =====
       // All slices are now explicit - use typed properties above instead
@@ -1096,6 +1161,7 @@ export function RepositoryPageProvider({
       commitFilesSlice,
       agentHighlightLayersSlice,
       forkTourSlice,
+      lineCountsSlice,
     ]
   );
 
