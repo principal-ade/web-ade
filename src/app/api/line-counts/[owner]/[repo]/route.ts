@@ -311,7 +311,7 @@ export async function GET(
  * PUT /api/line-counts/[owner]/[repo]
  *
  * Store line counts from electron-app.
- * Requires API key authentication.
+ * Requires GitHub token authentication (from authenticated session).
  */
 export async function PUT(
   request: NextRequest,
@@ -319,30 +319,22 @@ export async function PUT(
 ): Promise<NextResponse> {
   const { owner, repo } = await params;
 
-  // 1. Validate API key
+  // 1. Validate authentication - check for GitHub token
   const authHeader = request.headers.get('Authorization');
-  const apiKey = process.env.LINE_COUNTS_API_KEY;
+  let githubToken: string | null = null;
 
-  if (!apiKey) {
-    console.error('[Line Counts] LINE_COUNTS_API_KEY not configured');
-    return NextResponse.json(
-      { error: 'API not configured' },
-      { status: 503 }
-    );
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    githubToken = authHeader.slice(7);
+  } else {
+    // Also check cookies for token
+    const cookieStore = await cookies();
+    githubToken = cookieStore.get('github_token')?.value || null;
   }
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!githubToken) {
     return NextResponse.json(
-      { error: 'Missing authorization header' },
+      { error: 'Authentication required. Provide a GitHub token.' },
       { status: 401 }
-    );
-  }
-
-  const providedKey = authHeader.slice(7); // Remove 'Bearer ' prefix
-  if (providedKey !== apiKey) {
-    return NextResponse.json(
-      { error: 'Invalid API key' },
-      { status: 403 }
     );
   }
 
