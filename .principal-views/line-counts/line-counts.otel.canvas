@@ -1,0 +1,909 @@
+{
+  "pv": {
+    "name": "Line Counts",
+    "version": "1.0.0",
+    "markdown": ".principal-views/line-counts/line-counts.md",
+    "edgeTypes": {
+      "flow": {
+        "label": "Flow"
+      },
+      "error": {
+        "label": "Error Path"
+      },
+      "data-flow": {
+        "label": "Data Flow"
+      }
+    },
+    "nodeTypes": {
+      "event": {
+        "label": "Event"
+      },
+      "boundary": {
+        "label": "Boundary"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "get-started",
+      "type": "text",
+      "text": "GET Request",
+      "x": -400,
+      "y": 0,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/app/api/line-counts/[owner]/[repo]/route.ts"
+        ],
+        "event": {
+          "name": "line-counts.get.started",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            },
+            "forceCompute": {
+              "type": "boolean",
+              "description": "Force recomputation flag",
+              "required": false
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "cache-check",
+      "type": "text",
+      "text": "Check S3 Cache",
+      "x": -400,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/lib/line-counts/s3-cache.ts"
+        ],
+        "event": {
+          "name": "line-counts.cache.check",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "cache-hit",
+      "type": "text",
+      "text": "Cache Hit",
+      "x": -400,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/lib/line-counts/s3-cache.ts"
+        ],
+        "event": {
+          "name": "line-counts.cache.hit",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            },
+            "fileCount": {
+              "type": "number",
+              "description": "Number of files with line counts",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "cache-miss",
+      "type": "text",
+      "text": "Cache Miss",
+      "x": -100,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/lib/line-counts/s3-cache.ts"
+        ],
+        "event": {
+          "name": "line-counts.cache.miss",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "auth-check",
+      "type": "text",
+      "text": "Auth Check",
+      "x": -100,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/app/api/line-counts/[owner]/[repo]/route.ts"
+        ],
+        "event": {
+          "name": "line-counts.auth.check",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "auth-required",
+      "type": "text",
+      "text": "Auth Required",
+      "x": 200,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/app/api/line-counts/[owner]/[repo]/route.ts"
+        ],
+        "event": {
+          "name": "line-counts.auth.required",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "tree-fetch",
+      "type": "text",
+      "text": "Fetch GitHub Tree",
+      "x": -100,
+      "y": 450,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/app/api/line-counts/[owner]/[repo]/route.ts"
+        ],
+        "event": {
+          "name": "line-counts.tree.fetch",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "size-check",
+      "type": "text",
+      "text": "Check File Count",
+      "x": -100,
+      "y": 600,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/app/api/line-counts/[owner]/[repo]/route.ts"
+        ],
+        "event": {
+          "name": "line-counts.size.check",
+          "attributes": {
+            "fileCount": {
+              "type": "number",
+              "description": "Number of files in repository",
+              "required": true
+            },
+            "maxFiles": {
+              "type": "number",
+              "description": "Max files for on-demand computation",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "too-large",
+      "type": "text",
+      "text": "Repo Too Large",
+      "x": 200,
+      "y": 600,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/app/api/line-counts/[owner]/[repo]/route.ts"
+        ],
+        "event": {
+          "name": "line-counts.too-large",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            },
+            "fileCount": {
+              "type": "number",
+              "description": "Number of files in repo",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "compute-start",
+      "type": "text",
+      "text": "Compute Line Counts",
+      "x": -100,
+      "y": 750,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/app/api/line-counts/[owner]/[repo]/route.ts"
+        ],
+        "event": {
+          "name": "line-counts.compute.start",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            },
+            "fileCount": {
+              "type": "number",
+              "description": "Number of files to process",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "compute-complete",
+      "type": "text",
+      "text": "Compute Complete",
+      "x": -100,
+      "y": 900,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/app/api/line-counts/[owner]/[repo]/route.ts"
+        ],
+        "event": {
+          "name": "line-counts.compute.complete",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            },
+            "fileCount": {
+              "type": "number",
+              "description": "Number of files counted",
+              "required": true
+            },
+            "durationMs": {
+              "type": "number",
+              "description": "Time to compute",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "compute-error",
+      "type": "text",
+      "text": "Compute Error",
+      "x": 200,
+      "y": 750,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/app/api/line-counts/[owner]/[repo]/route.ts"
+        ],
+        "event": {
+          "name": "line-counts.compute.error",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            },
+            "error.message": {
+              "type": "string",
+              "description": "Error message",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "cache-store",
+      "type": "text",
+      "text": "Store in S3",
+      "x": -100,
+      "y": 1050,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/lib/line-counts/s3-cache.ts"
+        ],
+        "event": {
+          "name": "line-counts.cache.store",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            },
+            "fileCount": {
+              "type": "number",
+              "description": "Number of files stored",
+              "required": true
+            },
+            "generatedBy": {
+              "type": "string",
+              "description": "Source: electron-app or web-ade",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "put-started",
+      "type": "text",
+      "text": "PUT Request",
+      "x": 500,
+      "y": 0,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/app/api/line-counts/[owner]/[repo]/route.ts"
+        ],
+        "event": {
+          "name": "line-counts.put.started",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "put-auth-check",
+      "type": "text",
+      "text": "Auth Check",
+      "x": 500,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/app/api/line-counts/[owner]/[repo]/route.ts"
+        ],
+        "event": {
+          "name": "line-counts.put.auth.check",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "put-auth-fail",
+      "type": "text",
+      "text": "Auth Failed",
+      "x": 750,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/app/api/line-counts/[owner]/[repo]/route.ts"
+        ],
+        "event": {
+          "name": "line-counts.put.auth.fail",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            },
+            "error": {
+              "type": "string",
+              "description": "Error message",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "put-validation",
+      "type": "text",
+      "text": "Validate Request",
+      "x": 500,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/app/api/line-counts/[owner]/[repo]/route.ts"
+        ],
+        "event": {
+          "name": "line-counts.put.validation",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            },
+            "hasLineCounts": {
+              "type": "boolean",
+              "description": "Has lineCounts field",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "put-store",
+      "type": "text",
+      "text": "Store in S3",
+      "x": 500,
+      "y": 450,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/lib/line-counts/s3-cache.ts"
+        ],
+        "event": {
+          "name": "line-counts.put.store",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            },
+            "fileCount": {
+              "type": "number",
+              "description": "Number of files to store",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "put-success",
+      "type": "text",
+      "text": "PUT Success",
+      "x": 500,
+      "y": 600,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/app/api/line-counts/[owner]/[repo]/route.ts"
+        ],
+        "event": {
+          "name": "line-counts.put.success",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            },
+            "fileCount": {
+              "type": "number",
+              "description": "Number of files stored",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    },
+    {
+      "id": "put-error",
+      "type": "text",
+      "text": "PUT Error",
+      "x": 750,
+      "y": 450,
+      "width": 200,
+      "height": 90,
+      "pv": {
+        "status": "draft",
+        "references": [
+          "src/app/api/line-counts/[owner]/[repo]/route.ts"
+        ],
+        "event": {
+          "name": "line-counts.put.error",
+          "attributes": {
+            "owner": {
+              "type": "string",
+              "description": "Repository owner",
+              "required": true
+            },
+            "repo": {
+              "type": "string",
+              "description": "Repository name",
+              "required": true
+            },
+            "error.message": {
+              "type": "string",
+              "description": "Error message",
+              "required": true
+            }
+          }
+        },
+        "nodeType": "event"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "get-1",
+      "fromNode": "get-started",
+      "fromSide": "bottom",
+      "toNode": "cache-check",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "get-2",
+      "fromNode": "cache-check",
+      "fromSide": "bottom",
+      "toNode": "cache-hit",
+      "toSide": "top",
+      "label": "found",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "get-3",
+      "fromNode": "cache-check",
+      "fromSide": "right",
+      "toNode": "cache-miss",
+      "toSide": "left",
+      "label": "not found",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "get-4",
+      "fromNode": "cache-miss",
+      "fromSide": "bottom",
+      "toNode": "auth-check",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "get-5",
+      "fromNode": "auth-check",
+      "fromSide": "right",
+      "toNode": "auth-required",
+      "toSide": "left",
+      "label": "no token",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "get-6",
+      "fromNode": "auth-check",
+      "fromSide": "bottom",
+      "toNode": "tree-fetch",
+      "toSide": "top",
+      "label": "authenticated",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "get-7",
+      "fromNode": "tree-fetch",
+      "fromSide": "bottom",
+      "toNode": "size-check",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "get-8",
+      "fromNode": "size-check",
+      "fromSide": "right",
+      "toNode": "too-large",
+      "toSide": "left",
+      "label": ">=2000 files",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "get-9",
+      "fromNode": "size-check",
+      "fromSide": "bottom",
+      "toNode": "compute-start",
+      "toSide": "top",
+      "label": "<2000 files",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "get-10",
+      "fromNode": "compute-start",
+      "fromSide": "bottom",
+      "toNode": "compute-complete",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "get-11",
+      "fromNode": "compute-start",
+      "fromSide": "right",
+      "toNode": "compute-error",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "get-12",
+      "fromNode": "compute-complete",
+      "fromSide": "bottom",
+      "toNode": "cache-store",
+      "toSide": "top",
+      "label": "async",
+      "pv": {
+        "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "put-1",
+      "fromNode": "put-started",
+      "fromSide": "bottom",
+      "toNode": "put-auth-check",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "put-2",
+      "fromNode": "put-auth-check",
+      "fromSide": "right",
+      "toNode": "put-auth-fail",
+      "toSide": "left",
+      "label": "no token",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "put-3",
+      "fromNode": "put-auth-check",
+      "fromSide": "bottom",
+      "toNode": "put-validation",
+      "toSide": "top",
+      "label": "authenticated",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "put-4",
+      "fromNode": "put-validation",
+      "fromSide": "bottom",
+      "toNode": "put-store",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "put-5",
+      "fromNode": "put-store",
+      "fromSide": "bottom",
+      "toNode": "put-success",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "put-6",
+      "fromNode": "put-store",
+      "fromSide": "right",
+      "toNode": "put-error",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "error"
+      }
+    }
+  ]
+}
