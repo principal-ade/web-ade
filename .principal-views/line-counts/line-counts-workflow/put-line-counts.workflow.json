@@ -1,0 +1,52 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/line-counts/line-counts.otel.canvas",
+  "spanPattern": "api.line-counts.put",
+  "name": "Put Line Counts",
+  "description": "Store pre-computed line counts from external source (e.g., Electron app)",
+  "scenarios": [
+    {
+      "id": "put-success",
+      "description": "Successfully stored line counts in S3",
+      "priority": 1,
+      "template": {
+        "summary": "[Success] Stored {owner}/{repo} - {fileCount} files",
+        "events": {
+          "line-counts.put.started": "PUT line counts for {{owner}}/{{repo}}",
+          "line-counts.put.auth.check": "Checking authentication for {{owner}}/{{repo}}",
+          "line-counts.put.validation": "Validating request for {{owner}}/{{repo}} (hasLineCounts: {{hasLineCounts}})",
+          "line-counts.put.store": "Storing {{owner}}/{{repo}}: {{fileCount}} files in S3",
+          "line-counts.put.success": "Successfully stored {{fileCount}} files for {{owner}}/{{repo}}"
+        }
+      }
+    },
+    {
+      "id": "put-auth-fail",
+      "description": "PUT request rejected due to missing or invalid authentication",
+      "priority": 2,
+      "template": {
+        "summary": "[Auth Failed] {owner}/{repo} - {error}",
+        "events": {
+          "line-counts.put.started": "PUT line counts for {{owner}}/{{repo}}",
+          "line-counts.put.auth.check": "Checking authentication for {{owner}}/{{repo}}",
+          "line-counts.put.auth.fail": "Authentication failed for {{owner}}/{{repo}}: {{error}}"
+        }
+      }
+    },
+    {
+      "id": "put-store-error",
+      "description": "S3 storage operation failed",
+      "priority": 3,
+      "template": {
+        "summary": "[Error] {owner}/{repo} - {error.message}",
+        "events": {
+          "line-counts.put.started": "PUT line counts for {{owner}}/{{repo}}",
+          "line-counts.put.auth.check": "Checking authentication for {{owner}}/{{repo}}",
+          "line-counts.put.validation": "Validating request for {{owner}}/{{repo}} (hasLineCounts: {{hasLineCounts}})",
+          "line-counts.put.store": "Storing {{owner}}/{{repo}}: {{fileCount}} files in S3",
+          "line-counts.put.error": "Storage failed for {{owner}}/{{repo}}: {{error.message}}"
+        }
+      }
+    }
+  ]
+}
