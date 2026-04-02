@@ -26,692 +26,612 @@
   "nodes": [
     {
       "id": "get-started",
-      "type": "text",
-      "text": "GET Request",
+      "type": "otel-event",
       "x": -400,
       "y": 0,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/app/api/line-counts/[owner]/[repo]/route.ts"
-        ],
-        "event": {
-          "name": "line-counts.get.started",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            },
-            "forceCompute": {
-              "type": "boolean",
-              "description": "Force recomputation flag",
-              "required": false
-            }
+      "label": "GET Request",
+      "event": {
+        "name": "line-counts.get.started",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "forceCompute": {
+            "type": "boolean",
+            "description": "Force recomputation flag",
+            "required": false
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "cache-check",
-      "type": "text",
-      "text": "Check S3 Cache",
+      "type": "otel-event",
       "x": -400,
       "y": 150,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/lib/line-counts/s3-cache.ts"
-        ],
-        "event": {
-          "name": "line-counts.cache.check",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            }
+      "label": "Check S3 Cache",
+      "event": {
+        "name": "line-counts.cache.check",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "cache-hit",
-      "type": "text",
-      "text": "Cache Hit",
+      "type": "otel-event",
       "x": -400,
       "y": 300,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/lib/line-counts/s3-cache.ts"
-        ],
-        "event": {
-          "name": "line-counts.cache.hit",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            },
-            "fileCount": {
-              "type": "number",
-              "description": "Number of files with line counts",
-              "required": true
-            }
+      "label": "Cache Hit",
+      "event": {
+        "name": "line-counts.cache.hit",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "fileCount": {
+            "type": "number",
+            "description": "Number of files with line counts",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "cache-miss",
-      "type": "text",
-      "text": "Cache Miss",
+      "type": "otel-event",
       "x": -100,
       "y": 150,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/lib/line-counts/s3-cache.ts"
-        ],
-        "event": {
-          "name": "line-counts.cache.miss",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            }
+      "label": "Cache Miss",
+      "event": {
+        "name": "line-counts.cache.miss",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "auth-check",
-      "type": "text",
-      "text": "Auth Check",
+      "type": "otel-event",
       "x": -100,
       "y": 300,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/app/api/line-counts/[owner]/[repo]/route.ts"
-        ],
-        "event": {
-          "name": "line-counts.auth.check",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            }
+      "label": "Auth Check",
+      "event": {
+        "name": "line-counts.auth.check",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "auth-required",
-      "type": "text",
-      "text": "Auth Required",
+      "type": "otel-event",
       "x": 200,
       "y": 300,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/app/api/line-counts/[owner]/[repo]/route.ts"
-        ],
-        "event": {
-          "name": "line-counts.auth.required",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            }
+      "label": "Auth Required",
+      "event": {
+        "name": "line-counts.auth.required",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "tree-fetch",
-      "type": "text",
-      "text": "Fetch GitHub Tree",
+      "type": "otel-event",
       "x": -100,
       "y": 450,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/app/api/line-counts/[owner]/[repo]/route.ts"
-        ],
-        "event": {
-          "name": "line-counts.tree.fetch",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            }
+      "label": "Fetch GitHub Tree",
+      "event": {
+        "name": "line-counts.tree.fetch",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "size-check",
-      "type": "text",
-      "text": "Check File Count",
+      "type": "otel-event",
       "x": -100,
       "y": 600,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/app/api/line-counts/[owner]/[repo]/route.ts"
-        ],
-        "event": {
-          "name": "line-counts.size.check",
-          "attributes": {
-            "fileCount": {
-              "type": "number",
-              "description": "Number of files in repository",
-              "required": true
-            },
-            "maxFiles": {
-              "type": "number",
-              "description": "Max files for on-demand computation",
-              "required": true
-            }
+      "label": "Check File Count",
+      "event": {
+        "name": "line-counts.size.check",
+        "attributes": {
+          "fileCount": {
+            "type": "number",
+            "description": "Number of files in repository",
+            "required": true
+          },
+          "maxFiles": {
+            "type": "number",
+            "description": "Max files for on-demand computation",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "too-large",
-      "type": "text",
-      "text": "Repo Too Large",
+      "type": "otel-event",
       "x": 200,
       "y": 600,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/app/api/line-counts/[owner]/[repo]/route.ts"
-        ],
-        "event": {
-          "name": "line-counts.too-large",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            },
-            "fileCount": {
-              "type": "number",
-              "description": "Number of files in repo",
-              "required": true
-            }
+      "label": "Repo Too Large",
+      "event": {
+        "name": "line-counts.too-large",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "fileCount": {
+            "type": "number",
+            "description": "Number of files in repo",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "compute-start",
-      "type": "text",
-      "text": "Compute Line Counts",
+      "type": "otel-event",
       "x": -100,
       "y": 750,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/app/api/line-counts/[owner]/[repo]/route.ts"
-        ],
-        "event": {
-          "name": "line-counts.compute.start",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            },
-            "fileCount": {
-              "type": "number",
-              "description": "Number of files to process",
-              "required": true
-            }
+      "label": "Compute Line Counts",
+      "event": {
+        "name": "line-counts.compute.start",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "fileCount": {
+            "type": "number",
+            "description": "Number of files to process",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "compute-complete",
-      "type": "text",
-      "text": "Compute Complete",
+      "type": "otel-event",
       "x": -100,
       "y": 900,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/app/api/line-counts/[owner]/[repo]/route.ts"
-        ],
-        "event": {
-          "name": "line-counts.compute.complete",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            },
-            "fileCount": {
-              "type": "number",
-              "description": "Number of files counted",
-              "required": true
-            },
-            "durationMs": {
-              "type": "number",
-              "description": "Time to compute",
-              "required": true
-            }
+      "label": "Compute Complete",
+      "event": {
+        "name": "line-counts.compute.complete",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "fileCount": {
+            "type": "number",
+            "description": "Number of files counted",
+            "required": true
+          },
+          "durationMs": {
+            "type": "number",
+            "description": "Time to compute",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "compute-error",
-      "type": "text",
-      "text": "Compute Error",
+      "type": "otel-event",
       "x": 200,
       "y": 750,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/app/api/line-counts/[owner]/[repo]/route.ts"
-        ],
-        "event": {
-          "name": "line-counts.compute.error",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            },
-            "error.message": {
-              "type": "string",
-              "description": "Error message",
-              "required": true
-            }
+      "label": "Compute Error",
+      "event": {
+        "name": "line-counts.compute.error",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "cache-store",
-      "type": "text",
-      "text": "Store in S3",
+      "type": "otel-event",
       "x": -100,
       "y": 1050,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/lib/line-counts/s3-cache.ts"
-        ],
-        "event": {
-          "name": "line-counts.cache.store",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            },
-            "fileCount": {
-              "type": "number",
-              "description": "Number of files stored",
-              "required": true
-            },
-            "generatedBy": {
-              "type": "string",
-              "description": "Source: electron-app or web-ade",
-              "required": true
-            }
+      "label": "Store in S3",
+      "event": {
+        "name": "line-counts.cache.store",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "fileCount": {
+            "type": "number",
+            "description": "Number of files stored",
+            "required": true
+          },
+          "generatedBy": {
+            "type": "string",
+            "description": "Source: electron-app or web-ade",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "put-started",
-      "type": "text",
-      "text": "PUT Request",
+      "type": "otel-event",
       "x": 500,
       "y": 0,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/app/api/line-counts/[owner]/[repo]/route.ts"
-        ],
-        "event": {
-          "name": "line-counts.put.started",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            }
+      "label": "PUT Request",
+      "event": {
+        "name": "line-counts.put.started",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "put-auth-check",
-      "type": "text",
-      "text": "Auth Check",
+      "type": "otel-event",
       "x": 500,
       "y": 150,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/app/api/line-counts/[owner]/[repo]/route.ts"
-        ],
-        "event": {
-          "name": "line-counts.put.auth.check",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            }
+      "label": "Auth Check",
+      "event": {
+        "name": "line-counts.put.auth.check",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "put-auth-fail",
-      "type": "text",
-      "text": "Auth Failed",
+      "type": "otel-event",
       "x": 750,
       "y": 150,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/app/api/line-counts/[owner]/[repo]/route.ts"
-        ],
-        "event": {
-          "name": "line-counts.put.auth.fail",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            },
-            "error": {
-              "type": "string",
-              "description": "Error message",
-              "required": true
-            }
+      "label": "Auth Failed",
+      "event": {
+        "name": "line-counts.put.auth.fail",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "put-validation",
-      "type": "text",
-      "text": "Validate Request",
+      "type": "otel-event",
       "x": 500,
       "y": 300,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/app/api/line-counts/[owner]/[repo]/route.ts"
-        ],
-        "event": {
-          "name": "line-counts.put.validation",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            },
-            "hasLineCounts": {
-              "type": "boolean",
-              "description": "Has lineCounts field",
-              "required": true
-            }
+      "label": "Validate Request",
+      "event": {
+        "name": "line-counts.put.validation",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "hasLineCounts": {
+            "type": "boolean",
+            "description": "Has lineCounts field",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "put-store",
-      "type": "text",
-      "text": "Store in S3",
+      "type": "otel-event",
       "x": 500,
       "y": 450,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/lib/line-counts/s3-cache.ts"
-        ],
-        "event": {
-          "name": "line-counts.put.store",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            },
-            "fileCount": {
-              "type": "number",
-              "description": "Number of files to store",
-              "required": true
-            }
+      "label": "Store in S3",
+      "event": {
+        "name": "line-counts.put.store",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "fileCount": {
+            "type": "number",
+            "description": "Number of files to store",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "put-success",
-      "type": "text",
-      "text": "PUT Success",
+      "type": "otel-event",
       "x": 500,
       "y": 600,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/app/api/line-counts/[owner]/[repo]/route.ts"
-        ],
-        "event": {
-          "name": "line-counts.put.success",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            },
-            "fileCount": {
-              "type": "number",
-              "description": "Number of files stored",
-              "required": true
-            }
+      "label": "PUT Success",
+      "event": {
+        "name": "line-counts.put.success",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "fileCount": {
+            "type": "number",
+            "description": "Number of files stored",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     },
     {
       "id": "put-error",
-      "type": "text",
-      "text": "PUT Error",
+      "type": "otel-event",
       "x": 750,
       "y": 450,
       "width": 200,
       "height": 90,
-      "pv": {
-        "status": "draft",
-        "references": [
-          "src/app/api/line-counts/[owner]/[repo]/route.ts"
-        ],
-        "event": {
-          "name": "line-counts.put.error",
-          "attributes": {
-            "owner": {
-              "type": "string",
-              "description": "Repository owner",
-              "required": true
-            },
-            "repo": {
-              "type": "string",
-              "description": "Repository name",
-              "required": true
-            },
-            "error.message": {
-              "type": "string",
-              "description": "Error message",
-              "required": true
-            }
+      "label": "PUT Error",
+      "event": {
+        "name": "line-counts.put.error",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
           }
-        },
-        "nodeType": "event"
+        }
+      },
+      "otel": {
+        "status": "draft"
       }
     }
   ],
