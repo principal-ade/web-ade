@@ -55,7 +55,7 @@ export default function RootLayout({
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
   return (
-    <html lang="en">
+    <html lang="en" style={{ background: "#0a0a0a" }}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
