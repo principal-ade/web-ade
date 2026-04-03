@@ -648,6 +648,16 @@ export function RepositoryPageProvider({
     [lineCountsData, lineCountsLoading, lineCountsError]
   );
 
+  // Debug: log when lineCounts slice changes
+  useEffect(() => {
+    console.log('[RepositoryPageProvider] lineCountsSlice changed:', {
+      hasData: !!lineCountsData,
+      lineCountsKeys: lineCountsData ? Object.keys(lineCountsData.lineCounts).slice(0, 5) : null,
+      status: lineCountsData?.status,
+      loading: lineCountsLoading,
+    });
+  }, [lineCountsData, lineCountsLoading]);
+
   // Slices ref (now empty after full migration)
   const slicesRef = useRef<Map<string, DataSlice>>(new Map());
 
@@ -987,6 +997,12 @@ export function RepositoryPageProvider({
         const data = await response.json();
 
         if (data.available) {
+          const lineCounts = data.data.lineCounts as Record<string, number>;
+          console.log('[RepositoryPageProvider] Line counts API response:', {
+            fileCount: data.data.fileCount,
+            lineCountsKeys: Object.keys(lineCounts).slice(0, 5),
+            totalLines: Object.values(lineCounts).reduce((a: number, b: number) => a + b, 0),
+          });
           setLineCountsData({
             lineCounts: data.data.lineCounts,
             status: 'available',

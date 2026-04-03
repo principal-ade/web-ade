@@ -35,7 +35,7 @@ import { layoutTools } from '@principal-ade/utcp-panel-event';
 import { minimatch } from 'minimatch';
 import { GitFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData } from '@principal-ai/principal-view-core';
-import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode } from '@industry-theme/file-city-panel';
+import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode, LineCountsSliceData } from '@industry-theme/file-city-panel';
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from './AuthContext';
 import type {
@@ -157,6 +157,7 @@ export interface OwnerPageContextType {
   commitFiles?: DataSlice<CommitFilesSliceData>;
   storyboardContext?: DataSlice<StoryboardContextSliceData>;
   selectedCollectionView: SelectedCollectionView;
+  lineCounts?: DataSlice<LineCountsSliceData | null>;
 }
 
 interface OwnerPageProviderProps {
@@ -261,6 +262,10 @@ export function OwnerPageProvider({
 
   // State for storyboard context
   const [storyboardContextData] = useState<StoryboardContextSliceData | null>(null);
+
+  // State for line counts (for File City 3D building heights)
+  const [lineCountsData, setLineCountsData] = useState<LineCountsSliceData | null>(null);
+  const [lineCountsLoading, setLineCountsLoading] = useState(false);
 
   // State for enabled color modes
   const [enabledColorModes] = useState<ColorMode[]>([]);
@@ -581,6 +586,19 @@ export function OwnerPageProvider({
     [storyboardContextData]
   );
 
+  // Explicit slice: lineCounts (for File City 3D building heights)
+  const lineCountsSlice = useMemo<DataSlice<LineCountsSliceData | null>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'lineCounts',
+      data: lineCountsData,
+      loading: lineCountsLoading,
+      error: null,
+      refresh: async () => { /* no-op */ },
+    }),
+    [lineCountsData, lineCountsLoading]
+  );
+
   // Explicit slice: selectedCollectionView (special - used by CollectionMapPanel)
   // Uses virtual collection created from owner's first 10 repos
   const selectedCollectionViewSlice = useMemo<SelectedCollectionView>(
@@ -748,6 +766,49 @@ export function OwnerPageProvider({
     fetchFileTree();
   }, [githubRepo]);
 
+  // Fetch line counts when githubRepo changes
+  useEffect(() => {
+    if (!githubRepo) {
+      setLineCountsData(null);
+      setLineCountsLoading(false);
+      return;
+    }
+
+    const [owner, repo] = githubRepo.split('/');
+    if (!owner || !repo) return;
+
+    setLineCountsLoading(true);
+
+    const fetchLineCounts = async () => {
+      try {
+        const response = await fetch(`/api/line-counts/${owner}/${repo}`);
+        const data = await response.json();
+
+        if (data.available) {
+          console.log('[OwnerPageProvider] Line counts loaded:', Object.keys(data.data.lineCounts).length, 'files');
+          setLineCountsData({
+            lineCounts: data.data.lineCounts,
+            status: 'available',
+          });
+        } else {
+          console.log('[OwnerPageProvider] Line counts unavailable:', data.reason);
+          setLineCountsData({
+            lineCounts: {},
+            status: data.reason as 'too-large' | 'auth-required',
+            message: data.message,
+          });
+        }
+      } catch (error) {
+        console.error('[OwnerPageProvider] Failed to fetch line counts:', error);
+        setLineCountsData(null);
+      } finally {
+        setLineCountsLoading(false);
+      }
+    };
+
+    fetchLineCounts();
+  }, [githubRepo]);
+
   // Note: refresh is now a no-op inline function in the context
   // Actions handle data refreshing - React handles reactivity through useMemo dependencies
 
@@ -823,6 +884,7 @@ export function OwnerPageProvider({
       'active-file': activeFileSlice,
       commitFiles: commitFilesSlice,
       storyboardContext: storyboardContextSlice,
+      lineCounts: lineCountsSlice,
 
       // ===== LEGACY METHODS (no-ops for interface compatibility) =====
       // All slices are now explicit - use typed properties above instead
@@ -851,6 +913,7 @@ export function OwnerPageProvider({
       activeFileSlice,
       commitFilesSlice,
       storyboardContextSlice,
+      lineCountsSlice,
     ]
   );
 

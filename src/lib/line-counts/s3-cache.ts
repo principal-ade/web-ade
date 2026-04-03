@@ -110,6 +110,14 @@ export async function getLineCountsFromS3(
     const bodyString = await response.Body.transformToString();
     const data = JSON.parse(bodyString) as LineCountsCache;
 
+    console.log('[Line Counts S3] Retrieved:', {
+      owner,
+      repo,
+      fileCount: data.fileCount,
+      totalLines: Object.values(data.lineCounts).reduce((a, b) => a + b, 0),
+      sampleEntries: Object.entries(data.lineCounts).slice(0, 5),
+    });
+
     return data;
   } catch (error) {
     const errorCode = (error as { name?: string }).name;
