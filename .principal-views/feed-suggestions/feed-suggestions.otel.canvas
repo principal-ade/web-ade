@@ -1,0 +1,872 @@
+{
+  "pv": {
+    "name": "Feed Suggestions",
+    "version": "1.0.0",
+    "markdown": ".principal-views/feed-suggestions/feed-suggestions.md",
+    "edgeTypes": {
+      "flow": {
+        "label": "Flow"
+      },
+      "error": {
+        "label": "Error Path"
+      },
+      "github-api": {
+        "label": "GitHub API"
+      },
+      "parallel": {
+        "label": "Parallel Fetch"
+      },
+      "aggregate": {
+        "label": "Aggregate"
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "get-suggested-users-start",
+      "type": "otel-event",
+      "x": 0,
+      "y": -150,
+      "width": 240,
+      "height": 90,
+      "color": "#1d4ed8",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Get Suggested Users",
+      "event": {
+        "name": "github.suggestions.users.started",
+        "attributes": {}
+      }
+    },
+    {
+      "id": "check-auth-users",
+      "type": "otel-event",
+      "x": 0,
+      "y": 0,
+      "width": 240,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Check Auth",
+      "event": {
+        "name": "github.suggestions.auth.check",
+        "attributes": {
+          "hasToken": {
+            "type": "boolean",
+            "description": "Whether GitHub token exists",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "fetch-following",
+      "type": "otel-event",
+      "x": -150,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Fetch Following",
+      "event": {
+        "name": "github.api.user.following",
+        "attributes": {}
+      }
+    },
+    {
+      "id": "fetch-user-orgs",
+      "type": "otel-event",
+      "x": 150,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Fetch User Orgs",
+      "event": {
+        "name": "github.api.user.orgs",
+        "attributes": {}
+      }
+    },
+    {
+      "id": "fetch-org-members",
+      "type": "otel-event",
+      "x": 150,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Fetch Org Members",
+      "event": {
+        "name": "github.api.org.members",
+        "attributes": {
+          "orgName": {
+            "type": "string",
+            "description": "Organization login name",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "aggregate-users",
+      "type": "otel-event",
+      "x": 0,
+      "y": 450,
+      "width": 240,
+      "height": 90,
+      "color": "#0891b2",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Aggregate & Deduplicate",
+      "event": {
+        "name": "github.suggestions.users.aggregate",
+        "attributes": {
+          "followingCount": {
+            "type": "number",
+            "description": "Users from following",
+            "required": true
+          },
+          "orgMemberCount": {
+            "type": "number",
+            "description": "Users from org members",
+            "required": true
+          },
+          "totalUnique": {
+            "type": "number",
+            "description": "Deduplicated total",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "suggested-users-ready",
+      "type": "otel-event",
+      "x": 0,
+      "y": 600,
+      "width": 240,
+      "height": 90,
+      "color": "#16a34a",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Suggested Users Ready",
+      "event": {
+        "name": "github.suggestions.users.ready",
+        "attributes": {
+          "userCount": {
+            "type": "number",
+            "description": "Total suggested users",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "get-suggested-repos-start",
+      "type": "otel-event",
+      "x": 500,
+      "y": -150,
+      "width": 240,
+      "height": 90,
+      "color": "#1d4ed8",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Get Suggested Repos",
+      "event": {
+        "name": "github.suggestions.repos.started",
+        "attributes": {}
+      }
+    },
+    {
+      "id": "check-auth-repos",
+      "type": "otel-event",
+      "x": 500,
+      "y": 0,
+      "width": 240,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Check Auth",
+      "event": {
+        "name": "github.suggestions.auth.check",
+        "attributes": {
+          "hasToken": {
+            "type": "boolean",
+            "description": "Whether GitHub token exists",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "fetch-starred",
+      "type": "otel-event",
+      "x": 350,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Fetch Starred Repos",
+      "event": {
+        "name": "github.api.user.starred",
+        "attributes": {}
+      }
+    },
+    {
+      "id": "fetch-repo-orgs",
+      "type": "otel-event",
+      "x": 650,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Fetch User Orgs",
+      "event": {
+        "name": "github.api.user.orgs",
+        "attributes": {}
+      }
+    },
+    {
+      "id": "fetch-org-repos",
+      "type": "otel-event",
+      "x": 650,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Fetch Org Repos",
+      "event": {
+        "name": "github.api.org.repos",
+        "attributes": {
+          "orgName": {
+            "type": "string",
+            "description": "Organization login name",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "aggregate-repos",
+      "type": "otel-event",
+      "x": 500,
+      "y": 450,
+      "width": 240,
+      "height": 90,
+      "color": "#0891b2",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Aggregate & Deduplicate",
+      "event": {
+        "name": "github.suggestions.repos.aggregate",
+        "attributes": {
+          "starredCount": {
+            "type": "number",
+            "description": "Repos from starred",
+            "required": true
+          },
+          "orgRepoCount": {
+            "type": "number",
+            "description": "Repos from orgs",
+            "required": true
+          },
+          "totalUnique": {
+            "type": "number",
+            "description": "Deduplicated total",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "suggested-repos-ready",
+      "type": "otel-event",
+      "x": 500,
+      "y": 600,
+      "width": 240,
+      "height": 90,
+      "color": "#16a34a",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Suggested Repos Ready",
+      "event": {
+        "name": "github.suggestions.repos.ready",
+        "attributes": {
+          "repoCount": {
+            "type": "number",
+            "description": "Total suggested repos",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "search-users-start",
+      "type": "otel-event",
+      "x": 1157,
+      "y": -3,
+      "width": 220,
+      "height": 90,
+      "color": "#1d4ed8",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Search Users",
+      "event": {
+        "name": "github.search.users.started",
+        "attributes": {
+          "query": {
+            "type": "string",
+            "description": "Search query",
+            "required": true
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "search-users-api",
+      "type": "otel-event",
+      "x": 1157,
+      "y": 147,
+      "width": 220,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "GitHub Search API",
+      "event": {
+        "name": "github.api.search.users",
+        "attributes": {
+          "query": {
+            "type": "string",
+            "description": "Search query",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "search-users-ready",
+      "type": "otel-event",
+      "x": 1024,
+      "y": 447,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Search Results Ready",
+      "event": {
+        "name": "github.search.users.ready",
+        "attributes": {
+          "resultCount": {
+            "type": "number",
+            "description": "Number of results",
+            "required": true
+          },
+          "totalCount": {
+            "type": "number",
+            "description": "Total matching users",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "search-repos-start",
+      "type": "otel-event",
+      "x": 1457,
+      "y": -3,
+      "width": 220,
+      "height": 90,
+      "color": "#1d4ed8",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Search Repos",
+      "event": {
+        "name": "github.search.repos.started",
+        "attributes": {
+          "query": {
+            "type": "string",
+            "description": "Search query",
+            "required": true
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "search-repos-api",
+      "type": "otel-event",
+      "x": 1457,
+      "y": 147,
+      "width": 220,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "GitHub Search API",
+      "event": {
+        "name": "github.api.search.repos",
+        "attributes": {
+          "query": {
+            "type": "string",
+            "description": "Search query",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "search-repos-ready",
+      "type": "otel-event",
+      "x": 1588,
+      "y": 446,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Search Results Ready",
+      "event": {
+        "name": "github.search.repos.ready",
+        "attributes": {
+          "resultCount": {
+            "type": "number",
+            "description": "Number of results",
+            "required": true
+          },
+          "totalCount": {
+            "type": "number",
+            "description": "Total matching repos",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "auth-required-error",
+      "type": "otel-event",
+      "x": 250,
+      "y": -150,
+      "width": 200,
+      "height": 90,
+      "color": "#dc2626",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Auth Required",
+      "event": {
+        "name": "github.suggestions.auth-required",
+        "attributes": {}
+      }
+    },
+    {
+      "id": "rate-limit-error",
+      "type": "otel-event",
+      "x": 1310,
+      "y": 447,
+      "width": 200,
+      "height": 90,
+      "color": "#d97706",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/github.ts"
+        ]
+      },
+      "label": "Rate Limited",
+      "event": {
+        "name": "github.api.rate-limited",
+        "attributes": {
+          "retryAfter": {
+            "type": "number",
+            "description": "Seconds until rate limit resets",
+            "required": false
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "users-auth-0",
+      "fromNode": "get-suggested-users-start",
+      "fromSide": "bottom",
+      "toNode": "check-auth-users",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "users-1",
+      "fromNode": "check-auth-users",
+      "fromSide": "bottom",
+      "toNode": "fetch-following",
+      "toSide": "top",
+      "label": "authenticated",
+      "pv": {
+        "edgeType": "parallel"
+      }
+    },
+    {
+      "id": "users-2",
+      "fromNode": "check-auth-users",
+      "fromSide": "bottom",
+      "toNode": "fetch-user-orgs",
+      "toSide": "top",
+      "label": "authenticated",
+      "pv": {
+        "edgeType": "parallel"
+      }
+    },
+    {
+      "id": "users-3",
+      "fromNode": "fetch-user-orgs",
+      "fromSide": "bottom",
+      "toNode": "fetch-org-members",
+      "toSide": "top",
+      "label": "for each org",
+      "pv": {
+        "edgeType": "github-api"
+      }
+    },
+    {
+      "id": "users-4",
+      "fromNode": "fetch-following",
+      "fromSide": "bottom",
+      "toNode": "aggregate-users",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "aggregate"
+      }
+    },
+    {
+      "id": "users-5",
+      "fromNode": "fetch-org-members",
+      "fromSide": "bottom",
+      "toNode": "aggregate-users",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "aggregate"
+      }
+    },
+    {
+      "id": "users-6",
+      "fromNode": "aggregate-users",
+      "fromSide": "bottom",
+      "toNode": "suggested-users-ready",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "repos-auth-0",
+      "fromNode": "get-suggested-repos-start",
+      "fromSide": "bottom",
+      "toNode": "check-auth-repos",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "repos-1",
+      "fromNode": "check-auth-repos",
+      "fromSide": "bottom",
+      "toNode": "fetch-starred",
+      "toSide": "top",
+      "label": "authenticated",
+      "pv": {
+        "edgeType": "parallel"
+      }
+    },
+    {
+      "id": "repos-2",
+      "fromNode": "check-auth-repos",
+      "fromSide": "bottom",
+      "toNode": "fetch-repo-orgs",
+      "toSide": "top",
+      "label": "authenticated",
+      "pv": {
+        "edgeType": "parallel"
+      }
+    },
+    {
+      "id": "repos-3",
+      "fromNode": "fetch-repo-orgs",
+      "fromSide": "bottom",
+      "toNode": "fetch-org-repos",
+      "toSide": "top",
+      "label": "for each org",
+      "pv": {
+        "edgeType": "github-api"
+      }
+    },
+    {
+      "id": "repos-4",
+      "fromNode": "fetch-starred",
+      "fromSide": "bottom",
+      "toNode": "aggregate-repos",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "aggregate"
+      }
+    },
+    {
+      "id": "repos-5",
+      "fromNode": "fetch-org-repos",
+      "fromSide": "bottom",
+      "toNode": "aggregate-repos",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "aggregate"
+      }
+    },
+    {
+      "id": "repos-6",
+      "fromNode": "aggregate-repos",
+      "fromSide": "bottom",
+      "toNode": "suggested-repos-ready",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "search-users-1",
+      "fromNode": "search-users-start",
+      "fromSide": "bottom",
+      "toNode": "search-users-api",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "github-api"
+      }
+    },
+    {
+      "id": "search-users-2",
+      "fromNode": "search-users-api",
+      "fromSide": "bottom",
+      "toNode": "search-users-ready",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "search-repos-1",
+      "fromNode": "search-repos-start",
+      "fromSide": "bottom",
+      "toNode": "search-repos-api",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "github-api"
+      }
+    },
+    {
+      "id": "search-repos-2",
+      "fromNode": "search-repos-api",
+      "fromSide": "bottom",
+      "toNode": "search-repos-ready",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "auth-error-1",
+      "fromNode": "check-auth-users",
+      "fromSide": "right",
+      "toNode": "auth-required-error",
+      "toSide": "left",
+      "label": "no token",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "auth-error-2",
+      "fromNode": "check-auth-repos",
+      "fromSide": "left",
+      "toNode": "auth-required-error",
+      "toSide": "right",
+      "label": "no token",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "rate-limit-1",
+      "fromNode": "search-users-api",
+      "fromSide": "bottom",
+      "toNode": "rate-limit-error",
+      "toSide": "top",
+      "label": "403",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "rate-limit-2",
+      "fromNode": "search-repos-api",
+      "fromSide": "bottom",
+      "toNode": "rate-limit-error",
+      "toSide": "top",
+      "label": "403",
+      "pv": {
+        "edgeType": "error"
+      }
+    }
+  ]
+}

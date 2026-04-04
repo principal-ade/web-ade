@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/feed-suggestions/feed-suggestions.otel.canvas",
+  "spanPattern": "github.suggestions.repos",
+  "name": "Get Suggested Repos",
+  "description": "Fetch aggregated repo suggestions from starred + org repos",
+  "scenarios": [
+    {
+      "id": "success",
+      "description": "User is authenticated and returns combined suggestions from starred and orgs",
+      "priority": 1,
+      "template": {
+        "summary": "[Success] Loaded {{totalUnique}} repo suggestions",
+        "events": {
+          "github.suggestions.repos.started": "Loading repo suggestions",
+          "github.suggestions.auth.check": "Checking auth: hasToken={{hasToken}}",
+          "github.api.user.starred": "Fetching starred repos",
+          "github.api.user.orgs": "Fetching user's organizations",
+          "github.api.org.repos": "Fetching repos for org {{orgName}}",
+          "github.suggestions.repos.aggregate": "Aggregated {{starredCount}} starred + {{orgRepoCount}} org repos = {{totalUnique}} unique",
+          "github.suggestions.repos.ready": "Returning {{repoCount}} suggested repos"
+        }
+      }
+    },
+    {
+      "id": "auth-required",
+      "description": "Unauthenticated user tries to get suggestions",
+      "priority": 2,
+      "template": {
+        "summary": "[Error] Authentication required for suggestions",
+        "events": {
+          "github.suggestions.repos.started": "Loading repo suggestions",
+          "github.suggestions.auth.check": "Checking auth: hasToken=false",
+          "github.suggestions.auth-required": "401: Authentication required"
+        }
+      }
+    }
+  ]
+}

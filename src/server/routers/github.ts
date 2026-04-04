@@ -318,6 +318,30 @@ async function getGitHubToken(): Promise<string | null> {
   }
 }
 
+/**
+ * Get GitHub token from Bearer header or cookies
+ * Used for mobile-friendly endpoints that accept both auth methods
+ */
+async function getGitHubTokenFromHeadersOrCookies(): Promise<string | null> {
+  try {
+    // Dynamic import to avoid issues in non-request contexts
+    const { headers } = await import('next/headers');
+    const headerStore = await headers();
+
+    // Check for Bearer token in Authorization header
+    const authHeader = headerStore.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      return authHeader.slice(7); // Remove 'Bearer ' prefix
+    }
+
+    // Fall back to cookies
+    const cookieStore = await cookies();
+    return cookieStore.get('github_token')?.value || null;
+  } catch {
+    return null;
+  }
+}
+
 async function makeGitHubRequest<T>(
   endpoint: string,
   userToken?: string | null
@@ -433,6 +457,68 @@ const cacheTourAvailabilityInputSchema = z.object({
   tourPath: z.string().min(1),
   tourId: z.string().optional(),
   tourName: z.string().optional(),
+});
+
+// ============================================================================
+// Suggestion & Search Schemas
+// ============================================================================
+
+const suggestedUserSchema = z.object({
+  login: z.string(),
+  avatar_url: z.string(),
+  name: z.string().nullable().optional(),
+  bio: z.string().nullable().optional(),
+  source: z.enum(['following', 'org']),
+  orgName: z.string().optional(),
+});
+
+const getSuggestedUsersOutputSchema = z.object({
+  users: z.array(suggestedUserSchema),
+});
+
+const suggestedRepoSchema = z.object({
+  owner: z.string(),
+  name: z.string(),
+  full_name: z.string(),
+  description: z.string().nullable().optional(),
+  stargazers_count: z.number(),
+  language: z.string().nullable().optional(),
+  source: z.enum(['starred', 'org']),
+  orgName: z.string().optional(),
+});
+
+const getSuggestedReposOutputSchema = z.object({
+  repos: z.array(suggestedRepoSchema),
+});
+
+const searchInputSchema = z.object({
+  query: z.string().min(1),
+  perPage: z.number().min(1).max(30).optional().default(10),
+});
+
+const searchUsersOutputSchema = z.object({
+  users: z.array(
+    z.object({
+      login: z.string(),
+      avatar_url: z.string(),
+      type: z.enum(['User', 'Organization']),
+    })
+  ),
+  total_count: z.number(),
+});
+
+const searchReposOutputSchema = z.object({
+  repos: z.array(
+    z.object({
+      owner: z.string(),
+      name: z.string(),
+      full_name: z.string(),
+      description: z.string().nullable().optional(),
+      stargazers_count: z.number(),
+      language: z.string().nullable().optional(),
+    })
+  ),
+  total_count: z.number(),
 });
 
 export const githubRouter = router({
@@ -1086,6 +1172,299 @@ export const githubRouter = router({
         console.error('[getFeaturedRepos] Error fetching featured repos:', error);
         return [];
       }
+    }),
+
+  // ==========================================================================
+  // Suggestion Endpoints (for mobile feed customization)
+  // ==========================================================================
+
+  /**
+   * Get suggested users for feed customization
+   * Aggregates: users the authenticated user follows + members of their orgs
+   * Requires authentication
+   */
+  getSuggestedUsers: publicProcedure
+    .output(getSuggestedUsersOutputSchema)
+    .query(async () => {
+      const userToken = await getGitHubTokenFromHeadersOrCookies();
+      if (!userToken) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Authentication required to get suggestions. Provide Bearer token or sign in.',
+        });
+      }
+
+      const limit = createLimiter(MAX_CONCURRENT_REQUESTS);
+      const userMap = new Map<string, z.infer<typeof suggestedUserSchema>>();
+
+      // Fetch following and orgs in parallel
+      interface GitHubFollowingUser {
+        login: string;
+        avatar_url: string;
+        name?: string | null;
+        bio?: string | null;
+      }
+
+      interface GitHubOrg {
+        login: string;
+      }
+
+      interface GitHubOrgMember {
+        login: string;
+        avatar_url: string;
+      }
+
+      const [followingResult, orgsResult] = await Promise.allSettled([
+        makeGitHubRequest<GitHubFollowingUser[]>('/user/following?per_page=100', userToken),
+        makeGitHubRequest<GitHubOrg[]>('/user/orgs?per_page=100', userToken),
+      ]);
+
+      // Process following
+      if (followingResult.status === 'fulfilled') {
+        for (const user of followingResult.value) {
+          userMap.set(user.login.toLowerCase(), {
+            login: user.login,
+            avatar_url: user.avatar_url,
+            name: user.name,
+            bio: user.bio,
+            source: 'following',
+          });
+        }
+      }
+
+      // Process org members
+      if (orgsResult.status === 'fulfilled') {
+        const orgMemberPromises = orgsResult.value.map((org) =>
+          limit(async () => {
+            try {
+              const members = await makeGitHubRequest<GitHubOrgMember[]>(
+                `/orgs/${org.login}/members?per_page=100`,
+                userToken
+              );
+              return { org: org.login, members };
+            } catch {
+              // Skip orgs we can't access (private membership, etc.)
+              return { org: org.login, members: [] };
+            }
+          })
+        );
+
+        const orgResults = await Promise.all(orgMemberPromises);
+
+        for (const { org, members } of orgResults) {
+          for (const member of members) {
+            const key = member.login.toLowerCase();
+            // Don't overwrite if already added from following
+            if (!userMap.has(key)) {
+              userMap.set(key, {
+                login: member.login,
+                avatar_url: member.avatar_url,
+                source: 'org',
+                orgName: org,
+              });
+            }
+          }
+        }
+      }
+
+      return {
+        users: Array.from(userMap.values()),
+      };
+    }),
+
+  /**
+   * Get suggested repos for feed customization
+   * Aggregates: starred repos + repos from user's orgs
+   * Requires authentication
+   */
+  getSuggestedRepos: publicProcedure
+    .output(getSuggestedReposOutputSchema)
+    .query(async () => {
+      const userToken = await getGitHubTokenFromHeadersOrCookies();
+      if (!userToken) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Authentication required to get suggestions. Provide Bearer token or sign in.',
+        });
+      }
+
+      const limit = createLimiter(MAX_CONCURRENT_REQUESTS);
+      const repoMap = new Map<string, z.infer<typeof suggestedRepoSchema>>();
+
+      interface GitHubStarredRepo {
+        id: number;
+        name: string;
+        full_name: string;
+        description?: string | null;
+        stargazers_count: number;
+        language?: string | null;
+        owner: {
+          login: string;
+        };
+      }
+
+      interface GitHubOrg {
+        login: string;
+      }
+
+      interface GitHubOrgRepo {
+        id: number;
+        name: string;
+        full_name: string;
+        description?: string | null;
+        stargazers_count: number;
+        language?: string | null;
+        owner: {
+          login: string;
+        };
+      }
+
+      // Fetch starred repos and orgs in parallel
+      const [starredResult, orgsResult] = await Promise.allSettled([
+        makeGitHubRequest<GitHubStarredRepo[]>(
+          '/user/starred?per_page=100&sort=updated',
+          userToken
+        ),
+        makeGitHubRequest<GitHubOrg[]>('/user/orgs?per_page=100', userToken),
+      ]);
+
+      // Process starred repos
+      if (starredResult.status === 'fulfilled') {
+        for (const repo of starredResult.value) {
+          repoMap.set(repo.full_name.toLowerCase(), {
+            owner: repo.owner.login,
+            name: repo.name,
+            full_name: repo.full_name,
+            description: repo.description,
+            stargazers_count: repo.stargazers_count,
+            language: repo.language,
+            source: 'starred',
+          });
+        }
+      }
+
+      // Process org repos
+      if (orgsResult.status === 'fulfilled') {
+        const orgRepoPromises = orgsResult.value.map((org) =>
+          limit(async () => {
+            try {
+              const repos = await makeGitHubRequest<GitHubOrgRepo[]>(
+                `/orgs/${org.login}/repos?per_page=100&sort=updated`,
+                userToken
+              );
+              return { org: org.login, repos };
+            } catch {
+              // Skip orgs we can't access
+              return { org: org.login, repos: [] };
+            }
+          })
+        );
+
+        const orgResults = await Promise.all(orgRepoPromises);
+
+        for (const { org, repos } of orgResults) {
+          for (const repo of repos) {
+            const key = repo.full_name.toLowerCase();
+            // Don't overwrite if already added from starred
+            if (!repoMap.has(key)) {
+              repoMap.set(key, {
+                owner: repo.owner.login,
+                name: repo.name,
+                full_name: repo.full_name,
+                description: repo.description,
+                stargazers_count: repo.stargazers_count,
+                language: repo.language,
+                source: 'org',
+                orgName: org,
+              });
+            }
+          }
+        }
+      }
+
+      return {
+        repos: Array.from(repoMap.values()),
+      };
+    }),
+
+  // ==========================================================================
+  // Search Endpoints
+  // ==========================================================================
+
+  /**
+   * Search GitHub users
+   */
+  searchUsers: publicProcedure
+    .input(searchInputSchema)
+    .output(searchUsersOutputSchema)
+    .query(async ({ input }) => {
+      // Search works without auth but benefits from higher rate limits when authenticated
+      const userToken = await getGitHubTokenFromHeadersOrCookies();
+
+      interface GitHubSearchUsersResponse {
+        total_count: number;
+        items: Array<{
+          login: string;
+          avatar_url: string;
+          type: 'User' | 'Organization';
+        }>;
+      }
+
+      const data = await makeGitHubRequest<GitHubSearchUsersResponse>(
+        `/search/users?q=${encodeURIComponent(input.query)}&per_page=${input.perPage}`,
+        userToken
+      );
+
+      return {
+        users: data.items.map((u) => ({
+          login: u.login,
+          avatar_url: u.avatar_url,
+          type: u.type,
+        })),
+        total_count: data.total_count,
+      };
+    }),
+
+  /**
+   * Search GitHub repositories
+   */
+  searchRepos: publicProcedure
+    .input(searchInputSchema)
+    .output(searchReposOutputSchema)
+    .query(async ({ input }) => {
+      // Search works without auth but benefits from higher rate limits when authenticated
+      const userToken = await getGitHubTokenFromHeadersOrCookies();
+
+      interface GitHubSearchReposResponse {
+        total_count: number;
+        items: Array<{
+          name: string;
+          full_name: string;
+          description?: string | null;
+          stargazers_count: number;
+          language?: string | null;
+          owner: {
+            login: string;
+          };
+        }>;
+      }
+
+      const data = await makeGitHubRequest<GitHubSearchReposResponse>(
+        `/search/repositories?q=${encodeURIComponent(input.query)}&per_page=${input.perPage}`,
+        userToken
+      );
+
+      return {
+        repos: data.items.map((r) => ({
+          owner: r.owner.login,
+          name: r.name,
+          full_name: r.full_name,
+          description: r.description,
+          stargazers_count: r.stargazers_count,
+          language: r.language,
+        })),
+        total_count: data.total_count,
+      };
     }),
 });
 

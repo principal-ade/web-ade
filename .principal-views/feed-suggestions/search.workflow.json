@@ -1,0 +1,48 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/feed-suggestions/feed-suggestions.otel.canvas",
+  "spanPattern": "github.search",
+  "name": "GitHub Search",
+  "description": "Search GitHub users and repositories",
+  "scenarios": [
+    {
+      "id": "search-users-success",
+      "description": "Successfully search for GitHub users",
+      "priority": 1,
+      "template": {
+        "summary": "[Success] Found {{resultCount}} users matching '{{query}}'",
+        "events": {
+          "github.search.users.started": "Searching users for '{{query}}' (perPage: {{perPage}})",
+          "github.api.search.users": "Calling GET /search/users?q={{query}}",
+          "github.search.users.ready": "Found {{resultCount}} of {{totalCount}} matching users"
+        }
+      }
+    },
+    {
+      "id": "search-repos-success",
+      "description": "Successfully search for GitHub repositories",
+      "priority": 2,
+      "template": {
+        "summary": "[Success] Found {{resultCount}} repos matching '{{query}}'",
+        "events": {
+          "github.search.repos.started": "Searching repos for '{{query}}' (perPage: {{perPage}})",
+          "github.api.search.repos": "Calling GET /search/repositories?q={{query}}",
+          "github.search.repos.ready": "Found {{resultCount}} of {{totalCount}} matching repos"
+        }
+      }
+    },
+    {
+      "id": "rate-limited",
+      "description": "GitHub API rate limit exceeded",
+      "priority": 3,
+      "template": {
+        "summary": "[Error] Rate limited on search, retry after {{retryAfter}}s",
+        "events": {
+          "github.search.users.started": "Searching users for '{{query}}'",
+          "github.api.search.users": "Calling GET /search/users?q={{query}}",
+          "github.api.rate-limited": "403: Rate limited, retry after {{retryAfter}}s"
+        }
+      }
+    }
+  ]
+}
