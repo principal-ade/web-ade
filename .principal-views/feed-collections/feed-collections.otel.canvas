@@ -661,6 +661,312 @@
           }
         }
       }
+    },
+    {
+      "id": "follow-user",
+      "type": "otel-event",
+      "x": 800,
+      "y": 0,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts"
+        ]
+      },
+      "label": "Follow User",
+      "event": {
+        "name": "feed.user.follow",
+        "attributes": {
+          "githubId": {
+            "type": "string",
+            "description": "Follower's GitHub ID",
+            "required": true
+          },
+          "targetLogin": {
+            "type": "string",
+            "description": "Username to follow",
+            "required": true
+          },
+          "followedUsersCount": {
+            "type": "number",
+            "description": "Total followed users after",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "unfollow-user",
+      "type": "otel-event",
+      "x": 800,
+      "y": 150,
+      "width": 220,
+      "height": 90,
+      "color": "#dc2626",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts"
+        ]
+      },
+      "label": "Unfollow User",
+      "event": {
+        "name": "feed.user.unfollow",
+        "attributes": {
+          "githubId": {
+            "type": "string",
+            "description": "Follower's GitHub ID",
+            "required": true
+          },
+          "targetLogin": {
+            "type": "string",
+            "description": "Username to unfollow",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "follow-repo",
+      "type": "otel-event",
+      "x": 800,
+      "y": 300,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts"
+        ]
+      },
+      "label": "Follow Repo",
+      "event": {
+        "name": "feed.repo.follow",
+        "attributes": {
+          "githubId": {
+            "type": "string",
+            "description": "Follower's GitHub ID",
+            "required": true
+          },
+          "owner": {
+            "type": "string",
+            "description": "Repo owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repo name",
+            "required": true
+          },
+          "followedReposCount": {
+            "type": "number",
+            "description": "Total followed repos after",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "unfollow-repo",
+      "type": "otel-event",
+      "x": 800,
+      "y": 450,
+      "width": 220,
+      "height": 90,
+      "color": "#dc2626",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts"
+        ]
+      },
+      "label": "Unfollow Repo",
+      "event": {
+        "name": "feed.repo.unfollow",
+        "attributes": {
+          "githubId": {
+            "type": "string",
+            "description": "Follower's GitHub ID",
+            "required": true
+          },
+          "owner": {
+            "type": "string",
+            "description": "Repo owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repo name",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "get-follows",
+      "type": "otel-event",
+      "x": 800,
+      "y": 600,
+      "width": 220,
+      "height": 90,
+      "color": "#0891b2",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts",
+          "src/hooks/useFollows.ts"
+        ]
+      },
+      "label": "Get Follows",
+      "event": {
+        "name": "feed.follows.get",
+        "attributes": {
+          "githubId": {
+            "type": "string",
+            "description": "User's GitHub ID",
+            "required": true
+          },
+          "followedUsersCount": {
+            "type": "number",
+            "description": "Number of followed users",
+            "required": true
+          },
+          "followedReposCount": {
+            "type": "number",
+            "description": "Number of followed repos",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "follows-limit-reached",
+      "type": "otel-event",
+      "x": 1050,
+      "y": 150,
+      "width": 220,
+      "height": 90,
+      "color": "#d97706",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts"
+        ]
+      },
+      "label": "Follows Limit Reached",
+      "event": {
+        "name": "feed.follows.limit-reached",
+        "attributes": {
+          "githubId": {
+            "type": "string",
+            "description": "User's GitHub ID",
+            "required": true
+          },
+          "type": {
+            "type": "string",
+            "description": "'user' or 'repo'",
+            "required": true
+          },
+          "currentCount": {
+            "type": "number",
+            "description": "Current count at limit",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "feed-activity-fetch",
+      "type": "otel-event",
+      "x": 1050,
+      "y": 300,
+      "width": 220,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/app/api/feed/activity/route.ts",
+          "src/lib/feed-activity/fetchers.ts"
+        ]
+      },
+      "label": "Fetch Feed Activity",
+      "event": {
+        "name": "feed.activity.fetch",
+        "attributes": {
+          "githubId": {
+            "type": "string",
+            "description": "User's GitHub ID",
+            "required": true
+          },
+          "followedUsersCount": {
+            "type": "number",
+            "description": "Users to fetch activity from",
+            "required": true
+          },
+          "followedReposCount": {
+            "type": "number",
+            "description": "Repos to fetch activity from",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "feed-activity-ready",
+      "type": "otel-event",
+      "x": 1050,
+      "y": 450,
+      "width": 220,
+      "height": 90,
+      "color": "#16a34a",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/app/api/feed/activity/route.ts"
+        ]
+      },
+      "label": "Feed Activity Ready",
+      "event": {
+        "name": "feed.activity.ready",
+        "attributes": {
+          "activityCount": {
+            "type": "number",
+            "description": "Total activity events returned",
+            "required": true
+          },
+          "userActivityCount": {
+            "type": "number",
+            "description": "Events from followed users",
+            "required": true
+          },
+          "repoActivityCount": {
+            "type": "number",
+            "description": "Events from followed repos",
+            "required": true
+          }
+        }
+      }
     }
   ],
   "edges": [
@@ -852,6 +1158,88 @@
       "label": "private",
       "pv": {
         "edgeType": "error"
+      }
+    },
+    {
+      "id": "follow-user-1",
+      "fromNode": "follow-user",
+      "fromSide": "bottom",
+      "toNode": "update-user-profile",
+      "toSide": "right",
+      "pv": {
+        "edgeType": "s3"
+      }
+    },
+    {
+      "id": "follow-user-2",
+      "fromNode": "follow-user",
+      "fromSide": "right",
+      "toNode": "follows-limit-reached",
+      "toSide": "left",
+      "label": "limit",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "unfollow-user-1",
+      "fromNode": "unfollow-user",
+      "fromSide": "bottom",
+      "toNode": "update-user-profile",
+      "toSide": "right",
+      "pv": {
+        "edgeType": "s3"
+      }
+    },
+    {
+      "id": "follow-repo-1",
+      "fromNode": "follow-repo",
+      "fromSide": "bottom",
+      "toNode": "update-user-profile",
+      "toSide": "right",
+      "pv": {
+        "edgeType": "s3"
+      }
+    },
+    {
+      "id": "follow-repo-2",
+      "fromNode": "follow-repo",
+      "fromSide": "right",
+      "toNode": "follows-limit-reached",
+      "toSide": "left",
+      "label": "limit",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "unfollow-repo-1",
+      "fromNode": "unfollow-repo",
+      "fromSide": "bottom",
+      "toNode": "update-user-profile",
+      "toSide": "right",
+      "pv": {
+        "edgeType": "s3"
+      }
+    },
+    {
+      "id": "activity-1",
+      "fromNode": "get-follows",
+      "fromSide": "right",
+      "toNode": "feed-activity-fetch",
+      "toSide": "left",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "activity-2",
+      "fromNode": "feed-activity-fetch",
+      "fromSide": "bottom",
+      "toNode": "feed-activity-ready",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "data-flow"
       }
     }
   ]

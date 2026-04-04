@@ -3,8 +3,37 @@
  *
  * Type definitions for personalized feed collections stored in S3.
  * Users can create collections of repositories and subscribe to
- * other users' public collections.
+ * other users' public collections. Also includes types for following
+ * individual users and repositories.
  */
+
+// ============================================================================
+// Follow Limits
+// ============================================================================
+
+export const MAX_FOLLOWED_USERS = 5;
+export const MAX_FOLLOWED_REPOS = 5;
+
+// ============================================================================
+// Follow Types
+// ============================================================================
+
+/**
+ * A followed GitHub user
+ */
+export interface FollowedUser {
+  login: string; // GitHub username
+  followedAt: string; // ISO timestamp
+}
+
+/**
+ * A followed GitHub repository
+ */
+export interface FollowedRepo {
+  owner: string;
+  repo: string;
+  followedAt: string; // ISO timestamp
+}
 
 /**
  * A repository entry within a collection
@@ -32,12 +61,14 @@ export interface FeedCollection {
 }
 
 /**
- * User's feed profile containing subscriptions
+ * User's feed profile containing subscriptions and follows
  */
 export interface UserFeedProfile {
   githubId: string;
   githubLogin: string;
   subscribedCollections: string[]; // Collection IDs
+  followedUsers: FollowedUser[]; // Max 5 users
+  followedRepos: FollowedRepo[]; // Max 5 repos
   createdAt: string; // ISO timestamp
   updatedAt: string; // ISO timestamp
 }

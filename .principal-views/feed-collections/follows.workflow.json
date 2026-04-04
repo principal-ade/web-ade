@@ -1,0 +1,91 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/feed-collections/feed-collections.otel.canvas",
+  "spanPattern": "feed.follows",
+  "name": "Follows",
+  "description": "Follow and unfollow individual users and repositories",
+  "scenarios": [
+    {
+      "id": "follow-user-success",
+      "description": "User successfully follows a GitHub user",
+      "priority": 1,
+      "template": {
+        "summary": "[Followed] User {{githubId}} now following @{{targetLogin}}",
+        "events": {
+          "feed.user.follow": "User {{githubId}} following @{{targetLogin}} (total: {{followedUsersCount}})",
+          "feed.profile.s3.put": "Updated profile for {{githubId}} with {{subscriptionCount}} subscriptions"
+        }
+      }
+    },
+    {
+      "id": "follow-user-limit",
+      "description": "User tries to follow but is at the limit",
+      "priority": 2,
+      "template": {
+        "summary": "[Limit] User {{githubId}} at max follows for {{type}}",
+        "events": {
+          "feed.follows.limit-reached": "User {{githubId}} reached {{type}} limit ({{currentCount}})"
+        }
+      }
+    },
+    {
+      "id": "unfollow-user-success",
+      "description": "User unfollows a GitHub user",
+      "priority": 3,
+      "template": {
+        "summary": "[Unfollowed] User {{githubId}} unfollowed @{{targetLogin}}",
+        "events": {
+          "feed.user.unfollow": "User {{githubId}} unfollowing @{{targetLogin}}",
+          "feed.profile.s3.put": "Updated profile for {{githubId}} with {{subscriptionCount}} subscriptions"
+        }
+      }
+    },
+    {
+      "id": "follow-repo-success",
+      "description": "User successfully follows a repository",
+      "priority": 4,
+      "template": {
+        "summary": "[Followed] User {{githubId}} now following {{owner}}/{{repo}}",
+        "events": {
+          "feed.repo.follow": "User {{githubId}} following {{owner}}/{{repo}} (total: {{followedReposCount}})",
+          "feed.profile.s3.put": "Updated profile for {{githubId}} with {{subscriptionCount}} subscriptions"
+        }
+      }
+    },
+    {
+      "id": "unfollow-repo-success",
+      "description": "User unfollows a repository",
+      "priority": 5,
+      "template": {
+        "summary": "[Unfollowed] User {{githubId}} unfollowed {{owner}}/{{repo}}",
+        "events": {
+          "feed.repo.unfollow": "User {{githubId}} unfollowing {{owner}}/{{repo}}",
+          "feed.profile.s3.put": "Updated profile for {{githubId}} with {{subscriptionCount}} subscriptions"
+        }
+      }
+    },
+    {
+      "id": "get-follows",
+      "description": "User fetches their current follows",
+      "priority": 6,
+      "template": {
+        "summary": "[Loaded] Follows for {{githubId}}: {{followedUsersCount}} users, {{followedReposCount}} repos",
+        "events": {
+          "feed.follows.get": "Fetched follows for {{githubId}}: {{followedUsersCount}} users, {{followedReposCount}} repos"
+        }
+      }
+    },
+    {
+      "id": "fetch-activity-success",
+      "description": "Successfully fetch activity feed from follows",
+      "priority": 7,
+      "template": {
+        "summary": "[Activity] Loaded {{activityCount}} events from follows",
+        "events": {
+          "feed.activity.fetch": "Fetching activity for {{githubId}} from {{followedUsersCount}} users, {{followedReposCount}} repos",
+          "feed.activity.ready": "Activity ready: {{activityCount}} events ({{userActivityCount}} from users, {{repoActivityCount}} from repos)"
+        }
+      }
+    }
+  ]
+}

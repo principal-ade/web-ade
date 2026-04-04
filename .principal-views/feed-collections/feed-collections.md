@@ -7,7 +7,10 @@ This canvas documents the personalized feed collections feature, allowing users 
 Feed Collections enables authenticated users to:
 - Create private and public collections of repositories
 - Subscribe to other users' public collections
+- **Follow individual GitHub users (max 5)**
+- **Follow individual repositories (max 5)**
 - Personalize their home page feed with repos from subscribed collections
+- **View a custom activity feed from followed users and repos**
 
 Anonymous users continue to see the default `FEATURED_REPOS` list.
 
@@ -51,9 +54,28 @@ interface UserFeedProfile {
   githubId: string;
   githubLogin: string;
   subscribedCollections: string[];     // Collection IDs
+  followedUsers: FollowedUser[];       // Max 5 users
+  followedRepos: FollowedRepo[];       // Max 5 repos
   createdAt: string;
   updatedAt: string;
 }
+
+// A followed GitHub user
+interface FollowedUser {
+  login: string;           // GitHub username
+  followedAt: string;      // ISO timestamp
+}
+
+// A followed repository
+interface FollowedRepo {
+  owner: string;
+  repo: string;
+  followedAt: string;      // ISO timestamp
+}
+
+// Constants
+const MAX_FOLLOWED_USERS = 5;
+const MAX_FOLLOWED_REPOS = 5;
 ```
 
 ### Key Files
@@ -61,13 +83,14 @@ interface UserFeedProfile {
 | File | Purpose |
 |------|---------|
 | `src/lib/feed-collections/s3-storage.ts` | S3 CRUD operations for collections and profiles |
-| `src/lib/feed-collections/types.ts` | TypeScript interfaces |
+| `src/lib/feed-collections/types.ts` | TypeScript interfaces (includes follows types) |
 | `src/hooks/usePersonalizedFeed.ts` | React hook for loading personalized feed |
-| `src/app/api/feed/collections/route.ts` | Create/list collections |
-| `src/app/api/feed/collections/[id]/route.ts` | Get/update/delete collection |
-| `src/app/api/feed/collections/[id]/repos/route.ts` | Add/remove repos from collection |
-| `src/app/api/feed/collections/[id]/subscribe/route.ts` | Subscribe/unsubscribe |
-| `src/app/api/feed/collections/public/[id]/route.ts` | View public collection |
+| `src/hooks/useFollows.ts` | React hook for managing followed users/repos |
+| `src/server/routers/feed.ts` | tRPC router for collections and follows |
+| `src/app/api/feed/activity/route.ts` | Aggregated activity feed from follows |
+| `src/lib/feed-activity/fetchers.ts` | GitHub API fetchers for follows activity |
+| `src/components/FollowsSettingsPanel.tsx` | UI for managing follows |
+| `src/components/FollowButton.tsx` | Reusable follow/unfollow button |
 
 ## Workflows
 
@@ -142,6 +165,52 @@ Unsubscribe from Collection
               └──► S3 Put Profile
 ```
 
+### 4. Follows (`follows.workflow.json`)
+
+Following individual users and repositories:
+
+```
+Follow User/Repo
+    │
+    ├──► Check Limit (max 5)
+    │         │
+    │         └──► Limit Reached ──► Error (PRECONDITION_FAILED)
+    │
+    └──► Update User Profile (add to followedUsers/followedRepos)
+              │
+              └──► S3 Put Profile ──► Success
+
+Unfollow User/Repo
+    │
+    └──► Update User Profile (remove from array)
+              │
+              └──► S3 Put Profile ──► Success
+```
+
+### 5. Follows Activity Feed (`follows-activity.workflow.json`)
+
+Loading activity from followed users and repos:
+
+```
+Get Feed Activity (API)
+    │
+    └──► Fetch User Profile (S3)
+              │
+              └──► Get followedUsers and followedRepos
+                        │
+                        ├──► Fetch User Activity (parallel, GraphQL)
+                        │         │
+                        │         └──► Commits + PRs from each user
+                        │
+                        └──► Fetch Repo Activity (parallel, GraphQL)
+                                  │
+                                  └──► Commits + PRs from each repo
+                                            │
+                                            └──► Merge + Sort by timestamp
+                                                      │
+                                                      └──► Return top 50 events
+```
+
 ## Event Naming Convention
 
 All events follow the pattern: `feed.<domain>.<action>`
@@ -154,6 +223,10 @@ All events follow the pattern: `feed.<domain>.<action>`
 | `collection` | Single collection operations |
 | `fallback` | Fallback to featured repos |
 | `repos` | Repository merge/dedup |
+| `user` | Following individual users |
+| `repo` | Following individual repos |
+| `follows` | Follows read operations |
+| `activity` | Follows activity feed |
 
 ## Access Control
 
@@ -166,6 +239,12 @@ All events follow the pattern: `feed.<domain>.<action>`
 | Delete collection | No | No | Yes |
 | Subscribe to public | No | Yes | Yes |
 | Unsubscribe | No | Yes | Yes |
+| Follow user | No | Yes | Yes |
+| Unfollow user | No | Yes | Yes |
+| Follow repo | No | Yes | Yes |
+| Unfollow repo | No | Yes | Yes |
+| Get follows | No | Yes | Yes |
+| Get follows activity | No | Yes | Yes |
 
 ## Feed Composition
 

@@ -22,6 +22,10 @@ import {
   getCollections,
 } from '@/lib/feed-collections/s3-storage';
 import type { FeedCollection, FeedRepo } from '@/lib/feed-collections/types';
+import {
+  MAX_FOLLOWED_USERS,
+  MAX_FOLLOWED_REPOS,
+} from '@/lib/feed-collections/types';
 import { FEATURED_REPOS } from '@/lib/featured-repos';
 
 // ============================================================================
@@ -110,6 +114,25 @@ const removeRepoInputSchema = z.object({
   repo: z.string().min(1),
 });
 
+// Follow input schemas
+const followUserInputSchema = z.object({
+  login: z.string().min(1).max(39), // GitHub username limit
+});
+
+const unfollowUserInputSchema = z.object({
+  login: z.string().min(1),
+});
+
+const followRepoInputSchema = z.object({
+  owner: z.string().min(1),
+  repo: z.string().min(1),
+});
+
+const unfollowRepoInputSchema = z.object({
+  owner: z.string().min(1),
+  repo: z.string().min(1),
+});
+
 // ============================================================================
 // Output Schemas
 // ============================================================================
@@ -137,6 +160,18 @@ const feedRepoSchema = z.object({
   owner: z.string(),
   repo: z.string(),
   description: z.string().optional(),
+});
+
+// Follow output schemas
+const followedUserSchema = z.object({
+  login: z.string(),
+  followedAt: z.string(),
+});
+
+const followedRepoSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  followedAt: z.string(),
 });
 
 // ============================================================================
@@ -176,6 +211,8 @@ export const feedRouter = router({
           githubId: auth.githubId,
           githubLogin: auth.githubLogin,
           subscribedCollections: [],
+          followedUsers: [],
+          followedRepos: [],
           createdAt: now,
           updatedAt: now,
         };
@@ -432,6 +469,8 @@ export const feedRouter = router({
           githubId: auth.githubId,
           githubLogin: auth.githubLogin,
           subscribedCollections: [],
+          followedUsers: [],
+          followedRepos: [],
           createdAt: now,
           updatedAt: now,
         };
@@ -603,6 +642,225 @@ export const feedRouter = router({
         repos,
         isPersonalized: true,
         collectionCount: accessibleCollections.length,
+      };
+    }),
+
+  // ==========================================================================
+  // Follow Endpoints
+  // ==========================================================================
+
+  /**
+   * Follow a GitHub user
+   * Requires authentication. Max 5 users.
+   */
+  followUser: publicProcedure
+    .input(followUserInputSchema)
+    .output(
+      z.object({
+        success: z.boolean(),
+        followedUsers: z.array(followedUserSchema),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const auth = await requireAuth();
+      const now = new Date().toISOString();
+
+      let profile = await getUserFeedProfile(auth.githubId);
+      if (!profile) {
+        profile = {
+          githubId: auth.githubId,
+          githubLogin: auth.githubLogin,
+          subscribedCollections: [],
+          followedUsers: [],
+          followedRepos: [],
+          createdAt: now,
+          updatedAt: now,
+        };
+      }
+
+      const followedUsers = profile.followedUsers ?? [];
+
+      // Check limit
+      if (followedUsers.length >= MAX_FOLLOWED_USERS) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: `You can only follow up to ${MAX_FOLLOWED_USERS} users`,
+        });
+      }
+
+      // Check if already following
+      if (
+        followedUsers.some(
+          (u) => u.login.toLowerCase() === input.login.toLowerCase()
+        )
+      ) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Already following this user',
+        });
+      }
+
+      // Prevent following self
+      if (input.login.toLowerCase() === auth.githubLogin.toLowerCase()) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Cannot follow yourself',
+        });
+      }
+
+      followedUsers.push({ login: input.login, followedAt: now });
+      profile.followedUsers = followedUsers;
+      profile.updatedAt = now;
+
+      await storeUserFeedProfile(profile);
+      return { success: true, followedUsers };
+    }),
+
+  /**
+   * Unfollow a GitHub user
+   * Requires authentication
+   */
+  unfollowUser: publicProcedure
+    .input(unfollowUserInputSchema)
+    .output(
+      z.object({
+        success: z.boolean(),
+        followedUsers: z.array(followedUserSchema),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const auth = await requireAuth();
+
+      const profile = await getUserFeedProfile(auth.githubId);
+      if (!profile) {
+        return { success: true, followedUsers: [] };
+      }
+
+      const followedUsers = (profile.followedUsers ?? []).filter(
+        (u) => u.login.toLowerCase() !== input.login.toLowerCase()
+      );
+
+      profile.followedUsers = followedUsers;
+      profile.updatedAt = new Date().toISOString();
+
+      await storeUserFeedProfile(profile);
+      return { success: true, followedUsers };
+    }),
+
+  /**
+   * Follow a repository
+   * Requires authentication. Max 5 repos.
+   */
+  followRepo: publicProcedure
+    .input(followRepoInputSchema)
+    .output(
+      z.object({
+        success: z.boolean(),
+        followedRepos: z.array(followedRepoSchema),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const auth = await requireAuth();
+      const now = new Date().toISOString();
+
+      let profile = await getUserFeedProfile(auth.githubId);
+      if (!profile) {
+        profile = {
+          githubId: auth.githubId,
+          githubLogin: auth.githubLogin,
+          subscribedCollections: [],
+          followedUsers: [],
+          followedRepos: [],
+          createdAt: now,
+          updatedAt: now,
+        };
+      }
+
+      const followedRepos = profile.followedRepos ?? [];
+
+      // Check limit
+      if (followedRepos.length >= MAX_FOLLOWED_REPOS) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: `You can only follow up to ${MAX_FOLLOWED_REPOS} repositories`,
+        });
+      }
+
+      // Check if already following
+      const repoKey = `${input.owner}/${input.repo}`.toLowerCase();
+      if (
+        followedRepos.some(
+          (r) => `${r.owner}/${r.repo}`.toLowerCase() === repoKey
+        )
+      ) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Already following this repository',
+        });
+      }
+
+      followedRepos.push({
+        owner: input.owner,
+        repo: input.repo,
+        followedAt: now,
+      });
+      profile.followedRepos = followedRepos;
+      profile.updatedAt = now;
+
+      await storeUserFeedProfile(profile);
+      return { success: true, followedRepos };
+    }),
+
+  /**
+   * Unfollow a repository
+   * Requires authentication
+   */
+  unfollowRepo: publicProcedure
+    .input(unfollowRepoInputSchema)
+    .output(
+      z.object({
+        success: z.boolean(),
+        followedRepos: z.array(followedRepoSchema),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const auth = await requireAuth();
+
+      const profile = await getUserFeedProfile(auth.githubId);
+      if (!profile) {
+        return { success: true, followedRepos: [] };
+      }
+
+      const repoKey = `${input.owner}/${input.repo}`.toLowerCase();
+      const followedRepos = (profile.followedRepos ?? []).filter(
+        (r) => `${r.owner}/${r.repo}`.toLowerCase() !== repoKey
+      );
+
+      profile.followedRepos = followedRepos;
+      profile.updatedAt = new Date().toISOString();
+
+      await storeUserFeedProfile(profile);
+      return { success: true, followedRepos };
+    }),
+
+  /**
+   * Get current follows (users and repos)
+   * Requires authentication
+   */
+  getFollows: publicProcedure
+    .output(
+      z.object({
+        followedUsers: z.array(followedUserSchema),
+        followedRepos: z.array(followedRepoSchema),
+      })
+    )
+    .query(async () => {
+      const auth = await requireAuth();
+
+      const profile = await getUserFeedProfile(auth.githubId);
+      return {
+        followedUsers: profile?.followedUsers ?? [],
+        followedRepos: profile?.followedRepos ?? [],
       };
     }),
 });
