@@ -297,8 +297,8 @@
     {
       "id": "collection-create-started",
       "type": "otel-event",
-      "x": 200,
-      "y": 0,
+      "x": 118,
+      "y": 14,
       "width": 220,
       "height": 90,
       "color": "#1d4ed8",
@@ -330,8 +330,8 @@
     {
       "id": "collection-s3-put",
       "type": "otel-event",
-      "x": 200,
-      "y": 150,
+      "x": 361,
+      "y": 302,
       "width": 220,
       "height": 90,
       "color": "#6d28d9",
@@ -363,8 +363,8 @@
     {
       "id": "collection-created",
       "type": "otel-event",
-      "x": 200,
-      "y": 300,
+      "x": 361,
+      "y": 457,
       "width": 220,
       "height": 90,
       "color": "#16a34a",
@@ -396,8 +396,8 @@
     {
       "id": "add-repo-to-collection",
       "type": "otel-event",
-      "x": 200,
-      "y": 450,
+      "x": 361,
+      "y": 14,
       "width": 220,
       "height": 90,
       "color": "#1d4ed8",
@@ -434,8 +434,8 @@
     {
       "id": "remove-repo-from-collection",
       "type": "otel-event",
-      "x": 200,
-      "y": 600,
+      "x": 605,
+      "y": 15,
       "width": 220,
       "height": 90,
       "color": "#dc2626",
@@ -472,8 +472,8 @@
     {
       "id": "subscribe-to-collection",
       "type": "otel-event",
-      "x": 500,
-      "y": 0,
+      "x": 1036,
+      "y": 157,
       "width": 220,
       "height": 90,
       "color": "#16a34a",
@@ -505,8 +505,8 @@
     {
       "id": "unsubscribe-from-collection",
       "type": "otel-event",
-      "x": 500,
-      "y": 150,
+      "x": 777,
+      "y": 153,
       "width": 220,
       "height": 90,
       "color": "#dc2626",
@@ -538,8 +538,8 @@
     {
       "id": "update-user-profile",
       "type": "otel-event",
-      "x": 500,
-      "y": 300,
+      "x": 1038,
+      "y": 465,
       "width": 220,
       "height": 90,
       "color": "#6d28d9",
@@ -571,8 +571,8 @@
     {
       "id": "view-public-collection",
       "type": "otel-event",
-      "x": 500,
-      "y": 450,
+      "x": 1654,
+      "y": 624,
       "width": 220,
       "height": 90,
       "color": "#0891b2",
@@ -604,8 +604,8 @@
     {
       "id": "collection-not-found",
       "type": "otel-event",
-      "x": 500,
-      "y": 600,
+      "x": 1524,
+      "y": 798,
       "width": 220,
       "height": 90,
       "color": "#dc2626",
@@ -632,8 +632,8 @@
     {
       "id": "collection-access-denied",
       "type": "otel-event",
-      "x": 750,
-      "y": 450,
+      "x": 1784,
+      "y": 799,
       "width": 220,
       "height": 90,
       "color": "#dc2626",
@@ -665,8 +665,8 @@
     {
       "id": "follow-user",
       "type": "otel-event",
-      "x": 800,
-      "y": 0,
+      "x": 2061,
+      "y": 152,
       "width": 220,
       "height": 90,
       "color": "#16a34a",
@@ -703,8 +703,8 @@
     {
       "id": "unfollow-user",
       "type": "otel-event",
-      "x": 800,
-      "y": 150,
+      "x": 1287,
+      "y": 157,
       "width": 220,
       "height": 90,
       "color": "#dc2626",
@@ -736,8 +736,8 @@
     {
       "id": "follow-repo",
       "type": "otel-event",
-      "x": 800,
-      "y": 300,
+      "x": 1792,
+      "y": 155,
       "width": 220,
       "height": 90,
       "color": "#16a34a",
@@ -779,8 +779,8 @@
     {
       "id": "unfollow-repo",
       "type": "otel-event",
-      "x": 800,
-      "y": 450,
+      "x": 1546,
+      "y": 158,
       "width": 220,
       "height": 90,
       "color": "#dc2626",
@@ -817,8 +817,8 @@
     {
       "id": "get-follows",
       "type": "otel-event",
-      "x": 800,
-      "y": 600,
+      "x": 685,
+      "y": 614,
       "width": 220,
       "height": 90,
       "color": "#0891b2",
@@ -856,8 +856,8 @@
     {
       "id": "follows-limit-reached",
       "type": "otel-event",
-      "x": 1050,
-      "y": 150,
+      "x": 1319,
+      "y": 465,
       "width": 220,
       "height": 90,
       "color": "#d97706",
@@ -894,8 +894,8 @@
     {
       "id": "feed-activity-fetch",
       "type": "otel-event",
-      "x": 1050,
-      "y": 300,
+      "x": 685,
+      "y": 815,
       "width": 220,
       "height": 90,
       "color": "#6d28d9",
@@ -933,8 +933,8 @@
     {
       "id": "feed-activity-ready",
       "type": "otel-event",
-      "x": 1050,
-      "y": 450,
+      "x": 685,
+      "y": 992,
       "width": 220,
       "height": 90,
       "color": "#16a34a",
@@ -1117,28 +1117,6 @@
       }
     },
     {
-      "id": "repo-add-1",
-      "fromNode": "add-repo-to-collection",
-      "fromSide": "bottom",
-      "toNode": "collection-s3-put",
-      "toSide": "right",
-      "label": "update",
-      "pv": {
-        "edgeType": "s3"
-      }
-    },
-    {
-      "id": "repo-remove-1",
-      "fromNode": "remove-repo-from-collection",
-      "fromSide": "left",
-      "toNode": "collection-s3-put",
-      "toSide": "right",
-      "label": "update",
-      "pv": {
-        "edgeType": "s3"
-      }
-    },
-    {
       "id": "public-1",
       "fromNode": "view-public-collection",
       "fromSide": "bottom",
@@ -1150,89 +1128,6 @@
       }
     },
     {
-      "id": "public-2",
-      "fromNode": "view-public-collection",
-      "fromSide": "right",
-      "toNode": "collection-access-denied",
-      "toSide": "left",
-      "label": "private",
-      "pv": {
-        "edgeType": "error"
-      }
-    },
-    {
-      "id": "follow-user-1",
-      "fromNode": "follow-user",
-      "fromSide": "bottom",
-      "toNode": "update-user-profile",
-      "toSide": "right",
-      "pv": {
-        "edgeType": "s3"
-      }
-    },
-    {
-      "id": "follow-user-2",
-      "fromNode": "follow-user",
-      "fromSide": "right",
-      "toNode": "follows-limit-reached",
-      "toSide": "left",
-      "label": "limit",
-      "pv": {
-        "edgeType": "error"
-      }
-    },
-    {
-      "id": "unfollow-user-1",
-      "fromNode": "unfollow-user",
-      "fromSide": "bottom",
-      "toNode": "update-user-profile",
-      "toSide": "right",
-      "pv": {
-        "edgeType": "s3"
-      }
-    },
-    {
-      "id": "follow-repo-1",
-      "fromNode": "follow-repo",
-      "fromSide": "bottom",
-      "toNode": "update-user-profile",
-      "toSide": "right",
-      "pv": {
-        "edgeType": "s3"
-      }
-    },
-    {
-      "id": "follow-repo-2",
-      "fromNode": "follow-repo",
-      "fromSide": "right",
-      "toNode": "follows-limit-reached",
-      "toSide": "left",
-      "label": "limit",
-      "pv": {
-        "edgeType": "error"
-      }
-    },
-    {
-      "id": "unfollow-repo-1",
-      "fromNode": "unfollow-repo",
-      "fromSide": "bottom",
-      "toNode": "update-user-profile",
-      "toSide": "right",
-      "pv": {
-        "edgeType": "s3"
-      }
-    },
-    {
-      "id": "activity-1",
-      "fromNode": "get-follows",
-      "fromSide": "right",
-      "toNode": "feed-activity-fetch",
-      "toSide": "left",
-      "pv": {
-        "edgeType": "flow"
-      }
-    },
-    {
       "id": "activity-2",
       "fromNode": "feed-activity-fetch",
       "fromSide": "bottom",
@@ -1240,6 +1135,106 @@
       "toSide": "top",
       "pv": {
         "edgeType": "data-flow"
+      }
+    },
+    {
+      "id": "edge-remove-repo-from-collection-collection-s3-put-1775277377436",
+      "fromNode": "remove-repo-from-collection",
+      "toNode": "collection-s3-put",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "s3"
+      }
+    },
+    {
+      "id": "edge-add-repo-to-collection-collection-s3-put-1775277377436",
+      "fromNode": "add-repo-to-collection",
+      "toNode": "collection-s3-put",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "s3"
+      }
+    },
+    {
+      "id": "edge-get-follows-feed-activity-fetch-1775277377436",
+      "fromNode": "get-follows",
+      "toNode": "feed-activity-fetch",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "edge-view-public-collection-collection-access-denied-1775277377436",
+      "fromNode": "view-public-collection",
+      "toNode": "collection-access-denied",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-unfollow-repo-update-user-profile-1775277377436",
+      "fromNode": "unfollow-repo",
+      "toNode": "update-user-profile",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "s3"
+      }
+    },
+    {
+      "id": "edge-follow-repo-update-user-profile-1775277377436",
+      "fromNode": "follow-repo",
+      "toNode": "update-user-profile",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "s3"
+      }
+    },
+    {
+      "id": "edge-follow-repo-follows-limit-reached-1775277377436",
+      "fromNode": "follow-repo",
+      "toNode": "follows-limit-reached",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-follow-user-follows-limit-reached-1775277377436",
+      "fromNode": "follow-user",
+      "toNode": "follows-limit-reached",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "edge-unfollow-user-update-user-profile-1775277377436",
+      "fromNode": "unfollow-user",
+      "toNode": "update-user-profile",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "s3"
+      }
+    },
+    {
+      "id": "edge-follow-user-update-user-profile-1775277377436",
+      "fromNode": "follow-user",
+      "toNode": "update-user-profile",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "s3"
       }
     }
   ]
