@@ -1,0 +1,41 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/feed-suggestions/feed-suggestions.otel.canvas",
+  "spanPattern": "feed.commitQueue",
+  "name": "Commit Queue",
+  "description": "Fetch and group commit activity cards for swipe feed",
+  "scenarios": [
+    {
+      "id": "queue-success",
+      "description": "Successfully fetch commit queue with activity cards",
+      "priority": 1,
+      "template": {
+        "summary": "[Success] Returned {{cardCount}} activity cards ({{hasMore}} more available)",
+        "events": {
+          "feed.commitQueue.started": "Getting commit queue (limit: {{limit}})",
+          "feed.commitQueue.auth.check": "Auth check: hasToken={{hasToken}}",
+          "feed.commitQueue.follows.fetch": "Fetching follows ({{followedRepos}} repos, {{followedUsers}} users)",
+          "github.api.repo.commits": "Fetching commits for {{owner}}/{{repo}}",
+          "github.api.user.events": "Fetching events for {{login}}",
+          "feed.commitQueue.group": "Grouped {{totalCommits}} commits into {{cardCount}} cards",
+          "feed.commitQueue.filter": "Filtered {{passedCount}} passed, {{savedCount}} saved, {{remainingCards}} remaining",
+          "feed.commitQueue.ready": "Queue ready: {{cardCount}} cards, hasMore={{hasMore}}"
+        }
+      }
+    },
+    {
+      "id": "queue-empty-no-follows",
+      "description": "Empty queue because user has no follows",
+      "priority": 2,
+      "template": {
+        "summary": "[Empty] No follows configured",
+        "events": {
+          "feed.commitQueue.started": "Getting commit queue (limit: {{limit}})",
+          "feed.commitQueue.auth.check": "Auth check: hasToken={{hasToken}}",
+          "feed.commitQueue.follows.fetch": "Fetching follows (0 repos, 0 users)",
+          "feed.commitQueue.empty": "Queue empty: {{reason}}"
+        }
+      }
+    }
+  ]
+}

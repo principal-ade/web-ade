@@ -11,7 +11,7 @@
 import { z } from 'zod';
 import { router, publicProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import {
   getCollection,
   storeCollection,
@@ -20,8 +20,16 @@ import {
   getUserFeedProfile,
   storeUserFeedProfile,
   getCollections,
+  getOrCreateCommitFeedState,
+  storeCommitFeedState,
 } from '@/lib/feed-collections/s3-storage';
-import type { FeedCollection, FeedRepo } from '@/lib/feed-collections/types';
+import type {
+  FeedCollection,
+  FeedRepo,
+  CommitActivityCard,
+  SavedActivityCard,
+  ActivityCommit,
+} from '@/lib/feed-collections/types';
 import {
   MAX_FOLLOWED_USERS,
   MAX_FOLLOWED_REPOS,
@@ -32,8 +40,20 @@ import { FEATURED_REPOS } from '@/lib/featured-repos';
 // Auth Helpers
 // ============================================================================
 
+/**
+ * Get GitHub token from Authorization header (Bearer) or cookie
+ * Supports both mobile (Bearer token) and web (cookie) authentication
+ */
 async function getGitHubToken(): Promise<string | null> {
   try {
+    // Check Authorization header first (for mobile/API clients)
+    const headerStore = await headers();
+    const authHeader = headerStore.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      return authHeader.slice(7);
+    }
+
+    // Fall back to cookie (for web clients)
     const cookieStore = await cookies();
     return cookieStore.get('github_token')?.value || null;
   } catch {
@@ -41,7 +61,11 @@ async function getGitHubToken(): Promise<string | null> {
   }
 }
 
-async function getGitHubUserId(): Promise<string | null> {
+/**
+ * Get GitHub user ID from cookie (web clients only)
+ * For Bearer token auth, we fetch from GitHub API instead
+ */
+async function getGitHubUserIdFromCookie(): Promise<string | null> {
   try {
     const cookieStore = await cookies();
     return cookieStore.get('github_user_id')?.value || null;
@@ -50,10 +74,39 @@ async function getGitHubUserId(): Promise<string | null> {
   }
 }
 
-async function getGitHubLogin(): Promise<string | null> {
+/**
+ * Get GitHub login from cookie (web clients only)
+ * For Bearer token auth, we fetch from GitHub API instead
+ */
+async function getGitHubLoginFromCookie(): Promise<string | null> {
   try {
     const cookieStore = await cookies();
     return cookieStore.get('github_login')?.value || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch GitHub user info using token
+ */
+async function fetchGitHubUser(
+  token: string
+): Promise<{ id: string; login: string } | null> {
+  try {
+    const response = await fetch('https://api.github.com/user', {
+      headers: {
+        Accept: 'application/vnd.github.v3+json',
+        Authorization: `token ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = (await response.json()) as { id: number; login: string };
+    return { id: String(data.id), login: data.login };
   } catch {
     return null;
   }
@@ -67,17 +120,32 @@ interface AuthContext {
 
 async function requireAuth(): Promise<AuthContext> {
   const token = await getGitHubToken();
-  const githubId = await getGitHubUserId();
-  const githubLogin = await getGitHubLogin();
 
-  if (!token || !githubId) {
+  if (!token) {
     throw new TRPCError({
       code: 'UNAUTHORIZED',
       message: 'Please sign in with GitHub to access this feature',
     });
   }
 
-  return { token, githubId, githubLogin: githubLogin || 'unknown' };
+  // Try cookies first (web clients)
+  let githubId = await getGitHubUserIdFromCookie();
+  let githubLogin = await getGitHubLoginFromCookie();
+
+  // If no cookies, fetch from GitHub API (mobile/API clients)
+  if (!githubId || !githubLogin) {
+    const user = await fetchGitHubUser(token);
+    if (!user) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'Invalid GitHub token',
+      });
+    }
+    githubId = user.id;
+    githubLogin = user.login;
+  }
+
+  return { token, githubId, githubLogin };
 }
 
 // ============================================================================
@@ -559,10 +627,9 @@ export const feedRouter = router({
     .query(async () => {
       // Try to get auth context, but don't require it
       const token = await getGitHubToken();
-      const githubId = await getGitHubUserId();
 
       // Not authenticated - return featured repos
-      if (!token || !githubId) {
+      if (!token) {
         return {
           repos: FEATURED_REPOS.map((r) => ({
             owner: r.owner,
@@ -572,6 +639,24 @@ export const feedRouter = router({
           isPersonalized: false,
           collectionCount: 0,
         };
+      }
+
+      // Try cookies first, then fetch from GitHub API
+      let githubId = await getGitHubUserIdFromCookie();
+      if (!githubId) {
+        const user = await fetchGitHubUser(token);
+        if (!user) {
+          return {
+            repos: FEATURED_REPOS.map((r) => ({
+              owner: r.owner,
+              repo: r.repo,
+              description: r.description,
+            })),
+            isPersonalized: false,
+            collectionCount: 0,
+          };
+        }
+        githubId = user.id;
       }
 
       // Get user profile
@@ -862,6 +947,428 @@ export const feedRouter = router({
         followedUsers: profile?.followedUsers ?? [],
         followedRepos: profile?.followedRepos ?? [],
       };
+    }),
+
+  // ==========================================================================
+  // Commit Activity Feed Endpoints (Swipe Feed)
+  // ==========================================================================
+
+  /**
+   * Get commit queue - activity cards from last 24h from followed users/repos
+   * Groups commits by repo + hour bucket (matching ActivityFeedPanel pattern)
+   * Filters out passed and saved cards
+   * Requires authentication
+   */
+  getCommitQueue: publicProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().min(1).max(50).optional().default(20),
+        })
+        .optional()
+    )
+    .output(
+      z.object({
+        cards: z.array(
+          z.object({
+            itemId: z.string(),
+            repo: z.object({
+              owner: z.string(),
+              name: z.string(),
+            }),
+            hour: z.number(),
+            hourBucket: z.string(),
+            commits: z.array(
+              z.object({
+                sha: z.string(),
+                message: z.string(),
+                author: z.object({
+                  login: z.string(),
+                  avatarUrl: z.string().optional(),
+                }),
+                committedAt: z.string(),
+                url: z.string(),
+              })
+            ),
+            commitCount: z.number(),
+            latestCommitAt: z.string(),
+          })
+        ),
+        hasMore: z.boolean(),
+      })
+    )
+    .query(async ({ input }) => {
+      const auth = await requireAuth();
+      const limit = input?.limit ?? 20;
+
+      // Get user's follows
+      const profile = await getUserFeedProfile(auth.githubId);
+      const followedRepos = profile?.followedRepos ?? [];
+      const followedUsers = profile?.followedUsers ?? [];
+
+      if (followedRepos.length === 0 && followedUsers.length === 0) {
+        return { cards: [], hasMore: false };
+      }
+
+      // Get user's feed state (passed/saved)
+      const feedState = await getOrCreateCommitFeedState(auth.githubId);
+      const passedSet = new Set(feedState.passed);
+      const savedSet = new Set(feedState.savedCards.map((c) => c.itemId));
+
+      // Calculate 24h ago
+      const twentyFourHoursAgo = new Date(
+        Date.now() - 24 * 60 * 60 * 1000
+      ).toISOString();
+
+      // Fetch commits from GitHub for each followed repo
+      const token = await getGitHubToken();
+
+      // Map to group commits by repo + hour: "YYYY-MM-DD:HH:owner/repo" -> ActivityCommit[]
+      const cardMap = new Map<
+        string,
+        {
+          repo: { owner: string; name: string };
+          hour: number;
+          hourBucket: string;
+          commits: ActivityCommit[];
+        }
+      >();
+
+      // Helper to add a commit to the appropriate card
+      const addCommitToCard = (
+        owner: string,
+        repoName: string,
+        commit: ActivityCommit
+      ) => {
+        const commitDate = new Date(commit.committedAt);
+        const dateStr = commitDate.toISOString().split('T')[0];
+        const hour = commitDate.getUTCHours();
+        const hourPadded = hour.toString().padStart(2, '0');
+        const itemId = `${dateStr}:${hourPadded}:${owner}/${repoName}`;
+
+        // Skip if this card was already passed or saved
+        if (passedSet.has(itemId) || savedSet.has(itemId)) {
+          return;
+        }
+
+        if (!cardMap.has(itemId)) {
+          // Create hour bucket timestamp (start of the hour)
+          const hourBucketDate = new Date(commitDate);
+          hourBucketDate.setUTCMinutes(0, 0, 0);
+
+          cardMap.set(itemId, {
+            repo: { owner, name: repoName },
+            hour,
+            hourBucket: hourBucketDate.toISOString(),
+            commits: [],
+          });
+        }
+
+        const card = cardMap.get(itemId)!;
+        // Avoid duplicate commits by sha
+        if (!card.commits.some((c) => c.sha === commit.sha)) {
+          card.commits.push(commit);
+        }
+      };
+
+      // Fetch commits from followed repos
+      for (const repo of followedRepos) {
+        try {
+          const response = await fetch(
+            `https://api.github.com/repos/${repo.owner}/${repo.repo}/commits?since=${twentyFourHoursAgo}&per_page=30`,
+            {
+              headers: {
+                Accept: 'application/vnd.github.v3+json',
+                ...(token ? { Authorization: `token ${token}` } : {}),
+              },
+            }
+          );
+
+          if (response.ok) {
+            const commits = (await response.json()) as Array<{
+              sha: string;
+              commit: {
+                message: string;
+                author: {
+                  date: string;
+                };
+              };
+              author: {
+                login: string;
+                avatar_url: string;
+              } | null;
+              html_url: string;
+            }>;
+
+            for (const commit of commits) {
+              addCommitToCard(repo.owner, repo.repo, {
+                sha: commit.sha,
+                message: commit.commit.message,
+                author: {
+                  login: commit.author?.login ?? 'unknown',
+                  avatarUrl: commit.author?.avatar_url,
+                },
+                committedAt: commit.commit.author.date,
+                url: commit.html_url,
+              });
+            }
+          }
+        } catch (error) {
+          console.error(
+            `[Commit Feed] Failed to fetch commits for ${repo.owner}/${repo.repo}:`,
+            error
+          );
+        }
+      }
+
+      // Fetch commits from followed users (their recent activity)
+      for (const user of followedUsers) {
+        try {
+          const response = await fetch(
+            `https://api.github.com/users/${user.login}/events?per_page=30`,
+            {
+              headers: {
+                Accept: 'application/vnd.github.v3+json',
+                ...(token ? { Authorization: `token ${token}` } : {}),
+              },
+            }
+          );
+
+          if (response.ok) {
+            const events = (await response.json()) as Array<{
+              type: string;
+              repo: { name: string };
+              payload: {
+                commits?: Array<{
+                  sha: string;
+                  message: string;
+                  author: { name: string };
+                }>;
+              };
+              actor: {
+                login: string;
+                avatar_url: string;
+              };
+              created_at: string;
+            }>;
+
+            for (const event of events) {
+              // Only process PushEvents
+              if (event.type !== 'PushEvent') continue;
+
+              // Check if within 24h
+              if (new Date(event.created_at) < new Date(twentyFourHoursAgo)) {
+                continue;
+              }
+
+              const repoParts = event.repo.name.split('/');
+              const owner = repoParts[0] ?? '';
+              const repoName = repoParts[1] ?? '';
+
+              if (!owner || !repoName) continue;
+
+              for (const commit of event.payload.commits ?? []) {
+                addCommitToCard(owner, repoName, {
+                  sha: commit.sha,
+                  message: commit.message,
+                  author: {
+                    login: event.actor.login,
+                    avatarUrl: event.actor.avatar_url,
+                  },
+                  committedAt: event.created_at,
+                  url: `https://github.com/${owner}/${repoName}/commit/${commit.sha}`,
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.error(
+            `[Commit Feed] Failed to fetch events for ${user.login}:`,
+            error
+          );
+        }
+      }
+
+      // Convert map to array of CommitActivityCard
+      const allCards: CommitActivityCard[] = Array.from(cardMap.entries()).map(
+        ([itemId, data]) => {
+          // Sort commits within each card by time (newest first)
+          const sortedCommits = [...data.commits].sort(
+            (a, b) =>
+              new Date(b.committedAt).getTime() -
+              new Date(a.committedAt).getTime()
+          );
+
+          return {
+            itemId,
+            repo: data.repo,
+            hour: data.hour,
+            hourBucket: data.hourBucket,
+            commits: sortedCommits,
+            commitCount: sortedCommits.length,
+            latestCommitAt: sortedCommits[0]?.committedAt ?? data.hourBucket,
+          };
+        }
+      );
+
+      // Sort cards by latestCommitAt descending (newest first)
+      allCards.sort(
+        (a, b) =>
+          new Date(b.latestCommitAt).getTime() -
+          new Date(a.latestCommitAt).getTime()
+      );
+
+      // Return limited results
+      const cards = allCards.slice(0, limit);
+      const hasMore = allCards.length > limit;
+
+      return { cards, hasMore };
+    }),
+
+  /**
+   * Pass a card (swipe left) - mark as seen, don't show again
+   * Requires authentication
+   */
+  passCard: publicProcedure
+    .input(z.object({ itemId: z.string() }))
+    .output(z.object({ success: z.boolean() }))
+    .mutation(async ({ input }) => {
+      const auth = await requireAuth();
+
+      const feedState = await getOrCreateCommitFeedState(auth.githubId);
+
+      // Add to passed if not already there
+      if (!feedState.passed.includes(input.itemId)) {
+        feedState.passed.push(input.itemId);
+        feedState.updatedAt = new Date().toISOString();
+        await storeCommitFeedState(feedState);
+      }
+
+      return { success: true };
+    }),
+
+  /**
+   * Save an activity card (swipe right) - store snapshot for later reference
+   * Requires authentication
+   */
+  saveCard: publicProcedure
+    .input(
+      z.object({
+        itemId: z.string(),
+        repo: z.object({
+          owner: z.string(),
+          name: z.string(),
+        }),
+        hour: z.number(),
+        hourBucket: z.string(),
+        commits: z.array(
+          z.object({
+            sha: z.string(),
+            message: z.string(),
+            author: z.object({
+              login: z.string(),
+              avatarUrl: z.string().optional(),
+            }),
+            committedAt: z.string(),
+            url: z.string(),
+          })
+        ),
+        commitCount: z.number(),
+        latestCommitAt: z.string(),
+      })
+    )
+    .output(z.object({ success: z.boolean() }))
+    .mutation(async ({ input }) => {
+      const auth = await requireAuth();
+
+      const feedState = await getOrCreateCommitFeedState(auth.githubId);
+
+      // Check if already saved
+      if (feedState.savedCards.some((c) => c.itemId === input.itemId)) {
+        return { success: true };
+      }
+
+      // Add to saved with timestamp
+      const savedCard: SavedActivityCard = {
+        ...input,
+        savedAt: new Date().toISOString(),
+      };
+
+      feedState.savedCards.push(savedCard);
+      feedState.updatedAt = new Date().toISOString();
+      await storeCommitFeedState(feedState);
+
+      return { success: true };
+    }),
+
+  /**
+   * Get saved activity cards
+   * Requires authentication
+   */
+  getSavedCards: publicProcedure
+    .output(
+      z.object({
+        savedCards: z.array(
+          z.object({
+            itemId: z.string(),
+            repo: z.object({
+              owner: z.string(),
+              name: z.string(),
+            }),
+            hour: z.number(),
+            hourBucket: z.string(),
+            commits: z.array(
+              z.object({
+                sha: z.string(),
+                message: z.string(),
+                author: z.object({
+                  login: z.string(),
+                  avatarUrl: z.string().optional(),
+                }),
+                committedAt: z.string(),
+                url: z.string(),
+              })
+            ),
+            commitCount: z.number(),
+            latestCommitAt: z.string(),
+            savedAt: z.string(),
+          })
+        ),
+      })
+    )
+    .query(async () => {
+      const auth = await requireAuth();
+
+      const feedState = await getOrCreateCommitFeedState(auth.githubId);
+
+      // Return saved cards sorted by savedAt (newest first)
+      const savedCards = [...feedState.savedCards].sort(
+        (a, b) =>
+          new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()
+      );
+
+      return { savedCards };
+    }),
+
+  /**
+   * Unsave a card - remove from saved list
+   * Requires authentication
+   */
+  unsaveCard: publicProcedure
+    .input(z.object({ itemId: z.string() }))
+    .output(z.object({ success: z.boolean() }))
+    .mutation(async ({ input }) => {
+      const auth = await requireAuth();
+
+      const feedState = await getOrCreateCommitFeedState(auth.githubId);
+
+      feedState.savedCards = feedState.savedCards.filter(
+        (c) => c.itemId !== input.itemId
+      );
+      feedState.updatedAt = new Date().toISOString();
+      await storeCommitFeedState(feedState);
+
+      return { success: true };
     }),
 });
 

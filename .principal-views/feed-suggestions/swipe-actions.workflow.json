@@ -1,0 +1,35 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/feed-suggestions/feed-suggestions.otel.canvas",
+  "spanPattern": "feed.card",
+  "name": "Swipe Actions",
+  "description": "Pass or save activity cards in swipe feed",
+  "scenarios": [
+    {
+      "id": "pass-card-success",
+      "description": "Successfully pass (swipe left) an activity card",
+      "priority": 1,
+      "template": {
+        "summary": "[Pass] Card {{itemId}} passed",
+        "events": {
+          "feed.card.pass.started": "Passing card: {{itemId}}",
+          "feed.card.pass.store": "Stored to S3 ({{passedCount}} total passed)",
+          "feed.card.pass.ready": "Pass complete"
+        }
+      }
+    },
+    {
+      "id": "save-card-success",
+      "description": "Successfully save (swipe right) an activity card",
+      "priority": 2,
+      "template": {
+        "summary": "[Save] Card {{itemId}} saved ({{commitCount}} commits)",
+        "events": {
+          "feed.card.save.started": "Saving card: {{itemId}} ({{commitCount}} commits)",
+          "feed.card.save.store": "Stored to S3 ({{savedCount}} total saved)",
+          "feed.card.save.ready": "Save complete"
+        }
+      }
+    }
+  ]
+}

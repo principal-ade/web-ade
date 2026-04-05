@@ -18,6 +18,9 @@
       },
       "aggregate": {
         "label": "Aggregate"
+      },
+      "s3": {
+        "label": "S3 Storage"
       }
     }
   },
@@ -635,6 +638,449 @@
           }
         }
       }
+    },
+    {
+      "id": "commit-queue-start",
+      "type": "otel-event",
+      "x": 0,
+      "y": 800,
+      "width": 240,
+      "height": 90,
+      "color": "#1d4ed8",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts"
+        ]
+      },
+      "label": "Get Commit Queue",
+      "event": {
+        "name": "feed.commitQueue.started",
+        "attributes": {
+          "limit": {
+            "type": "number",
+            "description": "Max cards to return",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "commit-queue-auth",
+      "type": "otel-event",
+      "x": 0,
+      "y": 950,
+      "width": 240,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts"
+        ]
+      },
+      "label": "Check Auth",
+      "event": {
+        "name": "feed.commitQueue.auth.check",
+        "attributes": {
+          "hasToken": {
+            "type": "boolean",
+            "description": "Whether GitHub token exists",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "fetch-follows",
+      "type": "otel-event",
+      "x": 0,
+      "y": 1100,
+      "width": 240,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts"
+        ]
+      },
+      "label": "Get User Follows",
+      "event": {
+        "name": "feed.commitQueue.follows.fetch",
+        "attributes": {
+          "followedRepos": {
+            "type": "number",
+            "description": "Number of followed repos",
+            "required": true
+          },
+          "followedUsers": {
+            "type": "number",
+            "description": "Number of followed users",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "fetch-repo-commits",
+      "type": "otel-event",
+      "x": -150,
+      "y": 1250,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts"
+        ]
+      },
+      "label": "Fetch Repo Commits",
+      "event": {
+        "name": "github.api.repo.commits",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repo owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repo name",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "fetch-user-events",
+      "type": "otel-event",
+      "x": 150,
+      "y": 1250,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts"
+        ]
+      },
+      "label": "Fetch User Events",
+      "event": {
+        "name": "github.api.user.events",
+        "attributes": {
+          "login": {
+            "type": "string",
+            "description": "GitHub username",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "group-by-hour",
+      "type": "otel-event",
+      "x": 0,
+      "y": 1400,
+      "width": 240,
+      "height": 90,
+      "color": "#0891b2",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts"
+        ]
+      },
+      "label": "Group by Repo + Hour",
+      "event": {
+        "name": "feed.commitQueue.group",
+        "attributes": {
+          "totalCommits": {
+            "type": "number",
+            "description": "Total commits fetched",
+            "required": true
+          },
+          "cardCount": {
+            "type": "number",
+            "description": "Number of activity cards",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "filter-passed-saved",
+      "type": "otel-event",
+      "x": 0,
+      "y": 1550,
+      "width": 240,
+      "height": 90,
+      "color": "#0891b2",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts"
+        ]
+      },
+      "label": "Filter Passed/Saved",
+      "event": {
+        "name": "feed.commitQueue.filter",
+        "attributes": {
+          "passedCount": {
+            "type": "number",
+            "description": "Cards already passed",
+            "required": true
+          },
+          "savedCount": {
+            "type": "number",
+            "description": "Cards already saved",
+            "required": true
+          },
+          "remainingCards": {
+            "type": "number",
+            "description": "Cards in queue",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "commit-queue-ready",
+      "type": "otel-event",
+      "x": 0,
+      "y": 1700,
+      "width": 240,
+      "height": 90,
+      "color": "#16a34a",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts"
+        ]
+      },
+      "label": "Queue Ready",
+      "event": {
+        "name": "feed.commitQueue.ready",
+        "attributes": {
+          "cardCount": {
+            "type": "number",
+            "description": "Cards returned",
+            "required": true
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "More cards available",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "pass-card-start",
+      "type": "otel-event",
+      "x": 500,
+      "y": 800,
+      "width": 200,
+      "height": 90,
+      "color": "#1d4ed8",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts"
+        ]
+      },
+      "label": "Pass Card",
+      "event": {
+        "name": "feed.card.pass.started",
+        "attributes": {
+          "itemId": {
+            "type": "string",
+            "description": "Card item ID",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "pass-card-store",
+      "type": "otel-event",
+      "x": 500,
+      "y": 950,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/lib/feed-collections/s3-storage.ts"
+        ]
+      },
+      "label": "Store Pass to S3",
+      "event": {
+        "name": "feed.card.pass.store",
+        "attributes": {
+          "passedCount": {
+            "type": "number",
+            "description": "Total passed items",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "pass-card-ready",
+      "type": "otel-event",
+      "x": 500,
+      "y": 1100,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts"
+        ]
+      },
+      "label": "Pass Complete",
+      "event": {
+        "name": "feed.card.pass.ready",
+        "attributes": {}
+      }
+    },
+    {
+      "id": "save-card-start",
+      "type": "otel-event",
+      "x": 750,
+      "y": 800,
+      "width": 200,
+      "height": 90,
+      "color": "#1d4ed8",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts"
+        ]
+      },
+      "label": "Save Card",
+      "event": {
+        "name": "feed.card.save.started",
+        "attributes": {
+          "itemId": {
+            "type": "string",
+            "description": "Card item ID",
+            "required": true
+          },
+          "commitCount": {
+            "type": "number",
+            "description": "Commits in card",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "save-card-store",
+      "type": "otel-event",
+      "x": 750,
+      "y": 950,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/lib/feed-collections/s3-storage.ts"
+        ]
+      },
+      "label": "Store Save to S3",
+      "event": {
+        "name": "feed.card.save.store",
+        "attributes": {
+          "savedCount": {
+            "type": "number",
+            "description": "Total saved cards",
+            "required": true
+          }
+        }
+      }
+    },
+    {
+      "id": "save-card-ready",
+      "type": "otel-event",
+      "x": 750,
+      "y": 1100,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts"
+        ]
+      },
+      "label": "Save Complete",
+      "event": {
+        "name": "feed.card.save.ready",
+        "attributes": {}
+      }
+    },
+    {
+      "id": "no-follows-empty",
+      "type": "otel-event",
+      "x": 300,
+      "y": 1100,
+      "width": 180,
+      "height": 90,
+      "color": "#d97706",
+      "otel": {
+        "status": "draft"
+      },
+      "pv": {
+        "references": [
+          "src/server/routers/feed.ts"
+        ]
+      },
+      "label": "No Follows",
+      "event": {
+        "name": "feed.commitQueue.empty",
+        "attributes": {
+          "reason": {
+            "type": "string",
+            "description": "Why queue is empty",
+            "required": true
+          }
+        }
+      }
     }
   ],
   "edges": [
@@ -866,6 +1312,140 @@
       "label": "403",
       "pv": {
         "edgeType": "error"
+      }
+    },
+    {
+      "id": "queue-1",
+      "fromNode": "commit-queue-start",
+      "fromSide": "bottom",
+      "toNode": "commit-queue-auth",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "queue-2",
+      "fromNode": "commit-queue-auth",
+      "fromSide": "bottom",
+      "toNode": "fetch-follows",
+      "toSide": "top",
+      "label": "authenticated",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "queue-3",
+      "fromNode": "fetch-follows",
+      "fromSide": "bottom",
+      "toNode": "fetch-repo-commits",
+      "toSide": "top",
+      "label": "for each repo",
+      "pv": {
+        "edgeType": "parallel"
+      }
+    },
+    {
+      "id": "queue-4",
+      "fromNode": "fetch-follows",
+      "fromSide": "bottom",
+      "toNode": "fetch-user-events",
+      "toSide": "top",
+      "label": "for each user",
+      "pv": {
+        "edgeType": "parallel"
+      }
+    },
+    {
+      "id": "queue-5",
+      "fromNode": "fetch-repo-commits",
+      "fromSide": "bottom",
+      "toNode": "group-by-hour",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "aggregate"
+      }
+    },
+    {
+      "id": "queue-6",
+      "fromNode": "fetch-user-events",
+      "fromSide": "bottom",
+      "toNode": "group-by-hour",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "aggregate"
+      }
+    },
+    {
+      "id": "queue-7",
+      "fromNode": "group-by-hour",
+      "fromSide": "bottom",
+      "toNode": "filter-passed-saved",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "queue-8",
+      "fromNode": "filter-passed-saved",
+      "fromSide": "bottom",
+      "toNode": "commit-queue-ready",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "queue-empty",
+      "fromNode": "fetch-follows",
+      "fromSide": "right",
+      "toNode": "no-follows-empty",
+      "toSide": "left",
+      "label": "no follows",
+      "pv": {
+        "edgeType": "error"
+      }
+    },
+    {
+      "id": "pass-1",
+      "fromNode": "pass-card-start",
+      "fromSide": "bottom",
+      "toNode": "pass-card-store",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "pass-2",
+      "fromNode": "pass-card-store",
+      "fromSide": "bottom",
+      "toNode": "pass-card-ready",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "save-1",
+      "fromNode": "save-card-start",
+      "fromSide": "bottom",
+      "toNode": "save-card-store",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
+      }
+    },
+    {
+      "id": "save-2",
+      "fromNode": "save-card-store",
+      "fromSide": "bottom",
+      "toNode": "save-card-ready",
+      "toSide": "top",
+      "pv": {
+        "edgeType": "flow"
       }
     }
   ]

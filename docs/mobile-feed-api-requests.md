@@ -134,13 +134,15 @@ Search for GitHub repositories.
 
 ## Authentication
 
-All endpoints accept authentication via:
+All endpoints (both `github.*` and `feed.*`) accept authentication via:
 - **Bearer token** (recommended for mobile): `Authorization: Bearer <github_token>`
 - **Cookie**: `github_token` cookie (for web)
 
+Feed endpoints automatically fetch user identity from the GitHub API when using Bearer tokens.
+
 ```typescript
 // Example mobile request
-fetch('/api/trpc/github.getSuggestedUsers', {
+fetch('/api/trpc/feed.getCommitQueue', {
   headers: {
     'Authorization': 'Bearer ghp_xxxxxxxxxxxx'
   }
@@ -155,9 +157,155 @@ fetch('/api/trpc/github.getSuggestedUsers', {
 - Uses `Promise.allSettled` so partial failures don't break the response
 - Results are deduplicated by login/full_name (following/starred takes priority over org)
 
+## Swipe Feed Endpoints (Commit Activity)
+
+Endpoints for the "Tinder-style" swipe feed where users can pass or save commit activity cards.
+
+### 5. Get Commit Queue
+
+Get activity cards from the last 24 hours, grouped by repo + hour bucket.
+
+```typescript
+// feed.getCommitQueue
+// Fetches commits from followed users/repos, groups by repo+hour
+
+// Input:
+{
+  limit?: number;  // default 20, max 50
+}
+
+// Output:
+{
+  cards: Array<{
+    itemId: string;        // "YYYY-MM-DD:HH:owner/repo"
+    repo: {
+      owner: string;
+      name: string;
+    };
+    hour: number;          // 0-23 (UTC)
+    hourBucket: string;    // ISO timestamp for hour start
+    commits: Array<{
+      sha: string;
+      message: string;
+      author: {
+        login: string;
+        avatarUrl?: string;
+      };
+      committedAt: string;
+      url: string;
+    }>;
+    commitCount: number;
+    latestCommitAt: string;
+  }>;
+  hasMore: boolean;
+}
+```
+
+**Grouping:** Commits are grouped by repository + hour bucket (same pattern as ActivityFeedPanel). Each card represents all commits for one repo within one hour.
+
+**Filtering:** Cards that have been passed or saved are excluded from the queue.
+
+### 6. Pass Card (Swipe Left)
+
+Mark an activity card as seen - won't show again for this 24h cycle.
+
+```typescript
+// feed.passCard
+// Input:
+{
+  itemId: string;  // e.g., "2026-04-04:14:facebook/react"
+}
+
+// Output:
+{
+  success: boolean;
+}
+```
+
+**Note:** Passed items are ephemeral - only relevant for the current 24h window.
+
+### 7. Save Card (Swipe Right)
+
+Save an activity card for later reference. Persists beyond 24h.
+
+```typescript
+// feed.saveCard
+// Input: Full CommitActivityCard object
+{
+  itemId: string;
+  repo: { owner: string; name: string; };
+  hour: number;
+  hourBucket: string;
+  commits: Array<{
+    sha: string;
+    message: string;
+    author: { login: string; avatarUrl?: string; };
+    committedAt: string;
+    url: string;
+  }>;
+  commitCount: number;
+  latestCommitAt: string;
+}
+
+// Output:
+{
+  success: boolean;
+}
+```
+
+**Note:** The full card snapshot is saved so it remains accessible even after the 24h window expires.
+
+### 8. Get Saved Cards
+
+Retrieve all saved activity cards.
+
+```typescript
+// feed.getSavedCards
+// Input: none
+
+// Output:
+{
+  savedCards: Array<{
+    ...CommitActivityCard,
+    savedAt: string;  // ISO timestamp when saved
+  }>;
+}
+```
+
+Cards are sorted by `savedAt` (newest first).
+
+### 9. Unsave Card
+
+Remove a card from saved list.
+
+```typescript
+// feed.unsaveCard
+// Input:
+{
+  itemId: string;
+}
+
+// Output:
+{
+  success: boolean;
+}
+```
+
+## Follow Management Endpoints
+
+Users can follow up to 5 users and 5 repositories.
+
+```typescript
+// feed.followUser / unfollowUser
+// feed.followRepo / unfollowRepo
+// feed.getFollows - returns current follows
+```
+
 ## Related Files
 
-- **Implementation:** `src/server/routers/github.ts` (lines 438+)
+- **GitHub API:** `src/server/routers/github.ts` (lines 438+)
+- **Feed API:** `src/server/routers/feed.ts`
+- **Types:** `src/lib/feed-collections/types.ts`
+- **Storage:** `src/lib/feed-collections/s3-storage.ts`
 - Mobile app: `src/screens/FeedCustomizationScreen.tsx`
-- OTEL canvas: `.principal-views/feed-collections/feed-collections.otel.canvas`
-- Feed router: `src/server/routers/feed.ts`
+- OTEL canvas: `.principal-views/feed-suggestions/feed-suggestions.otel.canvas`
