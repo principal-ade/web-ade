@@ -10,6 +10,14 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Transpile Three.js ecosystem packages for proper bundling
+  transpilePackages: [
+    'three',
+    '@react-three/fiber',
+    '@react-three/drei',
+    '@react-spring/three',
+    'troika-three-text',
+  ],
   images: {
     remotePatterns: [
       {
