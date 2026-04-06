@@ -445,7 +445,7 @@ export async function getCommitFeedState(
 
     console.log('[Commit Feed] Retrieved feed state:', {
       githubId,
-      passedCount: state.passed.length,
+      passedCommitCount: Object.keys(state.passedCommits || {}).length,
       savedCount: state.savedCards.length,
     });
 
@@ -490,7 +490,7 @@ export async function storeCommitFeedState(
         CacheControl: 'max-age=60',
         Metadata: {
           'github-id': state.githubId,
-          'passed-count': String(state.passed.length),
+          'passed-commit-count': String(Object.keys(state.passedCommits).length),
           'saved-count': String(state.savedCards.length),
           'updated-at': state.updatedAt,
         },
@@ -499,7 +499,7 @@ export async function storeCommitFeedState(
 
     console.log('[Commit Feed] Stored feed state:', {
       githubId: state.githubId,
-      passedCount: state.passed.length,
+      passedCommitCount: Object.keys(state.passedCommits).length,
       savedCount: state.savedCards.length,
     });
 
@@ -524,12 +524,18 @@ export async function getOrCreateCommitFeedState(
 ): Promise<CommitFeedState> {
   const existing = await getCommitFeedState(githubId);
   if (existing) {
+    // Migrate old format if needed (passed: string[] -> passedCommits: Record<string, string[]>)
+    if (!existing.passedCommits) {
+      existing.passedCommits = {};
+      // Old passed itemIds can't be migrated to SHAs, just clear them
+      delete (existing as unknown as Record<string, unknown>).passed;
+    }
     return existing;
   }
 
   const newState: CommitFeedState = {
     githubId,
-    passed: [],
+    passedCommits: {},
     savedCards: [],
     updatedAt: new Date().toISOString(),
   };

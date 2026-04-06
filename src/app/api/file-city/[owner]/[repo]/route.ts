@@ -7,7 +7,8 @@
  *   - branch: Git branch (default: "HEAD")
  *   - width: Image width (default: 400)
  *   - height: Image height (default: 400)
- *   - commit: Optional commit SHA to highlight changed files
+ *   - commit: Optional single commit SHA to highlight changed files
+ *   - commits: Optional comma-separated commit SHAs to highlight (for multi-commit cards)
  *
  * Returns the generated PNG image.
  */
@@ -90,36 +91,80 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const width = parseInt(searchParams.get('width') || '400', 10);
     const height = parseInt(searchParams.get('height') || '400', 10);
     const commitSha = searchParams.get('commit');
+    const commitsSha = searchParams.get('commits'); // comma-separated SHAs
+
+    console.log('[File City] Request params:', { owner, repo, commit: commitSha, commits: commitsSha });
 
     // Validate dimensions
     const maxDimension = 2000;
     const clampedWidth = Math.min(Math.max(width, 100), maxDimension);
     const clampedHeight = Math.min(Math.max(height, 100), maxDimension);
 
-    // Generate S3 key (include commit if present for unique caching)
-    const s3Key = commitSha
-      ? `file-city/${owner}/${repo}/${clampedWidth}x${clampedHeight}-${commitSha.slice(0, 7)}.png`
-      : generateFileCityS3Key(owner, repo, clampedWidth, clampedHeight);
+    // Parse commit SHAs (support both single 'commit' and multiple 'commits')
+    const commitShas: string[] = [];
+    if (commitSha) {
+      commitShas.push(commitSha);
+    }
+    if (commitsSha) {
+      commitShas.push(...commitsSha.split(',').map(s => s.trim()).filter(Boolean));
+    }
+
+    // Generate S3 key (include commits hash if present for unique caching)
+    let s3Key: string;
+    if (commitShas.length > 0) {
+      // For multiple commits, use a hash of all SHAs
+      const commitsKey = commitShas.length === 1
+        ? commitShas[0]!.slice(0, 7)
+        : `multi-${commitShas.length}-${commitShas.map(s => s.slice(0, 4)).join('')}`;
+      s3Key = `file-city/${owner}/${repo}/${clampedWidth}x${clampedHeight}-${commitsKey}.png`;
+    } else {
+      s3Key = generateFileCityS3Key(owner, repo, clampedWidth, clampedHeight);
+    }
 
     // Check for nocache flag
     const noCache = searchParams.get('nocache') === '1';
 
-    // Fetch commit details if SHA provided (for highlight files)
+    // Fetch commit details for all SHAs (for highlight files)
     let highlightFiles: Array<{ path: string; status: 'added' | 'modified' | 'removed' }> | undefined;
-    if (commitSha) {
-      const commitDetails = await fetchCommitDetails(owner, repo, commitSha);
-      if (commitDetails?.files) {
-        highlightFiles = commitDetails.files.map(f => ({
-          path: f.filename,
-          status: f.status === 'added' ? 'added'
-            : f.status === 'removed' ? 'removed'
-            : 'modified',
-        }));
-        console.log('[File City] Highlighting', highlightFiles.length, 'files from commit');
+    if (commitShas.length > 0) {
+      console.log('[File City] Fetching', commitShas.length, 'commits:', commitShas.map(s => s.slice(0, 7)));
+
+      // Fetch all commits in parallel
+      const commitPromises = commitShas.map(sha => fetchCommitDetails(owner, repo, sha));
+      const commitResults = await Promise.all(commitPromises);
+
+      console.log('[File City] Fetched commits:', commitResults.map(c => c ? `${c.sha?.slice(0, 7)} (${c.files?.length || 0} files)` : 'null'));
+
+      // Merge all changed files (deduplicate by path)
+      const fileMap = new Map<string, 'added' | 'modified' | 'removed'>();
+      for (const commitDetails of commitResults) {
+        if (commitDetails?.files) {
+          for (const f of commitDetails.files) {
+            const status = f.status === 'added' ? 'added'
+              : f.status === 'removed' ? 'removed'
+              : 'modified';
+            // If file already exists, prefer 'modified' (file touched in multiple commits)
+            const existing = fileMap.get(f.filename);
+            if (!existing) {
+              fileMap.set(f.filename, status);
+            } else if (existing !== status) {
+              // If same file has different statuses, mark as modified
+              fileMap.set(f.filename, 'modified');
+            }
+          }
+        }
+      }
+
+      if (fileMap.size > 0) {
+        highlightFiles = Array.from(fileMap.entries()).map(([path, status]) => ({ path, status }));
+        console.log('[File City] Highlighting', highlightFiles.length, 'files from', commitShas.length, 'commits');
+        console.log('[File City] Highlight paths:', highlightFiles.map(f => `${f.status}: ${f.path}`));
+      } else {
+        console.log('[File City] No files to highlight from commits:', commitShas);
       }
     }
 
-    console.log('[File City] Generating:', { owner, repo, branch, commit: commitSha?.slice(0, 7) });
+    console.log('[File City] Generating:', { owner, repo, branch, commits: commitShas.length || 0, highlightCount: highlightFiles?.length || 0 });
 
     const buffer = await renderFileCityPng({
       owner,

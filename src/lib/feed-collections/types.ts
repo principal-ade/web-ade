@@ -165,8 +165,8 @@ export interface SavedActivityCard extends CommitActivityCard {
  */
 export interface CommitFeedState {
   githubId: string;
-  /** Passed item IDs (ephemeral, only matters for current 24h) */
-  passed: string[];
+  /** Map of itemId -> array of seen commit SHAs (ephemeral, only matters for current 24h) */
+  passedCommits: Record<string, string[]>;
   /** Saved activity cards with full snapshot (persistent) */
   savedCards: SavedActivityCard[];
   updatedAt: string; // ISO timestamp

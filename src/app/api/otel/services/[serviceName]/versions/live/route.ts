@@ -79,6 +79,22 @@ export async function GET(
     const otelUrl = `${OTEL_API_BASE}/services/${encodeURIComponent(serviceName)}/versions/live`;
     const response = await fetch(otelUrl, { headers });
 
+    // Handle 404 gracefully - service not found means no OTEL instrumentation
+    if (response.status === 404) {
+      return addCorsHeaders(
+        NextResponse.json({
+          serviceName,
+          liveVersions: [],
+          count: 0,
+        }, {
+          status: 200,
+          headers: {
+            'Cache-Control': 'public, max-age=60',
+          },
+        })
+      );
+    }
+
     if (!response.ok) {
       throw new Error(`OTEL API error: ${response.status} ${response.statusText}`);
     }

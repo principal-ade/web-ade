@@ -1012,7 +1012,7 @@ export const feedRouter = router({
 
       // Get user's feed state (passed/saved)
       const feedState = await getOrCreateCommitFeedState(auth.githubId);
-      const passedSet = new Set(feedState.passed);
+      const passedCommits = feedState.passedCommits;
       const savedSet = new Set(feedState.savedCards.map((c) => c.itemId));
 
       // Calculate 24h ago
@@ -1046,8 +1046,14 @@ export const feedRouter = router({
         const hourPadded = hour.toString().padStart(2, '0');
         const itemId = `${dateStr}:${hourPadded}:${owner}/${repoName}`;
 
-        // Skip if this card was already passed or saved
-        if (passedSet.has(itemId) || savedSet.has(itemId)) {
+        // Skip if this card was already saved (entire card is excluded)
+        if (savedSet.has(itemId)) {
+          return;
+        }
+
+        // Skip if this specific commit was already seen
+        const seenShas = passedCommits[itemId] || [];
+        if (seenShas.includes(commit.sha)) {
           return;
         }
 
@@ -1226,20 +1232,31 @@ export const feedRouter = router({
     }),
 
   /**
-   * Pass a card (swipe left) - mark as seen, don't show again
+   * Pass a card (swipe left) - mark commits as seen, don't show again
+   * Tracks individual commit SHAs so new commits for the same repo/hour still appear
    * Requires authentication
    */
   passCard: publicProcedure
-    .input(z.object({ itemId: z.string() }))
+    .input(
+      z.object({
+        itemId: z.string(),
+        seenCommitShas: z.array(z.string()),
+      })
+    )
     .output(z.object({ success: z.boolean() }))
     .mutation(async ({ input }) => {
       const auth = await requireAuth();
 
       const feedState = await getOrCreateCommitFeedState(auth.githubId);
 
-      // Add to passed if not already there
-      if (!feedState.passed.includes(input.itemId)) {
-        feedState.passed.push(input.itemId);
+      // Merge new SHAs with existing ones for this itemId
+      const existingShas = feedState.passedCommits[input.itemId] || [];
+      const newShas = input.seenCommitShas.filter(
+        (sha) => !existingShas.includes(sha)
+      );
+
+      if (newShas.length > 0) {
+        feedState.passedCommits[input.itemId] = [...existingShas, ...newShas];
         feedState.updatedAt = new Date().toISOString();
         await storeCommitFeedState(feedState);
       }
