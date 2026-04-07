@@ -1387,6 +1387,507 @@ export const feedRouter = router({
 
       return { success: true };
     }),
+
+  // ==========================================================================
+  // Activity Heatmap Endpoint
+  // ==========================================================================
+
+  /**
+   * Get commit activity for heatmap visualization
+   * Returns flat list of commits with timestamps from followed users/repos
+   * Does NOT filter out passed/saved (shows all activity)
+   * Requires authentication
+   */
+  getActivityHeatmap: publicProcedure
+    .input(
+      z
+        .object({
+          hoursBack: z.number().min(1).max(168).optional().default(24),
+          authorLogins: z.array(z.string()).optional(),
+          repoIds: z.array(z.string()).optional(), // "owner/repo" format
+        })
+        .optional()
+    )
+    .output(
+      z.object({
+        commits: z.array(
+          z.object({
+            timestamp: z.string(),
+            repoId: z.string(),
+            authorLogin: z.string(),
+            authorAvatarUrl: z.string().optional(),
+          })
+        ),
+        authors: z.array(
+          z.object({
+            login: z.string(),
+            avatarUrl: z.string().optional(),
+            commitCount: z.number(),
+          })
+        ),
+        repos: z.array(
+          z.object({
+            id: z.string(), // "owner/repo"
+            owner: z.string(),
+            name: z.string(),
+            commitCount: z.number(),
+          })
+        ),
+        timeRange: z.object({
+          start: z.string(),
+          end: z.string(),
+        }),
+      })
+    )
+    .query(async ({ input }) => {
+      const auth = await requireAuth();
+      const hoursBack = input?.hoursBack ?? 24;
+      const authorFilter = input?.authorLogins
+        ? new Set(input.authorLogins.map((l) => l.toLowerCase()))
+        : null;
+      const repoFilter = input?.repoIds
+        ? new Set(input.repoIds.map((r) => r.toLowerCase()))
+        : null;
+
+      // Get user's follows
+      const profile = await getUserFeedProfile(auth.githubId);
+      const followedRepos = profile?.followedRepos ?? [];
+      const followedUsers = profile?.followedUsers ?? [];
+
+      if (followedRepos.length === 0 && followedUsers.length === 0) {
+        const now = new Date();
+        const start = new Date(now.getTime() - hoursBack * 60 * 60 * 1000);
+        return {
+          commits: [],
+          authors: [],
+          repos: [],
+          timeRange: {
+            start: start.toISOString(),
+            end: now.toISOString(),
+          },
+        };
+      }
+
+      const now = new Date();
+      const startTime = new Date(now.getTime() - hoursBack * 60 * 60 * 1000);
+      const sinceISO = startTime.toISOString();
+
+      const token = await getGitHubToken();
+
+      // Collect all commits
+      const allCommits: Array<{
+        timestamp: string;
+        repoId: string;
+        authorLogin: string;
+        authorAvatarUrl?: string;
+      }> = [];
+
+      // Track authors for aggregation
+      const authorMap = new Map<
+        string,
+        { login: string; avatarUrl?: string; commitCount: number }
+      >();
+
+      // Track repos for aggregation
+      const repoMap = new Map<
+        string,
+        { id: string; owner: string; name: string; commitCount: number }
+      >();
+
+      const addCommit = (
+        timestamp: string,
+        repoId: string,
+        authorLogin: string,
+        authorAvatarUrl?: string
+      ) => {
+        // Apply author filter if specified
+        if (authorFilter && !authorFilter.has(authorLogin.toLowerCase())) {
+          return;
+        }
+
+        // Apply repo filter if specified
+        if (repoFilter && !repoFilter.has(repoId.toLowerCase())) {
+          return;
+        }
+
+        allCommits.push({
+          timestamp,
+          repoId,
+          authorLogin,
+          authorAvatarUrl,
+        });
+
+        // Update author stats
+        const existingAuthor = authorMap.get(authorLogin.toLowerCase());
+        if (existingAuthor) {
+          existingAuthor.commitCount++;
+        } else {
+          authorMap.set(authorLogin.toLowerCase(), {
+            login: authorLogin,
+            avatarUrl: authorAvatarUrl,
+            commitCount: 1,
+          });
+        }
+
+        // Update repo stats
+        const existingRepo = repoMap.get(repoId.toLowerCase());
+        if (existingRepo) {
+          existingRepo.commitCount++;
+        } else {
+          const [owner, name] = repoId.split('/');
+          repoMap.set(repoId.toLowerCase(), {
+            id: repoId,
+            owner: owner ?? '',
+            name: name ?? '',
+            commitCount: 1,
+          });
+        }
+      };
+
+      // Fetch commits from followed repos
+      for (const repo of followedRepos) {
+        try {
+          const response = await fetch(
+            `https://api.github.com/repos/${repo.owner}/${repo.repo}/commits?since=${sinceISO}&per_page=100`,
+            {
+              headers: {
+                Accept: 'application/vnd.github.v3+json',
+                ...(token ? { Authorization: `token ${token}` } : {}),
+              },
+            }
+          );
+
+          if (response.ok) {
+            const commits = (await response.json()) as Array<{
+              sha: string;
+              commit: { author: { date: string } };
+              author: { login: string; avatar_url: string } | null;
+            }>;
+
+            for (const commit of commits) {
+              addCommit(
+                commit.commit.author.date,
+                `${repo.owner}/${repo.repo}`,
+                commit.author?.login ?? 'unknown',
+                commit.author?.avatar_url
+              );
+            }
+          }
+        } catch (error) {
+          console.error(
+            `[Heatmap] Failed to fetch commits for ${repo.owner}/${repo.repo}:`,
+            error
+          );
+        }
+      }
+
+      // Fetch commits from followed users (their recent activity)
+      for (const user of followedUsers) {
+        try {
+          const response = await fetch(
+            `https://api.github.com/users/${user.login}/events?per_page=100`,
+            {
+              headers: {
+                Accept: 'application/vnd.github.v3+json',
+                ...(token ? { Authorization: `token ${token}` } : {}),
+              },
+            }
+          );
+
+          if (response.ok) {
+            const events = (await response.json()) as Array<{
+              type: string;
+              repo: { name: string };
+              payload: {
+                commits?: Array<{ sha: string; message: string }>;
+              };
+              actor: { login: string; avatar_url: string };
+              created_at: string;
+            }>;
+
+            for (const event of events) {
+              if (event.type !== 'PushEvent') continue;
+              if (new Date(event.created_at) < startTime) continue;
+
+              const repoId = event.repo.name;
+              const commitCount = event.payload.commits?.length ?? 1;
+
+              // Each push event can have multiple commits
+              // Use created_at as approximate timestamp for all
+              for (let i = 0; i < commitCount; i++) {
+                addCommit(
+                  event.created_at,
+                  repoId,
+                  event.actor.login,
+                  event.actor.avatar_url
+                );
+              }
+            }
+          }
+        } catch (error) {
+          console.error(
+            `[Heatmap] Failed to fetch events for ${user.login}:`,
+            error
+          );
+        }
+      }
+
+      // Sort commits by timestamp (newest first)
+      allCommits.sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+
+      // Sort authors by commit count (most active first)
+      const authors = Array.from(authorMap.values()).sort(
+        (a, b) => b.commitCount - a.commitCount
+      );
+
+      // Sort repos by commit count (most active first)
+      const repos = Array.from(repoMap.values()).sort(
+        (a, b) => b.commitCount - a.commitCount
+      );
+
+      return {
+        commits: allCommits,
+        authors,
+        repos,
+        timeRange: {
+          start: startTime.toISOString(),
+          end: now.toISOString(),
+        },
+      };
+    }),
+
+  /**
+   * Get detailed commits for a specific time block
+   * Returns full commit information for display in UI
+   */
+  getBlockCommits: publicProcedure
+    .input(
+      z.object({
+        startTime: z.string(), // ISO date string
+        endTime: z.string(), // ISO date string
+        authorLogins: z.array(z.string()).optional(),
+        repoIds: z.array(z.string()).optional(), // "owner/repo" format
+      })
+    )
+    .output(
+      z.object({
+        commits: z.array(
+          z.object({
+            repoOwner: z.string(),
+            repoName: z.string(),
+            sha: z.string(),
+            message: z.string(),
+            author: z.string(),
+            authorLogin: z.string().nullable(),
+            authorEmail: z.string(),
+            authorAvatarUrl: z.string().nullable(),
+            date: z.string(),
+            additions: z.number().optional(),
+            deletions: z.number().optional(),
+            filesChanged: z.number().optional(),
+          })
+        ),
+      })
+    )
+    .query(async ({ input }) => {
+      const auth = await requireAuth();
+      const startTime = new Date(input.startTime);
+      const endTime = new Date(input.endTime);
+      const authorFilter = input.authorLogins
+        ? new Set(input.authorLogins.map((l) => l.toLowerCase()))
+        : null;
+      const repoFilter = input.repoIds
+        ? new Set(input.repoIds.map((r) => r.toLowerCase()))
+        : null;
+
+      // Get user's follows
+      const profile = await getUserFeedProfile(auth.githubId);
+      const followedRepos = profile?.followedRepos ?? [];
+      const followedUsers = profile?.followedUsers ?? [];
+
+      if (followedRepos.length === 0 && followedUsers.length === 0) {
+        return { commits: [] };
+      }
+
+      const token = await getGitHubToken();
+      const sinceISO = startTime.toISOString();
+      const untilISO = endTime.toISOString();
+
+      // Collect all commits with full details
+      const allCommits: Array<{
+        repoOwner: string;
+        repoName: string;
+        sha: string;
+        message: string;
+        author: string;
+        authorLogin: string | null;
+        authorEmail: string;
+        authorAvatarUrl: string | null;
+        date: string;
+        additions?: number;
+        deletions?: number;
+        filesChanged?: number;
+      }> = [];
+
+      // Fetch commits from followed repos
+      for (const repo of followedRepos) {
+        const repoId = `${repo.owner}/${repo.repo}`;
+
+        // Apply repo filter if specified
+        if (repoFilter && !repoFilter.has(repoId.toLowerCase())) {
+          continue;
+        }
+
+        try {
+          const response = await fetch(
+            `https://api.github.com/repos/${repo.owner}/${repo.repo}/commits?since=${sinceISO}&until=${untilISO}&per_page=100`,
+            {
+              headers: {
+                Accept: 'application/vnd.github.v3+json',
+                ...(token ? { Authorization: `token ${token}` } : {}),
+              },
+            }
+          );
+
+          if (response.ok) {
+            const commits = (await response.json()) as Array<{
+              sha: string;
+              commit: {
+                message: string;
+                author: { name: string; email: string; date: string };
+              };
+              author: { login: string; avatar_url: string } | null;
+              stats?: { additions: number; deletions: number; total: number };
+              files?: Array<unknown>;
+            }>;
+
+            for (const commit of commits) {
+              const authorLogin = commit.author?.login ?? null;
+
+              // Apply author filter if specified
+              if (
+                authorFilter &&
+                authorLogin &&
+                !authorFilter.has(authorLogin.toLowerCase())
+              ) {
+                continue;
+              }
+
+              allCommits.push({
+                repoOwner: repo.owner,
+                repoName: repo.repo,
+                sha: commit.sha,
+                message: commit.commit.message,
+                author: commit.commit.author.name,
+                authorLogin,
+                authorEmail: commit.commit.author.email,
+                authorAvatarUrl: commit.author?.avatar_url ?? null,
+                date: commit.commit.author.date,
+                additions: commit.stats?.additions,
+                deletions: commit.stats?.deletions,
+                filesChanged: commit.files?.length,
+              });
+            }
+          }
+        } catch (error) {
+          console.error(
+            `[BlockCommits] Failed to fetch commits for ${repo.owner}/${repo.repo}:`,
+            error
+          );
+        }
+      }
+
+      // Fetch commits from followed users via events API
+      for (const user of followedUsers) {
+        // Apply author filter if specified
+        if (authorFilter && !authorFilter.has(user.login.toLowerCase())) {
+          continue;
+        }
+
+        try {
+          const response = await fetch(
+            `https://api.github.com/users/${user.login}/events?per_page=100`,
+            {
+              headers: {
+                Accept: 'application/vnd.github.v3+json',
+                ...(token ? { Authorization: `token ${token}` } : {}),
+              },
+            }
+          );
+
+          if (response.ok) {
+            const events = (await response.json()) as Array<{
+              type: string;
+              repo: { name: string };
+              payload: {
+                commits?: Array<{
+                  sha: string;
+                  message: string;
+                  author: { name: string; email: string };
+                }>;
+              };
+              actor: { login: string; avatar_url: string };
+              created_at: string;
+            }>;
+
+            for (const event of events) {
+              if (event.type !== 'PushEvent') continue;
+
+              const eventTime = new Date(event.created_at);
+              if (eventTime < startTime || eventTime >= endTime) continue;
+
+              const [repoOwner, repoName] = event.repo.name.split('/');
+
+              // Apply repo filter if specified
+              if (
+                repoFilter &&
+                !repoFilter.has(event.repo.name.toLowerCase())
+              ) {
+                continue;
+              }
+
+              // Add each commit from the push event
+              for (const commit of event.payload.commits ?? []) {
+                allCommits.push({
+                  repoOwner: repoOwner ?? '',
+                  repoName: repoName ?? '',
+                  sha: commit.sha,
+                  message: commit.message,
+                  author: commit.author.name,
+                  authorLogin: event.actor.login,
+                  authorEmail: commit.author.email,
+                  authorAvatarUrl: event.actor.avatar_url,
+                  date: event.created_at,
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.error(
+            `[BlockCommits] Failed to fetch events for ${user.login}:`,
+            error
+          );
+        }
+      }
+
+      // Sort commits by date (newest first)
+      allCommits.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+
+      // Deduplicate by SHA (same commit could appear from both repo and user follows)
+      const seenShas = new Set<string>();
+      const dedupedCommits = allCommits.filter((commit) => {
+        if (seenShas.has(commit.sha)) return false;
+        seenShas.add(commit.sha);
+        return true;
+      });
+
+      return { commits: dedupedCommits };
+    }),
 });
 
 export type FeedRouter = typeof feedRouter;

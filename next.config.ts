@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Transpile Three.js ecosystem packages for proper bundling
+  // Transpile Three.js ecosystem packages to prevent code splitting issues
   transpilePackages: [
     'three',
     '@react-three/fiber',
@@ -18,6 +18,15 @@ const nextConfig: NextConfig = {
     '@react-spring/three',
     'troika-three-text',
   ],
+  // Include Three.js packages in the main bundle to avoid lazy loading
+  experimental: {
+    optimizePackageImports: [
+      'three',
+      '@react-three/fiber',
+      '@react-three/drei',
+      '@react-spring/three',
+    ],
+  },
   images: {
     remotePatterns: [
       {
