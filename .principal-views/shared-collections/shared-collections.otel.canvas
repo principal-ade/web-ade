@@ -1,24 +1,21 @@
 {
-  "pv": {
-    "name": "Shared Collections Page",
-    "version": "1.0.0",
-    "markdown": ".principal-views/shared-collections/shared-collections.md",
-    "edgeTypes": {
-      "flow": {
-        "label": "Flow"
-      },
-      "error": {
-        "label": "Error Path"
-      },
-      "user-action": {
-        "label": "User Action"
-      },
-      "progressive": {
-        "label": "Progressive Load"
-      },
-      "data-flow": {
-        "label": "Data Flow"
-      }
+  "name": "Shared Collections Page",
+  "markdown": ".principal-views/shared-collections/shared-collections.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow"
+    },
+    "error": {
+      "label": "Error Path"
+    },
+    "user-action": {
+      "label": "User Action"
+    },
+    "progressive": {
+      "label": "Progressive Load"
+    },
+    "data-flow": {
+      "label": "Data Flow"
     }
   },
   "nodes": [
@@ -816,9 +813,7 @@
       "fromSide": "bottom",
       "toNode": "fetch-collections",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "init-2",
@@ -827,9 +822,7 @@
       "toNode": "user-not-found",
       "toSide": "left",
       "label": "404",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "init-3",
@@ -838,9 +831,7 @@
       "toNode": "collections-loaded",
       "toSide": "top",
       "label": "success",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "init-4",
@@ -849,9 +840,7 @@
       "toNode": "no-collections-repo",
       "toSide": "left",
       "label": "no repo",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "init-5",
@@ -860,9 +849,7 @@
       "toNode": "empty-collections",
       "toSide": "left",
       "label": "empty",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "init-6",
@@ -871,9 +858,7 @@
       "toNode": "check-permissions",
       "toSide": "top",
       "label": "has collections",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "init-7",
@@ -881,9 +866,7 @@
       "fromSide": "bottom",
       "toNode": "permissions-result",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "init-8",
@@ -891,9 +874,7 @@
       "fromSide": "bottom",
       "toNode": "collection-select",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "init-9",
@@ -901,9 +882,7 @@
       "fromSide": "bottom",
       "toNode": "page-ready",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "hydrate-1",
@@ -912,9 +891,7 @@
       "toNode": "hydrate-repo-details-start",
       "toSide": "top",
       "label": "triggers",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "hydrate-2",
@@ -923,9 +900,7 @@
       "toNode": "hydrate-repo-details-item",
       "toSide": "top",
       "label": "per repo",
-      "pv": {
-        "edgeType": "progressive"
-      }
+      "edgeType": "progressive"
     },
     {
       "id": "hydrate-3",
@@ -934,9 +909,7 @@
       "toNode": "hydrate-repo-details-complete",
       "toSide": "top",
       "label": "all done",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "data-1",
@@ -945,9 +918,7 @@
       "toNode": "state-repo-details",
       "toSide": "top",
       "label": "writes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "data-2",
@@ -956,9 +927,7 @@
       "toNode": "panel-collection-map",
       "toSide": "top",
       "label": "subscribes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "hydrate-pkg-1",
@@ -967,9 +936,7 @@
       "toNode": "hydrate-packages-start",
       "toSide": "top",
       "label": "parallel",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "hydrate-pkg-2",
@@ -978,9 +945,7 @@
       "toNode": "hydrate-packages-item",
       "toSide": "top",
       "label": "per repo",
-      "pv": {
-        "edgeType": "progressive"
-      }
+      "edgeType": "progressive"
     },
     {
       "id": "hydrate-pkg-3",
@@ -989,9 +954,7 @@
       "toNode": "hydrate-packages-complete",
       "toSide": "top",
       "label": "all done",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "data-pkg-1",
@@ -1000,9 +963,7 @@
       "toNode": "state-packages",
       "toSide": "top",
       "label": "writes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "data-pkg-2",
@@ -1011,9 +972,7 @@
       "toNode": "panel-collection-map",
       "toSide": "top",
       "label": "subscribes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "repo-1",
@@ -1021,9 +980,7 @@
       "fromSide": "bottom",
       "toNode": "file-tree-load",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "repo-2",
@@ -1031,9 +988,7 @@
       "fromSide": "bottom",
       "toNode": "file-tree-success",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "repo-3",
@@ -1041,9 +996,7 @@
       "fromSide": "right",
       "toNode": "file-tree-error",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "switch-1",
@@ -1052,9 +1005,7 @@
       "toNode": "hydrate-repo-details-start",
       "toSide": "right",
       "label": "re-triggers",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "switch-2",
@@ -1063,9 +1014,7 @@
       "toNode": "hydrate-packages-start",
       "toSide": "right",
       "label": "re-triggers",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     }
   ]
 }

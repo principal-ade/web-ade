@@ -1,51 +1,48 @@
 {
-  "pv": {
-    "name": "Local Auth Architecture",
-    "version": "1.0.0",
-    "markdown": ".principal-views/local-auth-architecture/local-auth-architecture.md",
-    "nodeTypes": {
-      "browser": {
-        "label": "Browser",
-        "description": "User's web browser"
-      },
-      "web-ade": {
-        "label": "web-ade",
-        "description": "Next.js app on localhost:3001"
-      },
-      "auth-server": {
-        "label": "Auth Server",
-        "description": "Auth server on localhost:3002"
-      },
-      "external": {
-        "label": "External Service",
-        "description": "External OAuth providers"
-      },
-      "storage": {
-        "label": "Storage",
-        "description": "Token/session storage"
-      }
+  "name": "Local Auth Architecture",
+  "markdown": ".principal-views/local-auth-architecture/local-auth-architecture.md",
+  "nodeTypes": {
+    "browser": {
+      "label": "Browser",
+      "description": "User's web browser"
     },
-    "edgeTypes": {
-      "redirect": {
-        "label": "Browser Redirect",
-        "style": "dashed",
-        "color": "#f59e0b"
-      },
-      "api-call": {
-        "label": "API Call",
-        "style": "solid",
-        "color": "#3b82f6"
-      },
-      "server-to-server": {
-        "label": "Server-to-Server",
-        "style": "solid",
-        "color": "#8b5cf6"
-      },
-      "cookie": {
-        "label": "Cookie",
-        "style": "dotted",
-        "color": "#22c55e"
-      }
+    "web-ade": {
+      "label": "web-ade",
+      "description": "Next.js app on localhost:3001"
+    },
+    "auth-server": {
+      "label": "Auth Server",
+      "description": "Auth server on localhost:3002"
+    },
+    "external": {
+      "label": "External Service",
+      "description": "External OAuth providers"
+    },
+    "storage": {
+      "label": "Storage",
+      "description": "Token/session storage"
+    }
+  },
+  "edgeTypes": {
+    "redirect": {
+      "label": "Browser Redirect",
+      "style": "dashed",
+      "color": "#f59e0b"
+    },
+    "api-call": {
+      "label": "API Call",
+      "style": "solid",
+      "color": "#3b82f6"
+    },
+    "server-to-server": {
+      "label": "Server-to-Server",
+      "style": "solid",
+      "color": "#8b5cf6"
+    },
+    "cookie": {
+      "label": "Cookie",
+      "style": "dotted",
+      "color": "#22c55e"
     }
   },
   "nodes": [
@@ -333,9 +330,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "HTTP requests",
-      "pv": {
-        "edgeType": "api-call"
-      }
+      "edgeType": "api-call"
     },
     {
       "id": "e-webade-auth",
@@ -344,9 +339,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "server-to-server",
-      "pv": {
-        "edgeType": "server-to-server"
-      }
+      "edgeType": "server-to-server"
     },
     {
       "id": "e-auth-workos",
@@ -354,9 +347,7 @@
       "toNode": "workos",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "api-call"
-      }
+      "edgeType": "api-call"
     },
     {
       "id": "e-workos-github",
@@ -365,9 +356,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "delegates auth",
-      "pv": {
-        "edgeType": "redirect"
-      }
+      "edgeType": "redirect"
     },
     {
       "id": "e-step1-2",
@@ -375,9 +364,7 @@
       "toNode": "step2",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "api-call"
-      }
+      "edgeType": "api-call"
     },
     {
       "id": "e-step2-3",
@@ -386,9 +373,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "POST /start",
-      "pv": {
-        "edgeType": "server-to-server"
-      }
+      "edgeType": "server-to-server"
     },
     {
       "id": "e-step3-4",
@@ -397,9 +382,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "redirect",
-      "pv": {
-        "edgeType": "redirect"
-      }
+      "edgeType": "redirect"
     },
     {
       "id": "e-step4-5",
@@ -408,9 +391,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "callback",
-      "pv": {
-        "edgeType": "redirect"
-      }
+      "edgeType": "redirect"
     },
     {
       "id": "e-step5-6",
@@ -419,9 +400,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "redirect",
-      "pv": {
-        "edgeType": "redirect"
-      }
+      "edgeType": "redirect"
     },
     {
       "id": "e-step6-7",
@@ -429,9 +408,7 @@
       "toNode": "step7",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "api-call"
-      }
+      "edgeType": "api-call"
     },
     {
       "id": "e-step7-8",
@@ -440,9 +417,7 @@
       "fromSide": "left",
       "toSide": "right",
       "label": "set cookies",
-      "pv": {
-        "edgeType": "cookie"
-      }
+      "edgeType": "cookie"
     }
   ]
 }

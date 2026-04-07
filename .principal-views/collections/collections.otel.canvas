@@ -1,15 +1,12 @@
 {
-  "pv": {
-    "name": "Collections/Worlds Management",
-    "version": "1.0.0",
-    "markdown": ".principal-views/collections/collections.md",
-    "edgeTypes": {
-      "flow": {
-        "label": "Flow"
-      },
-      "error": {
-        "label": "Error Path"
-      }
+  "name": "Collections/Worlds Management",
+  "markdown": ".principal-views/collections/collections.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow"
+    },
+    "error": {
+      "label": "Error Path"
     }
   },
   "nodes": [
@@ -986,9 +983,7 @@
       "fromSide": "bottom",
       "toNode": "load-github-fetch",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "load-2",
@@ -997,9 +992,7 @@
       "toNode": "load-success",
       "toSide": "top",
       "label": "found",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "create-1",
@@ -1007,9 +1000,7 @@
       "fromSide": "bottom",
       "toNode": "create-validate",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "create-2",
@@ -1018,9 +1009,7 @@
       "toNode": "create-github-update",
       "toSide": "top",
       "label": "existing",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "create-3",
@@ -1029,9 +1018,7 @@
       "toNode": "create-github-init",
       "toSide": "top",
       "label": "new",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "create-6",
@@ -1039,9 +1026,7 @@
       "fromSide": "bottom",
       "toNode": "create-success",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "import-1",
@@ -1049,9 +1034,7 @@
       "fromSide": "bottom",
       "toNode": "import-fetch-source",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "import-2",
@@ -1060,9 +1043,7 @@
       "toNode": "import-create-copy",
       "toSide": "top",
       "label": "found",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "import-3",
@@ -1070,9 +1051,7 @@
       "fromSide": "bottom",
       "toNode": "import-copy-memberships",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "import-4",
@@ -1080,9 +1059,7 @@
       "fromSide": "bottom",
       "toNode": "import-github-sync",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "import-5",
@@ -1090,9 +1067,7 @@
       "fromSide": "bottom",
       "toNode": "import-success",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "import-6",
@@ -1101,9 +1076,7 @@
       "toNode": "import-duplicate-check",
       "toSide": "top",
       "label": "check",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "import-7",
@@ -1112,9 +1085,7 @@
       "toNode": "import-not-found",
       "toSide": "top",
       "label": "404",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-create-github-update-create-github-commit-1771182136513",
@@ -1122,9 +1093,7 @@
       "toNode": "create-github-commit",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-create-started-create-unauthorized-1771182308239",
@@ -1132,9 +1101,7 @@
       "toNode": "create-unauthorized",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-create-github-commit-create-error-1771182308239",
@@ -1142,9 +1109,7 @@
       "toNode": "create-error",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-create-validate-create-validation-error-1771182308239",
@@ -1152,9 +1117,7 @@
       "toNode": "create-validation-error",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-create-github-init-create-github-commit-1771182308239",
@@ -1162,9 +1125,7 @@
       "toNode": "create-github-commit",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-load-started-load-unauthorized-1771182519807",
@@ -1172,9 +1133,7 @@
       "toNode": "load-unauthorized",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-load-github-fetch-load-not-found-1771182519807",
@@ -1182,9 +1141,7 @@
       "toNode": "load-not-found",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-load-github-fetch-load-error-1771182519807",
@@ -1192,9 +1149,7 @@
       "toNode": "load-error",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-import-started-import-unauthorized-1771182767034",
@@ -1202,9 +1157,7 @@
       "toNode": "import-unauthorized",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-import-github-sync-import-error-1771182767035",
@@ -1212,9 +1165,7 @@
       "toNode": "import-error",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     }
   ]
 }

@@ -1,15 +1,12 @@
 {
-  "pv": {
-    "name": "Authentication Callback",
-    "version": "1.0.0",
-    "markdown": ".principal-views/auth-callback/auth-callback.md",
-    "edgeTypes": {
-      "flow": {
-        "label": "Flow"
-      },
-      "error": {
-        "label": "Error Path"
-      }
+  "name": "Authentication Callback",
+  "markdown": ".principal-views/auth-callback/auth-callback.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow"
+    },
+    "error": {
+      "label": "Error Path"
     }
   },
   "nodes": [
@@ -495,9 +492,7 @@
       "fromSide": "bottom",
       "toNode": "state-validated",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-validate-to-tokens",
@@ -505,9 +500,7 @@
       "fromSide": "bottom",
       "toNode": "tokens-received",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-tokens-to-pkce",
@@ -516,9 +509,7 @@
       "toNode": "tokens-received-pkce",
       "toSide": "top",
       "label": "PKCE flow",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-tokens-to-cookie",
@@ -527,9 +518,7 @@
       "toNode": "tokens-received-cookie",
       "toSide": "top",
       "label": "Cookie flow",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-pkce-to-cookies",
@@ -537,9 +526,7 @@
       "fromSide": "bottom",
       "toNode": "cookies-set",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-cookie-to-cookies",
@@ -547,9 +534,7 @@
       "fromSide": "bottom",
       "toNode": "cookies-set",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-cookies-to-complete",
@@ -557,9 +542,7 @@
       "fromSide": "bottom",
       "toNode": "callback-complete",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-start-to-error",
@@ -568,9 +551,7 @@
       "toNode": "callback-error",
       "toSide": "left",
       "label": "validation error",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-validate-to-error",
@@ -579,9 +560,7 @@
       "toNode": "callback-error",
       "toSide": "left",
       "label": "session error",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-tokens-to-error",
@@ -590,9 +569,7 @@
       "toNode": "callback-error",
       "toSide": "left",
       "label": "cookie error",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     }
   ]
 }

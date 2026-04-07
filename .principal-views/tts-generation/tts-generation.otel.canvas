@@ -1,27 +1,24 @@
 {
-  "pv": {
-    "name": "Text-to-Speech Generation",
-    "version": "1.0.0",
-    "description": "TTS audio generation for tour steps using ElevenLabs API with S3 caching",
-    "markdown": ".principal-views/tts-generation/tts-generation.md",
-    "scope": {
-      "service.name": "web-ade",
-      "service.version": "0.1.0",
-      "deployment.environment": "development"
+  "name": "Text-to-Speech Generation",
+  "description": "TTS audio generation for tour steps using ElevenLabs API with S3 caching",
+  "markdown": ".principal-views/tts-generation/tts-generation.md",
+  "scope": {
+    "service.name": "web-ade",
+    "service.version": "0.1.0",
+    "deployment.environment": "development"
+  },
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow",
+      "style": "solid"
     },
-    "edgeTypes": {
-      "flow": {
-        "label": "Flow",
-        "style": "solid"
-      },
-      "cache-path": {
-        "label": "Cache Path",
-        "style": "solid"
-      },
-      "error": {
-        "label": "Error Path",
-        "style": "dashed"
-      }
+    "cache-path": {
+      "label": "Cache Path",
+      "style": "solid"
+    },
+    "error": {
+      "label": "Error Path",
+      "style": "dashed"
     }
   },
   "nodes": [
@@ -620,9 +617,7 @@
       "toSide": "left",
       "label": "cache exists",
       "color": "#22c55e",
-      "pv": {
-        "edgeType": "cache-path"
-      }
+      "edgeType": "cache-path"
     },
     {
       "id": "edge-started-to-cache-miss",
@@ -632,9 +627,7 @@
       "toSide": "top",
       "label": "cache not found",
       "color": "#f59e0b",
-      "pv": {
-        "edgeType": "cache-path"
-      }
+      "edgeType": "cache-path"
     },
     {
       "id": "edge-cache-hit-to-complete",
@@ -643,9 +636,7 @@
       "toNode": "tts-request-complete",
       "toSide": "top",
       "color": "#22c55e",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-cache-miss-to-tour-fetched",
@@ -654,9 +645,7 @@
       "toNode": "tts-tour-fetched",
       "toSide": "top",
       "color": "#3b82f6",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-cache-miss-to-step-error",
@@ -666,9 +655,7 @@
       "toSide": "left",
       "label": "invalid step",
       "color": "#ef4444",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-tour-fetched-to-dictionary-applied",
@@ -678,9 +665,7 @@
       "toSide": "top",
       "label": "has dictionary",
       "color": "#8b5cf6",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-tour-fetched-to-dictionary-skipped",
@@ -690,9 +675,7 @@
       "toSide": "top",
       "label": "no dictionary",
       "color": "#94a3b8",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-dictionary-applied-to-generated",
@@ -701,9 +684,7 @@
       "toNode": "tts-audio-generated",
       "toSide": "left",
       "color": "#8b5cf6",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-dictionary-skipped-to-generated",
@@ -712,9 +693,7 @@
       "toNode": "tts-audio-generated",
       "toSide": "top",
       "color": "#94a3b8",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-tour-fetched-to-tour-error",
@@ -724,9 +703,7 @@
       "toSide": "bottom",
       "label": "404",
       "color": "#ef4444",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-generated-to-uploaded",
@@ -735,9 +712,7 @@
       "toNode": "tts-audio-uploaded",
       "toSide": "top",
       "color": "#3b82f6",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-generated-to-rate-limit",
@@ -747,9 +722,7 @@
       "toSide": "bottom",
       "label": "429",
       "color": "#ef4444",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-uploaded-to-complete",
@@ -758,9 +731,7 @@
       "toNode": "tts-request-complete",
       "toSide": "left",
       "color": "#22c55e",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     }
   ]
 }

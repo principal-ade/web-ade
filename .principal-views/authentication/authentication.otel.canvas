@@ -1,15 +1,12 @@
 {
-  "pv": {
-    "name": "Token Status Check",
-    "version": "1.0.0",
-    "markdown": ".principal-views/authentication/authentication.md",
-    "edgeTypes": {
-      "flow": {
-        "label": "Flow"
-      },
-      "error": {
-        "label": "Error Path"
-      }
+  "name": "Token Status Check",
+  "markdown": ".principal-views/authentication/authentication.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow"
+    },
+    "error": {
+      "label": "Error Path"
     }
   },
   "nodes": [
@@ -299,9 +296,7 @@
       "toNode": "token-check-authenticated",
       "toSide": "top",
       "label": "valid token",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "started-to-authenticated-expiring",
@@ -310,9 +305,7 @@
       "toNode": "token-check-authenticated-expiring",
       "toSide": "top",
       "label": "valid token (expiring)",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "started-to-unauthenticated",
@@ -321,9 +314,7 @@
       "toNode": "token-check-unauthenticated",
       "toSide": "left",
       "label": "no token",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "started-to-error",
@@ -332,9 +323,7 @@
       "toNode": "token-check-error",
       "toSide": "left",
       "label": "exception",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     }
   ]
 }

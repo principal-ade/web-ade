@@ -1,24 +1,21 @@
 {
-  "pv": {
-    "name": "Feed Collections",
-    "version": "1.0.0",
-    "markdown": ".principal-views/feed-collections/feed-collections.md",
-    "edgeTypes": {
-      "flow": {
-        "label": "Flow"
-      },
-      "error": {
-        "label": "Error Path"
-      },
-      "user-action": {
-        "label": "User Action"
-      },
-      "data-flow": {
-        "label": "Data Flow"
-      },
-      "s3": {
-        "label": "S3 Operation"
-      }
+  "name": "Feed Collections",
+  "markdown": ".principal-views/feed-collections/feed-collections.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow"
+    },
+    "error": {
+      "label": "Error Path"
+    },
+    "user-action": {
+      "label": "User Action"
+    },
+    "data-flow": {
+      "label": "Data Flow"
+    },
+    "s3": {
+      "label": "S3 Operation"
     }
   },
   "nodes": [
@@ -977,9 +974,7 @@
       "toNode": "fetch-user-profile",
       "toSide": "top",
       "label": "authenticated",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "load-2",
@@ -988,9 +983,7 @@
       "toNode": "use-featured-repos",
       "toSide": "top",
       "label": "anonymous",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "load-3",
@@ -999,9 +992,7 @@
       "toNode": "profile-not-found",
       "toSide": "left",
       "label": "404",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "load-4",
@@ -1010,9 +1001,7 @@
       "toNode": "use-featured-repos",
       "toSide": "top",
       "label": "fallback",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "load-5",
@@ -1021,9 +1010,7 @@
       "toNode": "profile-loaded",
       "toSide": "top",
       "label": "success",
-      "pv": {
-        "edgeType": "s3"
-      }
+      "edgeType": "s3"
     },
     {
       "id": "load-6",
@@ -1031,9 +1018,7 @@
       "fromSide": "bottom",
       "toNode": "fetch-collections",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "load-7",
@@ -1041,9 +1026,7 @@
       "fromSide": "bottom",
       "toNode": "collections-loaded",
       "toSide": "top",
-      "pv": {
-        "edgeType": "s3"
-      }
+      "edgeType": "s3"
     },
     {
       "id": "load-8",
@@ -1051,9 +1034,7 @@
       "fromSide": "bottom",
       "toNode": "merge-repos",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "load-9",
@@ -1061,9 +1042,7 @@
       "fromSide": "bottom",
       "toNode": "feed-ready",
       "toSide": "top",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "load-10",
@@ -1072,9 +1051,7 @@
       "toNode": "feed-ready",
       "toSide": "right",
       "label": "direct",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "create-1",
@@ -1082,9 +1059,7 @@
       "fromSide": "bottom",
       "toNode": "collection-s3-put",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "create-2",
@@ -1092,9 +1067,7 @@
       "fromSide": "bottom",
       "toNode": "collection-created",
       "toSide": "top",
-      "pv": {
-        "edgeType": "s3"
-      }
+      "edgeType": "s3"
     },
     {
       "id": "sub-1",
@@ -1102,9 +1075,7 @@
       "fromSide": "bottom",
       "toNode": "update-user-profile",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "sub-2",
@@ -1112,9 +1083,7 @@
       "fromSide": "bottom",
       "toNode": "update-user-profile",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "public-1",
@@ -1123,9 +1092,7 @@
       "toNode": "collection-not-found",
       "toSide": "top",
       "label": "404",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "activity-2",
@@ -1133,9 +1100,7 @@
       "fromSide": "bottom",
       "toNode": "feed-activity-ready",
       "toSide": "top",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "edge-remove-repo-from-collection-collection-s3-put-1775277377436",
@@ -1143,9 +1108,7 @@
       "toNode": "collection-s3-put",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "s3"
-      }
+      "edgeType": "s3"
     },
     {
       "id": "edge-add-repo-to-collection-collection-s3-put-1775277377436",
@@ -1153,9 +1116,7 @@
       "toNode": "collection-s3-put",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "s3"
-      }
+      "edgeType": "s3"
     },
     {
       "id": "edge-get-follows-feed-activity-fetch-1775277377436",
@@ -1163,9 +1124,7 @@
       "toNode": "feed-activity-fetch",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-view-public-collection-collection-access-denied-1775277377436",
@@ -1173,9 +1132,7 @@
       "toNode": "collection-access-denied",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-unfollow-repo-update-user-profile-1775277377436",
@@ -1183,9 +1140,7 @@
       "toNode": "update-user-profile",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "s3"
-      }
+      "edgeType": "s3"
     },
     {
       "id": "edge-follow-repo-update-user-profile-1775277377436",
@@ -1193,9 +1148,7 @@
       "toNode": "update-user-profile",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "s3"
-      }
+      "edgeType": "s3"
     },
     {
       "id": "edge-follow-repo-follows-limit-reached-1775277377436",
@@ -1203,9 +1156,7 @@
       "toNode": "follows-limit-reached",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-follow-user-follows-limit-reached-1775277377436",
@@ -1213,9 +1164,7 @@
       "toNode": "follows-limit-reached",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-unfollow-user-update-user-profile-1775277377436",
@@ -1223,9 +1172,7 @@
       "toNode": "update-user-profile",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "s3"
-      }
+      "edgeType": "s3"
     },
     {
       "id": "edge-follow-user-update-user-profile-1775277377436",
@@ -1233,9 +1180,7 @@
       "toNode": "update-user-profile",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "s3"
-      }
+      "edgeType": "s3"
     }
   ]
 }

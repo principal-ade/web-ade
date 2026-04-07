@@ -1,12 +1,9 @@
 {
-  "pv": {
-    "name": "Instrumentation Scopes",
-    "version": "1.0.0",
-    "markdown": ".principal-views/architecture.md",
-    "edgeTypes": {
-      "dependency": {
-        "label": "Dependency"
-      }
+  "name": "Instrumentation Scopes",
+  "markdown": ".principal-views/architecture.md",
+  "edgeTypes": {
+    "dependency": {
+      "label": "Dependency"
     }
   },
   "nodes": [
@@ -48,9 +45,7 @@
       "toNode": "auth-me-scope",
       "fromSide": "left",
       "toSide": "right",
-      "pv": {
-        "edgeType": "dependency"
-      }
+      "edgeType": "dependency"
     }
   ]
 }

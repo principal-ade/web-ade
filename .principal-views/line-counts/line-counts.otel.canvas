@@ -1,26 +1,23 @@
 {
-  "pv": {
-    "name": "Line Counts",
-    "version": "1.0.0",
-    "markdown": ".principal-views/line-counts/line-counts.md",
-    "edgeTypes": {
-      "flow": {
-        "label": "Flow"
-      },
-      "error": {
-        "label": "Error Path"
-      },
-      "data-flow": {
-        "label": "Data Flow"
-      }
+  "name": "Line Counts",
+  "markdown": ".principal-views/line-counts/line-counts.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow"
     },
-    "nodeTypes": {
-      "event": {
-        "label": "Event"
-      },
-      "boundary": {
-        "label": "Boundary"
-      }
+    "error": {
+      "label": "Error Path"
+    },
+    "data-flow": {
+      "label": "Data Flow"
+    }
+  },
+  "nodeTypes": {
+    "event": {
+      "label": "Event"
+    },
+    "boundary": {
+      "label": "Boundary"
     }
   },
   "nodes": [
@@ -642,9 +639,7 @@
       "fromSide": "bottom",
       "toNode": "cache-check",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "get-2",
@@ -653,9 +648,7 @@
       "toNode": "cache-hit",
       "toSide": "top",
       "label": "found",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "get-3",
@@ -664,9 +657,7 @@
       "toNode": "cache-miss",
       "toSide": "left",
       "label": "not found",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "get-4",
@@ -674,9 +665,7 @@
       "fromSide": "bottom",
       "toNode": "auth-check",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "get-5",
@@ -685,9 +674,7 @@
       "toNode": "auth-required",
       "toSide": "left",
       "label": "no token",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "get-6",
@@ -696,9 +683,7 @@
       "toNode": "tree-fetch",
       "toSide": "top",
       "label": "authenticated",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "get-7",
@@ -706,9 +691,7 @@
       "fromSide": "bottom",
       "toNode": "size-check",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "get-8",
@@ -717,9 +700,7 @@
       "toNode": "too-large",
       "toSide": "left",
       "label": ">=2000 files",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "get-9",
@@ -728,9 +709,7 @@
       "toNode": "compute-start",
       "toSide": "top",
       "label": "<2000 files",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "get-10",
@@ -738,9 +717,7 @@
       "fromSide": "bottom",
       "toNode": "compute-complete",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "get-11",
@@ -748,9 +725,7 @@
       "fromSide": "right",
       "toNode": "compute-error",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "get-12",
@@ -759,9 +734,7 @@
       "toNode": "cache-store",
       "toSide": "top",
       "label": "async",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "put-1",
@@ -769,9 +742,7 @@
       "fromSide": "bottom",
       "toNode": "put-auth-check",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "put-2",
@@ -780,9 +751,7 @@
       "toNode": "put-auth-fail",
       "toSide": "left",
       "label": "no token",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "put-3",
@@ -791,9 +760,7 @@
       "toNode": "put-validation",
       "toSide": "top",
       "label": "authenticated",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "put-4",
@@ -801,9 +768,7 @@
       "fromSide": "bottom",
       "toNode": "put-store",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "put-5",
@@ -811,9 +776,7 @@
       "fromSide": "bottom",
       "toNode": "put-success",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "put-6",
@@ -821,9 +784,7 @@
       "fromSide": "right",
       "toNode": "put-error",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     }
   ]
 }

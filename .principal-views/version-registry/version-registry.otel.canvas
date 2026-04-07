@@ -1,19 +1,16 @@
 {
-  "pv": {
-    "name": "Version Registry",
-    "version": "1.0.0",
-    "description": "Maps customer version strings (semver, git SHA, build numbers) to git commit SHAs for contract-based observability",
-    "markdown": ".principal-views/version-registry/version-registry.md",
-    "edgeTypes": {
-      "flow": {
-        "label": "Flow"
-      },
-      "error": {
-        "label": "Error Path"
-      },
-      "cache": {
-        "label": "Cache Path"
-      }
+  "name": "Version Registry",
+  "description": "Maps customer version strings (semver, git SHA, build numbers) to git commit SHAs for contract-based observability",
+  "markdown": ".principal-views/version-registry/version-registry.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow"
+    },
+    "error": {
+      "label": "Error Path"
+    },
+    "cache": {
+      "label": "Cache Path"
     }
   },
   "nodes": [
@@ -1218,9 +1215,7 @@
       "fromSide": "bottom",
       "toNode": "registration-validated",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-reg-validate-to-s3",
@@ -1228,9 +1223,7 @@
       "fromSide": "bottom",
       "toNode": "registration-s3-stored",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-reg-s3-to-schematic-fetching",
@@ -1238,9 +1231,7 @@
       "fromSide": "bottom",
       "toNode": "schematic-fetching",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-schematic-fetching-to-fetched",
@@ -1248,9 +1239,7 @@
       "fromSide": "bottom",
       "toNode": "schematic-fetched",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-schematic-fetched-to-stored",
@@ -1258,9 +1247,7 @@
       "fromSide": "bottom",
       "toNode": "schematic-stored",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-schematic-stored-to-complete",
@@ -1268,9 +1255,7 @@
       "fromSide": "bottom",
       "toNode": "registration-complete",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-schematic-fetching-to-schematic-error",
@@ -1279,9 +1264,7 @@
       "toNode": "registration-schematic-error",
       "toSide": "left",
       "label": "schematic fetch failed",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-s3-stored-to-complete-no-schematic",
@@ -1290,9 +1273,7 @@
       "toNode": "registration-complete-no-schematic",
       "toSide": "top",
       "label": "no schematic",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-schematic-stored-to-error",
@@ -1301,9 +1282,7 @@
       "toNode": "registration-error",
       "toSide": "left",
       "label": "storage failed",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-reg-start-to-error",
@@ -1312,9 +1291,7 @@
       "toNode": "registration-error",
       "toSide": "left",
       "label": "validation error",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-reg-validate-to-error",
@@ -1323,9 +1300,7 @@
       "toNode": "registration-error",
       "toSide": "left",
       "label": "storage error",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-lookup-start-to-s3",
@@ -1333,9 +1308,7 @@
       "fromSide": "bottom",
       "toNode": "lookup-s3-retrieved",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-lookup-s3-to-complete",
@@ -1343,9 +1316,7 @@
       "fromSide": "bottom",
       "toNode": "lookup-complete",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-lookup-start-to-not-found",
@@ -1354,9 +1325,7 @@
       "toNode": "lookup-not-found",
       "toSide": "left",
       "label": "not registered",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-lookup-start-to-error",
@@ -1365,9 +1334,7 @@
       "toNode": "lookup-error",
       "toSide": "left",
       "label": "storage error",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-list-start-to-s3",
@@ -1375,9 +1342,7 @@
       "fromSide": "bottom",
       "toNode": "list-s3-retrieved",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-list-s3-to-complete",
@@ -1385,9 +1350,7 @@
       "fromSide": "bottom",
       "toNode": "list-complete",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-list-start-to-error",
@@ -1396,9 +1359,7 @@
       "toNode": "list-error",
       "toSide": "left",
       "label": "storage error",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     }
   ]
 }

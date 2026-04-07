@@ -1,24 +1,21 @@
 {
-  "pv": {
-    "name": "Tour Availability",
-    "version": "1.0.0",
-    "markdown": ".principal-views/tour-availability/tour-availability.md",
-    "edgeTypes": {
-      "flow": {
-        "label": "Flow"
-      },
-      "error": {
-        "label": "Error Path"
-      },
-      "cache": {
-        "label": "Cache Operation"
-      },
-      "ui-action": {
-        "label": "UI Action"
-      },
-      "trpc": {
-        "label": "tRPC Call"
-      }
+  "name": "Tour Availability",
+  "markdown": ".principal-views/tour-availability/tour-availability.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow"
+    },
+    "error": {
+      "label": "Error Path"
+    },
+    "cache": {
+      "label": "Cache Operation"
+    },
+    "ui-action": {
+      "label": "UI Action"
+    },
+    "trpc": {
+      "label": "tRPC Call"
     }
   },
   "nodes": [
@@ -582,9 +579,7 @@
       "toNode": "ui-check-availability",
       "toSide": "top",
       "label": "init",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "ui-check-to-backend",
@@ -593,9 +588,7 @@
       "toNode": "check-start",
       "toSide": "left",
       "label": "tRPC query",
-      "pv": {
-        "edgeType": "trpc"
-      }
+      "edgeType": "trpc"
     },
     {
       "id": "ui-check-to-show",
@@ -604,9 +597,7 @@
       "toNode": "ui-layout-show",
       "toSide": "top",
       "label": "hasTour=true",
-      "pv": {
-        "edgeType": "ui-action"
-      }
+      "edgeType": "ui-action"
     },
     {
       "id": "ui-check-to-hide",
@@ -615,9 +606,7 @@
       "toNode": "ui-layout-hide",
       "toSide": "top",
       "label": "hasTour=false",
-      "pv": {
-        "edgeType": "ui-action"
-      }
+      "edgeType": "ui-action"
     },
     {
       "id": "ui-show-to-auto",
@@ -626,9 +615,7 @@
       "toNode": "ui-auto-show",
       "toSide": "right",
       "label": "first visit",
-      "pv": {
-        "edgeType": "ui-action"
-      }
+      "edgeType": "ui-action"
     },
     {
       "id": "ui-show-to-skip",
@@ -637,9 +624,7 @@
       "toNode": "ui-skip-auto-show",
       "toSide": "right",
       "label": "return visit",
-      "pv": {
-        "edgeType": "ui-action"
-      }
+      "edgeType": "ui-action"
     },
     {
       "id": "check-to-cache-hit",
@@ -648,9 +633,7 @@
       "toNode": "cache-hit",
       "toSide": "top",
       "label": "cached",
-      "pv": {
-        "edgeType": "cache"
-      }
+      "edgeType": "cache"
     },
     {
       "id": "check-to-cache-miss",
@@ -659,9 +642,7 @@
       "toNode": "cache-miss",
       "toSide": "top",
       "label": "not cached",
-      "pv": {
-        "edgeType": "cache"
-      }
+      "edgeType": "cache"
     },
     {
       "id": "check-to-error",
@@ -669,9 +650,7 @@
       "fromSide": "right",
       "toNode": "error",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "cache-miss-to-found",
@@ -680,9 +659,7 @@
       "toNode": "tour-found",
       "toSide": "top",
       "label": "tour exists",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "cache-miss-to-not-found",
@@ -691,9 +668,7 @@
       "toNode": "tour-not-found",
       "toSide": "top",
       "label": "no tour",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "found-to-parent",
@@ -702,9 +677,7 @@
       "toNode": "parent-resolved",
       "toSide": "top",
       "label": "resolve parent",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "parent-to-cached",
@@ -713,9 +686,7 @@
       "toNode": "cached",
       "toSide": "top",
       "label": "store",
-      "pv": {
-        "edgeType": "cache"
-      }
+      "edgeType": "cache"
     }
   ]
 }

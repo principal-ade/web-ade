@@ -1,18 +1,15 @@
 {
-  "pv": {
-    "name": "Get Current User (Auth Me)",
-    "version": "1.0.0",
-    "markdown": ".principal-views/auth-me/auth-me.md",
-    "edgeTypes": {
-      "flow": {
-        "label": "Flow"
-      },
-      "error": {
-        "label": "Error Path"
-      },
-      "external": {
-        "label": "External Call"
-      }
+  "name": "Get Current User (Auth Me)",
+  "markdown": ".principal-views/auth-me/auth-me.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow"
+    },
+    "error": {
+      "label": "Error Path"
+    },
+    "external": {
+      "label": "External Call"
     }
   },
   "nodes": [
@@ -278,9 +275,7 @@
       "toNode": "get-token",
       "toSide": "top",
       "label": "1. get token",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "token-to-unauth",
@@ -289,9 +284,7 @@
       "toNode": "unauthenticated",
       "toSide": "left",
       "label": "no token",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "token-to-github",
@@ -300,9 +293,7 @@
       "toNode": "fetch-github-user",
       "toSide": "top",
       "label": "2. has token",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "github-to-sync",
@@ -311,9 +302,7 @@
       "toNode": "sync-token",
       "toSide": "left",
       "label": "3. optional sync",
-      "pv": {
-        "edgeType": "external"
-      }
+      "edgeType": "external"
     },
     {
       "id": "github-to-user",
@@ -322,9 +311,7 @@
       "toNode": "return-user",
       "toSide": "top",
       "label": "4. success",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "sync-to-user",
@@ -332,9 +319,7 @@
       "fromSide": "bottom",
       "toNode": "return-user",
       "toSide": "right",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "github-to-error",
@@ -343,9 +328,7 @@
       "toNode": "error",
       "toSide": "top",
       "label": "API error",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     }
   ]
 }

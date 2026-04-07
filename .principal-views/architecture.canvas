@@ -1,42 +1,39 @@
 {
-  "pv": {
-    "name": "Quality Metrics Caching Architecture",
-    "version": "1.0.0",
-    "markdown": ".principal-views/architecture.md",
-    "nodeTypes": {
-      "client": {
-        "label": "Client Component",
-        "description": "Client-side React components"
-      },
-      "api-route": {
-        "label": "API Route",
-        "description": "Next.js API route handlers"
-      },
-      "external": {
-        "label": "External API",
-        "description": "External service API calls"
-      },
-      "cache": {
-        "label": "Cache",
-        "description": "Caching layer"
-      }
+  "name": "Quality Metrics Caching Architecture",
+  "markdown": ".principal-views/architecture.md",
+  "nodeTypes": {
+    "client": {
+      "label": "Client Component",
+      "description": "Client-side React components"
     },
-    "edgeTypes": {
-      "request": {
-        "label": "HTTP Request"
-      },
-      "api-call": {
-        "label": "API Call"
-      },
-      "data-flow": {
-        "label": "Data Flow"
-      },
-      "cache-check": {
-        "label": "Cache Check"
-      },
-      "cache-miss": {
-        "label": "Cache Miss"
-      }
+    "api-route": {
+      "label": "API Route",
+      "description": "Next.js API route handlers"
+    },
+    "external": {
+      "label": "External API",
+      "description": "External service API calls"
+    },
+    "cache": {
+      "label": "Cache",
+      "description": "Caching layer"
+    }
+  },
+  "edgeTypes": {
+    "request": {
+      "label": "HTTP Request"
+    },
+    "api-call": {
+      "label": "API Call"
+    },
+    "data-flow": {
+      "label": "Data Flow"
+    },
+    "cache-check": {
+      "label": "Cache Check"
+    },
+    "cache-miss": {
+      "label": "Cache Miss"
     }
   },
   "nodes": [
@@ -299,9 +296,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "parallel",
-      "pv": {
-        "edgeType": "request"
-      }
+      "edgeType": "request"
     },
     {
       "id": "e2",
@@ -310,9 +305,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "parallel",
-      "pv": {
-        "edgeType": "request"
-      }
+      "edgeType": "request"
     },
     {
       "id": "e3",
@@ -320,9 +313,7 @@
       "toNode": "github-api-1",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "api-call"
-      }
+      "edgeType": "api-call"
     },
     {
       "id": "e4",
@@ -331,9 +322,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "REDUNDANT",
-      "pv": {
-        "edgeType": "api-call"
-      }
+      "edgeType": "api-call"
     },
     {
       "id": "e5",
@@ -341,9 +330,7 @@
       "toNode": "github-api-3",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "api-call"
-      }
+      "edgeType": "api-call"
     },
     {
       "id": "e6",
@@ -351,9 +338,7 @@
       "toNode": "github-api-4",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "api-call"
-      }
+      "edgeType": "api-call"
     },
     {
       "id": "e10",
@@ -362,9 +347,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "1. fetch tree",
-      "pv": {
-        "edgeType": "request"
-      }
+      "edgeType": "request"
     },
     {
       "id": "e11",
@@ -372,9 +355,7 @@
       "toNode": "github-resolve",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "api-call"
-      }
+      "edgeType": "api-call"
     },
     {
       "id": "e12",
@@ -383,9 +364,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "returns sha",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "e13",
@@ -394,9 +373,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "2. use sha",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "e14",
@@ -405,9 +382,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "check cache",
-      "pv": {
-        "edgeType": "cache-check"
-      }
+      "edgeType": "cache-check"
     },
     {
       "id": "e15",
@@ -416,9 +391,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "miss",
-      "pv": {
-        "edgeType": "cache-miss"
-      }
+      "edgeType": "cache-miss"
     },
     {
       "id": "e16",
@@ -426,9 +399,7 @@
       "toNode": "github-download",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "api-call"
-      }
+      "edgeType": "api-call"
     }
   ]
 }

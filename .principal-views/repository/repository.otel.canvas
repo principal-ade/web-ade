@@ -1,21 +1,18 @@
 {
-  "pv": {
-    "name": "Repository Page",
-    "version": "1.0.0",
-    "markdown": ".principal-views/repository/repository.md",
-    "edgeTypes": {
-      "flow": {
-        "label": "Flow"
-      },
-      "error": {
-        "label": "Error Path"
-      },
-      "user-action": {
-        "label": "User Action"
-      },
-      "data-flow": {
-        "label": "Data Flow"
-      }
+  "name": "Repository Page",
+  "markdown": ".principal-views/repository/repository.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow"
+    },
+    "error": {
+      "label": "Error Path"
+    },
+    "user-action": {
+      "label": "User Action"
+    },
+    "data-flow": {
+      "label": "Data Flow"
     }
   },
   "nodes": [
@@ -1425,9 +1422,7 @@
       "toNode": "file-tree-load",
       "toSide": "top",
       "label": "parallel",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "init-2",
@@ -1436,9 +1431,7 @@
       "toNode": "packages-load",
       "toSide": "top",
       "label": "parallel",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "tree-1",
@@ -1447,9 +1440,7 @@
       "toNode": "file-tree-cache-hit",
       "toSide": "top",
       "label": "cached",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "tree-1b",
@@ -1458,9 +1449,7 @@
       "toNode": "file-tree-cache-miss",
       "toSide": "top",
       "label": "not cached",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "tree-1c",
@@ -1469,9 +1458,7 @@
       "toNode": "file-tree-success",
       "toSide": "left",
       "label": "fast path",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "tree-1d",
@@ -1480,9 +1467,7 @@
       "toNode": "file-tree-fetch-complete",
       "toSide": "top",
       "label": "fetch",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "tree-1e",
@@ -1490,9 +1475,7 @@
       "fromSide": "bottom",
       "toNode": "file-tree-success",
       "toSide": "right",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "tree-2",
@@ -1500,9 +1483,7 @@
       "fromSide": "right",
       "toNode": "file-tree-error",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "tree-3",
@@ -1511,9 +1492,7 @@
       "toNode": "state-file-tree",
       "toSide": "top",
       "label": "writes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "tree-4",
@@ -1522,9 +1501,7 @@
       "toNode": "readme-auto-load",
       "toSide": "left",
       "label": "triggers",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "tree-5",
@@ -1533,9 +1510,7 @@
       "toNode": "panel-file-city",
       "toSide": "top",
       "label": "subscribes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "pkg-1",
@@ -1543,9 +1518,7 @@
       "fromSide": "bottom",
       "toNode": "packages-success",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "pkg-2",
@@ -1553,9 +1526,7 @@
       "fromSide": "bottom",
       "toNode": "packages-error",
       "toSide": "top",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "pkg-3",
@@ -1564,9 +1535,7 @@
       "toNode": "state-packages",
       "toSide": "top",
       "label": "writes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "pkg-4",
@@ -1575,9 +1544,7 @@
       "toNode": "panel-packages",
       "toSide": "top",
       "label": "subscribes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "file-1",
@@ -1585,9 +1552,7 @@
       "fromSide": "bottom",
       "toNode": "file-content-load",
       "toSide": "top",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "file-2",
@@ -1595,9 +1560,7 @@
       "fromSide": "bottom",
       "toNode": "file-content-success",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "file-3",
@@ -1605,9 +1568,7 @@
       "fromSide": "right",
       "toNode": "file-content-error",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "file-4",
@@ -1616,9 +1577,7 @@
       "toNode": "state-active-file",
       "toSide": "top",
       "label": "writes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "file-5",
@@ -1627,9 +1586,7 @@
       "toNode": "panel-editor",
       "toSide": "top",
       "label": "subscribes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "md-1",
@@ -1638,9 +1595,7 @@
       "toNode": "panel-markdown",
       "toSide": "left",
       "label": "subscribes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "tour-1",
@@ -1649,9 +1604,7 @@
       "toNode": "tour-config-load",
       "toSide": "left",
       "label": "tour mode",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "tour-2",
@@ -1659,9 +1612,7 @@
       "fromSide": "bottom",
       "toNode": "tour-config-success",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "tour-3",
@@ -1669,9 +1620,7 @@
       "fromSide": "bottom",
       "toNode": "tour-step-navigate",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "tour-4",
@@ -1680,9 +1629,7 @@
       "toNode": "panel-tour",
       "toSide": "top",
       "label": "renders",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "story-1",
@@ -1691,9 +1638,7 @@
       "toNode": "storyboard-list-load",
       "toSide": "left",
       "label": "stories mode",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "story-2",
@@ -1701,9 +1646,7 @@
       "fromSide": "bottom",
       "toNode": "storyboard-list-success",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "story-3",
@@ -1711,9 +1654,7 @@
       "fromSide": "bottom",
       "toNode": "storyboard-select",
       "toSide": "top",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "story-4",
@@ -1722,9 +1663,7 @@
       "toNode": "panel-storyboard",
       "toSide": "top",
       "label": "renders",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "skill-1",
@@ -1733,9 +1672,7 @@
       "toNode": "skills-list-load",
       "toSide": "left",
       "label": "skills mode",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "skill-2",
@@ -1743,9 +1680,7 @@
       "fromSide": "bottom",
       "toNode": "skills-list-success",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "skill-3",
@@ -1753,9 +1688,7 @@
       "fromSide": "bottom",
       "toNode": "skill-select",
       "toSide": "top",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "skill-4",
@@ -1764,9 +1697,7 @@
       "toNode": "panel-skills",
       "toSide": "top",
       "label": "renders",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "quality-1",
@@ -1775,9 +1706,7 @@
       "toNode": "quality-data-load",
       "toSide": "left",
       "label": "quality mode",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "quality-2",
@@ -1785,9 +1714,7 @@
       "fromSide": "bottom",
       "toNode": "quality-data-success",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "quality-3",
@@ -1795,9 +1722,7 @@
       "fromSide": "bottom",
       "toNode": "lens-select",
       "toSide": "top",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "quality-4",
@@ -1806,9 +1731,7 @@
       "toNode": "panel-quality",
       "toSide": "top",
       "label": "renders",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "trace-1",
@@ -1817,9 +1740,7 @@
       "toNode": "traces-list-load",
       "toSide": "left",
       "label": "telemetry mode",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "trace-2",
@@ -1827,9 +1748,7 @@
       "fromSide": "bottom",
       "toNode": "traces-list-success",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "trace-3",
@@ -1837,9 +1756,7 @@
       "fromSide": "bottom",
       "toNode": "trace-select",
       "toSide": "top",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "trace-4",
@@ -1848,9 +1765,7 @@
       "toNode": "panel-traces",
       "toSide": "top",
       "label": "renders",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "edge-readme-auto-load-file-content-load-1773277609584",
@@ -1858,9 +1773,7 @@
       "toNode": "file-content-load",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     }
   ]
 }

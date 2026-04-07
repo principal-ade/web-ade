@@ -1,53 +1,50 @@
 {
-  "pv": {
-    "name": "Issue to Task Lifecycle",
-    "version": "1.0.0",
-    "markdown": ".principal-views/issue-task-lifecycle.md",
-    "nodeTypes": {
-      "panel": {
-        "label": "UI Panel",
-        "description": "User interface panel component"
-      },
-      "api-route": {
-        "label": "API Route",
-        "description": "Next.js API route handler"
-      },
-      "context": {
-        "label": "Context/State",
-        "description": "React context state management"
-      },
-      "panel-event": {
-        "label": "Panel Event",
-        "description": "Panel event emission"
-      },
-      "file-system": {
-        "label": "File System",
-        "description": "File operations and storage"
-      },
-      "external": {
-        "label": "External API",
-        "description": "GitHub API calls"
-      }
+  "name": "Issue to Task Lifecycle",
+  "markdown": ".principal-views/issue-task-lifecycle/issue-task-lifecycle.md",
+  "nodeTypes": {
+    "panel": {
+      "label": "UI Panel",
+      "description": "User interface panel component"
     },
-    "edgeTypes": {
-      "user-action": {
-        "label": "User Action"
-      },
-      "event": {
-        "label": "Event"
-      },
-      "api-call": {
-        "label": "API Call"
-      },
-      "data-flow": {
-        "label": "Data Flow"
-      },
-      "file-op": {
-        "label": "File Operation"
-      },
-      "state-update": {
-        "label": "State Update"
-      }
+    "api-route": {
+      "label": "API Route",
+      "description": "Next.js API route handler"
+    },
+    "context": {
+      "label": "Context/State",
+      "description": "React context state management"
+    },
+    "panel-event": {
+      "label": "Panel Event",
+      "description": "Panel event emission"
+    },
+    "file-system": {
+      "label": "File System",
+      "description": "File operations and storage"
+    },
+    "external": {
+      "label": "External API",
+      "description": "GitHub API calls"
+    }
+  },
+  "edgeTypes": {
+    "user-action": {
+      "label": "User Action"
+    },
+    "event": {
+      "label": "Event"
+    },
+    "api-call": {
+      "label": "API Call"
+    },
+    "data-flow": {
+      "label": "Data Flow"
+    },
+    "file-op": {
+      "label": "File Operation"
+    },
+    "state-update": {
+      "label": "State Update"
     }
   },
   "nodes": [
@@ -284,9 +281,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "user clicks issue",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "e2",
@@ -294,9 +289,7 @@
       "toNode": "panel-context",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "event"
     },
     {
       "id": "e3",
@@ -304,9 +297,7 @@
       "toNode": "editor-layout",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "event"
     },
     {
       "id": "e4",
@@ -315,9 +306,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "fetchMessages()",
-      "pv": {
-        "edgeType": "api-call"
-      }
+      "edgeType": "api-call"
     },
     {
       "id": "e5",
@@ -325,9 +314,7 @@
       "toNode": "github-api-timeline",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "api-call"
-      }
+      "edgeType": "api-call"
     },
     {
       "id": "e6",
@@ -336,9 +323,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "timeline data",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "e7",
@@ -347,9 +332,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "panel:focus",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "event"
     },
     {
       "id": "e8",
@@ -358,9 +341,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "user clicks button",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "e10",
@@ -369,9 +350,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "append task",
-      "pv": {
-        "edgeType": "file-op"
-      }
+      "edgeType": "file-op"
     },
     {
       "id": "e11",
@@ -380,9 +359,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "Add task from issue #N",
-      "pv": {
-        "edgeType": "file-op"
-      }
+      "edgeType": "file-op"
     },
     {
       "id": "e12",
@@ -390,9 +367,7 @@
       "toNode": "task-created-event",
       "fromSide": "left",
       "toSide": "right",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "event"
     },
     {
       "id": "e13",
@@ -400,9 +375,7 @@
       "toNode": "kanban-panel",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "event"
     },
     {
       "id": "e14",
@@ -411,9 +384,7 @@
       "fromSide": "right",
       "toSide": "left",
       "label": "select task",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "e15",
@@ -422,9 +393,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "read tasks",
-      "pv": {
-        "edgeType": "file-op"
-      }
+      "edgeType": "file-op"
     },
     {
       "id": "e16",
@@ -433,9 +402,7 @@
       "fromSide": "bottom",
       "toSide": "top",
       "label": "update task",
-      "pv": {
-        "edgeType": "file-op"
-      }
+      "edgeType": "file-op"
     },
     {
       "id": "edge-push-to-backlog-event-build-task-markdown-1767575693353",
@@ -443,9 +410,7 @@
       "toNode": "build-task-markdown",
       "fromSide": "bottom",
       "toSide": "top",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "event"
     }
   ]
 }

@@ -1,26 +1,23 @@
 {
-  "pv": {
-    "name": "Text-to-Speech with S3 Caching Architecture",
-    "version": "1.0.0",
-    "description": "Architecture flow for generating TTS audio for tour steps using ElevenLabs API with S3-based caching",
-    "markdown": ".principal-views/tts-s3-architecture.md",
-    "edgeTypes": {
-      "flow": {
-        "label": "Flow",
-        "color": "#3b82f6"
-      },
-      "cache-hit": {
-        "label": "Cache Hit",
-        "color": "#22c55e"
-      },
-      "cache-miss": {
-        "label": "Cache Miss",
-        "color": "#f59e0b"
-      },
-      "error": {
-        "label": "Error Path",
-        "color": "#ef4444"
-      }
+  "name": "Text-to-Speech with S3 Caching Architecture",
+  "description": "Architecture flow for generating TTS audio for tour steps using ElevenLabs API with S3-based caching",
+  "markdown": ".principal-views/tts-s3-architecture.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow",
+      "color": "#3b82f6"
+    },
+    "cache-hit": {
+      "label": "Cache Hit",
+      "color": "#22c55e"
+    },
+    "cache-miss": {
+      "label": "Cache Miss",
+      "color": "#f59e0b"
+    },
+    "error": {
+      "label": "Error Path",
+      "color": "#ef4444"
     }
   },
   "nodes": [
@@ -272,9 +269,7 @@
       "fromSide": "bottom",
       "toNode": "api-endpoint",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-api-to-github",
@@ -282,9 +277,7 @@
       "fromSide": "bottom",
       "toNode": "github-fetch",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-github-to-validation",
@@ -292,9 +285,7 @@
       "fromSide": "bottom",
       "toNode": "tour-validation",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-validation-to-cache",
@@ -302,9 +293,7 @@
       "fromSide": "bottom",
       "toNode": "s3-cache-check",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-cache-hit-path",
@@ -313,9 +302,7 @@
       "toNode": "cache-hit",
       "toSide": "left",
       "label": "exists",
-      "pv": {
-        "edgeType": "cache-hit"
-      }
+      "edgeType": "cache-hit"
     },
     {
       "id": "edge-cache-miss-path",
@@ -324,9 +311,7 @@
       "toNode": "elevenlabs-generate",
       "toSide": "top",
       "label": "not exists",
-      "pv": {
-        "edgeType": "cache-miss"
-      }
+      "edgeType": "cache-miss"
     },
     {
       "id": "edge-generate-to-upload",
@@ -334,9 +319,7 @@
       "fromSide": "bottom",
       "toNode": "s3-upload",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-upload-to-response",
@@ -344,9 +327,7 @@
       "fromSide": "right",
       "toNode": "return-response",
       "toSide": "bottom",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-cache-hit-to-response",
@@ -354,9 +335,7 @@
       "fromSide": "top",
       "toNode": "return-response",
       "toSide": "bottom",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-response-to-playback",
@@ -364,9 +343,7 @@
       "fromSide": "top",
       "toNode": "client-playback",
       "toSide": "bottom",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "edge-github-error",
@@ -375,9 +352,7 @@
       "toNode": "error-tour-not-found",
       "toSide": "left",
       "label": "404",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-validation-error",
@@ -386,9 +361,7 @@
       "toNode": "error-step-not-found",
       "toSide": "left",
       "label": "invalid stepId",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-elevenlabs-error",
@@ -397,9 +370,7 @@
       "toNode": "error-elevenlabs",
       "toSide": "left",
       "label": "API error",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "edge-batch-context",
@@ -408,9 +379,7 @@
       "toNode": "s3-bucket",
       "toSide": "left",
       "label": "uses",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     }
   ]
 }

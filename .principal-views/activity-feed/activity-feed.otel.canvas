@@ -1,24 +1,21 @@
 {
-  "pv": {
-    "name": "Activity Feed",
-    "version": "1.0.0",
-    "markdown": ".principal-views/activity-feed/activity-feed.md",
-    "edgeTypes": {
-      "flow": {
-        "label": "Flow"
-      },
-      "error": {
-        "label": "Error Path"
-      },
-      "user-action": {
-        "label": "User Action"
-      },
-      "data-flow": {
-        "label": "Data Flow"
-      },
-      "conditional": {
-        "label": "Conditional"
-      }
+  "name": "Activity Feed",
+  "markdown": ".principal-views/activity-feed/activity-feed.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow"
+    },
+    "error": {
+      "label": "Error Path"
+    },
+    "user-action": {
+      "label": "User Action"
+    },
+    "data-flow": {
+      "label": "Data Flow"
+    },
+    "conditional": {
+      "label": "Conditional"
     }
   },
   "nodes": [
@@ -815,9 +812,7 @@
       "fromSide": "bottom",
       "toNode": "feed-fetch-batch",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "init-2",
@@ -826,9 +821,7 @@
       "toNode": "feed-fetch-repo-item",
       "toSide": "top",
       "label": "per repo",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "init-3",
@@ -836,9 +829,7 @@
       "fromSide": "right",
       "toNode": "feed-fetch-repo-error",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "init-4",
@@ -846,9 +837,7 @@
       "fromSide": "right",
       "toNode": "feed-init-error",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "init-5",
@@ -857,9 +846,7 @@
       "toNode": "feed-init-success",
       "toSide": "top",
       "label": "all loaded",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "init-6",
@@ -868,9 +855,7 @@
       "toNode": "feed-init-empty",
       "toSide": "left",
       "label": "no commits",
-      "pv": {
-        "edgeType": "conditional"
-      }
+      "edgeType": "conditional"
     },
     {
       "id": "refresh-1",
@@ -879,9 +864,7 @@
       "toNode": "feed-refresh-started",
       "toSide": "top",
       "label": "visible",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "refresh-2",
@@ -889,9 +872,7 @@
       "fromSide": "bottom",
       "toNode": "feed-refresh-complete",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "refresh-3",
@@ -900,9 +881,7 @@
       "toNode": "feed-fetch-batch",
       "toSide": "left",
       "label": "triggers",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "mobile-1",
@@ -911,9 +890,7 @@
       "toNode": "mobile-card-swipe",
       "toSide": "top",
       "label": "mobile UI",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "mobile-2",
@@ -921,9 +898,7 @@
       "fromSide": "bottom",
       "toNode": "mobile-commit-swipe",
       "toSide": "top",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "mobile-3",
@@ -932,9 +907,7 @@
       "toNode": "mobile-filecity-load",
       "toSide": "top",
       "label": "triggers",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "mobile-4",
@@ -943,9 +916,7 @@
       "toNode": "mobile-stats-load",
       "toSide": "left",
       "label": "parallel",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "mobile-5",
@@ -953,9 +924,7 @@
       "fromSide": "right",
       "toNode": "mobile-filecity-error",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "desktop-1",
@@ -964,9 +933,7 @@
       "toNode": "desktop-heatmap-click",
       "toSide": "left",
       "label": "desktop UI",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "desktop-2",
@@ -974,9 +941,7 @@
       "fromSide": "bottom",
       "toNode": "desktop-search-query",
       "toSide": "top",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "desktop-3",
@@ -984,9 +949,7 @@
       "fromSide": "bottom",
       "toNode": "desktop-repo-select",
       "toSide": "top",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "desktop-4",
@@ -994,9 +957,7 @@
       "fromSide": "bottom",
       "toNode": "desktop-author-click",
       "toSide": "top",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "desktop-5",
@@ -1004,9 +965,7 @@
       "fromSide": "bottom",
       "toNode": "desktop-card-expand",
       "toSide": "top",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     }
   ]
 }

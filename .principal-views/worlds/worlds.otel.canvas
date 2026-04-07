@@ -1,24 +1,21 @@
 {
-  "pv": {
-    "name": "Worlds Page Interactions",
-    "version": "1.0.0",
-    "markdown": ".principal-views/worlds/worlds.md",
-    "edgeTypes": {
-      "flow": {
-        "label": "Flow"
-      },
-      "error": {
-        "label": "Error Path"
-      },
-      "user-action": {
-        "label": "User Action"
-      },
-      "progressive": {
-        "label": "Progressive Load"
-      },
-      "data-flow": {
-        "label": "Data Flow"
-      }
+  "name": "Worlds Page Interactions",
+  "markdown": ".principal-views/worlds/worlds.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow"
+    },
+    "error": {
+      "label": "Error Path"
+    },
+    "user-action": {
+      "label": "User Action"
+    },
+    "progressive": {
+      "label": "Progressive Load"
+    },
+    "data-flow": {
+      "label": "Data Flow"
     }
   },
   "nodes": [
@@ -1129,9 +1126,7 @@
       "fromSide": "bottom",
       "toNode": "page-auth-check",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "init-2",
@@ -1140,9 +1135,7 @@
       "toNode": "page-unauthenticated",
       "toSide": "left",
       "label": "not auth",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "init-3",
@@ -1151,9 +1144,7 @@
       "toNode": "page-collections-load",
       "toSide": "top",
       "label": "authenticated",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "init-4",
@@ -1162,9 +1153,7 @@
       "toNode": "page-collection-select",
       "toSide": "top",
       "label": "has collections",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "init-5",
@@ -1173,9 +1162,7 @@
       "toNode": "page-no-collections",
       "toSide": "left",
       "label": "empty",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "init-6",
@@ -1183,9 +1170,7 @@
       "fromSide": "bottom",
       "toNode": "page-init-success",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "init-7",
@@ -1193,9 +1178,7 @@
       "fromSide": "right",
       "toNode": "page-init-error",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "hydrate-github-1",
@@ -1204,9 +1187,7 @@
       "toNode": "hydrate-github-repos-start",
       "toSide": "top",
       "label": "parallel",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "hydrate-github-2",
@@ -1214,9 +1195,7 @@
       "fromSide": "bottom",
       "toNode": "hydrate-github-repos-success",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "hydrate-details-1",
@@ -1225,9 +1204,7 @@
       "toNode": "hydrate-repo-details-start",
       "toSide": "top",
       "label": "triggers",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "hydrate-details-2",
@@ -1236,9 +1213,7 @@
       "toNode": "hydrate-repo-details-item",
       "toSide": "top",
       "label": "per repo",
-      "pv": {
-        "edgeType": "progressive"
-      }
+      "edgeType": "progressive"
     },
     {
       "id": "hydrate-details-3",
@@ -1247,9 +1222,7 @@
       "toNode": "hydrate-repo-details-complete",
       "toSide": "top",
       "label": "all done",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "hydrate-packages-1",
@@ -1258,9 +1231,7 @@
       "toNode": "hydrate-packages-start",
       "toSide": "top",
       "label": "parallel",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "hydrate-packages-2",
@@ -1269,9 +1240,7 @@
       "toNode": "hydrate-packages-item",
       "toSide": "top",
       "label": "per repo",
-      "pv": {
-        "edgeType": "progressive"
-      }
+      "edgeType": "progressive"
     },
     {
       "id": "hydrate-packages-3",
@@ -1280,9 +1249,7 @@
       "toNode": "hydrate-packages-complete",
       "toSide": "top",
       "label": "all done",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "repo-1",
@@ -1290,9 +1257,7 @@
       "fromSide": "bottom",
       "toNode": "repo-file-tree-load",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "repo-2",
@@ -1300,9 +1265,7 @@
       "fromSide": "bottom",
       "toNode": "repo-select-success",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "repo-3",
@@ -1310,9 +1273,7 @@
       "fromSide": "right",
       "toNode": "repo-select-error",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "coll-1",
@@ -1320,9 +1281,7 @@
       "fromSide": "bottom",
       "toNode": "collection-repos-load",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "coll-2",
@@ -1330,9 +1289,7 @@
       "fromSide": "bottom",
       "toNode": "collection-switch-success",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "coll-hydrate-1",
@@ -1341,9 +1298,7 @@
       "toNode": "hydrate-repo-details-start",
       "toSide": "right",
       "label": "re-triggers",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "mode-1",
@@ -1352,9 +1307,7 @@
       "toNode": "mode-switch",
       "toSide": "left",
       "label": "user action",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "region-1",
@@ -1363,9 +1316,7 @@
       "toNode": "region-create",
       "toSide": "top",
       "label": "manage mode",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "region-2",
@@ -1373,9 +1324,7 @@
       "fromSide": "bottom",
       "toNode": "region-assign-repo",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "data-details-to-state",
@@ -1384,9 +1333,7 @@
       "toNode": "state-repo-details",
       "toSide": "top",
       "label": "writes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "data-packages-to-state",
@@ -1395,9 +1342,7 @@
       "toNode": "state-packages",
       "toSide": "top",
       "label": "writes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "state-details-to-panel",
@@ -1406,9 +1351,7 @@
       "toNode": "panel-overworld-map",
       "toSide": "top",
       "label": "subscribes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "state-packages-to-panel",
@@ -1417,9 +1360,7 @@
       "toNode": "panel-overworld-map",
       "toSide": "top",
       "label": "subscribes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     }
   ]
 }

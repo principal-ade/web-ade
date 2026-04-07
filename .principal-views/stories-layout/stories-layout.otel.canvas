@@ -1,24 +1,21 @@
 {
-  "pv": {
-    "name": "Stories Layout",
-    "version": "1.0.0",
-    "markdown": ".principal-views/stories-layout/stories-layout.md",
-    "edgeTypes": {
-      "flow": {
-        "label": "Flow"
-      },
-      "error": {
-        "label": "Error Path"
-      },
-      "user-action": {
-        "label": "User Action"
-      },
-      "data-flow": {
-        "label": "Data Flow"
-      },
-      "event": {
-        "label": "Event Bus"
-      }
+  "name": "Stories Layout",
+  "markdown": ".principal-views/stories-layout/stories-layout.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow"
+    },
+    "error": {
+      "label": "Error Path"
+    },
+    "user-action": {
+      "label": "User Action"
+    },
+    "data-flow": {
+      "label": "Data Flow"
+    },
+    "event": {
+      "label": "Event Bus"
     }
   },
   "nodes": [
@@ -886,9 +883,7 @@
       "toNode": "storyboard-list-panel-mount",
       "toSide": "top",
       "label": "triggers",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "load-1",
@@ -896,9 +891,7 @@
       "fromSide": "bottom",
       "toNode": "canvases-load",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "load-2",
@@ -906,9 +899,7 @@
       "fromSide": "bottom",
       "toNode": "canvases-success",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "load-3",
@@ -916,9 +907,7 @@
       "fromSide": "right",
       "toNode": "canvases-error",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "select-1",
@@ -927,9 +916,7 @@
       "toNode": "canvas-select",
       "toSide": "top",
       "label": "user action",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "select-2",
@@ -937,9 +924,7 @@
       "fromSide": "bottom",
       "toNode": "emit-open-canvas",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "event-1",
@@ -948,9 +933,7 @@
       "toNode": "editor-layout-receive",
       "toSide": "left",
       "label": "event bus",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "event"
     },
     {
       "id": "store-1",
@@ -958,9 +941,7 @@
       "fromSide": "bottom",
       "toNode": "store-canvas-data",
       "toSide": "top",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "render-1",
@@ -969,9 +950,7 @@
       "toNode": "canvas-editor-panel-render",
       "toSide": "top",
       "label": "middle panel",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "workflow-1",
@@ -980,9 +959,7 @@
       "toNode": "workflow-select",
       "toSide": "top",
       "label": "user action",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "workflow-2",
@@ -990,9 +967,7 @@
       "fromSide": "bottom",
       "toNode": "emit-open-workflow-scenarios",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "workflow-3",
@@ -1001,9 +976,7 @@
       "toNode": "editor-layout-receive-workflow",
       "toSide": "left",
       "label": "event bus",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "event"
     },
     {
       "id": "workflow-4",
@@ -1011,9 +984,7 @@
       "fromSide": "bottom",
       "toNode": "store-workflow-data",
       "toSide": "top",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "workflow-5",
@@ -1022,9 +993,7 @@
       "toNode": "scenario-select",
       "toSide": "top",
       "label": "user action",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "workflow-6",
@@ -1033,9 +1002,7 @@
       "toNode": "build-storyboard-context",
       "toSide": "right",
       "label": "triggers",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "context-1",
@@ -1044,9 +1011,7 @@
       "toNode": "build-storyboard-context",
       "toSide": "top",
       "label": "triggers",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "context-2",
@@ -1055,9 +1020,7 @@
       "toNode": "build-storyboard-context",
       "toSide": "left",
       "label": "triggers",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "context-3",
@@ -1065,9 +1028,7 @@
       "fromSide": "bottom",
       "toNode": "emit-context-update",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "context-4",
@@ -1076,9 +1037,7 @@
       "toNode": "file-city-receive-context",
       "toSide": "left",
       "label": "event bus",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "event"
     },
     {
       "id": "highlight-1",
@@ -1086,9 +1045,7 @@
       "fromSide": "bottom",
       "toNode": "file-city-apply-highlights",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "render-2",
@@ -1096,9 +1053,7 @@
       "fromSide": "bottom",
       "toNode": "file-city-panel-render",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "click-1",
@@ -1107,9 +1062,7 @@
       "toNode": "node-click",
       "toSide": "right",
       "label": "user action",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "click-2",
@@ -1117,9 +1070,7 @@
       "fromSide": "bottom",
       "toNode": "emit-focus-files",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "focus-1",
@@ -1128,9 +1079,7 @@
       "toNode": "file-city-focus",
       "toSide": "top",
       "label": "event bus",
-      "pv": {
-        "edgeType": "event"
-      }
+      "edgeType": "event"
     }
   ]
 }

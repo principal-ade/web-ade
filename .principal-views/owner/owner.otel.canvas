@@ -1,21 +1,18 @@
 {
-  "pv": {
-    "name": "Owner Page",
-    "version": "1.0.0",
-    "markdown": ".principal-views/owner/owner.md",
-    "edgeTypes": {
-      "flow": {
-        "label": "Flow"
-      },
-      "error": {
-        "label": "Error Path"
-      },
-      "user-action": {
-        "label": "User Action"
-      },
-      "data-flow": {
-        "label": "Data Flow"
-      }
+  "name": "Owner Page",
+  "markdown": ".principal-views/owner/owner.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow"
+    },
+    "error": {
+      "label": "Error Path"
+    },
+    "user-action": {
+      "label": "User Action"
+    },
+    "data-flow": {
+      "label": "Data Flow"
     }
   },
   "nodes": [
@@ -720,9 +717,7 @@
       "fromSide": "bottom",
       "toNode": "owner-repos-load",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "repos-1",
@@ -730,9 +725,7 @@
       "fromSide": "bottom",
       "toNode": "owner-repos-success",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "repos-2",
@@ -740,9 +733,7 @@
       "fromSide": "right",
       "toNode": "owner-repos-error",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "repos-3",
@@ -751,9 +742,7 @@
       "toNode": "state-owner-repos",
       "toSide": "top",
       "label": "writes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "repos-4",
@@ -762,9 +751,7 @@
       "toNode": "repo-auto-select",
       "toSide": "left",
       "label": "triggers",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "repos-5",
@@ -773,9 +760,7 @@
       "toNode": "panel-owner-repos",
       "toSide": "top",
       "label": "subscribes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "auto-1",
@@ -784,9 +769,7 @@
       "toNode": "repo-preview",
       "toSide": "left",
       "label": "auto",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "preview-1",
@@ -794,9 +777,7 @@
       "fromSide": "bottom",
       "toNode": "file-tree-load",
       "toSide": "top",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "preview-2",
@@ -805,9 +786,7 @@
       "toNode": "canvas-check",
       "toSide": "left",
       "label": "parallel",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "tree-1",
@@ -815,9 +794,7 @@
       "fromSide": "bottom",
       "toNode": "file-tree-success",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "tree-2",
@@ -825,9 +802,7 @@
       "fromSide": "right",
       "toNode": "file-tree-error",
       "toSide": "left",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "tree-3",
@@ -836,9 +811,7 @@
       "toNode": "state-file-tree",
       "toSide": "top",
       "label": "writes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "tree-4",
@@ -847,9 +820,7 @@
       "toNode": "panel-file-city",
       "toSide": "top",
       "label": "subscribes",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "canvas-1",
@@ -857,9 +828,7 @@
       "fromSide": "bottom",
       "toNode": "canvas-exists",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "canvas-2",
@@ -868,9 +837,7 @@
       "toNode": "panel-visual-validation",
       "toSide": "top",
       "label": "emits vv:config:selected",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "mode-1",
@@ -879,9 +846,7 @@
       "toNode": "layout-default",
       "toSide": "top",
       "label": "default",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "mode-2",
@@ -890,9 +855,7 @@
       "toNode": "layout-world",
       "toSide": "top",
       "label": "world",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     },
     {
       "id": "layout-1",
@@ -901,9 +864,7 @@
       "toNode": "panel-quality",
       "toSide": "top",
       "label": "renders",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "layout-2",
@@ -912,9 +873,7 @@
       "toNode": "panel-packages",
       "toSide": "top",
       "label": "renders",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "layout-3",
@@ -923,9 +882,7 @@
       "toNode": "panel-collection-map",
       "toSide": "top",
       "label": "renders",
-      "pv": {
-        "edgeType": "data-flow"
-      }
+      "edgeType": "data-flow"
     },
     {
       "id": "nav-1",
@@ -934,9 +891,7 @@
       "toNode": "repo-navigate",
       "toSide": "bottom",
       "label": "double-click",
-      "pv": {
-        "edgeType": "user-action"
-      }
+      "edgeType": "user-action"
     }
   ]
 }

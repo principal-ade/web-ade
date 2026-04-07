@@ -1,12 +1,9 @@
 {
-  "pv": {
-    "name": "Span Conventions",
-    "version": "1.0.0",
-    "markdown": ".principal-views/architecture.md",
-    "edgeTypes": {
-      "flow": {
-        "label": "Flow"
-      }
+  "name": "Span Conventions",
+  "markdown": ".principal-views/architecture.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow"
     }
   },
   "nodes": [
@@ -172,9 +169,7 @@
       "toNode": "api-collections",
       "fromSide": "right",
       "toSide": "left",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     }
   ]
 }

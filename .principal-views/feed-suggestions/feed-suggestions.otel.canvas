@@ -1,27 +1,24 @@
 {
-  "pv": {
-    "name": "Feed Suggestions",
-    "version": "1.0.0",
-    "markdown": ".principal-views/feed-suggestions/feed-suggestions.md",
-    "edgeTypes": {
-      "flow": {
-        "label": "Flow"
-      },
-      "error": {
-        "label": "Error Path"
-      },
-      "github-api": {
-        "label": "GitHub API"
-      },
-      "parallel": {
-        "label": "Parallel Fetch"
-      },
-      "aggregate": {
-        "label": "Aggregate"
-      },
-      "s3": {
-        "label": "S3 Storage"
-      }
+  "name": "Feed Suggestions",
+  "markdown": ".principal-views/feed-suggestions/feed-suggestions.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow"
+    },
+    "error": {
+      "label": "Error Path"
+    },
+    "github-api": {
+      "label": "GitHub API"
+    },
+    "parallel": {
+      "label": "Parallel Fetch"
+    },
+    "aggregate": {
+      "label": "Aggregate"
+    },
+    "s3": {
+      "label": "S3 Storage"
     }
   },
   "nodes": [
@@ -1090,9 +1087,7 @@
       "fromSide": "bottom",
       "toNode": "check-auth-users",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "users-1",
@@ -1101,9 +1096,7 @@
       "toNode": "fetch-following",
       "toSide": "top",
       "label": "authenticated",
-      "pv": {
-        "edgeType": "parallel"
-      }
+      "edgeType": "parallel"
     },
     {
       "id": "users-2",
@@ -1112,9 +1105,7 @@
       "toNode": "fetch-user-orgs",
       "toSide": "top",
       "label": "authenticated",
-      "pv": {
-        "edgeType": "parallel"
-      }
+      "edgeType": "parallel"
     },
     {
       "id": "users-3",
@@ -1123,9 +1114,7 @@
       "toNode": "fetch-org-members",
       "toSide": "top",
       "label": "for each org",
-      "pv": {
-        "edgeType": "github-api"
-      }
+      "edgeType": "github-api"
     },
     {
       "id": "users-4",
@@ -1133,9 +1122,7 @@
       "fromSide": "bottom",
       "toNode": "aggregate-users",
       "toSide": "top",
-      "pv": {
-        "edgeType": "aggregate"
-      }
+      "edgeType": "aggregate"
     },
     {
       "id": "users-5",
@@ -1143,9 +1130,7 @@
       "fromSide": "bottom",
       "toNode": "aggregate-users",
       "toSide": "top",
-      "pv": {
-        "edgeType": "aggregate"
-      }
+      "edgeType": "aggregate"
     },
     {
       "id": "users-6",
@@ -1153,9 +1138,7 @@
       "fromSide": "bottom",
       "toNode": "suggested-users-ready",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "repos-auth-0",
@@ -1163,9 +1146,7 @@
       "fromSide": "bottom",
       "toNode": "check-auth-repos",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "repos-1",
@@ -1174,9 +1155,7 @@
       "toNode": "fetch-starred",
       "toSide": "top",
       "label": "authenticated",
-      "pv": {
-        "edgeType": "parallel"
-      }
+      "edgeType": "parallel"
     },
     {
       "id": "repos-2",
@@ -1185,9 +1164,7 @@
       "toNode": "fetch-repo-orgs",
       "toSide": "top",
       "label": "authenticated",
-      "pv": {
-        "edgeType": "parallel"
-      }
+      "edgeType": "parallel"
     },
     {
       "id": "repos-3",
@@ -1196,9 +1173,7 @@
       "toNode": "fetch-org-repos",
       "toSide": "top",
       "label": "for each org",
-      "pv": {
-        "edgeType": "github-api"
-      }
+      "edgeType": "github-api"
     },
     {
       "id": "repos-4",
@@ -1206,9 +1181,7 @@
       "fromSide": "bottom",
       "toNode": "aggregate-repos",
       "toSide": "top",
-      "pv": {
-        "edgeType": "aggregate"
-      }
+      "edgeType": "aggregate"
     },
     {
       "id": "repos-5",
@@ -1216,9 +1189,7 @@
       "fromSide": "bottom",
       "toNode": "aggregate-repos",
       "toSide": "top",
-      "pv": {
-        "edgeType": "aggregate"
-      }
+      "edgeType": "aggregate"
     },
     {
       "id": "repos-6",
@@ -1226,9 +1197,7 @@
       "fromSide": "bottom",
       "toNode": "suggested-repos-ready",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "search-users-1",
@@ -1236,9 +1205,7 @@
       "fromSide": "bottom",
       "toNode": "search-users-api",
       "toSide": "top",
-      "pv": {
-        "edgeType": "github-api"
-      }
+      "edgeType": "github-api"
     },
     {
       "id": "search-users-2",
@@ -1246,9 +1213,7 @@
       "fromSide": "bottom",
       "toNode": "search-users-ready",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "search-repos-1",
@@ -1256,9 +1221,7 @@
       "fromSide": "bottom",
       "toNode": "search-repos-api",
       "toSide": "top",
-      "pv": {
-        "edgeType": "github-api"
-      }
+      "edgeType": "github-api"
     },
     {
       "id": "search-repos-2",
@@ -1266,9 +1229,7 @@
       "fromSide": "bottom",
       "toNode": "search-repos-ready",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "auth-error-1",
@@ -1277,9 +1238,7 @@
       "toNode": "auth-required-error",
       "toSide": "left",
       "label": "no token",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "auth-error-2",
@@ -1288,9 +1247,7 @@
       "toNode": "auth-required-error",
       "toSide": "right",
       "label": "no token",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "rate-limit-1",
@@ -1299,9 +1256,7 @@
       "toNode": "rate-limit-error",
       "toSide": "top",
       "label": "403",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "rate-limit-2",
@@ -1310,9 +1265,7 @@
       "toNode": "rate-limit-error",
       "toSide": "top",
       "label": "403",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "queue-1",
@@ -1320,9 +1273,7 @@
       "fromSide": "bottom",
       "toNode": "commit-queue-auth",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "queue-2",
@@ -1331,9 +1282,7 @@
       "toNode": "fetch-follows",
       "toSide": "top",
       "label": "authenticated",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "queue-3",
@@ -1342,9 +1291,7 @@
       "toNode": "fetch-repo-commits",
       "toSide": "top",
       "label": "for each repo",
-      "pv": {
-        "edgeType": "parallel"
-      }
+      "edgeType": "parallel"
     },
     {
       "id": "queue-4",
@@ -1353,9 +1300,7 @@
       "toNode": "fetch-user-events",
       "toSide": "top",
       "label": "for each user",
-      "pv": {
-        "edgeType": "parallel"
-      }
+      "edgeType": "parallel"
     },
     {
       "id": "queue-5",
@@ -1363,9 +1308,7 @@
       "fromSide": "bottom",
       "toNode": "group-by-hour",
       "toSide": "top",
-      "pv": {
-        "edgeType": "aggregate"
-      }
+      "edgeType": "aggregate"
     },
     {
       "id": "queue-6",
@@ -1373,9 +1316,7 @@
       "fromSide": "bottom",
       "toNode": "group-by-hour",
       "toSide": "top",
-      "pv": {
-        "edgeType": "aggregate"
-      }
+      "edgeType": "aggregate"
     },
     {
       "id": "queue-7",
@@ -1383,9 +1324,7 @@
       "fromSide": "bottom",
       "toNode": "filter-passed-saved",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "queue-8",
@@ -1393,9 +1332,7 @@
       "fromSide": "bottom",
       "toNode": "commit-queue-ready",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "queue-empty",
@@ -1404,9 +1341,7 @@
       "toNode": "no-follows-empty",
       "toSide": "left",
       "label": "no follows",
-      "pv": {
-        "edgeType": "error"
-      }
+      "edgeType": "error"
     },
     {
       "id": "pass-1",
@@ -1414,9 +1349,7 @@
       "fromSide": "bottom",
       "toNode": "pass-card-store",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "pass-2",
@@ -1424,9 +1357,7 @@
       "fromSide": "bottom",
       "toNode": "pass-card-ready",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "save-1",
@@ -1434,9 +1365,7 @@
       "fromSide": "bottom",
       "toNode": "save-card-store",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     },
     {
       "id": "save-2",
@@ -1444,9 +1373,7 @@
       "fromSide": "bottom",
       "toNode": "save-card-ready",
       "toSide": "top",
-      "pv": {
-        "edgeType": "flow"
-      }
+      "edgeType": "flow"
     }
   ]
 }
