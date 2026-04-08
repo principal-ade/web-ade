@@ -43,7 +43,6 @@ async function fetchCommitDetails(
   const cacheKey = getCommitDetailCacheKey(owner, repo, sha);
   const cached = await getCached<GitHubCommitDetailResponse>(cacheKey);
   if (cached) {
-    console.log('[File City] Commit cache hit:', sha);
     return cached;
   }
 
@@ -72,7 +71,6 @@ async function fetchCommitDetails(
 
     // Cache in Redis (commits are immutable)
     setCachedAsync(cacheKey, commit, CACHE_TTL_24H);
-    console.log('[File City] Commit cached:', sha);
 
     return commit;
   } catch (err) {
@@ -92,8 +90,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const height = parseInt(searchParams.get('height') || '400', 10);
     const commitSha = searchParams.get('commit');
     const commitsSha = searchParams.get('commits'); // comma-separated SHAs
-
-    console.log('[File City] Request params:', { owner, repo, commit: commitSha, commits: commitsSha });
 
     // Validate dimensions
     const maxDimension = 2000;
@@ -127,13 +123,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // Fetch commit details for all SHAs (for highlight files)
     let highlightFiles: Array<{ path: string; status: 'added' | 'modified' | 'removed' }> | undefined;
     if (commitShas.length > 0) {
-      console.log('[File City] Fetching', commitShas.length, 'commits:', commitShas.map(s => s.slice(0, 7)));
-
       // Fetch all commits in parallel
       const commitPromises = commitShas.map(sha => fetchCommitDetails(owner, repo, sha));
       const commitResults = await Promise.all(commitPromises);
-
-      console.log('[File City] Fetched commits:', commitResults.map(c => c ? `${c.sha?.slice(0, 7)} (${c.files?.length || 0} files)` : 'null'));
 
       // Merge all changed files (deduplicate by path)
       const fileMap = new Map<string, 'added' | 'modified' | 'removed'>();
@@ -157,14 +149,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
       if (fileMap.size > 0) {
         highlightFiles = Array.from(fileMap.entries()).map(([path, status]) => ({ path, status }));
-        console.log('[File City] Highlighting', highlightFiles.length, 'files from', commitShas.length, 'commits');
-        console.log('[File City] Highlight paths:', highlightFiles.map(f => `${f.status}: ${f.path}`));
-      } else {
-        console.log('[File City] No files to highlight from commits:', commitShas);
       }
     }
-
-    console.log('[File City] Generating:', { owner, repo, branch, commits: commitShas.length || 0, highlightCount: highlightFiles?.length || 0 });
 
     const buffer = await renderFileCityPng({
       owner,
@@ -178,7 +164,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // If nocache is set, return the image directly without caching
     // This ensures a fresh image is returned without browser/CDN cache interference
     if (noCache) {
-      console.log('[File City] Returning fresh image (nocache):', { owner, repo });
       return new NextResponse(new Uint8Array(buffer), {
         status: 200,
         headers: {
@@ -196,8 +181,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       branch,
       width: clampedWidth.toString(),
       height: clampedHeight.toString(),
-    }).then(() => {
-      console.log('[File City] Cached to S3:', { owner, repo, s3Key });
     }).catch((err) => {
       console.warn('[File City] S3 cache failed (non-blocking):', err);
     });

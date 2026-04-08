@@ -1888,6 +1888,101 @@ export const feedRouter = router({
 
       return { commits: dedupedCommits };
     }),
+
+  /**
+   * Get commit activity for a specific repository
+   * Fetches commits directly from GitHub for the given repo
+   */
+  getRepoActivity: publicProcedure
+    .input(
+      z.object({
+        owner: z.string(),
+        repo: z.string(),
+        hoursBack: z.number().min(1).max(168).optional().default(168),
+      })
+    )
+    .output(
+      z.object({
+        commits: z.array(
+          z.object({
+            timestamp: z.string(),
+            repoId: z.string(),
+            authorLogin: z.string(),
+            authorAvatarUrl: z.string().optional(),
+          })
+        ),
+        timeRange: z.object({
+          start: z.string(),
+          end: z.string(),
+        }),
+      })
+    )
+    .query(async ({ input }) => {
+      const { owner, repo, hoursBack } = input;
+      const token = await getGitHubToken();
+
+      const now = new Date();
+      const startTime = new Date(now.getTime() - hoursBack * 60 * 60 * 1000);
+      const sinceISO = startTime.toISOString();
+
+      console.log(`[RepoActivity] Fetching commits for ${owner}/${repo} from ${sinceISO} to ${now.toISOString()} (${hoursBack} hours back)`);
+
+      const commits: Array<{
+        timestamp: string;
+        repoId: string;
+        authorLogin: string;
+        authorAvatarUrl?: string;
+      }> = [];
+
+      try {
+        const response = await fetch(
+          `https://api.github.com/repos/${owner}/${repo}/commits?since=${sinceISO}&per_page=100`,
+          {
+            headers: {
+              Accept: 'application/vnd.github.v3+json',
+              ...(token ? { Authorization: `token ${token}` } : {}),
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = (await response.json()) as Array<{
+            sha: string;
+            commit: { author: { date: string } };
+            author: { login: string; avatar_url: string } | null;
+          }>;
+
+          for (const commit of data) {
+            commits.push({
+              timestamp: commit.commit.author.date,
+              repoId: `${owner}/${repo}`,
+              authorLogin: commit.author?.login ?? 'unknown',
+              authorAvatarUrl: commit.author?.avatar_url,
+            });
+          }
+        }
+        console.log(`[RepoActivity] Got ${commits.length} commits for ${owner}/${repo}`);
+      } catch (error) {
+        console.error(
+          `[RepoActivity] Failed to fetch commits for ${owner}/${repo}:`,
+          error
+        );
+      }
+
+      // Sort by timestamp (newest first)
+      commits.sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+
+      return {
+        commits,
+        timeRange: {
+          start: startTime.toISOString(),
+          end: now.toISOString(),
+        },
+      };
+    }),
 });
 
 export type FeedRouter = typeof feedRouter;

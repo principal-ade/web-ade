@@ -95,7 +95,6 @@ async function fetchGitHubTree(
   const cacheKey = `${owner}/${repo}/${branch}`;
   const cached = gitTreeCache.get<GitHubTreeResponse>(cacheKey);
   if (cached) {
-    console.log('[File City] Tree cache hit:', cacheKey);
     return cached;
   }
 
@@ -114,7 +113,6 @@ async function fetchGitHubTree(
   // Cache by both the lookup key and the tree SHA (immutable)
   gitTreeCache.set(cacheKey, treeData);
   gitTreeCache.set(treeData.sha, treeData);
-  console.log('[File City] Tree cached:', cacheKey, 'sha:', treeData.sha);
 
   return treeData;
 }
