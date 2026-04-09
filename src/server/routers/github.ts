@@ -521,6 +521,23 @@ const searchReposOutputSchema = z.object({
   total_count: z.number(),
 });
 
+const repoWithTourSchema = z.object({
+  owner: z.string(),
+  name: z.string(),
+  full_name: z.string(),
+  description: z.string().nullable().optional(),
+  stargazers_count: z.number(),
+  language: z.string().nullable().optional(),
+  forkOwner: z.string(), // The tour org that has the fork
+  forkRepo: z.string(), // The fork repo name
+  tourPath: z.string(), // Path to tour file
+});
+
+const getReposWithToursOutputSchema = z.object({
+  repos: z.array(repoWithTourSchema),
+  cached: z.boolean(),
+});
+
 export const githubRouter = router({
   /**
    * Read a file from a GitHub repository
@@ -1465,6 +1482,154 @@ export const githubRouter = router({
         })),
         total_count: data.total_count,
       };
+    }),
+
+  /**
+   * Get all repositories that have tours available
+   * Fetches repos from tour organizations and returns parent repo info
+   * Cached for 24 hours
+   */
+  getReposWithTours: publicProcedure
+    .output(getReposWithToursOutputSchema)
+    .query(async () => {
+      const cacheKey = 'github:repos-with-tours:v5';
+
+      // Check cache first
+      const cached = await getCached<z.infer<typeof getReposWithToursOutputSchema>>(cacheKey);
+      if (cached) {
+        console.log('[getReposWithTours] Cache hit');
+        return { ...cached, cached: true };
+      }
+
+      console.log('[getReposWithTours] Cache miss, fetching from GitHub');
+
+      const userToken = await getGitHubTokenFromHeadersOrCookies();
+      const limit = createLimiter(MAX_CONCURRENT_REQUESTS);
+      const reposWithTours: z.infer<typeof repoWithTourSchema>[] = [];
+
+      interface GitHubRepo {
+        id: number;
+        name: string;
+        full_name: string;
+        description?: string | null;
+        stargazers_count: number;
+        language?: string | null;
+        fork: boolean;
+        owner: {
+          login: string;
+        };
+        parent?: {
+          owner: {
+            login: string;
+          };
+          name: string;
+          full_name: string;
+          description?: string | null;
+          stargazers_count: number;
+          language?: string | null;
+        };
+        default_branch: string;
+      }
+
+      // Fetch repos from all tour orgs in parallel
+      // Use /users endpoint which works for both users and organizations
+      const orgRepoPromises = TOUR_ORGS.map((org) =>
+        limit(async () => {
+          try {
+            const repos = await makeGitHubRequest<GitHubRepo[]>(
+              `/users/${org}/repos?per_page=100&type=forks`,
+              userToken
+            );
+            return { org, repos };
+          } catch (error) {
+            console.error(`[getReposWithTours] Error fetching repos for ${org}:`, error);
+            return { org, repos: [] };
+          }
+        })
+      );
+
+      const orgResults = await Promise.all(orgRepoPromises);
+
+      console.log('[getReposWithTours] Org results:', orgResults.map(r => ({ org: r.org, count: r.repos.length, forks: r.repos.filter(repo => repo.fork).length })));
+
+      // Check each fork for tour file by fetching root tree
+      const tourCheckPromises: Promise<void>[] = [];
+
+      for (const { org, repos } of orgResults) {
+        const forks = repos.filter(r => r.fork);
+        console.log(`[getReposWithTours] Found ${forks.length} forks in ${org}`);
+
+        for (const repo of forks) {
+          tourCheckPromises.push(
+            limit(async () => {
+              try {
+                // Fetch full repo details to get parent info
+                const fullRepo = await makeGitHubRequest<GitHubRepo>(
+                  `/repos/${org}/${repo.name}`,
+                  userToken
+                );
+
+                if (!fullRepo.parent) {
+                  console.log(`[getReposWithTours] ${fullRepo.full_name} has no parent info`);
+                  return;
+                }
+
+                console.log(`[getReposWithTours] Checking fork ${org}/${repo.name} (parent: ${fullRepo.parent.full_name}) for tour files`);
+
+                // Get root tree to find .tour.json files
+                interface TreeItem {
+                  path: string;
+                  type: string;
+                }
+                interface TreeResponse {
+                  tree: TreeItem[];
+                }
+
+                const tree = await makeGitHubRequest<TreeResponse>(
+                  `/repos/${org}/${repo.name}/git/trees/${fullRepo.default_branch}`,
+                  userToken
+                );
+
+                // Look for any .tour.json file in root
+                const tourFile = tree.tree.find(
+                  (item) => item.type === 'blob' && item.path.endsWith('.tour.json')
+                );
+
+                if (tourFile) {
+                  reposWithTours.push({
+                    owner: fullRepo.parent.owner.login,
+                    name: fullRepo.parent.name,
+                    full_name: fullRepo.parent.full_name,
+                    description: fullRepo.parent.description,
+                    stargazers_count: fullRepo.parent.stargazers_count,
+                    language: fullRepo.parent.language,
+                    forkOwner: org,
+                    forkRepo: repo.name,
+                    tourPath: tourFile.path,
+                  });
+                  console.log(`[getReposWithTours] ✅ Found tour for ${fullRepo.parent.full_name} in ${org}/${repo.name} at ${tourFile.path}`);
+                }
+              } catch (error) {
+                console.error(`[getReposWithTours] Error checking tour for ${org}/${repo.name}:`, error);
+              }
+            })
+          );
+        }
+      }
+
+      await Promise.all(tourCheckPromises);
+
+      console.log(`[getReposWithTours] Found ${reposWithTours.length} repos with tours`);
+
+      const result = {
+        repos: reposWithTours,
+        cached: false,
+      };
+
+      // Cache for 24 hours
+      setCachedAsync(cacheKey, result, TOUR_AVAILABILITY_TTL);
+
+      return result;
     }),
 });
 
