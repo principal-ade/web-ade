@@ -25,6 +25,7 @@ import {
 } from '@/lib/redis-cache';
 import { PackageLayerModule } from '@principal-ai/codebase-composition';
 import type { FileTree, FileInfo, DirectoryInfo } from '@principal-ai/repository-abstraction';
+import { parseTour, type IntroductionTour } from '@principal-ai/file-city-builder';
 
 // Get tracer for GitHub operations
 const tracer = trace.getTracer('github-router', '1.0.0');
@@ -516,6 +517,7 @@ const searchReposOutputSchema = z.object({
       description: z.string().nullable().optional(),
       stargazers_count: z.number(),
       language: z.string().nullable().optional(),
+      owner_avatar_url: z.string(),
     })
   ),
   total_count: z.number(),
@@ -528,6 +530,7 @@ const repoWithTourSchema = z.object({
   description: z.string().nullable().optional(),
   stargazers_count: z.number(),
   language: z.string().nullable().optional(),
+  owner_avatar_url: z.string(),
   forkOwner: z.string(), // The tour org that has the fork
   forkRepo: z.string(), // The fork repo name
   tourPath: z.string(), // Path to tour file
@@ -1462,6 +1465,7 @@ export const githubRouter = router({
           language?: string | null;
           owner: {
             login: string;
+            avatar_url: string;
           };
         }>;
       }
@@ -1479,6 +1483,7 @@ export const githubRouter = router({
           description: r.description,
           stargazers_count: r.stargazers_count,
           language: r.language,
+          owner_avatar_url: r.owner.avatar_url,
         })),
         total_count: data.total_count,
       };
@@ -1492,7 +1497,7 @@ export const githubRouter = router({
   getReposWithTours: publicProcedure
     .output(getReposWithToursOutputSchema)
     .query(async () => {
-      const cacheKey = 'github:repos-with-tours:v5';
+      const cacheKey = 'github:repos-with-tours:v6';
 
       // Check cache first
       const cached = await getCached<z.infer<typeof getReposWithToursOutputSchema>>(cacheKey);
@@ -1521,6 +1526,7 @@ export const githubRouter = router({
         parent?: {
           owner: {
             login: string;
+            avatar_url: string;
           };
           name: string;
           full_name: string;
@@ -1603,6 +1609,7 @@ export const githubRouter = router({
                     description: fullRepo.parent.description,
                     stargazers_count: fullRepo.parent.stargazers_count,
                     language: fullRepo.parent.language,
+                    owner_avatar_url: fullRepo.parent.owner.avatar_url,
                     forkOwner: org,
                     forkRepo: repo.name,
                     tourPath: tourFile.path,
@@ -1630,6 +1637,85 @@ export const githubRouter = router({
       setCachedAsync(cacheKey, result, TOUR_AVAILABILITY_TTL);
 
       return result;
+    }),
+
+  /**
+   * Get tour JSON for a repository
+   * Fetches the tour file from GitHub and parses it
+   */
+  getTour: publicProcedure
+    .input(
+      z.object({
+        owner: z.string().min(1),
+        repo: z.string().min(1),
+        tourPath: z.string().min(1),
+        branch: z.string().optional().default('main'),
+      })
+    )
+    .output(
+      z.object({
+        tour: z.any(), // IntroductionTour type from file-city-builder
+        cached: z.boolean(),
+      })
+    )
+    .query(async ({ input }) => {
+      const { owner, repo, tourPath, branch } = input;
+
+      // Cache key for this tour
+      const cacheKey = `github:tour:${owner}/${repo}:${tourPath}:${branch}`;
+
+      // Check cache first
+      const cached = await getCached<{ tour: IntroductionTour }>(cacheKey);
+      if (cached) {
+        console.log(`[getTour] Cache hit for ${owner}/${repo}/${tourPath}`);
+        return { ...cached, cached: true };
+      }
+
+      console.log(`[getTour] Cache miss, fetching from GitHub: ${owner}/${repo}/${tourPath}`);
+
+      try {
+        // Fetch tour JSON from raw.githubusercontent.com
+        const tourUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${tourPath}`;
+        const response = await fetch(tourUrl);
+
+        if (!response.ok) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: `Tour file not found: ${tourPath}`,
+          });
+        }
+
+        const tourJson = await response.text();
+
+        // Parse and validate tour
+        const parseResult = parseTour(tourJson);
+
+        if (!parseResult.success) {
+          const errorMessages = parseResult.errors?.map(e => e.message).join(', ') || 'Unknown error';
+          console.error(`[getTour] Tour validation failed for ${owner}/${repo}/${tourPath}:`, errorMessages);
+          console.error(`[getTour] First 500 chars of tour JSON:`, tourJson.substring(0, 500));
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Invalid tour file: ${errorMessages}`,
+          });
+        }
+
+        const result = { tour: parseResult.tour!, cached: false };
+
+        // Cache for 24 hours
+        setCachedAsync(cacheKey, { tour: parseResult.tour! }, TOUR_AVAILABILITY_TTL);
+
+        return result;
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        console.error(`[getTour] Error fetching tour:`, error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to fetch tour: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        });
+      }
     }),
 });
 
