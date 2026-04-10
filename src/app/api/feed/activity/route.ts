@@ -26,12 +26,12 @@ export async function GET() {
       );
     }
 
-    // Get user's follows from S3
+    // Get user's watches from S3
     const profile = await getUserFeedProfile(String(githubId));
-    const followedUsers = profile?.followedUsers ?? [];
-    const followedRepos = profile?.followedRepos ?? [];
+    const followedUsers = profile?.watchedUsers ?? [];
+    const followedRepos = profile?.watchedRepos ?? [];
 
-    // If no follows, return empty activity
+    // If no watches, return empty activity
     if (followedUsers.length === 0 && followedRepos.length === 0) {
       const response: FeedActivityResponse = {
         activity: [],

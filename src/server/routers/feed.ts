@@ -31,8 +31,8 @@ import type {
   ActivityCommit,
 } from '@/lib/feed-collections/types';
 import {
-  MAX_FOLLOWED_USERS,
-  MAX_FOLLOWED_REPOS,
+  MAX_WATCHED_USERS,
+  MAX_WATCHED_REPOS,
 } from '@/lib/feed-collections/types';
 import { FEATURED_REPOS } from '@/lib/featured-repos';
 
@@ -182,21 +182,21 @@ const removeRepoInputSchema = z.object({
   repo: z.string().min(1),
 });
 
-// Follow input schemas
-const followUserInputSchema = z.object({
+// Watch input schemas
+const watchUserInputSchema = z.object({
   login: z.string().min(1).max(39), // GitHub username limit
 });
 
-const unfollowUserInputSchema = z.object({
+const unwatchUserInputSchema = z.object({
   login: z.string().min(1),
 });
 
-const followRepoInputSchema = z.object({
+const watchRepoInputSchema = z.object({
   owner: z.string().min(1),
   repo: z.string().min(1),
 });
 
-const unfollowRepoInputSchema = z.object({
+const unwatchRepoInputSchema = z.object({
   owner: z.string().min(1),
   repo: z.string().min(1),
 });
@@ -230,16 +230,16 @@ const feedRepoSchema = z.object({
   description: z.string().optional(),
 });
 
-// Follow output schemas
-const followedUserSchema = z.object({
+// Watch output schemas
+const watchedUserSchema = z.object({
   login: z.string(),
-  followedAt: z.string(),
+  watchedAt: z.string(),
 });
 
-const followedRepoSchema = z.object({
+const watchedRepoSchema = z.object({
   owner: z.string(),
   repo: z.string(),
-  followedAt: z.string(),
+  watchedAt: z.string(),
 });
 
 // ============================================================================
@@ -279,8 +279,8 @@ export const feedRouter = router({
           githubId: auth.githubId,
           githubLogin: auth.githubLogin,
           subscribedCollections: [],
-          followedUsers: [],
-          followedRepos: [],
+          watchedUsers: [],
+          watchedRepos: [],
           createdAt: now,
           updatedAt: now,
         };
@@ -537,8 +537,8 @@ export const feedRouter = router({
           githubId: auth.githubId,
           githubLogin: auth.githubLogin,
           subscribedCollections: [],
-          followedUsers: [],
-          followedRepos: [],
+          watchedUsers: [],
+          watchedRepos: [],
           createdAt: now,
           updatedAt: now,
         };
@@ -731,19 +731,19 @@ export const feedRouter = router({
     }),
 
   // ==========================================================================
-  // Follow Endpoints
+  // Watch Endpoints
   // ==========================================================================
 
   /**
-   * Follow a GitHub user
+   * Watch a GitHub user
    * Requires authentication. Max 5 users.
    */
-  followUser: publicProcedure
-    .input(followUserInputSchema)
+  watchUser: publicProcedure
+    .input(watchUserInputSchema)
     .output(
       z.object({
         success: z.boolean(),
-        followedUsers: z.array(followedUserSchema),
+        watchedUsers: z.array(watchedUserSchema),
       })
     )
     .mutation(async ({ input }) => {
@@ -756,61 +756,61 @@ export const feedRouter = router({
           githubId: auth.githubId,
           githubLogin: auth.githubLogin,
           subscribedCollections: [],
-          followedUsers: [],
-          followedRepos: [],
+          watchedUsers: [],
+          watchedRepos: [],
           createdAt: now,
           updatedAt: now,
         };
       }
 
-      const followedUsers = profile.followedUsers ?? [];
+      const watchedUsers = profile.watchedUsers ?? [];
 
       // Check limit
-      if (followedUsers.length >= MAX_FOLLOWED_USERS) {
+      if (watchedUsers.length >= MAX_WATCHED_USERS) {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
-          message: `You can only follow up to ${MAX_FOLLOWED_USERS} users`,
+          message: `You can only watch up to ${MAX_WATCHED_USERS} users`,
         });
       }
 
-      // Check if already following
+      // Check if already watching
       if (
-        followedUsers.some(
+        watchedUsers.some(
           (u) => u.login.toLowerCase() === input.login.toLowerCase()
         )
       ) {
         throw new TRPCError({
           code: 'CONFLICT',
-          message: 'Already following this user',
+          message: 'Already watching this user',
         });
       }
 
-      // Prevent following self
+      // Prevent watching self
       if (input.login.toLowerCase() === auth.githubLogin.toLowerCase()) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Cannot follow yourself',
+          message: 'Cannot watch yourself',
         });
       }
 
-      followedUsers.push({ login: input.login, followedAt: now });
-      profile.followedUsers = followedUsers;
+      watchedUsers.push({ login: input.login, watchedAt: now });
+      profile.watchedUsers = watchedUsers;
       profile.updatedAt = now;
 
       await storeUserFeedProfile(profile);
-      return { success: true, followedUsers };
+      return { success: true, watchedUsers };
     }),
 
   /**
-   * Unfollow a GitHub user
+   * Unwatch a GitHub user
    * Requires authentication
    */
-  unfollowUser: publicProcedure
-    .input(unfollowUserInputSchema)
+  unwatchUser: publicProcedure
+    .input(unwatchUserInputSchema)
     .output(
       z.object({
         success: z.boolean(),
-        followedUsers: z.array(followedUserSchema),
+        watchedUsers: z.array(watchedUserSchema),
       })
     )
     .mutation(async ({ input }) => {
@@ -818,30 +818,30 @@ export const feedRouter = router({
 
       const profile = await getUserFeedProfile(auth.githubId);
       if (!profile) {
-        return { success: true, followedUsers: [] };
+        return { success: true, watchedUsers: [] };
       }
 
-      const followedUsers = (profile.followedUsers ?? []).filter(
+      const watchedUsers = (profile.watchedUsers ?? []).filter(
         (u) => u.login.toLowerCase() !== input.login.toLowerCase()
       );
 
-      profile.followedUsers = followedUsers;
+      profile.watchedUsers = watchedUsers;
       profile.updatedAt = new Date().toISOString();
 
       await storeUserFeedProfile(profile);
-      return { success: true, followedUsers };
+      return { success: true, watchedUsers };
     }),
 
   /**
-   * Follow a repository
+   * Watch a repository
    * Requires authentication. Max 5 repos.
    */
-  followRepo: publicProcedure
-    .input(followRepoInputSchema)
+  watchRepo: publicProcedure
+    .input(watchRepoInputSchema)
     .output(
       z.object({
         success: z.boolean(),
-        followedRepos: z.array(followedRepoSchema),
+        watchedRepos: z.array(watchedRepoSchema),
       })
     )
     .mutation(async ({ input }) => {
@@ -854,58 +854,58 @@ export const feedRouter = router({
           githubId: auth.githubId,
           githubLogin: auth.githubLogin,
           subscribedCollections: [],
-          followedUsers: [],
-          followedRepos: [],
+          watchedUsers: [],
+          watchedRepos: [],
           createdAt: now,
           updatedAt: now,
         };
       }
 
-      const followedRepos = profile.followedRepos ?? [];
+      const watchedRepos = profile.watchedRepos ?? [];
 
       // Check limit
-      if (followedRepos.length >= MAX_FOLLOWED_REPOS) {
+      if (watchedRepos.length >= MAX_WATCHED_REPOS) {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
-          message: `You can only follow up to ${MAX_FOLLOWED_REPOS} repositories`,
+          message: `You can only watch up to ${MAX_WATCHED_REPOS} repositories`,
         });
       }
 
-      // Check if already following
+      // Check if already watching
       const repoKey = `${input.owner}/${input.repo}`.toLowerCase();
       if (
-        followedRepos.some(
+        watchedRepos.some(
           (r) => `${r.owner}/${r.repo}`.toLowerCase() === repoKey
         )
       ) {
         throw new TRPCError({
           code: 'CONFLICT',
-          message: 'Already following this repository',
+          message: 'Already watching this repository',
         });
       }
 
-      followedRepos.push({
+      watchedRepos.push({
         owner: input.owner,
         repo: input.repo,
-        followedAt: now,
+        watchedAt: now,
       });
-      profile.followedRepos = followedRepos;
+      profile.watchedRepos = watchedRepos;
       profile.updatedAt = now;
 
       await storeUserFeedProfile(profile);
-      return { success: true, followedRepos };
+      return { success: true, watchedRepos };
     }),
 
   /**
-   * Unfollow a repository
+   * Unwatch a repository
    * Requires authentication
    */
-  unfollowRepo: publicProcedure
-    .input(unfollowRepoInputSchema)
+  unwatchRepo: publicProcedure
+    .input(unwatchRepoInputSchema)
     .output(
       z.object({
         success: z.boolean(),
-        followedRepos: z.array(followedRepoSchema),
+        watchedRepos: z.array(watchedRepoSchema),
       })
     )
     .mutation(async ({ input }) => {
@@ -913,30 +913,30 @@ export const feedRouter = router({
 
       const profile = await getUserFeedProfile(auth.githubId);
       if (!profile) {
-        return { success: true, followedRepos: [] };
+        return { success: true, watchedRepos: [] };
       }
 
       const repoKey = `${input.owner}/${input.repo}`.toLowerCase();
-      const followedRepos = (profile.followedRepos ?? []).filter(
+      const watchedRepos = (profile.watchedRepos ?? []).filter(
         (r) => `${r.owner}/${r.repo}`.toLowerCase() !== repoKey
       );
 
-      profile.followedRepos = followedRepos;
+      profile.watchedRepos = watchedRepos;
       profile.updatedAt = new Date().toISOString();
 
       await storeUserFeedProfile(profile);
-      return { success: true, followedRepos };
+      return { success: true, watchedRepos };
     }),
 
   /**
-   * Get current follows (users and repos)
+   * Get current watches (users and repos)
    * Requires authentication
    */
-  getFollows: publicProcedure
+  getWatches: publicProcedure
     .output(
       z.object({
-        followedUsers: z.array(followedUserSchema),
-        followedRepos: z.array(followedRepoSchema),
+        watchedUsers: z.array(watchedUserSchema),
+        watchedRepos: z.array(watchedRepoSchema),
       })
     )
     .query(async () => {
@@ -944,8 +944,8 @@ export const feedRouter = router({
 
       const profile = await getUserFeedProfile(auth.githubId);
       return {
-        followedUsers: profile?.followedUsers ?? [],
-        followedRepos: profile?.followedRepos ?? [],
+        watchedUsers: profile?.watchedUsers ?? [],
+        watchedRepos: profile?.watchedRepos ?? [],
       };
     }),
 
@@ -954,7 +954,7 @@ export const feedRouter = router({
   // ==========================================================================
 
   /**
-   * Get commit queue - activity cards from last 24h from followed users/repos
+   * Get commit queue - activity cards from last 24h from watched users/repos
    * Groups commits by repo + hour bucket (matching ActivityFeedPanel pattern)
    * Filters out passed and saved cards
    * Requires authentication
@@ -1001,12 +1001,12 @@ export const feedRouter = router({
       const auth = await requireAuth();
       const limit = input?.limit ?? 20;
 
-      // Get user's follows
+      // Get user's watches
       const profile = await getUserFeedProfile(auth.githubId);
-      const followedRepos = profile?.followedRepos ?? [];
-      const followedUsers = profile?.followedUsers ?? [];
+      const watchedRepos = profile?.watchedRepos ?? [];
+      const watchedUsers = profile?.watchedUsers ?? [];
 
-      if (followedRepos.length === 0 && followedUsers.length === 0) {
+      if (watchedRepos.length === 0 && watchedUsers.length === 0) {
         return { cards: [], hasMore: false };
       }
 
@@ -1020,7 +1020,7 @@ export const feedRouter = router({
         Date.now() - 24 * 60 * 60 * 1000
       ).toISOString();
 
-      // Fetch commits from GitHub for each followed repo
+      // Fetch commits from GitHub for each watched repo
       const token = await getGitHubToken();
 
       // Map to group commits by repo + hour: "YYYY-MM-DD:HH:owner/repo" -> ActivityCommit[]
@@ -1077,8 +1077,8 @@ export const feedRouter = router({
         }
       };
 
-      // Fetch commits from followed repos
-      for (const repo of followedRepos) {
+      // Fetch commits from watched repos
+      for (const repo of watchedRepos) {
         try {
           const response = await fetch(
             `https://api.github.com/repos/${repo.owner}/${repo.repo}/commits?since=${twentyFourHoursAgo}&per_page=30`,
@@ -1127,8 +1127,8 @@ export const feedRouter = router({
         }
       }
 
-      // Fetch commits from followed users (their recent activity)
-      for (const user of followedUsers) {
+      // Fetch commits from watched users (their recent activity)
+      for (const user of watchedUsers) {
         try {
           const response = await fetch(
             `https://api.github.com/users/${user.login}/events?per_page=30`,
@@ -1394,7 +1394,7 @@ export const feedRouter = router({
 
   /**
    * Get commit activity for heatmap visualization
-   * Returns flat list of commits with timestamps from followed users/repos
+   * Returns flat list of commits with timestamps from watched users/repos
    * Does NOT filter out passed/saved (shows all activity)
    * Requires authentication
    */
@@ -1449,12 +1449,12 @@ export const feedRouter = router({
         ? new Set(input.repoIds.map((r) => r.toLowerCase()))
         : null;
 
-      // Get user's follows
+      // Get user's watches
       const profile = await getUserFeedProfile(auth.githubId);
-      const followedRepos = profile?.followedRepos ?? [];
-      const followedUsers = profile?.followedUsers ?? [];
+      const watchedRepos = profile?.watchedRepos ?? [];
+      const watchedUsers = profile?.watchedUsers ?? [];
 
-      if (followedRepos.length === 0 && followedUsers.length === 0) {
+      if (watchedRepos.length === 0 && watchedUsers.length === 0) {
         const now = new Date();
         const start = new Date(now.getTime() - hoursBack * 60 * 60 * 1000);
         return {
@@ -1544,8 +1544,8 @@ export const feedRouter = router({
         }
       };
 
-      // Fetch commits from followed repos
-      for (const repo of followedRepos) {
+      // Fetch commits from watched repos
+      for (const repo of watchedRepos) {
         try {
           const response = await fetch(
             `https://api.github.com/repos/${repo.owner}/${repo.repo}/commits?since=${sinceISO}&per_page=100`,
@@ -1581,8 +1581,8 @@ export const feedRouter = router({
         }
       }
 
-      // Fetch commits from followed users (their recent activity)
-      for (const user of followedUsers) {
+      // Fetch commits from watched users (their recent activity)
+      for (const user of watchedUsers) {
         try {
           const response = await fetch(
             `https://api.github.com/users/${user.login}/events?per_page=100`,
@@ -1703,12 +1703,12 @@ export const feedRouter = router({
         ? new Set(input.repoIds.map((r) => r.toLowerCase()))
         : null;
 
-      // Get user's follows
+      // Get user's watches
       const profile = await getUserFeedProfile(auth.githubId);
-      const followedRepos = profile?.followedRepos ?? [];
-      const followedUsers = profile?.followedUsers ?? [];
+      const watchedRepos = profile?.watchedRepos ?? [];
+      const watchedUsers = profile?.watchedUsers ?? [];
 
-      if (followedRepos.length === 0 && followedUsers.length === 0) {
+      if (watchedRepos.length === 0 && watchedUsers.length === 0) {
         return { commits: [] };
       }
 
@@ -1732,8 +1732,8 @@ export const feedRouter = router({
         filesChanged?: number;
       }> = [];
 
-      // Fetch commits from followed repos
-      for (const repo of followedRepos) {
+      // Fetch commits from watched repos
+      for (const repo of watchedRepos) {
         const repoId = `${repo.owner}/${repo.repo}`;
 
         // Apply repo filter if specified
@@ -1801,7 +1801,7 @@ export const feedRouter = router({
       }
 
       // Fetch commits from followed users via events API
-      for (const user of followedUsers) {
+      for (const user of watchedUsers) {
         // Apply author filter if specified
         if (authorFilter && !authorFilter.has(user.login.toLowerCase())) {
           continue;

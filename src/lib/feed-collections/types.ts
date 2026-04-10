@@ -3,36 +3,36 @@
  *
  * Type definitions for personalized feed collections stored in S3.
  * Users can create collections of repositories and subscribe to
- * other users' public collections. Also includes types for following
+ * other users' public collections. Also includes types for watching
  * individual users and repositories.
  */
 
 // ============================================================================
-// Follow Limits
+// Watch Limits
 // ============================================================================
 
-export const MAX_FOLLOWED_USERS = 5;
-export const MAX_FOLLOWED_REPOS = 5;
+export const MAX_WATCHED_USERS = 5;
+export const MAX_WATCHED_REPOS = 5;
 
 // ============================================================================
-// Follow Types
+// Watch Types
 // ============================================================================
 
 /**
- * A followed GitHub user
+ * A watched GitHub user
  */
-export interface FollowedUser {
+export interface WatchedUser {
   login: string; // GitHub username
-  followedAt: string; // ISO timestamp
+  watchedAt: string; // ISO timestamp
 }
 
 /**
- * A followed GitHub repository
+ * A watched GitHub repository
  */
-export interface FollowedRepo {
+export interface WatchedRepo {
   owner: string;
   repo: string;
-  followedAt: string; // ISO timestamp
+  watchedAt: string; // ISO timestamp
 }
 
 /**
@@ -61,14 +61,14 @@ export interface FeedCollection {
 }
 
 /**
- * User's feed profile containing subscriptions and follows
+ * User's feed profile containing subscriptions and watches
  */
 export interface UserFeedProfile {
   githubId: string;
   githubLogin: string;
   subscribedCollections: string[]; // Collection IDs
-  followedUsers: FollowedUser[]; // Max 5 users
-  followedRepos: FollowedRepo[]; // Max 5 repos
+  watchedUsers: WatchedUser[]; // Max 5 users
+  watchedRepos: WatchedRepo[]; // Max 5 repos
   createdAt: string; // ISO timestamp
   updatedAt: string; // ISO timestamp
 }

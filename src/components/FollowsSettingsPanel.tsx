@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { X, UserPlus, FolderGit2, Trash2, Loader2 } from 'lucide-react';
-import { useFollows } from '@/hooks/useFollows';
+import { X, UserPlus, FolderGit2, Trash2 } from 'lucide-react';
+import { useWatches } from '@/hooks/useFollows';
+import { LoadingSpinner } from './LoadingSpinner';
 import {
-  MAX_FOLLOWED_USERS,
-  MAX_FOLLOWED_REPOS,
+  MAX_WATCHED_USERS,
+  MAX_WATCHED_REPOS,
 } from '@/lib/feed-collections/types';
 
 export interface FollowsSettingsPanelProps {
@@ -20,16 +21,16 @@ export interface FollowsSettingsPanelProps {
 export function FollowsSettingsPanel({ isOpen, onClose }: FollowsSettingsPanelProps) {
   const { theme } = useTheme();
   const {
-    followedUsers,
-    followedRepos,
+    watchedUsers: followedUsers,
+    watchedRepos: followedRepos,
     isLoading,
-    followUser,
-    unfollowUser,
-    followRepo,
-    unfollowRepo,
-    canFollowMoreUsers,
-    canFollowMoreRepos,
-  } = useFollows();
+    watchUser: followUser,
+    unwatchUser: unfollowUser,
+    watchRepo: followRepo,
+    unwatchRepo: unfollowRepo,
+    canWatchMoreUsers: canFollowMoreUsers,
+    canWatchMoreRepos: canFollowMoreRepos,
+  } = useWatches();
 
   const [userInput, setUserInput] = useState('');
   const [repoInput, setRepoInput] = useState('');
@@ -177,7 +178,7 @@ export function FollowsSettingsPanel({ isOpen, onClose }: FollowsSettingsPanelPr
                   color: theme.colors.text,
                 }}
               >
-                Following Users ({followedUsers.length}/{MAX_FOLLOWED_USERS})
+                Following Users ({followedUsers.length}/{MAX_WATCHED_USERS})
               </h3>
             </div>
 
@@ -211,14 +212,14 @@ export function FollowsSettingsPanel({ isOpen, onClose }: FollowsSettingsPanelPr
                   opacity: canFollowMoreUsers && userInput.trim() ? 1 : 0.5,
                 }}
               >
-                {userLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Follow'}
+                {userLoading ? <LoadingSpinner size={16} /> : 'Follow'}
               </button>
             </form>
 
             {/* Followed users list */}
             {isLoading ? (
               <div className="flex items-center justify-center py-4">
-                <Loader2 className="w-5 h-5 animate-spin" style={{ color: theme.colors.textMuted }} />
+                <LoadingSpinner size={20} />
               </div>
             ) : followedUsers.length === 0 ? (
               <p
@@ -273,7 +274,7 @@ export function FollowsSettingsPanel({ isOpen, onClose }: FollowsSettingsPanelPr
                   color: theme.colors.text,
                 }}
               >
-                Following Repos ({followedRepos.length}/{MAX_FOLLOWED_REPOS})
+                Following Repos ({followedRepos.length}/{MAX_WATCHED_REPOS})
               </h3>
             </div>
 
@@ -307,14 +308,14 @@ export function FollowsSettingsPanel({ isOpen, onClose }: FollowsSettingsPanelPr
                   opacity: canFollowMoreRepos && repoInput.trim() ? 1 : 0.5,
                 }}
               >
-                {repoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Follow'}
+                {repoLoading ? <LoadingSpinner size={16} /> : 'Follow'}
               </button>
             </form>
 
             {/* Followed repos list */}
             {isLoading ? (
               <div className="flex items-center justify-center py-4">
-                <Loader2 className="w-5 h-5 animate-spin" style={{ color: theme.colors.textMuted }} />
+                <LoadingSpinner size={20} />
               </div>
             ) : followedRepos.length === 0 ? (
               <p

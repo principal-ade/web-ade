@@ -32,6 +32,21 @@ const tracer = trace.getTracer('github-router', '1.0.0');
 
 const GITHUB_API_BASE = 'https://api.github.com';
 
+/**
+ * Get cache key for user profile
+ */
+function getUserProfileCacheKey(login: string): string {
+  return `github:user-profile:${login.toLowerCase()}`;
+}
+
+/**
+ * Get cached user profile data
+ */
+async function getCachedUserProfile(login: string): Promise<{ login: string; name: string | null; avatar_url: string } | null> {
+  const cacheKey = getUserProfileCacheKey(login);
+  return await getCached<{ login: string; name: string | null; avatar_url: string }>(cacheKey);
+}
+
 // ============================================================================
 // Input Schemas
 // ============================================================================
@@ -503,6 +518,7 @@ const searchUsersOutputSchema = z.object({
       login: z.string(),
       avatar_url: z.string(),
       type: z.enum(['User', 'Organization']),
+      name: z.string().nullable().optional(), // Enriched from cache if available
     })
   ),
   total_count: z.number(),
@@ -1413,6 +1429,7 @@ export const githubRouter = router({
 
   /**
    * Search GitHub users
+   * Enriches results with cached user profiles (names) when available
    */
   searchUsers: publicProcedure
     .input(searchInputSchema)
@@ -1435,12 +1452,21 @@ export const githubRouter = router({
         userToken
       );
 
+      // Enrich with cached user profiles (fetch all in parallel)
+      const enrichedUsers = await Promise.all(
+        data.items.map(async (u) => {
+          const cached = await getCachedUserProfile(u.login);
+          return {
+            login: u.login,
+            avatar_url: u.avatar_url,
+            type: u.type,
+            name: cached?.name || null,
+          };
+        })
+      );
+
       return {
-        users: data.items.map((u) => ({
-          login: u.login,
-          avatar_url: u.avatar_url,
-          type: u.type,
-        })),
+        users: enrichedUsers,
         total_count: data.total_count,
       };
     }),

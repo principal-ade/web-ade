@@ -1,95 +1,95 @@
 /**
- * useFollows - Hook for managing followed users and repositories
+ * useWatches - Hook for managing watched users and repositories
  *
- * Provides state and mutations for following/unfollowing GitHub users and repos.
+ * Provides state and mutations for watching/unwatching GitHub users and repos.
  * Data is persisted to S3 via tRPC endpoints.
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { trpc } from '@/lib/trpc/client';
-import type { FollowedUser, FollowedRepo } from '@/lib/feed-collections/types';
+import type { WatchedUser, WatchedRepo } from '@/lib/feed-collections/types';
 import {
-  MAX_FOLLOWED_USERS,
-  MAX_FOLLOWED_REPOS,
+  MAX_WATCHED_USERS,
+  MAX_WATCHED_REPOS,
 } from '@/lib/feed-collections/types';
 
-export interface UseFollowsResult {
-  /** List of followed users */
-  followedUsers: FollowedUser[];
-  /** List of followed repos */
-  followedRepos: FollowedRepo[];
+export interface UseWatchesResult {
+  /** List of watched users */
+  watchedUsers: WatchedUser[];
+  /** List of watched repos */
+  watchedRepos: WatchedRepo[];
   /** Whether the data is currently loading */
   isLoading: boolean;
   /** Error message if fetch failed */
   error: string | null;
 
   // Mutations
-  /** Follow a GitHub user */
-  followUser: (login: string) => Promise<void>;
-  /** Unfollow a GitHub user */
-  unfollowUser: (login: string) => Promise<void>;
-  /** Follow a repository */
-  followRepo: (owner: string, repo: string) => Promise<void>;
-  /** Unfollow a repository */
-  unfollowRepo: (owner: string, repo: string) => Promise<void>;
+  /** Watch a GitHub user */
+  watchUser: (login: string) => Promise<void>;
+  /** Unwatch a GitHub user */
+  unwatchUser: (login: string) => Promise<void>;
+  /** Watch a repository */
+  watchRepo: (owner: string, repo: string) => Promise<void>;
+  /** Unwatch a repository */
+  unwatchRepo: (owner: string, repo: string) => Promise<void>;
 
   // Helpers
-  /** Check if a user is being followed */
-  isFollowingUser: (login: string) => boolean;
-  /** Check if a repo is being followed */
-  isFollowingRepo: (owner: string, repo: string) => boolean;
-  /** Whether the user can follow more users */
-  canFollowMoreUsers: boolean;
-  /** Whether the user can follow more repos */
-  canFollowMoreRepos: boolean;
+  /** Check if a user is being watched */
+  isWatchingUser: (login: string) => boolean;
+  /** Check if a repo is being watched */
+  isWatchingRepo: (owner: string, repo: string) => boolean;
+  /** Whether the user can watch more users */
+  canWatchMoreUsers: boolean;
+  /** Whether the user can watch more repos */
+  canWatchMoreRepos: boolean;
 
-  /** Refresh the follows data */
+  /** Refresh the watches data */
   refresh: () => void;
 }
 
 /**
- * Hook for managing followed users and repositories
+ * Hook for managing watched users and repositories
  *
- * @returns Follows state, mutations, and utility functions
+ * @returns Watches state, mutations, and utility functions
  *
  * @example
  * ```tsx
- * function FollowButton({ login }: { login: string }) {
- *   const { isFollowingUser, followUser, unfollowUser, canFollowMoreUsers } = useFollows();
- *   const isFollowing = isFollowingUser(login);
+ * function WatchButton({ login }: { login: string }) {
+ *   const { isWatchingUser, watchUser, unwatchUser, canWatchMoreUsers } = useWatches();
+ *   const isWatching = isWatchingUser(login);
  *
  *   return (
  *     <button
- *       onClick={() => isFollowing ? unfollowUser(login) : followUser(login)}
- *       disabled={!isFollowing && !canFollowMoreUsers}
+ *       onClick={() => isWatching ? unwatchUser(login) : watchUser(login)}
+ *       disabled={!isWatching && !canWatchMoreUsers}
  *     >
- *       {isFollowing ? 'Unfollow' : 'Follow'}
+ *       {isWatching ? 'Unwatch' : 'Watch'}
  *     </button>
  *   );
  * }
  * ```
  */
-export function useFollows(): UseFollowsResult {
-  const [followedUsers, setFollowedUsers] = useState<FollowedUser[]>([]);
-  const [followedRepos, setFollowedRepos] = useState<FollowedRepo[]>([]);
+export function useWatches(): UseWatchesResult {
+  const [watchedUsers, setWatchedUsers] = useState<WatchedUser[]>([]);
+  const [watchedRepos, setWatchedRepos] = useState<WatchedRepo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const fetchFollows = useCallback(async () => {
+  const fetchWatches = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const result = await trpc.feed.getFollows.query();
-      setFollowedUsers(result.followedUsers);
-      setFollowedRepos(result.followedRepos);
+      const result = await trpc.feed.getWatches.query();
+      setWatchedUsers(result.watchedUsers);
+      setWatchedRepos(result.watchedRepos);
     } catch (err) {
-      console.error('[useFollows] Failed to fetch follows:', err);
+      console.error('[useWatches] Failed to fetch watches:', err);
 
       // Reset to empty on error
-      setFollowedUsers([]);
-      setFollowedRepos([]);
+      setWatchedUsers([]);
+      setWatchedRepos([]);
 
       // Only set error for non-auth errors
       if (err instanceof Error && !err.message.includes('UNAUTHORIZED')) {
@@ -101,67 +101,67 @@ export function useFollows(): UseFollowsResult {
   }, []);
 
   useEffect(() => {
-    fetchFollows();
-  }, [fetchFollows, refreshKey]);
+    fetchWatches();
+  }, [fetchWatches, refreshKey]);
 
   // Mutations
-  const followUser = useCallback(async (login: string) => {
+  const watchUser = useCallback(async (login: string) => {
     try {
-      const result = await trpc.feed.followUser.mutate({ login });
-      setFollowedUsers(result.followedUsers);
+      const result = await trpc.feed.watchUser.mutate({ login });
+      setWatchedUsers(result.watchedUsers);
     } catch (err) {
-      console.error('[useFollows] Failed to follow user:', err);
+      console.error('[useWatches] Failed to watch user:', err);
       throw err;
     }
   }, []);
 
-  const unfollowUser = useCallback(async (login: string) => {
+  const unwatchUser = useCallback(async (login: string) => {
     try {
-      const result = await trpc.feed.unfollowUser.mutate({ login });
-      setFollowedUsers(result.followedUsers);
+      const result = await trpc.feed.unwatchUser.mutate({ login });
+      setWatchedUsers(result.watchedUsers);
     } catch (err) {
-      console.error('[useFollows] Failed to unfollow user:', err);
+      console.error('[useWatches] Failed to unwatch user:', err);
       throw err;
     }
   }, []);
 
-  const followRepo = useCallback(async (owner: string, repo: string) => {
+  const watchRepo = useCallback(async (owner: string, repo: string) => {
     try {
-      const result = await trpc.feed.followRepo.mutate({ owner, repo });
-      setFollowedRepos(result.followedRepos);
+      const result = await trpc.feed.watchRepo.mutate({ owner, repo });
+      setWatchedRepos(result.watchedRepos);
     } catch (err) {
-      console.error('[useFollows] Failed to follow repo:', err);
+      console.error('[useWatches] Failed to watch repo:', err);
       throw err;
     }
   }, []);
 
-  const unfollowRepo = useCallback(async (owner: string, repo: string) => {
+  const unwatchRepo = useCallback(async (owner: string, repo: string) => {
     try {
-      const result = await trpc.feed.unfollowRepo.mutate({ owner, repo });
-      setFollowedRepos(result.followedRepos);
+      const result = await trpc.feed.unwatchRepo.mutate({ owner, repo });
+      setWatchedRepos(result.watchedRepos);
     } catch (err) {
-      console.error('[useFollows] Failed to unfollow repo:', err);
+      console.error('[useWatches] Failed to unwatch repo:', err);
       throw err;
     }
   }, []);
 
   // Helpers
-  const isFollowingUser = useCallback(
+  const isWatchingUser = useCallback(
     (login: string) =>
-      followedUsers.some(
+      watchedUsers.some(
         (u) => u.login.toLowerCase() === login.toLowerCase()
       ),
-    [followedUsers]
+    [watchedUsers]
   );
 
-  const isFollowingRepo = useCallback(
+  const isWatchingRepo = useCallback(
     (owner: string, repo: string) =>
-      followedRepos.some(
+      watchedRepos.some(
         (r) =>
           r.owner.toLowerCase() === owner.toLowerCase() &&
           r.repo.toLowerCase() === repo.toLowerCase()
       ),
-    [followedRepos]
+    [watchedRepos]
   );
 
   const refresh = useCallback(() => {
@@ -169,18 +169,18 @@ export function useFollows(): UseFollowsResult {
   }, []);
 
   return {
-    followedUsers,
-    followedRepos,
+    watchedUsers,
+    watchedRepos,
     isLoading,
     error,
-    followUser,
-    unfollowUser,
-    followRepo,
-    unfollowRepo,
-    isFollowingUser,
-    isFollowingRepo,
-    canFollowMoreUsers: followedUsers.length < MAX_FOLLOWED_USERS,
-    canFollowMoreRepos: followedRepos.length < MAX_FOLLOWED_REPOS,
+    watchUser,
+    unwatchUser,
+    watchRepo,
+    unwatchRepo,
+    isWatchingUser,
+    isWatchingRepo,
+    canWatchMoreUsers: watchedUsers.length < MAX_WATCHED_USERS,
+    canWatchMoreRepos: watchedRepos.length < MAX_WATCHED_REPOS,
     refresh,
   };
 }

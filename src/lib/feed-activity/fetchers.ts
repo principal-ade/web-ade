@@ -5,7 +5,7 @@
  * Uses GitHub's GraphQL API for user activity and REST API for repo activity.
  */
 
-import type { FollowedUser, FollowedRepo } from '@/lib/feed-collections/types';
+import type { WatchedUser, WatchedRepo } from '@/lib/feed-collections/types';
 import type { FeedActivityEvent } from './types';
 
 // GraphQL query for a user's recent activity
@@ -346,7 +346,7 @@ async function fetchRepoActivity(
  * Fetch activity for all followed users in parallel
  */
 export async function fetchFollowedUsersActivity(
-  users: FollowedUser[],
+  users: WatchedUser[],
   token: string
 ): Promise<FeedActivityEvent[]> {
   if (users.length === 0) return [];
@@ -362,7 +362,7 @@ export async function fetchFollowedUsersActivity(
  * Fetch activity for all followed repos in parallel
  */
 export async function fetchFollowedReposActivity(
-  repos: FollowedRepo[],
+  repos: WatchedRepo[],
   token: string
 ): Promise<FeedActivityEvent[]> {
   if (repos.length === 0) return [];
