@@ -22,6 +22,7 @@ import { CommitModal } from './CommitModal';
 import { LayoutSidebar } from './LayoutSidebar';
 import { layoutConfigs, LayoutConfig } from './LayoutConfigDropdown';
 import { AIChatPanel } from './AIChatPanel';
+import { RepositoryActivityFeedPanel } from '@/panels/RepositoryActivityFeedPanel';
 import { PendingChangesProvider, usePendingChanges } from '@/contexts/PendingChangesContext';
 import { useVFS } from '@/contexts/VFSContext';
 import '@principal-ade/industry-themed-ai-sdk-panel/styles.css';
@@ -1854,6 +1855,25 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <FileCityPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'repo-activity',
+      label: 'Activity',
+      icon: <Activity size={16} />,
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          {githubRepo && githubRepo.includes('/') ? (
+            <RepositoryActivityFeedPanel
+              owner={githubRepo.split('/')[0]!}
+              repo={githubRepo.split('/')[1]!}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full" style={{ color: theme.colors.textMuted }}>
+              No repository selected
+            </div>
+          )}
         </div>
       ),
     },

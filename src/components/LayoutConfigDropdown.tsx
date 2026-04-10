@@ -47,6 +47,20 @@ export const layoutConfigs: LayoutConfig[] = [
     singlePanelMode: true,
   },
   {
+    id: 'activity',
+    name: 'Activity',
+    layout: {
+      left: 'packages',
+      middle: 'repo-activity',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: false,
+      right: false,
+    },
+    hidden: false,
+  },
+  {
     id: 'stories',
     name: 'Stories',
     layout: {
