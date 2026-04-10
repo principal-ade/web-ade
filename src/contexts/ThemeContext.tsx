@@ -2,39 +2,19 @@
 
 import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useMemo } from 'react';
 import {
-  terminalTheme,
-  regalTheme,
-  matrixTheme,
-  matrixMinimalTheme,
-  slateTheme,
   slateNeonTheme,
-  slateGoldTheme,
-  enterpriseTheme,
-  neuralPulseTheme,
-  humanCentricTheme,
-  landingPageTheme,
-  landingPageLightTheme,
+  iceTangerineDarkTheme,
   overrideColors,
   type Theme,
 } from '@principal-ade/industry-theme';
 
 export const availableThemes = [
-  { name: 'Slate Gold', theme: slateGoldTheme },
-  { name: 'Slate Neon', theme: slateNeonTheme },
-  { name: 'Landing Page', theme: landingPageTheme },
-  { name: 'Landing Page Light', theme: landingPageLightTheme },
-  { name: 'Terminal', theme: terminalTheme },
-  { name: 'Regal', theme: regalTheme },
-  { name: 'Matrix', theme: matrixTheme },
-  { name: 'Matrix Minimal', theme: matrixMinimalTheme },
-  { name: 'Slate', theme: slateTheme },
-  { name: 'Enterprise', theme: enterpriseTheme },
-  { name: 'Neural Pulse', theme: neuralPulseTheme },
-  { name: 'Human-Centric', theme: humanCentricTheme },
+  { name: 'Neon', theme: slateNeonTheme },
+  { name: 'Dark', theme: iceTangerineDarkTheme },
 ] as const;
 
-// Themes to skip when cycling (light themes that might surprise users)
-const cycleSkipThemes = new Set(['Landing Page Light']);
+// Themes to skip when cycling
+const cycleSkipThemes = new Set<string>();
 
 export type ThemeName = typeof availableThemes[number]['name'];
 
