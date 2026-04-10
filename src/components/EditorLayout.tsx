@@ -1868,6 +1868,7 @@ function EditorLayoutContent({
             <RepositoryActivityFeedPanel
               owner={githubRepo.split('/')[0]!}
               repo={githubRepo.split('/')[1]!}
+              events={events}
             />
           ) : (
             <div className="flex items-center justify-center h-full" style={{ color: theme.colors.textMuted }}>

@@ -8,9 +8,10 @@
  * since it only tracks one repository.
  */
 
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Calendar, RefreshCw } from 'lucide-react';
+import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { useGitHubActivityFeed, type RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { RepoActivityCard } from './RepoActivityCard';
@@ -128,18 +129,23 @@ export interface RepositoryActivityFeedPanelProps {
   owner: string;
   repo: string;
   className?: string;
+  events?: PanelEventEmitter;
 }
 
 export const RepositoryActivityFeedPanel: React.FC<RepositoryActivityFeedPanelProps> = ({
   owner,
   repo,
   className,
+  events,
 }) => {
   const { theme } = useTheme();
   const router = useRouter();
 
   // Track expanded state for cards
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+
+  // Track selected package for filtering
+  const [selectedPackagePath, setSelectedPackagePath] = useState<string | null>(null);
 
   // Create a single-repo array for the activity feed hook
   const feedRepos = useMemo(() => [{
@@ -150,6 +156,119 @@ export const RepositoryActivityFeedPanel: React.FC<RepositoryActivityFeedPanelPr
 
   // Fetch activity for this specific repo
   const { repoSummaries, loading, error, refresh } = useGitHubActivityFeed(feedRepos, 50); // Fetch more commits for a single repo
+
+  // Listen for package selection events
+  useEffect(() => {
+    if (!events) return;
+
+    const unsubscribe = events.on('package:select', (event) => {
+      const payload = event.payload as { packagePath?: string };
+      setSelectedPackagePath(payload?.packagePath ?? null);
+    });
+
+    return unsubscribe;
+  }, [events]);
+
+  // Track commit file data for package filtering
+  const [commitFilesData, setCommitFilesData] = useState<Map<string, string[]>>(new Map());
+  const [fetchingCommitFiles, setFetchingCommitFiles] = useState(false);
+  const fetchedShasRef = useRef<Set<string>>(new Set());
+
+  // Fetch file lists for commits when package filter is applied
+  useEffect(() => {
+    if (!selectedPackagePath || repoSummaries.length === 0) return;
+
+    const fetchCommitFiles = async () => {
+      // Find commits we haven't fetched yet
+      const shasToFetch = repoSummaries
+        .flatMap(s => s.commits)
+        .map(c => c.sha)
+        .filter(sha => !fetchedShasRef.current.has(sha))
+        .slice(0, 20); // Limit to 20 commits to avoid rate limits
+
+      if (shasToFetch.length === 0) {
+        return; // Nothing to fetch
+      }
+
+      setFetchingCommitFiles(true);
+
+      try {
+        // Mark these as being fetched
+        shasToFetch.forEach(sha => fetchedShasRef.current.add(sha));
+
+        const promises = shasToFetch.map(async (sha) => {
+          try {
+            const response = await fetch(
+              `/api/github/repo/${owner}/${repo}/commits/${sha}`
+            );
+            if (!response.ok) return null;
+
+            const data = await response.json();
+            const files = (data.files || []).map((f: { filename: string }) => f.filename);
+            return { sha, files };
+          } catch {
+            return null;
+          }
+        });
+
+        const results = await Promise.all(promises);
+
+        // Update state with new data
+        setCommitFilesData((prevData) => {
+          const newFilesData = new Map(prevData);
+          results.forEach((result) => {
+            if (result) {
+              newFilesData.set(result.sha, result.files);
+            }
+          });
+          return newFilesData;
+        });
+      } catch (error) {
+        console.error('[RepositoryActivityFeedPanel] Error fetching commit files:', error);
+      } finally {
+        setFetchingCommitFiles(false);
+      }
+    };
+
+    fetchCommitFiles();
+  }, [selectedPackagePath, owner, repo, repoSummaries]);
+
+  // Filter commits by selected package
+  const filteredSummaries = useMemo(() => {
+    if (!selectedPackagePath) {
+      return repoSummaries;
+    }
+
+    // Normalize package path (remove leading/trailing slashes)
+    const normalizedPackagePath = selectedPackagePath.replace(/^\/+|\/+$/g, '');
+
+    // Filter summaries to only include commits that touched files in the selected package
+    return repoSummaries
+      .map((summary) => {
+        const filteredCommits = summary.commits.filter((commit) => {
+          // If we don't have file data yet, include the commit (will be filtered once data loads)
+          const files = commitFilesData.get(commit.sha);
+          if (!files) return true;
+
+          // Check if any changed file is within the selected package path
+          return files.some(file => {
+            const normalizedFile = file.replace(/^\/+/, '');
+            return normalizedFile.startsWith(normalizedPackagePath + '/') ||
+                   normalizedFile === normalizedPackagePath ||
+                   normalizedFile.startsWith(normalizedPackagePath) && normalizedFile[normalizedPackagePath.length] === '/';
+          });
+        });
+
+        if (filteredCommits.length === 0) return null;
+
+        return {
+          ...summary,
+          commits: filteredCommits,
+          commitCount: filteredCommits.length,
+        };
+      })
+      .filter((s): s is RepoActivitySummary => s !== null);
+  }, [repoSummaries, selectedPackagePath, commitFilesData]);
 
   // Poll for updates every 60 seconds when tab is visible
   useEffect(() => {
@@ -203,8 +322,8 @@ export const RepositoryActivityFeedPanel: React.FC<RepositoryActivityFeedPanelPr
 
   // Group commits by hour
   const hourGroups = useMemo(() => {
-    return groupSummariesByHour(repoSummaries);
-  }, [repoSummaries]);
+    return groupSummariesByHour(filteredSummaries);
+  }, [filteredSummaries]);
 
   // Loading state
   if (loading && repoSummaries.length === 0) {
@@ -270,8 +389,28 @@ export const RepositoryActivityFeedPanel: React.FC<RepositoryActivityFeedPanelPr
       >
         <Calendar size={48} style={{ color: theme.colors.textMuted, marginBottom: spacing.md }} />
         <p style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[3] }}>
-          No activity in the last 24 hours
+          {selectedPackagePath
+            ? `No commits found for ${selectedPackagePath.split('/').pop() || selectedPackagePath}`
+            : 'No activity in the last 24 hours'}
         </p>
+        {selectedPackagePath && (
+          <button
+            onClick={() => setSelectedPackagePath(null)}
+            style={{
+              marginTop: spacing.md,
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              background: theme.colors.primary,
+              color: theme.colors.background,
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[2],
+            }}
+          >
+            Clear filter
+          </button>
+        )}
         <button
           onClick={refresh}
           style={{
@@ -350,6 +489,50 @@ export const RepositoryActivityFeedPanel: React.FC<RepositoryActivityFeedPanelPr
         </button>
       </div>
 
+      {/* Package filter chip */}
+      {selectedPackagePath && (
+        <div
+          style={{
+            padding: `${spacing.sm}px ${spacing.lg}px`,
+            borderBottom: `1px solid ${theme.colors.border}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing.sm,
+          }}
+        >
+          <span style={{ fontSize: theme.fontSizes[1], color: theme.colors.textMuted }}>
+            Filtered by package:
+          </span>
+          <button
+            onClick={() => setSelectedPackagePath(null)}
+            style={{
+              padding: `${spacing.xs}px ${spacing.sm}px`,
+              background: theme.colors.primary + '20',
+              color: theme.colors.primary,
+              border: `1px solid ${theme.colors.primary}`,
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: theme.fontSizes[2],
+              fontFamily: theme.fonts.body,
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.xs,
+            }}
+          >
+            <span>{selectedPackagePath.split('/').pop() || selectedPackagePath}</span>
+            <span>&times;</span>
+          </button>
+          {fetchingCommitFiles && (
+            <>
+              <LoadingSpinner size={14} color={theme.colors.primary} />
+              <span style={{ fontSize: theme.fontSizes[1], color: theme.colors.textMuted }}>
+                Analyzing commits...
+              </span>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Activity cards grouped by hour */}
       <div style={{ padding: spacing.lg }}>
         {hourGroups.map((group) => {
@@ -412,6 +595,21 @@ export const RepositoryActivityFeedPanel: React.FC<RepositoryActivityFeedPanelPr
                       }}
                       onOpen={() => {
                         router.push(`/${summary.owner}/${summary.repo}`);
+                      }}
+                      onCommitSelect={(commit) => {
+                        // Emit event for commit selection
+                        events?.emit({
+                          type: 'git-panels.commit-detail:selected',
+                          source: 'repository-activity-feed',
+                          timestamp: Date.now(),
+                          payload: {
+                            hash: commit.sha,
+                            repository: summary.fullName,
+                            message: commit.message,
+                            author: commit.author,
+                            date: commit.date,
+                          },
+                        });
                       }}
                     />
                   );

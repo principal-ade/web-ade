@@ -36,6 +36,7 @@ interface RepoActivityCardProps {
   onOpen: () => void;
   dimmed?: boolean;
   onAuthorClick?: (username: string) => void;
+  onCommitSelect?: (commit: { sha: string; message: string; author: string; date: string }) => void;
 }
 
 /**
@@ -188,6 +189,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
   onOpen,
   dimmed = false,
   onAuthorClick,
+  onCommitSelect,
 }) => {
   const { theme } = useTheme();
   const hasMoreCommits = summary.commits.length > 1;
@@ -775,6 +777,12 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                           e.stopPropagation();
                           setSelectedCommitIndex(globalIndex);
                           if (commit.authorLogin) onAuthorClick?.(commit.authorLogin);
+                          onCommitSelect?.({
+                            sha: commit.sha,
+                            message: commit.message,
+                            author: commit.author,
+                            date: commit.date,
+                          });
                         }}
                         style={{
                           display: 'flex',
@@ -1116,6 +1124,12 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedCommitIndex(index);
+                    onCommitSelect?.({
+                      sha: commit.sha,
+                      message: commit.message,
+                      author: commit.author,
+                      date: commit.date,
+                    });
                   }}
                   style={{
                     display: 'flex',

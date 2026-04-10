@@ -1,0 +1,46 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/repository/repository.otel.canvas",
+  "spanPattern": "repo.activity.feed.load",
+  "name": "Activity Feed",
+  "description": "User views repository activity feed, filters by package, and selects commits",
+  "scenarios": [
+    {
+      "id": "activity-feed-load-success",
+      "description": "Activity feed loads successfully and displays commits",
+      "priority": 1,
+      "template": {
+        "summary": "[Activity] Feed loaded with {{commitCount}} commits",
+        "events": {
+          "repo.activity.feed.load": "Loading activity feed for {{owner}}/{{repo}}",
+          "repo.activity.feed.success": "Activity feed loaded: {{commitCount}} commits",
+          "repo.panel.activity-feed.render": "Rendering activity feed with {{commitCount}} commits"
+        }
+      }
+    },
+    {
+      "id": "activity-filter-by-package",
+      "description": "User selects a package to filter activity feed commits",
+      "priority": 2,
+      "template": {
+        "summary": "[Activity] Filtered by package {{packagePath}}",
+        "events": {
+          "package:select": "Package selected: {{packagePath}}",
+          "repo.activity.filter.package": "Filtering activity by package {{packagePath}}: {{filteredCommitCount}} commits match",
+          "repo.panel.activity-feed.render": "Rendering activity feed with {{commitCount}} commits, package filter: {{packageFilter}}"
+        }
+      }
+    },
+    {
+      "id": "commit-select-from-feed",
+      "description": "User selects a commit from the activity feed",
+      "priority": 3,
+      "template": {
+        "summary": "[Activity] Commit {{hash}} selected",
+        "events": {
+          "git-panels.commit-detail:selected": "Commit selected: {{hash}} by {{author}} on {{date}} in {{repository}} - {{message}}"
+        }
+      }
+    }
+  ]
+}

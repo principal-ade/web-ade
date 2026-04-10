@@ -1412,6 +1412,217 @@
       "otel": {
         "status": "draft"
       }
+    },
+    {
+      "id": "activity-feed-load",
+      "type": "otel-event",
+      "x": 2100,
+      "y": 0,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "pv": {
+        "status": "implemented",
+        "references": [
+          "src/panels/RepositoryActivityFeedPanel.tsx"
+        ]
+      },
+      "label": "Load Activity Feed",
+      "event": {
+        "name": "repo.activity.feed.load",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "activity-feed-success",
+      "type": "otel-event",
+      "x": 2100,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "pv": {
+        "status": "implemented",
+        "references": [
+          "src/panels/RepositoryActivityFeedPanel.tsx"
+        ]
+      },
+      "label": "Activity Feed Ready",
+      "event": {
+        "name": "repo.activity.feed.success",
+        "attributes": {
+          "commitCount": {
+            "type": "number",
+            "description": "Number of commits in feed",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "package-select-for-filter",
+      "type": "otel-event",
+      "x": 2350,
+      "y": 0,
+      "width": 200,
+      "height": 90,
+      "color": "#0891b2",
+      "pv": {
+        "status": "implemented",
+        "references": [
+          "node_modules/@industry-theme/repository-composition-panels",
+          "node_modules/@industry-theme/file-city-panel"
+        ]
+      },
+      "label": "Select Package",
+      "event": {
+        "name": "package:select",
+        "attributes": {
+          "packagePath": {
+            "type": "string",
+            "description": "Package path to filter by",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "activity-filter-by-package",
+      "type": "otel-event",
+      "x": 2350,
+      "y": 150,
+      "width": 200,
+      "height": 90,
+      "color": "#ca8a04",
+      "pv": {
+        "status": "implemented",
+        "references": [
+          "src/panels/RepositoryActivityFeedPanel.tsx"
+        ]
+      },
+      "label": "Filter Activity by Package",
+      "event": {
+        "name": "repo.activity.filter.package",
+        "attributes": {
+          "packagePath": {
+            "type": "string",
+            "description": "Package path filter",
+            "required": true
+          },
+          "filteredCommitCount": {
+            "type": "number",
+            "description": "Commits after filtering",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "commit-select-from-feed",
+      "type": "otel-event",
+      "x": 2100,
+      "y": 300,
+      "width": 200,
+      "height": 90,
+      "color": "#0891b2",
+      "pv": {
+        "status": "implemented",
+        "references": [
+          "src/panels/RepositoryActivityFeedPanel.tsx",
+          "src/panels/RepoActivityCard.tsx"
+        ]
+      },
+      "label": "Select Commit",
+      "event": {
+        "name": "git-panels.commit-detail:selected",
+        "attributes": {
+          "hash": {
+            "type": "string",
+            "description": "Commit SHA",
+            "required": true
+          },
+          "repository": {
+            "type": "string",
+            "description": "Repository full name",
+            "required": true
+          },
+          "message": {
+            "type": "string",
+            "description": "Commit message",
+            "required": false
+          },
+          "author": {
+            "type": "string",
+            "description": "Commit author",
+            "required": false
+          },
+          "date": {
+            "type": "string",
+            "description": "Commit date",
+            "required": false
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
+    },
+    {
+      "id": "panel-activity-feed",
+      "type": "otel-event",
+      "x": 2100,
+      "y": 450,
+      "width": 200,
+      "height": 90,
+      "color": "#059669",
+      "pv": {
+        "status": "implemented",
+        "references": [
+          "src/panels/RepositoryActivityFeedPanel.tsx"
+        ]
+      },
+      "label": "Activity Feed Panel",
+      "event": {
+        "name": "repo.panel.activity-feed.render",
+        "attributes": {
+          "commitCount": {
+            "type": "number",
+            "description": "Commits displayed",
+            "required": true
+          },
+          "packageFilter": {
+            "type": "string",
+            "description": "Active package filter",
+            "required": false
+          }
+        }
+      },
+      "otel": {
+        "status": "draft"
+      }
     }
   ],
   "edges": [
@@ -1774,6 +1985,50 @@
       "fromSide": "right",
       "toSide": "left",
       "edgeType": "flow"
+    },
+    {
+      "id": "activity-1",
+      "fromNode": "activity-feed-load",
+      "fromSide": "bottom",
+      "toNode": "activity-feed-success",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "activity-2",
+      "fromNode": "activity-feed-success",
+      "fromSide": "bottom",
+      "toNode": "panel-activity-feed",
+      "toSide": "top",
+      "label": "renders",
+      "edgeType": "data-flow"
+    },
+    {
+      "id": "activity-3",
+      "fromNode": "package-select-for-filter",
+      "fromSide": "bottom",
+      "toNode": "activity-filter-by-package",
+      "toSide": "top",
+      "label": "triggers",
+      "edgeType": "user-action"
+    },
+    {
+      "id": "activity-4",
+      "fromNode": "activity-filter-by-package",
+      "fromSide": "left",
+      "toNode": "panel-activity-feed",
+      "toSide": "right",
+      "label": "updates",
+      "edgeType": "data-flow"
+    },
+    {
+      "id": "activity-5",
+      "fromNode": "panel-activity-feed",
+      "fromSide": "top",
+      "toNode": "commit-select-from-feed",
+      "toSide": "bottom",
+      "label": "user selects",
+      "edgeType": "user-action"
     }
   ]
 }
