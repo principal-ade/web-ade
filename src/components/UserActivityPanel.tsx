@@ -7,7 +7,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { PanelContextValue, PanelActions, PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { usePanelFocusListener } from '@principal-ade/panel-layouts';
 import {
-  Loader2,
   RefreshCw,
   Calendar,
   MessageSquare,
@@ -15,6 +14,7 @@ import {
 import { DocumentView } from 'themed-markdown';
 import type { ActivityEvent, UserActivityResponse, ReactionContent, ReactionCounts } from '@/app/api/github/user/[username]/activity/route';
 import { WeeklyTimelineHeader } from './WeeklyTimelineHeader';
+import { LoadingSpinner } from './LoadingSpinner';
 
 const REACTION_EMOJI: Record<ReactionContent, string> = {
   THUMBS_UP: '👍',
@@ -722,8 +722,8 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
         style={{ color: theme.colors.textMuted }}
       >
         <div className="text-center">
-          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-          <p style={{ fontSize: `${theme.fontSizes[3]}px`, fontFamily: theme.fonts.body }}>
+          <LoadingSpinner size={24} />
+          <p style={{ fontSize: `${theme.fontSizes[3]}px`, fontFamily: theme.fonts.body }} className="mt-2">
             Loading activity...
           </p>
         </div>
@@ -1176,7 +1176,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                               className="flex items-center gap-2 p-3"
                               style={{ color: theme.colors.textMuted }}
                             >
-                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <LoadingSpinner size={12} />
                               <span style={{ fontSize: `${theme.fontSizes[2]}px`, fontFamily: theme.fonts.body }}>
                                 Loading PR...
                               </span>
@@ -1219,7 +1219,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                               className="flex items-center gap-2 py-1"
                               style={{ color: theme.colors.textMuted }}
                             >
-                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <LoadingSpinner size={12} />
                               <span style={{ fontSize: `${theme.fontSizes[2]}px`, fontFamily: theme.fonts.body }}>
                                 Loading commits...
                               </span>
@@ -1305,7 +1305,7 @@ export function UserActivityPanel({ context: _context, actions: _actions, events
                               className="flex items-center gap-2 p-3"
                               style={{ color: theme.colors.textMuted }}
                             >
-                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <LoadingSpinner size={12} />
                               <span style={{ fontSize: `${theme.fontSizes[2]}px`, fontFamily: theme.fonts.body }}>
                                 Loading issue...
                               </span>

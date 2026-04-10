@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { X, Github, Globe, Check, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
+import { X, Github, Globe, Check, AlertCircle, ExternalLink } from 'lucide-react';
+import { LoadingSpinner } from '../LoadingSpinner';
 
 interface GitHubSyncModalProps {
   isOpen: boolean;
@@ -366,7 +367,7 @@ export function GitHubSyncModal({
               >
                 {syncState === 'syncing' ? (
                   <>
-                    <Loader2 size={16} className="animate-spin" />
+                    <LoadingSpinner size={16} />
                     Enabling...
                   </>
                 ) : isSynced ? (

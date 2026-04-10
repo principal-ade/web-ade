@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Github, Check, ExternalLink, RefreshCw, Loader2, Zap } from 'lucide-react';
+import { Github, Check, ExternalLink, RefreshCw, Zap } from 'lucide-react';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface GitHubAppStatusProps {
   repoId: string;
@@ -122,7 +123,7 @@ export function GitHubAppStatus({
             color: theme.colors.textSecondary,
           }}
         >
-          <Loader2 size={12} className="animate-spin" />
+          <LoadingSpinner size={12} />
         </span>
       );
     }
@@ -237,7 +238,7 @@ export function GitHubAppStatus({
             fontSize: `${theme.fontSizes[1]}px`,
           }}
         >
-          <Loader2 size={14} className="animate-spin" />
+          <LoadingSpinner size={14} />
           Checking status...
         </div>
       ) : error ? (

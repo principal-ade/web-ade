@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { PanelContextValue, PanelActions, PanelEventEmitter } from '@principal-ade/panel-framework-core';
-import { Users, Loader2, ExternalLink } from 'lucide-react';
+import { Users, ExternalLink } from 'lucide-react';
+import { LoadingSpinner } from './LoadingSpinner';
 
 export interface FollowingUsersPanelProps {
   context: PanelContextValue;
@@ -235,7 +236,7 @@ export function FollowingUsersPanel({ context: _context, actions: _actions, even
         className="h-full w-full flex items-center justify-center p-4"
         style={{ color: theme.colors.textMuted }}
       >
-        <Loader2 className="h-5 w-5 animate-spin" />
+        <LoadingSpinner size={20} />
       </div>
     );
   }

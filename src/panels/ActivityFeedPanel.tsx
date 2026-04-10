@@ -13,11 +13,12 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { FolderGit2, Search, X, Loader2, ArrowLeft, Globe, Building2, MapPin } from 'lucide-react';
+import { FolderGit2, Search, X, ArrowLeft, Globe, Building2, MapPin } from 'lucide-react';
 import { GitHubSearchingAnimation } from '@/components/home/GitHubSearchingAnimation';
 import { Logo } from '@principal-ai/logo-component';
 import { useGitHubActivityFeed, type RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
 import { usePersonalizedFeed } from '@/hooks/usePersonalizedFeed';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { RepoActivityCard } from './RepoActivityCard';
 import { HourlyActivityHeatmap, type CommitTimestamp } from '@/components/HourlyActivityHeatmap';
 import { MobileActivityFeed } from '@/components/home/MobileActivityFeed';
@@ -653,7 +654,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                 {selectedRepo.full_name}
               </span>
               {selectedRepoLoading && (
-                <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                <LoadingSpinner size={16} />
               )}
             </div>
           )}
@@ -919,7 +920,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                       padding: spacing.lg,
                     }}
                   >
-                    <Loader2 size={24} style={{ animation: 'spin 1s linear infinite' }} color={theme.colors.primary} />
+                    <LoadingSpinner size={24} />
                   </div>
                 ) : authorProfile ? (
                   <div

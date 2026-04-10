@@ -10,10 +10,11 @@
 
 import React, { useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { FolderGit2, Loader2 } from 'lucide-react';
+import { FolderGit2 } from 'lucide-react';
 import type { RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
 import { MobileRepoCard } from './MobileRepoCard';
 import { groupSummariesByHour } from '@/utils/activityGrouping';
+import { LoadingSpinner } from '../LoadingSpinner';
 
 interface MobileActivityFeedProps {
   summaries: RepoActivitySummary[];
@@ -49,11 +50,7 @@ export const MobileActivityFeed: React.FC<MobileActivityFeedProps> = ({
           gap: spacing.md,
         }}
       >
-        <Loader2
-          size={32}
-          style={{ animation: 'spin 1s linear infinite' }}
-        />
-        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+        <LoadingSpinner size={32} />
         <span style={{ fontSize: theme.fontSizes[1] }}>Loading activity...</span>
       </div>
     );

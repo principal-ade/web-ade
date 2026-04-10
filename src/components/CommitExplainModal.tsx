@@ -2,9 +2,10 @@
 
 import { useState, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { X, Loader2, ArrowLeft, Sparkles, Code, Users } from 'lucide-react';
+import { X, ArrowLeft, Sparkles, Code, Users } from 'lucide-react';
 import { IndustryMarkdownSlide } from 'themed-markdown';
 import type { ActivityCommit } from '@/hooks/useGitHubActivityFeed';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface CommitExplainModalProps {
   isOpen: boolean;
@@ -215,7 +216,7 @@ export function CommitExplainModal({
 
           {state === 'loading' && (
             <div className="flex flex-col items-center gap-4 py-8">
-              <Loader2 className="w-8 h-8 animate-spin" style={{ color: theme.colors.primary }} />
+              <LoadingSpinner size={32} />
               <p className="text-sm" style={{ color: theme.colors.textMuted }}>
                 Generating {audienceLevel === 'maintainer' ? 'technical' : 'friendly'} explanation...
               </p>

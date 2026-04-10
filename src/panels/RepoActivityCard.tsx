@@ -17,10 +17,10 @@ import {
   Play,
   Square,
   Sparkles,
-  Loader2,
 } from 'lucide-react';
 import type { RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
 import { trpc } from '@/lib/trpc/client';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import {
   ArchitectureMapHighlightLayers,
   MultiVersionCityBuilder,
@@ -1213,7 +1213,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 fontSize: theme.fontSizes[1],
               }}
             >
-              <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+              <LoadingSpinner size={14} />
               <span>Generating explanation...</span>
             </div>
           )}

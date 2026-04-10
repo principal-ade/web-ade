@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { X, GitCommit, Check, Loader2, AlertCircle } from 'lucide-react';
+import { X, GitCommit, Check, AlertCircle } from 'lucide-react';
 import type { PendingFileChange } from '@/contexts/PendingChangesContext';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface CommitModalProps {
   isOpen: boolean;
@@ -271,7 +272,7 @@ export function CommitModal({
             >
               {isCommitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <LoadingSpinner size={16} />
                   Committing...
                 </>
               ) : (

@@ -11,7 +11,8 @@ import { usePresenceData, type RepositorySession } from '@/hooks/usePresenceData
 import { groupSessionsByDevice, getDeviceTypeLabel, getRelativeTime } from '@/lib/sessions/sessionUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Monitor, Globe, RefreshCw, Loader2 } from 'lucide-react';
+import { Monitor, Globe, RefreshCw } from 'lucide-react';
+import { LoadingSpinner } from './LoadingSpinner';
 
 export function SessionsPanel() {
   const { theme } = useTheme();
@@ -40,8 +41,8 @@ export function SessionsPanel() {
         style={{ color: theme.colors.textMuted }}
       >
         <div className="text-center">
-          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-          <p className="text-sm">Loading sessions...</p>
+          <LoadingSpinner size={24} />
+          <p className="text-sm mt-2">Loading sessions...</p>
         </div>
       </div>
     );

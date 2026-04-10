@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { UserPlus, UserMinus, Loader2 } from 'lucide-react';
+import { UserPlus, UserMinus } from 'lucide-react';
+import { LoadingSpinner } from './LoadingSpinner';
 
 export interface FollowButtonProps {
   /** Type of entity to follow */
@@ -95,7 +96,7 @@ export function FollowButton({
       }}
     >
       {loading ? (
-        <Loader2 className="animate-spin" style={{ width: iconSize, height: iconSize }} />
+        <LoadingSpinner size={iconSize} />
       ) : (
         <Icon style={{ width: iconSize, height: iconSize }} />
       )}

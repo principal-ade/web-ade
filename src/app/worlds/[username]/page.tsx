@@ -19,11 +19,11 @@ import {
   Layers,
   ExternalLink,
   ArrowLeft,
-  Loader2,
   AlertCircle,
   Map,
   User,
 } from 'lucide-react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { CollectionModal } from "@/components/collections/CollectionModal";
 import { AddRepositoryModal } from "@/components/collections/AddRepositoryModal";
 import type { Collection, CollectionMembership } from '@principal-ai/alexandria-collections';
@@ -451,7 +451,7 @@ function SharedCollectionsWrapper() {
           height: '100vh'
         }}
       >
-        <Loader2 size={32} className="animate-spin" style={{ color: theme.colors.primary }} />
+        <LoadingSpinner size={32} />
       </div>
     );
   }
@@ -717,7 +717,7 @@ function SharedCollectionsLoading() {
         height: '100vh'
       }}
     >
-      <Loader2 size={32} className="animate-spin" style={{ color: theme.colors.primary }} />
+      <LoadingSpinner size={32} />
     </div>
   );
 }

@@ -1,5 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGitHubToken } from "@/lib/auth/cookies";
+import { setCachedAsync } from "@/lib/redis-cache";
+
+// User profile cache TTL (7 days)
+const USER_PROFILE_CACHE_TTL = 604800;
+
+/**
+ * Cache a user's profile data (name, avatar) for enriching search results
+ */
+async function cacheUserProfile(login: string, name: string | null, avatarUrl: string): Promise<void> {
+  const cacheKey = `github:user-profile:${login.toLowerCase()}`;
+  const cacheData = { login, name, avatar_url: avatarUrl };
+  await setCachedAsync(cacheKey, cacheData, USER_PROFILE_CACHE_TTL);
+}
 
 class GitHubApiError extends Error {
   constructor(
@@ -531,6 +544,9 @@ export async function GET(
       activity,
       contributions,
     };
+
+    // Cache user profile for enriching search results (fire and forget)
+    cacheUserProfile(contributionsUser.login, contributionsUser.name, contributionsUser.avatarUrl);
 
     const jsonResponse = NextResponse.json(response);
 
