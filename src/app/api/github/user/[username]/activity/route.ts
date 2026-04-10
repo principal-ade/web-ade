@@ -51,11 +51,9 @@ async function makeGitHubGraphQLRequest(
   return data.data;
 }
 
-const USER_ACTIVITY_QUERY = `
-  query UserActivity($login: String!, $from: DateTime!) {
-    viewer {
-      login
-    }
+// Query for contribution calendar data (long time range)
+const CONTRIBUTIONS_QUERY = `
+  query UserContributions($login: String!, $from: DateTime!) {
     user(login: $login) {
       login
       name
@@ -74,6 +72,19 @@ const USER_ACTIVITY_QUERY = `
             }
           }
         }
+      }
+    }
+  }
+`;
+
+// Query for recent activity (short time range - commits, PRs, issues)
+const ACTIVITY_QUERY = `
+  query UserActivity($login: String!, $from: DateTime!) {
+    viewer {
+      login
+    }
+    user(login: $login) {
+      contributionsCollection(from: $from) {
         commitContributionsByRepository(maxRepositories: 20) {
           repository {
             nameWithOwner
@@ -341,9 +352,10 @@ function normalizeActivity(user: GraphQLUser, fromDate: Date, viewerLogin: strin
   const events: ActivityEvent[] = [];
   const fromTime = fromDate.getTime();
 
-  // Normalize commit contributions
+  // Normalize commit contributions (filtered by GraphQL query time range)
   for (const repo of user.contributionsCollection.commitContributionsByRepository) {
     for (const contribution of repo.contributions.nodes) {
+      // Note: commits are already filtered by the GraphQL contributionsCollection(from:) parameter
       events.push({
         id: `commit-${repo.repository.nameWithOwner}-${contribution.occurredAt}`,
         type: 'commit',
@@ -432,45 +444,69 @@ function normalizeActivity(user: GraphQLUser, fromDate: Date, viewerLogin: strin
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ username: string }> }
 ) {
   try {
     const { username } = await params;
     const userToken = await getGitHubToken();
 
-    // Calculate 14 days ago to ensure we get full contribution calendar data
-    const from = new Date();
-    from.setDate(from.getDate() - 14);
-
-    const data = await makeGitHubGraphQLRequest(
-      USER_ACTIVITY_QUERY,
-      {
-        login: username,
-        from: from.toISOString(),
-      },
-      userToken
+    // Get query parameters (default: 7 days for both, max: 365)
+    const { searchParams } = new URL(request.url);
+    const contributionDays = Math.min(
+      parseInt(searchParams.get('contributionDays') || '7', 10),
+      365
+    );
+    const activityDays = Math.min(
+      parseInt(searchParams.get('activityDays') || '7', 10),
+      365
     );
 
-    const user = data.user as GraphQLUser;
-    const viewerLogin = (data.viewer?.login as string) || '';
+    // Make two separate GraphQL requests with different time ranges
+    const contributionsFrom = new Date();
+    contributionsFrom.setDate(contributionsFrom.getDate() - contributionDays);
 
-    if (!user) {
+    const activityFrom = new Date();
+    activityFrom.setDate(activityFrom.getDate() - activityDays);
+
+    // Fetch contributions and activity in parallel
+    const [contributionsData, activityData] = await Promise.all([
+      makeGitHubGraphQLRequest(
+        CONTRIBUTIONS_QUERY,
+        {
+          login: username,
+          from: contributionsFrom.toISOString(),
+        },
+        userToken
+      ),
+      makeGitHubGraphQLRequest(
+        ACTIVITY_QUERY,
+        {
+          login: username,
+          from: activityFrom.toISOString(),
+        },
+        userToken
+      ),
+    ]);
+
+    const contributionsUser = contributionsData.user as GraphQLUser;
+    const activityUser = activityData.user as GraphQLUser;
+    const viewerLogin = (activityData.viewer?.login as string) || '';
+
+    if (!contributionsUser || !activityUser) {
       return NextResponse.json(
         { error: `User '${username}' not found` },
         { status: 404 }
       );
     }
 
-    // Filter activity to last 7 days only
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const activity = normalizeActivity(user, sevenDaysAgo, viewerLogin);
+    // Normalize activity events (no date filtering needed - already filtered by GraphQL query)
+    const activity = normalizeActivity(activityUser, activityFrom, viewerLogin);
 
-    // Extract last 7 days of contributions from calendar
+    // Extract contributions from contributions query result
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
     const allDays: DailyContribution[] = [];
-    for (const week of user.contributionsCollection.contributionCalendar.weeks) {
+    for (const week of contributionsUser.contributionsCollection.contributionCalendar.weeks) {
       for (const day of week.contributionDays) {
         // Only include dates up to today (calendar includes future dates)
         if (day.date <= today) {
@@ -481,16 +517,16 @@ export async function GET(
         }
       }
     }
-    // Sort by date descending and take last 7 days
+    // Sort by date descending and take last N days
     allDays.sort((a, b) => b.date.localeCompare(a.date));
-    const contributions = allDays.slice(0, 7).reverse(); // Oldest to newest for display
+    const contributions = allDays.slice(0, contributionDays).reverse(); // Oldest to newest for display
 
     const response: UserActivityResponse = {
       user: {
-        login: user.login,
-        name: user.name,
-        avatarUrl: user.avatarUrl,
-        followersCount: user.followers?.totalCount ?? 0,
+        login: contributionsUser.login,
+        name: contributionsUser.name,
+        avatarUrl: contributionsUser.avatarUrl,
+        followersCount: contributionsUser.followers?.totalCount ?? 0,
       },
       activity,
       contributions,
