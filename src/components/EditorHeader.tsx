@@ -547,22 +547,6 @@ export function EditorHeader({
           </button>
         )} */}
 
-        {/* Feed button - only show on repo pages */}
-        {repositoryName && (
-          <Link
-            href="/"
-            className="flex items-center justify-center px-3 h-8 rounded-md transition-all hover:opacity-80 text-sm font-medium"
-            style={{
-              background: theme.colors.secondary,
-              color: theme.colors.textOnPrimary,
-              border: `1px solid ${theme.colors.border}`,
-            }}
-            title="Go to feed"
-          >
-            Feed
-          </Link>
-        )}
-
         {/* App Store Download - only on home page, mobile only, Apple devices only */}
         {!repositoryName && !ownerOnly && isAppleDevice && (
           <a

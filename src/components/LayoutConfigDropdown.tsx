@@ -34,7 +34,7 @@ export const layoutConfigs: LayoutConfig[] = [
   },
   {
     id: 'tour',
-    name: 'Tour',
+    name: 'File City',
     layout: {
       left: 'packages',
       middle: 'file-city',

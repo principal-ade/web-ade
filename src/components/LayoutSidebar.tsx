@@ -220,6 +220,27 @@ export function LayoutSidebar({
             })}
           </nav>
 
+          {/* Feed Button - only show on repo pages */}
+          {owner && (
+            <div style={{ borderTop: `1px solid ${theme.colors.border}` }}>
+              <Link
+                href="/"
+                onClick={onMobileClose}
+                className="w-full flex items-center h-10 px-4 gap-3 transition-colors"
+                style={{
+                  background: 'transparent',
+                  color: theme.colors.text,
+                  textDecoration: 'none',
+                }}
+              >
+                <Activity className="w-5 h-5 flex-shrink-0" />
+                <span style={{ fontFamily: theme.fonts.body, fontSize: theme.fontSizes[2] }}>
+                  Public Feed
+                </span>
+              </Link>
+            </div>
+          )}
+
           {/* Theme Toggle */}
           <div style={{ borderTop: `1px solid ${theme.colors.border}` }}>
             <button
@@ -406,6 +427,49 @@ export function LayoutSidebar({
           );
         })}
       </nav>
+
+      {/* Feed Button - only show on repo pages */}
+      {owner && (
+        <div
+          style={{
+            borderTop: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <Link
+            href="/"
+            className="w-full flex items-center h-10 transition-colors"
+            style={{
+              minWidth: `${SIDEBAR_EXPANDED_WIDTH}px`,
+              background: 'transparent',
+              color: theme.colors.text,
+              textDecoration: 'none',
+            }}
+            title={collapsed ? 'Go to public feed' : undefined}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = theme.colors.backgroundSecondary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <div
+              className="flex items-center justify-center flex-shrink-0"
+              style={{ width: `${ICON_CONTAINER_WIDTH}px` }}
+            >
+              <Activity className="w-5 h-5" />
+            </div>
+            <span
+              style={{
+                whiteSpace: 'nowrap',
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[2],
+              }}
+            >
+              Public Feed
+            </span>
+          </Link>
+        </div>
+      )}
 
       {/* Theme Toggle */}
       <div
