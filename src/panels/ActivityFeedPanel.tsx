@@ -20,7 +20,6 @@ import { useGitHubActivityFeed, type RepoActivitySummary } from '@/hooks/useGitH
 import { usePersonalizedFeed } from '@/hooks/usePersonalizedFeed';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { RepoActivityCard } from './RepoActivityCard';
-import { HourlyActivityHeatmap, type CommitTimestamp } from '@/components/HourlyActivityHeatmap';
 import { MobileActivityFeed } from '@/components/home/MobileActivityFeed';
 
 // Hour helpers for grouping
@@ -255,6 +254,9 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   // State for expanded cards
   const [expandedRepos, setExpandedRepos] = useState<Set<string>>(new Set());
 
+  // Store file counts per repo
+  const [repoFileStats, setRepoFileStats] = useState<Map<string, { filesChanged: number }>>(new Map());
+
   // URL param sync for shareable links
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -273,14 +275,6 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
   const [authorProfile, setAuthorProfile] = useState<GitHubUserProfile | null>(null);
   const [authorLoading, setAuthorLoading] = useState(false);
-
-  // Time filter from heatmap
-  const [timeFilter, setTimeFilter] = useState<{ start: Date; end: Date } | null>(null);
-
-  // Active hour key for heatmap highlighting (tracks scroll position)
-  const [activeHourKey, setActiveHourKey] = useState<string | null>(null);
-  const hourGroupRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const feedScrollRef = useRef<HTMLDivElement>(null);
 
   // Debounced GitHub search
   useEffect(() => {
@@ -381,46 +375,34 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     }
   }, [searchParams, addRepo]);
 
-  // Get summaries to display (either selected repo or all featured)
+  // All repos sorted by most recent commit (for left sidebar)
+  const allSummaries = useMemo(() => {
+    return [...repoSummaries].sort((a, b) => {
+      return new Date(b.latestCommitAt).getTime() - new Date(a.latestCommitAt).getTime();
+    });
+  }, [repoSummaries]);
+
+  // Get summaries to display in center column (either selected repo or all featured)
   const displaySummaries = useMemo(() => {
+    let summaries: RepoActivitySummary[];
     if (selectedRepo) {
       // Show only the selected repo
-      return repoSummaries.filter(
+      summaries = repoSummaries.filter(
         (s) => s.fullName.toLowerCase() === selectedRepo.full_name.toLowerCase()
       );
+    } else {
+      summaries = repoSummaries;
     }
-    return repoSummaries;
+
+    // Sort by most recent commit
+    return summaries.sort((a, b) => {
+      return new Date(b.latestCommitAt).getTime() - new Date(a.latestCommitAt).getTime();
+    });
   }, [repoSummaries, selectedRepo]);
 
-  // Filter repos by time (from heatmap click)
-  const timeFilteredSummaries = useMemo(() => {
-    if (!timeFilter) return displaySummaries;
-
-    return displaySummaries.filter((summary) =>
-      summary.commits.some((commit) => {
-        const commitDate = new Date(commit.date);
-        return commitDate >= timeFilter.start && commitDate < timeFilter.end;
-      })
-    );
-  }, [displaySummaries, timeFilter]);
-
-  // Group summaries by hour
+  // Group summaries by hour for the center feed
   const hourGroups = useMemo(() => {
-    return groupSummariesByHour(timeFilteredSummaries);
-  }, [timeFilteredSummaries]);
-
-  // Build heatmap commits from displayed summaries
-  const heatmapCommits = useMemo<CommitTimestamp[]>(() => {
-    const commits: CommitTimestamp[] = [];
-    for (const summary of displaySummaries) {
-      for (const commit of summary.commits) {
-        commits.push({
-          timestamp: commit.date,
-          repoId: summary.fullName,
-        });
-      }
-    }
-    return commits;
+    return groupSummariesByHour(displaySummaries);
   }, [displaySummaries]);
 
   // Toggle card expansion
@@ -446,6 +428,58 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     setSelectedAuthor(username);
     setSearchQuery(''); // Clear search when viewing author
   }, []);
+
+  // Fetch file stats for all repos
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchFileStats = async () => {
+      const statsMap = new Map<string, { filesChanged: number }>();
+
+      await Promise.all(
+        allSummaries.map(async (summary) => {
+          const allFiles = new Set<string>();
+
+          await Promise.all(
+            summary.commits.map(async (commit) => {
+              try {
+                const response = await fetch(
+                  `/api/github/repo/${summary.owner}/${summary.repo}/commits/${commit.sha}`
+                );
+
+                if (!response.ok || cancelled) return;
+
+                const data = await response.json();
+                if (data.files) {
+                  data.files.forEach((f: { filename: string }) => {
+                    allFiles.add(f.filename);
+                  });
+                }
+              } catch (err) {
+                console.warn(`Failed to fetch stats for ${commit.sha}:`, err);
+              }
+            })
+          );
+
+          if (!cancelled) {
+            statsMap.set(summary.fullName, {
+              filesChanged: allFiles.size,
+            });
+          }
+        })
+      );
+
+      if (!cancelled) {
+        setRepoFileStats(statsMap);
+      }
+    };
+
+    fetchFileStats();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [allSummaries]);
 
   // Fetch author profile when selected
   useEffect(() => {
@@ -480,76 +514,6 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     };
   }, [selectedAuthor]);
 
-  // Handle heatmap block click
-  const handleHeatmapBlockClick = useCallback((start: Date, end: Date, count: number) => {
-    if (count === 0) return;
-
-    // Toggle filter if clicking same block
-    if (timeFilter && timeFilter.start.getTime() === start.getTime()) {
-      setTimeFilter(null);
-    } else {
-      setTimeFilter({ start, end });
-    }
-  }, [timeFilter]);
-
-  // Clear time filter
-  const clearTimeFilter = () => {
-    setTimeFilter(null);
-  };
-
-  // Initialize active hour to first group when data loads
-  useEffect(() => {
-    if (hourGroups.length > 0) {
-      setActiveHourKey(hourGroups[0]!.dateKey);
-    }
-  }, [hourGroups]);
-
-  // Track which hour group is visible during scroll
-  useEffect(() => {
-    const scrollContainer = feedScrollRef.current;
-    if (!scrollContainer || hourGroups.length === 0) return;
-
-    // Handle scroll to top - reset to first group
-    const handleScroll = () => {
-      if (scrollContainer.scrollTop < 50 && hourGroups[0]) {
-        setActiveHourKey(hourGroups[0].dateKey);
-      }
-    };
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        // Find the topmost visible entry
-        const visibleEntries = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-
-        if (visibleEntries.length > 0) {
-          const topEntry = visibleEntries[0];
-          const hourKey = topEntry?.target.getAttribute('data-hour-key');
-          if (hourKey) {
-            setActiveHourKey(hourKey);
-          }
-        }
-      },
-      {
-        root: scrollContainer,
-        rootMargin: '-10% 0px -70% 0px', // Trigger when element is in top 30% of viewport
-        threshold: 0,
-      }
-    );
-
-    // Observe all hour group headers
-    hourGroupRefs.current.forEach((element) => {
-      observer.observe(element);
-    });
-
-    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
-
-    return () => {
-      observer.disconnect();
-      scrollContainer.removeEventListener('scroll', handleScroll);
-    };
-  }, [hourGroups]);
 
   return (
     <div
@@ -564,7 +528,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
       {/* Mobile only: Vertical swipe feed */}
       <div className="md:hidden" style={{ flex: 1, overflow: 'hidden' }}>
         <MobileActivityFeed
-          summaries={timeFilteredSummaries}
+          summaries={displaySummaries}
           loading={isLoading}
           error={error}
         />
@@ -579,7 +543,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
           overflow: 'hidden',
         }}
       >
-        {/* Left column - Heatmap (desktop only) */}
+        {/* Left column - Repository List (desktop only) */}
         <div
           className="hidden lg:flex"
           style={{
@@ -597,21 +561,133 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
               padding: spacing.md,
               display: 'flex',
               flexDirection: 'column',
+              gap: spacing.sm,
+              overflow: 'auto',
             }}
           >
-            <HourlyActivityHeatmap
-              commits={heatmapCommits}
-              loading={isLoading}
-              onBlockClick={handleHeatmapBlockClick}
-              selectedBlock={timeFilter?.start.toISOString() ?? null}
-              activeHourKey={activeHourKey}
-            />
+            <div
+              style={{
+                fontSize: theme.fontSizes[2],
+                fontWeight: 600,
+                color: theme.colors.text,
+                marginBottom: spacing.xs,
+              }}
+            >
+              Popular Projects
+            </div>
+            {allSummaries.map((summary) => {
+              return (
+                <button
+                  key={summary.fullName}
+                  onClick={() => {
+                    if (selectedRepo?.full_name === summary.fullName) {
+                      // Deselect if clicking the same repo
+                      setSelectedRepo(null);
+                    } else {
+                      // Select this repo
+                      setSelectedRepo({
+                        id: 0,
+                        name: summary.repo,
+                        full_name: summary.fullName,
+                        owner: {
+                          login: summary.owner,
+                          avatar_url: summary.ownerAvatarUrl || '',
+                        },
+                        description: null,
+                      });
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing.sm,
+                    padding: spacing.sm,
+                    backgroundColor: selectedRepo?.full_name === summary.fullName ? theme.colors.surface : 'transparent',
+                    border: `1px solid ${selectedRepo?.full_name === summary.fullName ? theme.colors.primary : theme.colors.border}`,
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (selectedRepo?.full_name !== summary.fullName) {
+                      e.currentTarget.style.backgroundColor = theme.colors.surface;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (selectedRepo?.full_name !== summary.fullName) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
+                >
+                  {/* Avatar */}
+                  {summary.ownerAvatarUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={summary.ownerAvatarUrl}
+                      alt={summary.owner}
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: 8,
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
+
+                  {/* Text content */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: spacing.xs,
+                      flex: 1,
+                      minWidth: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[1],
+                        fontWeight: 600,
+                        color: theme.colors.text,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {summary.repo}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        color: theme.colors.textMuted,
+                      }}
+                    >
+                      {summary.owner}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        color: theme.colors.textMuted,
+                      }}
+                    >
+                      {(() => {
+                        const stats = repoFileStats.get(summary.fullName);
+                        if (stats && stats.filesChanged > 0) {
+                          return `${stats.filesChanged} file${stats.filesChanged !== 1 ? 's' : ''} changed in ${summary.commitCount} commit${summary.commitCount !== 1 ? 's' : ''}`;
+                        }
+                        return `${summary.commitCount} commit${summary.commitCount !== 1 ? 's' : ''}`;
+                      })()}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Center column - Feed */}
         <div
-          ref={feedScrollRef}
           className="activity-feed-scroll w-full lg:w-[800px] px-4 lg:px-0"
           style={{
             flexShrink: 0,
@@ -659,44 +735,6 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
             </div>
           )}
 
-          {/* Time filter indicator */}
-          {timeFilter && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: spacing.sm,
-                marginBottom: spacing.md,
-                backgroundColor: `${theme.colors.primary}10`,
-                borderRadius: 4,
-                border: `1px solid ${theme.colors.primary}`,
-              }}
-            >
-              <span style={{ fontSize: theme.fontSizes[1], color: theme.colors.text }}>
-                Showing commits from {timeFilter.start.toLocaleTimeString()} - {timeFilter.end.toLocaleTimeString()}
-              </span>
-              <button
-                onClick={clearTimeFilter}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: spacing.xs,
-                  padding: `${spacing.xs}px ${spacing.sm}px`,
-                  backgroundColor: 'transparent',
-                  border: `1px solid ${theme.colors.primary}`,
-                  borderRadius: 4,
-                  color: theme.colors.primary,
-                  cursor: 'pointer',
-                  fontSize: theme.fontSizes[1],
-                }}
-              >
-                <X size={12} />
-                Clear
-              </button>
-            </div>
-          )}
-
           {error && (
             <div
               style={{
@@ -726,10 +764,10 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
             >
               <FolderGit2 size={48} style={{ marginBottom: spacing.md, opacity: 0.5 }} />
               <p style={{ margin: 0, fontSize: theme.fontSizes[2] }}>
-                {timeFilter ? 'No commits in this time range' : selectedRepo ? 'No commits in the last 24 hours' : 'No recent activity'}
+                {selectedRepo ? 'No commits in the last 24 hours' : 'No recent activity'}
               </p>
               <p style={{ margin: `${spacing.xs}px 0 0`, fontSize: theme.fontSizes[1] }}>
-                {timeFilter ? 'Try selecting a different time block' : selectedRepo ? 'This repository has no recent commits' : 'Commits from featured repositories will appear here'}
+                {selectedRepo ? 'This repository has no recent commits' : 'Commits from featured repositories will appear here'}
               </p>
             </div>
           ) : (
@@ -742,14 +780,6 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                   <div key={group.dateKey}>
                     {/* Hour header */}
                     <div
-                      ref={(el) => {
-                        if (el) {
-                          hourGroupRefs.current.set(group.dateKey, el);
-                        } else {
-                          hourGroupRefs.current.delete(group.dateKey);
-                        }
-                      }}
-                      data-hour-key={group.dateKey}
                       style={{
                         paddingTop: groupIndex > 0 ? spacing.sm : 0,
                         paddingBottom: spacing.sm,

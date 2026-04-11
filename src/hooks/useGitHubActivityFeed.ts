@@ -23,6 +23,7 @@ export interface RepoActivitySummary {
   latestCommitAt: Date;
   commitCount: number;
   description?: string;
+  ownerAvatarUrl?: string;
 }
 
 interface GitHubCommitResponse {
@@ -146,6 +147,21 @@ export function useGitHubActivityFeed(
 
             if (activityCommits.length === 0) return;
 
+            // Fetch repo info to get owner avatar
+            let ownerAvatarUrl: string | undefined;
+            try {
+              const repoInfoResponse = await fetch(
+                `/api/github/repo/${repo.owner}/${repo.repo}?action=info`,
+                { signal }
+              );
+              if (repoInfoResponse.ok) {
+                const repoInfo = await repoInfoResponse.json();
+                ownerAvatarUrl = repoInfo.owner?.avatar_url;
+              }
+            } catch (err) {
+              console.warn(`Failed to fetch repo info for ${repoKey}:`, err);
+            }
+
             const latestCommit = activityCommits[0];
             if (latestCommit) {
               updatedSummaries.push({
@@ -156,6 +172,7 @@ export function useGitHubActivityFeed(
                 latestCommitAt: new Date(latestCommit.date),
                 commitCount: activityCommits.length,
                 description: repo.description,
+                ownerAvatarUrl,
               });
             }
           } catch (err) {
@@ -261,6 +278,20 @@ export function useGitHubActivityFeed(
 
       if (activityCommits.length === 0) return;
 
+      // Fetch repo info to get owner avatar
+      let ownerAvatarUrl: string | undefined;
+      try {
+        const repoInfoResponse = await fetch(
+          `/api/github/repo/${owner}/${repo}?action=info`
+        );
+        if (repoInfoResponse.ok) {
+          const repoInfo = await repoInfoResponse.json();
+          ownerAvatarUrl = repoInfo.owner?.avatar_url;
+        }
+      } catch (err) {
+        console.warn(`Failed to fetch repo info for ${owner}/${repo}:`, err);
+      }
+
       const latestCommit = activityCommits[0];
       if (latestCommit) {
         const newSummary: RepoActivitySummary = {
@@ -270,6 +301,7 @@ export function useGitHubActivityFeed(
           commits: activityCommits,
           latestCommitAt: new Date(latestCommit.date),
           commitCount: activityCommits.length,
+          ownerAvatarUrl,
         };
 
         setRepoSummaries((prev) => {
