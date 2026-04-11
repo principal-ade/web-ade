@@ -239,6 +239,7 @@ export function OwnerPageProvider({
     repositories: [],
     isAuthenticated: false,
   });
+  const [starredRepos, setStarredRepos] = useState<OwnerRepositoriesSliceData['repositories']>([]);
   const [extendedOwnerInfo, setExtendedOwnerInfo] = useState<ExtendedOwnerInfo | null>(null);
   const [ownerReposLoading, setOwnerReposLoading] = useState(true);
   const [currentOwner, setCurrentOwner] = useState<string | null>(null);
@@ -423,6 +424,7 @@ export function OwnerPageProvider({
         profile: extendedOwnerInfo ? buildProfile(extendedOwnerInfo) : null,
         collections: ownerCollections,
         repositories: ownerRepos.repositories || [],
+        starredRepositories: starredRepos,
         selectedRepositoryId,
         loading: ownerReposLoading || ownerCollectionsLoading,
         error: ownerRepos.error,
@@ -431,7 +433,7 @@ export function OwnerPageProvider({
       error: ownerRepos.error ? new Error(ownerRepos.error) : null,
       refresh: async () => { /* no-op */ },
     }),
-    [extendedOwnerInfo, buildProfile, ownerRepos.repositories, ownerRepos.error, ownerReposLoading, selectedRepositoryId, ownerCollections, ownerCollectionsLoading]
+    [extendedOwnerInfo, buildProfile, ownerRepos.repositories, ownerRepos.error, ownerReposLoading, selectedRepositoryId, ownerCollections, ownerCollectionsLoading, starredRepos]
   );
 
   // Explicit slice: fileTree
@@ -648,6 +650,7 @@ export function OwnerPageProvider({
           repositories: data.repositories || [],
           isAuthenticated,
         });
+        setStarredRepos(data.starredRepositories || []);
         // Store extended owner info for ProfilePanel
         if (data.owner) {
           setExtendedOwnerInfo(data.owner as ExtendedOwnerInfo);
@@ -661,6 +664,7 @@ export function OwnerPageProvider({
           isAuthenticated,
           error: data.error || 'Failed to load repositories',
         });
+        setStarredRepos([]);
         setExtendedOwnerInfo(null);
       }
     } catch (error) {
@@ -671,6 +675,7 @@ export function OwnerPageProvider({
         isAuthenticated,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
+      setStarredRepos([]);
       setExtendedOwnerInfo(null);
     } finally {
       setOwnerReposLoading(false);

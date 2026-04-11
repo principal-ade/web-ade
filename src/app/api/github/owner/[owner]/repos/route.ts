@@ -95,10 +95,11 @@ export async function GET(
       headers.Authorization = `Bearer ${githubToken}`;
     }
 
-    // Fetch owner info and repos in parallel
-    const [userResponse, reposResponse] = await Promise.all([
+    // Fetch owner info, repos, and starred repos in parallel
+    const [userResponse, reposResponse, starredResponse] = await Promise.all([
       fetch(`https://api.github.com/users/${owner}`, { headers }),
       fetch(`https://api.github.com/users/${owner}/repos?per_page=100&sort=updated`, { headers }),
+      fetch(`https://api.github.com/users/${owner}/starred?per_page=100`, { headers }),
     ]);
 
     if (!userResponse.ok) {
@@ -127,6 +128,7 @@ export async function GET(
 
     const userData: GitHubUser = await userResponse.json();
     const reposData: GitHubRepo[] = reposResponse.ok ? await reposResponse.json() : [];
+    const starredData: GitHubRepo[] = starredResponse.ok ? await starredResponse.json() : [];
 
     // If authenticated, also fetch org repos with member access (for private repos)
     let allRepos = reposData;
@@ -207,6 +209,27 @@ export async function GET(
         description: repo.description,
         fork: repo.fork,
         parent: forkParentMap.get(repo.full_name) || null,
+        clone_url: repo.clone_url,
+        language: repo.language,
+        default_branch: repo.default_branch,
+        stargazers_count: repo.stargazers_count,
+        forks_count: repo.forks_count,
+        updated_at: repo.updated_at,
+        created_at: repo.created_at,
+        topics: repo.topics,
+        archived: repo.archived,
+        license: repo.license?.spdx_id || null,
+      })),
+      starredRepositories: starredData.map((repo) => ({
+        id: repo.id,
+        name: repo.name,
+        full_name: repo.full_name,
+        owner: repo.owner,
+        private: repo.private,
+        html_url: repo.html_url,
+        description: repo.description,
+        fork: repo.fork,
+        parent: null, // Don't fetch parent info for starred repos (performance)
         clone_url: repo.clone_url,
         language: repo.language,
         default_branch: repo.default_branch,
