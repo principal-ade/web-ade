@@ -36,6 +36,14 @@ export interface GitHubRepoInfoResponse {
   html_url: string;
   description: string | null;
   fork: boolean;
+  parent?: {
+    full_name: string;
+    owner: {
+      login: string;
+      avatar_url: string;
+    };
+    name: string;
+  };
   url: string;
   clone_url: string;
   created_at: string;

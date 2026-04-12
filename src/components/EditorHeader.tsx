@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from '@principal-ade/industry-theme';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Palette, GitCommit, ArrowLeftRight, X, Star, Menu, Package, Activity } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Palette, GitCommit, ArrowLeftRight, X, Star, Menu, Package, Activity, GitFork } from 'lucide-react';
 import { UserAvatarMenu } from './UserAvatarMenu';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
@@ -15,6 +15,7 @@ import { VersionRegistryModal } from './VersionRegistryModal';
 import { useServiceStatus } from '@/hooks/useServiceStatus';
 import { useLiveVersions } from '@/hooks/useLiveVersions';
 import { trackButtonClick } from '@/lib/analytics';
+import { trpc } from '@/lib/trpc/client';
 
 interface EditorHeaderProps {
   currentLayoutConfigId?: string;
@@ -70,6 +71,7 @@ export function EditorHeader({
   const [canInstallApp, setCanInstallApp] = useState(false);
   const [showRegistryModal, setShowRegistryModal] = useState(false);
   const [isAppleDevice, setIsAppleDevice] = useState(false);
+  const [parentRepo, setParentRepo] = useState<{ owner: string; repo: string } | null>(null);
 
   // Fetch version registry data
   const customerId = repositoryName ? `${repositoryName.owner}/${repositoryName.repo}` : null;
@@ -165,6 +167,37 @@ export function EditorHeader({
     fetchPermissions();
   }, [repositoryName, isAuthenticated]);
 
+  // Fetch repository info to check if it's a fork with a parent
+  useEffect(() => {
+    if (!repositoryName) {
+      setParentRepo(null);
+      return;
+    }
+
+    const fetchRepoInfo = async () => {
+      try {
+        const repoInfo = await trpc.github.getRepoInfo.query({
+          owner: repositoryName.owner,
+          repo: repositoryName.repo,
+        });
+
+        if (repoInfo.fork && repoInfo.parent) {
+          setParentRepo({
+            owner: repoInfo.parent.owner.login,
+            repo: repoInfo.parent.name,
+          });
+        } else {
+          setParentRepo(null);
+        }
+      } catch (error) {
+        console.error('Failed to fetch repository info:', error);
+        setParentRepo(null);
+      }
+    };
+
+    fetchRepoInfo();
+  }, [repositoryName]);
+
   // Toggle star status
   const handleToggleStar = useCallback(async () => {
     if (!repositoryName || isStarLoading) return;
@@ -231,6 +264,23 @@ export function EditorHeader({
             >
               {repositoryName.repo}
             </a>
+            {/* Fork parent button - show if this repo is a fork */}
+            {parentRepo && (
+              <Link
+                href={`/${parentRepo.owner}/${parentRepo.repo}`}
+                className="flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-all hover:opacity-80"
+                style={{
+                  background: theme.colors.secondary,
+                  color: theme.colors.text,
+                  border: `1px solid ${theme.colors.border}`,
+                  textDecoration: 'none',
+                }}
+                title={`Forked from ${parentRepo.owner}/${parentRepo.repo}`}
+              >
+                <GitFork className="w-3 h-3" />
+                <span className="hidden sm:inline">{parentRepo.owner}/{parentRepo.repo}</span>
+              </Link>
+            )}
             {/* Star button - only show for authenticated users */}
             {isAuthenticated && (
               <button

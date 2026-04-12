@@ -110,6 +110,14 @@ const repoInfoOutputSchema = z.object({
   html_url: z.string(),
   description: z.string().nullable(),
   fork: z.boolean(),
+  parent: z.object({
+    full_name: z.string(),
+    owner: z.object({
+      login: z.string(),
+      avatar_url: z.string(),
+    }),
+    name: z.string(),
+  }).optional(),
   url: z.string(),
   clone_url: z.string(),
   created_at: z.string(),
@@ -794,6 +802,14 @@ export const githubRouter = router({
         html_url: string;
         description: string | null;
         fork: boolean;
+        parent?: {
+          full_name: string;
+          owner: {
+            login: string;
+            avatar_url: string;
+          };
+          name: string;
+        };
         url: string;
         clone_url: string;
         created_at: string;
