@@ -52,7 +52,7 @@ import { panels as alexandriaDocsPanels } from '@industry-theme/alexandria-docs-
 import { panels as backlogmdPanels } from '@industry-theme/backlogmd-kanban-panel';
 import { panels as principalViewPanels, TraceDetailsPanel } from '@industry-theme/principal-view-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
-import { panels as repositoryCompositionPanels } from '@industry-theme/repository-composition-panels';
+import { panels as repositoryCompositionPanels, PackageCompositionPanel } from '@industry-theme/repository-composition-panels';
 import { panels as gitPanels } from '@industry-theme/git-panels';
 import { panels as githubPanels } from '@industry-theme/github-panels';
 import { panels as fileEditingPanels } from '@industry-theme/file-editing-panels';
@@ -84,7 +84,7 @@ const PrincipalViewPanelLoader = principalViewPanels[0]!.component;
 const QualityHexagonPanelLoader = codeQualityPanels[0]!.component;
 const LensDataDebugPanelLoader = codeQualityPanels[2]!.component;
 const GitChangesPanelLoader = repositoryCompositionPanels[0]!.component;
-const PackageCompositionPanelLoader = repositoryCompositionPanels[1]!.component;
+const PackageCompositionPanelLoader = PackageCompositionPanel;
 const GitCommitHistoryPanelLoader = gitPanels[0]!.component;
 const GitCommitDetailPanelLoader = gitPanels[1]!.component;
 const GitHubMessagesPanelLoader = githubPanels[6]!.component;

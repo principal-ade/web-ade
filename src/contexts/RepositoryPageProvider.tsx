@@ -44,6 +44,7 @@ import { minimatch } from 'minimatch';
 import { GitFileTreeBuilder, type FileTree, createFileTreeSource } from '@principal-ai/repository-abstraction';
 import type { StoryboardContextSliceData, ExtendedCanvas, WorkflowTemplate, WorkflowScenario } from '@principal-ai/principal-view-core';
 import { buildStoryboardContext } from '@principal-ai/principal-view-core';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import type { FileCityColorModesSliceData, CommitFilesSliceData, QualitySliceData, PackagesSliceData, ColorMode, HighlightLayer, ForkTourSliceData, LineCountsSliceData } from '@industry-theme/file-city-panel';
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from './AuthContext';
@@ -199,7 +200,8 @@ export interface RepositoryPageContextType {
   commits?: DataSlice<CommitsSliceData>;
   quality?: DataSlice<QualitySliceData>;
   lensResults?: DataSlice<LensResultsSliceData>;
-  packages?: DataSlice<PackagesSliceData>;
+  packages: DataSlice<PackagesSliceData>;
+  repositoryEntry: DataSlice<AlexandriaEntry | null>;
   'github-messages'?: DataSlice<GitHubMessagesSliceData>;
   repoCapabilities?: DataSlice<RepoCapabilitiesSliceData>;
   storyboardContext?: DataSlice<StoryboardContextSliceData>;
@@ -305,6 +307,11 @@ export function RepositoryPageProvider({
   const [packagesData, setPackagesData] = useState<PackagesSliceData | null>(null);
   const [packagesLoading, setPackagesLoading] = useState(false);
   const [packagesError, setPackagesError] = useState<Error | null>(null);
+
+  // State for repository entry
+  const [repositoryEntryData, setRepositoryEntryData] = useState<AlexandriaEntry | null>(null);
+  const [repositoryEntryLoading, setRepositoryEntryLoading] = useState(false);
+  const [repositoryEntryError, setRepositoryEntryError] = useState<Error | null>(null);
 
   // State for GitHub messages
   const [githubMessages, setGithubMessages] = useState<GitHubMessagesSliceData>({
@@ -525,6 +532,19 @@ export function RepositoryPageProvider({
       refresh: async () => { /* no-op */ },
     }),
     [packagesData, packagesLoading, packagesError]
+  );
+
+  // Explicit slice: repositoryEntry
+  const repositoryEntrySlice = useMemo<DataSlice<AlexandriaEntry | null>>(
+    () => ({
+      scope: 'repository' as const,
+      name: 'repositoryEntry',
+      data: repositoryEntryData,
+      loading: repositoryEntryLoading,
+      error: repositoryEntryError,
+      refresh: async () => { /* no-op */ },
+    }),
+    [repositoryEntryData, repositoryEntryLoading, repositoryEntryError]
   );
 
   // Explicit slice: github-messages
@@ -1135,6 +1155,7 @@ export function RepositoryPageProvider({
       quality: qualitySlice,
       lensResults: lensResultsSlice,
       packages: packagesSlice,
+      repositoryEntry: repositoryEntrySlice,
       'github-messages': githubMessagesSlice,
       repoCapabilities: repoCapabilitiesSlice,
       storyboardContext: storyboardContextSlice,
@@ -1168,6 +1189,7 @@ export function RepositoryPageProvider({
       qualitySlice,
       lensResultsSlice,
       packagesSlice,
+      repositoryEntrySlice,
       githubMessagesSlice,
       repoCapabilitiesSlice,
       storyboardContextSlice,
