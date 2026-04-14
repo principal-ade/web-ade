@@ -85,6 +85,22 @@ const CONTRIBUTIONS_QUERY = `
             }
           }
         }
+        commitContributionsByRepository(maxRepositories: 20) {
+          repository {
+            nameWithOwner
+            url
+            isPrivate
+            owner {
+              __typename
+            }
+          }
+          contributions(first: 20, orderBy: {field: OCCURRED_AT, direction: DESC}) {
+            nodes {
+              occurredAt
+              commitCount
+            }
+          }
+        }
       }
     }
   }
@@ -246,6 +262,17 @@ export interface DailyContribution {
   count: number;
 }
 
+export interface ContributedRepo {
+  nameWithOwner: string;
+  owner: string;
+  name: string;
+  url: string;
+  commitCount: number;
+  lastContributedAt: string;
+  isPrivate: boolean;
+  ownerType: 'User' | 'Organization';
+}
+
 export interface UserActivityResponse {
   user: {
     login: string;
@@ -255,6 +282,7 @@ export interface UserActivityResponse {
   };
   activity: ActivityEvent[];
   contributions: DailyContribution[];
+  contributedRepos: ContributedRepo[];
 }
 
 interface GraphQLReactions {
@@ -456,6 +484,55 @@ function normalizeActivity(user: GraphQLUser, fromDate: Date, viewerLogin: strin
   return events;
 }
 
+/**
+ * Extract repositories the user has contributed to but doesn't own
+ * Filters out repos owned by the user and aggregates commit statistics
+ */
+function extractContributedRepos(
+  user: GraphQLUser,
+  username: string
+): ContributedRepo[] {
+  if (!user.contributionsCollection?.commitContributionsByRepository) {
+    return [];
+  }
+
+  return user.contributionsCollection
+    .commitContributionsByRepository
+    .filter(repo => {
+      const parts = repo.repository.nameWithOwner.split('/');
+      const owner = parts[0];
+      return owner && owner.toLowerCase() !== username.toLowerCase();
+    })
+    .map(repo => {
+      // Calculate total commits across all contribution nodes
+      const totalCommits = repo.contributions.nodes.reduce(
+        (sum, c) => sum + c.commitCount,
+        0
+      );
+
+      // Get most recent contribution timestamp
+      const sortedContributions = [...repo.contributions.nodes].sort(
+        (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
+      );
+
+      const parts = repo.repository.nameWithOwner.split('/');
+      const owner = parts[0] || '';
+      const name = parts[1] || '';
+
+      return {
+        nameWithOwner: repo.repository.nameWithOwner,
+        owner,
+        name,
+        url: repo.repository.url,
+        commitCount: totalCommits,
+        lastContributedAt: sortedContributions[0]?.occurredAt || new Date().toISOString(),
+        isPrivate: repo.repository.isPrivate,
+        ownerType: repo.repository.owner.__typename as 'User' | 'Organization',
+      };
+    })
+    .sort((a, b) => b.commitCount - a.commitCount); // Sort by most commits first
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ username: string }> }
@@ -516,6 +593,10 @@ export async function GET(
     // Normalize activity events (no date filtering needed - already filtered by GraphQL query)
     const activity = normalizeActivity(activityUser, activityFrom, viewerLogin);
 
+    // Extract contributed repos from contributions query (uses longer time range)
+    const contributedRepos = extractContributedRepos(contributionsUser, username);
+    console.log(`[activity] Contributed repos for ${username}:`, contributedRepos.length);
+
     // Extract contributions from contributions query result
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
     const allDays: DailyContribution[] = [];
@@ -543,6 +624,7 @@ export async function GET(
       },
       activity,
       contributions,
+      contributedRepos,
     };
 
     // Cache user profile for enriching search results (fire and forget)
