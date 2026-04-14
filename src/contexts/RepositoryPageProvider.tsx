@@ -309,9 +309,19 @@ export function RepositoryPageProvider({
   const [packagesError, setPackagesError] = useState<Error | null>(null);
 
   // State for repository entry
-  const [repositoryEntryData, setRepositoryEntryData] = useState<AlexandriaEntry | null>(null);
-  const [repositoryEntryLoading, setRepositoryEntryLoading] = useState(false);
-  const [repositoryEntryError, setRepositoryEntryError] = useState<Error | null>(null);
+  // Note: repository prop from panel framework is of type RepositoryMetadata which extends AlexandriaEntry
+  const [repositoryEntryData, setRepositoryEntryData] = useState<AlexandriaEntry | null>(
+    repository ? (repository as unknown as AlexandriaEntry) : null
+  );
+  const [repositoryEntryLoading] = useState(false);
+  const [repositoryEntryError] = useState<Error | null>(null);
+
+  // Update repository entry when repository prop changes
+  useEffect(() => {
+    if (repository) {
+      setRepositoryEntryData(repository as unknown as AlexandriaEntry);
+    }
+  }, [repository]);
 
   // State for GitHub messages
   const [githubMessages, setGithubMessages] = useState<GitHubMessagesSliceData>({
