@@ -8,6 +8,7 @@ import { useRepoPresence } from "@/hooks/useRepoPresence";
 import { useLocalFileSystem } from "@/contexts/LocalFileSystemContext";
 import { LocalFileSystemAdapter } from "@/lib/client/LocalFileSystemAdapter";
 import { addRecentRepository } from "@industry-theme/github-panels";
+import { Logo } from "@principal-ai/logo-component";
 
 const REPO_LAYOUT_CONFIGS_KEY = 'repo-layout-configs';
 
@@ -138,12 +139,21 @@ function RepoPageContent() {
   if (!localModeChecked) {
     return (
       <div
-        className="w-screen overflow-hidden"
+        className="w-screen flex items-center justify-center overflow-hidden"
         style={{
           background: theme.colors.background,
           height: '100vh'
         }}
-      />
+      >
+        <Logo
+          width={64}
+          height={64}
+          color={theme.colors.accent}
+          particleColor={theme.colors.primary}
+          letterColor={theme.colors.text}
+          opacity={0.9}
+        />
+      </div>
     );
   }
 

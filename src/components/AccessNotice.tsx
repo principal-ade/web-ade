@@ -3,6 +3,7 @@
 import { useTheme } from '@principal-ade/industry-theme';
 import { useRouter } from 'next/navigation';
 import { LocalFolderButton } from './LocalFolderButton';
+import { Logo } from '@principal-ai/logo-component';
 
 export type AccessStatus = 'loading' | 'granted' | 'login-required' | 'unauthorized' | 'not-found' | 'error';
 
@@ -52,11 +53,13 @@ export function AccessNotice({ status, onRetry, onLogin, repository, errorMessag
         }}
       >
         <div className="relative">
-          <div
-            className="w-16 h-16 rounded-full border-4 border-t-transparent animate-spin"
-            style={{
-              borderColor: `${theme.colors.primary} transparent transparent transparent`,
-            }}
+          <Logo
+            width={64}
+            height={64}
+            color={theme.colors.accent}
+            particleColor={theme.colors.primary}
+            letterColor={theme.colors.text}
+            opacity={0.9}
           />
         </div>
         <div className="space-y-2">
