@@ -595,7 +595,6 @@ export async function GET(
 
     // Extract contributed repos from contributions query (uses longer time range)
     const contributedRepos = extractContributedRepos(contributionsUser, username);
-    console.log(`[activity] Contributed repos for ${username}:`, contributedRepos.length);
 
     // Extract contributions from contributions query result
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
