@@ -50,6 +50,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "activity-feed-page",
+        "status": "draft"
       }
     },
     {
@@ -78,6 +82,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -106,6 +114,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -134,6 +146,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -167,6 +183,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -195,6 +215,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -228,6 +252,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "activity-feed-page",
+        "status": "draft"
       }
     },
     {
@@ -256,6 +284,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "activity-feed-page",
+        "status": "draft"
       }
     },
     {
@@ -289,6 +321,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "activity-feed-page",
+        "status": "draft"
       }
     },
     {
@@ -322,6 +358,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -355,6 +395,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -388,6 +432,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -426,6 +474,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -464,6 +516,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -497,6 +553,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -530,6 +590,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -563,6 +627,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -596,6 +664,10 @@
             "required": false
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -624,6 +696,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -657,6 +733,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -695,6 +775,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -728,6 +812,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -771,6 +859,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -809,6 +901,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -848,6 +944,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "activity-feed-page",
+        "status": "draft"
       }
     },
     {
@@ -886,6 +986,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -925,6 +1029,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     },
     {
@@ -963,6 +1071,10 @@
             "required": true
           }
         }
+      },
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
       }
     }
   ],

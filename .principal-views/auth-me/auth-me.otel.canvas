@@ -43,6 +43,7 @@
         }
       },
       "otel": {
+        "scope": "authentication-api",
         "status": "draft"
       }
     },
@@ -73,6 +74,7 @@
         }
       },
       "otel": {
+        "scope": "authentication-api",
         "status": "draft"
       }
     },
@@ -103,6 +105,7 @@
         }
       },
       "otel": {
+        "scope": "authentication-api",
         "status": "draft"
       }
     },
@@ -133,6 +136,7 @@
         }
       },
       "otel": {
+        "scope": "authentication-api",
         "status": "draft"
       }
     },
@@ -186,6 +190,7 @@
         }
       },
       "otel": {
+        "scope": "authentication-api",
         "status": "draft"
       }
     },
@@ -216,6 +221,7 @@
         }
       },
       "otel": {
+        "scope": "authentication-api",
         "status": "draft"
       }
     },
@@ -263,6 +269,7 @@
         }
       },
       "otel": {
+        "scope": "authentication-api",
         "status": "draft"
       }
     }

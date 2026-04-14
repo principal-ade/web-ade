@@ -20,16 +20,36 @@ resources:
     # Instrumentation scopes owned by this service
     # Spans from these tracers will be matched against this service's storyboards
     owned-scopes:
-      - "auth-me"
+      - "authentication-api"
       - "next.js"
+      - "activity-feed-api"
+      - "activity-feed-page"
+      - "collections-api"
+      - "collections-page"
+      - "feed-collections-api"
 
 scopes:
-  auth-me:
+  authentication-api:
     color: "#10B981"
     description: "Authentication and user session management"
   next.js:
     color: "#000000"
     description: "Next.js framework instrumentation"
+  activity-feed-api:
+    color: "#16a34a"
+    description: "Activity feed data fetching and aggregation"
+  activity-feed-page:
+    color: "#0891b2"
+    description: "Activity feed UI interactions and display"
+  collections-api:
+    color: "#6d28d9"
+    description: "Collections API operations (GitHub integration)"
+  collections-page:
+    color: "#8b5cf6"
+    description: "Collections UI management (create, import, load)"
+  feed-collections-api:
+    color: "#ec4899"
+    description: "Feed collections API (S3 storage, subscriptions, follows)"
 
 nodeComponents: {}
 edgeComponents: {}

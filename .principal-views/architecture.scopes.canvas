@@ -8,17 +8,17 @@
   },
   "nodes": [
     {
-      "id": "auth-me-scope",
+      "id": "authentication-api-scope",
       "type": "otel-scope",
       "x": 0,
       "y": 0,
       "width": 220,
       "height": 100,
       "color": "#10B981",
-      "label": "Auth Me",
+      "label": "Authentication API",
       "description": "Authentication and user session management",
       "otel": {
-        "scope": "auth-me",
+        "scope": "authentication-api",
         "status": "draft"
       }
     },
@@ -36,13 +36,88 @@
         "scope": "next.js",
         "status": "draft"
       }
+    },
+    {
+      "id": "activity-feed-api-scope",
+      "type": "otel-scope",
+      "x": 0,
+      "y": 150,
+      "width": 220,
+      "height": 100,
+      "color": "#16a34a",
+      "label": "Activity Feed API",
+      "description": "Activity feed data fetching and aggregation",
+      "otel": {
+        "scope": "activity-feed-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "activity-feed-page-scope",
+      "type": "otel-scope",
+      "x": 250,
+      "y": 150,
+      "width": 220,
+      "height": 100,
+      "color": "#0891b2",
+      "label": "Activity Feed Page",
+      "description": "Activity feed UI interactions and display",
+      "otel": {
+        "scope": "activity-feed-page",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "collections-api-scope",
+      "type": "otel-scope",
+      "x": 0,
+      "y": 300,
+      "width": 220,
+      "height": 100,
+      "color": "#6d28d9",
+      "label": "Collections API",
+      "description": "Collections API operations (GitHub integration)",
+      "otel": {
+        "scope": "collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "collections-page-scope",
+      "type": "otel-scope",
+      "x": 250,
+      "y": 300,
+      "width": 220,
+      "height": 100,
+      "color": "#8b5cf6",
+      "label": "Collections Page",
+      "description": "Collections UI management (create, import, load)",
+      "otel": {
+        "scope": "collections-page",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "feed-collections-api-scope",
+      "type": "otel-scope",
+      "x": 0,
+      "y": 450,
+      "width": 220,
+      "height": 100,
+      "color": "#ec4899",
+      "label": "Feed Collections API",
+      "description": "Feed collections API (S3 storage, subscriptions, follows)",
+      "otel": {
+        "scope": "feed-collections-api",
+        "status": "draft"
+      }
     }
   ],
   "edges": [
     {
       "id": "nextjs-to-auth",
       "fromNode": "nextjs-scope",
-      "toNode": "auth-me-scope",
+      "toNode": "authentication-api-scope",
       "fromSide": "left",
       "toSide": "right",
       "edgeType": "dependency"
