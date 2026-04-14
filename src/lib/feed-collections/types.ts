@@ -11,8 +11,8 @@
 // Watch Limits
 // ============================================================================
 
-export const MAX_WATCHED_USERS = 5;
-export const MAX_WATCHED_REPOS = 5;
+export const MAX_WATCHED_USERS = 10;
+export const MAX_WATCHED_REPOS = 10;
 
 // ============================================================================
 // Watch Types
@@ -67,8 +67,8 @@ export interface UserFeedProfile {
   githubId: string;
   githubLogin: string;
   subscribedCollections: string[]; // Collection IDs
-  watchedUsers: WatchedUser[]; // Max 5 users
-  watchedRepos: WatchedRepo[]; // Max 5 repos
+  watchedUsers: WatchedUser[]; // Max 10 users
+  watchedRepos: WatchedRepo[]; // Max 10 repos
   createdAt: string; // ISO timestamp
   updatedAt: string; // ISO timestamp
 }

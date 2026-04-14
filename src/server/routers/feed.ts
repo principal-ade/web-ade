@@ -736,7 +736,7 @@ export const feedRouter = router({
 
   /**
    * Watch a GitHub user
-   * Requires authentication. Max 5 users.
+   * Requires authentication. Max 10 users.
    */
   watchUser: publicProcedure
     .input(watchUserInputSchema)
@@ -834,7 +834,7 @@ export const feedRouter = router({
 
   /**
    * Watch a repository
-   * Requires authentication. Max 5 repos.
+   * Requires authentication. Max 10 repos.
    */
   watchRepo: publicProcedure
     .input(watchRepoInputSchema)
