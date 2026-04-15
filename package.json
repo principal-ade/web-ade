@@ -35,7 +35,7 @@
     "@industry-theme/file-editing-panels": "^0.4.1",
     "@industry-theme/git-panels": "^0.2.0",
     "@industry-theme/github-panels": "^0.4.5",
-    "@industry-theme/markdown-panels": "^0.3.1",
+    "@industry-theme/markdown-panels": "^0.3.2",
     "@industry-theme/principal-view-panels": "^0.12.97",
     "@industry-theme/repository-composition-panels": "^0.7.90",
     "@industry-theme/theme-editor-panel": "^0.2.0",
@@ -101,7 +101,7 @@
     "react-resizable-panels": "^4.7.4",
     "remove-markdown": "^0.6.3",
     "tailwindcss": "^4",
-    "themed-markdown": "^0.1.80",
+    "themed-markdown": "^0.1.86",
     "three": "^0.175.0",
     "typescript": "^5",
     "zod": "^3.25.76"
