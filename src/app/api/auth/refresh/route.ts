@@ -8,10 +8,10 @@
  * token is preserved locally as it doesn't change during refresh.
  */
 
-import { NextResponse } from 'next/server';
-import { getRefreshToken, refreshAuthCookies, RefreshTokenData } from '@/lib/auth/cookies';
+import { NextRequest, NextResponse } from 'next/server';
+import { getRefreshToken, getGitHubUserId, refreshAuthCookies, RefreshTokenData } from '@/lib/auth/cookies';
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
     // Get refresh token from HTTP-only cookie
     const refreshToken = await getRefreshToken();
@@ -23,10 +23,35 @@ export async function POST() {
       );
     }
 
+    // Get github_user_id from cookie for device-specific token management
+    const githubUserId = await getGitHubUserId();
+
+    // Get device_id from request body
+    let deviceId: string | undefined;
+    try {
+      const body = await request.json();
+      deviceId = body.device_id;
+    } catch (_error) {
+      // Body might not be JSON or might be empty, that's okay
+      console.log('[Refresh] No device_id in request body');
+    }
+
     // Call auth server to refresh tokens
     const authServerUrl = process.env.AUTH_SERVER_URL;
     if (!authServerUrl) {
       throw new Error('AUTH_SERVER_URL not configured');
+    }
+
+    const requestBody: Record<string, string> = {
+      refresh_token: refreshToken,
+    };
+
+    // Add device-specific parameters if available
+    if (deviceId) {
+      requestBody.device_id = deviceId;
+    }
+    if (githubUserId) {
+      requestBody.github_user_id = String(githubUserId);
     }
 
     const response = await fetch(`${authServerUrl}/api/auth/workos/refresh`, {
@@ -34,9 +59,7 @@ export async function POST() {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        refresh_token: refreshToken,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {

@@ -15,6 +15,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { getDeviceId } from '@/lib/device-id';
 
 /**
  * User data structure (NO TOKENS!)
@@ -156,9 +157,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isRefreshing.current = true;
 
     try {
+      // Get device ID for device-specific token management
+      const deviceId = getDeviceId();
+
       for (let attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
         try {
-          const response = await fetch('/api/auth/refresh', { method: 'POST' });
+          const response = await fetch('/api/auth/refresh', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ device_id: deviceId }),
+          });
 
           if (response.ok) {
             console.log('Tokens refreshed successfully');
