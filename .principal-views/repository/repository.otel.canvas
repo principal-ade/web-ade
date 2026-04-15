@@ -52,6 +52,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -86,6 +87,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -120,6 +122,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -149,6 +152,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -198,6 +202,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -232,6 +237,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -276,6 +282,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -310,6 +317,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -344,6 +352,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -373,6 +382,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -402,6 +412,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -436,6 +447,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -465,6 +477,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -494,6 +507,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -523,6 +537,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -552,6 +567,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -586,6 +602,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -620,6 +637,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -649,6 +667,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -678,6 +697,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -712,6 +732,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -746,6 +767,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -780,6 +802,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -814,6 +837,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -848,6 +872,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -882,6 +907,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -916,6 +942,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -950,6 +977,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -979,6 +1007,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1013,6 +1042,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1047,6 +1077,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1081,6 +1112,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1110,6 +1142,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1139,6 +1172,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1168,6 +1202,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1202,6 +1237,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1231,6 +1267,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1260,6 +1297,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1289,6 +1327,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1323,6 +1362,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1352,6 +1392,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1381,6 +1422,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1410,6 +1452,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1444,6 +1487,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1473,6 +1517,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1503,6 +1548,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1537,6 +1583,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1587,6 +1634,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     },
@@ -1621,6 +1669,7 @@
         }
       },
       "otel": {
+        "scope": "repository-page",
         "status": "draft"
       }
     }

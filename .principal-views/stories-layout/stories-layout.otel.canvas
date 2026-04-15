@@ -46,6 +46,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -80,6 +81,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -114,6 +116,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -148,6 +151,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -177,6 +181,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -217,6 +222,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -266,6 +272,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -300,6 +307,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -339,6 +347,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -378,6 +387,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -433,6 +443,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -472,6 +483,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -511,6 +523,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -545,6 +558,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -584,6 +598,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -623,6 +638,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -657,6 +673,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -691,6 +708,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -730,6 +748,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -764,6 +783,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -803,6 +823,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -837,6 +858,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     },
@@ -871,6 +893,7 @@
         }
       },
       "otel": {
+        "scope": "stories-layout-page",
         "status": "draft"
       }
     }

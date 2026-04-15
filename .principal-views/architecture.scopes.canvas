@@ -111,6 +111,186 @@
         "scope": "feed-collections-api",
         "status": "draft"
       }
+    },
+    {
+      "id": "feed-suggestions-api-scope",
+      "type": "otel-scope",
+      "x": 0,
+      "y": 600,
+      "width": 220,
+      "height": 100,
+      "color": "#f59e0b",
+      "label": "Feed Suggestions API",
+      "description": "Feed suggestions and commit queue (GitHub suggestions, search, feed operations)",
+      "otel": {
+        "scope": "feed-suggestions-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "line-counts-api-scope",
+      "type": "otel-scope",
+      "x": 250,
+      "y": 600,
+      "width": 220,
+      "height": 100,
+      "color": "#14b8a6",
+      "label": "Line Counts API",
+      "description": "Line count computation and caching (GET/PUT operations, S3 storage)",
+      "otel": {
+        "scope": "line-counts-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "owner-page-scope",
+      "type": "otel-scope",
+      "x": 0,
+      "y": 750,
+      "width": 220,
+      "height": 100,
+      "color": "#a855f7",
+      "label": "Owner Page",
+      "description": "Owner page UI (repository list, file tree, panels, view modes)",
+      "otel": {
+        "scope": "owner-page",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "package-lookup-api-scope",
+      "type": "otel-scope",
+      "x": 250,
+      "y": 750,
+      "width": 220,
+      "height": 100,
+      "color": "#84cc16",
+      "label": "Package Lookup API",
+      "description": "Package repository lookup (npm registry, fallback strategies)",
+      "otel": {
+        "scope": "package-lookup-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "repository-page-scope",
+      "type": "otel-scope",
+      "x": 0,
+      "y": 900,
+      "width": 220,
+      "height": 100,
+      "color": "#3b82f6",
+      "label": "Repository Page",
+      "description": "Repository page UI (file tree, panels, view modes, navigation)",
+      "otel": {
+        "scope": "repository-page",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "shared-collections-page-scope",
+      "type": "otel-scope",
+      "x": 250,
+      "y": 900,
+      "width": 220,
+      "height": 100,
+      "color": "#06b6d4",
+      "label": "Shared Collections Page",
+      "description": "Shared collections page UI (user collections, progressive loading)",
+      "otel": {
+        "scope": "shared-collections-page",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "stories-layout-page-scope",
+      "type": "otel-scope",
+      "x": 0,
+      "y": 1050,
+      "width": 220,
+      "height": 100,
+      "color": "#8b5cf6",
+      "label": "Stories Layout Page",
+      "description": "Stories layout interactions (layout switching, panel rendering)",
+      "otel": {
+        "scope": "stories-layout-page",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "tour-availability-api-scope",
+      "type": "otel-scope",
+      "x": 250,
+      "y": 1050,
+      "width": 220,
+      "height": 100,
+      "color": "#f97316",
+      "label": "Tour Availability API",
+      "description": "Tour availability checking (GitHub API, cache operations)",
+      "otel": {
+        "scope": "tour-availability-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "tts-generation-api-scope",
+      "type": "otel-scope",
+      "x": 0,
+      "y": 1200,
+      "width": 220,
+      "height": 100,
+      "color": "#ef4444",
+      "label": "TTS Generation API",
+      "description": "Text-to-speech generation (ElevenLabs API, S3 caching)",
+      "otel": {
+        "scope": "tts-generation-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "worlds-page-scope",
+      "type": "otel-scope",
+      "x": 250,
+      "y": 1200,
+      "width": 220,
+      "height": 100,
+      "color": "#14b8a6",
+      "label": "Worlds Page",
+      "description": "Worlds page UI (collection map, user interactions)",
+      "otel": {
+        "scope": "worlds-page",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "auth-callback-api-scope",
+      "type": "otel-scope",
+      "x": 0,
+      "y": 1350,
+      "width": 220,
+      "height": 100,
+      "color": "#10b981",
+      "label": "Auth Callback API",
+      "description": "OAuth callback handling (state validation, token exchange)",
+      "otel": {
+        "scope": "auth-callback-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "version-registry-api-scope",
+      "type": "otel-scope",
+      "x": 250,
+      "y": 1350,
+      "width": 220,
+      "height": 100,
+      "color": "#f59e0b",
+      "label": "Version Registry API",
+      "description": "Version registry (semver to git SHA mapping, caching)",
+      "otel": {
+        "scope": "version-registry-api",
+        "status": "draft"
+      }
     }
   ],
   "edges": [

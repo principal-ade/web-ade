@@ -80,6 +80,7 @@
         }
       },
       "otel": {
+        "scope": "auth-callback-api",
         "status": "draft"
       }
     },
@@ -142,6 +143,7 @@
         }
       },
       "otel": {
+        "scope": "auth-callback-api",
         "status": "draft"
       }
     },
@@ -226,6 +228,7 @@
         }
       },
       "otel": {
+        "scope": "auth-callback-api",
         "status": "draft"
       }
     },
@@ -266,6 +269,7 @@
         }
       },
       "otel": {
+        "scope": "auth-callback-api",
         "status": "draft"
       }
     },
@@ -306,6 +310,7 @@
         }
       },
       "otel": {
+        "scope": "auth-callback-api",
         "status": "draft"
       }
     },
@@ -346,6 +351,7 @@
         }
       },
       "otel": {
+        "scope": "auth-callback-api",
         "status": "draft"
       }
     },
@@ -408,6 +414,7 @@
         }
       },
       "otel": {
+        "scope": "auth-callback-api",
         "status": "draft"
       }
     },
@@ -481,6 +488,7 @@
         }
       },
       "otel": {
+        "scope": "auth-callback-api",
         "status": "draft"
       }
     }

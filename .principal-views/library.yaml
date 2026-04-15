@@ -27,6 +27,18 @@ resources:
       - "collections-api"
       - "collections-page"
       - "feed-collections-api"
+      - "feed-suggestions-api"
+      - "line-counts-api"
+      - "owner-page"
+      - "package-lookup-api"
+      - "repository-page"
+      - "shared-collections-page"
+      - "stories-layout-page"
+      - "tour-availability-api"
+      - "tts-generation-api"
+      - "worlds-page"
+      - "auth-callback-api"
+      - "version-registry-api"
 
 scopes:
   authentication-api:
@@ -50,6 +62,42 @@ scopes:
   feed-collections-api:
     color: "#ec4899"
     description: "Feed collections API (S3 storage, subscriptions, follows)"
+  feed-suggestions-api:
+    color: "#f59e0b"
+    description: "Feed suggestions and commit queue (GitHub suggestions, search, feed operations)"
+  line-counts-api:
+    color: "#14b8a6"
+    description: "Line count computation and caching (GET/PUT operations, S3 storage)"
+  owner-page:
+    color: "#a855f7"
+    description: "Owner page UI (repository list, file tree, panels, view modes)"
+  package-lookup-api:
+    color: "#84cc16"
+    description: "Package repository lookup (npm registry, fallback strategies)"
+  repository-page:
+    color: "#3b82f6"
+    description: "Repository page UI (file tree, panels, view modes, navigation)"
+  shared-collections-page:
+    color: "#06b6d4"
+    description: "Shared collections page UI (user collections, progressive loading)"
+  stories-layout-page:
+    color: "#8b5cf6"
+    description: "Stories layout interactions (layout switching, panel rendering)"
+  tour-availability-api:
+    color: "#f97316"
+    description: "Tour availability checking (GitHub API, cache operations)"
+  tts-generation-api:
+    color: "#ef4444"
+    description: "Text-to-speech generation (ElevenLabs API, S3 caching)"
+  worlds-page:
+    color: "#14b8a6"
+    description: "Worlds page UI (collection map, user interactions)"
+  auth-callback-api:
+    color: "#10b981"
+    description: "OAuth callback handling (state validation, token exchange)"
+  version-registry-api:
+    color: "#f59e0b"
+    description: "Version registry (semver to git SHA mapping, caching)"
 
 nodeComponents: {}
 edgeComponents: {}

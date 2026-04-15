@@ -50,6 +50,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -77,6 +78,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -109,6 +111,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -136,6 +139,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -163,6 +167,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -190,6 +195,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -217,6 +223,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -244,6 +251,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -276,6 +284,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -308,6 +317,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -345,6 +355,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -377,6 +388,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -414,6 +426,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -441,6 +454,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -468,6 +482,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -500,6 +515,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -532,6 +548,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -564,6 +581,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -596,6 +614,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     },
@@ -628,6 +647,7 @@
         }
       },
       "otel": {
+        "scope": "line-counts-api",
         "status": "draft"
       }
     }

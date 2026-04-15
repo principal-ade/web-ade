@@ -48,6 +48,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -80,6 +81,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -112,6 +114,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -145,6 +148,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -182,6 +186,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -214,6 +219,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -257,6 +263,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -289,6 +296,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -321,6 +329,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -363,6 +372,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -400,6 +410,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -442,6 +453,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -484,6 +496,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -521,6 +534,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -558,6 +572,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -595,6 +610,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -633,6 +649,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -665,6 +682,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -697,6 +715,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -734,6 +753,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -771,6 +791,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -809,6 +830,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -846,6 +868,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -888,6 +911,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -925,6 +949,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -967,6 +992,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -1009,6 +1035,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -1041,6 +1068,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -1078,6 +1106,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -1115,6 +1144,7 @@
         }
       },
       "otel": {
+        "scope": "worlds-page",
         "status": "draft"
       }
     }

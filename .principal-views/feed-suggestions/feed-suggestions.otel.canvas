@@ -31,6 +31,7 @@
       "height": 90,
       "color": "#1d4ed8",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -53,6 +54,7 @@
       "height": 90,
       "color": "#6d28d9",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -81,6 +83,7 @@
       "height": 90,
       "color": "#6d28d9",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -103,6 +106,7 @@
       "height": 90,
       "color": "#6d28d9",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -125,6 +129,7 @@
       "height": 90,
       "color": "#6d28d9",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -153,6 +158,7 @@
       "height": 90,
       "color": "#0891b2",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -191,6 +197,7 @@
       "height": 90,
       "color": "#16a34a",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -219,6 +226,7 @@
       "height": 90,
       "color": "#1d4ed8",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -241,6 +249,7 @@
       "height": 90,
       "color": "#6d28d9",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -269,6 +278,7 @@
       "height": 90,
       "color": "#6d28d9",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -291,6 +301,7 @@
       "height": 90,
       "color": "#6d28d9",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -313,6 +324,7 @@
       "height": 90,
       "color": "#6d28d9",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -341,6 +353,7 @@
       "height": 90,
       "color": "#0891b2",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -379,6 +392,7 @@
       "height": 90,
       "color": "#16a34a",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -407,6 +421,7 @@
       "height": 90,
       "color": "#1d4ed8",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -440,6 +455,7 @@
       "height": 90,
       "color": "#6d28d9",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -468,6 +484,7 @@
       "height": 90,
       "color": "#16a34a",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -501,6 +518,7 @@
       "height": 90,
       "color": "#1d4ed8",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -534,6 +552,7 @@
       "height": 90,
       "color": "#6d28d9",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -562,6 +581,7 @@
       "height": 90,
       "color": "#16a34a",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -595,6 +615,7 @@
       "height": 90,
       "color": "#dc2626",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -617,6 +638,7 @@
       "height": 90,
       "color": "#d97706",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -645,6 +667,7 @@
       "height": 90,
       "color": "#1d4ed8",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -673,6 +696,7 @@
       "height": 90,
       "color": "#6d28d9",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -701,6 +725,7 @@
       "height": 90,
       "color": "#6d28d9",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -734,6 +759,7 @@
       "height": 90,
       "color": "#6d28d9",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -767,6 +793,7 @@
       "height": 90,
       "color": "#6d28d9",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -795,6 +822,7 @@
       "height": 90,
       "color": "#0891b2",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -828,6 +856,7 @@
       "height": 90,
       "color": "#0891b2",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -866,6 +895,7 @@
       "height": 90,
       "color": "#16a34a",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -899,6 +929,7 @@
       "height": 90,
       "color": "#1d4ed8",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -927,6 +958,7 @@
       "height": 90,
       "color": "#6d28d9",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -955,6 +987,7 @@
       "height": 90,
       "color": "#16a34a",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -977,6 +1010,7 @@
       "height": 90,
       "color": "#1d4ed8",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -1010,6 +1044,7 @@
       "height": 90,
       "color": "#6d28d9",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -1038,6 +1073,7 @@
       "height": 90,
       "color": "#16a34a",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {
@@ -1060,6 +1096,7 @@
       "height": 90,
       "color": "#d97706",
       "otel": {
+        "scope": "feed-suggestions-api",
         "status": "draft"
       },
       "pv": {

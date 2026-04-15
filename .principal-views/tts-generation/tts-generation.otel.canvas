@@ -89,6 +89,7 @@
         }
       },
       "otel": {
+        "scope": "tts-generation-api",
         "status": "draft"
       }
     },
@@ -134,6 +135,7 @@
         }
       },
       "otel": {
+        "scope": "tts-generation-api",
         "status": "draft"
       }
     },
@@ -174,6 +176,7 @@
         }
       },
       "otel": {
+        "scope": "tts-generation-api",
         "status": "draft"
       }
     },
@@ -219,6 +222,7 @@
         }
       },
       "otel": {
+        "scope": "tts-generation-api",
         "status": "draft"
       }
     },
@@ -274,6 +278,7 @@
         }
       },
       "otel": {
+        "scope": "tts-generation-api",
         "status": "draft"
       }
     },
@@ -319,6 +324,7 @@
         }
       },
       "otel": {
+        "scope": "tts-generation-api",
         "status": "draft"
       }
     },
@@ -364,6 +370,7 @@
         }
       },
       "otel": {
+        "scope": "tts-generation-api",
         "status": "draft"
       }
     },
@@ -424,6 +431,7 @@
         }
       },
       "otel": {
+        "scope": "tts-generation-api",
         "status": "draft"
       }
     },
@@ -474,6 +482,7 @@
         }
       },
       "otel": {
+        "scope": "tts-generation-api",
         "status": "draft"
       }
     },
@@ -524,6 +533,7 @@
         }
       },
       "otel": {
+        "scope": "tts-generation-api",
         "status": "draft"
       }
     },
@@ -569,6 +579,7 @@
         }
       },
       "otel": {
+        "scope": "tts-generation-api",
         "status": "draft"
       }
     },
@@ -604,6 +615,7 @@
         }
       },
       "otel": {
+        "scope": "tts-generation-api",
         "status": "draft"
       }
     }

@@ -17,12 +17,24 @@ Adding required `otel.scope` field to all event nodes in canvas files to fix val
 | `activity-feed-api` | #16a34a | Activity feed data fetching and aggregation | ✅ Added |
 | `collections-api` | #6d28d9 | Collections API operations (GitHub integration) | ✅ Added |
 | `feed-collections-api` | #ec4899 | Feed collections API (S3 storage, subscriptions, follows) | ✅ Added |
+| `feed-suggestions-api` | #f59e0b | Feed suggestions and commit queue (GitHub suggestions, search, feed operations) | ✅ Added |
+| `line-counts-api` | #14b8a6 | Line count computation and caching (GET/PUT operations, S3 storage) | ✅ Added |
+| `package-lookup-api` | #84cc16 | Package repository lookup (npm registry, fallback strategies) | ✅ Added |
+| `tour-availability-api` | #f97316 | Tour availability checking (GitHub API, cache operations) | ✅ Added |
+| `tts-generation-api` | #ef4444 | Text-to-speech generation (ElevenLabs API, S3 caching) | ✅ Added |
+| `auth-callback-api` | #10b981 | OAuth callback handling (state validation, token exchange) | ✅ Added |
+| `version-registry-api` | #f59e0b | Version registry (semver to git SHA mapping, caching) | ✅ Added |
 
 ### Client-side Page Scopes
 | Scope Name | Color | Description | Status |
 |------------|-------|-------------|--------|
 | `activity-feed-page` | #0891b2 | Activity feed UI interactions and display | ✅ Added |
 | `collections-page` | #8b5cf6 | Collections UI management (create, import, load) | ✅ Added |
+| `owner-page` | #a855f7 | Owner page UI (repository list, file tree, panels, view modes) | ✅ Added |
+| `repository-page` | #3b82f6 | Repository page UI (file tree, panels, view modes, navigation) | ✅ Added |
+| `shared-collections-page` | #06b6d4 | Shared collections page UI (user collections, progressive loading) | ✅ Added |
+| `stories-layout-page` | #8b5cf6 | Stories layout interactions (layout switching, panel rendering) | ✅ Added |
+| `worlds-page` | #14b8a6 | Worlds page UI (collection map, user interactions) | ✅ Added |
 
 ### Framework Scopes
 | Scope Name | Color | Description | Status |
@@ -31,7 +43,7 @@ Adding required `otel.scope` field to all event nodes in canvas files to fix val
 
 ---
 
-## Canvas Files Progress (5/17 Complete)
+## Canvas Files Progress (17/17 Complete) ✅
 
 ### ✅ Completed Files
 
@@ -60,57 +72,65 @@ Adding required `otel.scope` field to all event nodes in canvas files to fix val
 - **Notes**: S3 storage, subscriptions, follows
 - **Status**: ✅ Done
 
----
-
-### 🔄 Remaining Files (12)
-
 #### 6. feed-suggestions.otel.canvas
-- **Estimated Scopes**: TBD (likely `feed-suggestions-api`)
-- **Status**: ⏳ Pending
+- **Scopes Used**: `feed-suggestions-api` (38 events)
+- **Notes**: GitHub suggestions, search, and feed commit queue operations
+- **Status**: ✅ Done
 
-#### 7. file-city.otel.canvas
-- **Estimated Scopes**: TBD (likely `file-city-api`)
-- **Status**: ⏳ Pending
+#### 7. line-counts.otel.canvas
+- **Scopes Used**: `line-counts-api` (19 events)
+- **Notes**: Line count computation and caching (GET/PUT operations, S3 storage)
+- **Status**: ✅ Done
 
-#### 8. line-counts.otel.canvas
-- **Estimated Scopes**: TBD (likely `line-counts-api`)
-- **Status**: ⏳ Pending
+#### 8. owner.otel.canvas
+- **Scopes Used**: `owner-page` (21 events)
+- **Notes**: Owner page UI (repository list, file tree, panels, view modes)
+- **Status**: ✅ Done
 
-#### 9. owner-page.otel.canvas
-- **Estimated Scopes**: TBD (likely `owner-page`)
-- **Status**: ⏳ Pending
+#### 9. package-repository-lookup.otel.canvas
+- **Scopes Used**: `package-lookup-api` (15 events)
+- **Notes**: Package repository lookup (npm registry, fallback strategies)
+- **Status**: ✅ Done
 
-#### 10. package-lookup.otel.canvas
-- **Estimated Scopes**: TBD (likely `package-lookup-api`)
-- **Status**: ⏳ Pending
+#### 10. repository.otel.canvas
+- **Scopes Used**: `repository-page` (49 events)
+- **Notes**: Repository page UI (file tree, panels, view modes, navigation)
+- **Status**: ✅ Done
 
-#### 11. repository-api.otel.canvas
-- **Estimated Scopes**: TBD (likely `repository-api`)
-- **Status**: ⏳ Pending
+#### 11. shared-collections.otel.canvas
+- **Scopes Used**: `shared-collections-page` (24 events)
+- **Notes**: Shared collections page UI (user collections, progressive loading)
+- **Status**: ✅ Done
 
-#### 12. repository-page.otel.canvas
-- **Estimated Scopes**: TBD (likely `repository-page`)
-- **Status**: ⏳ Pending
+#### 12. stories-layout.otel.canvas
+- **Scopes Used**: `stories-layout-page` (23 events)
+- **Notes**: Stories layout interactions (layout switching, panel rendering)
+- **Status**: ✅ Done
 
-#### 13. shared-collections-page.otel.canvas
-- **Estimated Scopes**: TBD (likely `shared-collections-page`)
-- **Status**: ⏳ Pending
+#### 13. tour-availability.otel.canvas
+- **Scopes Used**: `tour-availability-api` (14 events)
+- **Notes**: Tour availability checking (GitHub API, cache operations)
+- **Status**: ✅ Done
 
-#### 14. stories-layout.otel.canvas
-- **Estimated Scopes**: TBD (likely `stories-layout`)
-- **Status**: ⏳ Pending
+#### 14. tts-generation.otel.canvas
+- **Scopes Used**: `tts-generation-api` (12 events)
+- **Notes**: Text-to-speech generation (ElevenLabs API, S3 caching)
+- **Status**: ✅ Done
 
-#### 15. tour-availability-api.otel.canvas
-- **Estimated Scopes**: TBD (likely `tour-availability-api`)
-- **Status**: ⏳ Pending
+#### 15. worlds.otel.canvas
+- **Scopes Used**: `worlds-page` (30 events)
+- **Notes**: Worlds page UI (collection map, user interactions)
+- **Status**: ✅ Done
 
-#### 16. tts-generation.otel.canvas
-- **Estimated Scopes**: TBD (likely `tts-generation-api`)
-- **Status**: ⏳ Pending
+#### 16. auth-callback.otel.canvas
+- **Scopes Used**: `auth-callback-api` (8 events)
+- **Notes**: OAuth callback handling (state validation, token exchange)
+- **Status**: ✅ Done
 
-#### 17. worlds-page.otel.canvas
-- **Estimated Scopes**: TBD (likely `worlds-page`)
-- **Status**: ⏳ Pending
+#### 17. version-registry.otel.canvas
+- **Scopes Used**: `version-registry-api` (19 events)
+- **Notes**: Version registry (semver to git SHA mapping, caching)
+- **Status**: ✅ Done
 
 ---
 
@@ -142,8 +162,8 @@ Adding required `otel.scope` field to all event nodes in canvas files to fix val
 - `architecture.scopes.canvas` - Add visual scope nodes
 - Individual `.otel.canvas` files - Add scope to each event's otel object
 
-### Validation:
-Run `npx @principal-ai/principal-view-cli@latest validate` to check progress.
+### Final Validation:
+✅ All 85 files validated successfully (23 canvas files, 61 workflow files, 1 library file)
 
 ---
 
@@ -152,5 +172,21 @@ Run `npx @principal-ai/principal-view-cli@latest validate` to check progress.
 - Some client events reuse existing scopes (e.g., `activity-feed-page`)
 - Color scheme: Green (#10B981) for auth, Blue (#0891b2) for feeds, Purple (#6d28d9/#8b5cf6) for collections, Pink (#ec4899) for feed-collections
 
+## Summary
+
+### Total Scopes Created: 18
+- **Server-side API Scopes**: 11
+- **Client-side Page Scopes**: 7
+- **Framework Scopes**: 1 (existing)
+
+### Total Events Updated: 293+
+All event nodes across 17 canvas files now have the required `otel.scope` field.
+
+### Validation Status
+✅ All 85 files pass validation
+- 23 canvas files
+- 61 workflow files
+- 1 library file
+
 ## Last Updated
-2026-04-14
+2026-04-15 - Migration Complete!
