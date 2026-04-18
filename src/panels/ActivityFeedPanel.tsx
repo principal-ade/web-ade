@@ -21,6 +21,7 @@ import { usePersonalizedFeed } from '@/hooks/usePersonalizedFeed';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { RepoActivityCard } from './RepoActivityCard';
 import { MobileActivityFeed } from '@/components/home/MobileActivityFeed';
+import { RepoHeader } from '@/components/RepoHeader';
 
 // Hour helpers for grouping
 const formatHourLabel = (hour: number): string => {
@@ -137,6 +138,7 @@ interface GitHubSearchRepo {
   owner: {
     login: string;
     avatar_url: string;
+    type?: 'User' | 'Organization';
   };
   description: string | null;
 }
@@ -269,7 +271,23 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
 
   // Selected repo from search (replaces feed with single repo)
   const [selectedRepo, setSelectedRepo] = useState<GitHubSearchRepo | null>(null);
-  const [selectedRepoLoading, setSelectedRepoLoading] = useState(false);
+
+  // Full repository details for header display
+  const [selectedRepoDetails, setSelectedRepoDetails] = useState<{
+    created_at: string;
+    updated_at: string;
+    language: string | null;
+    stargazers_count: number;
+    forks_count: number;
+    watchers_count: number;
+    open_issues_count: number;
+  } | null>(null);
+
+  // Full year contribution data for heatmap
+  const [contributionData, setContributionData] = useState<{
+    contributions: Array<{ date: string; count: number }>;
+    totalCommits: number;
+  } | null>(null);
 
   // Selected author (shows profile in right column)
   const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
@@ -324,20 +342,52 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
 
   // Handle selecting a repo from search results
   const handleSelectRepo = useCallback(async (repo: GitHubSearchRepo) => {
+    // Immediately set repo with data we already have
     setSelectedRepo(repo);
-    setSelectedRepoLoading(true);
 
     // Update URL with repo for sharing
     router.replace(`${pathname}?q=${repo.full_name}`, { scroll: false });
 
-    // Fetch activity for this repo
+    // Fetch full repository details and contributions in parallel
+    try {
+      const [detailsResponse, contributionsResponse] = await Promise.all([
+        fetch(`https://api.github.com/repos/${repo.owner.login}/${repo.name}`),
+        fetch(`/api/github/repo/${repo.owner.login}/${repo.name}/contributions`)
+      ]);
+
+      if (detailsResponse.ok) {
+        const data = await detailsResponse.json();
+        setSelectedRepoDetails({
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+          language: data.language,
+          stargazers_count: data.stargazers_count || 0,
+          forks_count: data.forks_count || 0,
+          watchers_count: data.watchers_count || 0,
+          open_issues_count: data.open_issues_count || 0,
+        });
+      }
+
+      if (contributionsResponse.ok) {
+        const data = await contributionsResponse.json();
+        setContributionData({
+          contributions: data.contributions || [],
+          totalCommits: data.totalCommits || 0,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch repository details:', error);
+    }
+
+    // Fetch activity for this repo (for recent 24h feed)
     await addRepo(repo.owner.login, repo.name);
-    setSelectedRepoLoading(false);
   }, [addRepo, pathname, router]);
 
   // Clear selected repo to go back to featured repos
   const clearSelectedRepo = useCallback(() => {
     setSelectedRepo(null);
+    setSelectedRepoDetails(null);
+    setContributionData(null);
     // Clear URL param
     router.replace(pathname, { scroll: false });
   }, [pathname, router]);
@@ -358,18 +408,37 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
 
       // Fetch and select the repo
       (async () => {
-        setSelectedRepoLoading(true);
         try {
-          const response = await fetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}`);
-          if (response.ok) {
-            const data = await response.json();
-            setSelectedRepo(data);
+          const [repoResponse, contributionsResponse] = await Promise.all([
+            fetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}`),
+            fetch(`/api/github/repo/${parsed.owner}/${parsed.repo}/contributions`)
+          ]);
+
+          if (repoResponse.ok) {
+            const repoData = await repoResponse.json();
+            setSelectedRepo(repoData);
+            setSelectedRepoDetails({
+              created_at: repoData.created_at,
+              updated_at: repoData.updated_at,
+              language: repoData.language,
+              stargazers_count: repoData.stargazers_count || 0,
+              forks_count: repoData.forks_count || 0,
+              watchers_count: repoData.watchers_count || 0,
+              open_issues_count: repoData.open_issues_count || 0,
+            });
             await addRepo(parsed.owner, parsed.repo);
+          }
+
+          if (contributionsResponse.ok) {
+            const contributionsData = await contributionsResponse.json();
+            setContributionData({
+              contributions: contributionsData.contributions || [],
+              totalCommits: contributionsData.totalCommits || 0,
+            });
           }
         } catch (err) {
           console.warn('Failed to load repo from URL:', err);
         }
-        setSelectedRepoLoading(false);
       })();
     } else {
       initialLoadHandled.current = true;
@@ -401,6 +470,18 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     });
   }, [repoSummaries, selectedRepo]);
 
+  // Build activity data map for the heatmap from full year contribution data
+  const selectedRepoActivityData = useMemo(() => {
+    if (!selectedRepo || !contributionData) return new Map<string, number>();
+
+    const activityMap = new Map<string, number>();
+    contributionData.contributions.forEach((contribution) => {
+      activityMap.set(contribution.date, contribution.count);
+    });
+
+    return activityMap;
+  }, [selectedRepo, contributionData]);
+
   // Group summaries by hour for the center feed
   const hourGroups = useMemo(() => {
     return groupSummariesByHour(displaySummaries);
@@ -419,10 +500,66 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     });
   };
 
-  // Handle opening repo (navigate to repo page)
-  const handleRepoOpen = (summary: RepoActivitySummary) => {
-    window.open(`/${summary.owner}/${summary.repo}`, '_blank');
-  };
+  // Handle opening repo (show header view)
+  const handleRepoOpen = useCallback(async (summary: RepoActivitySummary) => {
+    // Update URL with repo for sharing
+    router.replace(`${pathname}?q=${summary.fullName}`, { scroll: false });
+
+    // Immediately set repo with data we already have
+    setSelectedRepo({
+      id: 0,
+      name: summary.repo,
+      full_name: summary.fullName,
+      owner: {
+        login: summary.owner,
+        avatar_url: summary.ownerAvatarUrl || `https://github.com/${summary.owner}.png`,
+        type: undefined,
+      },
+      description: null,
+    });
+
+    // Fetch full details in background
+    try {
+      const [repoResponse, contributionsResponse] = await Promise.all([
+        fetch(`https://api.github.com/repos/${summary.owner}/${summary.repo}`),
+        fetch(`/api/github/repo/${summary.owner}/${summary.repo}/contributions`)
+      ]);
+
+      if (repoResponse.ok) {
+        const repoData = await repoResponse.json();
+        setSelectedRepo({
+          id: repoData.id || 0,
+          name: repoData.name,
+          full_name: repoData.full_name,
+          owner: {
+            login: repoData.owner.login,
+            avatar_url: repoData.owner.avatar_url,
+            type: repoData.owner.type,
+          },
+          description: repoData.description,
+        });
+        setSelectedRepoDetails({
+          created_at: repoData.created_at,
+          updated_at: repoData.updated_at,
+          language: repoData.language,
+          stargazers_count: repoData.stargazers_count || 0,
+          forks_count: repoData.forks_count || 0,
+          watchers_count: repoData.watchers_count || 0,
+          open_issues_count: repoData.open_issues_count || 0,
+        });
+      }
+
+      if (contributionsResponse.ok) {
+        const contributionsData = await contributionsResponse.json();
+        setContributionData({
+          contributions: contributionsData.contributions || [],
+          totalCommits: contributionsData.totalCommits || 0,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch repository details:', error);
+    }
+  }, [pathname, router]);
 
   // Handle author click - fetch profile
   const handleAuthorClick = useCallback((username: string) => {
@@ -793,22 +930,68 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
               return (
                 <button
                   key={summary.fullName}
-                  onClick={() => {
+                  onClick={async () => {
                     if (selectedRepo?.full_name === summary.fullName) {
                       // Deselect if clicking the same repo
-                      setSelectedRepo(null);
+                      clearSelectedRepo();
                     } else {
-                      // Select this repo
+                      // Update URL with repo for sharing
+                      router.replace(`${pathname}?q=${summary.fullName}`, { scroll: false });
+
+                      // Immediately set repo with data we already have
                       setSelectedRepo({
                         id: 0,
                         name: summary.repo,
                         full_name: summary.fullName,
                         owner: {
                           login: summary.owner,
-                          avatar_url: summary.ownerAvatarUrl || '',
+                          avatar_url: summary.ownerAvatarUrl || `https://github.com/${summary.owner}.png`,
+                          type: undefined,
                         },
                         description: null,
                       });
+
+                      // Fetch full details in background
+                      try {
+                        const [repoResponse, contributionsResponse] = await Promise.all([
+                          fetch(`https://api.github.com/repos/${summary.owner}/${summary.repo}`),
+                          fetch(`/api/github/repo/${summary.owner}/${summary.repo}/contributions`)
+                        ]);
+
+                        if (repoResponse.ok) {
+                          const repoData = await repoResponse.json();
+                          setSelectedRepo({
+                            id: repoData.id || 0,
+                            name: repoData.name,
+                            full_name: repoData.full_name,
+                            owner: {
+                              login: repoData.owner.login,
+                              avatar_url: repoData.owner.avatar_url,
+                              type: repoData.owner.type,
+                            },
+                            description: repoData.description,
+                          });
+                          setSelectedRepoDetails({
+                            created_at: repoData.created_at,
+                            updated_at: repoData.updated_at,
+                            language: repoData.language,
+                            stargazers_count: repoData.stargazers_count || 0,
+                            forks_count: repoData.forks_count || 0,
+                            watchers_count: repoData.watchers_count || 0,
+                            open_issues_count: repoData.open_issues_count || 0,
+                          });
+                        }
+
+                        if (contributionsResponse.ok) {
+                          const contributionsData = await contributionsResponse.json();
+                          setContributionData({
+                            contributions: contributionsData.contributions || [],
+                            totalCommits: contributionsData.totalCommits || 0,
+                          });
+                        }
+                      } catch (error) {
+                        console.error('Failed to fetch repository details:', error);
+                      }
                     }
                   }}
                   style={{
@@ -915,38 +1098,23 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
           <style>{`.activity-feed-scroll::-webkit-scrollbar { display: none; }`}</style>
           {/* Selected repo header */}
           {selectedRepo && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.sm,
-                marginBottom: spacing.md,
+            <RepoHeader
+              repo={{
+                name: selectedRepo.name,
+                full_name: selectedRepo.full_name,
+                owner: {
+                  login: selectedRepo.owner.login,
+                  avatar_url: selectedRepo.owner.avatar_url,
+                  type: selectedRepo.owner.type,
+                },
+                description: selectedRepo.description,
+                created_at: selectedRepoDetails?.created_at || null,
+                language: selectedRepoDetails?.language || null,
               }}
-            >
-              <button
-                onClick={clearSelectedRepo}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: spacing.xs,
-                  padding: `${spacing.xs}px ${spacing.sm}px`,
-                  backgroundColor: 'transparent',
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: 4,
-                  color: theme.colors.textMuted,
-                  cursor: 'pointer',
-                  fontSize: theme.fontSizes[1],
-                }}
-              >
-                ← Back to feed
-              </button>
-              <span style={{ fontSize: theme.fontSizes[2], fontWeight: 600, color: theme.colors.text }}>
-                {selectedRepo.full_name}
-              </span>
-              {selectedRepoLoading && (
-                <LoadingSpinner size={16} />
-              )}
-            </div>
+              activityData={selectedRepoActivityData}
+              totalCommits={contributionData?.totalCommits || 0}
+              onBackClick={clearSelectedRepo}
+            />
           )}
 
           {error && (
