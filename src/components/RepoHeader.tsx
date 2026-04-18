@@ -156,7 +156,10 @@ const ActivityHeatmap: React.FC<{
         overflowX: 'auto',
         overflowY: 'hidden',
         alignItems: 'center',
+        scrollbarWidth: 'none', // Firefox
+        msOverflowStyle: 'none', // IE/Edge
       }}
+      className="heatmap-container"
     >
       {weeks.map((week, weekIndex) => (
         <div key={week[0]?.date ?? `week-${weekIndex}`} style={{ display: 'flex', flexDirection: 'column', gap, flexShrink: 0 }}>
@@ -221,6 +224,13 @@ export const RepoHeader: React.FC<RepoHeaderProps> = ({
         marginBottom: spacing.md,
       }}
     >
+      {/* Hide scrollbar for webkit browsers */}
+      <style>{`
+        .heatmap-container::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+
       {/* Banner with Activity Heatmap */}
       <div
         style={{
