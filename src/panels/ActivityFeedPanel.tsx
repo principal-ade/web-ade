@@ -276,6 +276,9 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   const [authorProfile, setAuthorProfile] = useState<GitHubUserProfile | null>(null);
   const [authorLoading, setAuthorLoading] = useState(false);
 
+  // Search expansion state for left column
+  const [searchExpanded, setSearchExpanded] = useState(false);
+
   // Debounced GitHub search
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -323,8 +326,6 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   const handleSelectRepo = useCallback(async (repo: GitHubSearchRepo) => {
     setSelectedRepo(repo);
     setSelectedRepoLoading(true);
-    setSearchQuery('');
-    setSearchResults([]);
 
     // Update URL with repo for sharing
     router.replace(`${pathname}?q=${repo.full_name}`, { scroll: false });
@@ -427,6 +428,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   const handleAuthorClick = useCallback((username: string) => {
     setSelectedAuthor(username);
     setSearchQuery(''); // Clear search when viewing author
+    setSearchExpanded(false); // Close search panel
   }, []);
 
   // Fetch file stats for all repos
@@ -567,15 +569,227 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
           >
             <div
               style={{
-                fontSize: theme.fontSizes[2],
-                fontWeight: 600,
-                color: theme.colors.text,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
                 marginBottom: spacing.xs,
               }}
             >
-              Popular Projects
+              <div
+                style={{
+                  fontSize: theme.fontSizes[2],
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                }}
+              >
+                Popular Projects
+              </div>
+              <button
+                onClick={() => setSearchExpanded(!searchExpanded)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: spacing.xs,
+                  backgroundColor: searchExpanded ? theme.colors.primary : theme.colors.surface,
+                  border: `1px solid ${searchExpanded ? theme.colors.primary : theme.colors.border}`,
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (!searchExpanded) {
+                    e.currentTarget.style.opacity = '0.8';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!searchExpanded) {
+                    e.currentTarget.style.opacity = '1';
+                  }
+                }}
+              >
+                <Search size={16} color={searchExpanded ? theme.colors.textOnPrimary : theme.colors.text} />
+              </button>
             </div>
-            {allSummaries.map((summary) => {
+
+            {/* Search interface - shown when expanded */}
+            {searchExpanded && (
+              <div style={{ marginBottom: spacing.md }}>
+                {/* Search input */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: spacing.sm,
+                    padding: `${spacing.sm}px ${spacing.md}px`,
+                    backgroundColor: theme.colors.surface,
+                    borderRadius: 4,
+                    border: `1px solid ${theme.colors.border}`,
+                    marginBottom: spacing.sm,
+                  }}
+                >
+                  <Search size={16} color={theme.colors.textMuted} />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSearchQuery(value);
+                      if (value.trim()) setSearchLoading(true);
+                    }}
+                    placeholder="Search GitHub or paste a link..."
+                    style={{
+                      flex: 1,
+                      border: 'none',
+                      outline: 'none',
+                      backgroundColor: 'transparent',
+                      color: theme.colors.text,
+                      fontSize: theme.fontSizes[1],
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: spacing.xs,
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        borderRadius: 4,
+                      }}
+                    >
+                      <X size={14} color={theme.colors.textMuted} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Search results */}
+                {searchLoading ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: spacing.lg,
+                    }}
+                  >
+                    <GitHubSearchingAnimation size={80} />
+                  </div>
+                ) : searchQuery.trim() && searchResults.length === 0 ? (
+                  <div
+                    style={{
+                      padding: spacing.md,
+                      textAlign: 'center',
+                      color: theme.colors.textMuted,
+                      fontSize: theme.fontSizes[1],
+                    }}
+                  >
+                    No results for &quot;{searchQuery}&quot;
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
+                    {searchResults.map((repo) => {
+                      const isSelected = selectedRepo?.full_name === repo.full_name;
+                      return (
+                      <button
+                        key={repo.id}
+                        onClick={() => {
+                          handleSelectRepo(repo);
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: spacing.sm,
+                          padding: spacing.sm,
+                          backgroundColor: isSelected ? theme.colors.surface : 'transparent',
+                          border: `1px solid ${isSelected ? theme.colors.primary : theme.colors.border}`,
+                          borderRadius: 6,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.backgroundColor = theme.colors.surface;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }
+                        }}
+                      >
+                        {/* Avatar */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={repo.owner.avatar_url}
+                          alt={repo.owner.login}
+                          style={{
+                            width: 56,
+                            height: 56,
+                            borderRadius: 8,
+                            flexShrink: 0,
+                          }}
+                        />
+
+                        {/* Text content */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: spacing.xs,
+                            flex: 1,
+                            minWidth: 0,
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: theme.fontSizes[1],
+                              fontWeight: 600,
+                              color: theme.colors.text,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {repo.name}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: theme.fontSizes[0],
+                              color: theme.colors.textMuted,
+                            }}
+                          >
+                            {repo.owner.login}
+                          </div>
+                          {repo.description && (
+                            <div
+                              style={{
+                                fontSize: theme.fontSizes[0],
+                                color: theme.colors.textMuted,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {repo.description}
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            {/* Popular projects list - only show when search is not expanded */}
+            {!searchExpanded && allSummaries.map((summary) => {
               return (
                 <button
                   key={summary.fullName}
@@ -845,7 +1059,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
           )}
         </div>
 
-        {/* Right column - Search (desktop only) */}
+        {/* Right column - Author profile or default content (desktop only) */}
         <div
           className="hidden lg:flex"
           style={{
@@ -856,62 +1070,9 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
             overflow: 'hidden',
           }}
         >
-          <div style={{ width: 300, padding: spacing.md }}>
-            {/* Search input */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing.sm,
-                padding: `${spacing.sm}px ${spacing.md}px`,
-                backgroundColor: theme.colors.surface,
-                borderRadius: 4,
-                border: `1px solid ${theme.colors.border}`,
-              }}
-            >
-              <Search size={16} color={theme.colors.textMuted} />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setSearchQuery(value);
-                  if (value.trim()) setSearchLoading(true);
-                }}
-                placeholder="Search GitHub or paste a link..."
-                style={{
-                  flex: 1,
-                  border: 'none',
-                  outline: 'none',
-                  backgroundColor: 'transparent',
-                  color: theme.colors.text,
-                  fontSize: theme.fontSizes[1],
-                  fontFamily: 'inherit',
-                }}
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: spacing.xs,
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    borderRadius: 4,
-                  }}
-                >
-                  <X size={14} color={theme.colors.textMuted} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Search results or Author profile */}
-          <div style={{ width: 300, flex: 1, overflow: 'auto', padding: `0 ${spacing.md}px ${spacing.md}px` }}>
-            {selectedAuthor && !searchQuery.trim() ? (
+          {/* Author profile or default content */}
+          <div style={{ width: 300, flex: 1, overflow: 'auto', padding: spacing.md }}>
+            {selectedAuthor ? (
               // Author profile view
               <div
                 style={{
@@ -1171,7 +1332,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                   </div>
                 )}
               </div>
-            ) : !searchQuery.trim() ? (
+            ) : (
               <div
                 style={{
                   display: 'flex',
@@ -1265,93 +1426,6 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                     Download
                   </a>
                 </div>
-              </div>
-            ) : searchLoading ? (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '100%',
-                  flex: 1,
-                }}
-              >
-                <GitHubSearchingAnimation size={120} />
-              </div>
-            ) : searchResults.length === 0 ? (
-              <div
-                style={{
-                  padding: spacing.md,
-                  textAlign: 'center',
-                  color: theme.colors.textMuted,
-                  fontSize: theme.fontSizes[1],
-                }}
-              >
-                No results for &quot;{searchQuery}&quot;
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-                {searchResults.map((repo) => (
-                  <button
-                    key={repo.id}
-                    onClick={() => handleSelectRepo(repo)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: spacing.sm,
-                      padding: spacing.sm,
-                      backgroundColor: 'transparent',
-                      border: `1px solid ${theme.colors.border}`,
-                      borderRadius: 6,
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      transition: 'background-color 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.surface;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={repo.owner.avatar_url}
-                      alt={repo.owner.login}
-                      style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: 4,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: theme.fontSizes[1],
-                          fontWeight: 500,
-                          color: theme.colors.text,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {repo.name}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: theme.fontSizes[0],
-                          color: theme.colors.textMuted,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {repo.owner.login}
-                      </div>
-                    </div>
-                  </button>
-                ))}
               </div>
             )}
           </div>
