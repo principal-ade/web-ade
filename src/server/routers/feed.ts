@@ -1389,16 +1389,16 @@ export const feedRouter = router({
     }),
 
   // ==========================================================================
-  // Activity Heatmap Endpoint
+  // Recent Commits Endpoint
   // ==========================================================================
 
   /**
-   * Get commit activity for heatmap visualization
-   * Returns flat list of commits with timestamps from watched users/repos
+   * Get recent commits from watched users/repos
+   * Returns full commit details including SHAs, messages, and file changes
    * Does NOT filter out passed/saved (shows all activity)
    * Requires authentication
    */
-  getActivityHeatmap: publicProcedure
+  getRecentCommits: publicProcedure
     .input(
       z
         .object({
@@ -1412,9 +1412,13 @@ export const feedRouter = router({
       z.object({
         commits: z.array(
           z.object({
+            sha: z.string(),
+            message: z.string(),
             timestamp: z.string(),
             repoId: z.string(),
             authorLogin: z.string(),
+            authorName: z.string(),
+            authorEmail: z.string(),
             authorAvatarUrl: z.string().optional(),
           })
         ),
@@ -1476,9 +1480,13 @@ export const feedRouter = router({
 
       // Collect all commits
       const allCommits: Array<{
+        sha: string;
+        message: string;
         timestamp: string;
         repoId: string;
         authorLogin: string;
+        authorName: string;
+        authorEmail: string;
         authorAvatarUrl?: string;
       }> = [];
 
@@ -1495,9 +1503,13 @@ export const feedRouter = router({
       >();
 
       const addCommit = (
+        sha: string,
+        message: string,
         timestamp: string,
         repoId: string,
         authorLogin: string,
+        authorName: string,
+        authorEmail: string,
         authorAvatarUrl?: string
       ) => {
         // Apply author filter if specified
@@ -1511,9 +1523,13 @@ export const feedRouter = router({
         }
 
         allCommits.push({
+          sha,
+          message,
           timestamp,
           repoId,
           authorLogin,
+          authorName,
+          authorEmail,
           authorAvatarUrl,
         });
 
@@ -1560,15 +1576,26 @@ export const feedRouter = router({
           if (response.ok) {
             const commits = (await response.json()) as Array<{
               sha: string;
-              commit: { author: { date: string } };
+              commit: {
+                message: string;
+                author: {
+                  name: string;
+                  email: string;
+                  date: string;
+                };
+              };
               author: { login: string; avatar_url: string } | null;
             }>;
 
             for (const commit of commits) {
               addCommit(
+                commit.sha,
+                commit.commit.message,
                 commit.commit.author.date,
                 `${repo.owner}/${repo.repo}`,
                 commit.author?.login ?? 'unknown',
+                commit.commit.author.name,
+                commit.commit.author.email,
                 commit.author?.avatar_url
               );
             }
@@ -1599,7 +1626,14 @@ export const feedRouter = router({
               type: string;
               repo: { name: string };
               payload: {
-                commits?: Array<{ sha: string; message: string }>;
+                commits?: Array<{
+                  sha: string;
+                  message: string;
+                  author: {
+                    name: string;
+                    email: string;
+                  };
+                }>;
               };
               actor: { login: string; avatar_url: string };
               created_at: string;
@@ -1610,15 +1644,17 @@ export const feedRouter = router({
               if (new Date(event.created_at) < startTime) continue;
 
               const repoId = event.repo.name;
-              const commitCount = event.payload.commits?.length ?? 1;
 
-              // Each push event can have multiple commits
-              // Use created_at as approximate timestamp for all
-              for (let i = 0; i < commitCount; i++) {
+              // Each push event can have multiple commits with full details
+              for (const commit of event.payload.commits ?? []) {
                 addCommit(
+                  commit.sha,
+                  commit.message,
                   event.created_at,
                   repoId,
                   event.actor.login,
+                  commit.author.name,
+                  commit.author.email,
                   event.actor.avatar_url
                 );
               }
