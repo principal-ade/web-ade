@@ -346,9 +346,7 @@ export const RepoHeader: React.FC<RepoHeaderProps> = ({
         {/* Repository Name */}
         <div style={{ marginBottom: spacing.sm }}>
           <a
-            href={`https://github.com/${repo.full_name}`}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={`/${repo.owner.login}?project=${repo.name}`}
             style={{
               textDecoration: 'none',
               color: 'inherit',

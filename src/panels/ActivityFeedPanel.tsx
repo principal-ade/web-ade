@@ -204,48 +204,6 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Poll for updates every 60 seconds when tab is visible
-  useEffect(() => {
-    const POLL_INTERVAL = 60 * 1000; // 60 seconds
-    let intervalId: NodeJS.Timeout | null = null;
-
-    const startPolling = () => {
-      if (intervalId) return;
-      intervalId = setInterval(() => {
-        refresh();
-      }, POLL_INTERVAL);
-    };
-
-    const stopPolling = () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-        intervalId = null;
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        stopPolling();
-      } else {
-        // Refresh immediately when tab becomes visible
-        refresh();
-        startPolling();
-      }
-    };
-
-    // Start polling if tab is visible
-    if (!document.hidden) {
-      startPolling();
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      stopPolling();
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [refresh]);
-
   const spacing = {
     xs: 4,
     sm: 8,
@@ -296,6 +254,50 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
 
   // Search expansion state for left column
   const [searchExpanded, setSearchExpanded] = useState(false);
+
+  // Poll for updates every 60 seconds when tab is visible and no specific repo is selected
+  useEffect(() => {
+    const POLL_INTERVAL = 60 * 1000; // 60 seconds
+    let intervalId: NodeJS.Timeout | null = null;
+
+    const startPolling = () => {
+      if (intervalId) return;
+      intervalId = setInterval(() => {
+        refresh();
+      }, POLL_INTERVAL);
+    };
+
+    const stopPolling = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden || selectedRepo) {
+        stopPolling();
+      } else {
+        // Refresh immediately when tab becomes visible (but not when viewing a specific repo)
+        refresh();
+        startPolling();
+      }
+    };
+
+    // Start polling if tab is visible and no specific repo is selected
+    if (!document.hidden && !selectedRepo) {
+      startPolling();
+    } else {
+      stopPolling();
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refresh, selectedRepo]);
 
   // Debounced GitHub search
   useEffect(() => {
@@ -486,6 +488,13 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
   const hourGroups = useMemo(() => {
     return groupSummariesByHour(displaySummaries);
   }, [displaySummaries]);
+
+  // Redirect to owner page when no commits are found for selected repo
+  useEffect(() => {
+    if (selectedRepo && hourGroups.length === 0 && !isLoading) {
+      router.push(`/${selectedRepo.owner.login}?project=${selectedRepo.name}`);
+    }
+  }, [selectedRepo, hourGroups, isLoading, router]);
 
   // Toggle card expansion
   const toggleExpanded = (fullName: string) => {
