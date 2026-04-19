@@ -347,6 +347,8 @@ export const RepoHeader: React.FC<RepoHeaderProps> = ({
         <div style={{ marginBottom: spacing.sm }}>
           <a
             href={`/${repo.owner.login}?project=${repo.name}`}
+            target="_blank"
+            rel="noopener noreferrer"
             style={{
               textDecoration: 'none',
               color: 'inherit',
