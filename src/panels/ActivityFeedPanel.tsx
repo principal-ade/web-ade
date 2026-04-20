@@ -489,13 +489,6 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
     return groupSummariesByHour(displaySummaries);
   }, [displaySummaries]);
 
-  // Redirect to owner page when no commits are found for selected repo
-  useEffect(() => {
-    if (selectedRepo && hourGroups.length === 0 && !isLoading) {
-      router.push(`/${selectedRepo.owner.login}?project=${selectedRepo.name}`);
-    }
-  }, [selectedRepo, hourGroups, isLoading, router]);
-
   // Toggle card expansion
   const toggleExpanded = (fullName: string) => {
     setExpandedRepos((prev) => {
