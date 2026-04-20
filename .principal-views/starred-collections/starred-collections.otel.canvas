@@ -1,0 +1,1706 @@
+{
+  "name": "Starred Collections API",
+  "markdown": ".principal-views/starred-collections/starred-collections.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow"
+    },
+    "error": {
+      "label": "Error Path"
+    }
+  },
+  "nodes": [
+    {
+      "id": "list-started",
+      "type": "otel-event",
+      "x": 50,
+      "y": 50,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "label": "List Started",
+      "event": {
+        "name": "starred-collections.list.started",
+        "attributes": {
+          "userId": {
+            "type": "string",
+            "description": "User ID requesting collections",
+            "required": true
+          },
+          "includeItems": {
+            "type": "boolean",
+            "description": "Whether to include repos and users",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "list-s3-read",
+      "type": "otel-event",
+      "x": 50,
+      "y": 170,
+      "width": 200,
+      "height": 90,
+      "color": "#3b82f6",
+      "label": "S3 Read",
+      "event": {
+        "name": "starred-collections.list.s3.read",
+        "attributes": {
+          "s3Key": {
+            "type": "string",
+            "description": "S3 key being read",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "list-success",
+      "type": "otel-event",
+      "x": -80,
+      "y": 290,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "label": "List Success",
+      "event": {
+        "name": "starred-collections.list.success",
+        "attributes": {
+          "collectionCount": {
+            "type": "number",
+            "description": "Number of collections returned",
+            "required": true
+          },
+          "version": {
+            "type": "number",
+            "description": "Collections data version",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "list-unauthorized",
+      "type": "otel-event",
+      "x": 290,
+      "y": 50,
+      "width": 200,
+      "height": 90,
+      "color": "#dc2626",
+      "label": "List Unauthorized",
+      "event": {
+        "name": "starred-collections.list.unauthorized",
+        "attributes": {
+          "reason": {
+            "type": "string",
+            "description": "Reason for unauthorized access",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "list-error",
+      "type": "otel-event",
+      "x": 180,
+      "y": 290,
+      "width": 200,
+      "height": 90,
+      "color": "#dc2626",
+      "label": "List Error",
+      "event": {
+        "name": "starred-collections.list.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
+          },
+          "error.code": {
+            "type": "string",
+            "description": "Error code",
+            "required": false
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "create-started",
+      "type": "otel-event",
+      "x": 50,
+      "y": 500,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "label": "Create Started",
+      "event": {
+        "name": "starred-collections.create.started",
+        "attributes": {
+          "name": {
+            "type": "string",
+            "description": "Collection name",
+            "required": true
+          },
+          "icon": {
+            "type": "string",
+            "description": "Collection icon",
+            "required": false
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "create-validate",
+      "type": "otel-event",
+      "x": 50,
+      "y": 620,
+      "width": 200,
+      "height": 90,
+      "color": "#1d4ed8",
+      "label": "Validate Input",
+      "event": {
+        "name": "starred-collections.create.validate",
+        "attributes": {
+          "name": {
+            "type": "string",
+            "description": "Name being validated",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "create-s3-read",
+      "type": "otel-event",
+      "x": 50,
+      "y": 740,
+      "width": 200,
+      "height": 90,
+      "color": "#3b82f6",
+      "label": "S3 Read",
+      "event": {
+        "name": "starred-collections.create.s3.read",
+        "attributes": {
+          "s3Key": {
+            "type": "string",
+            "description": "S3 key being read",
+            "required": true
+          },
+          "etag": {
+            "type": "string",
+            "description": "ETag for optimistic locking",
+            "required": false
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "create-check-duplicate",
+      "type": "otel-event",
+      "x": 50,
+      "y": 860,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "label": "Check Duplicate",
+      "event": {
+        "name": "starred-collections.create.check-duplicate",
+        "attributes": {
+          "name": {
+            "type": "string",
+            "description": "Name being checked",
+            "required": true
+          },
+          "isDuplicate": {
+            "type": "boolean",
+            "description": "Whether duplicate found",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "create-check-limits",
+      "type": "otel-event",
+      "x": 50,
+      "y": 980,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "label": "Check Limits",
+      "event": {
+        "name": "starred-collections.create.check-limits",
+        "attributes": {
+          "currentCount": {
+            "type": "number",
+            "description": "Current collection count",
+            "required": true
+          },
+          "maxLimit": {
+            "type": "number",
+            "description": "Maximum allowed collections",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "create-s3-write",
+      "type": "otel-event",
+      "x": 50,
+      "y": 1100,
+      "width": 200,
+      "height": 90,
+      "color": "#3b82f6",
+      "label": "S3 Write",
+      "event": {
+        "name": "starred-collections.create.s3.write",
+        "attributes": {
+          "s3Key": {
+            "type": "string",
+            "description": "S3 key being written",
+            "required": true
+          },
+          "etag": {
+            "type": "string",
+            "description": "ETag for optimistic locking",
+            "required": true
+          },
+          "newVersion": {
+            "type": "number",
+            "description": "New version number",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "create-success",
+      "type": "otel-event",
+      "x": -80,
+      "y": 1220,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "label": "Create Success",
+      "event": {
+        "name": "starred-collections.create.success",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "ID of created collection",
+            "required": true
+          },
+          "name": {
+            "type": "string",
+            "description": "Collection name",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "create-validation-error",
+      "type": "otel-event",
+      "x": 290,
+      "y": 620,
+      "width": 200,
+      "height": 90,
+      "color": "#d97706",
+      "label": "Validation Error",
+      "event": {
+        "name": "starred-collections.create.validation-error",
+        "attributes": {
+          "error.field": {
+            "type": "string",
+            "description": "Field that failed validation",
+            "required": true
+          },
+          "error.message": {
+            "type": "string",
+            "description": "Validation error message",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "create-duplicate",
+      "type": "otel-event",
+      "x": 290,
+      "y": 860,
+      "width": 200,
+      "height": 90,
+      "color": "#d97706",
+      "label": "Duplicate Name",
+      "event": {
+        "name": "starred-collections.create.duplicate",
+        "attributes": {
+          "name": {
+            "type": "string",
+            "description": "Duplicate collection name",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "create-limit-exceeded",
+      "type": "otel-event",
+      "x": 290,
+      "y": 980,
+      "width": 200,
+      "height": 90,
+      "color": "#d97706",
+      "label": "Limit Exceeded",
+      "event": {
+        "name": "starred-collections.create.limit-exceeded",
+        "attributes": {
+          "currentCount": {
+            "type": "number",
+            "description": "Current collection count",
+            "required": true
+          },
+          "maxLimit": {
+            "type": "number",
+            "description": "Maximum allowed",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "create-unauthorized",
+      "type": "otel-event",
+      "x": 290,
+      "y": 500,
+      "width": 200,
+      "height": 90,
+      "color": "#dc2626",
+      "label": "Create Unauthorized",
+      "event": {
+        "name": "starred-collections.create.unauthorized",
+        "attributes": {
+          "reason": {
+            "type": "string",
+            "description": "Reason for unauthorized access",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "create-error",
+      "type": "otel-event",
+      "x": 180,
+      "y": 1220,
+      "width": 200,
+      "height": 90,
+      "color": "#dc2626",
+      "label": "Create Error",
+      "event": {
+        "name": "starred-collections.create.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
+          },
+          "error.code": {
+            "type": "string",
+            "description": "Error code",
+            "required": false
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-repo-started",
+      "type": "otel-event",
+      "x": 600,
+      "y": 50,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "label": "Add Repo Started",
+      "event": {
+        "name": "starred-collections.add-repo.started",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection ID",
+            "required": true
+          },
+          "owner": {
+            "type": "string",
+            "description": "Repo owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repo name",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-repo-validate",
+      "type": "otel-event",
+      "x": 600,
+      "y": 170,
+      "width": 200,
+      "height": 90,
+      "color": "#1d4ed8",
+      "label": "Validate Repo",
+      "event": {
+        "name": "starred-collections.add-repo.validate",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Owner being validated",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repo being validated",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-repo-s3-read",
+      "type": "otel-event",
+      "x": 600,
+      "y": 290,
+      "width": 200,
+      "height": 90,
+      "color": "#3b82f6",
+      "label": "S3 Read",
+      "event": {
+        "name": "starred-collections.add-repo.s3.read",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection being read",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-repo-check-duplicate",
+      "type": "otel-event",
+      "x": 600,
+      "y": 410,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "label": "Check Duplicate Repo",
+      "event": {
+        "name": "starred-collections.add-repo.check-duplicate",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repo owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repo name",
+            "required": true
+          },
+          "isDuplicate": {
+            "type": "boolean",
+            "description": "Whether duplicate found",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-repo-github-fetch",
+      "type": "otel-event",
+      "x": 600,
+      "y": 530,
+      "width": 200,
+      "height": 90,
+      "color": "#8b5cf6",
+      "label": "GitHub Fetch Metadata",
+      "event": {
+        "name": "starred-collections.add-repo.github.fetch",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repo owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repo name",
+            "required": true
+          },
+          "cacheHit": {
+            "type": "boolean",
+            "description": "Whether metadata was cached",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-repo-cache-update",
+      "type": "otel-event",
+      "x": 600,
+      "y": 650,
+      "width": 200,
+      "height": 90,
+      "color": "#6d28d9",
+      "label": "Update Cache",
+      "event": {
+        "name": "starred-collections.add-repo.cache.update",
+        "attributes": {
+          "repoKey": {
+            "type": "string",
+            "description": "Cache key (owner/repo)",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-repo-s3-write",
+      "type": "otel-event",
+      "x": 600,
+      "y": 770,
+      "width": 200,
+      "height": 90,
+      "color": "#3b82f6",
+      "label": "S3 Write",
+      "event": {
+        "name": "starred-collections.add-repo.s3.write",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection being updated",
+            "required": true
+          },
+          "newVersion": {
+            "type": "number",
+            "description": "New version number",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-repo-success",
+      "type": "otel-event",
+      "x": 470,
+      "y": 890,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "label": "Add Repo Success",
+      "event": {
+        "name": "starred-collections.add-repo.success",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection ID",
+            "required": true
+          },
+          "owner": {
+            "type": "string",
+            "description": "Repo owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repo name",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-repo-not-found",
+      "type": "otel-event",
+      "x": 840,
+      "y": 290,
+      "width": 200,
+      "height": 90,
+      "color": "#d97706",
+      "label": "Collection Not Found",
+      "event": {
+        "name": "starred-collections.add-repo.not-found",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection ID not found",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-repo-duplicate",
+      "type": "otel-event",
+      "x": 840,
+      "y": 410,
+      "width": 200,
+      "height": 90,
+      "color": "#d97706",
+      "label": "Duplicate Repo",
+      "event": {
+        "name": "starred-collections.add-repo.duplicate",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repo owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repo name",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-repo-github-error",
+      "type": "otel-event",
+      "x": 840,
+      "y": 530,
+      "width": 200,
+      "height": 90,
+      "color": "#dc2626",
+      "label": "GitHub API Error",
+      "event": {
+        "name": "starred-collections.add-repo.github.error",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repo owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repo name",
+            "required": true
+          },
+          "error.message": {
+            "type": "string",
+            "description": "GitHub API error",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-repo-unauthorized",
+      "type": "otel-event",
+      "x": 840,
+      "y": 50,
+      "width": 200,
+      "height": 90,
+      "color": "#dc2626",
+      "label": "Add Repo Unauthorized",
+      "event": {
+        "name": "starred-collections.add-repo.unauthorized",
+        "attributes": {
+          "reason": {
+            "type": "string",
+            "description": "Reason for unauthorized",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-repo-error",
+      "type": "otel-event",
+      "x": 730,
+      "y": 890,
+      "width": 200,
+      "height": 90,
+      "color": "#dc2626",
+      "label": "Add Repo Error",
+      "event": {
+        "name": "starred-collections.add-repo.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
+          },
+          "error.code": {
+            "type": "string",
+            "description": "Error code",
+            "required": false
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-user-started",
+      "type": "otel-event",
+      "x": 1150,
+      "y": 50,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "label": "Add User Started",
+      "event": {
+        "name": "starred-collections.add-user.started",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection ID",
+            "required": true
+          },
+          "login": {
+            "type": "string",
+            "description": "GitHub username",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-user-validate",
+      "type": "otel-event",
+      "x": 1150,
+      "y": 170,
+      "width": 200,
+      "height": 90,
+      "color": "#1d4ed8",
+      "label": "Validate User",
+      "event": {
+        "name": "starred-collections.add-user.validate",
+        "attributes": {
+          "login": {
+            "type": "string",
+            "description": "Username being validated",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-user-github-fetch",
+      "type": "otel-event",
+      "x": 1150,
+      "y": 290,
+      "width": 200,
+      "height": 90,
+      "color": "#8b5cf6",
+      "label": "GitHub Fetch User",
+      "event": {
+        "name": "starred-collections.add-user.github.fetch",
+        "attributes": {
+          "login": {
+            "type": "string",
+            "description": "GitHub username",
+            "required": true
+          },
+          "cacheHit": {
+            "type": "boolean",
+            "description": "Whether metadata was cached",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-user-s3-write",
+      "type": "otel-event",
+      "x": 1150,
+      "y": 410,
+      "width": 200,
+      "height": 90,
+      "color": "#3b82f6",
+      "label": "S3 Write",
+      "event": {
+        "name": "starred-collections.add-user.s3.write",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection being updated",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-user-success",
+      "type": "otel-event",
+      "x": 1020,
+      "y": 530,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "label": "Add User Success",
+      "event": {
+        "name": "starred-collections.add-user.success",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection ID",
+            "required": true
+          },
+          "login": {
+            "type": "string",
+            "description": "GitHub username",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-user-github-error",
+      "type": "otel-event",
+      "x": 1390,
+      "y": 290,
+      "width": 200,
+      "height": 90,
+      "color": "#dc2626",
+      "label": "GitHub User Error",
+      "event": {
+        "name": "starred-collections.add-user.github.error",
+        "attributes": {
+          "login": {
+            "type": "string",
+            "description": "GitHub username",
+            "required": true
+          },
+          "error.message": {
+            "type": "string",
+            "description": "GitHub API error",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "add-user-error",
+      "type": "otel-event",
+      "x": 1280,
+      "y": 530,
+      "width": 200,
+      "height": 90,
+      "color": "#dc2626",
+      "label": "Add User Error",
+      "event": {
+        "name": "starred-collections.add-user.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "reorder-started",
+      "type": "otel-event",
+      "x": 50,
+      "y": 1450,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "label": "Reorder Started",
+      "event": {
+        "name": "starred-collections.reorder.started",
+        "attributes": {
+          "type": {
+            "type": "string",
+            "description": "Type being reordered (collections/repos/users)",
+            "required": true
+          },
+          "itemCount": {
+            "type": "number",
+            "description": "Number of items to reorder",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "reorder-validate",
+      "type": "otel-event",
+      "x": 50,
+      "y": 1570,
+      "width": 200,
+      "height": 90,
+      "color": "#1d4ed8",
+      "label": "Validate Reorder",
+      "event": {
+        "name": "starred-collections.reorder.validate",
+        "attributes": {
+          "expectedCount": {
+            "type": "number",
+            "description": "Expected item count",
+            "required": true
+          },
+          "providedCount": {
+            "type": "number",
+            "description": "Provided item count",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "reorder-s3-write",
+      "type": "otel-event",
+      "x": 50,
+      "y": 1690,
+      "width": 200,
+      "height": 90,
+      "color": "#3b82f6",
+      "label": "S3 Write",
+      "event": {
+        "name": "starred-collections.reorder.s3.write",
+        "attributes": {
+          "newVersion": {
+            "type": "number",
+            "description": "New version number",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "reorder-success",
+      "type": "otel-event",
+      "x": -80,
+      "y": 1810,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "label": "Reorder Success",
+      "event": {
+        "name": "starred-collections.reorder.success",
+        "attributes": {
+          "type": {
+            "type": "string",
+            "description": "Type reordered",
+            "required": true
+          },
+          "itemCount": {
+            "type": "number",
+            "description": "Items reordered",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "reorder-validation-error",
+      "type": "otel-event",
+      "x": 290,
+      "y": 1570,
+      "width": 200,
+      "height": 90,
+      "color": "#d97706",
+      "label": "Validation Error",
+      "event": {
+        "name": "starred-collections.reorder.validation-error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Validation error",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "reorder-error",
+      "type": "otel-event",
+      "x": 180,
+      "y": 1810,
+      "width": 200,
+      "height": 90,
+      "color": "#dc2626",
+      "label": "Reorder Error",
+      "event": {
+        "name": "starred-collections.reorder.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "delete-started",
+      "type": "otel-event",
+      "x": 600,
+      "y": 1100,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "label": "Delete Started",
+      "event": {
+        "name": "starred-collections.delete.started",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection ID to delete",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "delete-s3-read",
+      "type": "otel-event",
+      "x": 600,
+      "y": 1220,
+      "width": 200,
+      "height": 90,
+      "color": "#3b82f6",
+      "label": "S3 Read",
+      "event": {
+        "name": "starred-collections.delete.s3.read",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection being read",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "delete-s3-write",
+      "type": "otel-event",
+      "x": 600,
+      "y": 1340,
+      "width": 200,
+      "height": 90,
+      "color": "#3b82f6",
+      "label": "S3 Write",
+      "event": {
+        "name": "starred-collections.delete.s3.write",
+        "attributes": {
+          "newVersion": {
+            "type": "number",
+            "description": "New version number",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "delete-success",
+      "type": "otel-event",
+      "x": 470,
+      "y": 1460,
+      "width": 200,
+      "height": 90,
+      "color": "#16a34a",
+      "label": "Delete Success",
+      "event": {
+        "name": "starred-collections.delete.success",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Deleted collection ID",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "delete-not-found",
+      "type": "otel-event",
+      "x": 840,
+      "y": 1220,
+      "width": 200,
+      "height": 90,
+      "color": "#d97706",
+      "label": "Collection Not Found",
+      "event": {
+        "name": "starred-collections.delete.not-found",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection ID not found",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "delete-error",
+      "type": "otel-event",
+      "x": 730,
+      "y": 1460,
+      "width": 200,
+      "height": 90,
+      "color": "#dc2626",
+      "label": "Delete Error",
+      "event": {
+        "name": "starred-collections.delete.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "list-1",
+      "fromNode": "list-started",
+      "fromSide": "bottom",
+      "toNode": "list-s3-read",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "list-2",
+      "fromNode": "list-s3-read",
+      "fromSide": "bottom",
+      "toNode": "list-success",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "list-3",
+      "fromNode": "list-started",
+      "fromSide": "right",
+      "toNode": "list-unauthorized",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "list-4",
+      "fromNode": "list-s3-read",
+      "fromSide": "right",
+      "toNode": "list-error",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "create-1",
+      "fromNode": "create-started",
+      "fromSide": "bottom",
+      "toNode": "create-validate",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "create-2",
+      "fromNode": "create-validate",
+      "fromSide": "bottom",
+      "toNode": "create-s3-read",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "create-3",
+      "fromNode": "create-s3-read",
+      "fromSide": "bottom",
+      "toNode": "create-check-duplicate",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "create-4",
+      "fromNode": "create-check-duplicate",
+      "fromSide": "bottom",
+      "toNode": "create-check-limits",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "create-5",
+      "fromNode": "create-check-limits",
+      "fromSide": "bottom",
+      "toNode": "create-s3-write",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "create-6",
+      "fromNode": "create-s3-write",
+      "fromSide": "bottom",
+      "toNode": "create-success",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "create-7",
+      "fromNode": "create-started",
+      "fromSide": "right",
+      "toNode": "create-unauthorized",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "create-8",
+      "fromNode": "create-validate",
+      "fromSide": "right",
+      "toNode": "create-validation-error",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "create-9",
+      "fromNode": "create-check-duplicate",
+      "fromSide": "right",
+      "toNode": "create-duplicate",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "create-10",
+      "fromNode": "create-check-limits",
+      "fromSide": "right",
+      "toNode": "create-limit-exceeded",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "create-11",
+      "fromNode": "create-s3-write",
+      "fromSide": "right",
+      "toNode": "create-error",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "add-repo-1",
+      "fromNode": "add-repo-started",
+      "fromSide": "bottom",
+      "toNode": "add-repo-validate",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "add-repo-2",
+      "fromNode": "add-repo-validate",
+      "fromSide": "bottom",
+      "toNode": "add-repo-s3-read",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "add-repo-3",
+      "fromNode": "add-repo-s3-read",
+      "fromSide": "bottom",
+      "toNode": "add-repo-check-duplicate",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "add-repo-4",
+      "fromNode": "add-repo-check-duplicate",
+      "fromSide": "bottom",
+      "toNode": "add-repo-github-fetch",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "add-repo-5",
+      "fromNode": "add-repo-github-fetch",
+      "fromSide": "bottom",
+      "toNode": "add-repo-cache-update",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "add-repo-6",
+      "fromNode": "add-repo-cache-update",
+      "fromSide": "bottom",
+      "toNode": "add-repo-s3-write",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "add-repo-7",
+      "fromNode": "add-repo-s3-write",
+      "fromSide": "bottom",
+      "toNode": "add-repo-success",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "add-repo-8",
+      "fromNode": "add-repo-started",
+      "fromSide": "right",
+      "toNode": "add-repo-unauthorized",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "add-repo-9",
+      "fromNode": "add-repo-s3-read",
+      "fromSide": "right",
+      "toNode": "add-repo-not-found",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "add-repo-10",
+      "fromNode": "add-repo-check-duplicate",
+      "fromSide": "right",
+      "toNode": "add-repo-duplicate",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "add-repo-11",
+      "fromNode": "add-repo-github-fetch",
+      "fromSide": "right",
+      "toNode": "add-repo-github-error",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "add-repo-12",
+      "fromNode": "add-repo-s3-write",
+      "fromSide": "right",
+      "toNode": "add-repo-error",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "add-user-1",
+      "fromNode": "add-user-started",
+      "fromSide": "bottom",
+      "toNode": "add-user-validate",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "add-user-2",
+      "fromNode": "add-user-validate",
+      "fromSide": "bottom",
+      "toNode": "add-user-github-fetch",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "add-user-3",
+      "fromNode": "add-user-github-fetch",
+      "fromSide": "bottom",
+      "toNode": "add-user-s3-write",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "add-user-4",
+      "fromNode": "add-user-s3-write",
+      "fromSide": "bottom",
+      "toNode": "add-user-success",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "add-user-5",
+      "fromNode": "add-user-github-fetch",
+      "fromSide": "right",
+      "toNode": "add-user-github-error",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "add-user-6",
+      "fromNode": "add-user-s3-write",
+      "fromSide": "right",
+      "toNode": "add-user-error",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "reorder-1",
+      "fromNode": "reorder-started",
+      "fromSide": "bottom",
+      "toNode": "reorder-validate",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "reorder-2",
+      "fromNode": "reorder-validate",
+      "fromSide": "bottom",
+      "toNode": "reorder-s3-write",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "reorder-3",
+      "fromNode": "reorder-s3-write",
+      "fromSide": "bottom",
+      "toNode": "reorder-success",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "reorder-4",
+      "fromNode": "reorder-validate",
+      "fromSide": "right",
+      "toNode": "reorder-validation-error",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "reorder-5",
+      "fromNode": "reorder-s3-write",
+      "fromSide": "right",
+      "toNode": "reorder-error",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "delete-1",
+      "fromNode": "delete-started",
+      "fromSide": "bottom",
+      "toNode": "delete-s3-read",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "delete-2",
+      "fromNode": "delete-s3-read",
+      "fromSide": "bottom",
+      "toNode": "delete-s3-write",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "delete-3",
+      "fromNode": "delete-s3-write",
+      "fromSide": "bottom",
+      "toNode": "delete-success",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "delete-4",
+      "fromNode": "delete-s3-read",
+      "fromSide": "right",
+      "toNode": "delete-not-found",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "delete-5",
+      "fromNode": "delete-s3-write",
+      "fromSide": "right",
+      "toNode": "delete-error",
+      "toSide": "left",
+      "edgeType": "error"
+    }
+  ]
+}

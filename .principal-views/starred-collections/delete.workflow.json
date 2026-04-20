@@ -1,0 +1,48 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/starred-collections/starred-collections.otel.canvas",
+  "spanPattern": "api.collections.delete",
+  "name": "Delete Collection",
+  "description": "Delete a starred collection and all its associations",
+  "scenarios": [
+    {
+      "id": "success",
+      "description": "Successfully deleted collection",
+      "priority": 1,
+      "template": {
+        "summary": "[Success] Deleted collection {collectionId}",
+        "events": {
+          "starred-collections.delete.started": "Deleting collection {{collectionId}}",
+          "starred-collections.delete.s3.read": "Reading collection {{collectionId}} from S3",
+          "starred-collections.delete.s3.write": "Writing to S3 (new version: {{newVersion}})",
+          "starred-collections.delete.success": "Deleted collection {{collectionId}}"
+        }
+      }
+    },
+    {
+      "id": "not-found",
+      "description": "Collection not found",
+      "priority": 2,
+      "template": {
+        "summary": "[Not Found] Collection not found: {collectionId}",
+        "events": {
+          "starred-collections.delete.started": "Deleting collection {{collectionId}}",
+          "starred-collections.delete.s3.read": "Reading collection from S3",
+          "starred-collections.delete.not-found": "Collection not found: {{collectionId}}"
+        }
+      }
+    },
+    {
+      "id": "error",
+      "description": "Delete failed due to an unexpected error",
+      "priority": 3,
+      "template": {
+        "summary": "[Error] Failed to delete collection: {error.message}",
+        "events": {
+          "starred-collections.delete.started": "Deleting collection {{collectionId}}",
+          "starred-collections.delete.error": "Error: {{error.message}}"
+        }
+      }
+    }
+  ]
+}

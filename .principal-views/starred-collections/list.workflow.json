@@ -1,0 +1,47 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/starred-collections/starred-collections.otel.canvas",
+  "spanPattern": "api.collections.list",
+  "name": "List Starred Collections",
+  "description": "Retrieve all starred collections for the authenticated user",
+  "scenarios": [
+    {
+      "id": "success",
+      "description": "Successfully retrieved collections list",
+      "priority": 1,
+      "template": {
+        "summary": "[Success] Retrieved {collectionCount} collections (version: {version})",
+        "events": {
+          "starred-collections.list.started": "Listing collections for user {{userId}} (includeItems: {{includeItems}})",
+          "starred-collections.list.s3.read": "Reading from S3: {{s3Key}}",
+          "starred-collections.list.success": "Retrieved {{collectionCount}} collections (version: {{version}})"
+        }
+      }
+    },
+    {
+      "id": "unauthorized",
+      "description": "List collections failed because user is not authenticated",
+      "priority": 2,
+      "template": {
+        "summary": "[Unauthorized] Authentication required",
+        "events": {
+          "starred-collections.list.started": "Listing collections",
+          "starred-collections.list.unauthorized": "Not authenticated: {{reason}}"
+        }
+      }
+    },
+    {
+      "id": "error",
+      "description": "List collections failed due to an unexpected error",
+      "priority": 3,
+      "template": {
+        "summary": "[Error] Failed to list collections: {error.message}",
+        "events": {
+          "starred-collections.list.started": "Listing collections for user {{userId}}",
+          "starred-collections.list.s3.read": "Reading from S3",
+          "starred-collections.list.error": "Error: {{error.message}} (code: {{error.code}})"
+        }
+      }
+    }
+  ]
+}

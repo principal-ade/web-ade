@@ -1,0 +1,48 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/starred-collections/starred-collections.otel.canvas",
+  "spanPattern": "api.collections.reorder",
+  "name": "Reorder Collection Items",
+  "description": "Reorder collections, repos, or users within a collection",
+  "scenarios": [
+    {
+      "id": "success",
+      "description": "Successfully reordered items",
+      "priority": 1,
+      "template": {
+        "summary": "[Success] Reordered {itemCount} {type}",
+        "events": {
+          "starred-collections.reorder.started": "Reordering {{type}}: {{itemCount}} items",
+          "starred-collections.reorder.validate": "Validating reorder request (expected: {{expectedCount}}, provided: {{providedCount}})",
+          "starred-collections.reorder.s3.write": "Writing to S3 (new version: {{newVersion}})",
+          "starred-collections.reorder.success": "Reordered {{itemCount}} {{type}}"
+        }
+      }
+    },
+    {
+      "id": "validation-error",
+      "description": "Reorder failed due to validation error",
+      "priority": 2,
+      "template": {
+        "summary": "[Validation Error] Invalid reorder request: {error.message}",
+        "events": {
+          "starred-collections.reorder.started": "Reordering {{type}}",
+          "starred-collections.reorder.validate": "Validating reorder request",
+          "starred-collections.reorder.validation-error": "Validation error: {{error.message}}"
+        }
+      }
+    },
+    {
+      "id": "error",
+      "description": "Reorder failed due to an unexpected error",
+      "priority": 3,
+      "template": {
+        "summary": "[Error] Failed to reorder: {error.message}",
+        "events": {
+          "starred-collections.reorder.started": "Reordering {{type}}",
+          "starred-collections.reorder.error": "Error: {{error.message}}"
+        }
+      }
+    }
+  ]
+}

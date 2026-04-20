@@ -39,6 +39,7 @@ resources:
       - "worlds-page"
       - "auth-callback-api"
       - "version-registry-api"
+      - "starred-collections-api"
 
 scopes:
   authentication-api:
@@ -98,6 +99,9 @@ scopes:
   version-registry-api:
     color: "#f59e0b"
     description: "Version registry (semver to git SHA mapping, caching)"
+  starred-collections-api:
+    color: "#8b5cf6"
+    description: "Starred collections API (S3 storage, GitHub metadata caching, collection management)"
 
 nodeComponents: {}
 edgeComponents: {}

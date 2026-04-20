@@ -1,0 +1,94 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/starred-collections/starred-collections.otel.canvas",
+  "spanPattern": "api.collections.create",
+  "name": "Create Starred Collection",
+  "description": "Create a new starred collection and save to S3",
+  "scenarios": [
+    {
+      "id": "success",
+      "description": "Successfully created a new collection",
+      "priority": 1,
+      "template": {
+        "summary": "[Success] Created collection '{name}'",
+        "events": {
+          "starred-collections.create.started": "Creating collection: {{name}} (icon: {{icon}})",
+          "starred-collections.create.validate": "Validating collection data (name: {{name}})",
+          "starred-collections.create.s3.read": "Reading collections from S3 ({{s3Key}}, etag: {{etag}})",
+          "starred-collections.create.check-duplicate": "Checking for duplicate name: {{name}} (duplicate: {{isDuplicate}})",
+          "starred-collections.create.check-limits": "Checking limits: {{currentCount}}/{{maxLimit}} collections",
+          "starred-collections.create.s3.write": "Writing to S3 ({{s3Key}}, etag: {{etag}}, new version: {{newVersion}})",
+          "starred-collections.create.success": "Collection '{{name}}' created with ID {{collectionId}}"
+        }
+      }
+    },
+    {
+      "id": "validation-error",
+      "description": "Collection creation failed due to invalid data",
+      "priority": 2,
+      "template": {
+        "summary": "[Warning] Invalid collection data: {error.field}",
+        "events": {
+          "starred-collections.create.started": "Creating collection: {{name}}",
+          "starred-collections.create.validate": "Validating collection data (name: {{name}})",
+          "starred-collections.create.validation-error": "Validation failed: {{error.field}} - {{error.message}}"
+        }
+      }
+    },
+    {
+      "id": "duplicate-name",
+      "description": "Collection creation failed due to duplicate name",
+      "priority": 3,
+      "template": {
+        "summary": "[Conflict] Collection name already exists: {name}",
+        "events": {
+          "starred-collections.create.started": "Creating collection: {{name}}",
+          "starred-collections.create.validate": "Validating collection data",
+          "starred-collections.create.s3.read": "Reading collections from S3",
+          "starred-collections.create.check-duplicate": "Checking for duplicate name: {{name}} (duplicate: true)",
+          "starred-collections.create.duplicate": "Duplicate collection name: {{name}}"
+        }
+      }
+    },
+    {
+      "id": "limit-exceeded",
+      "description": "Collection creation failed due to limit exceeded",
+      "priority": 4,
+      "template": {
+        "summary": "[Limit] Maximum collections exceeded: {currentCount}/{maxLimit}",
+        "events": {
+          "starred-collections.create.started": "Creating collection: {{name}}",
+          "starred-collections.create.validate": "Validating collection data",
+          "starred-collections.create.s3.read": "Reading collections from S3",
+          "starred-collections.create.check-duplicate": "Checking for duplicate name",
+          "starred-collections.create.check-limits": "Checking limits: {{currentCount}}/{{maxLimit}}",
+          "starred-collections.create.limit-exceeded": "Limit exceeded: {{currentCount}}/{{maxLimit}}"
+        }
+      }
+    },
+    {
+      "id": "unauthorized",
+      "description": "Collection creation failed because user is not authenticated",
+      "priority": 5,
+      "template": {
+        "summary": "[Unauthorized] Authentication required",
+        "events": {
+          "starred-collections.create.started": "Creating collection: {{name}}",
+          "starred-collections.create.unauthorized": "Not authenticated: {{reason}}"
+        }
+      }
+    },
+    {
+      "id": "error",
+      "description": "Collection creation failed due to an unexpected error",
+      "priority": 6,
+      "template": {
+        "summary": "[Error] Failed to create collection: {error.message}",
+        "events": {
+          "starred-collections.create.started": "Creating collection: {{name}}",
+          "starred-collections.create.error": "Error: {{error.message}} (code: {{error.code}})"
+        }
+      }
+    }
+  ]
+}

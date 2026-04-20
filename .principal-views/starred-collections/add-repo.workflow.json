@@ -1,0 +1,96 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/starred-collections/starred-collections.otel.canvas",
+  "spanPattern": "api.collections.add-repo",
+  "name": "Add Repo to Collection",
+  "description": "Add a GitHub repository to a starred collection with metadata caching",
+  "scenarios": [
+    {
+      "id": "success",
+      "description": "Successfully added repo to collection",
+      "priority": 1,
+      "template": {
+        "summary": "[Success] Added {owner}/{repo} to collection",
+        "events": {
+          "starred-collections.add-repo.started": "Adding repo {{owner}}/{{repo}} to collection {{collectionId}}",
+          "starred-collections.add-repo.validate": "Validating repo: {{owner}}/{{repo}}",
+          "starred-collections.add-repo.s3.read": "Reading collection {{collectionId}} from S3",
+          "starred-collections.add-repo.check-duplicate": "Checking for duplicate: {{owner}}/{{repo}} (isDuplicate: {{isDuplicate}})",
+          "starred-collections.add-repo.github.fetch": "Fetching GitHub metadata for {{owner}}/{{repo}} (cacheHit: {{cacheHit}})",
+          "starred-collections.add-repo.cache.update": "Updating cache for {{repoKey}}",
+          "starred-collections.add-repo.s3.write": "Writing to S3 (collection: {{collectionId}}, version: {{newVersion}})",
+          "starred-collections.add-repo.success": "Added {{owner}}/{{repo}} to collection {{collectionId}}"
+        }
+      }
+    },
+    {
+      "id": "collection-not-found",
+      "description": "Failed to add repo because collection doesn't exist",
+      "priority": 2,
+      "template": {
+        "summary": "[Not Found] Collection not found: {collectionId}",
+        "events": {
+          "starred-collections.add-repo.started": "Adding repo {{owner}}/{{repo}} to collection {{collectionId}}",
+          "starred-collections.add-repo.validate": "Validating repo",
+          "starred-collections.add-repo.s3.read": "Reading collection from S3",
+          "starred-collections.add-repo.not-found": "Collection not found: {{collectionId}}"
+        }
+      }
+    },
+    {
+      "id": "duplicate-repo",
+      "description": "Failed to add repo because it's already in the collection",
+      "priority": 3,
+      "template": {
+        "summary": "[Conflict] Repo already in collection: {owner}/{repo}",
+        "events": {
+          "starred-collections.add-repo.started": "Adding repo {{owner}}/{{repo}} to collection {{collectionId}}",
+          "starred-collections.add-repo.validate": "Validating repo",
+          "starred-collections.add-repo.s3.read": "Reading collection from S3",
+          "starred-collections.add-repo.check-duplicate": "Checking for duplicate: {{owner}}/{{repo}} (duplicate: true)",
+          "starred-collections.add-repo.duplicate": "Repo already exists: {{owner}}/{{repo}}"
+        }
+      }
+    },
+    {
+      "id": "github-error",
+      "description": "Failed to add repo due to GitHub API error (repo not found, rate limit, etc.)",
+      "priority": 4,
+      "template": {
+        "summary": "[GitHub Error] Failed to fetch repo metadata: {error.message}",
+        "events": {
+          "starred-collections.add-repo.started": "Adding repo {{owner}}/{{repo}}",
+          "starred-collections.add-repo.validate": "Validating repo",
+          "starred-collections.add-repo.s3.read": "Reading collection from S3",
+          "starred-collections.add-repo.check-duplicate": "Checking for duplicate",
+          "starred-collections.add-repo.github.fetch": "Fetching GitHub metadata",
+          "starred-collections.add-repo.github.error": "GitHub API error for {{owner}}/{{repo}}: {{error.message}}"
+        }
+      }
+    },
+    {
+      "id": "unauthorized",
+      "description": "Failed to add repo because user is not authenticated",
+      "priority": 5,
+      "template": {
+        "summary": "[Unauthorized] Authentication required",
+        "events": {
+          "starred-collections.add-repo.started": "Adding repo {{owner}}/{{repo}}",
+          "starred-collections.add-repo.unauthorized": "Not authenticated: {{reason}}"
+        }
+      }
+    },
+    {
+      "id": "error",
+      "description": "Failed to add repo due to an unexpected error",
+      "priority": 6,
+      "template": {
+        "summary": "[Error] Failed to add repo: {error.message} (code: {error.code})",
+        "events": {
+          "starred-collections.add-repo.started": "Adding repo {{owner}}/{{repo}}",
+          "starred-collections.add-repo.error": "Error: {{error.message}} (code: {{error.code}})"
+        }
+      }
+    }
+  ]
+}

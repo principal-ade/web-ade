@@ -1,0 +1,50 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/starred-collections/starred-collections.otel.canvas",
+  "spanPattern": "api.collections.add-user",
+  "name": "Add User to Collection",
+  "description": "Add a GitHub user to a starred collection with metadata caching",
+  "scenarios": [
+    {
+      "id": "success",
+      "description": "Successfully added user to collection",
+      "priority": 1,
+      "template": {
+        "summary": "[Success] Added user {login} to collection",
+        "events": {
+          "starred-collections.add-user.started": "Adding user {{login}} to collection {{collectionId}}",
+          "starred-collections.add-user.validate": "Validating username: {{login}}",
+          "starred-collections.add-user.github.fetch": "Fetching GitHub user metadata for {{login}} (cacheHit: {{cacheHit}})",
+          "starred-collections.add-user.s3.write": "Writing to S3 (collection: {{collectionId}})",
+          "starred-collections.add-user.success": "Added user {{login}} to collection {{collectionId}}"
+        }
+      }
+    },
+    {
+      "id": "github-error",
+      "description": "Failed to add user due to GitHub API error",
+      "priority": 2,
+      "template": {
+        "summary": "[GitHub Error] Failed to fetch user metadata: {error.message}",
+        "events": {
+          "starred-collections.add-user.started": "Adding user {{login}}",
+          "starred-collections.add-user.validate": "Validating username",
+          "starred-collections.add-user.github.fetch": "Fetching GitHub user metadata",
+          "starred-collections.add-user.github.error": "GitHub API error for user {{login}}: {{error.message}}"
+        }
+      }
+    },
+    {
+      "id": "error",
+      "description": "Failed to add user due to an unexpected error",
+      "priority": 3,
+      "template": {
+        "summary": "[Error] Failed to add user: {error.message}",
+        "events": {
+          "starred-collections.add-user.started": "Adding user {{login}}",
+          "starred-collections.add-user.error": "Error: {{error.message}}"
+        }
+      }
+    }
+  ]
+}
