@@ -101,7 +101,7 @@
       "color": "#6366F1",
       "label": "Executing API",
       "otel": {
-        "status": "implemented",
+        "status": "draft",
         "spanPattern": "executing api route*"
       }
     },

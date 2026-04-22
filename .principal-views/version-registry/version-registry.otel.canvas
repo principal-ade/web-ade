@@ -21,7 +21,6 @@
       "y": 50,
       "width": 200,
       "height": 100,
-      "color": "#16a34a",
       "pv": {
         "status": "implemented",
         "references": [
@@ -106,7 +105,6 @@
       "y": 199,
       "width": 200,
       "height": 100,
-      "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
         "references": [
@@ -169,7 +167,6 @@
       "y": 350,
       "width": 200,
       "height": 100,
-      "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
         "references": [
@@ -232,7 +229,6 @@
       "y": 498,
       "width": 200,
       "height": 100,
-      "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
         "references": [
@@ -295,7 +291,6 @@
       "y": 649,
       "width": 200,
       "height": 100,
-      "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
         "references": [
@@ -380,7 +375,6 @@
       "y": 801,
       "width": 200,
       "height": 100,
-      "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
         "references": [
@@ -443,7 +437,6 @@
       "y": 954,
       "width": 200,
       "height": 100,
-      "color": "#16a34a",
       "pv": {
         "status": "implemented",
         "references": [
@@ -506,7 +499,6 @@
       "y": 1080,
       "width": 200,
       "height": 100,
-      "color": "#16a34a",
       "pv": {
         "status": "implemented",
         "references": [
@@ -558,7 +550,6 @@
       "y": 800,
       "width": 200,
       "height": 100,
-      "color": "#d97706",
       "pv": {
         "status": "implemented",
         "references": [
@@ -610,7 +601,6 @@
       "y": 358,
       "width": 200,
       "height": 100,
-      "color": "#dc2626",
       "pv": {
         "status": "approved",
         "references": [
@@ -696,7 +686,6 @@
       "y": 172,
       "width": 200,
       "height": 100,
-      "color": "#16a34a",
       "pv": {
         "status": "implemented",
         "references": [
@@ -770,7 +759,6 @@
       "y": 386,
       "width": 200,
       "height": 100,
-      "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
         "references": [
@@ -844,7 +832,6 @@
       "y": 596,
       "width": 200,
       "height": 100,
-      "color": "#16a34a",
       "pv": {
         "status": "implemented",
         "references": [
@@ -896,7 +883,6 @@
       "y": 262,
       "width": 200,
       "height": 100,
-      "color": "#d97706",
       "pv": {
         "status": "implemented",
         "references": [
@@ -960,7 +946,6 @@
       "y": 93,
       "width": 200,
       "height": 100,
-      "color": "#dc2626",
       "pv": {
         "status": "approved",
         "references": [
@@ -1024,7 +1009,6 @@
       "y": 292,
       "width": 200,
       "height": 100,
-      "color": "#16a34a",
       "pv": {
         "status": "implemented",
         "references": [
@@ -1065,7 +1049,6 @@
       "y": 465,
       "width": 200,
       "height": 100,
-      "color": "#2563eb",
       "pv": {
         "status": "implemented",
         "references": [
@@ -1117,7 +1100,6 @@
       "y": 675,
       "width": 200,
       "height": 100,
-      "color": "#16a34a",
       "pv": {
         "status": "implemented",
         "references": [
@@ -1169,7 +1151,6 @@
       "y": 291,
       "width": 200,
       "height": 100,
-      "color": "#dc2626",
       "pv": {
         "status": "approved",
         "references": [

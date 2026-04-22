@@ -17,7 +17,6 @@
       "y": 50,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "label": "List Started",
       "event": {
         "name": "starred-collections.list.started",
@@ -46,7 +45,6 @@
       "y": 170,
       "width": 200,
       "height": 90,
-      "color": "#3b82f6",
       "label": "S3 Read",
       "event": {
         "name": "starred-collections.list.s3.read",
@@ -70,7 +68,6 @@
       "y": 290,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "label": "List Success",
       "event": {
         "name": "starred-collections.list.success",
@@ -99,7 +96,6 @@
       "y": 50,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "label": "List Unauthorized",
       "event": {
         "name": "starred-collections.list.unauthorized",
@@ -123,7 +119,6 @@
       "y": 290,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "label": "List Error",
       "event": {
         "name": "starred-collections.list.error",
@@ -152,7 +147,6 @@
       "y": 500,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "label": "Create Started",
       "event": {
         "name": "starred-collections.create.started",
@@ -181,7 +175,6 @@
       "y": 620,
       "width": 200,
       "height": 90,
-      "color": "#1d4ed8",
       "label": "Validate Input",
       "event": {
         "name": "starred-collections.create.validate",
@@ -205,7 +198,6 @@
       "y": 740,
       "width": 200,
       "height": 90,
-      "color": "#3b82f6",
       "label": "S3 Read",
       "event": {
         "name": "starred-collections.create.s3.read",
@@ -234,7 +226,6 @@
       "y": 860,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "label": "Check Duplicate",
       "event": {
         "name": "starred-collections.create.check-duplicate",
@@ -263,7 +254,6 @@
       "y": 980,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "label": "Check Limits",
       "event": {
         "name": "starred-collections.create.check-limits",
@@ -292,7 +282,6 @@
       "y": 1100,
       "width": 200,
       "height": 90,
-      "color": "#3b82f6",
       "label": "S3 Write",
       "event": {
         "name": "starred-collections.create.s3.write",
@@ -326,7 +315,6 @@
       "y": 1220,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "label": "Create Success",
       "event": {
         "name": "starred-collections.create.success",
@@ -355,7 +343,6 @@
       "y": 620,
       "width": 200,
       "height": 90,
-      "color": "#d97706",
       "label": "Validation Error",
       "event": {
         "name": "starred-collections.create.validation-error",
@@ -384,7 +371,6 @@
       "y": 860,
       "width": 200,
       "height": 90,
-      "color": "#d97706",
       "label": "Duplicate Name",
       "event": {
         "name": "starred-collections.create.duplicate",
@@ -408,7 +394,6 @@
       "y": 980,
       "width": 200,
       "height": 90,
-      "color": "#d97706",
       "label": "Limit Exceeded",
       "event": {
         "name": "starred-collections.create.limit-exceeded",
@@ -437,7 +422,6 @@
       "y": 500,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "label": "Create Unauthorized",
       "event": {
         "name": "starred-collections.create.unauthorized",
@@ -461,7 +445,6 @@
       "y": 1220,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "label": "Create Error",
       "event": {
         "name": "starred-collections.create.error",
@@ -490,7 +473,6 @@
       "y": 50,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "label": "Add Repo Started",
       "event": {
         "name": "starred-collections.add-repo.started",
@@ -524,7 +506,6 @@
       "y": 170,
       "width": 200,
       "height": 90,
-      "color": "#1d4ed8",
       "label": "Validate Repo",
       "event": {
         "name": "starred-collections.add-repo.validate",
@@ -553,7 +534,6 @@
       "y": 290,
       "width": 200,
       "height": 90,
-      "color": "#3b82f6",
       "label": "S3 Read",
       "event": {
         "name": "starred-collections.add-repo.s3.read",
@@ -577,7 +557,6 @@
       "y": 410,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "label": "Check Duplicate Repo",
       "event": {
         "name": "starred-collections.add-repo.check-duplicate",
@@ -611,7 +590,6 @@
       "y": 530,
       "width": 200,
       "height": 90,
-      "color": "#8b5cf6",
       "label": "GitHub Fetch Metadata",
       "event": {
         "name": "starred-collections.add-repo.github.fetch",
@@ -645,7 +623,6 @@
       "y": 650,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "label": "Update Cache",
       "event": {
         "name": "starred-collections.add-repo.cache.update",
@@ -669,7 +646,6 @@
       "y": 770,
       "width": 200,
       "height": 90,
-      "color": "#3b82f6",
       "label": "S3 Write",
       "event": {
         "name": "starred-collections.add-repo.s3.write",
@@ -698,7 +674,6 @@
       "y": 890,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "label": "Add Repo Success",
       "event": {
         "name": "starred-collections.add-repo.success",
@@ -732,7 +707,6 @@
       "y": 290,
       "width": 200,
       "height": 90,
-      "color": "#d97706",
       "label": "Collection Not Found",
       "event": {
         "name": "starred-collections.add-repo.not-found",
@@ -756,7 +730,6 @@
       "y": 410,
       "width": 200,
       "height": 90,
-      "color": "#d97706",
       "label": "Duplicate Repo",
       "event": {
         "name": "starred-collections.add-repo.duplicate",
@@ -785,7 +758,6 @@
       "y": 530,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "label": "GitHub API Error",
       "event": {
         "name": "starred-collections.add-repo.github.error",
@@ -819,7 +791,6 @@
       "y": 50,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "label": "Add Repo Unauthorized",
       "event": {
         "name": "starred-collections.add-repo.unauthorized",
@@ -843,7 +814,6 @@
       "y": 890,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "label": "Add Repo Error",
       "event": {
         "name": "starred-collections.add-repo.error",
@@ -872,7 +842,6 @@
       "y": 50,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "label": "Add User Started",
       "event": {
         "name": "starred-collections.add-user.started",
@@ -901,7 +870,6 @@
       "y": 170,
       "width": 200,
       "height": 90,
-      "color": "#1d4ed8",
       "label": "Validate User",
       "event": {
         "name": "starred-collections.add-user.validate",
@@ -925,7 +893,6 @@
       "y": 290,
       "width": 200,
       "height": 90,
-      "color": "#8b5cf6",
       "label": "GitHub Fetch User",
       "event": {
         "name": "starred-collections.add-user.github.fetch",
@@ -954,7 +921,6 @@
       "y": 410,
       "width": 200,
       "height": 90,
-      "color": "#3b82f6",
       "label": "S3 Write",
       "event": {
         "name": "starred-collections.add-user.s3.write",
@@ -978,7 +944,6 @@
       "y": 530,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "label": "Add User Success",
       "event": {
         "name": "starred-collections.add-user.success",
@@ -1007,7 +972,6 @@
       "y": 290,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "label": "GitHub User Error",
       "event": {
         "name": "starred-collections.add-user.github.error",
@@ -1036,7 +1000,6 @@
       "y": 530,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "label": "Add User Error",
       "event": {
         "name": "starred-collections.add-user.error",
@@ -1060,7 +1023,6 @@
       "y": 1450,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "label": "Reorder Started",
       "event": {
         "name": "starred-collections.reorder.started",
@@ -1089,7 +1051,6 @@
       "y": 1570,
       "width": 200,
       "height": 90,
-      "color": "#1d4ed8",
       "label": "Validate Reorder",
       "event": {
         "name": "starred-collections.reorder.validate",
@@ -1118,7 +1079,6 @@
       "y": 1690,
       "width": 200,
       "height": 90,
-      "color": "#3b82f6",
       "label": "S3 Write",
       "event": {
         "name": "starred-collections.reorder.s3.write",
@@ -1142,7 +1102,6 @@
       "y": 1810,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "label": "Reorder Success",
       "event": {
         "name": "starred-collections.reorder.success",
@@ -1171,7 +1130,6 @@
       "y": 1570,
       "width": 200,
       "height": 90,
-      "color": "#d97706",
       "label": "Validation Error",
       "event": {
         "name": "starred-collections.reorder.validation-error",
@@ -1195,7 +1153,6 @@
       "y": 1810,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "label": "Reorder Error",
       "event": {
         "name": "starred-collections.reorder.error",
@@ -1219,7 +1176,6 @@
       "y": 1100,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "label": "Delete Started",
       "event": {
         "name": "starred-collections.delete.started",
@@ -1243,7 +1199,6 @@
       "y": 1220,
       "width": 200,
       "height": 90,
-      "color": "#3b82f6",
       "label": "S3 Read",
       "event": {
         "name": "starred-collections.delete.s3.read",
@@ -1267,7 +1222,6 @@
       "y": 1340,
       "width": 200,
       "height": 90,
-      "color": "#3b82f6",
       "label": "S3 Write",
       "event": {
         "name": "starred-collections.delete.s3.write",
@@ -1291,7 +1245,6 @@
       "y": 1460,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "label": "Delete Success",
       "event": {
         "name": "starred-collections.delete.success",
@@ -1315,7 +1268,6 @@
       "y": 1220,
       "width": 200,
       "height": 90,
-      "color": "#d97706",
       "label": "Collection Not Found",
       "event": {
         "name": "starred-collections.delete.not-found",
@@ -1339,7 +1291,6 @@
       "y": 1460,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "label": "Delete Error",
       "event": {
         "name": "starred-collections.delete.error",

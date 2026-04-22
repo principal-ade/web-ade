@@ -29,7 +29,6 @@
       "y": -150,
       "width": 240,
       "height": 90,
-      "color": "#1d4ed8",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -52,7 +51,6 @@
       "y": 0,
       "width": 240,
       "height": 90,
-      "color": "#6d28d9",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -81,7 +79,6 @@
       "y": 150,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -104,7 +101,6 @@
       "y": 150,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -127,7 +123,6 @@
       "y": 300,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -156,7 +151,6 @@
       "y": 450,
       "width": 240,
       "height": 90,
-      "color": "#0891b2",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -195,7 +189,6 @@
       "y": 600,
       "width": 240,
       "height": 90,
-      "color": "#16a34a",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -224,7 +217,6 @@
       "y": -150,
       "width": 240,
       "height": 90,
-      "color": "#1d4ed8",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -247,7 +239,6 @@
       "y": 0,
       "width": 240,
       "height": 90,
-      "color": "#6d28d9",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -276,7 +267,6 @@
       "y": 150,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -299,7 +289,6 @@
       "y": 150,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -322,7 +311,6 @@
       "y": 300,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -351,7 +339,6 @@
       "y": 450,
       "width": 240,
       "height": 90,
-      "color": "#0891b2",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -390,7 +377,6 @@
       "y": 600,
       "width": 240,
       "height": 90,
-      "color": "#16a34a",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -419,7 +405,6 @@
       "y": -3,
       "width": 220,
       "height": 90,
-      "color": "#1d4ed8",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -453,7 +438,6 @@
       "y": 147,
       "width": 220,
       "height": 90,
-      "color": "#6d28d9",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -482,7 +466,6 @@
       "y": 447,
       "width": 220,
       "height": 90,
-      "color": "#16a34a",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -516,7 +499,6 @@
       "y": -3,
       "width": 220,
       "height": 90,
-      "color": "#1d4ed8",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -550,7 +532,6 @@
       "y": 147,
       "width": 220,
       "height": 90,
-      "color": "#6d28d9",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -579,7 +560,6 @@
       "y": 446,
       "width": 220,
       "height": 90,
-      "color": "#16a34a",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -613,7 +593,6 @@
       "y": -150,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -636,7 +615,6 @@
       "y": 447,
       "width": 200,
       "height": 90,
-      "color": "#d97706",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -665,7 +643,6 @@
       "y": 800,
       "width": 240,
       "height": 90,
-      "color": "#1d4ed8",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -694,7 +671,6 @@
       "y": 950,
       "width": 240,
       "height": 90,
-      "color": "#6d28d9",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -723,7 +699,6 @@
       "y": 1100,
       "width": 240,
       "height": 90,
-      "color": "#6d28d9",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -757,7 +732,6 @@
       "y": 1250,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -791,7 +765,6 @@
       "y": 1250,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -820,7 +793,6 @@
       "y": 1400,
       "width": 240,
       "height": 90,
-      "color": "#0891b2",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -854,7 +826,6 @@
       "y": 1550,
       "width": 240,
       "height": 90,
-      "color": "#0891b2",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -893,7 +864,6 @@
       "y": 1700,
       "width": 240,
       "height": 90,
-      "color": "#16a34a",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -927,7 +897,6 @@
       "y": 800,
       "width": 200,
       "height": 90,
-      "color": "#1d4ed8",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -956,7 +925,6 @@
       "y": 950,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -985,7 +953,6 @@
       "y": 1100,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -1008,7 +975,6 @@
       "y": 800,
       "width": 200,
       "height": 90,
-      "color": "#1d4ed8",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -1042,7 +1008,6 @@
       "y": 950,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -1071,7 +1036,6 @@
       "y": 1100,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"
@@ -1094,7 +1058,6 @@
       "y": 1100,
       "width": 180,
       "height": 90,
-      "color": "#d97706",
       "otel": {
         "scope": "feed-suggestions-api",
         "status": "draft"

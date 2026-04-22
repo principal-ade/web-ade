@@ -29,7 +29,6 @@
       "y": 50,
       "width": 200,
       "height": 100,
-      "color": "#3b82f6",
       "pv": {
         "status": "approved",
         "name": "TTS Request Started",
@@ -100,7 +99,6 @@
       "y": 50,
       "width": 200,
       "height": 100,
-      "color": "#22c55e",
       "pv": {
         "status": "approved",
         "name": "TTS Cache Hit",
@@ -146,7 +144,6 @@
       "y": 200,
       "width": 200,
       "height": 100,
-      "color": "#f59e0b",
       "pv": {
         "status": "approved",
         "name": "TTS Cache Miss",
@@ -187,7 +184,6 @@
       "y": 350,
       "width": 200,
       "height": 100,
-      "color": "#6366f1",
       "pv": {
         "status": "approved",
         "name": "Tour Fetched",
@@ -233,7 +229,6 @@
       "y": 500,
       "width": 200,
       "height": 100,
-      "color": "#ec4899",
       "pv": {
         "status": "approved",
         "name": "Audio Generated",
@@ -289,7 +284,6 @@
       "y": 650,
       "width": 200,
       "height": 100,
-      "color": "#f59e0b",
       "pv": {
         "status": "approved",
         "name": "Audio Uploaded to S3",
@@ -335,7 +329,6 @@
       "y": 650,
       "width": 200,
       "height": 100,
-      "color": "#22c55e",
       "pv": {
         "status": "approved",
         "name": "TTS Request Complete",
@@ -381,7 +374,6 @@
       "y": 350,
       "width": 200,
       "height": 100,
-      "color": "#ef4444",
       "pv": {
         "status": "approved",
         "name": "Error: Tour Not Found",
@@ -442,7 +434,6 @@
       "y": 200,
       "width": 200,
       "height": 100,
-      "color": "#ef4444",
       "pv": {
         "status": "approved",
         "name": "Error: Step Not Found",
@@ -493,7 +484,6 @@
       "y": 500,
       "width": 200,
       "height": 100,
-      "color": "#ef4444",
       "pv": {
         "status": "approved",
         "name": "Error: Rate Limit Exceeded",
@@ -544,7 +534,6 @@
       "y": 425,
       "width": 200,
       "height": 100,
-      "color": "#8b5cf6",
       "pv": {
         "status": "approved",
         "name": "Dictionary Applied",
@@ -590,7 +579,6 @@
       "y": 425,
       "width": 150,
       "height": 60,
-      "color": "#94a3b8",
       "pv": {
         "status": "approved",
         "name": "No Dictionary",

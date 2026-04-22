@@ -17,7 +17,6 @@
       "y": 732,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "pv": {
         "status": "implemented",
         "references": [
@@ -50,7 +49,6 @@
       "y": 900,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "pv": {
         "status": "approved",
         "references": [
@@ -92,7 +90,6 @@
       "y": 1092,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "pv": {
         "status": "implemented",
         "references": [
@@ -144,7 +141,6 @@
       "y": 1089,
       "width": 200,
       "height": 90,
-      "color": "#4b5563",
       "pv": {
         "status": "approved",
         "references": [
@@ -177,7 +173,6 @@
       "y": 732,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "pv": {
         "status": "approved",
         "references": [
@@ -210,7 +205,6 @@
       "y": 899,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "pv": {
         "status": "implemented",
         "references": [
@@ -251,7 +245,6 @@
       "y": -138,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "pv": {
         "status": "implemented",
         "references": [
@@ -314,7 +307,6 @@
       "y": 45,
       "width": 200,
       "height": 90,
-      "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
         "references": [
@@ -352,7 +344,6 @@
       "y": 197,
       "width": 180,
       "height": 90,
-      "color": "#6d28d9",
       "pv": {
         "status": "implemented",
         "references": [
@@ -385,7 +376,6 @@
       "y": 198,
       "width": 180,
       "height": 90,
-      "color": "#6d28d9",
       "pv": {
         "status": "implemented",
         "references": [
@@ -426,7 +416,6 @@
       "y": 374,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "pv": {
         "status": "implemented",
         "references": [
@@ -459,7 +448,6 @@
       "y": 538,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "pv": {
         "status": "implemented",
         "references": [
@@ -500,7 +488,6 @@
       "y": 43,
       "width": 200,
       "height": 90,
-      "color": "#d97706",
       "pv": {
         "status": "approved",
         "references": [
@@ -552,7 +539,6 @@
       "y": -139,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "pv": {
         "status": "approved",
         "references": [
@@ -585,7 +571,6 @@
       "y": 373,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "pv": {
         "status": "approved",
         "references": [
@@ -626,7 +611,6 @@
       "y": 16,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "pv": {
         "status": "approved",
         "references": [
@@ -678,7 +662,6 @@
       "y": 173,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "pv": {
         "status": "approved",
         "references": [
@@ -711,7 +694,6 @@
       "y": 306,
       "width": 200,
       "height": 90,
-      "color": "#1d4ed8",
       "pv": {
         "status": "approved",
         "references": [
@@ -752,7 +734,6 @@
       "y": 456,
       "width": 200,
       "height": 90,
-      "color": "#1d4ed8",
       "pv": {
         "status": "approved",
         "references": [
@@ -793,7 +774,6 @@
       "y": 607,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "pv": {
         "status": "approved",
         "references": [
@@ -826,7 +806,6 @@
       "y": 745,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "pv": {
         "status": "approved",
         "references": [
@@ -867,7 +846,6 @@
       "y": 169,
       "width": 200,
       "height": 90,
-      "color": "#4b5563",
       "pv": {
         "status": "approved",
         "references": [
@@ -900,7 +878,6 @@
       "y": 312,
       "width": 200,
       "height": 90,
-      "color": "#d97706",
       "pv": {
         "status": "approved",
         "references": [
@@ -933,7 +910,6 @@
       "y": 11,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "pv": {
         "status": "approved",
         "references": [
@@ -966,7 +942,6 @@
       "y": 606,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "pv": {
         "status": "approved",
         "references": [

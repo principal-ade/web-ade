@@ -1,107 +1,31 @@
-# Principal View Component Library
-version: "1.0.0"
-name: "Web ADE"
-description: "Principal ADE web application"
-
-# Service resource registry
-# Define all services in this repository with their OTEL resource attributes
-# Each service configures its own resources at runtime, but declaring them here provides:
-# - Service documentation/registry
-# - Expected resource schema for validation
-# - Dev workspace trace routing
+version: 1.0.0
+name: Web ADE
+description: Principal ADE web application
 resources:
   web-ade:
-    service.name: "web-ade"
-    service.version: "0.1.0"
-    deployment.environment: "development"
-    # service.repository.url and service.commit.sha are auto-detected from git locally
-    # and set via environment variables in production (see amplify.yml)
-
-    # Instrumentation scopes owned by this service
-    # Spans from these tracers will be matched against this service's storyboards
+    service.name: web-ade
+    service.version: 0.1.0
+    deployment.environment: development
     owned-scopes:
-      - "authentication-api"
-      - "next.js"
-      - "activity-feed-api"
-      - "activity-feed-page"
-      - "collections-api"
-      - "collections-page"
-      - "feed-collections-api"
-      - "feed-suggestions-api"
-      - "line-counts-api"
-      - "owner-page"
-      - "package-lookup-api"
-      - "repository-page"
-      - "shared-collections-page"
-      - "stories-layout-page"
-      - "tour-availability-api"
-      - "tts-generation-api"
-      - "worlds-page"
-      - "auth-callback-api"
-      - "version-registry-api"
-      - "starred-collections-api"
-
-scopes:
-  authentication-api:
-    color: "#10B981"
-    description: "Authentication and user session management"
-  next.js:
-    color: "#000000"
-    description: "Next.js framework instrumentation"
-  activity-feed-api:
-    color: "#16a34a"
-    description: "Activity feed data fetching and aggregation"
-  activity-feed-page:
-    color: "#0891b2"
-    description: "Activity feed UI interactions and display"
-  collections-api:
-    color: "#6d28d9"
-    description: "Collections API operations (GitHub integration)"
-  collections-page:
-    color: "#8b5cf6"
-    description: "Collections UI management (create, import, load)"
-  feed-collections-api:
-    color: "#ec4899"
-    description: "Feed collections API (S3 storage, subscriptions, follows)"
-  feed-suggestions-api:
-    color: "#f59e0b"
-    description: "Feed suggestions and commit queue (GitHub suggestions, search, feed operations)"
-  line-counts-api:
-    color: "#14b8a6"
-    description: "Line count computation and caching (GET/PUT operations, S3 storage)"
-  owner-page:
-    color: "#a855f7"
-    description: "Owner page UI (repository list, file tree, panels, view modes)"
-  package-lookup-api:
-    color: "#84cc16"
-    description: "Package repository lookup (npm registry, fallback strategies)"
-  repository-page:
-    color: "#3b82f6"
-    description: "Repository page UI (file tree, panels, view modes, navigation)"
-  shared-collections-page:
-    color: "#06b6d4"
-    description: "Shared collections page UI (user collections, progressive loading)"
-  stories-layout-page:
-    color: "#8b5cf6"
-    description: "Stories layout interactions (layout switching, panel rendering)"
-  tour-availability-api:
-    color: "#f97316"
-    description: "Tour availability checking (GitHub API, cache operations)"
-  tts-generation-api:
-    color: "#ef4444"
-    description: "Text-to-speech generation (ElevenLabs API, S3 caching)"
-  worlds-page:
-    color: "#14b8a6"
-    description: "Worlds page UI (collection map, user interactions)"
-  auth-callback-api:
-    color: "#10b981"
-    description: "OAuth callback handling (state validation, token exchange)"
-  version-registry-api:
-    color: "#f59e0b"
-    description: "Version registry (semver to git SHA mapping, caching)"
-  starred-collections-api:
-    color: "#8b5cf6"
-    description: "Starred collections API (S3 storage, GitHub metadata caching, collection management)"
-
+      - authentication-api
+      - next.js
+      - activity-feed-api
+      - activity-feed-page
+      - collections-api
+      - collections-page
+      - feed-collections-api
+      - feed-suggestions-api
+      - line-counts-api
+      - owner-page
+      - package-lookup-api
+      - repository-page
+      - shared-collections-page
+      - stories-layout-page
+      - tour-availability-api
+      - tts-generation-api
+      - worlds-page
+      - auth-callback-api
+      - version-registry-api
+      - starred-collections-api
 nodeComponents: {}
 edgeComponents: {}

@@ -29,7 +29,7 @@
       "y": 0,
       "width": 220,
       "height": 100,
-      "color": "#000000",
+      "color": "#7d0a0a",
       "label": "Next.js",
       "description": "Next.js framework instrumentation",
       "otel": {
@@ -55,8 +55,8 @@
     {
       "id": "activity-feed-page-scope",
       "type": "otel-scope",
-      "x": 250,
-      "y": 150,
+      "x": -362,
+      "y": 152,
       "width": 220,
       "height": 100,
       "color": "#0891b2",
@@ -85,8 +85,8 @@
     {
       "id": "collections-page-scope",
       "type": "otel-scope",
-      "x": 250,
-      "y": 300,
+      "x": -362,
+      "y": 303,
       "width": 220,
       "height": 100,
       "color": "#8b5cf6",
@@ -130,8 +130,8 @@
     {
       "id": "line-counts-api-scope",
       "type": "otel-scope",
-      "x": 250,
-      "y": 600,
+      "x": 0,
+      "y": 753,
       "width": 220,
       "height": 100,
       "color": "#14b8a6",
@@ -145,8 +145,8 @@
     {
       "id": "owner-page-scope",
       "type": "otel-scope",
-      "x": 0,
-      "y": 750,
+      "x": -364,
+      "y": 448,
       "width": 220,
       "height": 100,
       "color": "#a855f7",
@@ -160,8 +160,8 @@
     {
       "id": "package-lookup-api-scope",
       "type": "otel-scope",
-      "x": 250,
-      "y": 750,
+      "x": 0,
+      "y": 894,
       "width": 220,
       "height": 100,
       "color": "#84cc16",
@@ -175,8 +175,8 @@
     {
       "id": "repository-page-scope",
       "type": "otel-scope",
-      "x": 0,
-      "y": 900,
+      "x": -362,
+      "y": 601,
       "width": 220,
       "height": 100,
       "color": "#3b82f6",
@@ -190,8 +190,8 @@
     {
       "id": "shared-collections-page-scope",
       "type": "otel-scope",
-      "x": 250,
-      "y": 900,
+      "x": -360,
+      "y": 893,
       "width": 220,
       "height": 100,
       "color": "#06b6d4",
@@ -205,8 +205,8 @@
     {
       "id": "stories-layout-page-scope",
       "type": "otel-scope",
-      "x": 0,
-      "y": 1050,
+      "x": -362,
+      "y": 750,
       "width": 220,
       "height": 100,
       "color": "#8b5cf6",
@@ -220,8 +220,8 @@
     {
       "id": "tour-availability-api-scope",
       "type": "otel-scope",
-      "x": 250,
-      "y": 1050,
+      "x": -3,
+      "y": 1052,
       "width": 220,
       "height": 100,
       "color": "#f97316",
@@ -250,8 +250,8 @@
     {
       "id": "worlds-page-scope",
       "type": "otel-scope",
-      "x": 250,
-      "y": 1200,
+      "x": -360,
+      "y": 1050,
       "width": 220,
       "height": 100,
       "color": "#14b8a6",
@@ -280,8 +280,8 @@
     {
       "id": "version-registry-api-scope",
       "type": "otel-scope",
-      "x": 250,
-      "y": 1350,
+      "x": -1,
+      "y": 1490,
       "width": 220,
       "height": 100,
       "color": "#f59e0b",
@@ -289,6 +289,21 @@
       "description": "Version registry (semver to git SHA mapping, caching)",
       "otel": {
         "scope": "version-registry-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "starred-collections-api-scope",
+      "type": "otel-scope",
+      "x": 0,
+      "y": 1640,
+      "width": 220,
+      "height": 100,
+      "color": "#8b5cf6",
+      "label": "Starred Collections API",
+      "description": "Starred collections API (S3 storage, GitHub metadata caching, collection management)",
+      "otel": {
+        "scope": "starred-collections-api",
         "status": "draft"
       }
     }

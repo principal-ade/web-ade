@@ -26,7 +26,6 @@
       "y": 50,
       "width": 200,
       "height": 100,
-      "color": "#0891b2",
       "pv": {
         "status": "draft",
         "references": [
@@ -61,7 +60,6 @@
       "y": 250,
       "width": 200,
       "height": 100,
-      "color": "#6d28d9",
       "pv": {
         "status": "draft",
         "references": [
@@ -96,7 +94,6 @@
       "y": 450,
       "width": 200,
       "height": 100,
-      "color": "#16a34a",
       "pv": {
         "status": "draft",
         "references": [
@@ -141,7 +138,6 @@
       "y": 650,
       "width": 200,
       "height": 100,
-      "color": "#6b7280",
       "pv": {
         "status": "draft",
         "references": [
@@ -181,7 +177,6 @@
       "y": 450,
       "width": 200,
       "height": 100,
-      "color": "#f59e0b",
       "pv": {
         "status": "draft",
         "references": [
@@ -226,7 +221,6 @@
       "y": 600,
       "width": 200,
       "height": 100,
-      "color": "#6b7280",
       "pv": {
         "status": "draft",
         "references": [
@@ -266,7 +260,6 @@
       "y": 50,
       "width": 200,
       "height": 100,
-      "color": "#6d28d9",
       "pv": {
         "status": "draft",
         "references": [
@@ -306,7 +299,6 @@
       "y": 250,
       "width": 200,
       "height": 100,
-      "color": "#16a34a",
       "pv": {
         "status": "draft",
         "references": [
@@ -351,7 +343,6 @@
       "y": 250,
       "width": 200,
       "height": 100,
-      "color": "#ca8a04",
       "pv": {
         "status": "draft",
         "references": [
@@ -386,7 +377,6 @@
       "y": 450,
       "width": 200,
       "height": 100,
-      "color": "#16a34a",
       "pv": {
         "status": "draft",
         "references": [
@@ -426,7 +416,6 @@
       "y": 450,
       "width": 200,
       "height": 100,
-      "color": "#6b7280",
       "pv": {
         "status": "draft",
         "references": [
@@ -461,7 +450,6 @@
       "y": 650,
       "width": 200,
       "height": 100,
-      "color": "#0891b2",
       "pv": {
         "status": "draft",
         "references": [
@@ -506,7 +494,6 @@
       "y": 850,
       "width": 200,
       "height": 100,
-      "color": "#16a34a",
       "pv": {
         "status": "draft",
         "references": [
@@ -546,7 +533,6 @@
       "y": 250,
       "width": 200,
       "height": 100,
-      "color": "#dc2626",
       "pv": {
         "status": "draft",
         "references": [

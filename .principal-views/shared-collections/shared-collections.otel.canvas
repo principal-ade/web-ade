@@ -26,7 +26,6 @@
       "y": 0,
       "width": 220,
       "height": 90,
-      "color": "#16a34a",
       "pv": {
         "status": "approved",
         "references": [
@@ -61,7 +60,6 @@
       "y": 150,
       "width": 220,
       "height": 90,
-      "color": "#6d28d9",
       "pv": {
         "status": "approved",
         "references": [
@@ -91,7 +89,6 @@
       "y": 150,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "pv": {
         "status": "approved",
         "references": [
@@ -121,7 +118,6 @@
       "y": 300,
       "width": 200,
       "height": 90,
-      "color": "#d97706",
       "pv": {
         "status": "approved",
         "references": [
@@ -151,7 +147,6 @@
       "y": 300,
       "width": 220,
       "height": 90,
-      "color": "#16a34a",
       "pv": {
         "status": "approved",
         "references": [
@@ -186,7 +181,6 @@
       "y": 450,
       "width": 200,
       "height": 90,
-      "color": "#4b5563",
       "pv": {
         "status": "approved",
         "references": [
@@ -216,7 +210,6 @@
       "y": 450,
       "width": 220,
       "height": 90,
-      "color": "#1d4ed8",
       "pv": {
         "status": "approved",
         "references": [
@@ -251,7 +244,6 @@
       "y": 600,
       "width": 220,
       "height": 90,
-      "color": "#16a34a",
       "pv": {
         "status": "approved",
         "references": [
@@ -281,7 +273,6 @@
       "y": 750,
       "width": 220,
       "height": 90,
-      "color": "#1d4ed8",
       "pv": {
         "status": "approved",
         "references": [
@@ -316,7 +307,6 @@
       "y": 900,
       "width": 220,
       "height": 90,
-      "color": "#16a34a",
       "pv": {
         "status": "approved",
         "references": [
@@ -361,7 +351,6 @@
       "y": 750,
       "width": 220,
       "height": 90,
-      "color": "#6d28d9",
       "pv": {
         "status": "approved",
         "references": [
@@ -396,7 +385,6 @@
       "y": 900,
       "width": 220,
       "height": 90,
-      "color": "#0891b2",
       "pv": {
         "status": "approved",
         "references": [
@@ -436,7 +424,6 @@
       "y": 1050,
       "width": 220,
       "height": 90,
-      "color": "#16a34a",
       "pv": {
         "status": "approved",
         "references": [
@@ -471,7 +458,6 @@
       "y": 1200,
       "width": 220,
       "height": 90,
-      "color": "#ca8a04",
       "pv": {
         "status": "approved",
         "references": [
@@ -501,7 +487,6 @@
       "y": 750,
       "width": 220,
       "height": 90,
-      "color": "#6d28d9",
       "pv": {
         "status": "approved",
         "references": [
@@ -536,7 +521,6 @@
       "y": 900,
       "width": 220,
       "height": 90,
-      "color": "#0891b2",
       "pv": {
         "status": "approved",
         "references": [
@@ -571,7 +555,6 @@
       "y": 1050,
       "width": 220,
       "height": 90,
-      "color": "#16a34a",
       "pv": {
         "status": "approved",
         "references": [
@@ -606,7 +589,6 @@
       "y": 1200,
       "width": 220,
       "height": 90,
-      "color": "#ca8a04",
       "pv": {
         "status": "approved",
         "references": [
@@ -641,7 +623,6 @@
       "y": 1350,
       "width": 220,
       "height": 90,
-      "color": "#059669",
       "pv": {
         "status": "approved",
         "references": [
@@ -671,7 +652,6 @@
       "y": 0,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "pv": {
         "status": "approved",
         "references": [
@@ -701,7 +681,6 @@
       "y": 150,
       "width": 200,
       "height": 90,
-      "color": "#6d28d9",
       "pv": {
         "status": "approved",
         "references": [
@@ -731,7 +710,6 @@
       "y": 300,
       "width": 200,
       "height": 90,
-      "color": "#16a34a",
       "pv": {
         "status": "approved",
         "references": [
@@ -766,7 +744,6 @@
       "y": 150,
       "width": 200,
       "height": 90,
-      "color": "#dc2626",
       "pv": {
         "status": "approved",
         "references": [
@@ -801,7 +778,6 @@
       "y": 450,
       "width": 200,
       "height": 90,
-      "color": "#1d4ed8",
       "pv": {
         "status": "approved",
         "references": [

@@ -17,7 +17,6 @@
       "y": 50,
       "width": 200,
       "height": 100,
-      "color": "#16a34a",
       "pv": {
         "status": "implemented",
         "references": [
@@ -58,7 +57,6 @@
       "y": 250,
       "width": 200,
       "height": 100,
-      "color": "#16a34a",
       "pv": {
         "status": "implemented",
         "references": [
@@ -132,7 +130,6 @@
       "y": 450,
       "width": 200,
       "height": 100,
-      "color": "#d97706",
       "pv": {
         "status": "implemented",
         "references": [
@@ -206,7 +203,6 @@
       "y": 250,
       "width": 200,
       "height": 100,
-      "color": "#1d4ed8",
       "pv": {
         "status": "implemented",
         "references": [
@@ -247,7 +243,6 @@
       "y": 450,
       "width": 200,
       "height": 100,
-      "color": "#dc2626",
       "pv": {
         "status": "implemented",
         "references": [
