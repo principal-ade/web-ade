@@ -45,7 +45,7 @@
       "color": "#8B5CF6",
       "label": "API GitHub",
       "otel": {
-        "status": "implemented",
+        "status": "draft",
         "spanPattern": "api.github.*"
       }
     },
@@ -143,7 +143,7 @@
       "color": "#F97316",
       "label": "Shared Page",
       "otel": {
-        "status": "implemented",
+        "status": "draft",
         "spanPattern": "shared.*"
       }
     },
@@ -157,7 +157,7 @@
       "color": "#06B6D4",
       "label": "Worlds Page",
       "otel": {
-        "status": "implemented",
+        "status": "draft",
         "spanPattern": "worlds.*"
       }
     }
