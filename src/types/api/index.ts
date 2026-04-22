@@ -32,14 +32,6 @@ export type {
   GitHubErrorResponse,
 } from './github';
 
-export type {
-  CollectionsUser,
-  CollectionsGetResponse,
-  CollectionsPutRequest,
-  CollectionsPutResponse,
-  CollectionsPermissionsResponse,
-} from './collections';
-
 // TTS (Tour audio) types - re-exported from lib/tts
 export type {
   TTSGenerateRequest,

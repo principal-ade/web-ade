@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, Home, FolderOpen, Calendar, User, UserPlus } from 'lucide-react';
+import { LogOut, Home, Calendar, User, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FollowsSettingsPanel } from './FollowsSettingsPanel';
@@ -135,16 +135,6 @@ export function UserAvatarMenu() {
               Home
             </Link>
           )}
-          {/* Worlds */}
-          <Link
-            href="/worlds"
-            className="flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:opacity-80"
-            style={{ color: theme.colors.text }}
-            onClick={() => setUserMenuOpen(false)}
-          >
-            <FolderOpen className="w-4 h-4" />
-            Worlds
-          </Link>
           {/* Organizations */}
           {(organizations.length > 0 || orgsLoading) && (
             <>
