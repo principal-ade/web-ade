@@ -9,6 +9,7 @@ import { getGitHubToken, getGitHubUserId } from '@/lib/auth/request';
 import { updateCollections } from '@/lib/starred-collections/s3-storage';
 import { validateReorderReposRequest } from '@/lib/starred-collections/validation';
 import { CollectionError, ErrorCodes } from '@/lib/starred-collections/types';
+import { findCollection } from '@/lib/starred-collections/find-collection';
 import type {
   CollectionRepo,
   ReorderReposRequest,
@@ -17,7 +18,7 @@ import type {
 /**
  * PATCH /api/starred-collections/[id]/repos/reorder
  *
- * Reorder repositories within a collection
+ * Reorder repositories within a collection (user or org)
  * Array order in the request body becomes the new display order
  *
  * Request Body: { repos: Array<{ owner: string, repo: string }> }
@@ -44,8 +45,19 @@ export async function PATCH(
     // Parse request
     const body = (await request.json()) as ReorderReposRequest;
 
-    // Update collection
-    const updated = await updateCollections(userIdStr, (data) => {
+    // Find collection across user/org storage
+    const result = await findCollection(id, userIdStr, githubToken);
+
+    if (!result) {
+      throw new CollectionError(
+        'Collection not found',
+        404,
+        ErrorCodes.NOT_FOUND
+      );
+    }
+
+    // Update collection in appropriate storage
+    const updated = await updateCollections(result.ownerType, result.ownerId, (data) => {
       // Find collection
       const collection = data.collections.find(c => c.id === id);
 

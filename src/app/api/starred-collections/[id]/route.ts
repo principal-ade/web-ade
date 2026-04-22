@@ -15,6 +15,7 @@ import {
 } from '@/lib/starred-collections/validation';
 import { validateCollectionIcon } from '@/lib/starred-collections/validation';
 import { CollectionError, ErrorCodes } from '@/lib/starred-collections/types';
+import { findCollection } from '@/lib/starred-collections/find-collection';
 import type {
   UpdateCollectionRequest,
 } from '@/lib/starred-collections/types';
@@ -22,7 +23,7 @@ import type {
 /**
  * GET /api/starred-collections/[id]
  *
- * Get a single collection by ID
+ * Get a single collection by ID (user or org)
  *
  * Response: Collection
  */
@@ -44,11 +45,10 @@ export async function GET(
     const userIdStr = String(userId);
     const { id } = await params;
 
-    // Get collections and find the requested one
-    const { getCollections } = await import('@/lib/starred-collections/s3-storage');
-    const data = await getCollections(userIdStr);
+    // Find collection across user/org storage
+    const result = await findCollection(id, userIdStr, githubToken);
 
-    if (!data) {
+    if (!result) {
       throw new CollectionError(
         'Collection not found',
         404,
@@ -56,17 +56,7 @@ export async function GET(
       );
     }
 
-    const collection = data.collections.find(c => c.id === id);
-
-    if (!collection) {
-      throw new CollectionError(
-        'Collection not found',
-        404,
-        ErrorCodes.NOT_FOUND
-      );
-    }
-
-    return NextResponse.json(collection);
+    return NextResponse.json(result.collection);
   } catch (error) {
     if (error instanceof CollectionError) {
       return NextResponse.json(
@@ -113,8 +103,19 @@ export async function PATCH(
     const body = (await request.json()) as UpdateCollectionRequest;
     validateUpdateCollectionRequest(body);
 
-    // Update collection
-    const updated = await updateCollections(userIdStr, (data) => {
+    // Find collection across user/org storage
+    const result = await findCollection(id, userIdStr, githubToken);
+
+    if (!result) {
+      throw new CollectionError(
+        'Collection not found',
+        404,
+        ErrorCodes.NOT_FOUND
+      );
+    }
+
+    // Update collection in appropriate storage
+    const updated = await updateCollections(result.ownerType, result.ownerId, (data) => {
       // Find collection
       const collection = data.collections.find(c => c.id === id);
 
@@ -172,7 +173,7 @@ export async function PATCH(
 /**
  * DELETE /api/starred-collections/[id]
  *
- * Delete a collection
+ * Delete a collection (user or org)
  *
  * Response: 204 No Content
  */
@@ -194,8 +195,19 @@ export async function DELETE(
     const userIdStr = String(userId);
     const { id } = await params;
 
-    // Delete collection
-    await updateCollections(userIdStr, (data) => {
+    // Find collection across user/org storage
+    const result = await findCollection(id, userIdStr, githubToken);
+
+    if (!result) {
+      throw new CollectionError(
+        'Collection not found',
+        404,
+        ErrorCodes.NOT_FOUND
+      );
+    }
+
+    // Delete collection from appropriate storage
+    await updateCollections(result.ownerType, result.ownerId, (data) => {
       // Find collection index
       const index = data.collections.findIndex(c => c.id === id);
 

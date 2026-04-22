@@ -79,6 +79,20 @@
       }
     },
     {
+      "id": "not-org-member",
+      "description": "Collection creation failed because user is not a member of the required organization",
+      "priority": 7,
+      "template": {
+        "summary": "[Forbidden] User is not a member of org: {orgLogin}",
+        "events": {
+          "starred-collections.create.started": "Creating collection: {{name}}",
+          "starred-collections.create.validate": "Validating collection data",
+          "starred-collections.create.check-org-membership": "Checking org membership for: {{orgLogin}} (member: {{isMember}})",
+          "starred-collections.create.not-org-member": "User is not a member of org: {{orgLogin}}"
+        }
+      }
+    },
+    {
       "id": "error",
       "description": "Collection creation failed due to an unexpected error",
       "priority": 6,

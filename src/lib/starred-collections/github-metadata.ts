@@ -32,12 +32,13 @@ function isCacheStale(cachedAt: string): boolean {
  * @returns Cached metadata or null if not found or stale
  */
 async function getCachedRepoMetadata(
-  userId: string,
+  ownerType: 'user' | 'org',
+  ownerId: string,
   owner: string,
   repo: string
 ): Promise<Omit<CachedRepoMetadata, 'cachedAt'> | null> {
   try {
-    const cache = await getMetadataCache(userId);
+    const cache = await getMetadataCache(ownerType, ownerId);
     if (!cache) {
       return null;
     }
@@ -85,11 +86,12 @@ async function getCachedRepoMetadata(
  * @returns Cached metadata or null if not found or stale
  */
 async function getCachedUserMetadata(
-  userId: string,
+  ownerType: 'user' | 'org',
+  ownerId: string,
   login: string
 ): Promise<Omit<CachedUserMetadata, 'cachedAt'> | null> {
   try {
-    const cache = await getMetadataCache(userId);
+    const cache = await getMetadataCache(ownerType, ownerId);
     if (!cache) {
       return null;
     }
@@ -132,14 +134,15 @@ async function getCachedUserMetadata(
  * Updates repo metadata in cache (async, non-blocking)
  */
 function cacheRepoMetadata(
-  userId: string,
+  ownerType: 'user' | 'org',
+  ownerId: string,
   owner: string,
   repo: string,
   metadata: Omit<CachedRepoMetadata, 'cachedAt'>
 ): void {
   const key = `${owner.toLowerCase()}/${repo.toLowerCase()}`;
 
-  updateMetadataCache(userId, (cache: MetadataCache) => {
+  updateMetadataCache(ownerType, ownerId, (cache: MetadataCache) => {
     return {
       ...cache,
       repos: {
@@ -163,13 +166,14 @@ function cacheRepoMetadata(
  * Updates user metadata in cache (async, non-blocking)
  */
 function cacheUserMetadata(
-  userId: string,
+  ownerType: 'user' | 'org',
+  ownerId: string,
   login: string,
   metadata: Omit<CachedUserMetadata, 'cachedAt'>
 ): void {
   const key = login.toLowerCase();
 
-  updateMetadataCache(userId, (cache: MetadataCache) => {
+  updateMetadataCache(ownerType, ownerId, (cache: MetadataCache) => {
     return {
       ...cache,
       users: {
@@ -197,7 +201,8 @@ function cacheUserMetadata(
  *
  * @param owner - Repository owner
  * @param repo - Repository name
- * @param userId - User ID for cache storage
+ * @param ownerType - Owner type for cache storage ('user' or 'org')
+ * @param ownerId - Owner ID for cache storage (user ID or org login)
  * @param token - GitHub access token
  * @returns Repository metadata
  * @throws {CollectionError} if repo not found or GitHub API error
@@ -205,7 +210,8 @@ function cacheUserMetadata(
 export async function fetchRepoMetadata(
   owner: string,
   repo: string,
-  userId: string,
+  ownerType: 'user' | 'org',
+  ownerId: string,
   token: string
 ): Promise<{
   description: string | null;
@@ -213,7 +219,7 @@ export async function fetchRepoMetadata(
   avatarUrl: string;
 }> {
   // Check cache first
-  const cached = await getCachedRepoMetadata(userId, owner, repo);
+  const cached = await getCachedRepoMetadata(ownerType, ownerId, owner, repo);
   if (cached) {
     return cached;
   }
@@ -235,7 +241,7 @@ export async function fetchRepoMetadata(
     };
 
     // Update cache async (don't block response)
-    cacheRepoMetadata(userId, owner, repo, metadata);
+    cacheRepoMetadata(ownerType, ownerId, owner, repo, metadata);
 
     console.log('[GitHub Metadata] Fetched repo metadata:', {
       owner,
@@ -283,21 +289,23 @@ export async function fetchRepoMetadata(
  * Fetches user metadata from GitHub API with caching
  *
  * @param login - GitHub username
- * @param userId - User ID for cache storage
+ * @param ownerType - Owner type for cache storage ('user' or 'org')
+ * @param ownerId - Owner ID for cache storage (user ID or org login)
  * @param token - GitHub access token
  * @returns User metadata
  * @throws {CollectionError} if user not found or GitHub API error
  */
 export async function fetchUserMetadata(
   login: string,
-  userId: string,
+  ownerType: 'user' | 'org',
+  ownerId: string,
   token: string
 ): Promise<{
   avatarUrl: string;
   name: string | null;
 }> {
   // Check cache first
-  const cached = await getCachedUserMetadata(userId, login);
+  const cached = await getCachedUserMetadata(ownerType, ownerId, login);
   if (cached) {
     return cached;
   }
@@ -317,7 +325,7 @@ export async function fetchUserMetadata(
     };
 
     // Update cache async (don't block response)
-    cacheUserMetadata(userId, login, metadata);
+    cacheUserMetadata(ownerType, ownerId, login, metadata);
 
     console.log('[GitHub Metadata] Fetched user metadata:', {
       login,

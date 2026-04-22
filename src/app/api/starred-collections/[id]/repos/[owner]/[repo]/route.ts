@@ -8,11 +8,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getGitHubToken, getGitHubUserId } from '@/lib/auth/request';
 import { updateCollections } from '@/lib/starred-collections/s3-storage';
 import { CollectionError, ErrorCodes } from '@/lib/starred-collections/types';
+import { findCollection } from '@/lib/starred-collections/find-collection';
 
 /**
  * DELETE /api/starred-collections/[id]/repos/[owner]/[repo]
  *
- * Remove a repository from a collection
+ * Remove a repository from a collection (user or org)
  *
  * Response: 204 No Content
  */
@@ -34,8 +35,19 @@ export async function DELETE(
     const userIdStr = String(userId);
     const { id, owner, repo } = await params;
 
-    // Update collection
-    await updateCollections(userIdStr, (data) => {
+    // Find collection across user/org storage
+    const result = await findCollection(id, userIdStr, githubToken);
+
+    if (!result) {
+      throw new CollectionError(
+        'Collection not found',
+        404,
+        ErrorCodes.NOT_FOUND
+      );
+    }
+
+    // Update collection in appropriate storage
+    await updateCollections(result.ownerType, result.ownerId, (data) => {
       // Find collection
       const collection = data.collections.find(c => c.id === id);
 

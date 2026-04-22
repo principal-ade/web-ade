@@ -17,6 +17,7 @@ import {
 } from '@/lib/starred-collections/validation';
 import {  validateCollectionIcon } from '@/lib/starred-collections/validation';
 import { CollectionError } from '@/lib/starred-collections/types';
+import { getUserOrgs, isOrgMember } from '@/lib/starred-collections/github-org';
 import type {
   Collection,
   CreateCollectionRequest,
@@ -27,7 +28,7 @@ import type {
 /**
  * GET /api/starred-collections
  *
- * List all collections for the authenticated user
+ * List all collections for the authenticated user (including org collections)
  *
  * Query Parameters:
  *   include_items (boolean, optional) - Include repos and users arrays. Default: true
@@ -52,22 +53,33 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const includeItems = searchParams.get('include_items') !== 'false';
 
-    // Get collections data
-    const data = await getCollections(userIdStr);
+    // Get user's personal collections
+    const userData = await getCollections('user', userIdStr);
+    const userCollections = userData?.collections || [];
 
-    if (!data) {
-      // Return empty collections for new users
-      const response: ListCollectionsResponse = {
-        collections: [],
-        version: 0,
-      };
-      return NextResponse.json(response);
-    }
+    // Get user's organizations
+    const orgs = await getUserOrgs(githubToken);
+
+    // Fetch collections from each org in parallel
+    const orgCollectionsPromises = orgs.map(async (orgLogin) => {
+      try {
+        const orgData = await getCollections('org', orgLogin);
+        return orgData?.collections || [];
+      } catch (error) {
+        console.error(`Failed to fetch collections for org ${orgLogin}:`, error);
+        return [];
+      }
+    });
+
+    const orgCollectionsArrays = await Promise.all(orgCollectionsPromises);
+    const orgCollections = orgCollectionsArrays.flat();
+
+    // Combine user + org collections
+    let allCollections = [...userCollections, ...orgCollections];
 
     // Optionally strip repos/users arrays for performance
-    let collections = data.collections;
     if (!includeItems) {
-      collections = collections.map(c => ({
+      allCollections = allCollections.map(c => ({
         ...c,
         repos: [],
         users: [],
@@ -75,8 +87,8 @@ export async function GET(request: NextRequest) {
     }
 
     const response: ListCollectionsResponse = {
-      collections,
-      version: data.version,
+      collections: allCollections,
+      version: userData?.version || 0,
     };
 
     return NextResponse.json(response);
@@ -99,9 +111,9 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/starred-collections
  *
- * Create a new collection
+ * Create a new collection (user or org)
  *
- * Request Body: { name: string, description?: string, icon?: string }
+ * Request Body: { name: string, description?: string, icon?: string, orgLogin?: string }
  * Response: Collection
  */
 export async function POST(request: NextRequest) {
@@ -122,20 +134,39 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as CreateCollectionRequest;
     validateCreateCollectionRequest(body);
 
-    // Create new collection
+    // Determine owner type and ID
+    let ownerType: 'user' | 'org' = 'user';
+    let ownerId = userIdStr;
+
+    if (body.orgLogin) {
+      // Creating org collection - verify membership
+      const isMember = await isOrgMember(body.orgLogin, githubToken);
+      if (!isMember) {
+        return NextResponse.json(
+          { error: 'Not a member of this organization', code: 'NOT_ORG_MEMBER' },
+          { status: 403 }
+        );
+      }
+      ownerType = 'org';
+      ownerId = body.orgLogin;
+    }
+
+    // Create new collection with owner information
     const newCollection: Collection = {
       id: Date.now().toString(), // Timestamp-based ID
       name: body.name.trim(),
       description: body.description?.trim(),
       icon: validateCollectionIcon(body.icon),
+      ownerType,
+      ownerLogin: ownerType === 'org' ? ownerId : undefined,
       repos: [],
       users: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    // Update collections data
-    const updated = await updateCollections(userIdStr, (data) => {
+    // Update collections data in appropriate storage
+    const updated = await updateCollections(ownerType, ownerId, (data) => {
       // Check limits
       checkCollectionsLimit(data);
 
@@ -172,7 +203,7 @@ export async function POST(request: NextRequest) {
 /**
  * PATCH /api/starred-collections
  *
- * Reorder collections
+ * Reorder user's personal collections (not org collections)
  *
  * Request Body: { collectionIds: string[] }
  * Response: { collections: Collection[], version: number }
@@ -194,8 +225,8 @@ export async function PATCH(request: NextRequest) {
     // Parse and validate request
     const body = (await request.json()) as ReorderCollectionsRequest;
 
-    // Update collections with reordered array
-    const updated = await updateCollections(userIdStr, (data) => {
+    // Update user's collections with reordered array
+    const updated = await updateCollections('user', userIdStr, (data) => {
       // Validate reorder request
       validateReorderCollectionsRequest(data, body);
 

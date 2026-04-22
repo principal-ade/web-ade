@@ -14,6 +14,7 @@ import {
 } from '@/lib/starred-collections/validation';
 import { fetchRepoMetadata } from '@/lib/starred-collections/github-metadata';
 import { CollectionError, ErrorCodes } from '@/lib/starred-collections/types';
+import { findCollection } from '@/lib/starred-collections/find-collection';
 import type {
   CollectionRepo,
   AddRepoRequest,
@@ -22,7 +23,7 @@ import type {
 /**
  * POST /api/starred-collections/[id]/repos
  *
- * Add a repository to a collection
+ * Add a repository to a collection (user or org)
  *
  * Request Body: { owner: string, repo: string }
  * Response: CollectionRepo
@@ -49,11 +50,23 @@ export async function POST(
     const body = (await request.json()) as AddRepoRequest;
     validateAddRepoRequest(body);
 
+    // Find collection across user/org storage
+    const result = await findCollection(id, userIdStr, githubToken);
+
+    if (!result) {
+      throw new CollectionError(
+        'Collection not found',
+        404,
+        ErrorCodes.NOT_FOUND
+      );
+    }
+
     // Fetch GitHub metadata (also validates repo exists)
     const metadata = await fetchRepoMetadata(
       body.owner,
       body.repo,
-      userIdStr,
+      result.ownerType,
+      result.ownerId,
       githubToken
     );
 
@@ -67,8 +80,8 @@ export async function POST(
       avatarUrl: metadata.avatarUrl,
     };
 
-    // Update collection
-    const updated = await updateCollections(userIdStr, (data) => {
+    // Update collection in appropriate storage
+    const updated = await updateCollections(result.ownerType, result.ownerId, (data) => {
       // Find collection
       const collection = data.collections.find(c => c.id === id);
 

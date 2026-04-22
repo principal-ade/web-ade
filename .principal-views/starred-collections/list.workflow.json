@@ -12,7 +12,7 @@
       "template": {
         "summary": "[Success] Retrieved {collectionCount} collections (version: {version})",
         "events": {
-          "starred-collections.list.started": "Listing collections for user {{userId}} (includeItems: {{includeItems}})",
+          "starred-collections.list.started": "Listing collections for user {{userId}} (includeItems: {{includeItems}}, orgCount: {{orgCount}})",
           "starred-collections.list.s3.read": "Reading from S3: {{s3Key}}",
           "starred-collections.list.success": "Retrieved {{collectionCount}} collections (version: {{version}})"
         }

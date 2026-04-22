@@ -6,26 +6,34 @@ This canvas documents the OpenTelemetry events for the Starred Collections API, 
 
 ## Architecture
 
-**Storage**: S3-based per-user JSON files
+**Storage**: S3-based per-user and per-organization JSON files
 **Authentication**: GitHub OAuth tokens
+**Authorization**: User collections (owner-only) and organization collections (any active member)
 **Concurrency Control**: Optimistic locking with ETags
 **Metadata Caching**: GitHub API responses cached in S3
 
 ### Key Design Decisions
 
-1. **S3 Storage vs Database**: Collections are stored as JSON files in S3 rather than a relational database because:
-   - Data is user-scoped with no cross-user queries needed
+1. **Organization Collections**: Users can create and manage collections under organizations they belong to:
+   - User collections stored at `{user-id}/collections.json`
+   - Organization collections stored at `org-{org-login}/collections.json`
+   - Any active organization member can view, create, and edit org collections
+   - Membership verified via GitHub API on every operation
+   - List operations aggregate both user and org collections
+
+2. **S3 Storage vs Database**: Collections are stored as JSON files in S3 rather than a relational database because:
+   - Data is user-scoped and org-scoped with no complex cross-queries needed
    - Document-oriented structure matches API responses naturally
    - Eliminates database infrastructure and associated costs
    - Simple and cost-effective for this use case
 
-2. **Optimistic Locking**: Uses S3 ETags to prevent concurrent modification conflicts:
+3. **Optimistic Locking**: Uses S3 ETags to prevent concurrent modification conflicts:
    - Read file with ETag
    - Modify in memory
    - Write with If-Match header (fails if ETag changed)
    - Retry up to 3 times on conflicts
 
-3. **GitHub Metadata Caching**: Repository and user metadata is cached in a separate S3 file:
+4. **GitHub Metadata Caching**: Repository and user metadata is cached in a separate S3 file:
    - Reduces GitHub API calls
    - 1-hour cache TTL
    - Async cache updates don't block responses
@@ -36,12 +44,13 @@ This canvas documents the OpenTelemetry events for the Starred Collections API, 
 
 **Endpoint**: `GET /api/starred-collections`
 
-Retrieves all collections for the authenticated user.
+Retrieves all collections for the authenticated user, including both user-owned and organization collections.
 
 **Event Flow**:
-1. `starred-collections.list.started` - Request initiated
-2. `starred-collections.list.s3.read` - Read collections from S3
-3. `starred-collections.list.success` - Collections returned
+1. `starred-collections.list.started` - Request initiated (includes `orgCount` attribute)
+2. `starred-collections.list.s3.read` - Read user collections from S3
+3. For each organization: `starred-collections.list.s3.read` - Read org collections from S3
+4. `starred-collections.list.success` - Aggregated collections returned
 
 **Error Paths**:
 - `starred-collections.list.unauthorized` - Not authenticated
@@ -50,34 +59,47 @@ Retrieves all collections for the authenticated user.
 **Query Parameters**:
 - `include_items` (boolean) - Include repos/users arrays (default: true)
 
+**Notes**:
+- User collections and all org collections are fetched in parallel
+- Organization membership is retrieved via GitHub API
+- Collections include `ownerType` ('user' or 'org') and `ownerLogin` fields
+
 ---
 
 ### 2. Create Collection
 
 **Endpoint**: `POST /api/starred-collections`
 
-Creates a new collection with a timestamp-based ID.
+Creates a new collection with a timestamp-based ID. Can be created under a user account or an organization.
 
 **Event Flow**:
 1. `starred-collections.create.started` - Creation requested
 2. `starred-collections.create.validate` - Validate input (name, icon)
-3. `starred-collections.create.s3.read` - Read existing collections
-4. `starred-collections.create.check-duplicate` - Check for duplicate name
-5. `starred-collections.create.check-limits` - Verify max collections not exceeded
-6. `starred-collections.create.s3.write` - Write updated collections with ETag
-7. `starred-collections.create.success` - Collection created
+3. `starred-collections.create.check-org-membership` - If `orgLogin` provided, verify user is org member via GitHub API
+4. `starred-collections.create.s3.read` - Read existing collections (user or org storage)
+5. `starred-collections.create.check-duplicate` - Check for duplicate name
+6. `starred-collections.create.check-limits` - Verify max collections not exceeded
+7. `starred-collections.create.s3.write` - Write updated collections with ETag
+8. `starred-collections.create.success` - Collection created
 
 **Error Paths**:
 - `starred-collections.create.unauthorized` - Not authenticated
 - `starred-collections.create.validation-error` - Invalid name or icon
+- `starred-collections.create.not-org-member` - User not a member of specified organization
 - `starred-collections.create.duplicate` - Collection name already exists
 - `starred-collections.create.limit-exceeded` - Max collections reached
 - `starred-collections.create.error` - S3 write failure or ETag conflict
 
-**Validation Rules**:
-- Name: Required, 1-100 characters
-- Icon: Optional, must be valid Lucide icon name
-- Description: Optional, max 500 characters
+**Request Body**:
+- `name`: Required, 1-100 characters
+- `icon`: Optional, must be valid Lucide icon name
+- `description`: Optional, max 500 characters
+- `orgLogin`: Optional, organization login to create collection under
+
+**Notes**:
+- If `orgLogin` is provided, collection is created in org storage and owned by the organization
+- Organization membership is verified via GitHub API (`orgs.getMembershipForAuthenticatedUser`)
+- Only active organization members can create org collections
 
 ---
 
@@ -185,6 +207,8 @@ Deletes a collection and all its associations.
 All events include:
 - `userId` - GitHub user ID (where applicable)
 - `collectionId` - Collection ID (where applicable)
+- `ownerType` - Owner type: 'user' or 'org' (where applicable)
+- `orgLogin` - Organization login for org collections (where applicable)
 
 ### S3 Operation Attributes
 
@@ -240,9 +264,16 @@ This scope covers all API operations for the starred collections feature, includ
 
 ## S3 Storage Structure
 
+**User Collections**:
 ```
 s3://{bucket}/starred-collections/{user-id}/collections.json
 s3://{bucket}/starred-collections/{user-id}/metadata-cache.json
+```
+
+**Organization Collections**:
+```
+s3://{bucket}/starred-collections/org-{org-login}/collections.json
+s3://{bucket}/starred-collections/org-{org-login}/metadata-cache.json
 ```
 
 **collections.json**:
@@ -250,7 +281,23 @@ s3://{bucket}/starred-collections/{user-id}/metadata-cache.json
 {
   "version": 42,
   "updatedAt": "2026-04-19T16:00:00Z",
-  "collections": [...]
+  "collections": [
+    {
+      "id": "col_123456",
+      "name": "My Collection",
+      "ownerType": "user",
+      "repos": [...],
+      "users": [...]
+    },
+    {
+      "id": "col_789012",
+      "name": "Team Collection",
+      "ownerType": "org",
+      "ownerLogin": "my-org",
+      "repos": [...],
+      "users": [...]
+    }
+  ]
 }
 ```
 
@@ -275,6 +322,11 @@ s3://{bucket}/starred-collections/{user-id}/metadata-cache.json
 }
 ```
 
+**Notes**:
+- User collections stored by user ID, org collections prefixed with `org-`
+- Each owner (user or org) has its own metadata cache
+- Collection objects include `ownerType` and optionally `ownerLogin` fields
+
 ---
 
 ## Error Codes
@@ -283,6 +335,8 @@ s3://{bucket}/starred-collections/{user-id}/metadata-cache.json
 |------|--------|-------------|
 | `NOT_AUTHENTICATED` | 401 | Missing or invalid auth token |
 | `COLLECTION_NOT_FOUND` | 404 | Collection doesn't exist |
+| `NOT_ORG_MEMBER` | 403 | User not a member of specified organization |
+| `ORG_MEMBERSHIP_CHECK_FAILED` | 502 | Failed to verify org membership via GitHub API |
 | `DUPLICATE_NAME` | 409 | Collection name already exists |
 | `DUPLICATE_REPO` | 409 | Repo already in collection |
 | `DUPLICATE_USER` | 409 | User already in collection |

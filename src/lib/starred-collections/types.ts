@@ -39,6 +39,8 @@ export interface Collection {
   name: string; // User-defined name (required, 1-100 chars)
   description?: string; // Optional description (max 500 chars)
   icon?: string; // Lucide icon name (optional, defaults to "Star")
+  ownerType: 'user' | 'org'; // Owner type (user or organization)
+  ownerLogin?: string; // Organization login (only when ownerType='org')
   repos: CollectionRepo[]; // Array of repos in collection
   users: CollectionUser[]; // Array of users in collection
   createdAt: string; // ISO 8601 timestamp
@@ -98,6 +100,7 @@ export interface CreateCollectionRequest {
   name: string;
   description?: string;
   icon?: string;
+  orgLogin?: string; // Optional organization login for org-owned collections
 }
 
 /**
@@ -178,6 +181,9 @@ export const ErrorCodes = {
   // Authentication errors (401)
   NOT_AUTHENTICATED: 'NOT_AUTHENTICATED',
 
+  // Authorization errors (403)
+  NOT_ORG_MEMBER: 'NOT_ORG_MEMBER',
+
   // Not found errors (404)
   NOT_FOUND: 'NOT_FOUND',
   COLLECTION_NOT_FOUND: 'COLLECTION_NOT_FOUND',
@@ -209,6 +215,7 @@ export const ErrorCodes = {
   GITHUB_API_ERROR: 'GITHUB_API_ERROR',
   REPO_NOT_FOUND: 'REPO_NOT_FOUND',
   USER_NOT_FOUND: 'USER_NOT_FOUND',
+  ORG_MEMBERSHIP_CHECK_FAILED: 'ORG_MEMBERSHIP_CHECK_FAILED',
 
   // S3 errors (500)
   S3_ERROR: 'S3_ERROR',

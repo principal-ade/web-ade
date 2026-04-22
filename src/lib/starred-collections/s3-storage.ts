@@ -40,19 +40,23 @@ const s3Client = new S3Client({
 // ============================================================================
 
 /**
- * Builds S3 key for user's collections file
+ * Builds S3 key for collections file
  * Pattern: starred-collections/{user-id}/collections.json
+ *      OR: starred-collections/org-{org-login}/collections.json
  */
-function buildCollectionsS3Key(userId: string): string {
-  return `${S3_PREFIX}/${userId}/${COLLECTIONS_FILE}`;
+function buildCollectionsS3Key(ownerType: 'user' | 'org', ownerId: string): string {
+  const prefix = ownerType === 'org' ? `org-${ownerId}` : ownerId;
+  return `${S3_PREFIX}/${prefix}/${COLLECTIONS_FILE}`;
 }
 
 /**
- * Builds S3 key for user's metadata cache file
+ * Builds S3 key for metadata cache file
  * Pattern: starred-collections/{user-id}/metadata-cache.json
+ *      OR: starred-collections/org-{org-login}/metadata-cache.json
  */
-function buildMetadataCacheS3Key(userId: string): string {
-  return `${S3_PREFIX}/${userId}/${METADATA_CACHE_FILE}`;
+function buildMetadataCacheS3Key(ownerType: 'user' | 'org', ownerId: string): string {
+  const prefix = ownerType === 'org' ? `org-${ownerId}` : ownerId;
+  return `${S3_PREFIX}/${prefix}/${METADATA_CACHE_FILE}`;
 }
 
 // ============================================================================
@@ -64,10 +68,11 @@ function buildMetadataCacheS3Key(userId: string): string {
  * @returns Collections data and ETag, or null if not found
  */
 async function getCollectionsWithETag(
-  userId: string
+  ownerType: 'user' | 'org',
+  ownerId: string
 ): Promise<{ data: CollectionsData; etag: string } | null> {
   try {
-    const s3Key = buildCollectionsS3Key(userId);
+    const s3Key = buildCollectionsS3Key(ownerType, ownerId);
 
     const response = await s3Client.send(
       new GetObjectCommand({
@@ -85,7 +90,8 @@ async function getCollectionsWithETag(
     const etag = response.ETag || '';
 
     console.log('[Starred Collections] Retrieved collections with ETag:', {
-      userId,
+      ownerType,
+      ownerId,
       version: data.version,
       collectionsCount: data.collections.length,
       etag,
@@ -99,12 +105,13 @@ async function getCollectionsWithETag(
       'name' in error &&
       error.name === 'NoSuchKey'
     ) {
-      console.log('[Starred Collections] Collections not found:', { userId });
+      console.log('[Starred Collections] Collections not found:', { ownerType, ownerId });
       return null;
     }
 
     console.error('[Starred Collections] Get collections failed:', {
-      userId,
+      ownerType,
+      ownerId,
       error: error instanceof Error ? error.message : String(error),
     });
     throw new CollectionError(
@@ -120,12 +127,13 @@ async function getCollectionsWithETag(
  * @throws {CollectionError} if ETag doesn't match (concurrent modification)
  */
 async function putCollectionsWithETag(
-  userId: string,
+  ownerType: 'user' | 'org',
+  ownerId: string,
   data: CollectionsData,
   etag: string | null
 ): Promise<void> {
   try {
-    const s3Key = buildCollectionsS3Key(userId);
+    const s3Key = buildCollectionsS3Key(ownerType, ownerId);
 
     const params: {
       Bucket: string;
@@ -150,7 +158,8 @@ async function putCollectionsWithETag(
     await s3Client.send(new PutObjectCommand(params));
 
     console.log('[Starred Collections] Stored collections:', {
-      userId,
+      ownerType,
+      ownerId,
       version: data.version,
       collectionsCount: data.collections.length,
     });
@@ -162,7 +171,7 @@ async function putCollectionsWithETag(
       'name' in error &&
       (error.name === 'PreconditionFailed' || error.name === '412')
     ) {
-      console.log('[Starred Collections] ETag conflict detected:', { userId });
+      console.log('[Starred Collections] ETag conflict detected:', { ownerType, ownerId });
       throw new CollectionError(
         'Concurrent modification detected',
         409,
@@ -171,7 +180,8 @@ async function putCollectionsWithETag(
     }
 
     console.error('[Starred Collections] Put collections failed:', {
-      userId,
+      ownerType,
+      ownerId,
       error: error instanceof Error ? error.message : String(error),
     });
     throw new CollectionError(
@@ -198,9 +208,10 @@ function initializeCollections(): CollectionsData {
  * @returns Collections data or null if not found
  */
 export async function getCollections(
-  userId: string
+  ownerType: 'user' | 'org',
+  ownerId: string
 ): Promise<CollectionsData | null> {
-  const result = await getCollectionsWithETag(userId);
+  const result = await getCollectionsWithETag(ownerType, ownerId);
   return result ? result.data : null;
 }
 
@@ -208,13 +219,15 @@ export async function getCollections(
  * Updates collections data with automatic retry on ETag conflicts
  * This is the primary function used by API routes for all mutations
  *
- * @param userId - User's GitHub ID
+ * @param ownerType - Owner type ('user' or 'org')
+ * @param ownerId - User's GitHub ID or organization login
  * @param modifier - Function that modifies the collections data
  * @returns Updated collections data
  * @throws {CollectionError} if max retries exceeded or other error
  */
 export async function updateCollections(
-  userId: string,
+  ownerType: 'user' | 'org',
+  ownerId: string,
   modifier: (data: CollectionsData) => CollectionsData
 ): Promise<CollectionsData> {
   let attempts = 0;
@@ -222,13 +235,13 @@ export async function updateCollections(
   while (attempts < MAX_ETAG_RETRIES) {
     try {
       // Get current data with ETag
-      const result = await getCollectionsWithETag(userId);
+      const result = await getCollectionsWithETag(ownerType, ownerId);
 
       let data: CollectionsData;
       let etag: string | null;
 
       if (!result) {
-        // Initialize new collections data for first-time user
+        // Initialize new collections data for first-time user/org
         data = initializeCollections();
         etag = null;
       } else {
@@ -244,7 +257,7 @@ export async function updateCollections(
       updated.updatedAt = new Date().toISOString();
 
       // Write back with ETag check
-      await putCollectionsWithETag(userId, updated, etag);
+      await putCollectionsWithETag(ownerType, ownerId, updated, etag);
 
       return updated;
     } catch (error) {
@@ -253,7 +266,8 @@ export async function updateCollections(
 
         if (attempts >= MAX_ETAG_RETRIES) {
           console.error('[Starred Collections] Max retries exceeded:', {
-            userId,
+            ownerType,
+            ownerId,
             attempts,
           });
           throw new CollectionError(
@@ -264,7 +278,8 @@ export async function updateCollections(
         }
 
         console.log('[Starred Collections] Retrying after ETag conflict:', {
-          userId,
+          ownerType,
+          ownerId,
           attempt: attempts,
         });
 
@@ -287,11 +302,14 @@ export async function updateCollections(
 }
 
 /**
- * Checks if collections file exists for a user
+ * Checks if collections file exists for a user or org
  */
-export async function checkCollectionsExist(userId: string): Promise<boolean> {
+export async function checkCollectionsExist(
+  ownerType: 'user' | 'org',
+  ownerId: string
+): Promise<boolean> {
   try {
-    const s3Key = buildCollectionsS3Key(userId);
+    const s3Key = buildCollectionsS3Key(ownerType, ownerId);
 
     await s3Client.send(
       new HeadObjectCommand({
@@ -315,10 +333,11 @@ export async function checkCollectionsExist(userId: string): Promise<boolean> {
  * @returns Metadata cache or null if not found
  */
 export async function getMetadataCache(
-  userId: string
+  ownerType: 'user' | 'org',
+  ownerId: string
 ): Promise<MetadataCache | null> {
   try {
-    const s3Key = buildMetadataCacheS3Key(userId);
+    const s3Key = buildMetadataCacheS3Key(ownerType, ownerId);
 
     const response = await s3Client.send(
       new GetObjectCommand({
@@ -335,7 +354,8 @@ export async function getMetadataCache(
     const cache = JSON.parse(body) as MetadataCache;
 
     console.log('[Starred Collections] Retrieved metadata cache:', {
-      userId,
+      ownerType,
+      ownerId,
       reposCount: Object.keys(cache.repos || {}).length,
       usersCount: Object.keys(cache.users || {}).length,
     });
@@ -348,12 +368,13 @@ export async function getMetadataCache(
       'name' in error &&
       error.name === 'NoSuchKey'
     ) {
-      console.log('[Starred Collections] Metadata cache not found:', { userId });
+      console.log('[Starred Collections] Metadata cache not found:', { ownerType, ownerId });
       return null;
     }
 
     console.error('[Starred Collections] Get metadata cache failed:', {
-      userId,
+      ownerType,
+      ownerId,
       error: error instanceof Error ? error.message : String(error),
     });
     // Don't throw - cache is optional
@@ -377,12 +398,13 @@ function initializeMetadataCache(): MetadataCache {
  * and can be safely overwritten
  */
 export async function updateMetadataCache(
-  userId: string,
+  ownerType: 'user' | 'org',
+  ownerId: string,
   modifier: (cache: MetadataCache) => MetadataCache
 ): Promise<void> {
   try {
     // Get current cache or initialize empty
-    let cache = await getMetadataCache(userId);
+    let cache = await getMetadataCache(ownerType, ownerId);
     if (!cache) {
       cache = initializeMetadataCache();
     }
@@ -391,7 +413,7 @@ export async function updateMetadataCache(
     const updated = modifier(cache);
 
     // Store updated cache
-    const s3Key = buildMetadataCacheS3Key(userId);
+    const s3Key = buildMetadataCacheS3Key(ownerType, ownerId);
 
     await s3Client.send(
       new PutObjectCommand({
@@ -404,13 +426,15 @@ export async function updateMetadataCache(
     );
 
     console.log('[Starred Collections] Updated metadata cache:', {
-      userId,
+      ownerType,
+      ownerId,
       reposCount: Object.keys(updated.repos || {}).length,
       usersCount: Object.keys(updated.users || {}).length,
     });
   } catch (error) {
     console.error('[Starred Collections] Update metadata cache failed:', {
-      userId,
+      ownerType,
+      ownerId,
       error: error instanceof Error ? error.message : String(error),
     });
     // Don't throw - cache updates are non-critical
@@ -418,13 +442,16 @@ export async function updateMetadataCache(
 }
 
 /**
- * Deletes all data for a user (collections and cache)
+ * Deletes all data for a user or org (collections and cache)
  * Used for cleanup or testing
  */
-export async function deleteUserData(userId: string): Promise<void> {
+export async function deleteUserData(
+  ownerType: 'user' | 'org',
+  ownerId: string
+): Promise<void> {
   try {
-    const collectionsKey = buildCollectionsS3Key(userId);
-    const cacheKey = buildMetadataCacheS3Key(userId);
+    const collectionsKey = buildCollectionsS3Key(ownerType, ownerId);
+    const cacheKey = buildMetadataCacheS3Key(ownerType, ownerId);
 
     // Delete both files (ignore errors if they don't exist)
     await Promise.allSettled([
@@ -442,14 +469,15 @@ export async function deleteUserData(userId: string): Promise<void> {
       ),
     ]);
 
-    console.log('[Starred Collections] Deleted user data:', { userId });
+    console.log('[Starred Collections] Deleted data:', { ownerType, ownerId });
   } catch (error) {
-    console.error('[Starred Collections] Delete user data failed:', {
-      userId,
+    console.error('[Starred Collections] Delete data failed:', {
+      ownerType,
+      ownerId,
       error: error instanceof Error ? error.message : String(error),
     });
     throw new CollectionError(
-      'Failed to delete user data',
+      'Failed to delete data',
       500,
       ErrorCodes.S3_ERROR
     );

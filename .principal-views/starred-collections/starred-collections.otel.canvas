@@ -30,6 +30,11 @@
             "type": "boolean",
             "description": "Whether to include repos and users",
             "required": true
+          },
+          "orgCount": {
+            "type": "number",
+            "description": "Number of orgs user belongs to",
+            "required": false
           }
         }
       },
@@ -182,6 +187,57 @@
           "name": {
             "type": "string",
             "description": "Name being validated",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "create-check-org-membership",
+      "type": "otel-event",
+      "x": 50,
+      "y": 680,
+      "width": 200,
+      "height": 90,
+      "label": "Check Org Membership",
+      "event": {
+        "name": "starred-collections.create.check-org-membership",
+        "attributes": {
+          "orgLogin": {
+            "type": "string",
+            "description": "Organization login being checked",
+            "required": false
+          },
+          "isMember": {
+            "type": "boolean",
+            "description": "Whether user is org member",
+            "required": false
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "create-not-org-member",
+      "type": "otel-event",
+      "x": 290,
+      "y": 680,
+      "width": 200,
+      "height": 90,
+      "label": "Not Org Member",
+      "event": {
+        "name": "starred-collections.create.not-org-member",
+        "attributes": {
+          "orgLogin": {
+            "type": "string",
+            "description": "Organization login",
             "required": true
           }
         }
@@ -355,6 +411,29 @@
           "error.message": {
             "type": "string",
             "description": "Validation error message",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "starred-collections-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "create-not-org-member",
+      "type": "otel-event",
+      "x": 290,
+      "y": 680,
+      "width": 200,
+      "height": 90,
+      "label": "Not Org Member",
+      "event": {
+        "name": "starred-collections.create.not-org-member",
+        "attributes": {
+          "orgLogin": {
+            "type": "string",
+            "description": "Organization login",
             "required": true
           }
         }
@@ -1353,6 +1432,14 @@
       "id": "create-2",
       "fromNode": "create-validate",
       "fromSide": "bottom",
+      "toNode": "create-check-org-membership",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "create-2a",
+      "fromNode": "create-check-org-membership",
+      "fromSide": "bottom",
       "toNode": "create-s3-read",
       "toSide": "top",
       "edgeType": "flow"
@@ -1402,6 +1489,14 @@
       "fromNode": "create-validate",
       "fromSide": "right",
       "toNode": "create-validation-error",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "create-8a",
+      "fromNode": "create-check-org-membership",
+      "fromSide": "right",
+      "toNode": "create-not-org-member",
       "toSide": "left",
       "edgeType": "error"
     },
