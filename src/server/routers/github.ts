@@ -637,7 +637,7 @@ export const githubRouter = router({
         span.setAttribute('repo.ref', ref);
 
         try {
-          const userToken = await getGitHubToken();
+          const userToken = await getGitHubTokenFromHeadersOrCookies();
 
           // 1. Check in-memory cache first (fastest)
           const memCacheKey = `${owner}/${repo}/${ref}`;

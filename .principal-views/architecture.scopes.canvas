@@ -351,6 +351,21 @@
         "scope": "llm-client",
         "status": "draft"
       }
+    },
+    {
+      "id": "file-city-api-scope",
+      "type": "otel-scope",
+      "x": 500,
+      "y": 1650,
+      "width": 220,
+      "height": 100,
+      "color": "#6366f1",
+      "label": "File City API",
+      "description": "PNG generation for repository file structure visualization with S3 and in-memory caching",
+      "otel": {
+        "scope": "file-city-api",
+        "status": "draft"
+      }
     }
   ],
   "edges": [

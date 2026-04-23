@@ -1,0 +1,137 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/file-city/file-city.otel.canvas",
+  "spanPattern": "api.file-city.generate",
+  "name": "File City Image Generation",
+  "description": "PNG generation for repository file structure visualization with S3 and in-memory caching",
+  "scenarios": [
+    {
+      "id": "s3-cache-hit",
+      "description": "Base repo image served from S3 cache, render skipped entirely",
+      "priority": 1,
+      "template": {
+        "summary": "[S3 Hit] {{owner}}/{{repo}} {{width}}x{{height}} served from S3 in {{durationMs}}ms",
+        "events": {
+          "file-city.request.started": "GET {{owner}}/{{repo}} ({{width}}x{{height}}, branch: {{branch}}, commits: {{commitCount}}, nocache: {{nocache}})",
+          "file-city.s3.cache_hit": "S3 hit at {{s3Key}} ({{imageSizeBytes}} bytes)",
+          "file-city.response.served": "Served {{imageSizeBytes}} bytes from S3 in {{durationMs}}ms"
+        }
+      }
+    },
+    {
+      "id": "render-and-cache",
+      "description": "S3 cache miss — image rendered and uploaded to S3 for future requests",
+      "priority": 2,
+      "template": {
+        "summary": "[Rendered+Cached] {{owner}}/{{repo}} {{width}}x{{height}} — {{fileCount}} files in {{renderTimeMs}}ms",
+        "events": {
+          "file-city.request.started": "GET {{owner}}/{{repo}} ({{width}}x{{height}}, branch: {{branch}}, commits: {{commitCount}}, nocache: {{nocache}})",
+          "file-city.tree.cache_miss": "In-memory tree miss for {{cacheKey}} (branch: {{branch}})",
+          "file-city.png.rendered": "Rendered {{width}}x{{height}}, {{fileCount}} files, {{highlightCount}} highlights in {{renderTimeMs}}ms → {{imageSizeBytes}} bytes",
+          "file-city.s3.uploaded": "Uploaded to {{s3Key}} → {{imageUrl}} ({{imageSizeBytes}} bytes)",
+          "file-city.response.served": "Served fresh render {{imageSizeBytes}} bytes in {{durationMs}}ms"
+        }
+      }
+    },
+    {
+      "id": "tree-cache-hit",
+      "description": "S3 cache miss but in-memory tree hit — render skips GitHub API call",
+      "priority": 3,
+      "template": {
+        "summary": "[Tree Hit] {{owner}}/{{repo}} rendered from in-memory tree (SHA: {{treeSha}}) in {{renderTimeMs}}ms",
+        "events": {
+          "file-city.request.started": "GET {{owner}}/{{repo}} ({{width}}x{{height}}, branch: {{branch}}, commits: {{commitCount}}, nocache: {{nocache}})",
+          "file-city.tree.cache_hit": "In-memory tree hit for {{cacheKey}} (SHA: {{treeSha}}, {{fileCount}} files)",
+          "file-city.png.rendered": "Rendered {{width}}x{{height}}, {{fileCount}} files in {{renderTimeMs}}ms → {{imageSizeBytes}} bytes",
+          "file-city.s3.uploaded": "Uploaded to {{s3Key}} → {{imageUrl}} ({{imageSizeBytes}} bytes)",
+          "file-city.response.served": "Served {{imageSizeBytes}} bytes in {{durationMs}}ms"
+        }
+      }
+    },
+    {
+      "id": "commit-highlight",
+      "description": "Commit-specific render with changed files highlighted — no S3 caching",
+      "priority": 4,
+      "template": {
+        "summary": "[Commit Highlight] {{owner}}/{{repo}} {{highlightCount}} files highlighted in {{renderTimeMs}}ms",
+        "events": {
+          "file-city.request.started": "GET {{owner}}/{{repo}} ({{width}}x{{height}}, commits: {{commitCount}}, nocache: {{nocache}})",
+          "file-city.commit.cache_miss": "Redis miss for commit {{commitSha}} (key: {{cacheKey}}), fetching from GitHub",
+          "file-city.tree.cache_miss": "In-memory tree miss for {{cacheKey}} (branch: {{branch}})",
+          "file-city.png.rendered": "Rendered {{width}}x{{height}}, {{fileCount}} files, {{highlightCount}} highlights in {{renderTimeMs}}ms → {{imageSizeBytes}} bytes",
+          "file-city.response.served": "Served commit-highlight render {{imageSizeBytes}} bytes in {{durationMs}}ms"
+        }
+      }
+    },
+    {
+      "id": "commit-highlight-cached",
+      "description": "Commit-specific render with commit details and tree both served from cache",
+      "priority": 5,
+      "template": {
+        "summary": "[Commit+Cache Hit] {{owner}}/{{repo}} commit {{commitSha}} from Redis, tree SHA: {{treeSha}}",
+        "events": {
+          "file-city.request.started": "GET {{owner}}/{{repo}} ({{width}}x{{height}}, commits: {{commitCount}}, nocache: {{nocache}})",
+          "file-city.commit.cache_hit": "Redis hit for commit {{commitSha}} (key: {{cacheKey}})",
+          "file-city.tree.cache_hit": "In-memory tree hit for {{cacheKey}} (SHA: {{treeSha}}, {{fileCount}} files)",
+          "file-city.png.rendered": "Rendered {{width}}x{{height}}, {{fileCount}} files, {{highlightCount}} highlights in {{renderTimeMs}}ms → {{imageSizeBytes}} bytes",
+          "file-city.response.served": "Served {{imageSizeBytes}} bytes in {{durationMs}}ms"
+        }
+      }
+    },
+    {
+      "id": "nocache-render",
+      "description": "?nocache=1 render — always fresh, no S3 read or write (used by card/OG image generation)",
+      "priority": 6,
+      "template": {
+        "summary": "[Nocache] {{owner}}/{{repo}} fresh render {{fileCount}} files in {{renderTimeMs}}ms",
+        "events": {
+          "file-city.request.started": "GET {{owner}}/{{repo}} ({{width}}x{{height}}, branch: {{branch}}, commits: {{commitCount}}, nocache: {{nocache}})",
+          "file-city.tree.cache_miss": "In-memory tree miss for {{cacheKey}} (branch: {{branch}})",
+          "file-city.png.rendered": "Rendered {{width}}x{{height}}, {{fileCount}} files in {{renderTimeMs}}ms → {{imageSizeBytes}} bytes",
+          "file-city.response.nocache": "Served with no-store headers: {{imageSizeBytes}} bytes in {{durationMs}}ms"
+        }
+      }
+    },
+    {
+      "id": "s3-upload-failed",
+      "description": "Render succeeded but async S3 upload failed — warn only, response already sent",
+      "priority": 7,
+      "template": {
+        "summary": "[S3 Upload Failed] {{owner}}/{{repo}} render OK but S3 write failed for {{s3Key}}",
+        "events": {
+          "file-city.request.started": "GET {{owner}}/{{repo}} ({{width}}x{{height}}, branch: {{branch}}, commits: {{commitCount}}, nocache: {{nocache}})",
+          "file-city.tree.cache_miss": "In-memory tree miss for {{cacheKey}} (branch: {{branch}})",
+          "file-city.png.rendered": "Rendered {{width}}x{{height}}, {{fileCount}} files, {{highlightCount}} highlights in {{renderTimeMs}}ms → {{imageSizeBytes}} bytes",
+          "file-city.error.s3_upload": "S3 upload failed for {{s3Key}}: {{errorMessage}} (warn only)",
+          "file-city.response.served": "Served despite S3 failure: {{imageSizeBytes}} bytes in {{durationMs}}ms"
+        }
+      }
+    },
+    {
+      "id": "github-api-error",
+      "description": "GitHub API returned non-200 during tree fetch",
+      "priority": 8,
+      "template": {
+        "summary": "[Error] GitHub API {{httpStatus}} fetching tree for {{owner}}/{{repo}}",
+        "events": {
+          "file-city.request.started": "GET {{owner}}/{{repo}} ({{width}}x{{height}}, branch: {{branch}}, commits: {{commitCount}}, nocache: {{nocache}})",
+          "file-city.tree.cache_miss": "In-memory tree miss for {{cacheKey}} (branch: {{branch}})",
+          "file-city.error.github_api": "GitHub API error {{httpStatus}} ({{errorCode}}): {{errorMessage}}"
+        }
+      }
+    },
+    {
+      "id": "empty-repo-error",
+      "description": "Repository has no files — cannot render city",
+      "priority": 9,
+      "template": {
+        "summary": "[Error] Empty repository {{owner}}/{{repo}}",
+        "events": {
+          "file-city.request.started": "GET {{owner}}/{{repo}} ({{width}}x{{height}}, branch: {{branch}}, commits: {{commitCount}}, nocache: {{nocache}})",
+          "file-city.tree.cache_miss": "In-memory tree miss for {{cacheKey}} (branch: {{branch}})",
+          "file-city.error.no_files": "No files found in {{owner}}/{{repo}} ({{errorCode}})"
+        }
+      }
+    }
+  ]
+}

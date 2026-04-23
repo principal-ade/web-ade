@@ -7,6 +7,7 @@
 
 import {
   S3Client,
+  GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
 } from '@aws-sdk/client-s3';
@@ -53,6 +54,33 @@ export async function checkFileCityCache(key: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Fetches a File City PNG from S3 cache
+ *
+ * @param key - S3 object key
+ * @returns PNG buffer if found, null if not cached
+ */
+export async function getFileCityImageFromS3(key: string): Promise<Buffer | null> {
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: key,
+      })
+    );
+
+    if (!response.Body) return null;
+
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks);
+  } catch {
+    return null;
   }
 }
 

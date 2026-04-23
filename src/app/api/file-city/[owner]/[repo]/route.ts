@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { renderFileCityPng } from '@/lib/file-city/renderer';
 import {
   generateFileCityS3Key,
+  getFileCityImageFromS3,
   uploadFileCityImage,
 } from '@/lib/file-city/s3-cache';
 import { getCached, setCachedAsync, getCommitDetailCacheKey } from '@/lib/redis-cache';
@@ -120,6 +121,20 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // Check for nocache flag
     const noCache = searchParams.get('nocache') === '1';
 
+    // For base repo images, serve from S3 cache if available
+    if (commitShas.length === 0 && !noCache) {
+      const cached = await getFileCityImageFromS3(s3Key);
+      if (cached) {
+        return new NextResponse(new Uint8Array(cached), {
+          status: 200,
+          headers: {
+            'Content-Type': 'image/png',
+            'Cache-Control': 'public, max-age=604800', // 1 week
+          },
+        });
+      }
+    }
+
     // Fetch commit details for all SHAs (for highlight files)
     let highlightFiles: Array<{ path: string; status: 'added' | 'modified' | 'removed' }> | undefined;
     if (commitShas.length > 0) {
@@ -174,23 +189,25 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       });
     }
 
-    // Try to upload to S3 for future caching (don't block on failure)
-    uploadFileCityImage(s3Key, buffer, {
-      owner,
-      repo,
-      branch,
-      width: clampedWidth.toString(),
-      height: clampedHeight.toString(),
-    }).catch((err) => {
-      console.warn('[File City] S3 cache failed (non-blocking):', err);
-    });
+    // Only cache base repo images in S3 — commit-specific renders are ephemeral
+    if (commitShas.length === 0) {
+      uploadFileCityImage(s3Key, buffer, {
+        owner,
+        repo,
+        branch,
+        width: clampedWidth.toString(),
+        height: clampedHeight.toString(),
+      }).catch((err) => {
+        console.warn('[File City] S3 cache failed (non-blocking):', err);
+      });
+    }
 
     // Return the image directly instead of redirecting to S3
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
         'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+        'Cache-Control': 'public, max-age=604800', // 1 week
       },
     });
   } catch (error) {

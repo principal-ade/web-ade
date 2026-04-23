@@ -1,0 +1,771 @@
+{
+  "name": "File City Image Generation",
+  "description": "File City PNG generation for GitHub repositories with in-memory tree cache, Redis commit cache, and S3 write-through cache",
+  "markdown": ".principal-views/file-city/file-city.md",
+  "scope": {
+    "service.name": "web-ade",
+    "service.version": "0.1.0",
+    "deployment.environment": "development"
+  },
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow",
+      "style": "solid"
+    },
+    "cache-path": {
+      "label": "Cache Path",
+      "style": "solid"
+    },
+    "error": {
+      "label": "Error Path",
+      "style": "dashed"
+    }
+  },
+  "nodes": [
+    {
+      "id": "file-city-request-started",
+      "type": "otel-event",
+      "x": 100,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "status": "approved",
+        "name": "Request Started",
+        "description": "File City image generation request received",
+        "shape": "rectangle",
+        "fill": "#dbeafe",
+        "stroke": "#3b82f6",
+        "references": [
+          "src/app/api/file-city/[owner]/[repo]/route.ts"
+        ]
+      },
+      "label": "Request Started",
+      "event": {
+        "name": "file-city.request.started",
+        "description": "Emitted when a File City image generation request is received",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "GitHub repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "GitHub repository name",
+            "required": true
+          },
+          "branch": {
+            "type": "string",
+            "description": "Git branch or ref (default: HEAD)",
+            "required": false
+          },
+          "width": {
+            "type": "number",
+            "description": "Requested image width (clamped 100–2000, default 400)",
+            "required": false
+          },
+          "height": {
+            "type": "number",
+            "description": "Requested image height (clamped 100–2000, default 400)",
+            "required": false
+          },
+          "commitCount": {
+            "type": "number",
+            "description": "Number of commit SHAs provided for highlight (0 when not specified)",
+            "required": true
+          },
+          "nocache": {
+            "type": "boolean",
+            "description": "Whether the ?nocache=1 flag was set",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "file-city-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "file-city-s3-cache-hit",
+      "type": "otel-event",
+      "x": 700,
+      "y": 50,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "status": "approved",
+        "name": "S3 Cache Hit",
+        "description": "Base repo image found in S3, render skipped entirely",
+        "shape": "rectangle",
+        "fill": "#d1fae5",
+        "stroke": "#22c55e",
+        "references": [
+          "src/app/api/file-city/[owner]/[repo]/route.ts",
+          "src/lib/file-city/s3-cache.ts"
+        ]
+      },
+      "label": "S3 Cache Hit",
+      "event": {
+        "name": "file-city.s3.cache_hit",
+        "description": "Emitted when a base repo image is found in S3 and returned without rendering",
+        "attributes": {
+          "s3Key": {
+            "type": "string",
+            "description": "S3 key that returned a hit",
+            "required": true
+          },
+          "imageSizeBytes": {
+            "type": "number",
+            "description": "Size of the cached image in bytes",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "file-city-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "file-city-commit-redis-miss",
+      "type": "otel-event",
+      "x": 100,
+      "y": 200,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "status": "approved",
+        "name": "Commit: Redis Miss",
+        "description": "Commit details not in Redis cache, fetching from GitHub API",
+        "shape": "rectangle",
+        "fill": "#fef3c7",
+        "stroke": "#f59e0b",
+        "references": [
+          "src/app/api/file-city/[owner]/[repo]/route.ts"
+        ]
+      },
+      "label": "Commit: Redis Miss",
+      "event": {
+        "name": "file-city.commit.cache_miss",
+        "description": "Emitted when commit details are not found in Redis and must be fetched from GitHub",
+        "attributes": {
+          "commitSha": {
+            "type": "string",
+            "description": "Commit SHA being looked up",
+            "required": true
+          },
+          "cacheKey": {
+            "type": "string",
+            "description": "Redis cache key that was checked",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "file-city-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "file-city-commit-redis-hit",
+      "type": "otel-event",
+      "x": 450,
+      "y": 200,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "status": "approved",
+        "name": "Commit: Redis Hit",
+        "description": "Commit details found in Redis cache, no GitHub API call needed",
+        "shape": "rectangle",
+        "fill": "#d1fae5",
+        "stroke": "#22c55e",
+        "references": [
+          "src/app/api/file-city/[owner]/[repo]/route.ts"
+        ]
+      },
+      "label": "Commit: Redis Hit",
+      "event": {
+        "name": "file-city.commit.cache_hit",
+        "description": "Emitted when commit details are found in Redis cache",
+        "attributes": {
+          "commitSha": {
+            "type": "string",
+            "description": "Commit SHA that was found in cache",
+            "required": true
+          },
+          "cacheKey": {
+            "type": "string",
+            "description": "Redis cache key that returned a hit",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "file-city-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "file-city-tree-cache-miss",
+      "type": "otel-event",
+      "x": 100,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "status": "approved",
+        "name": "Tree: In-Memory Miss",
+        "description": "Git tree not in in-memory cache, fetching from GitHub API",
+        "shape": "rectangle",
+        "fill": "#fef3c7",
+        "stroke": "#f59e0b",
+        "references": [
+          "src/lib/file-city/renderer.ts",
+          "src/lib/git-tree-cache.ts"
+        ]
+      },
+      "label": "Tree: In-Memory Miss",
+      "event": {
+        "name": "file-city.tree.cache_miss",
+        "description": "Emitted when the git tree is not found in the in-memory cache (24h TTL) and must be fetched from GitHub",
+        "attributes": {
+          "cacheKey": {
+            "type": "string",
+            "description": "Cache key checked (owner/repo/branch)",
+            "required": true
+          },
+          "branch": {
+            "type": "string",
+            "description": "Resolved branch name (HEAD resolved to default branch)",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "file-city-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "file-city-tree-cache-hit",
+      "type": "otel-event",
+      "x": 450,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "status": "approved",
+        "name": "Tree: In-Memory Hit",
+        "description": "Git tree found in in-memory cache, no GitHub API call needed",
+        "shape": "rectangle",
+        "fill": "#d1fae5",
+        "stroke": "#22c55e",
+        "references": [
+          "src/lib/file-city/renderer.ts",
+          "src/lib/git-tree-cache.ts"
+        ]
+      },
+      "label": "Tree: In-Memory Hit",
+      "event": {
+        "name": "file-city.tree.cache_hit",
+        "description": "Emitted when the git tree is found in the in-memory cache",
+        "attributes": {
+          "cacheKey": {
+            "type": "string",
+            "description": "Cache key that returned a hit (owner/repo/branch or tree SHA)",
+            "required": true
+          },
+          "treeSha": {
+            "type": "string",
+            "description": "Tree SHA of the cached tree",
+            "required": true
+          },
+          "fileCount": {
+            "type": "number",
+            "description": "Number of files in the cached tree",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "file-city-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "file-city-png-rendered",
+      "type": "otel-event",
+      "x": 100,
+      "y": 500,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "status": "approved",
+        "name": "PNG Rendered",
+        "description": "File City PNG image successfully rendered from the git tree",
+        "shape": "rectangle",
+        "fill": "#e0e7ff",
+        "stroke": "#6366f1",
+        "references": [
+          "src/lib/file-city/renderer.ts"
+        ]
+      },
+      "label": "PNG Rendered",
+      "event": {
+        "name": "file-city.png.rendered",
+        "description": "Emitted when the File City PNG is successfully rendered",
+        "attributes": {
+          "width": {
+            "type": "number",
+            "description": "Final image width in pixels",
+            "required": true
+          },
+          "height": {
+            "type": "number",
+            "description": "Final image height in pixels",
+            "required": true
+          },
+          "fileCount": {
+            "type": "number",
+            "description": "Number of files rendered in the city",
+            "required": true
+          },
+          "highlightCount": {
+            "type": "number",
+            "description": "Number of files highlighted (from commit diff), 0 if no commits provided",
+            "required": true
+          },
+          "renderTimeMs": {
+            "type": "number",
+            "description": "Time taken to render the PNG in milliseconds",
+            "required": true
+          },
+          "imageSizeBytes": {
+            "type": "number",
+            "description": "Size of the generated PNG buffer in bytes",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "file-city-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "file-city-s3-upload",
+      "type": "otel-event",
+      "x": 100,
+      "y": 650,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "status": "approved",
+        "name": "S3 Upload (async)",
+        "description": "PNG uploaded to S3 write-through cache asynchronously (fire-and-forget, does not block response)",
+        "shape": "rectangle",
+        "fill": "#fef3c7",
+        "stroke": "#f59e0b",
+        "references": [
+          "src/lib/file-city/s3-cache.ts",
+          "src/app/api/file-city/[owner]/[repo]/route.ts"
+        ]
+      },
+      "label": "S3 Upload (async)",
+      "event": {
+        "name": "file-city.s3.uploaded",
+        "description": "Emitted when the PNG is successfully uploaded to S3 (fires asynchronously after response is sent)",
+        "attributes": {
+          "s3Key": {
+            "type": "string",
+            "description": "S3 object key where image was stored (file-city/{owner}/{repo}/{w}x{h}.png)",
+            "required": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "Public URL to the uploaded image (CDN or direct S3)",
+            "required": true
+          },
+          "imageSizeBytes": {
+            "type": "number",
+            "description": "Size of the uploaded PNG in bytes",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "file-city-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "file-city-nocache-response",
+      "type": "otel-event",
+      "x": 450,
+      "y": 500,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "status": "approved",
+        "name": "Nocache Response",
+        "description": "PNG returned directly with no-store headers, S3 upload skipped (?nocache=1 path)",
+        "shape": "rectangle",
+        "fill": "#f1f5f9",
+        "stroke": "#94a3b8",
+        "references": [
+          "src/app/api/file-city/[owner]/[repo]/route.ts"
+        ]
+      },
+      "label": "Nocache Response",
+      "event": {
+        "name": "file-city.response.nocache",
+        "description": "Emitted when the request was made with ?nocache=1 — response is served with no-store headers and S3 upload is skipped",
+        "attributes": {
+          "imageSizeBytes": {
+            "type": "number",
+            "description": "Size of the returned PNG in bytes",
+            "required": true
+          },
+          "durationMs": {
+            "type": "number",
+            "description": "Total request duration in milliseconds",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "file-city-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "file-city-response-served",
+      "type": "otel-event",
+      "x": 450,
+      "y": 650,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "status": "approved",
+        "name": "Response Served",
+        "description": "PNG returned to client with public 1-week cache header",
+        "shape": "rectangle",
+        "fill": "#d1fae5",
+        "stroke": "#22c55e",
+        "references": [
+          "src/app/api/file-city/[owner]/[repo]/route.ts"
+        ]
+      },
+      "label": "Response Served",
+      "event": {
+        "name": "file-city.response.served",
+        "description": "Emitted when the File City PNG is returned to the client (Cache-Control: public, max-age=604800)",
+        "attributes": {
+          "imageSizeBytes": {
+            "type": "number",
+            "description": "Size of the returned PNG in bytes",
+            "required": true
+          },
+          "durationMs": {
+            "type": "number",
+            "description": "Total request duration in milliseconds",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "file-city-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "file-city-error-github-api",
+      "type": "otel-event",
+      "x": 750,
+      "y": 350,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "status": "approved",
+        "name": "Error: GitHub API",
+        "description": "GitHub API failed when fetching the git tree (non-200 response)",
+        "shape": "rectangle",
+        "fill": "#fee2e2",
+        "stroke": "#ef4444",
+        "references": [
+          "src/lib/file-city/renderer.ts"
+        ]
+      },
+      "label": "Error: GitHub API",
+      "event": {
+        "name": "file-city.error.github_api",
+        "description": "Emitted when the GitHub API returns a non-200 response during tree or default-branch fetch",
+        "attributes": {
+          "errorCode": {
+            "type": "string",
+            "description": "Error code (GITHUB_API_ERROR)",
+            "required": true
+          },
+          "httpStatus": {
+            "type": "number",
+            "description": "HTTP status code returned by GitHub",
+            "required": true
+          },
+          "errorMessage": {
+            "type": "string",
+            "description": "GitHub API error status text",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "file-city-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "file-city-error-no-files",
+      "type": "otel-event",
+      "x": 750,
+      "y": 500,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "status": "approved",
+        "name": "Error: No Files",
+        "description": "Repository tree is empty — no files found to render",
+        "shape": "rectangle",
+        "fill": "#fee2e2",
+        "stroke": "#ef4444",
+        "references": [
+          "src/lib/file-city/renderer.ts"
+        ]
+      },
+      "label": "Error: No Files",
+      "event": {
+        "name": "file-city.error.no_files",
+        "description": "Emitted when the repository tree contains no files (empty repo or all directories)",
+        "attributes": {
+          "errorCode": {
+            "type": "string",
+            "description": "Error code (NO_FILES_FOUND)",
+            "required": true
+          },
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "file-city-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "file-city-error-s3-upload",
+      "type": "otel-event",
+      "x": 750,
+      "y": 650,
+      "width": 200,
+      "height": 100,
+      "pv": {
+        "status": "approved",
+        "name": "Error: S3 Upload Failed",
+        "description": "Async S3 write-through upload failed — warning only, response already sent",
+        "shape": "rectangle",
+        "fill": "#fff7ed",
+        "stroke": "#f97316",
+        "references": [
+          "src/lib/file-city/s3-cache.ts",
+          "src/app/api/file-city/[owner]/[repo]/route.ts"
+        ]
+      },
+      "label": "Error: S3 Upload Failed",
+      "event": {
+        "name": "file-city.error.s3_upload",
+        "description": "Emitted when the fire-and-forget S3 upload fails — does not affect the response, warn-only",
+        "attributes": {
+          "s3Key": {
+            "type": "string",
+            "description": "S3 key that failed to upload",
+            "required": true
+          },
+          "errorMessage": {
+            "type": "string",
+            "description": "S3 upload error message",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "file-city-api",
+        "status": "draft"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-started-to-s3-cache-hit",
+      "fromNode": "file-city-request-started",
+      "fromSide": "right",
+      "toNode": "file-city-s3-cache-hit",
+      "toSide": "left",
+      "label": "base image, S3 hit",
+      "color": "#22c55e",
+      "edgeType": "cache-path"
+    },
+    {
+      "id": "edge-s3-cache-hit-to-response",
+      "fromNode": "file-city-s3-cache-hit",
+      "fromSide": "bottom",
+      "toNode": "file-city-response-served",
+      "toSide": "top",
+      "color": "#22c55e",
+      "edgeType": "cache-path"
+    },
+    {
+      "id": "edge-started-to-commit-miss",
+      "fromNode": "file-city-request-started",
+      "fromSide": "bottom",
+      "toNode": "file-city-commit-redis-miss",
+      "toSide": "top",
+      "label": "has commits, miss",
+      "color": "#f59e0b",
+      "edgeType": "flow"
+    },
+    {
+      "id": "edge-started-to-commit-hit",
+      "fromNode": "file-city-request-started",
+      "fromSide": "right",
+      "toNode": "file-city-commit-redis-hit",
+      "toSide": "left",
+      "label": "has commits, hit",
+      "color": "#22c55e",
+      "edgeType": "cache-path"
+    },
+    {
+      "id": "edge-started-to-tree-miss",
+      "fromNode": "file-city-request-started",
+      "fromSide": "bottom",
+      "toNode": "file-city-tree-cache-miss",
+      "toSide": "top",
+      "label": "no commits, miss",
+      "color": "#f59e0b",
+      "edgeType": "flow"
+    },
+    {
+      "id": "edge-started-to-tree-hit",
+      "fromNode": "file-city-request-started",
+      "fromSide": "right",
+      "toNode": "file-city-tree-cache-hit",
+      "toSide": "left",
+      "label": "no commits, hit",
+      "color": "#22c55e",
+      "edgeType": "cache-path"
+    },
+    {
+      "id": "edge-commit-miss-to-tree-miss",
+      "fromNode": "file-city-commit-redis-miss",
+      "fromSide": "bottom",
+      "toNode": "file-city-tree-cache-miss",
+      "toSide": "top",
+      "color": "#3b82f6",
+      "edgeType": "flow"
+    },
+    {
+      "id": "edge-commit-hit-to-tree-hit",
+      "fromNode": "file-city-commit-redis-hit",
+      "fromSide": "bottom",
+      "toNode": "file-city-tree-cache-hit",
+      "toSide": "top",
+      "color": "#22c55e",
+      "edgeType": "cache-path"
+    },
+    {
+      "id": "edge-tree-miss-to-rendered",
+      "fromNode": "file-city-tree-cache-miss",
+      "fromSide": "bottom",
+      "toNode": "file-city-png-rendered",
+      "toSide": "top",
+      "color": "#3b82f6",
+      "edgeType": "flow"
+    },
+    {
+      "id": "edge-tree-hit-to-rendered",
+      "fromNode": "file-city-tree-cache-hit",
+      "fromSide": "bottom",
+      "toNode": "file-city-png-rendered",
+      "toSide": "right",
+      "color": "#22c55e",
+      "edgeType": "cache-path"
+    },
+    {
+      "id": "edge-tree-miss-to-github-error",
+      "fromNode": "file-city-tree-cache-miss",
+      "fromSide": "right",
+      "toNode": "file-city-error-github-api",
+      "toSide": "left",
+      "label": "non-200",
+      "color": "#ef4444",
+      "edgeType": "error"
+    },
+    {
+      "id": "edge-rendered-to-s3-upload",
+      "fromNode": "file-city-png-rendered",
+      "fromSide": "bottom",
+      "toNode": "file-city-s3-upload",
+      "toSide": "top",
+      "color": "#3b82f6",
+      "edgeType": "flow"
+    },
+    {
+      "id": "edge-rendered-to-nocache",
+      "fromNode": "file-city-png-rendered",
+      "fromSide": "right",
+      "toNode": "file-city-nocache-response",
+      "toSide": "left",
+      "label": "?nocache=1",
+      "color": "#94a3b8",
+      "edgeType": "flow"
+    },
+    {
+      "id": "edge-rendered-to-no-files",
+      "fromNode": "file-city-png-rendered",
+      "fromSide": "right",
+      "toNode": "file-city-error-no-files",
+      "toSide": "left",
+      "label": "empty tree",
+      "color": "#ef4444",
+      "edgeType": "error"
+    },
+    {
+      "id": "edge-s3-upload-to-response",
+      "fromNode": "file-city-s3-upload",
+      "fromSide": "right",
+      "toNode": "file-city-response-served",
+      "toSide": "left",
+      "color": "#22c55e",
+      "edgeType": "flow"
+    },
+    {
+      "id": "edge-s3-upload-to-error",
+      "fromNode": "file-city-s3-upload",
+      "fromSide": "right",
+      "toNode": "file-city-error-s3-upload",
+      "toSide": "left",
+      "label": "warn only",
+      "color": "#f97316",
+      "edgeType": "error"
+    }
+  ]
+}
