@@ -68,36 +68,6 @@
       }
     },
     {
-      "id": "collections-api-scope",
-      "type": "otel-scope",
-      "x": 0,
-      "y": 300,
-      "width": 220,
-      "height": 100,
-      "color": "#6d28d9",
-      "label": "Collections API",
-      "description": "Collections API operations (GitHub integration)",
-      "otel": {
-        "scope": "collections-api",
-        "status": "draft"
-      }
-    },
-    {
-      "id": "collections-page-scope",
-      "type": "otel-scope",
-      "x": -362,
-      "y": 303,
-      "width": 220,
-      "height": 100,
-      "color": "#8b5cf6",
-      "label": "Collections Page",
-      "description": "Collections UI management (create, import, load)",
-      "otel": {
-        "scope": "collections-page",
-        "status": "draft"
-      }
-    },
-    {
       "id": "feed-collections-api-scope",
       "type": "otel-scope",
       "x": 0,
@@ -188,21 +158,6 @@
       }
     },
     {
-      "id": "shared-collections-page-scope",
-      "type": "otel-scope",
-      "x": -360,
-      "y": 893,
-      "width": 220,
-      "height": 100,
-      "color": "#06b6d4",
-      "label": "Shared Collections Page",
-      "description": "Shared collections page UI (user collections, progressive loading)",
-      "otel": {
-        "scope": "shared-collections-page",
-        "status": "draft"
-      }
-    },
-    {
       "id": "stories-layout-page-scope",
       "type": "otel-scope",
       "x": -362,
@@ -244,21 +199,6 @@
       "description": "Text-to-speech generation (ElevenLabs API, S3 caching)",
       "otel": {
         "scope": "tts-generation-api",
-        "status": "draft"
-      }
-    },
-    {
-      "id": "worlds-page-scope",
-      "type": "otel-scope",
-      "x": -360,
-      "y": 1050,
-      "width": 220,
-      "height": 100,
-      "color": "#14b8a6",
-      "label": "Worlds Page",
-      "description": "Worlds page UI (collection map, user interactions)",
-      "otel": {
-        "scope": "worlds-page",
         "status": "draft"
       }
     },
@@ -321,6 +261,96 @@
         "scope": "repo-notes-api",
         "status": "draft"
       }
+    },
+    {
+      "id": "explain-commits-api-scope",
+      "type": "otel-scope",
+      "x": 0,
+      "y": 1940,
+      "width": 220,
+      "height": 100,
+      "color": "#7c3aed",
+      "label": "Explain Commits API",
+      "description": "AI-powered commit explanation (LLM provider, model rotation, in-memory cache)",
+      "otel": {
+        "scope": "explain-commits-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "github-client-scope",
+      "type": "otel-scope",
+      "x": 500,
+      "y": 450,
+      "width": 220,
+      "height": 100,
+      "color": "#6366f1",
+      "label": "GitHub Client",
+      "description": "GitHub REST API abstraction (repo info, commits, trees, user data, three-layer cache)",
+      "otel": {
+        "scope": "github-client",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "cache-backend-scope",
+      "type": "otel-scope",
+      "x": 914,
+      "y": 611,
+      "width": 220,
+      "height": 100,
+      "color": "#06b6d4",
+      "label": "Cache Backend",
+      "description": "Pluggable cache layer (Upstash Redis implementation, in-memory fallback for tests/dev)",
+      "otel": {
+        "scope": "cache-backend",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "s3-storage-scope",
+      "type": "otel-scope",
+      "x": 913,
+      "y": 853,
+      "width": 220,
+      "height": 100,
+      "color": "#ea580c",
+      "label": "S3 Storage",
+      "description": "S3 object storage abstraction (bucket-specific implementations, ETag optimistic locking, binary and JSON objects)",
+      "otel": {
+        "scope": "s3-storage",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "tts-provider-scope",
+      "type": "otel-scope",
+      "x": 500,
+      "y": 1200,
+      "width": 220,
+      "height": 100,
+      "color": "#f43f5e",
+      "label": "TTS Provider",
+      "description": "Text-to-speech provider abstraction (ElevenLabs implementation, rate-limit handling)",
+      "otel": {
+        "scope": "tts-provider",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "llm-client-scope",
+      "type": "otel-scope",
+      "x": 500,
+      "y": 1500,
+      "width": 220,
+      "height": 100,
+      "color": "#d97706",
+      "label": "LLM Client",
+      "description": "LLM provider abstraction (OpenRouter implementation, model rotation, rate-limit cooldown)",
+      "otel": {
+        "scope": "llm-client",
+        "status": "draft"
+      }
     }
   ],
   "edges": [
@@ -330,6 +360,294 @@
       "toNode": "authentication-api-scope",
       "fromSide": "left",
       "toSide": "right",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "activity-feed-page-to-feed-collections-api",
+      "fromNode": "activity-feed-page-scope",
+      "toNode": "feed-collections-api-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "repository-page-to-line-counts-api",
+      "fromNode": "repository-page-scope",
+      "toNode": "line-counts-api-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "repository-page-to-tour-availability-api",
+      "fromNode": "repository-page-scope",
+      "toNode": "tour-availability-api-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "repository-page-to-tts-generation-api",
+      "fromNode": "repository-page-scope",
+      "toNode": "tts-generation-api-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "stories-layout-page-to-line-counts-api",
+      "fromNode": "stories-layout-page-scope",
+      "toNode": "line-counts-api-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "stories-layout-page-to-tour-availability-api",
+      "fromNode": "stories-layout-page-scope",
+      "toNode": "tour-availability-api-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "stories-layout-page-to-tts-generation-api",
+      "fromNode": "stories-layout-page-scope",
+      "toNode": "tts-generation-api-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "activity-feed-api-to-github-client",
+      "fromNode": "activity-feed-api-scope",
+      "toNode": "github-client-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "feed-suggestions-api-to-github-client",
+      "fromNode": "feed-suggestions-api-scope",
+      "toNode": "github-client-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "tour-availability-api-to-github-client",
+      "fromNode": "tour-availability-api-scope",
+      "toNode": "github-client-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "starred-collections-api-to-github-client",
+      "fromNode": "starred-collections-api-scope",
+      "toNode": "github-client-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "feed-collections-api-to-github-client",
+      "fromNode": "feed-collections-api-scope",
+      "toNode": "github-client-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "github-client-to-cache-backend",
+      "fromNode": "github-client-scope",
+      "toNode": "cache-backend-scope",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "activity-feed-api-to-cache-backend",
+      "fromNode": "activity-feed-api-scope",
+      "toNode": "cache-backend-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "tour-availability-api-to-cache-backend",
+      "fromNode": "tour-availability-api-scope",
+      "toNode": "cache-backend-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "starred-collections-api-to-cache-backend",
+      "fromNode": "starred-collections-api-scope",
+      "toNode": "cache-backend-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "feed-collections-api-to-cache-backend",
+      "fromNode": "feed-collections-api-scope",
+      "toNode": "cache-backend-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "tts-generation-api-to-tts-provider",
+      "fromNode": "tts-generation-api-scope",
+      "toNode": "tts-provider-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "tts-generation-api-to-cache-backend",
+      "fromNode": "tts-generation-api-scope",
+      "toNode": "cache-backend-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "explain-commits-api-to-llm-client",
+      "fromNode": "explain-commits-api-scope",
+      "toNode": "llm-client-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "starred-collections-api-to-s3-storage",
+      "fromNode": "starred-collections-api-scope",
+      "toNode": "s3-storage-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "feed-collections-api-to-s3-storage",
+      "fromNode": "feed-collections-api-scope",
+      "toNode": "s3-storage-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "line-counts-api-to-s3-storage",
+      "fromNode": "line-counts-api-scope",
+      "toNode": "s3-storage-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "tour-availability-api-to-s3-storage",
+      "fromNode": "tour-availability-api-scope",
+      "toNode": "s3-storage-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "tts-generation-api-to-s3-storage",
+      "fromNode": "tts-generation-api-scope",
+      "toNode": "s3-storage-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "version-registry-api-to-s3-storage",
+      "fromNode": "version-registry-api-scope",
+      "toNode": "s3-storage-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "repo-notes-api-to-s3-storage",
+      "fromNode": "repo-notes-api-scope",
+      "toNode": "s3-storage-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "github-client-to-s3-storage",
+      "fromNode": "github-client-scope",
+      "toNode": "s3-storage-scope",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "owner-page-to-activity-feed-api",
+      "fromNode": "owner-page-scope",
+      "toNode": "activity-feed-api-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "owner-page-to-github-client",
+      "fromNode": "owner-page-scope",
+      "toNode": "github-client-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "owner-page-to-line-counts-api",
+      "fromNode": "owner-page-scope",
+      "toNode": "line-counts-api-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "owner-page-to-tts-generation-api",
+      "fromNode": "owner-page-scope",
+      "toNode": "tts-generation-api-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "activity-feed-page-to-github-client",
+      "fromNode": "activity-feed-page-scope",
+      "toNode": "github-client-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "activity-feed-page-to-activity-feed-api",
+      "fromNode": "activity-feed-page-scope",
+      "toNode": "activity-feed-api-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "activity-feed-api-to-github-client",
+      "fromNode": "activity-feed-api-scope",
+      "toNode": "github-client-scope",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "dependency"
+    },
+    {
+      "id": "activity-feed-api-to-feed-collections-api",
+      "fromNode": "activity-feed-api-scope",
+      "toNode": "feed-collections-api-scope",
+      "fromSide": "bottom",
+      "toSide": "top",
       "edgeType": "dependency"
     }
   ]
