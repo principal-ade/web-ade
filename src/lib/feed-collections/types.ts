@@ -24,6 +24,7 @@ export const MAX_WATCHED_REPOS = 10;
 export interface WatchedUser {
   login: string; // GitHub username
   watchedAt: string; // ISO timestamp
+  type?: 'User' | 'Organization';
 }
 
 /**

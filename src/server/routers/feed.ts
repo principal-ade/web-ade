@@ -185,6 +185,7 @@ const removeRepoInputSchema = z.object({
 // Watch input schemas
 const watchUserInputSchema = z.object({
   login: z.string().min(1).max(39), // GitHub username limit
+  type: z.enum(['User', 'Organization']).optional(),
 });
 
 const unwatchUserInputSchema = z.object({
@@ -234,6 +235,7 @@ const feedRepoSchema = z.object({
 const watchedUserSchema = z.object({
   login: z.string(),
   watchedAt: z.string(),
+  type: z.enum(['User', 'Organization']).optional(),
 });
 
 const watchedRepoSchema = z.object({
@@ -793,7 +795,7 @@ export const feedRouter = router({
         });
       }
 
-      watchedUsers.push({ login: input.login, watchedAt: now });
+      watchedUsers.push({ login: input.login, watchedAt: now, type: input.type });
       profile.watchedUsers = watchedUsers;
       profile.updatedAt = now;
 
