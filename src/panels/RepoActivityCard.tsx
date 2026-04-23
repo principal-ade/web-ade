@@ -671,7 +671,11 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
             }}
           >
             {/* Avatar */}
-            <div
+            <a
+              href={`/${summary.owner}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
               style={{
                 width: 56,
                 height: 56,
@@ -683,6 +687,8 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 justifyContent: 'center',
                 flexShrink: 0,
                 overflow: 'hidden',
+                textDecoration: 'none',
+                cursor: 'pointer',
               }}
             >
               {avatarLoaded ? (
@@ -700,7 +706,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
               ) : (
                 <User size={28} color={theme.colors.textMuted} />
               )}
-            </div>
+            </a>
 
             {/* Name and time */}
             <div style={{ flex: 1, minWidth: 0 }}>
