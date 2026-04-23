@@ -1,0 +1,49 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/repo-notes/repo-notes.otel.canvas",
+  "spanPattern": "api.repo-notes.delete",
+  "name": "Delete Repo Note",
+  "description": "Delete the global note for a specific repository",
+  "scenarios": [
+    {
+      "id": "success",
+      "description": "Successfully deleted a repo note",
+      "priority": 1,
+      "template": {
+        "summary": "[Success] Note deleted for {owner}/{repo}",
+        "events": {
+          "repo-notes.delete.started": "Deleting note for {{owner}}/{{repo}} (user: {{userId}})",
+          "repo-notes.delete.s3.read": "Reading from S3: {{s3Key}} (etag: {{etag}})",
+          "repo-notes.delete.s3.write": "Writing to S3: {{s3Key}}, removing key {{repoKey}}",
+          "repo-notes.delete.success": "Note deleted for {{owner}}/{{repo}}"
+        }
+      }
+    },
+    {
+      "id": "unauthorized",
+      "description": "Delete failed because user is not authenticated",
+      "priority": 2,
+      "template": {
+        "summary": "[Unauthorized] Authentication required",
+        "events": {
+          "repo-notes.delete.started": "Deleting note for {{owner}}/{{repo}}",
+          "repo-notes.delete.unauthorized": "Not authenticated: {{reason}}"
+        }
+      }
+    },
+    {
+      "id": "error",
+      "description": "Delete failed due to an unexpected error",
+      "priority": 3,
+      "template": {
+        "summary": "[Error] Failed to delete note: {error.message}",
+        "events": {
+          "repo-notes.delete.started": "Deleting note for {{owner}}/{{repo}}",
+          "repo-notes.delete.s3.read": "Reading from S3: {{s3Key}}",
+          "repo-notes.delete.s3.write": "Writing to S3: {{s3Key}}",
+          "repo-notes.delete.error": "Error: {{error.message}}"
+        }
+      }
+    }
+  ]
+}

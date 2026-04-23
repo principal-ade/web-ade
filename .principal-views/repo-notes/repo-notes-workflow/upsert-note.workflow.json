@@ -1,0 +1,63 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/repo-notes/repo-notes.otel.canvas",
+  "spanPattern": "api.repo-notes.upsert",
+  "name": "Upsert Repo Note",
+  "description": "Create or replace a global note for a specific repository",
+  "scenarios": [
+    {
+      "id": "success",
+      "description": "Successfully upserted a repo note",
+      "priority": 1,
+      "template": {
+        "summary": "[Success] Note saved for {owner}/{repo}",
+        "events": {
+          "repo-notes.upsert.started": "Upserting note for {{owner}}/{{repo}} as user {{userId}} ({{contentLength}} chars)",
+          "repo-notes.upsert.validate": "Validating content (length: {{contentLength}}, max: {{maxLength}})",
+          "repo-notes.upsert.s3.read": "Reading from S3: {{s3Key}} (etag: {{etag}})",
+          "repo-notes.upsert.s3.write": "Writing to S3: {{s3Key}} for key {{repoKey}} (etag: {{etag}})",
+          "repo-notes.upsert.success": "Note saved for {{owner}}/{{repo}} at {{updatedAt}}"
+        }
+      }
+    },
+    {
+      "id": "unauthorized",
+      "description": "Upsert failed because user is not authenticated",
+      "priority": 2,
+      "template": {
+        "summary": "[Unauthorized] Authentication required",
+        "events": {
+          "repo-notes.upsert.started": "Upserting note for {{owner}}/{{repo}}",
+          "repo-notes.upsert.unauthorized": "Not authenticated: {{reason}}"
+        }
+      }
+    },
+    {
+      "id": "validation-error",
+      "description": "Upsert failed due to invalid content",
+      "priority": 3,
+      "template": {
+        "summary": "[Validation Error] {error.message}",
+        "events": {
+          "repo-notes.upsert.started": "Upserting note for {{owner}}/{{repo}} ({{contentLength}} chars)",
+          "repo-notes.upsert.validate": "Validating content (length: {{contentLength}}, max: {{maxLength}})",
+          "repo-notes.upsert.validation-error": "Validation failed: {{error.message}}"
+        }
+      }
+    },
+    {
+      "id": "error",
+      "description": "Upsert failed due to an unexpected error",
+      "priority": 4,
+      "template": {
+        "summary": "[Error] Failed to save note: {error.message}",
+        "events": {
+          "repo-notes.upsert.started": "Upserting note for {{owner}}/{{repo}}",
+          "repo-notes.upsert.s3.read": "Reading from S3: {{s3Key}}",
+          "repo-notes.upsert.s3.write": "Writing to S3: {{s3Key}}",
+          "repo-notes.upsert.error": "Error: {{error.message}}"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/repo-notes/repo-notes.otel.canvas",
+  "spanPattern": "api.repo-notes.get",
+  "name": "Get All Repo Notes",
+  "description": "Fetch all repo notes for the authenticated user",
+  "scenarios": [
+    {
+      "id": "success",
+      "description": "Successfully retrieved all repo notes",
+      "priority": 1,
+      "template": {
+        "summary": "[Success] Retrieved {notesCount} repo notes",
+        "events": {
+          "repo-notes.get.started": "Fetching repo notes for user {{userId}}",
+          "repo-notes.get.s3.read": "Reading from S3: {{s3Key}} (found: {{found}})",
+          "repo-notes.get.success": "Retrieved {{notesCount}} notes"
+        }
+      }
+    },
+    {
+      "id": "unauthorized",
+      "description": "Get repo notes failed because user is not authenticated",
+      "priority": 2,
+      "template": {
+        "summary": "[Unauthorized] Authentication required",
+        "events": {
+          "repo-notes.get.started": "Fetching repo notes",
+          "repo-notes.get.unauthorized": "Not authenticated: {{reason}}"
+        }
+      }
+    },
+    {
+      "id": "error",
+      "description": "Get repo notes failed due to an unexpected error",
+      "priority": 3,
+      "template": {
+        "summary": "[Error] Failed to get repo notes: {error.message}",
+        "events": {
+          "repo-notes.get.started": "Fetching repo notes for user {{userId}}",
+          "repo-notes.get.s3.read": "Reading from S3: {{s3Key}}",
+          "repo-notes.get.error": "Error: {{error.message}}"
+        }
+      }
+    }
+  ]
+}

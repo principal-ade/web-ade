@@ -19,6 +19,7 @@ export interface CollectionRepo {
   description?: string; // Cached from GitHub API
   stargazersCount?: number; // Cached from GitHub API
   avatarUrl?: string; // Cached owner avatar from GitHub
+  notes?: string; // User-authored note for this repo in this collection
 }
 
 /**
@@ -125,6 +126,13 @@ export interface AddRepoRequest {
  */
 export interface AddUserRequest {
   login: string;
+}
+
+/**
+ * Request body for updating a repo's collection-scoped fields (e.g. notes)
+ */
+export interface UpdateCollectionRepoRequest {
+  notes?: string | null; // null clears the note
 }
 
 /**

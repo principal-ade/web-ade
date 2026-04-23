@@ -1,0 +1,93 @@
+{
+  "version": "1.0.0",
+  "canvas": ".principal-views/repo-notes/repo-notes.otel.canvas",
+  "spanPattern": "api.repo-notes.collection-note",
+  "name": "Update Collection-Scoped Repo Note",
+  "description": "Set or clear the note for a repo within a specific starred collection",
+  "scenarios": [
+    {
+      "id": "success",
+      "description": "Successfully updated the collection-scoped note",
+      "priority": 1,
+      "template": {
+        "summary": "[Success] Collection note updated for {owner}/{repo} in collection {collectionId}",
+        "events": {
+          "repo-notes.collection-note.started": "Updating collection note for {{owner}}/{{repo}} in collection {{collectionId}} ({{notesLength}} chars)",
+          "repo-notes.collection-note.validate": "Validating notes (length: {{notesLength}}, max: {{maxLength}})",
+          "repo-notes.collection-note.find-collection": "Finding collection {{collectionId}} (ownerType: {{ownerType}})",
+          "repo-notes.collection-note.s3.read": "Reading from S3: {{s3Key}} (etag: {{etag}})",
+          "repo-notes.collection-note.s3.write": "Writing to S3: {{s3Key}}, collection {{collectionId}} (version: {{newVersion}})",
+          "repo-notes.collection-note.success": "Note updated for {{owner}}/{{repo}} in collection {{collectionId}}"
+        }
+      }
+    },
+    {
+      "id": "unauthorized",
+      "description": "Update failed because user is not authenticated",
+      "priority": 2,
+      "template": {
+        "summary": "[Unauthorized] Authentication required",
+        "events": {
+          "repo-notes.collection-note.started": "Updating collection note for {{owner}}/{{repo}}",
+          "repo-notes.collection-note.unauthorized": "Not authenticated: {{reason}}"
+        }
+      }
+    },
+    {
+      "id": "validation-error",
+      "description": "Update failed due to invalid notes content",
+      "priority": 3,
+      "template": {
+        "summary": "[Validation Error] {error.message}",
+        "events": {
+          "repo-notes.collection-note.started": "Updating collection note for {{owner}}/{{repo}}",
+          "repo-notes.collection-note.validate": "Validating notes (length: {{notesLength}}, max: {{maxLength}})",
+          "repo-notes.collection-note.validation-error": "Validation failed: {{error.message}}"
+        }
+      }
+    },
+    {
+      "id": "collection-not-found",
+      "description": "Update failed because the collection does not exist",
+      "priority": 4,
+      "template": {
+        "summary": "[Not Found] Collection {collectionId} not found",
+        "events": {
+          "repo-notes.collection-note.started": "Updating collection note for {{owner}}/{{repo}} in collection {{collectionId}}",
+          "repo-notes.collection-note.validate": "Validating notes",
+          "repo-notes.collection-note.find-collection": "Looking up collection {{collectionId}}",
+          "repo-notes.collection-note.not-found": "Collection {{collectionId}} not found"
+        }
+      }
+    },
+    {
+      "id": "repo-not-found",
+      "description": "Update failed because the repo is not in the collection",
+      "priority": 5,
+      "template": {
+        "summary": "[Not Found] {owner}/{repo} not in collection {collectionId}",
+        "events": {
+          "repo-notes.collection-note.started": "Updating collection note for {{owner}}/{{repo}} in collection {{collectionId}}",
+          "repo-notes.collection-note.find-collection": "Found collection {{collectionId}}",
+          "repo-notes.collection-note.s3.read": "Reading from S3: {{s3Key}}",
+          "repo-notes.collection-note.repo-not-found": "{{owner}}/{{repo}} not found in collection"
+        }
+      }
+    },
+    {
+      "id": "error",
+      "description": "Update failed due to an unexpected error",
+      "priority": 6,
+      "template": {
+        "summary": "[Error] Failed to update collection note: {error.message}",
+        "events": {
+          "repo-notes.collection-note.started": "Updating collection note for {{owner}}/{{repo}}",
+          "repo-notes.collection-note.find-collection": "Finding collection {{collectionId}}",
+          "repo-notes.collection-note.s3.read": "Reading from S3",
+          "repo-notes.collection-note.s3.write": "Writing to S3",
+          "repo-notes.collection-note.error": "Error: {{error.message}} (code: {{error.code}})"
+        }
+      }
+    }
+  ]
+}

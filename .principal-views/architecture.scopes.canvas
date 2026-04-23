@@ -306,6 +306,21 @@
         "scope": "starred-collections-api",
         "status": "draft"
       }
+    },
+    {
+      "id": "repo-notes-api-scope",
+      "type": "otel-scope",
+      "x": 0,
+      "y": 1790,
+      "width": 220,
+      "height": 100,
+      "color": "#0891b2",
+      "label": "Repo Notes API",
+      "description": "Repo notes API (global per-user notes and collection-scoped notes, S3 storage)",
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
     }
   ],
   "edges": [

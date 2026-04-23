@@ -1,0 +1,1169 @@
+{
+  "name": "Repo Notes API",
+  "markdown": ".principal-views/repo-notes/repo-notes.md",
+  "edgeTypes": {
+    "flow": {
+      "label": "Flow"
+    },
+    "error": {
+      "label": "Error Path"
+    }
+  },
+  "nodes": [
+    {
+      "id": "get-started",
+      "type": "otel-event",
+      "x": 50,
+      "y": 50,
+      "width": 200,
+      "height": 90,
+      "label": "Get Notes Started",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/repo-notes/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.get.started",
+        "attributes": {
+          "userId": {
+            "type": "string",
+            "description": "Authenticated user's GitHub ID",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "get-s3-read",
+      "type": "otel-event",
+      "x": 50,
+      "y": 170,
+      "width": 200,
+      "height": 90,
+      "label": "S3 Read",
+      "pv": {
+        "status": "draft",
+        "references": ["src/lib/repo-notes/s3-storage.ts"]
+      },
+      "event": {
+        "name": "repo-notes.get.s3.read",
+        "attributes": {
+          "s3Key": {
+            "type": "string",
+            "description": "S3 key: repo-notes/{userId}/notes.json",
+            "required": true
+          },
+          "found": {
+            "type": "boolean",
+            "description": "Whether the notes file exists",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "get-success",
+      "type": "otel-event",
+      "x": -80,
+      "y": 290,
+      "width": 200,
+      "height": 90,
+      "label": "Get Notes Success",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/repo-notes/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.get.success",
+        "attributes": {
+          "notesCount": {
+            "type": "number",
+            "description": "Number of repo notes returned",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "get-unauthorized",
+      "type": "otel-event",
+      "x": 290,
+      "y": 50,
+      "width": 200,
+      "height": 90,
+      "label": "Get Unauthorized",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/repo-notes/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.get.unauthorized",
+        "attributes": {
+          "reason": {
+            "type": "string",
+            "description": "Reason for unauthorized access",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "get-error",
+      "type": "otel-event",
+      "x": 180,
+      "y": 290,
+      "width": 200,
+      "height": 90,
+      "label": "Get Error",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/repo-notes/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.get.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "upsert-started",
+      "type": "otel-event",
+      "x": 600,
+      "y": 50,
+      "width": 200,
+      "height": 90,
+      "label": "Upsert Started",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/repo-notes/[owner]/[repo]/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.upsert.started",
+        "attributes": {
+          "userId": {
+            "type": "string",
+            "description": "Authenticated user's GitHub ID",
+            "required": true
+          },
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "contentLength": {
+            "type": "number",
+            "description": "Length of note content in characters",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "upsert-validate",
+      "type": "otel-event",
+      "x": 600,
+      "y": 170,
+      "width": 200,
+      "height": 90,
+      "label": "Validate Content",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/repo-notes/[owner]/[repo]/route.ts", "src/lib/repo-notes/types.ts"]
+      },
+      "event": {
+        "name": "repo-notes.upsert.validate",
+        "attributes": {
+          "contentLength": {
+            "type": "number",
+            "description": "Content length being validated",
+            "required": true
+          },
+          "maxLength": {
+            "type": "number",
+            "description": "Maximum allowed content length",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "upsert-s3-read",
+      "type": "otel-event",
+      "x": 600,
+      "y": 290,
+      "width": 200,
+      "height": 90,
+      "label": "S3 Read",
+      "pv": {
+        "status": "draft",
+        "references": ["src/lib/repo-notes/s3-storage.ts"]
+      },
+      "event": {
+        "name": "repo-notes.upsert.s3.read",
+        "attributes": {
+          "s3Key": {
+            "type": "string",
+            "description": "S3 key: repo-notes/{userId}/notes.json",
+            "required": true
+          },
+          "etag": {
+            "type": "string",
+            "description": "ETag for optimistic locking",
+            "required": false
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "upsert-s3-write",
+      "type": "otel-event",
+      "x": 600,
+      "y": 410,
+      "width": 200,
+      "height": 90,
+      "label": "S3 Write",
+      "pv": {
+        "status": "draft",
+        "references": ["src/lib/repo-notes/s3-storage.ts"]
+      },
+      "event": {
+        "name": "repo-notes.upsert.s3.write",
+        "attributes": {
+          "s3Key": {
+            "type": "string",
+            "description": "S3 key being written",
+            "required": true
+          },
+          "repoKey": {
+            "type": "string",
+            "description": "Note key within the file (owner/repo)",
+            "required": true
+          },
+          "etag": {
+            "type": "string",
+            "description": "ETag used for conditional write",
+            "required": false
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "upsert-success",
+      "type": "otel-event",
+      "x": 470,
+      "y": 530,
+      "width": 200,
+      "height": 90,
+      "label": "Upsert Success",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/repo-notes/[owner]/[repo]/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.upsert.success",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO 8601 timestamp of the upsert",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "upsert-unauthorized",
+      "type": "otel-event",
+      "x": 840,
+      "y": 50,
+      "width": 200,
+      "height": 90,
+      "label": "Upsert Unauthorized",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/repo-notes/[owner]/[repo]/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.upsert.unauthorized",
+        "attributes": {
+          "reason": {
+            "type": "string",
+            "description": "Reason for unauthorized access",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "upsert-validation-error",
+      "type": "otel-event",
+      "x": 840,
+      "y": 170,
+      "width": 200,
+      "height": 90,
+      "label": "Validation Error",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/repo-notes/[owner]/[repo]/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.upsert.validation-error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Validation error message",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "upsert-error",
+      "type": "otel-event",
+      "x": 730,
+      "y": 530,
+      "width": 200,
+      "height": 90,
+      "label": "Upsert Error",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/repo-notes/[owner]/[repo]/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.upsert.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "delete-started",
+      "type": "otel-event",
+      "x": 1150,
+      "y": 50,
+      "width": 200,
+      "height": 90,
+      "label": "Delete Started",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/repo-notes/[owner]/[repo]/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.delete.started",
+        "attributes": {
+          "userId": {
+            "type": "string",
+            "description": "Authenticated user's GitHub ID",
+            "required": true
+          },
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "delete-s3-read",
+      "type": "otel-event",
+      "x": 1150,
+      "y": 170,
+      "width": 200,
+      "height": 90,
+      "label": "S3 Read",
+      "pv": {
+        "status": "draft",
+        "references": ["src/lib/repo-notes/s3-storage.ts"]
+      },
+      "event": {
+        "name": "repo-notes.delete.s3.read",
+        "attributes": {
+          "s3Key": {
+            "type": "string",
+            "description": "S3 key: repo-notes/{userId}/notes.json",
+            "required": true
+          },
+          "etag": {
+            "type": "string",
+            "description": "ETag for optimistic locking",
+            "required": false
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "delete-s3-write",
+      "type": "otel-event",
+      "x": 1150,
+      "y": 290,
+      "width": 200,
+      "height": 90,
+      "label": "S3 Write",
+      "pv": {
+        "status": "draft",
+        "references": ["src/lib/repo-notes/s3-storage.ts"]
+      },
+      "event": {
+        "name": "repo-notes.delete.s3.write",
+        "attributes": {
+          "s3Key": {
+            "type": "string",
+            "description": "S3 key being written",
+            "required": true
+          },
+          "repoKey": {
+            "type": "string",
+            "description": "Note key removed from the file (owner/repo)",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "delete-success",
+      "type": "otel-event",
+      "x": 1020,
+      "y": 410,
+      "width": 200,
+      "height": 90,
+      "label": "Delete Success",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/repo-notes/[owner]/[repo]/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.delete.success",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "delete-unauthorized",
+      "type": "otel-event",
+      "x": 1390,
+      "y": 50,
+      "width": 200,
+      "height": 90,
+      "label": "Delete Unauthorized",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/repo-notes/[owner]/[repo]/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.delete.unauthorized",
+        "attributes": {
+          "reason": {
+            "type": "string",
+            "description": "Reason for unauthorized access",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "delete-error",
+      "type": "otel-event",
+      "x": 1280,
+      "y": 410,
+      "width": 200,
+      "height": 90,
+      "label": "Delete Error",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/repo-notes/[owner]/[repo]/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.delete.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "collection-note-started",
+      "type": "otel-event",
+      "x": 1700,
+      "y": 50,
+      "width": 200,
+      "height": 90,
+      "label": "Update Collection Note Started",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/starred-collections/[id]/repos/[owner]/[repo]/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.collection-note.started",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection ID",
+            "required": true
+          },
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          },
+          "notesLength": {
+            "type": "number",
+            "description": "Length of notes content in characters (null if clearing)",
+            "required": false
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "collection-note-validate",
+      "type": "otel-event",
+      "x": 1700,
+      "y": 170,
+      "width": 200,
+      "height": 90,
+      "label": "Validate Notes",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/starred-collections/[id]/repos/[owner]/[repo]/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.collection-note.validate",
+        "attributes": {
+          "notesLength": {
+            "type": "number",
+            "description": "Notes content length being validated",
+            "required": false
+          },
+          "maxLength": {
+            "type": "number",
+            "description": "Maximum allowed notes length",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "collection-note-find-collection",
+      "type": "otel-event",
+      "x": 1700,
+      "y": 290,
+      "width": 200,
+      "height": 90,
+      "label": "Find Collection",
+      "pv": {
+        "status": "draft",
+        "references": ["src/lib/starred-collections/find-collection.ts"]
+      },
+      "event": {
+        "name": "repo-notes.collection-note.find-collection",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection ID being looked up",
+            "required": true
+          },
+          "ownerType": {
+            "type": "string",
+            "description": "Whether collection is user or org owned",
+            "required": false
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "collection-note-s3-read",
+      "type": "otel-event",
+      "x": 1700,
+      "y": 410,
+      "width": 200,
+      "height": 90,
+      "label": "S3 Read",
+      "pv": {
+        "status": "draft",
+        "references": ["src/lib/starred-collections/s3-storage.ts"]
+      },
+      "event": {
+        "name": "repo-notes.collection-note.s3.read",
+        "attributes": {
+          "s3Key": {
+            "type": "string",
+            "description": "Starred-collections S3 key for this owner",
+            "required": true
+          },
+          "etag": {
+            "type": "string",
+            "description": "ETag for optimistic locking",
+            "required": false
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "collection-note-s3-write",
+      "type": "otel-event",
+      "x": 1700,
+      "y": 530,
+      "width": 200,
+      "height": 90,
+      "label": "S3 Write",
+      "pv": {
+        "status": "draft",
+        "references": ["src/lib/starred-collections/s3-storage.ts"]
+      },
+      "event": {
+        "name": "repo-notes.collection-note.s3.write",
+        "attributes": {
+          "s3Key": {
+            "type": "string",
+            "description": "S3 key being written",
+            "required": true
+          },
+          "collectionId": {
+            "type": "string",
+            "description": "Collection being updated",
+            "required": true
+          },
+          "newVersion": {
+            "type": "number",
+            "description": "New version number",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "collection-note-success",
+      "type": "otel-event",
+      "x": 1570,
+      "y": 650,
+      "width": 200,
+      "height": 90,
+      "label": "Update Success",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/starred-collections/[id]/repos/[owner]/[repo]/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.collection-note.success",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection ID",
+            "required": true
+          },
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "collection-note-unauthorized",
+      "type": "otel-event",
+      "x": 1940,
+      "y": 50,
+      "width": 200,
+      "height": 90,
+      "label": "Unauthorized",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/starred-collections/[id]/repos/[owner]/[repo]/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.collection-note.unauthorized",
+        "attributes": {
+          "reason": {
+            "type": "string",
+            "description": "Reason for unauthorized access",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "collection-note-validation-error",
+      "type": "otel-event",
+      "x": 1940,
+      "y": 170,
+      "width": 200,
+      "height": 90,
+      "label": "Validation Error",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/starred-collections/[id]/repos/[owner]/[repo]/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.collection-note.validation-error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Validation error message",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "collection-note-not-found",
+      "type": "otel-event",
+      "x": 1940,
+      "y": 290,
+      "width": 200,
+      "height": 90,
+      "label": "Collection Not Found",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/starred-collections/[id]/repos/[owner]/[repo]/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.collection-note.not-found",
+        "attributes": {
+          "collectionId": {
+            "type": "string",
+            "description": "Collection ID not found",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "collection-note-repo-not-found",
+      "type": "otel-event",
+      "x": 1940,
+      "y": 410,
+      "width": 200,
+      "height": 90,
+      "label": "Repo Not Found in Collection",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/starred-collections/[id]/repos/[owner]/[repo]/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.collection-note.repo-not-found",
+        "attributes": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner",
+            "required": true
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name",
+            "required": true
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "collection-note-error",
+      "type": "otel-event",
+      "x": 1830,
+      "y": 650,
+      "width": 200,
+      "height": 90,
+      "label": "Update Error",
+      "pv": {
+        "status": "draft",
+        "references": ["src/app/api/starred-collections/[id]/repos/[owner]/[repo]/route.ts"]
+      },
+      "event": {
+        "name": "repo-notes.collection-note.error",
+        "attributes": {
+          "error.message": {
+            "type": "string",
+            "description": "Error message",
+            "required": true
+          },
+          "error.code": {
+            "type": "string",
+            "description": "Error code",
+            "required": false
+          }
+        }
+      },
+      "otel": {
+        "scope": "repo-notes-api",
+        "status": "draft"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "get-1",
+      "fromNode": "get-started",
+      "fromSide": "bottom",
+      "toNode": "get-s3-read",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "get-2",
+      "fromNode": "get-s3-read",
+      "fromSide": "bottom",
+      "toNode": "get-success",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "get-3",
+      "fromNode": "get-started",
+      "fromSide": "right",
+      "toNode": "get-unauthorized",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "get-4",
+      "fromNode": "get-s3-read",
+      "fromSide": "right",
+      "toNode": "get-error",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "upsert-1",
+      "fromNode": "upsert-started",
+      "fromSide": "bottom",
+      "toNode": "upsert-validate",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "upsert-2",
+      "fromNode": "upsert-validate",
+      "fromSide": "bottom",
+      "toNode": "upsert-s3-read",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "upsert-3",
+      "fromNode": "upsert-s3-read",
+      "fromSide": "bottom",
+      "toNode": "upsert-s3-write",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "upsert-4",
+      "fromNode": "upsert-s3-write",
+      "fromSide": "bottom",
+      "toNode": "upsert-success",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "upsert-5",
+      "fromNode": "upsert-started",
+      "fromSide": "right",
+      "toNode": "upsert-unauthorized",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "upsert-6",
+      "fromNode": "upsert-validate",
+      "fromSide": "right",
+      "toNode": "upsert-validation-error",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "upsert-7",
+      "fromNode": "upsert-s3-write",
+      "fromSide": "right",
+      "toNode": "upsert-error",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "delete-1",
+      "fromNode": "delete-started",
+      "fromSide": "bottom",
+      "toNode": "delete-s3-read",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "delete-2",
+      "fromNode": "delete-s3-read",
+      "fromSide": "bottom",
+      "toNode": "delete-s3-write",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "delete-3",
+      "fromNode": "delete-s3-write",
+      "fromSide": "bottom",
+      "toNode": "delete-success",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "delete-4",
+      "fromNode": "delete-started",
+      "fromSide": "right",
+      "toNode": "delete-unauthorized",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "delete-5",
+      "fromNode": "delete-s3-write",
+      "fromSide": "right",
+      "toNode": "delete-error",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "collection-note-1",
+      "fromNode": "collection-note-started",
+      "fromSide": "bottom",
+      "toNode": "collection-note-validate",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "collection-note-2",
+      "fromNode": "collection-note-validate",
+      "fromSide": "bottom",
+      "toNode": "collection-note-find-collection",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "collection-note-3",
+      "fromNode": "collection-note-find-collection",
+      "fromSide": "bottom",
+      "toNode": "collection-note-s3-read",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "collection-note-4",
+      "fromNode": "collection-note-s3-read",
+      "fromSide": "bottom",
+      "toNode": "collection-note-s3-write",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "collection-note-5",
+      "fromNode": "collection-note-s3-write",
+      "fromSide": "bottom",
+      "toNode": "collection-note-success",
+      "toSide": "top",
+      "edgeType": "flow"
+    },
+    {
+      "id": "collection-note-6",
+      "fromNode": "collection-note-started",
+      "fromSide": "right",
+      "toNode": "collection-note-unauthorized",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "collection-note-7",
+      "fromNode": "collection-note-validate",
+      "fromSide": "right",
+      "toNode": "collection-note-validation-error",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "collection-note-8",
+      "fromNode": "collection-note-find-collection",
+      "fromSide": "right",
+      "toNode": "collection-note-not-found",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "collection-note-9",
+      "fromNode": "collection-note-s3-read",
+      "fromSide": "right",
+      "toNode": "collection-note-repo-not-found",
+      "toSide": "left",
+      "edgeType": "error"
+    },
+    {
+      "id": "collection-note-10",
+      "fromNode": "collection-note-s3-write",
+      "fromSide": "right",
+      "toNode": "collection-note-error",
+      "toSide": "left",
+      "edgeType": "error"
+    }
+  ]
+}
