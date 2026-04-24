@@ -13,8 +13,10 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { Calendar, RefreshCw } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { useGitHubActivityFeed, type RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
+import { useCommitThemes } from '@/hooks/useCommitThemes';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { RepoActivityCard } from './RepoActivityCard';
+import { RepoThemeCards } from './RepoThemeCards';
 import { useRouter } from 'next/navigation';
 
 // Hour helpers for grouping
@@ -147,6 +149,9 @@ export const RepositoryActivityFeedPanel: React.FC<RepositoryActivityFeedPanelPr
   // Track selected package for filtering
   const [selectedPackagePath, setSelectedPackagePath] = useState<string | null>(null);
 
+  // Track selected theme for filtering
+  const [selectedThemeTitle, setSelectedThemeTitle] = useState<string | null>(null);
+
   // Create a single-repo array for the activity feed hook
   const feedRepos = useMemo(() => [{
     owner,
@@ -156,6 +161,23 @@ export const RepositoryActivityFeedPanel: React.FC<RepositoryActivityFeedPanelPr
 
   // Fetch activity for this specific repo
   const { repoSummaries, loading, error, refresh } = useGitHubActivityFeed(feedRepos, 50); // Fetch more commits for a single repo
+
+  // Flatten commits and derive emergent themes via LLM
+  const themeInputs = useMemo(
+    () =>
+      repoSummaries.flatMap((s) =>
+        s.commits.map((c) => ({ sha: c.sha, message: c.message, author: c.author }))
+      ),
+    [repoSummaries]
+  );
+  const { themes, loading: themesLoading, error: themesError } = useCommitThemes(
+    `${owner}/${repo}`,
+    themeInputs
+  );
+  const selectedTheme = useMemo(
+    () => themes.find((t) => t.title === selectedThemeTitle) ?? null,
+    [themes, selectedThemeTitle]
+  );
 
   // Listen for package selection events
   useEffect(() => {
@@ -233,30 +255,36 @@ export const RepositoryActivityFeedPanel: React.FC<RepositoryActivityFeedPanelPr
     fetchCommitFiles();
   }, [selectedPackagePath, owner, repo, repoSummaries]);
 
-  // Filter commits by selected package
+  // Filter commits by selected package and/or theme
   const filteredSummaries = useMemo(() => {
-    if (!selectedPackagePath) {
+    if (!selectedPackagePath && !selectedTheme) {
       return repoSummaries;
     }
 
-    // Normalize package path (remove leading/trailing slashes)
-    const normalizedPackagePath = selectedPackagePath.replace(/^\/+|\/+$/g, '');
+    const themeShaSet = selectedTheme ? new Set(selectedTheme.shas) : null;
+    const normalizedPackagePath = selectedPackagePath
+      ? selectedPackagePath.replace(/^\/+|\/+$/g, '')
+      : null;
 
-    // Filter summaries to only include commits that touched files in the selected package
     return repoSummaries
       .map((summary) => {
         const filteredCommits = summary.commits.filter((commit) => {
-          // If we don't have file data yet, include the commit (will be filtered once data loads)
-          const files = commitFilesData.get(commit.sha);
-          if (!files) return true;
+          if (themeShaSet && !themeShaSet.has(commit.sha)) return false;
 
-          // Check if any changed file is within the selected package path
-          return files.some(file => {
-            const normalizedFile = file.replace(/^\/+/, '');
-            return normalizedFile.startsWith(normalizedPackagePath + '/') ||
-                   normalizedFile === normalizedPackagePath ||
-                   normalizedFile.startsWith(normalizedPackagePath) && normalizedFile[normalizedPackagePath.length] === '/';
-          });
+          if (normalizedPackagePath) {
+            // If we don't have file data yet, include the commit (will be filtered once data loads)
+            const files = commitFilesData.get(commit.sha);
+            if (!files) return true;
+
+            return files.some((file) => {
+              const normalizedFile = file.replace(/^\/+/, '');
+              return normalizedFile.startsWith(normalizedPackagePath + '/') ||
+                     normalizedFile === normalizedPackagePath ||
+                     normalizedFile.startsWith(normalizedPackagePath) && normalizedFile[normalizedPackagePath.length] === '/';
+            });
+          }
+
+          return true;
         });
 
         if (filteredCommits.length === 0) return null;
@@ -268,7 +296,7 @@ export const RepositoryActivityFeedPanel: React.FC<RepositoryActivityFeedPanelPr
         };
       })
       .filter((s): s is RepoActivitySummary => s !== null);
-  }, [repoSummaries, selectedPackagePath, commitFilesData]);
+  }, [repoSummaries, selectedPackagePath, commitFilesData, selectedTheme]);
 
   // Poll for updates every 60 seconds when tab is visible
   useEffect(() => {
@@ -488,6 +516,15 @@ export const RepositoryActivityFeedPanel: React.FC<RepositoryActivityFeedPanelPr
           Refresh
         </button>
       </div>
+
+      {/* Theme cards */}
+      <RepoThemeCards
+        themes={themes}
+        loading={themesLoading}
+        error={themesError}
+        selectedTitle={selectedThemeTitle}
+        onSelect={setSelectedThemeTitle}
+      />
 
       {/* Package filter chip */}
       {selectedPackagePath && (
