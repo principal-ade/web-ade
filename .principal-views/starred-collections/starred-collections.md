@@ -7,8 +7,10 @@ This canvas documents the OpenTelemetry events for the Starred Collections API, 
 ## Architecture
 
 **Storage**: S3-based per-user and per-organization JSON files
-**Authentication**: GitHub OAuth tokens
-**Authorization**: User collections (owner-only) and organization collections (any active member)
+**Authentication**: GitHub OAuth tokens for writes; reads are public
+**Authorization**:
+- Mutations: user collections (owner-only), org collections (any active member)
+- Reads: any caller can fetch another user's or org's collections via the public read routes under `/api/github/owner/[owner]/starred-collections`
 **Concurrency Control**: Optimistic locking with ETags
 **Metadata Caching**: GitHub API responses cached in S3
 
@@ -182,7 +184,35 @@ Reorders items by updating the array order in the JSON file (array order = displ
 
 ---
 
-### 6. Delete Collection
+### 6. Public Read (Another User's Collections)
+
+**Endpoints**:
+- `GET /api/github/owner/[owner]/starred-collections` - List a user's or org's collections
+- `GET /api/github/owner/[owner]/starred-collections/[id]` - Get a single collection
+
+Public, unauthenticated reads of any user's or organization's starred
+collections. Resolves the GitHub login to an `id`/`type` via the GitHub
+users API, then reads from the corresponding S3 file.
+
+**Behavior**:
+- `User` accounts -> `getCollections('user', String(id))`
+- `Organization` accounts -> `getCollections('org', login)`
+- Returns an empty `collections: []` array if the owner has no S3 file
+- 404 if the GitHub login does not exist, or (single-collection route) the collection ID is not present
+
+**Query Parameters** (list route):
+- `include_items` (boolean) - Include repos/users arrays (default: true)
+
+**Notes**:
+- These routes do not emit telemetry today; if added later, suggest
+  span pattern `api.collections.public-read`.
+- The caller's GitHub token, if present, is forwarded only to ease
+  rate limits on the `users/{login}` lookup. It is not used for
+  authorization.
+
+---
+
+### 7. Delete Collection
 
 **Endpoint**: `DELETE /api/starred-collections/:collectionId`
 
@@ -259,6 +289,8 @@ This scope covers all API operations for the starred collections feature, includ
 | POST | `/api/starred-collections/:id/users` | Add user to collection |
 | DELETE | `/api/starred-collections/:id/users/:login` | Remove user |
 | PATCH | `/api/starred-collections/:id/users/reorder` | Reorder users |
+| GET | `/api/github/owner/:owner/starred-collections` | List another user's or org's collections (public) |
+| GET | `/api/github/owner/:owner/starred-collections/:id` | Get a single collection by owner + ID (public) |
 
 ---
 
