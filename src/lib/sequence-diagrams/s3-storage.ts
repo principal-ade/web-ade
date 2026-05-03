@@ -1,0 +1,334 @@
+/**
+ * S3 storage for shared sequence diagrams.
+ *
+ * Layout:
+ *   sequence-diagrams/{owner}/{repo}/index.json   - per-repo manifest (ETag-locked)
+ *   sequence-diagrams/{owner}/{repo}/{id}.json    - per-payload object
+ *
+ * The manifest is updated under optimistic-locking with retries (mirrors
+ * starred-collections). Per-payload objects are id-scoped and don't need
+ * locking.
+ */
+
+import {
+  S3Client,
+  GetObjectCommand,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
+import {
+  BUCKET_NAME,
+  BUCKET_REGION,
+  S3_PREFIX,
+  INDEX_FILE,
+  INDEX_CACHE_CONTROL,
+  PAYLOAD_CACHE_CONTROL,
+  MAX_ETAG_RETRIES,
+} from './constants';
+import {
+  SequenceDiagramShareError,
+  ShareErrorCodes,
+} from './types';
+import type {
+  SequenceDiagramPayload,
+  SharedSequenceDiagramIndex,
+  SharedSequenceDiagramIndexEntry,
+} from './types';
+
+const s3Client = new S3Client({ region: BUCKET_REGION });
+
+// ============================================================================
+// Key builders
+// ============================================================================
+
+function repoPrefix(owner: string, repo: string): string {
+  return `${S3_PREFIX}/${owner.toLowerCase()}/${repo.toLowerCase()}`;
+}
+
+export function buildIndexKey(owner: string, repo: string): string {
+  return `${repoPrefix(owner, repo)}/${INDEX_FILE}`;
+}
+
+export function buildPayloadKey(
+  owner: string,
+  repo: string,
+  id: string
+): string {
+  return `${repoPrefix(owner, repo)}/${id}.json`;
+}
+
+function isNoSuchKey(error: unknown): boolean {
+  return (
+    !!error &&
+    typeof error === 'object' &&
+    'name' in error &&
+    (error as { name: string }).name === 'NoSuchKey'
+  );
+}
+
+function isEtagConflict(error: unknown): boolean {
+  return (
+    !!error &&
+    typeof error === 'object' &&
+    'name' in error &&
+    ((error as { name: string }).name === 'PreconditionFailed' ||
+      (error as { name: string }).name === '412')
+  );
+}
+
+function emptyIndex(): SharedSequenceDiagramIndex {
+  return {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    entries: [],
+  };
+}
+
+// ============================================================================
+// Index operations
+// ============================================================================
+
+async function getIndexWithETag(
+  owner: string,
+  repo: string
+): Promise<{ data: SharedSequenceDiagramIndex; etag: string } | null> {
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: buildIndexKey(owner, repo),
+      })
+    );
+
+    const body = await response.Body?.transformToString();
+    if (!body) return null;
+
+    return {
+      data: JSON.parse(body) as SharedSequenceDiagramIndex,
+      etag: response.ETag || '',
+    };
+  } catch (error: unknown) {
+    if (isNoSuchKey(error)) return null;
+
+    console.error('[SequenceDiagrams] Get index failed:', {
+      owner,
+      repo,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new SequenceDiagramShareError(
+      'Failed to retrieve diagram index',
+      500,
+      ShareErrorCodes.S3_ERROR
+    );
+  }
+}
+
+async function putIndexWithETag(
+  owner: string,
+  repo: string,
+  data: SharedSequenceDiagramIndex,
+  etag: string | null
+): Promise<void> {
+  try {
+    const params: {
+      Bucket: string;
+      Key: string;
+      Body: string;
+      ContentType: string;
+      CacheControl: string;
+      IfMatch?: string;
+    } = {
+      Bucket: BUCKET_NAME,
+      Key: buildIndexKey(owner, repo),
+      Body: JSON.stringify(data, null, 2),
+      ContentType: 'application/json',
+      CacheControl: INDEX_CACHE_CONTROL,
+    };
+
+    if (etag) params.IfMatch = etag;
+
+    await s3Client.send(new PutObjectCommand(params));
+  } catch (error: unknown) {
+    if (isEtagConflict(error)) {
+      throw new SequenceDiagramShareError(
+        'Concurrent modification detected',
+        409,
+        ShareErrorCodes.ETAG_CONFLICT
+      );
+    }
+
+    console.error('[SequenceDiagrams] Put index failed:', {
+      owner,
+      repo,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new SequenceDiagramShareError(
+      'Failed to save diagram index',
+      500,
+      ShareErrorCodes.S3_ERROR
+    );
+  }
+}
+
+export async function getIndex(
+  owner: string,
+  repo: string
+): Promise<SharedSequenceDiagramIndex> {
+  const result = await getIndexWithETag(owner, repo);
+  return result ? result.data : emptyIndex();
+}
+
+export async function updateIndex(
+  owner: string,
+  repo: string,
+  modifier: (
+    data: SharedSequenceDiagramIndex
+  ) => SharedSequenceDiagramIndex
+): Promise<SharedSequenceDiagramIndex> {
+  let attempts = 0;
+
+  while (attempts < MAX_ETAG_RETRIES) {
+    try {
+      const current = await getIndexWithETag(owner, repo);
+      const data = current ? current.data : emptyIndex();
+      const etag = current ? current.etag : null;
+
+      const updated = modifier(data);
+      updated.updatedAt = new Date().toISOString();
+
+      await putIndexWithETag(owner, repo, updated, etag);
+      return updated;
+    } catch (error) {
+      if (
+        error instanceof SequenceDiagramShareError &&
+        error.code === ShareErrorCodes.ETAG_CONFLICT
+      ) {
+        attempts++;
+        if (attempts >= MAX_ETAG_RETRIES) {
+          throw new SequenceDiagramShareError(
+            'Concurrent modification conflict — please retry',
+            409,
+            ShareErrorCodes.MAX_RETRIES
+          );
+        }
+        await new Promise((r) => setTimeout(r, 100 * attempts));
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new SequenceDiagramShareError(
+    'Update failed after retries',
+    500,
+    ShareErrorCodes.S3_ERROR
+  );
+}
+
+// ============================================================================
+// Payload operations
+// ============================================================================
+
+export async function getPayload(
+  owner: string,
+  repo: string,
+  id: string
+): Promise<SequenceDiagramPayload | null> {
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: buildPayloadKey(owner, repo, id),
+      })
+    );
+
+    const body = await response.Body?.transformToString();
+    if (!body) return null;
+
+    return JSON.parse(body) as SequenceDiagramPayload;
+  } catch (error: unknown) {
+    if (isNoSuchKey(error)) return null;
+
+    console.error('[SequenceDiagrams] Get payload failed:', {
+      owner,
+      repo,
+      id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new SequenceDiagramShareError(
+      'Failed to retrieve diagram payload',
+      500,
+      ShareErrorCodes.S3_ERROR
+    );
+  }
+}
+
+export async function putPayload(
+  owner: string,
+  repo: string,
+  id: string,
+  payload: SequenceDiagramPayload
+): Promise<{ sizeBytes: number }> {
+  const body = JSON.stringify(payload);
+  const sizeBytes = Buffer.byteLength(body, 'utf8');
+
+  try {
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: buildPayloadKey(owner, repo, id),
+        Body: body,
+        ContentType: 'application/json',
+        CacheControl: PAYLOAD_CACHE_CONTROL,
+      })
+    );
+
+    return { sizeBytes };
+  } catch (error: unknown) {
+    console.error('[SequenceDiagrams] Put payload failed:', {
+      owner,
+      repo,
+      id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new SequenceDiagramShareError(
+      'Failed to save diagram payload',
+      500,
+      ShareErrorCodes.S3_ERROR
+    );
+  }
+}
+
+export async function deletePayload(
+  owner: string,
+  repo: string,
+  id: string
+): Promise<void> {
+  try {
+    await s3Client.send(
+      new DeleteObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: buildPayloadKey(owner, repo, id),
+      })
+    );
+  } catch (error) {
+    console.error('[SequenceDiagrams] Delete payload failed:', {
+      owner,
+      repo,
+      id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new SequenceDiagramShareError(
+      'Failed to delete diagram payload',
+      500,
+      ShareErrorCodes.S3_ERROR
+    );
+  }
+}
+
+export function findIndexEntry(
+  index: SharedSequenceDiagramIndex,
+  id: string
+): SharedSequenceDiagramIndexEntry | undefined {
+  return index.entries.find((e) => e.id === id);
+}
