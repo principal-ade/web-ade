@@ -110,32 +110,103 @@ The viewer surfaces what happened: a small badge on the snippet ("showing latest
 
 ## HTTP API (web-ade)
 
-All routes are authenticated via the existing platform session.
+All routes accept either an `Authorization: Bearer <github_token>` header (mobile / API clients, including the desktop bridge) or the `github_token` cookie (web clients). Every route gates on `GET /repos/{owner}/{repo}` against GitHub with the requester's token, cached per `(token-prefix, owner, repo)` for 60s.
 
-### `POST /api/sequence-diagrams` (new)
+Error responses use the shape `{ error: string, code: ShareErrorCode }`. See `src/lib/sequence-diagrams/types.ts` for the full code list.
 
-Body: `{ owner: string; repo: string; payload: SequenceDiagramPayload }`.
+### `POST /api/sequence-diagrams`
 
-1. Verify GitHub read access to `owner/repo` for the requester.
-2. Walk the payload server-side and bake any `newContents` that wasn't already inlined client-side (idempotent — desktop bakes too, but server bake guards against direct API callers).
-3. Generate `id`, write `sequence-diagrams/{owner}/{repo}/{id}.json`, append to the per-repo index.
-4. Return `{ id, url }`.
+Publish a payload.
 
-### `GET /api/sequence-diagrams/:owner/:repo` (new)
+**Request body:**
+```ts
+{
+  owner: string;
+  repo: string;
+  payload: SequenceDiagramPayload;
+}
+```
 
-Returns the index entries for the repo, gated by the same access check.
+**Validation:**
+1. `owner` / `repo` match `/^[A-Za-z0-9._-]+$/`.
+2. `payload.events` is a non-empty array; each event has `id` and `name`.
+3. Every diff snippet has either `newContents` (baked) or `gitRef: { sha, path }` (reserved for future hydration). Snippets with neither are rejected with `SNIPPET_NOT_BAKED` — web-ade can't read the producer's filesystem, so baking is the desktop bridge's responsibility.
+4. Total serialized payload ≤ 10 MB.
 
-### `GET /api/sequence-diagrams/:owner/:repo/:id` (new)
+**Behavior:**
+1. Verify the requester has GitHub read access to `owner/repo`. On 403/404 → `{ code: NO_REPO_ACCESS }`, status 403.
+2. Generate `id` server-side (`crypto.randomUUID()`).
+3. Write `sequence-diagrams/{owner-lower}/{repo-lower}/{id}.json`.
+4. Append the index entry to `sequence-diagrams/{owner-lower}/{repo-lower}/index.json` under ETag-locked update with retry (max 3). When the repo exceeds the 200-entry soft cap, the oldest entries by `updatedAt` are pruned in-place.
 
-Returns the full payload, gated by the same access check.
+**Response (201):**
+```ts
+{
+  id: string;
+  url: string;                                  // "/d/{owner}/{repo}/{id}"
+  entry: SharedSequenceDiagramIndexEntry;
+}
+```
 
-### `DELETE /api/sequence-diagrams/:owner/:repo/:id` (new)
+### `GET /api/sequence-diagrams/{owner}/{repo}`
 
-Permanently deletes a shared payload. Restricted to the original `createdBy.githubId` (or any user with push access to the repo, TBD — see [Open Questions](#open-questions)).
+List shared diagrams for a repo, gated by the same access check. Returns metadata only — payloads are fetched separately.
 
-### Viewer page
+**Response (200):**
+```ts
+{
+  entries: SharedSequenceDiagramIndexEntry[];   // sorted by updatedAt desc
+}
+```
 
-`/d/:owner/:repo/:id` renders the same diagram component used by the desktop overlay, gated by the same access check. Short prefix matches gist precedent.
+### `GET /api/sequence-diagrams/{owner}/{repo}/{id}`
+
+Fetch a single diagram, gated by the same access check.
+
+**Response (200):**
+```ts
+{
+  entry: SharedSequenceDiagramIndexEntry;
+  payload: SequenceDiagramPayload;
+}
+```
+
+Returns 404 with `{ code: NOT_FOUND }` if either the index entry or the payload object is missing.
+
+### `DELETE /api/sequence-diagrams/{owner}/{repo}/{id}`
+
+Permanently delete a shared payload.
+
+**Authorization:** restricted to the original `createdBy.githubId` (revisit if curation pain emerges — see [Open Questions](#open-questions)). The repo-access check still runs first.
+
+**Behavior:** removes the per-payload object and the matching index entry under the same ETag-locked update path as POST.
+
+**Response (200):** `{ success: true }`.
+
+### Index entry shape
+
+```ts
+interface SharedSequenceDiagramIndexEntry {
+  id: string;
+  title?: string;
+  summaryPreview?: string;        // payload.summary truncated to 200 chars
+  eventCount: number;
+  hasDiffSnippets: boolean;
+  createdBy: { githubId: number; githubLogin: string };
+  githubRepoId: number;           // GitHub numeric repo id at upload time
+  createdAt: string;              // ISO 8601
+  updatedAt: string;
+  sizeBytes: number;
+}
+```
+
+### Viewer page (not yet built)
+
+`/d/{owner}/{repo}/{id}` will render the same diagram component used by the desktop overlay, gated by the same access check. Short prefix matches gist precedent. Tracked under [Status](#status).
+
+### Storage key conventions
+
+S3 keys lowercase `owner` and `repo` (GitHub treats them case-insensitively), but the on-disk index entry preserves casing as uploaded. Two clients posting to `Acme/Foo` vs `acme/foo` write to the same prefix and see each other's entries.
 
 ## Desktop integration
 
@@ -192,14 +263,38 @@ The renderer derives `owner`/`repo` when it has them in scope; otherwise main re
 
 ## Status
 
-Not started. Sequenced rollout:
+**Slice 1 — web-ade backend: shipped.** API is live and round-trippable from any caller with a valid GitHub token. No platform UI yet; viewer page and desktop integration still pending.
 
-- [ ] Audit `SequenceDiagramOverlay` for electron-only dependencies; extract a payload-rendering component reusable from web-ade.
-- [ ] Add S3 helpers under `src/lib/sequence-diagrams/` on web-ade, mirroring `src/lib/starred-collections/s3-storage.ts`.
-- [ ] Add `POST /api/sequence-diagrams`, `GET` (list + by-id), `DELETE` with GitHub access gating.
-- [ ] Build the viewer page at `/d/:owner/:repo/:id`.
-- [ ] Add bake-on-share helper + `POST /api/file-city/sequence/:id/share` to the electron bridge.
-- [ ] Add `share` to `FileCitySequenceAPI`, wire the preload + renderer.
-- [ ] Add the "Share" action and post-share state to `SequenceDiagramRow`.
-- [ ] Reserve `gitRef?: { sha; path; branch? }` on `DiffSnippet` (no producers yet).
+- [x] Add S3 helpers under `src/lib/sequence-diagrams/` on web-ade, mirroring `src/lib/starred-collections/s3-storage.ts`.
+- [x] Add `POST /api/sequence-diagrams`, `GET` (list + by-id), `DELETE` with GitHub access gating.
+- [x] Reserve `gitRef?: { sha; path; branch? }` on `DiffSnippet` in the duplicated payload types (no producers yet).
+- [ ] **Slice 2:** Audit `SequenceDiagramOverlay` for electron-only dependencies; extract a payload-rendering component reusable from web-ade.
+- [ ] **Slice 2:** Build the viewer page at `/d/:owner/:repo/:id`.
+- [ ] **Slice 3:** Add bake-on-share helper + `POST /api/file-city/sequence/:id/share` to the electron bridge.
+- [ ] **Slice 3:** Add `share` to `FileCitySequenceAPI`, wire the preload + renderer.
+- [ ] **Slice 3:** Add the "Share" action and post-share state to `SequenceDiagramRow`.
 - [ ] Update the persistence doc in `desktop-app/electron-app/docs/file-city-sequence-diagram-persistence.md`: drop "Cross-machine sync" from non-goals; link here.
+
+### Smoke test (slice 1)
+
+```bash
+TOKEN=...   # any GitHub token with read access to owner/repo
+
+# publish
+curl -sX POST http://localhost:3000/api/sequence-diagrams \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "content-type: application/json" \
+  -d '{"owner":"acme","repo":"widgets","payload":{"title":"flow A","events":[{"id":"a","name":"step 1"}]}}'
+
+# list
+curl -s http://localhost:3000/api/sequence-diagrams/acme/widgets \
+  -H "Authorization: Bearer $TOKEN"
+
+# fetch one
+curl -s http://localhost:3000/api/sequence-diagrams/acme/widgets/<id> \
+  -H "Authorization: Bearer $TOKEN"
+
+# delete (creator only)
+curl -sX DELETE http://localhost:3000/api/sequence-diagrams/acme/widgets/<id> \
+  -H "Authorization: Bearer $TOKEN"
+```
