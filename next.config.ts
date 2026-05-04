@@ -52,6 +52,22 @@ const nextConfig: NextConfig = {
         '@storybook/addon-vitest/vitest-plugin': '@storybook/addon-vitest/vitest-plugin',
       });
 
+      // @pierre/diffs and @pierre/trees both register a custom element
+      // (`<diffs-container>`, `<file-tree-container>`) via a side-effect-only
+      // module at `dist/components/web-components.js` that attaches Shadow
+      // DOM stylesheets. Each package's `sideEffects` field only marks that
+      // one file, and the chain that imports it gets tree-shaken when
+      // consumers — like @industry-theme/file-city-panel — only import the
+      // React entry (`@pierre/diffs/react`, `@pierre/trees/react`), which
+      // doesn't pull in `web-components.js`. Without the side effect, the
+      // element never upgrades and Pierre's `:host`-scoped styles no-op.
+      // Override the package-level sideEffects allow-list so webpack
+      // preserves the registration.
+      config.module.rules.push({
+        test: /[\\/]node_modules[\\/]@pierre[\\/](?:diffs|trees)[\\/]/,
+        sideEffects: true,
+      });
+
       // Configure Monaco editor workers
       config.plugins.push(
         new MonacoWebpackPlugin({
