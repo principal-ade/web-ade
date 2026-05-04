@@ -83,18 +83,20 @@ const CodeCityPanel = dynamic(
 );
 const FileCityExplorerPanel = dynamic(
   async () => {
-    // Load @pierre/diffs and @pierre/trees through their main entries before
-    // the panel chunk evaluates. The main entries pull in the side-effect
-    // modules that register the `<diffs-container>` and
-    // `<file-tree-container>` custom elements (with Shadow DOM stylesheets).
-    // The panel only imports the React entries, which don't pull these in,
-    // so without this the elements never upgrade and Pierre's overlays
-    // render unstyled. next.config.ts also widens these packages'
-    // sideEffects allow-list as a defense-in-depth.
+    // Load Pierre's web-component side-effect modules before the panel
+    // chunk evaluates. They register the `<diffs-container>` and
+    // `<file-tree-container>` custom elements (with Shadow DOM
+    // stylesheets). The panel only imports the React entries, which don't
+    // pull these in, so without this the elements never upgrade and
+    // Pierre's overlays render unstyled. @pierre/trees exposes a
+    // dedicated `./web-components` side-effect export; @pierre/diffs
+    // doesn't, so we go through its main entry and rely on the
+    // package-level sideEffects rule in next.config.ts to keep the chain
+    // intact.
     const [{ FileCityExplorerPanel }] = await Promise.all([
       import('@industry-theme/file-city-panel'),
       import('@pierre/diffs'),
-      import('@pierre/trees'),
+      import('@pierre/trees/web-components'),
     ]);
     return FileCityExplorerPanel;
   },
