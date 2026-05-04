@@ -2004,8 +2004,8 @@ function EditorLayoutContent({
     },
     {
       id: 'sequence-diagrams-list',
-      label: 'Walkthroughs',
-      icon: <Workflow size={16} />,
+      label: 'Trails',
+      icon: <Workflow size={16} strokeWidth={1.5} />,
       content: (
         <div className="h-full w-full overflow-hidden">
           <SharedSequenceDiagramsListPanel

@@ -7,7 +7,7 @@
 
 import React, { useCallback, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { GitCompare, Loader2, Share2 } from 'lucide-react';
+import { Check, GitCompare, Link2, Loader2, Share2 } from 'lucide-react';
 import type { SharedSequenceDiagramIndexEntry } from '@/lib/sequence-diagrams/types';
 
 const relativeTime = (iso: string): string => {
@@ -30,17 +30,40 @@ export interface SharedSequenceDiagramRowProps {
   entry: SharedSequenceDiagramIndexEntry;
   isActive: boolean;
   onActivate: (id: string) => Promise<void>;
+  /** Relative path (e.g. "/owner/repo?walkthrough=<id>") used to build the
+   *  absolute share link at click time. Null when owner/repo unknown. */
+  sharePath: string | null;
 }
 
 export const SharedSequenceDiagramRow: React.FC<SharedSequenceDiagramRowProps> = ({
   entry,
   isActive,
   onActivate,
+  sharePath,
 }) => {
   const { theme } = useTheme();
   const [hovered, setHovered] = useState(false);
   const [activating, setActivating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!sharePath) return;
+      const url = new URL(sharePath, window.location.origin).href;
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1500);
+      } catch {
+        // Clipboard write failed (permissions, insecure context, etc).
+        // Surface in the row's existing error slot.
+        setError('Could not copy link to clipboard.');
+      }
+    },
+    [sharePath],
+  );
 
   const handleActivate = useCallback(async () => {
     if (activating) return;
@@ -200,6 +223,32 @@ export const SharedSequenceDiagramRow: React.FC<SharedSequenceDiagramRowProps> =
           </div>
         )}
       </div>
+      {sharePath && !activating && (
+        <button
+          type="button"
+          onClick={handleCopyLink}
+          title={copied ? 'Link copied' : 'Copy share link'}
+          aria-label={copied ? 'Link copied' : 'Copy share link'}
+          style={{
+            alignSelf: 'flex-start',
+            padding: '4px',
+            borderRadius: '6px',
+            border: 'none',
+            background: 'transparent',
+            color: copied
+              ? theme.colors.primary
+              : theme.colors.textSecondary,
+            cursor: 'pointer',
+            opacity: copied || hovered ? 1 : 0,
+            transition: 'opacity 120ms, color 120ms',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {copied ? <Check size={14} /> : <Link2 size={14} />}
+        </button>
+      )}
       {activating && (
         <div
           style={{

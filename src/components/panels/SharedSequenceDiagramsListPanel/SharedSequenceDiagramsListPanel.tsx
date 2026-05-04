@@ -67,9 +67,6 @@ export const SharedSequenceDiagramsListPanel: React.FC<
     });
   }, [initialActivateId, availability, entries, activeId, handleActivate]);
 
-  const repoLabel =
-    owner && repo ? `${owner}/${repo}` : owner ?? repo ?? null;
-
   return (
     <div
       style={{
@@ -101,22 +98,8 @@ export const SharedSequenceDiagramsListPanel: React.FC<
               lineHeight: 1.2,
             }}
           >
-            Sequence Diagrams
+            Trails
           </h2>
-          {repoLabel && (
-            <div
-              style={{
-                fontSize: theme.fontSizes[0],
-                color: theme.colors.textSecondary,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-              title={repoLabel}
-            >
-              for {repoLabel}
-            </div>
-          )}
         </div>
         <button
           type="button"
@@ -178,6 +161,11 @@ export const SharedSequenceDiagramsListPanel: React.FC<
               entry={entry}
               isActive={entry.id === activeId}
               onActivate={handleActivate}
+              sharePath={
+                owner && repo
+                  ? `/${owner}/${repo}?walkthrough=${entry.id}`
+                  : null
+              }
             />
           ))}
       </div>

@@ -159,7 +159,7 @@ export const layoutConfigs: LayoutConfig[] = [
   },
   {
     id: 'walkthroughs',
-    name: 'Walkthroughs',
+    name: 'Trails',
     layout: {
       left: 'sequence-diagrams-list',
       middle: 'file-city-explorer',
