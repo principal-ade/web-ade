@@ -223,7 +223,7 @@ const UnavailableState: React.FC<{
     }}
   >
     {hasRepo
-      ? 'Sign in with GitHub to see sequence diagrams shared for this repository.'
+      ? 'This repository’s sequence diagrams aren’t accessible. Public repos are visible to everyone; private repos require signing in with an account that can read them.'
       : 'No repository selected.'}
   </div>
 );

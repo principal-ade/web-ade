@@ -30,8 +30,9 @@ The web-ade platform does not have an internal repository entity. Repos are refe
 ## Access model
 
 - **Identifier.** `owner/repo`, derived from the local repo's GitHub remote at share time. Stored on the shared record.
-- **Authorization.** Every read and write calls `GET /repos/{owner}/{repo}` on GitHub with the requester's token. 200 → allowed; 404 → denied. Public, private, and org repos all work without per-repo configuration.
-- **Reasoning.** A user with GitHub read access to the repo can fetch the same source themselves. Embedding diff snippets in shared payloads does not expand their effective access. The one exception — speculative `newContents` from a working tree — is named below.
+- **Read authorization.** Reads call `GET /repos/{owner}/{repo}` on GitHub. If the requester has a GitHub token, the call uses it; otherwise the call goes anonymously. 200 → allowed; 404/403 → denied. Public repos resolve 200 without auth, so logged-out callers can read shared diagrams for any public repo. Private and org repos still require a token belonging to an account with read access.
+- **Write authorization (POST/DELETE).** Writes always require a GitHub token — the sharer's identity is recorded on `createdBy`, and DELETE is restricted to the original sharer. Anonymous writes are rejected with 401.
+- **Reasoning.** A user with GitHub read access to the repo can fetch the same source themselves. Public-repo reads being anonymously available mirrors GitHub's own posture (the repo is already world-readable). Embedding diff snippets in shared payloads does not expand effective access. The one exception — speculative `newContents` from a working tree — is named below.
 
 ## Storage layout
 
@@ -110,7 +111,7 @@ The viewer surfaces what happened: a small badge on the snippet ("showing latest
 
 ## HTTP API (web-ade)
 
-All routes accept either an `Authorization: Bearer <github_token>` header (mobile / API clients, including the desktop bridge) or the `github_token` cookie (web clients). Every route gates on `GET /repos/{owner}/{repo}` against GitHub with the requester's token, cached per `(token-prefix, owner, repo)` for 60s.
+All routes accept either an `Authorization: Bearer <github_token>` header (mobile / API clients, including the desktop bridge) or the `github_token` cookie (web clients). The repo-access check (`GET /repos/{owner}/{repo}` against GitHub) runs on every request: it uses the requester's token when present and falls back to an anonymous call otherwise, so public repos remain readable to logged-out callers. Cached per `(token-prefix, owner, repo)` for authenticated calls and per `(anon, owner, repo)` for anonymous calls, both for 60s. Writes (POST/DELETE) still require a token; the read endpoints (GET) do not.
 
 Error responses use the shape `{ error: string, code: ShareErrorCode }`. See `src/lib/sequence-diagrams/types.ts` for the full code list.
 

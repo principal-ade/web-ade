@@ -16,17 +16,13 @@ export async function GET(
   try {
     const { owner, repo } = await params;
 
+    // Public repos are readable by logged-out callers; checkRepoAccess
+    // falls back to anonymous GitHub when the token is null.
     const githubToken = await getGitHubToken();
-    if (!githubToken) {
-      return NextResponse.json(
-        { error: 'Not authenticated', code: ShareErrorCodes.NOT_AUTHENTICATED },
-        { status: 401 }
-      );
-    }
 
     validateOwnerRepo(owner, repo);
 
-    const access = await checkRepoAccess(owner, repo, githubToken);
+    const access = await checkRepoAccess(owner, repo, githubToken ?? null);
     if (!access) {
       return NextResponse.json(
         {

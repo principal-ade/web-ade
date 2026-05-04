@@ -51,7 +51,10 @@ export function useSharedSequenceDiagrams(
       );
       if (seq !== seqRef.current) return;
 
-      if (res.status === 401) {
+      // 401 is defensive — the read endpoints don't currently require
+      // auth, but a future re-lock would surface here. 403 means the
+      // requester can't see this repo on GitHub (private + no access).
+      if (res.status === 401 || res.status === 403) {
         setAvailability('unavailable');
         setEntries([]);
         setErrorMessage(null);

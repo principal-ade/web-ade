@@ -8,6 +8,7 @@
  */
 
 import {
+  cachedGitHubFetch,
   cachedUserGitHubFetch,
   CACHE_TAGS,
   GitHubApiError,
@@ -23,20 +24,33 @@ export interface RepoAccessInfo {
 /**
  * Returns repo metadata if the caller can read the repo, or `null` if they
  * can't. Throws on non-access errors (rate limit, transient 5xx).
+ *
+ * Pass `null` for `token` to allow public-repo reads from logged-out
+ * callers — GitHub returns 200 on `/repos/{owner}/{repo}` for any public
+ * repo regardless of authentication. Private repos still 404 anonymously,
+ * which we map to "no access".
  */
 export async function checkRepoAccess(
   owner: string,
   repo: string,
-  token: string
+  token: string | null
 ): Promise<RepoAccessInfo | null> {
+  const baseKey = `repo-access:${owner.toLowerCase()}/${repo.toLowerCase()}`;
   try {
-    const data = await cachedUserGitHubFetch<{ id: number; full_name: string }>(
-      `/repos/${owner}/${repo}`,
-      `repo-access:${owner.toLowerCase()}/${repo.toLowerCase()}`,
-      REPO_ACCESS_CACHE_TTL,
-      token,
-      [CACHE_TAGS.REPOS]
-    );
+    const data = token
+      ? await cachedUserGitHubFetch<{ id: number; full_name: string }>(
+          `/repos/${owner}/${repo}`,
+          baseKey,
+          REPO_ACCESS_CACHE_TTL,
+          token,
+          [CACHE_TAGS.REPOS]
+        )
+      : await cachedGitHubFetch<{ id: number; full_name: string }>(
+          `/repos/${owner}/${repo}`,
+          `anon:${baseKey}`,
+          REPO_ACCESS_CACHE_TTL,
+          [CACHE_TAGS.REPOS]
+        );
 
     return { githubRepoId: data.id, fullName: data.full_name };
   } catch (error) {
