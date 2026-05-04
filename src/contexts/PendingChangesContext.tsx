@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 
 /**
  * Metadata for a file that has been read (used for tracking SHAs for commits)
@@ -51,6 +51,16 @@ export function PendingChangesProvider({ children }: { children: React.ReactNode
   const [pendingChanges, setPendingChanges] = useState<Map<string, PendingFileChange>>(new Map());
   const [fileMetadata, setFileMetadataState] = useState<Map<string, FileMetadata>>(new Map());
 
+  // Ref mirrors of the maps so read-only callbacks can stay identity-stable.
+  // Without this, every setFileMetadata call (which fires on every successful
+  // readFile) invalidates addPendingChangeFromWrite, which cascades into
+  // enhancedActions / explorerActions and re-triggers PierreSnippetView's
+  // effect — producing an infinite Loading flash on walkthrough snippets.
+  const fileMetadataRef = useRef(fileMetadata);
+  const pendingChangesRef = useRef(pendingChanges);
+  useEffect(() => { fileMetadataRef.current = fileMetadata; }, [fileMetadata]);
+  useEffect(() => { pendingChangesRef.current = pendingChanges; }, [pendingChanges]);
+
   const hasPendingChanges = pendingChanges.size > 0;
   const pendingChangesCount = pendingChanges.size;
 
@@ -64,8 +74,8 @@ export function PendingChangesProvider({ children }: { children: React.ReactNode
   }, []);
 
   const getFileMetadata = useCallback((path: string) => {
-    return fileMetadata.get(path);
-  }, [fileMetadata]);
+    return fileMetadataRef.current.get(path);
+  }, []);
 
   const addPendingChange = useCallback((change: PendingFileChange) => {
     setPendingChanges(prev => {
@@ -78,7 +88,7 @@ export function PendingChangesProvider({ children }: { children: React.ReactNode
   // Helper function called when panel's writeFile action is invoked
   // Returns true if successful, false if metadata not found
   const addPendingChangeFromWrite = useCallback((path: string, newContent: string): boolean => {
-    const metadata = fileMetadata.get(path);
+    const metadata = fileMetadataRef.current.get(path);
     if (!metadata) {
       console.warn('[PendingChanges] No metadata found for file:', path);
       return false;
@@ -108,7 +118,7 @@ export function PendingChangesProvider({ children }: { children: React.ReactNode
       return next;
     });
     return true;
-  }, [fileMetadata]);
+  }, []);
 
   // Add a pending change for a new file that doesn't exist yet
   // Used by features like backlog init that create new files
@@ -155,8 +165,8 @@ export function PendingChangesProvider({ children }: { children: React.ReactNode
   }, []);
 
   const getPendingChangesArray = useCallback(() => {
-    return Array.from(pendingChanges.values());
-  }, [pendingChanges]);
+    return Array.from(pendingChangesRef.current.values());
+  }, []);
 
   // Warn user before leaving page with unsaved changes
   useEffect(() => {
