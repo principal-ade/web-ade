@@ -9,6 +9,7 @@ import {
   ConfigurablePanelLayoutHandle,
 } from '@principal-ade/panel-layouts';
 import { globalPanelRegistry } from '@principal-ade/panel-framework-core';
+import type { PanelContextValue } from '@principal-ade/panel-framework-core';
 import { useTheme } from '@principal-ade/industry-theme';
 import { RepositoryPageProvider, useRepositoryPageProvider } from '@/contexts/RepositoryPageProvider';
 import { WebLLMProvider } from '@/contexts/WebLLMContext';
@@ -61,8 +62,15 @@ import {
   BookOpen, MessageSquare, FileText, Map, LayoutGrid,
   CheckSquare, Terminal, Users, Compass, Shield, Bug,
   GitBranch, History, GitCommit, Package,
-  Zap, File, Edit, Activity
+  Zap, File, Edit, Activity, Workflow
 } from 'lucide-react';
+import { SharedSequenceDiagramsListPanel } from './panels/SharedSequenceDiagramsListPanel';
+import type {
+  FileCityExplorerPanelActions,
+  FileCityExplorerPanelContext,
+  SequenceDiagramPayload,
+} from '@industry-theme/file-city-panel';
+import type { GitHubCommitDetailResponse } from '@/types/api';
 
 // Dynamic imports for panels that access document at import time
 const MarkdownPanel = dynamic<MarkdownPanelProps>(
@@ -71,6 +79,10 @@ const MarkdownPanel = dynamic<MarkdownPanelProps>(
 );
 const CodeCityPanel = dynamic(
   () => import('@industry-theme/file-city-panel').then(m => m.CodeCityPanel),
+  { ssr: false }
+);
+const FileCityExplorerPanel = dynamic(
+  () => import('@industry-theme/file-city-panel').then(m => m.FileCityExplorerPanel),
   { ssr: false }
 );
 
@@ -276,6 +288,13 @@ function EditorLayoutContent({
 
   // State for selected trace (for Telemetry view)
   const [selectedTrace, setSelectedTrace] = useState<RegisteredTrace | null>(null);
+
+  // Active sequence-diagram payload for the Walkthroughs layout. The
+  // SharedSequenceDiagramsListPanel writes it; the FileCityExplorerPanel
+  // reads it via its `sequenceDiagram` slice. Lives here (rather than in
+  // a separate context) because both panels render in this tree.
+  const [activeSequencePayload, setActiveSequencePayload] =
+    useState<SequenceDiagramPayload | null>(null);
 
   // Toast notification state
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
@@ -1810,6 +1829,104 @@ function EditorLayoutContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCanvasData, selectedWorkflowData]);
 
+  // === Walkthroughs layout: FileCityExplorerPanel wiring ===
+
+  const sequenceRepoSplit = useMemo(() => {
+    if (!githubRepo || !githubRepo.includes('/')) return null;
+    const [owner, repo] = githubRepo.split('/');
+    return { owner: owner!, repo: repo! };
+  }, [githubRepo]);
+
+  const explorerContext = useMemo<PanelContextValue<FileCityExplorerPanelContext>>(() => {
+    const nullSlice = <T,>(name: string) => ({
+      scope: 'repository' as const,
+      name,
+      data: null as T | null,
+      loading: false,
+      error: null,
+      refresh: async () => {},
+    });
+    return {
+      // Spread first to inherit currentScope / refresh / adapters from the
+      // host's PanelContextValue; override slices below.
+      ...context,
+      fileTree: context.fileTree,
+      gitStatusWithFiles: nullSlice('gitStatusWithFiles'),
+      lineCounts: context.lineCounts ?? nullSlice('lineCounts'),
+      latestCommit: nullSlice('latestCommit'),
+      scopeWorkspace: nullSlice('scopeWorkspace'),
+      areaWorkspace: nullSlice('areaWorkspace'),
+      sequenceDiagram: {
+        scope: 'repository' as const,
+        name: 'sequenceDiagram',
+        data: activeSequencePayload,
+        loading: false,
+        error: null,
+        refresh: async () => {},
+      },
+      repository: sequenceRepoSplit
+        ? { owner: sequenceRepoSplit.owner, name: sequenceRepoSplit.repo }
+        : null,
+    };
+  }, [context, activeSequencePayload, sequenceRepoSplit]);
+
+  const explorerActions = useMemo<FileCityExplorerPanelActions>(() => ({
+    ...actions,
+    openFile: (filePath: string, _line?: number) => {
+      // Host's openFile is single-arg; line navigation isn't wired yet.
+      if (typeof actions.openFile === 'function') {
+        actions.openFile(filePath);
+      }
+    },
+    readFile: (path: string) => enhancedActions.readFile(path),
+    getCommitDiff: async (commitHash: string): Promise<string> => {
+      if (!sequenceRepoSplit) {
+        throw new Error('Repository not selected.');
+      }
+      const { owner, repo } = sequenceRepoSplit;
+      const res = await fetch(
+        `/api/github/repo/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits/${encodeURIComponent(commitHash)}`,
+      );
+      if (!res.ok) {
+        throw new Error(`Failed to fetch commit ${commitHash}: ${res.statusText}`);
+      }
+      const data: GitHubCommitDetailResponse = await res.json();
+      // GitHub's per-file `patch` is already in unified-diff hunk form;
+      // prepend the file headers so the join is a complete unified diff.
+      return (data.files ?? [])
+        .filter((f) => typeof f.patch === 'string')
+        .map((f) => {
+          const oldPath = f.previous_filename ?? f.filename;
+          const newPath = f.filename;
+          return [
+            `diff --git a/${oldPath} b/${newPath}`,
+            `--- a/${oldPath}`,
+            `+++ b/${newPath}`,
+            f.patch,
+          ].join('\n');
+        })
+        .join('\n');
+    },
+    getWorkingTreeDiff: async () => '',
+    // Scope/area workspaces are wired with `data: null`, so these
+    // actions are unreachable from the panel UI — the throws are
+    // defensive in case a host wires the slice without wiring the action.
+    addToScope: async () => {
+      throw new Error('addToScope is not supported on web-ade yet.');
+    },
+    addArea: async () => {
+      throw new Error('addArea is not supported on web-ade yet.');
+    },
+    addPathToArea: async () => {
+      throw new Error('addPathToArea is not supported on web-ade yet.');
+    },
+    // Notes CRUD: stubbed for v1. Returning null signals "host couldn't
+    // persist" — the overlay surfaces this gracefully.
+    createSequenceNote: async () => null,
+    updateSequenceNote: async () => null,
+    deleteSequenceNote: async () => {},
+  }), [actions, enhancedActions, sequenceRepoSplit]);
+
   // Memoize panels that use stable props to prevent unnecessary re-renders
   const stablePanels = useMemo(() => [
     {
@@ -1855,6 +1972,35 @@ function EditorLayoutContent({
       content: (
         <div className="h-full w-full overflow-hidden">
           <FileCityPanelLoader context={context} actions={enhancedActions} events={events} />
+        </div>
+      ),
+    },
+    {
+      id: 'sequence-diagrams-list',
+      label: 'Walkthroughs',
+      icon: <Workflow size={16} />,
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <SharedSequenceDiagramsListPanel
+            owner={sequenceRepoSplit?.owner ?? null}
+            repo={sequenceRepoSplit?.repo ?? null}
+            activeId={activeSequencePayload?.id ?? null}
+            onActivate={setActiveSequencePayload}
+          />
+        </div>
+      ),
+    },
+    {
+      id: 'file-city-explorer',
+      label: 'File City Explorer',
+      icon: <Map size={16} />,
+      content: (
+        <div className="h-full w-full overflow-hidden">
+          <FileCityExplorerPanel
+            context={explorerContext}
+            actions={explorerActions}
+            events={events}
+          />
         </div>
       ),
     },
@@ -2076,7 +2222,7 @@ function EditorLayoutContent({
         </div>
       ),
     },
-  ], [context, enhancedActions, events, theme.colors.textMuted, selectedCanvasData, selectedWorkflowData, selectedTrace]);
+  ], [context, enhancedActions, events, theme.colors.textMuted, selectedCanvasData, selectedWorkflowData, selectedTrace, sequenceRepoSplit, activeSequencePayload, explorerContext, explorerActions]);
 
   // File editing panels - now use the standard panel framework pattern
   const fileEditingPanels = useMemo(() => [

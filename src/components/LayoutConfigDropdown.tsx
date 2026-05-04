@@ -158,6 +158,19 @@ export const layoutConfigs: LayoutConfig[] = [
     hidden: true,
   },
   {
+    id: 'walkthroughs',
+    name: 'Walkthroughs',
+    layout: {
+      left: 'sequence-diagrams-list',
+      middle: 'file-city-explorer',
+      right: 'file-city',
+    },
+    collapsed: {
+      left: false,
+      right: true,
+    },
+  },
+  {
     id: 'traces',
     name: 'Telemetry',
     layout: {
