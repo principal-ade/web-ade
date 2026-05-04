@@ -62,11 +62,11 @@ interface SharedSequenceDiagramIndexEntry {
 }
 ```
 
-Same shape as the desktop manifest plus `createdBy` and `githubRepoId` so the desktop sidebar and the web list view render from a common type.
+`SharedSequenceDiagramIndexEntry` extends `BaseSequenceDiagramIndexEntry` from `@industry-theme/file-city-panel` with the web-side `createdBy` and `githubRepoId` fields. The desktop sidebar and the web list view render from the same base type.
 
-**Type duplication is expected for now.** `SequenceDiagramPayload`, `DiffSnippet`, and the index entry types are owned by `desktop-app/electron-app` today. Until a shared types package exists, copy the relevant definitions into web-ade rather than introducing a cross-repo import. When the shared dependency lands, swap the duplicated declarations for imports in one pass.
+**Shared types live in `@industry-theme/file-city-panel`.** `SequenceDiagramPayload`, `DiffSnippet`, `SequenceEvent`, `SequenceEdge`, and `BaseSequenceDiagramIndexEntry` are imported from that package — the same source the desktop consumes. Web-ade owns only the storage-coupled extensions (sharer identity, GitHub repo id, request/response envelopes, error codes) in `src/lib/sequence-diagrams/types.ts`.
 
-`id` is server-generated (`crypto.randomUUID()`). Desktop ids and shared ids are independent — re-sharing a local payload creates a new record rather than overwriting.
+`id` is **producer-supplied** and required on the wire — the desktop bridge mints it (`crypto.randomUUID()`) before posting. Re-sharing a local payload requires the producer to mint a new id; the same id posted twice overwrites the existing shared record.
 
 ## Snippet handling
 
@@ -129,13 +129,15 @@ Publish a payload.
 
 **Validation:**
 1. `owner` / `repo` match `/^[A-Za-z0-9._-]+$/`.
-2. `payload.events` is a non-empty array; each event has `id` and `name`.
-3. Every diff snippet has either `newContents` (baked) or `gitRef: { sha, path }` (reserved for future hydration). Snippets with neither are rejected with `SNIPPET_NOT_BAKED` — web-ade can't read the producer's filesystem, so baking is the desktop bridge's responsibility.
-4. Total serialized payload ≤ 10 MB.
+2. `payload` carries the strict shared shape: `id`, `title`, `createdAt`, `updatedAt` are all required (timestamps must be ISO 8601). Producers that pre-date the strict contract must be upgraded.
+3. `payload.events` is a non-empty array; each event has `id` and `name`.
+4. `payload.edges`, when present, is an array of `{ id, fromEvent, toEvent }` per the upstream `SequenceEdge` shape.
+5. Every diff snippet has `startLine` and `endLine` (1-based) and either `newContents` (baked) or `gitRef: { sha, path }` (reserved for future hydration). Snippets missing line bounds are rejected with `INVALID_PAYLOAD`; snippets missing both `newContents` and `gitRef` are rejected with `SNIPPET_NOT_BAKED` — web-ade can't read the producer's filesystem, so baking is the desktop bridge's responsibility.
+6. Total serialized payload ≤ 10 MB.
 
 **Behavior:**
 1. Verify the requester has GitHub read access to `owner/repo`. On 403/404 → `{ code: NO_REPO_ACCESS }`, status 403.
-2. Generate `id` server-side (`crypto.randomUUID()`).
+2. Use `payload.id` as the stored id; `payload.createdAt` / `updatedAt` propagate to the index entry as-is.
 3. Write `sequence-diagrams/{owner-lower}/{repo-lower}/{id}.json`.
 4. Append the index entry to `sequence-diagrams/{owner-lower}/{repo-lower}/index.json` under ETag-locked update with retry (max 3). When the repo exceeds the 200-entry soft cap, the oldest entries by `updatedAt` are pruned in-place.
 
@@ -185,18 +187,21 @@ Permanently delete a shared payload.
 
 ### Index entry shape
 
+`SharedSequenceDiagramIndexEntry` extends `BaseSequenceDiagramIndexEntry` (from `@industry-theme/file-city-panel`) with web-side fields:
+
 ```ts
-interface SharedSequenceDiagramIndexEntry {
-  id: string;
-  title?: string;
-  summaryPreview?: string;        // payload.summary truncated to 200 chars
-  eventCount: number;
-  hasDiffSnippets: boolean;
+interface SharedSequenceDiagramIndexEntry extends BaseSequenceDiagramIndexEntry {
+  // From BaseSequenceDiagramIndexEntry:
+  //   id: string;
+  //   title: string;                // required; hosts default to e.g. "Untitled flow"
+  //   summaryPreview: string;       // required; empty string when no summary
+  //   eventCount: number;
+  //   hasDiffSnippets: boolean;
+  //   createdAt: string;            // ISO 8601
+  //   updatedAt: string;
+  //   sizeBytes: number;
   createdBy: { githubId: number; githubLogin: string };
-  githubRepoId: number;           // GitHub numeric repo id at upload time
-  createdAt: string;              // ISO 8601
-  updatedAt: string;
-  sizeBytes: number;
+  githubRepoId: number;             // GitHub numeric repo id at upload time
 }
 ```
 
@@ -268,6 +273,7 @@ The renderer derives `owner`/`repo` when it has them in scope; otherwise main re
 - [x] Add S3 helpers under `src/lib/sequence-diagrams/` on web-ade, mirroring `src/lib/starred-collections/s3-storage.ts`.
 - [x] Add `POST /api/sequence-diagrams`, `GET` (list + by-id), `DELETE` with GitHub access gating.
 - [x] Reserve `gitRef?: { sha; path; branch? }` on `DiffSnippet` in the duplicated payload types (no producers yet).
+- [x] Replace duplicated payload types with imports from `@industry-theme/file-city-panel` (shared cross-repo source of truth). Validation tightened to require `id`, `title`, `createdAt`, `updatedAt` on payloads and `startLine` / `endLine` on diff snippets — producers must be on the new contract.
 - [ ] **Slice 2:** Audit `SequenceDiagramOverlay` for electron-only dependencies; extract a payload-rendering component reusable from web-ade.
 - [ ] **Slice 2:** Build the viewer page at `/d/:owner/:repo/:id`.
 - [ ] **Slice 3:** Add bake-on-share helper + `POST /api/file-city/sequence/:id/share` to the electron bridge.
@@ -279,12 +285,14 @@ The renderer derives `owner`/`repo` when it has them in scope; otherwise main re
 
 ```bash
 TOKEN=...   # any GitHub token with read access to owner/repo
+ID=$(uuidgen)
+NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-# publish
+# publish (id, title, createdAt, updatedAt are all required)
 curl -sX POST http://localhost:3000/api/sequence-diagrams \
   -H "Authorization: Bearer $TOKEN" \
   -H "content-type: application/json" \
-  -d '{"owner":"acme","repo":"widgets","payload":{"title":"flow A","events":[{"id":"a","name":"step 1"}]}}'
+  -d "{\"owner\":\"acme\",\"repo\":\"widgets\",\"payload\":{\"id\":\"$ID\",\"title\":\"flow A\",\"createdAt\":\"$NOW\",\"updatedAt\":\"$NOW\",\"events\":[{\"id\":\"a\",\"name\":\"step 1\"}]}}"
 
 # list
 curl -s http://localhost:3000/api/sequence-diagrams/acme/widgets \

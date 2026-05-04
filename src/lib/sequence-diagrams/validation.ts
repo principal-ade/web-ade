@@ -6,11 +6,13 @@ import type {
   CreateSharedDiagramRequest,
   DiffSnippet,
   SequenceDiagramPayload,
+  SequenceEdge,
   SequenceEvent,
 } from './types';
 import { MAX_PAYLOAD_BYTES } from './constants';
 
 const OWNER_REPO_PATTERN = /^[A-Za-z0-9._-]+$/;
+const ISO_DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/;
 
 export function validateOwnerRepo(owner: string, repo: string): void {
   if (
@@ -33,6 +35,14 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
+function isIsoDateTime(value: unknown): value is string {
+  return typeof value === 'string' && ISO_DATETIME_PATTERN.test(value);
+}
+
+function isPositiveInt(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 1;
+}
+
 function validateSnippet(snippet: unknown, eventIndex: number): void {
   if (!isPlainObject(snippet)) {
     throw new SequenceDiagramShareError(
@@ -42,9 +52,10 @@ function validateSnippet(snippet: unknown, eventIndex: number): void {
     );
   }
 
+  // Slice snippets are not produced by the share flow today — only diff
+  // snippets are recognized. Unknown kinds pass through so producers can
+  // experiment without web-ade being a gatekeeper.
   if (snippet.kind !== 'diff') {
-    // Only diff snippets are recognized today; allow unknown kinds to pass
-    // through so producers can experiment without web-ade being a gatekeeper.
     return;
   }
 
@@ -53,6 +64,14 @@ function validateSnippet(snippet: unknown, eventIndex: number): void {
   if (typeof s.oldContents !== 'string') {
     throw new SequenceDiagramShareError(
       `Event ${eventIndex}: diff snippet missing oldContents`,
+      400,
+      ShareErrorCodes.INVALID_PAYLOAD
+    );
+  }
+
+  if (!isPositiveInt(s.startLine) || !isPositiveInt(s.endLine)) {
+    throw new SequenceDiagramShareError(
+      `Event ${eventIndex}: diff snippet must include 1-based startLine and endLine`,
       400,
       ShareErrorCodes.INVALID_PAYLOAD
     );
@@ -81,7 +100,7 @@ function validateEvent(event: unknown, index: number): void {
       ShareErrorCodes.INVALID_PAYLOAD
     );
   }
-  const e = event as Partial<SequenceEvent>;
+  const e = event as Partial<SequenceEvent> & { snippet?: unknown };
   if (typeof e.id !== 'string' || !e.id) {
     throw new SequenceDiagramShareError(
       `Event ${index}: missing id`,
@@ -101,6 +120,38 @@ function validateEvent(event: unknown, index: number): void {
   }
 }
 
+function validateEdge(edge: unknown, index: number): void {
+  if (!isPlainObject(edge)) {
+    throw new SequenceDiagramShareError(
+      `Edge ${index}: must be an object`,
+      400,
+      ShareErrorCodes.INVALID_PAYLOAD
+    );
+  }
+  const e = edge as Partial<SequenceEdge>;
+  if (typeof e.id !== 'string' || !e.id) {
+    throw new SequenceDiagramShareError(
+      `Edge ${index}: missing id`,
+      400,
+      ShareErrorCodes.INVALID_PAYLOAD
+    );
+  }
+  if (typeof e.fromEvent !== 'string' || !e.fromEvent) {
+    throw new SequenceDiagramShareError(
+      `Edge ${index}: missing fromEvent`,
+      400,
+      ShareErrorCodes.INVALID_PAYLOAD
+    );
+  }
+  if (typeof e.toEvent !== 'string' || !e.toEvent) {
+    throw new SequenceDiagramShareError(
+      `Edge ${index}: missing toEvent`,
+      400,
+      ShareErrorCodes.INVALID_PAYLOAD
+    );
+  }
+}
+
 export function validatePayload(payload: unknown): SequenceDiagramPayload {
   if (!isPlainObject(payload)) {
     throw new SequenceDiagramShareError(
@@ -111,6 +162,38 @@ export function validatePayload(payload: unknown): SequenceDiagramPayload {
   }
 
   const p = payload as Partial<SequenceDiagramPayload>;
+
+  if (typeof p.id !== 'string' || !p.id) {
+    throw new SequenceDiagramShareError(
+      'Payload.id is required',
+      400,
+      ShareErrorCodes.INVALID_PAYLOAD
+    );
+  }
+
+  if (typeof p.title !== 'string' || !p.title) {
+    throw new SequenceDiagramShareError(
+      'Payload.title is required',
+      400,
+      ShareErrorCodes.INVALID_PAYLOAD
+    );
+  }
+
+  if (!isIsoDateTime(p.createdAt)) {
+    throw new SequenceDiagramShareError(
+      'Payload.createdAt must be an ISO 8601 timestamp',
+      400,
+      ShareErrorCodes.INVALID_PAYLOAD
+    );
+  }
+
+  if (!isIsoDateTime(p.updatedAt)) {
+    throw new SequenceDiagramShareError(
+      'Payload.updatedAt must be an ISO 8601 timestamp',
+      400,
+      ShareErrorCodes.INVALID_PAYLOAD
+    );
+  }
 
   if (!Array.isArray(p.events)) {
     throw new SequenceDiagramShareError(
@@ -130,12 +213,15 @@ export function validatePayload(payload: unknown): SequenceDiagramPayload {
 
   p.events.forEach(validateEvent);
 
-  if (p.edges !== undefined && !Array.isArray(p.edges)) {
-    throw new SequenceDiagramShareError(
-      'Payload.edges must be an array if provided',
-      400,
-      ShareErrorCodes.INVALID_PAYLOAD
-    );
+  if (p.edges !== undefined) {
+    if (!Array.isArray(p.edges)) {
+      throw new SequenceDiagramShareError(
+        'Payload.edges must be an array if provided',
+        400,
+        ShareErrorCodes.INVALID_PAYLOAD
+      );
+    }
+    p.edges.forEach(validateEdge);
   }
 
   // Cheap size guard: serialize once, check, return parsed value.
@@ -170,15 +256,13 @@ export function validateCreateRequest(
 export function summarizePayload(payload: SequenceDiagramPayload): {
   eventCount: number;
   hasDiffSnippets: boolean;
-  summaryPreview?: string;
+  summaryPreview: string;
 } {
   const eventCount = payload.events.length;
   const hasDiffSnippets = payload.events.some(
     (e) => e.snippet?.kind === 'diff'
   );
   const summaryPreview =
-    typeof payload.summary === 'string'
-      ? payload.summary.slice(0, 200)
-      : undefined;
+    typeof payload.summary === 'string' ? payload.summary.slice(0, 200) : '';
   return { eventCount, hasDiffSnippets, summaryPreview };
 }

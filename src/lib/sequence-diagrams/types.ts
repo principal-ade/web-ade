@@ -1,80 +1,41 @@
 /**
  * Sequence Diagrams Sharing Types
  *
- * Payload types are duplicated from desktop-app/electron-app
- * (src/shared/main-process-api-interfaces/FileCitySequenceAPI.ts) until a
- * shared cross-repo dependency exists. Keep field names in sync; when the
- * shared package lands, swap these declarations for imports.
+ * Payload, snippet, event, edge, and base index-entry types come from
+ * `@industry-theme/file-city-panel` (the shared cross-repo source of truth
+ * also consumed by desktop-app/electron-app). Web-ade owns only the
+ * storage-coupled extensions to those shapes (sharer identity, GitHub
+ * repo id, request/response envelopes, error codes).
  */
 
-// ============================================================================
-// Payload (mirrors desktop-app)
-// ============================================================================
+import type {
+  BaseSequenceDiagramIndexEntry,
+  SequenceDiagramPayload,
+} from '@industry-theme/file-city-panel';
 
-export interface DiffSnippet {
-  kind: 'diff';
-  /** Pre-change file contents. Always embedded by the producer. */
-  oldContents: string;
-  /**
-   * Post-change file contents. The desktop hydrates this from disk at view
-   * time when omitted; for shared payloads it must either be embedded
-   * (baked) or accompanied by `gitRef` so the viewer can hydrate from
-   * GitHub. See file-city-sequence-diagram-sharing.md.
-   */
-  newContents?: string;
-  startLine?: number;
-  endLine?: number;
-  language?: string;
-  /**
-   * Reserved for opt-in hydration from GitHub at view time. No producer sets
-   * this today; declared so the schema is forward-compatible.
-   */
-  gitRef?: { sha: string; path: string; branch?: string };
-}
-
-export interface SequenceEvent {
-  id: string;
-  name: string;
-  description?: string;
-  sourcePath?: string;
-  startLine?: number;
-  endLine?: number;
-  snippet?: DiffSnippet;
-}
-
-export interface SequenceEdge {
-  fromEventId: string;
-  toEventId: string;
-  label?: string;
-}
-
-export interface SequenceDiagramPayload {
-  id?: string;
-  title?: string;
-  summary?: string;
-  /** Producer-side path; not used on the web viewer. */
-  repositoryPath?: string;
-  events: SequenceEvent[];
-  edges?: SequenceEdge[];
-  kind?: string;
-}
+// Re-export the shared payload-side types for consumers within this dir.
+export type {
+  SequenceEvent,
+  SequenceEdge,
+  SliceSnippet,
+  DiffSnippet,
+  SequenceEventSnippet,
+  FileCitySequenceEventDef,
+  SequenceLayoutOptions,
+  SequenceDiagramPayload,
+  BaseSequenceDiagramIndexEntry,
+} from '@industry-theme/file-city-panel';
 
 // ============================================================================
-// Web-side index (stored in S3)
+// Web-side index (stored in S3) — extends the shared base with sharer
+// identity and the rename-stable GitHub repo id backstop.
 // ============================================================================
 
-export interface SharedSequenceDiagramIndexEntry {
-  id: string;
-  title?: string;
-  summaryPreview?: string;
-  eventCount: number;
-  hasDiffSnippets: boolean;
+export interface SharedSequenceDiagramIndexEntry
+  extends BaseSequenceDiagramIndexEntry {
   createdBy: { githubId: number; githubLogin: string };
   /** GitHub numeric repo id at upload time, used as a rename-stable backstop. */
   githubRepoId: number;
-  createdAt: string;
-  updatedAt: string;
-  sizeBytes: number;
 }
 
 export interface SharedSequenceDiagramIndex {

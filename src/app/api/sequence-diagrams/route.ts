@@ -6,7 +6,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { randomUUID } from 'node:crypto';
 import {
   fetchGitHubUser,
   getGitHubToken,
@@ -79,9 +78,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const id = randomUUID();
+    const id = payload.id;
     const summary = summarizePayload(payload);
-    const now = new Date().toISOString();
 
     const { sizeBytes } = await putPayload(owner, repo, id, payload);
 
@@ -93,8 +91,8 @@ export async function POST(request: NextRequest) {
       hasDiffSnippets: summary.hasDiffSnippets,
       createdBy: { githubId: user.id, githubLogin: user.login },
       githubRepoId: access.githubRepoId,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: payload.createdAt,
+      updatedAt: payload.updatedAt,
       sizeBytes,
     };
 
