@@ -8,7 +8,7 @@
  * `sequenceDiagram` slice.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { AlertCircle, RefreshCw, Workflow } from 'lucide-react';
 import type { SequenceDiagramPayload } from '@/lib/sequence-diagrams/types';
@@ -20,12 +20,19 @@ export interface SharedSequenceDiagramsListPanelProps {
   repo: string | null;
   /** Currently-active payload id (highlights the matching row). */
   activeId: string | null;
+  /**
+   * Walkthrough id to auto-activate once when the listing first resolves.
+   * Used to honor `?walkthrough=<id>` deep links. Subsequent prop changes
+   * are ignored — once activated, ownership of the selection moves to
+   * the user.
+   */
+  initialActivateId?: string;
   onActivate: (payload: SequenceDiagramPayload) => void;
 }
 
 export const SharedSequenceDiagramsListPanel: React.FC<
   SharedSequenceDiagramsListPanelProps
-> = ({ owner, repo, activeId, onActivate }) => {
+> = ({ owner, repo, activeId, initialActivateId, onActivate }) => {
   const { theme } = useTheme();
   const { availability, entries, errorMessage, loading, refresh, hydrate } =
     useSharedSequenceDiagrams(owner, repo);
@@ -37,6 +44,28 @@ export const SharedSequenceDiagramsListPanel: React.FC<
     },
     [hydrate, onActivate],
   );
+
+  // Auto-activate from `initialActivateId` once entries resolve. Guarded
+  // by a ref so we never re-activate (e.g. on remount, or if the user
+  // manually picked a different row before the listing finished
+  // loading).
+  const autoActivatedRef = useRef(false);
+  useEffect(() => {
+    if (autoActivatedRef.current) return;
+    if (!initialActivateId) return;
+    if (availability !== 'available') return;
+    if (activeId === initialActivateId) {
+      autoActivatedRef.current = true;
+      return;
+    }
+    if (!entries.some((e) => e.id === initialActivateId)) return;
+    autoActivatedRef.current = true;
+    handleActivate(initialActivateId).catch(() => {
+      // Hydration errors surface in the row's own error state when the
+      // user clicks; for the auto-activate path we just silently leave
+      // the row untouched.
+    });
+  }, [initialActivateId, availability, entries, activeId, handleActivate]);
 
   const repoLabel =
     owner && repo ? `${owner}/${repo}` : owner ?? repo ?? null;

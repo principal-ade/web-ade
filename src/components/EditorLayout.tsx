@@ -176,6 +176,8 @@ interface EditorLayoutContentProps {
   setRightSidebarCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   currentLayoutConfigId: string;
   onLayoutConfigIdChange: (configId: string) => void;
+  initialWalkthroughId?: string;
+  onWalkthroughChange?: (id: string | null) => void;
 }
 
 function EditorLayoutContent({
@@ -187,6 +189,8 @@ function EditorLayoutContent({
   setRightSidebarCollapsed,
   currentLayoutConfigId,
   onLayoutConfigIdChange,
+  initialWalkthroughId,
+  onWalkthroughChange,
 }: EditorLayoutContentProps) {
   const { theme } = useTheme();
   const { context, actions, events, selectedColorMode, clearColorMode } = useRepositoryPageProvider();
@@ -436,7 +440,13 @@ function EditorLayoutContent({
     setLayout(config.layout);
     setLeftSidebarCollapsed(config.collapsed.left);
     setRightSidebarCollapsed(config.collapsed.right);
-  }, [onLayoutConfigIdChange, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed, githubRepo]);
+
+    // Drop the `?walkthrough=` URL param when leaving the walkthroughs
+    // layout — keeps share links honest about what's actually visible.
+    if (config.id !== 'walkthroughs') {
+      onWalkthroughChange?.(null);
+    }
+  }, [onLayoutConfigIdChange, setLayout, setLeftSidebarCollapsed, setRightSidebarCollapsed, githubRepo, onWalkthroughChange]);
 
   // Handle vim mode toggle
   const handleVimModeToggle = useCallback(() => {
@@ -1985,7 +1995,11 @@ function EditorLayoutContent({
             owner={sequenceRepoSplit?.owner ?? null}
             repo={sequenceRepoSplit?.repo ?? null}
             activeId={activeSequencePayload?.id ?? null}
-            onActivate={setActiveSequencePayload}
+            initialActivateId={initialWalkthroughId}
+            onActivate={(payload) => {
+              setActiveSequencePayload(payload);
+              onWalkthroughChange?.(payload.id);
+            }}
           />
         </div>
       ),
@@ -2222,7 +2236,7 @@ function EditorLayoutContent({
         </div>
       ),
     },
-  ], [context, enhancedActions, events, theme.colors.textMuted, selectedCanvasData, selectedWorkflowData, selectedTrace, sequenceRepoSplit, activeSequencePayload, explorerContext, explorerActions]);
+  ], [context, enhancedActions, events, theme.colors.textMuted, selectedCanvasData, selectedWorkflowData, selectedTrace, sequenceRepoSplit, activeSequencePayload, explorerContext, explorerActions, initialWalkthroughId, onWalkthroughChange]);
 
   // File editing panels - now use the standard panel framework pattern
   const fileEditingPanels = useMemo(() => [
@@ -2557,9 +2571,13 @@ interface EditorLayoutProps {
   localAdapter?: LocalFileSystemAdapter | null;
   initialConfigId?: string;
   onConfigChange?: (configId: string) => void;
+  /** Walkthrough id to auto-activate on first render (from `?walkthrough=`). */
+  initialWalkthroughId?: string;
+  /** Notified when the active walkthrough changes; the page mirrors this into the URL. */
+  onWalkthroughChange?: (id: string | null) => void;
 }
 
-export function EditorLayout({ githubRepo, localAdapter: _localAdapter, initialConfigId, onConfigChange }: EditorLayoutProps = {}) {
+export function EditorLayout({ githubRepo, localAdapter: _localAdapter, initialConfigId, onConfigChange, initialWalkthroughId, onWalkthroughChange }: EditorLayoutProps = {}) {
   const { theme } = useTheme();
   const { isAuthenticated, isLoading: authLoading, login } = useAuth();
   const { adapter: localAdapter } = useLocalFileSystem();
@@ -2680,6 +2698,8 @@ export function EditorLayout({ githubRepo, localAdapter: _localAdapter, initialC
         <EditorContextWrapper
           initialConfigId={initialConfigId}
           onConfigChange={onConfigChange}
+          initialWalkthroughId={initialWalkthroughId}
+          onWalkthroughChange={onWalkthroughChange}
         />
       </RepositoryPageProvider>
     </div>
@@ -2689,13 +2709,15 @@ export function EditorLayout({ githubRepo, localAdapter: _localAdapter, initialC
 interface EditorContextWrapperProps {
   initialConfigId?: string;
   onConfigChange?: (configId: string) => void;
+  initialWalkthroughId?: string;
+  onWalkthroughChange?: (id: string | null) => void;
 }
 
 /**
  * Wrapper component that provides AI contexts (WebLLM, Gemini) and manages
  * editor-level state including layout configuration.
  */
-function EditorContextWrapper({ initialConfigId, onConfigChange }: EditorContextWrapperProps) {
+function EditorContextWrapper({ initialConfigId, onConfigChange, initialWalkthroughId, onWalkthroughChange }: EditorContextWrapperProps) {
   const { events, actions, context } = useRepositoryPageProvider();
 
   // Layout state - lifted here so GeminiProvider can access it
@@ -2811,6 +2833,8 @@ function EditorContextWrapper({ initialConfigId, onConfigChange }: EditorContext
             setRightSidebarCollapsed={setRightSidebarCollapsed}
             currentLayoutConfigId={currentLayoutConfigId}
             onLayoutConfigIdChange={handleConfigIdChange}
+            initialWalkthroughId={initialWalkthroughId}
+            onWalkthroughChange={onWalkthroughChange}
           />
         </GeminiProvider>
       </WebLLMProvider>

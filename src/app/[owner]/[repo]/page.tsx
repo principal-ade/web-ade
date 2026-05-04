@@ -100,12 +100,37 @@ function RepoPageContent() {
     setLocalAdapterState(adapter);
   }, [adapter]);
 
-  // Get initial config from URL, then fall back to localStorage
+  // Get initial config from URL, then fall back to localStorage.
+  // A bare `?walkthrough=<id>` (no `?config=`) opens the Walkthroughs
+  // layout so share links work without spelling out both params.
   const initialConfigId = useMemo(() => {
     const urlConfig = searchParams.get('config');
     if (urlConfig) return urlConfig;
+    if (searchParams.get('walkthrough')) return 'walkthroughs';
     return getRepositoryLayoutConfig(owner, repo) || 'documentation';
   }, [searchParams, owner, repo]);
+
+  // Initial walkthrough id is read once at mount; subsequent changes
+  // are driven by the panel via onWalkthroughChange and reflected back
+  // in the URL.
+  const initialWalkthroughId = useMemo(
+    () => searchParams.get('walkthrough') ?? undefined,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const handleWalkthroughChange = useCallback(
+    (id: string | null) => {
+      const url = new URL(window.location.href);
+      if (id) {
+        url.searchParams.set('walkthrough', id);
+      } else {
+        url.searchParams.delete('walkthrough');
+      }
+      router.replace(url.pathname + url.search, { scroll: false });
+    },
+    [router],
+  );
 
   // Connect to presence system for this repository
   useRepoPresence({ repoId: githubRepo });
@@ -170,6 +195,8 @@ function RepoPageContent() {
         localAdapter={localAdapterState}
         initialConfigId={initialConfigId}
         onConfigChange={handleConfigChange}
+        initialWalkthroughId={initialWalkthroughId}
+        onWalkthroughChange={handleWalkthroughChange}
       />
     </div>
   );
