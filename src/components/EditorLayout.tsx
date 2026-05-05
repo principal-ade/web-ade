@@ -66,8 +66,8 @@ import {
 } from 'lucide-react';
 import { SharedSequenceDiagramsListPanel } from './panels/SharedSequenceDiagramsListPanel';
 import type {
-  FileCityExplorerPanelActions,
-  FileCityExplorerPanelContext,
+  FileCitySequenceExplorerPanelActions,
+  FileCitySequenceExplorerPanelContext,
   SequenceDiagramPayload,
 } from '@industry-theme/file-city-panel';
 import type { GitHubCommitDetailResponse } from '@/types/api';
@@ -81,8 +81,8 @@ const CodeCityPanel = dynamic(
   () => import('@industry-theme/file-city-panel').then(m => m.CodeCityPanel),
   { ssr: false }
 );
-const FileCityExplorerPanel = dynamic(
-  () => import('@industry-theme/file-city-panel').then(m => m.FileCityExplorerPanel),
+const FileCitySequenceExplorerPanel = dynamic(
+  () => import('@industry-theme/file-city-panel').then(m => m.FileCitySequenceExplorerPanel),
   { ssr: false }
 );
 
@@ -294,7 +294,7 @@ function EditorLayoutContent({
   const [selectedTrace, setSelectedTrace] = useState<RegisteredTrace | null>(null);
 
   // Active sequence-diagram payload for the Walkthroughs layout. The
-  // SharedSequenceDiagramsListPanel writes it; the FileCityExplorerPanel
+  // SharedSequenceDiagramsListPanel writes it; the FileCitySequenceExplorerPanel
   // reads it via its `sequenceDiagram` slice. Lives here (rather than in
   // a separate context) because both panels render in this tree.
   const [activeSequencePayload, setActiveSequencePayload] =
@@ -1839,7 +1839,7 @@ function EditorLayoutContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCanvasData, selectedWorkflowData]);
 
-  // === Walkthroughs layout: FileCityExplorerPanel wiring ===
+  // === Walkthroughs layout: FileCitySequenceExplorerPanel wiring ===
 
   const sequenceRepoSplit = useMemo(() => {
     if (!githubRepo || !githubRepo.includes('/')) return null;
@@ -1847,7 +1847,7 @@ function EditorLayoutContent({
     return { owner: owner!, repo: repo! };
   }, [githubRepo]);
 
-  const explorerContext = useMemo<PanelContextValue<FileCityExplorerPanelContext>>(() => {
+  const explorerContext = useMemo<PanelContextValue<FileCitySequenceExplorerPanelContext>>(() => {
     const nullSlice = <T,>(name: string) => ({
       scope: 'repository' as const,
       name,
@@ -1880,7 +1880,7 @@ function EditorLayoutContent({
     };
   }, [context, activeSequencePayload, sequenceRepoSplit]);
 
-  const explorerActions = useMemo<FileCityExplorerPanelActions>(() => ({
+  const explorerActions = useMemo<FileCitySequenceExplorerPanelActions>(() => ({
     ...actions,
     openFile: (filePath: string, _line?: number) => {
       // Host's openFile is single-arg; line navigation isn't wired yet.
@@ -2010,7 +2010,7 @@ function EditorLayoutContent({
       icon: <Map size={16} />,
       content: (
         <div className="h-full w-full overflow-hidden">
-          <FileCityExplorerPanel
+          <FileCitySequenceExplorerPanel
             context={explorerContext}
             actions={explorerActions}
             events={events}

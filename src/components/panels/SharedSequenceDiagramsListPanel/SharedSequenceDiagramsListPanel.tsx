@@ -4,7 +4,7 @@
  * Web-ade port of the desktop's SequenceDiagramsPanel — shared-section only.
  * Lists payloads stored under sequence-diagrams/{owner}/{repo}/ and, when
  * the user activates a row, hands the hydrated payload back via
- * `onActivate` so the host can drop it into FileCityExplorerPanel's
+ * `onActivate` so the host can drop it into FileCitySequenceExplorerPanel's
  * `sequenceDiagram` slice.
  */
 
