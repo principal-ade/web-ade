@@ -99,7 +99,9 @@ export async function POST(request: NextRequest) {
     };
 
     await updateIndex(owner, repo, (data) => {
-      const next = [...data.entries, entry];
+      // Replace any existing entry with the same id (republish) so we
+      // don't accumulate duplicates.
+      const next = [...data.entries.filter((e) => e.id !== id), entry];
       // Soft cap: prune oldest by updatedAt when over the limit.
       if (next.length > MAX_DIAGRAMS_PER_REPO) {
         next.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
