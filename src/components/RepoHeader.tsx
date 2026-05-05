@@ -346,7 +346,7 @@ export const RepoHeader: React.FC<RepoHeaderProps> = ({
         {/* Repository Name */}
         <div style={{ marginBottom: spacing.sm }}>
           <a
-            href={`/${repo.owner.login}?project=${repo.name}`}
+            href={`/${repo.owner.login}/${repo.name}`}
             target="_blank"
             rel="noopener noreferrer"
             style={{
@@ -374,16 +374,29 @@ export const RepoHeader: React.FC<RepoHeaderProps> = ({
               {repo.name}
             </h2>
           </a>
-          <div
+          <a
+            href={`/${repo.owner.login}`}
+            target="_blank"
+            rel="noopener noreferrer"
             style={{
+              display: 'inline-block',
               fontSize: theme.fontSizes[1],
               fontFamily: theme.fonts?.body,
               color: theme.colors.textMuted,
               marginTop: spacing.xs,
+              textDecoration: 'none',
+              cursor: 'pointer',
+              transition: 'color 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = theme.colors.text;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = theme.colors.textMuted;
             }}
           >
             {repo.owner.login}
-          </div>
+          </a>
         </div>
 
         {/* Description */}
