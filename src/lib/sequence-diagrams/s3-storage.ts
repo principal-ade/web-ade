@@ -4,10 +4,12 @@
  * Layout:
  *   sequence-diagrams/{owner}/{repo}/index.json   - per-repo manifest (ETag-locked)
  *   sequence-diagrams/{owner}/{repo}/{id}.json    - per-payload object
+ *   sequence-diagrams/_by-id/{id}.json            - id → {owner, repo} pointer
  *
  * The manifest is updated under optimistic-locking with retries (mirrors
  * starred-collections). Per-payload objects are id-scoped and don't need
- * locking.
+ * locking. The by-id pointer lets share links resolve a trail without
+ * carrying owner/repo in the URL.
  */
 
 import {
@@ -55,6 +57,15 @@ export function buildPayloadKey(
   id: string
 ): string {
   return `${repoPrefix(owner, repo)}/${id}.json`;
+}
+
+export function buildIdPointerKey(id: string): string {
+  return `${S3_PREFIX}/_by-id/${id}.json`;
+}
+
+interface IdPointer {
+  owner: string;
+  repo: string;
 }
 
 function isNoSuchKey(error: unknown): boolean {
@@ -331,4 +342,89 @@ export function findIndexEntry(
   id: string
 ): SharedSequenceDiagramIndexEntry | undefined {
   return index.entries.find((e) => e.id === id);
+}
+
+// ============================================================================
+// Id pointer (for repo-less share links: /trail/{id})
+// ============================================================================
+
+export async function getIdPointer(id: string): Promise<IdPointer | null> {
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: buildIdPointerKey(id),
+      })
+    );
+
+    const body = await response.Body?.transformToString();
+    if (!body) return null;
+
+    const parsed = JSON.parse(body) as Partial<IdPointer>;
+    if (typeof parsed.owner !== 'string' || typeof parsed.repo !== 'string') {
+      return null;
+    }
+    return { owner: parsed.owner, repo: parsed.repo };
+  } catch (error: unknown) {
+    if (isNoSuchKey(error)) return null;
+
+    console.error('[SequenceDiagrams] Get id pointer failed:', {
+      id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new SequenceDiagramShareError(
+      'Failed to retrieve diagram pointer',
+      500,
+      ShareErrorCodes.S3_ERROR
+    );
+  }
+}
+
+export async function putIdPointer(
+  owner: string,
+  repo: string,
+  id: string
+): Promise<void> {
+  try {
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: buildIdPointerKey(id),
+        Body: JSON.stringify({ owner, repo } satisfies IdPointer),
+        ContentType: 'application/json',
+        CacheControl: PAYLOAD_CACHE_CONTROL,
+      })
+    );
+  } catch (error: unknown) {
+    console.error('[SequenceDiagrams] Put id pointer failed:', {
+      owner,
+      repo,
+      id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new SequenceDiagramShareError(
+      'Failed to save diagram pointer',
+      500,
+      ShareErrorCodes.S3_ERROR
+    );
+  }
+}
+
+export async function deleteIdPointer(id: string): Promise<void> {
+  try {
+    await s3Client.send(
+      new DeleteObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: buildIdPointerKey(id),
+      })
+    );
+  } catch (error) {
+    // Pointer deletion is best-effort: a stale pointer 404s on the next
+    // payload fetch, which the route handles. Don't fail the user-facing
+    // delete just because the pointer cleanup failed.
+    console.error('[SequenceDiagrams] Delete id pointer failed:', {
+      id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }

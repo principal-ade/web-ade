@@ -12,6 +12,7 @@ import {
   getGitHubUserId,
 } from '@/lib/auth/request';
 import {
+  putIdPointer,
   putPayload,
   updateIndex,
 } from '@/lib/sequence-diagrams/s3-storage';
@@ -82,6 +83,7 @@ export async function POST(request: NextRequest) {
     const summary = summarizePayload(payload);
 
     const { sizeBytes } = await putPayload(owner, repo, id, payload);
+    await putIdPointer(owner, repo, id);
 
     const entry: SharedSequenceDiagramIndexEntry = {
       id,

@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGitHubToken, getGitHubUserId } from '@/lib/auth/request';
 import {
+  deleteIdPointer,
   deletePayload,
   findIndexEntry,
+  getIdPointer,
   getIndex,
   getPayload,
+  putIdPointer,
   updateIndex,
 } from '@/lib/sequence-diagrams/s3-storage';
 import { validateOwnerRepo } from '@/lib/sequence-diagrams/validation';
@@ -64,6 +67,27 @@ export async function GET(_request: NextRequest, { params }: Params) {
       );
     }
 
+    // Lazy backfill: trails created before the by-id pointer existed have
+    // no entry under _by-id/. Now that we've confirmed the payload, write
+    // one if missing so future /trail/{id} share links resolve.
+    try {
+      const pointer = await getIdPointer(id);
+      if (!pointer) {
+        await putIdPointer(owner, repo, id);
+      }
+    } catch (backfillError) {
+      // Backfill is opportunistic — never fail the read because of it.
+      console.warn('[SequenceDiagrams] Pointer backfill failed:', {
+        owner,
+        repo,
+        id,
+        error:
+          backfillError instanceof Error
+            ? backfillError.message
+            : String(backfillError),
+      });
+    }
+
     return NextResponse.json({ entry, payload });
   } catch (error) {
     return errorResponse(error, 'Failed to retrieve sequence diagram');
@@ -118,6 +142,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     }
 
     await deletePayload(owner, repo, id);
+    await deleteIdPointer(id);
     await updateIndex(owner, repo, (data) => ({
       ...data,
       entries: data.entries.filter((e) => e.id !== id),
