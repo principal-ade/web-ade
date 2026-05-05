@@ -163,11 +163,10 @@ export const layoutConfigs: LayoutConfig[] = [
     layout: {
       left: 'sequence-diagrams-list',
       middle: 'file-city-explorer',
-      right: 'file-city',
     },
     collapsed: {
       left: false,
-      right: true,
+      right: false,
     },
   },
   {

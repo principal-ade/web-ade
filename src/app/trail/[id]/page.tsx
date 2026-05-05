@@ -11,7 +11,7 @@
 
 import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   PanelEventBus,
@@ -105,13 +105,49 @@ function TrailErrorView({ message }: { message: string }) {
   );
 }
 
+let __trailViewerInstanceCounter = 0;
+let __trailPageInstanceCounter = 0;
+
 function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
   const { theme } = useTheme();
-  const events = useMemo<PanelEventEmitter>(() => new PanelEventBus(), []);
+  const instanceIdRef = useRef<number | null>(null);
+  if (instanceIdRef.current === null) {
+    instanceIdRef.current = ++__trailViewerInstanceCounter;
+  }
+  const renderCountRef = useRef(0);
+  renderCountRef.current += 1;
+  console.log(
+    `[trail] TrailViewer render #${renderCountRef.current} (instance ${instanceIdRef.current})`,
+    {
+      ownerRepo: `${owner}/${repo}`,
+      payloadId: payload.id,
+      fileTreeRef: fileTree,
+    },
+  );
+  useEffect(() => {
+    console.log(
+      `[trail] TrailViewer MOUNTED (instance ${instanceIdRef.current})`,
+    );
+    return () => {
+      console.log(
+        `[trail] TrailViewer UNMOUNTED (instance ${instanceIdRef.current})`,
+      );
+    };
+  }, []);
+
+  const events = useMemo<PanelEventEmitter>(() => {
+    console.log(
+      `[trail] TrailViewer events useMemo() — new PanelEventBus (instance ${instanceIdRef.current})`,
+    );
+    return new PanelEventBus();
+  }, []);
 
   const context = useMemo<
     PanelContextValue<FileCitySequenceExplorerPanelContext>
   >(() => {
+    console.log(
+      `[trail] TrailViewer context useMemo() recomputed (instance ${instanceIdRef.current}) — fileTree/owner/repo/payload identity changed`,
+    );
     const fileTreeSlice: DataSlice<FileTree> = {
       scope: 'repository',
       name: 'fileTree',
@@ -243,11 +279,38 @@ export default function TrailPage() {
   const params = useParams();
   const id = params?.id as string | undefined;
 
+  const pageInstanceIdRef = useRef<number | null>(null);
+  if (pageInstanceIdRef.current === null) {
+    pageInstanceIdRef.current = ++__trailPageInstanceCounter;
+  }
+  const pageRenderCountRef = useRef(0);
+  pageRenderCountRef.current += 1;
+  console.log(
+    `[trail] TrailPage render #${pageRenderCountRef.current} (instance ${pageInstanceIdRef.current})`,
+    { id },
+  );
+  useEffect(() => {
+    console.log(
+      `[trail] TrailPage MOUNTED (instance ${pageInstanceIdRef.current})`,
+    );
+    return () => {
+      console.log(
+        `[trail] TrailPage UNMOUNTED (instance ${pageInstanceIdRef.current})`,
+      );
+    };
+  }, []);
+
   const [data, setData] = useState<TrailContext | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
+
+    const effectRunId = Math.random().toString(36).slice(2, 8);
+    console.log(
+      `[trail] load-effect START (instance ${pageInstanceIdRef.current}, run ${effectRunId})`,
+      { id },
+    );
 
     let cancelled = false;
 
@@ -282,7 +345,16 @@ export default function TrailPage() {
           branch: 'main',
         });
 
-        if (cancelled) return;
+        if (cancelled) {
+          console.log(
+            `[trail] load-effect CANCELLED before setData (run ${effectRunId})`,
+          );
+          return;
+        }
+        console.log(
+          `[trail] load-effect setData (run ${effectRunId})`,
+          { ownerRepo: `${trail.owner}/${trail.repo}`, payloadId: trail.payload.id },
+        );
         setData({
           owner: trail.owner,
           repo: trail.repo,
@@ -298,6 +370,9 @@ export default function TrailPage() {
     load();
     return () => {
       cancelled = true;
+      console.log(
+        `[trail] load-effect CLEANUP (instance ${pageInstanceIdRef.current}, run ${effectRunId})`,
+      );
     };
   }, [id]);
 
