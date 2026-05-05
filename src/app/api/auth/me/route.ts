@@ -70,10 +70,7 @@ export async function GET() {
         reason: 'no_token',
       });
 
-      return NextResponse.json(
-        { error: 'Not authenticated', isAuthenticated: false },
-        { status: 401 }
-      );
+      return NextResponse.json({ isAuthenticated: false, user: null });
     }
 
     // Fetch user profile from GitHub API
@@ -130,7 +127,7 @@ export async function GET() {
         }
       }
 
-      // If we still don't have a valid response, return 401
+      // If we still don't have a valid response, treat as unauthenticated
       if (!response.ok) {
         console.error('GitHub API error after sync attempt:', response.status, response.statusText);
 
@@ -138,10 +135,7 @@ export async function GET() {
           reason: 'invalid_token_after_sync',
         });
 
-        return NextResponse.json(
-          { error: 'Invalid token', isAuthenticated: false, needsSync: true },
-          { status: 401 }
-        );
+        return NextResponse.json({ isAuthenticated: false, user: null, needsSync: true });
       }
     }
 

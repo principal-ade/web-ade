@@ -90,22 +90,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUser = useCallback(async () => {
     try {
       const response = await fetch('/api/auth/me');
+      const data = response.ok ? await response.json() : null;
 
-      if (response.ok) {
-        const data = await response.json();
-        setState({
-          user: data.user,
-          isAuthenticated: true,
-          isLoading: false,
-        });
-      } else {
-        // Not authenticated
-        setState({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-        });
-      }
+      setState({
+        user: data?.user ?? null,
+        isAuthenticated: !!data?.isAuthenticated,
+        isLoading: false,
+      });
     } catch (error) {
       console.error('Failed to fetch user:', error);
       setState({
