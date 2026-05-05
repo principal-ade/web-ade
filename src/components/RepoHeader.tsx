@@ -389,7 +389,7 @@ export const RepoHeader: React.FC<RepoHeaderProps> = ({
               transition: 'color 0.15s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.color = theme.colors.text;
+              e.currentTarget.style.color = theme.colors.primary;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.color = theme.colors.textMuted;
