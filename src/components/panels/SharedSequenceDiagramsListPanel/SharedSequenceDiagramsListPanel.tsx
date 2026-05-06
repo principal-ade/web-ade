@@ -161,7 +161,11 @@ export const SharedSequenceDiagramsListPanel: React.FC<
               entry={entry}
               isActive={entry.id === activeId}
               onActivate={handleActivate}
-              sharePath={`/trail/${entry.id}`}
+              sharePath={
+                owner && repo
+                  ? `/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}?walkthrough=${encodeURIComponent(entry.id)}`
+                  : null
+              }
             />
           ))}
       </div>
