@@ -1,10 +1,10 @@
 /**
  * Trail by id — repo-less share-link resolver.
  *
- * Reads the `_by-id/{id}.json` pointer to find the owning {owner, repo},
- * then returns the same `{ entry, payload }` shape as the per-repo
- * `/api/sequence-diagrams/{owner}/{repo}/{id}` endpoint. This is what the
- * `/trail/{id}` page consumes.
+ * Reads the `trails/_by-id/{id}.json` pointer to find the owning
+ * {owner, repo}, then returns the same `{ entry, payload }` shape as the
+ * per-repo `/api/trails/{owner}/{repo}/{id}` endpoint plus the resolved
+ * owner/repo. This is what the `/trail/{id}` page consumes.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -14,13 +14,10 @@ import {
   getIdPointer,
   getIndex,
   getPayload,
-} from '@/lib/sequence-diagrams/s3-storage';
-import { validateOwnerRepo } from '@/lib/sequence-diagrams/validation';
-import { checkRepoAccess } from '@/lib/sequence-diagrams/github-access';
-import {
-  SequenceDiagramShareError,
-  ShareErrorCodes,
-} from '@/lib/sequence-diagrams/types';
+} from '@/lib/trails/s3-storage';
+import { validateOwnerRepo } from '@/lib/trails/validation';
+import { checkRepoAccess } from '@/lib/trails/github-access';
+import { TrailShareError, ShareErrorCodes } from '@/lib/trails/types';
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -77,7 +74,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
     return NextResponse.json({ owner, repo, entry, payload });
   } catch (error) {
-    if (error instanceof SequenceDiagramShareError) {
+    if (error instanceof TrailShareError) {
       return NextResponse.json(
         { error: error.message, code: error.code },
         { status: error.statusCode }

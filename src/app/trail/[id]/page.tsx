@@ -1,17 +1,22 @@
 'use client';
 
 /**
- * Trail page — standalone viewer for a shared sequence diagram.
+ * Trail page — standalone viewer for a shared trail.
  *
- * Resolves the trail by id (no owner/repo in the URL) via /api/trails/by-id/{id},
- * then renders only FileCitySequenceExplorerPanel with the minimum slices
- * the panel requires. Intentionally avoids RepositoryPageProvider so a
- * shared trail link doesn't drag in the editor's full data graph.
+ * Resolves the trail by id (no owner/repo in the URL) via
+ * /api/trails/by-id/{id}, then renders FileCityTrailExplorerPanel with
+ * the minimum context the panel requires. Intentionally avoids
+ * RepositoryPageProvider so a shared trail link doesn't drag in the
+ * editor's full data graph.
+ *
+ * The trail medium ships parallel to sequence diagrams — this page only
+ * handles trails. Sequence diagrams are still served from
+ * /d/{owner}/{repo}/{id} via the existing sequence-diagram surface.
  */
 
 import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   PanelEventBus,
@@ -26,19 +31,19 @@ import {
 import { Logo } from '@principal-ai/logo-component';
 import { trpc } from '@/lib/trpc/client';
 import type {
-  FileCitySequenceExplorerPanelActions,
-  FileCitySequenceExplorerPanelContext,
+  FileCityTrailExplorerPanelActions,
+  FileCityTrailExplorerPanelContext,
+  FileCityTrailExplorerRepository,
 } from '@industry-theme/file-city-panel';
 import type {
-  SequenceDiagramPayload,
-  SharedSequenceDiagramIndexEntry,
-} from '@/lib/sequence-diagrams/types';
-import type { GitHubCommitDetailResponse } from '@/types/api';
+  TrailPayload,
+  SharedTrailIndexEntry,
+} from '@/lib/trails/types';
 
-const FileCitySequenceExplorerPanel = dynamic(
+const FileCityTrailExplorerPanel = dynamic(
   () =>
     import('@industry-theme/file-city-panel').then(
-      (m) => m.FileCitySequenceExplorerPanel,
+      (m) => m.FileCityTrailExplorerPanel,
     ),
   { ssr: false },
 );
@@ -46,14 +51,14 @@ const FileCitySequenceExplorerPanel = dynamic(
 interface TrailResponse {
   owner: string;
   repo: string;
-  entry: SharedSequenceDiagramIndexEntry;
-  payload: SequenceDiagramPayload;
+  entry: SharedTrailIndexEntry;
+  payload: TrailPayload;
 }
 
 interface TrailContext {
   owner: string;
   repo: string;
-  payload: SequenceDiagramPayload;
+  payload: TrailPayload;
   fileTree: FileTree;
 }
 
@@ -105,49 +110,23 @@ function TrailErrorView({ message }: { message: string }) {
   );
 }
 
-let __trailViewerInstanceCounter = 0;
-let __trailPageInstanceCounter = 0;
-
 function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
   const { theme } = useTheme();
-  const instanceIdRef = useRef<number | null>(null);
-  if (instanceIdRef.current === null) {
-    instanceIdRef.current = ++__trailViewerInstanceCounter;
-  }
-  const renderCountRef = useRef(0);
-  renderCountRef.current += 1;
-  console.log(
-    `[trail] TrailViewer render #${renderCountRef.current} (instance ${instanceIdRef.current})`,
-    {
-      ownerRepo: `${owner}/${repo}`,
-      payloadId: payload.id,
-      fileTreeRef: fileTree,
-    },
-  );
-  useEffect(() => {
-    console.log(
-      `[trail] TrailViewer MOUNTED (instance ${instanceIdRef.current})`,
-    );
-    return () => {
-      console.log(
-        `[trail] TrailViewer UNMOUNTED (instance ${instanceIdRef.current})`,
-      );
-    };
-  }, []);
 
-  const events = useMemo<PanelEventEmitter>(() => {
-    console.log(
-      `[trail] TrailViewer events useMemo() — new PanelEventBus (instance ${instanceIdRef.current})`,
-    );
-    return new PanelEventBus();
-  }, []);
+  const events = useMemo<PanelEventEmitter>(() => new PanelEventBus(), []);
+
+  const repository = useMemo<FileCityTrailExplorerRepository>(() => {
+    // For multi-repo trails the panel filters markers by `id`. Single-repo
+    // trails carry no `marker.repo`, so any id passes the filter — we
+    // mirror the payload's first registered repo when present and fall
+    // back to "owner/repo" as a stable synthetic id otherwise.
+    const id = payload.repos?.[0]?.id ?? `${owner}/${repo}`;
+    return { id, owner, name: repo };
+  }, [owner, repo, payload]);
 
   const context = useMemo<
-    PanelContextValue<FileCitySequenceExplorerPanelContext>
+    PanelContextValue<FileCityTrailExplorerPanelContext>
   >(() => {
-    console.log(
-      `[trail] TrailViewer context useMemo() recomputed (instance ${instanceIdRef.current}) — fileTree/owner/repo/payload identity changed`,
-    );
     const fileTreeSlice: DataSlice<FileTree> = {
       scope: 'repository',
       name: 'fileTree',
@@ -157,26 +136,24 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
       refresh: async () => {},
     };
 
+    const trailSlice: DataSlice<TrailPayload | null> = {
+      scope: 'repository',
+      name: 'trail',
+      data: payload,
+      loading: false,
+      error: null,
+      refresh: async () => {},
+    };
+
     return {
       currentScope: { type: 'repository' },
       refresh: async () => {},
       fileTree: fileTreeSlice,
-      gitStatusWithFiles: nullSlice('gitStatusWithFiles'),
       lineCounts: nullSlice('lineCounts'),
-      latestCommit: nullSlice('latestCommit'),
-      scopeWorkspace: nullSlice('scopeWorkspace'),
-      areaWorkspace: nullSlice('areaWorkspace'),
-      sequenceDiagram: {
-        scope: 'repository',
-        name: 'sequenceDiagram',
-        data: payload,
-        loading: false,
-        error: null,
-        refresh: async () => {},
-      },
-      repository: { owner, name: repo },
+      trail: trailSlice,
+      repository,
     };
-  }, [fileTree, owner, repo, payload]);
+  }, [fileTree, payload, repository]);
 
   const readFile = useCallback(
     async (path: string): Promise<string> => {
@@ -210,55 +187,23 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
     [owner, repo],
   );
 
-  const getCommitDiff = useCallback(
-    async (commitHash: string): Promise<string> => {
-      const res = await fetch(
-        `/api/github/repo/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits/${encodeURIComponent(commitHash)}`,
-      );
-      if (!res.ok) {
-        throw new Error(`Failed to fetch commit ${commitHash}: ${res.statusText}`);
-      }
-      const data: GitHubCommitDetailResponse = await res.json();
-      return (data.files ?? [])
-        .filter((f) => typeof f.patch === 'string')
-        .map((f) => {
-          const oldPath = f.previous_filename ?? f.filename;
-          const newPath = f.filename;
-          return [
-            `diff --git a/${oldPath} b/${newPath}`,
-            `--- a/${oldPath}`,
-            `+++ b/${newPath}`,
-            f.patch,
-          ].join('\n');
-        })
-        .join('\n');
-    },
-    [owner, repo],
-  );
-
-  const actions = useMemo<FileCitySequenceExplorerPanelActions>(
+  const actions = useMemo<FileCityTrailExplorerPanelActions>(
     () => ({
       openFile: () => {
         // Trail viewer has no editor surface to open into; opening a file
         // would have nowhere to render. Intentional no-op.
       },
       readFile,
-      getCommitDiff,
-      getWorkingTreeDiff: async () => '',
-      addToScope: async () => {
-        throw new Error('Scopes are not available in the trail viewer.');
-      },
-      addArea: async () => {
-        throw new Error('Areas are not available in the trail viewer.');
-      },
-      addPathToArea: async () => {
-        throw new Error('Areas are not available in the trail viewer.');
-      },
-      createSequenceNote: async () => null,
-      updateSequenceNote: async () => null,
-      deleteSequenceNote: async () => {},
+      // Trail-side note persistence has no host endpoint yet (notes are
+      // host-private per the trail design). The shared viewer can't
+      // write notes back into the read-only S3 payload, so all three
+      // resolve as no-ops — the panel renders existing notes (if any
+      // were authored before publish) but new notes can't be saved.
+      createTrailNote: async () => null,
+      updateTrailNote: async () => null,
+      deleteTrailNote: async () => {},
     }),
-    [readFile, getCommitDiff],
+    [readFile],
   );
 
   return (
@@ -266,7 +211,7 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
       className="w-screen overflow-hidden"
       style={{ background: theme.colors.background, height: '100vh' }}
     >
-      <FileCitySequenceExplorerPanel
+      <FileCityTrailExplorerPanel
         context={context}
         actions={actions}
         events={events}
@@ -279,38 +224,11 @@ export default function TrailPage() {
   const params = useParams();
   const id = params?.id as string | undefined;
 
-  const pageInstanceIdRef = useRef<number | null>(null);
-  if (pageInstanceIdRef.current === null) {
-    pageInstanceIdRef.current = ++__trailPageInstanceCounter;
-  }
-  const pageRenderCountRef = useRef(0);
-  pageRenderCountRef.current += 1;
-  console.log(
-    `[trail] TrailPage render #${pageRenderCountRef.current} (instance ${pageInstanceIdRef.current})`,
-    { id },
-  );
-  useEffect(() => {
-    console.log(
-      `[trail] TrailPage MOUNTED (instance ${pageInstanceIdRef.current})`,
-    );
-    return () => {
-      console.log(
-        `[trail] TrailPage UNMOUNTED (instance ${pageInstanceIdRef.current})`,
-      );
-    };
-  }, []);
-
   const [data, setData] = useState<TrailContext | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
-
-    const effectRunId = Math.random().toString(36).slice(2, 8);
-    console.log(
-      `[trail] load-effect START (instance ${pageInstanceIdRef.current}, run ${effectRunId})`,
-      { id },
-    );
 
     let cancelled = false;
 
@@ -345,16 +263,7 @@ export default function TrailPage() {
           branch: 'main',
         });
 
-        if (cancelled) {
-          console.log(
-            `[trail] load-effect CANCELLED before setData (run ${effectRunId})`,
-          );
-          return;
-        }
-        console.log(
-          `[trail] load-effect setData (run ${effectRunId})`,
-          { ownerRepo: `${trail.owner}/${trail.repo}`, payloadId: trail.payload.id },
-        );
+        if (cancelled) return;
         setData({
           owner: trail.owner,
           repo: trail.repo,
@@ -370,9 +279,6 @@ export default function TrailPage() {
     load();
     return () => {
       cancelled = true;
-      console.log(
-        `[trail] load-effect CLEANUP (instance ${pageInstanceIdRef.current}, run ${effectRunId})`,
-      );
     };
   }, [id]);
 
