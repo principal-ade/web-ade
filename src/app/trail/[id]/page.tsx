@@ -3,7 +3,7 @@
 /**
  * Trail page — standalone viewer for a shared sequence diagram.
  *
- * Resolves the trail by id (no owner/repo in the URL) via /api/trails/{id},
+ * Resolves the trail by id (no owner/repo in the URL) via /api/trails/by-id/{id},
  * then renders only FileCitySequenceExplorerPanel with the minimum slices
  * the panel requires. Intentionally avoids RepositoryPageProvider so a
  * shared trail link doesn't drag in the editor's full data graph.
@@ -316,7 +316,7 @@ export default function TrailPage() {
 
     async function load() {
       try {
-        const res = await fetch(`/api/trails/${encodeURIComponent(id!)}`);
+        const res = await fetch(`/api/trails/by-id/${encodeURIComponent(id!)}`);
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(
