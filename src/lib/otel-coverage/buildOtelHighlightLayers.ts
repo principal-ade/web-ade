@@ -1,12 +1,17 @@
 /**
  * OTEL Canvas Coverage Highlight Layers
  *
- * Converts OTEL canvas node references (pv.otel.files) into HighlightLayers
+ * Converts OTEL event node metadata (otel.files) into HighlightLayers
  * for visualization in the File City panel.
  */
 
 import type { HighlightLayer } from '@industry-theme/file-city-panel';
-import type { ExtendedCanvas, ExtendedCanvasNode } from '@principal-ai/principal-view-core';
+import {
+  isOtelEventNode,
+  type ExtendedCanvas,
+  type OtelEventNode,
+  type PVNodeStatus,
+} from '@principal-ai/principal-view-core';
 
 export interface OtelCoverageOptions {
   /** Include draft nodes (default: false) */
@@ -22,49 +27,26 @@ export interface ParsedOtelCanvas {
   content: ExtendedCanvas;
 }
 
-/**
- * Extract file paths from a canvas node
- * Checks in order of preference:
- * 1. pv.otel.files (current standard)
- * 2. pv.references (for file references)
- * 3. pv.sources (deprecated, for backward compatibility)
- */
-function getOtelFiles(node: ExtendedCanvasNode): string[] {
-  // Primary: pv.otel.files
-  if (node.pv?.otel?.files && node.pv.otel.files.length > 0) {
-    return node.pv.otel.files;
+function getOtelFiles(node: OtelEventNode): string[] {
+  if (node.otel?.files && node.otel.files.length > 0) {
+    return node.otel.files;
   }
 
-  // Secondary: pv.references (filter to file paths only)
-  if (node.pv?.references && node.pv.references.length > 0) {
-    // Filter out URLs and package names, keep only file paths
-    return node.pv.references.filter(
+  if (node.otel?.references && node.otel.references.length > 0) {
+    return node.otel.references.filter(
       (ref) => !ref.startsWith('http') && !ref.startsWith('@') && (ref.includes('/') || ref.endsWith('.ts') || ref.endsWith('.tsx'))
     );
-  }
-
-  // Deprecated: pv.sources (for backward compatibility)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sources = (node.pv as any)?.sources;
-  if (sources && Array.isArray(sources) && sources.length > 0) {
-    return sources;
   }
 
   return [];
 }
 
-/**
- * Get the implementation status of a node
- */
-function getNodeStatus(node: ExtendedCanvasNode): 'draft' | 'approved' | 'implemented' | undefined {
-  return node.pv?.status;
+function getNodeStatus(node: OtelEventNode): PVNodeStatus | undefined {
+  return node.otel?.status;
 }
 
-/**
- * Check if a node has an event definition (inline or reference)
- */
-function hasEvent(node: ExtendedCanvasNode): boolean {
-  return !!(node.pv?.event?.name || node.pv?.eventRef);
+function hasEvent(node: OtelEventNode): boolean {
+  return !!(node.event?.name || node.eventRef);
 }
 
 /**
@@ -94,7 +76,7 @@ export function buildOtelHighlightLayers(
     const nodes = canvas.content.nodes || [];
 
     for (const node of nodes) {
-      // Only process nodes with events (telemetry points)
+      if (!isOtelEventNode(node)) continue;
       if (!hasEvent(node)) continue;
 
       const status = getNodeStatus(node);
@@ -182,6 +164,7 @@ export function countOtelCoverageFiles(canvases: ParsedOtelCanvas[]): {
     const nodes = canvas.content.nodes || [];
 
     for (const node of nodes) {
+      if (!isOtelEventNode(node)) continue;
       if (!hasEvent(node)) continue;
 
       const status = getNodeStatus(node);
