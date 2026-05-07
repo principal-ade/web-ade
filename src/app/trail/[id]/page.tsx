@@ -29,11 +29,11 @@ import {
   GitFileTreeBuilder,
   type FileTree,
 } from '@principal-ai/repository-abstraction';
-import { Logo } from '@principal-ai/logo-component';
 import { MapPinOff, AlertTriangle, Github } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { PrivatePropertySign } from './PrivatePropertySign';
+import { TrailLoadingAnimation } from '@/components/trail/TrailLoadingAnimation';
 import type {
   FileCityTrailExplorerPanelActions,
   FileCityTrailExplorerPanelContext,
@@ -79,21 +79,14 @@ function nullSlice<T>(name: string): DataSlice<T | null> {
   };
 }
 
-function CenteredLogo() {
+function TrailLoadingScreen() {
   const { theme } = useTheme();
   return (
     <div
       className="w-screen flex items-center justify-center overflow-hidden"
       style={{ background: theme.colors.background, height: '100vh' }}
     >
-      <Logo
-        width={64}
-        height={64}
-        color={theme.colors.accent}
-        particleColor={theme.colors.primary}
-        letterColor={theme.colors.text}
-        opacity={0.9}
-      />
+      <TrailLoadingAnimation />
     </div>
   );
 }
@@ -383,7 +376,7 @@ export default function TrailPage() {
 
   if (error)
     return <TrailErrorView message={error.message} code={error.code} />;
-  if (!data) return <CenteredLogo />;
+  if (!data) return <TrailLoadingScreen />;
   return (
     <TrailViewer
       owner={data.owner}
