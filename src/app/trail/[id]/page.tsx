@@ -188,6 +188,7 @@ function TrailErrorView({
 }
 
 function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
+  const trailId = payload.id;
   const { theme } = useTheme();
 
   const events = useMemo<PanelEventEmitter>(() => new PanelEventBus(), []);
@@ -288,7 +289,7 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
       className="w-screen flex flex-col overflow-hidden"
       style={{ background: theme.colors.background, height: '100vh' }}
     >
-      <TrailHeader owner={owner} repo={repo} />
+      <TrailHeader owner={owner} repo={repo} trailId={trailId} />
       <div className="flex-1 min-h-0">
         <FileCityTrailExplorerPanel
           context={context}
