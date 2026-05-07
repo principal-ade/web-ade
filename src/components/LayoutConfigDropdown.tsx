@@ -102,20 +102,6 @@ export const layoutConfigs: LayoutConfig[] = [
     hidden: true,
   },
   {
-    id: 'kanban',
-    name: 'Triaged',
-    layout: {
-      left: 'kanban',
-      middle: 'task-detail',
-      right: 'github-messages',
-    },
-    collapsed: {
-      left: false,
-      right: true,
-    },
-    hidden: true,
-  },
-  {
     id: 'git-history',
     name: 'Change Log',
     layout: {

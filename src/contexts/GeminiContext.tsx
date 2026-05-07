@@ -245,7 +245,7 @@ export function GeminiProvider({
         const panel = args.panel as string;
 
         const validSlots = ['left', 'middle', 'right'];
-        const validPanels = ['docs', 'ai-chat', 'markdown-viewer', 'file-city', 'kanban', 'terminal', 'sessions', 'visual-validation', 'canvas-editor', 'packages'];
+        const validPanels = ['docs', 'ai-chat', 'markdown-viewer', 'file-city', 'terminal', 'sessions', 'visual-validation', 'canvas-editor', 'packages'];
 
         if (!slot || !validSlots.includes(slot)) {
           return {

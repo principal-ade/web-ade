@@ -40,7 +40,6 @@ import { useLocalFileSystem } from '@/contexts/LocalFileSystemContext';
 import type { FileInfo } from '@principal-ai/repository-abstraction';
 import type { WorkflowTemplate, ExtendedCanvas, RegisteredTrace } from '@principal-ai/principal-view-core';
 import { buildStoryboardContext, type StoryboardReference } from '@principal-ai/principal-view-core';
-import { parseTaskMarkdown, serializeTaskMarkdown, DEFAULT_TASK_STATUSES } from '@backlog-md/core';
 import { markTourAsShown } from '@/lib/tourStorage';
 import { trpc } from '@/lib/trpc/client';
 import type { OpenWorkflowScenariosPayload } from '@/types/panel-events';
@@ -50,7 +49,6 @@ import { withSpanSync } from '@/lib/telemetry';
 import dynamic from 'next/dynamic';
 import type { MarkdownPanelProps } from '@industry-theme/markdown-panels';
 import { panels as alexandriaDocsPanels } from '@industry-theme/alexandria-docs-panel';
-import { panels as backlogmdPanels } from '@industry-theme/backlogmd-kanban-panel';
 import { panels as principalViewPanels, TraceDetailsPanel } from '@industry-theme/principal-view-panels';
 import { panels as codeQualityPanels } from '@principal-ade/code-quality-panels';
 import { panels as repositoryCompositionPanels, PackageCompositionPanel } from '@industry-theme/repository-composition-panels';
@@ -59,8 +57,8 @@ import { panels as githubPanels } from '@industry-theme/github-panels';
 import { panels as fileEditingPanels } from '@industry-theme/file-editing-panels';
 import { panels as agentPanels } from '@industry-theme/agent-panels';
 import {
-  BookOpen, MessageSquare, FileText, Map, LayoutGrid,
-  CheckSquare, Terminal, Users, Compass, Shield, Bug,
+  BookOpen, MessageSquare, FileText, Map,
+  Terminal, Users, Compass, Shield, Bug,
   GitBranch, History, GitCommit, Package,
   Zap, File, Edit, Activity, Workflow
 } from 'lucide-react';
@@ -90,8 +88,6 @@ const FileCitySequenceExplorerPanel = dynamic(
 const MarkdownPanelLoader = MarkdownPanel;
 const AlexandriaDocsPanelLoader = alexandriaDocsPanels[0]!.component;
 const FileCityPanelLoader = CodeCityPanel;
-const KanbanPanelLoader = backlogmdPanels[0]!.component;
-const TaskDetailPanelLoader = backlogmdPanels[1]!.component;
 const PrincipalViewPanelLoader = principalViewPanels[0]!.component;
 const QualityHexagonPanelLoader = codeQualityPanels[0]!.component;
 const LensDataDebugPanelLoader = codeQualityPanels[2]!.component;
@@ -115,57 +111,6 @@ const TraceListPanelLoader = principalViewPanels.find(
   (p) => p.metadata?.id === 'principal-ai.trace-list'
 )!.component;
 const TraceDetailsPanelLoader = TraceDetailsPanel;
-
-/**
- * Build the GitHub issue body for a backlog task (without @claude tag)
- * The @claude tag will be added in a separate comment after the task file is updated
- */
-function buildClaudeIssueBody(task: {
-  id: string;
-  title: string;
-  description?: string;
-  priority?: string;
-  labels?: string[];
-  acceptanceCriteria?: Array<{ text: string; checked: boolean }>;
-  implementationPlan?: string;
-  rawContent?: string;
-}): string {
-  const lines: string[] = [];
-
-  lines.push(`## Task: ${task.title}`);
-  lines.push('');
-
-  if (task.priority) {
-    lines.push(`**Priority:** ${task.priority}`);
-    lines.push('');
-  }
-
-  if (task.description) {
-    lines.push('### Description');
-    lines.push(task.description);
-    lines.push('');
-  }
-
-  if (task.acceptanceCriteria && task.acceptanceCriteria.length > 0) {
-    lines.push('### Acceptance Criteria');
-    for (const criterion of task.acceptanceCriteria) {
-      const checkbox = criterion.checked ? '[x]' : '[ ]';
-      lines.push(`- ${checkbox} ${criterion.text}`);
-    }
-    lines.push('');
-  }
-
-  if (task.implementationPlan) {
-    lines.push('### Implementation Plan');
-    lines.push(task.implementationPlan);
-    lines.push('');
-  }
-
-  lines.push('---');
-  lines.push(`*Backlog Task ID: ${task.id}*`);
-
-  return lines.join('\n');
-}
 
 interface EditorLayoutContentProps {
   layout: PanelLayout;
@@ -194,14 +139,6 @@ function EditorLayoutContent({
 }: EditorLayoutContentProps) {
   const { theme } = useTheme();
   const { context, actions, events, selectedColorMode, clearColorMode } = useRepositoryPageProvider();
-
-  // Count triaged items from fileTree (files in backlog/tasks/)
-  const fileTreeSlice = context.fileTree;
-  const triagedCount = useMemo(() => {
-    const allFiles = fileTreeSlice?.data?.allFiles;
-    if (!allFiles) return 0;
-    return allFiles.filter((file: { path: string }) => file.path.includes('backlog/tasks/')).length;
-  }, [fileTreeSlice?.data?.allFiles]);
 
   const { login } = useAuth();
   const { setTheme, setColor, resetColor, resetAllColors } = useGlobalTheme();
@@ -550,7 +487,6 @@ function EditorLayoutContent({
     initialSuggestions: [
       'hide the sidebars',
       'show the AI chat panel',
-      'switch to kanban view',
       '/repo',
       '/login',
     ],
@@ -1205,162 +1141,6 @@ function EditorLayoutContent({
           });
         }
       }),
-      // Handle "Assign to Claude" from kanban panel
-      events.on('task:assign-to-claude', async (event) => {
-        const payload = event.payload as {
-          taskId: string;
-          task: {
-            id: string;
-            title: string;
-            description?: string;
-            priority?: string;
-            labels?: string[];
-            acceptanceCriteria?: Array<{ text: string; checked: boolean }>;
-            implementationPlan?: string;
-            rawContent?: string;
-            filePath?: string;
-            status?: string;
-            references?: string[];
-          };
-        };
-
-        if (!payload?.task || !githubRepo || !githubRepo.includes('/')) {
-          console.error('[EditorLayout] Cannot assign to Claude: missing task or repo');
-          return;
-        }
-
-        const [owner, name] = githubRepo.split('/');
-        const task = payload.task;
-
-        // Build issue body with task details
-        const issueBody = buildClaudeIssueBody(task);
-
-        try {
-          // 1. Create the GitHub issue (without @claude tag)
-          const issueResponse = await fetch(`/api/github/repo/${owner}/${name}/issues`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-              title: `[${task.id}] ${task.title}`,
-              body: issueBody,
-              labels: ['claude-task'],
-            }),
-          });
-
-          if (!issueResponse.ok) {
-            const errorData = await issueResponse.json().catch(() => ({}));
-            throw new Error(errorData.error || `Failed to create issue: ${issueResponse.statusText}`);
-          }
-
-          const { issue } = await issueResponse.json();
-          const issueUrl = issue.html_url as string;
-          const issueNumber = issue.number as number;
-
-          console.log(`[EditorLayout] Created GitHub issue #${issueNumber} for task ${task.id}`);
-
-          // 2. Update task file with issue reference and commit
-          if (task.filePath) {
-            try {
-              // Read current task file content and get SHA
-              const fileResponse = await fetch(
-                `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(task.filePath)}`
-              );
-
-              if (fileResponse.ok) {
-                const fileData = await fileResponse.json();
-                let content = '';
-                if (fileData.content && fileData.encoding === 'base64') {
-                  const binaryString = atob(fileData.content.replace(/\n/g, ''));
-                  const bytes = new Uint8Array(binaryString.length);
-                  for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                  }
-                  content = new TextDecoder('utf-8').decode(bytes);
-                }
-
-                // Parse task, add reference, set status to in-progress, and serialize back
-                const parsedTask = parseTaskMarkdown(content, task.filePath);
-                const existingRefs = parsedTask.references || [];
-                if (!existingRefs.includes(issueUrl)) {
-                  parsedTask.references = [...existingRefs, issueUrl];
-                }
-                // Set status to "In Progress" when assigning to Claude
-                parsedTask.status = DEFAULT_TASK_STATUSES.IN_PROGRESS;
-                const updatedContent = serializeTaskMarkdown(parsedTask);
-
-                // Commit the updated file
-                const commitResponse = await fetch(`/api/github/repo/${owner}/${name}/commit`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  credentials: 'include',
-                  body: JSON.stringify({
-                    files: [{
-                      path: task.filePath,
-                      content: updatedContent,
-                      sha: fileData.sha,
-                    }],
-                    message: `Assign task ${task.id} to Claude (issue #${issueNumber})`,
-                  }),
-                });
-
-                if (!commitResponse.ok) {
-                  console.warn('[EditorLayout] Failed to commit task file update, but issue was created');
-                } else {
-                  console.log(`[EditorLayout] Committed task file update with issue reference`);
-                }
-              }
-            } catch (fileErr) {
-              console.warn('[EditorLayout] Failed to update task file, but issue was created:', fileErr);
-            }
-          }
-
-          // 3. Add @claude comment to trigger the workflow
-          try {
-            const commentResponse = await fetch(`/api/github/repo/${owner}/${name}/issues/${issueNumber}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({
-                comment: '@claude Please work on this task. Follow the acceptance criteria and implementation plan in the issue description.',
-              }),
-            });
-
-            if (!commentResponse.ok) {
-              console.warn('[EditorLayout] Failed to add @claude comment, but issue was created');
-            } else {
-              console.log(`[EditorLayout] Added @claude comment to issue #${issueNumber}`);
-            }
-          } catch (commentErr) {
-            console.warn('[EditorLayout] Failed to add @claude comment:', commentErr);
-          }
-
-          // 4. Emit success event so kanban panel can update UI
-          events.emit({
-            type: 'task:assigned-to-claude',
-            source: 'web-ade',
-            timestamp: Date.now(),
-            payload: {
-              taskId: task.id,
-              issueNumber,
-              issueUrl,
-              issue, // Include full issue object for state updates
-            },
-          });
-
-        } catch (err) {
-          console.error('[EditorLayout] Failed to assign task to Claude:', err);
-          events.emit({
-            type: 'task:assign-to-claude:error',
-            source: 'web-ade',
-            timestamp: Date.now(),
-            payload: {
-              taskId: task.id,
-              error: err instanceof Error ? err.message : 'Failed to assign to Claude',
-            },
-          });
-        }
-      }),
       // Handle "Create Task from Issue" from GitHub issue detail panel
       events.on('issue:create-task', async (event) => {
         const payload = event.payload as {
@@ -1460,130 +1240,6 @@ function EditorLayoutContent({
             payload: {
               issueNumber: issue.number,
               error: err instanceof Error ? err.message : 'Failed to create task',
-            },
-          });
-        }
-      }),
-      // Handle task selection - focus TaskDetailPanel
-      events.on('task:selected', () => {
-        // Emit focus event to the task detail panel
-        events.emit({
-          type: 'panel:focus',
-          source: 'web-ade',
-          timestamp: Date.now(),
-          payload: {
-            panelId: 'task-detail',
-            panelSlot: 'middle', // or wherever the task detail panel is located
-          },
-        });
-      }),
-      // Handle task deletion from TaskDetailPanel
-      events.on('task:delete-requested', async (event) => {
-        const payload = event.payload as {
-          taskId: string;
-          task: {
-            id: string;
-            title: string;
-            filePath?: string;
-          };
-        };
-
-        if (!payload?.task || !githubRepo || !githubRepo.includes('/')) {
-          console.error('[EditorLayout] Cannot delete task: missing task or repo');
-          events.emit({
-            type: 'task:deleted:error',
-            source: 'web-ade',
-            timestamp: Date.now(),
-            payload: {
-              taskId: payload?.taskId,
-              error: 'Missing task data or repository context',
-            },
-          });
-          return;
-        }
-
-        const [owner, name] = githubRepo.split('/');
-        const task = payload.task;
-
-        if (!task.filePath) {
-          console.error('[EditorLayout] Cannot delete task: missing file path');
-          events.emit({
-            type: 'task:deleted:error',
-            source: 'web-ade',
-            timestamp: Date.now(),
-            payload: {
-              taskId: task.id,
-              error: 'Task file path is missing',
-            },
-          });
-          return;
-        }
-
-        try {
-          // Read the file to get its SHA
-          const fileResponse = await fetch(
-            `/api/github/repo/${owner}/${name}?action=file&path=${encodeURIComponent(task.filePath)}`,
-            { credentials: 'include' }
-          );
-
-          if (!fileResponse.ok) {
-            throw new Error(`Failed to read task file: ${fileResponse.statusText}`);
-          }
-
-          const fileData = await fileResponse.json();
-
-          // Delete the file by committing with empty content and sha
-          const deleteResponse = await fetch(`/api/github/repo/${owner}/${name}/commit`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-              files: [{
-                path: task.filePath,
-                content: null, // null indicates deletion
-                sha: fileData.sha,
-              }],
-              message: `Delete task: ${task.title}`,
-            }),
-          });
-
-          if (!deleteResponse.ok) {
-            const errorData = await deleteResponse.json().catch(() => ({}));
-            throw new Error(errorData.error || `Failed to delete task: ${deleteResponse.statusText}`);
-          }
-
-          console.log(`[EditorLayout] Successfully deleted task ${task.id}`);
-
-          // Emit success event
-          events.emit({
-            type: 'task:deleted:success',
-            source: 'web-ade',
-            timestamp: Date.now(),
-            payload: { taskId: task.id },
-          });
-
-          // Emit focus event to return focus to kanban panel
-          setTimeout(() => {
-            events.emit({
-              type: 'panel:focus',
-              source: 'web-ade',
-              timestamp: Date.now(),
-              payload: {
-                panelId: 'backlog-kanban',
-                panelSlot: 'left',
-              },
-            });
-          }, 2100); // Slightly after the 2s success display
-
-        } catch (err) {
-          console.error('[EditorLayout] Failed to delete task:', err);
-          events.emit({
-            type: 'task:deleted:error',
-            source: 'web-ade',
-            timestamp: Date.now(),
-            payload: {
-              taskId: task.id,
-              error: err instanceof Error ? err.message : 'Failed to delete task',
             },
           });
         }
@@ -2039,26 +1695,6 @@ function EditorLayoutContent({
       ),
     },
     {
-      id: 'kanban',
-      label: 'Kanban',
-      icon: <LayoutGrid size={16} />,
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <KanbanPanelLoader context={context} actions={enhancedActions} events={events} />
-        </div>
-      ),
-    },
-    {
-      id: 'task-detail',
-      label: 'Task Detail',
-      icon: <CheckSquare size={16} />,
-      content: (
-        <div className="h-full w-full overflow-hidden">
-          <TaskDetailPanelLoader context={context} actions={enhancedActions} events={events} />
-        </div>
-      ),
-    },
-    {
       id: 'terminal',
       label: 'Terminal',
       icon: <Terminal size={16} />,
@@ -2287,9 +1923,6 @@ function EditorLayoutContent({
           collapsed={layoutSidebarCollapsed}
           onToggleCollapse={() => setLayoutSidebarCollapsed((prev: boolean) => !prev)}
           owner={repositoryInfo?.owner}
-          badges={(triagedCount > 0) ? {
-            'kanban': triagedCount,
-          } : undefined}
           mobileOpen={mobileSidebarOpen}
           onMobileClose={() => setMobileSidebarOpen(false)}
           currentRepoId={githubRepo}
@@ -2437,9 +2070,6 @@ function EditorLayoutContent({
         collapsed={layoutSidebarCollapsed}
         onToggleCollapse={() => setLayoutSidebarCollapsed((prev: boolean) => !prev)}
         owner={repositoryInfo?.owner}
-        badges={(triagedCount > 0) ? {
-          'kanban': triagedCount,
-        } : undefined}
         mobileOpen={mobileSidebarOpen}
         onMobileClose={() => setMobileSidebarOpen(false)}
         currentRepoId={githubRepo}

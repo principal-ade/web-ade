@@ -6,7 +6,6 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { useGlobalTheme } from '@/contexts/ThemeContext';
 import {
   Blocks,
-  KanbanSquare,
   BookOpen,
   FileCode,
   Hexagon,
@@ -23,7 +22,6 @@ import { layoutConfigs, LayoutConfig } from './LayoutConfigDropdown';
 const layoutIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   tour: Map,
   default: Blocks,
-  kanban: KanbanSquare,
   documentation: BookOpen,
   'file-editor': FileCode,
   'quality-debug': Hexagon,
@@ -44,7 +42,7 @@ interface LayoutSidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   owner?: string; // When provided, shows owner avatar/name instead of Principal AI logo
-  badges?: Record<string, number>; // Badge counts for specific layout config IDs (e.g., { 'kanban': 3 })
+  badges?: Record<string, number>; // Badge counts for specific layout config IDs
   mobileOpen?: boolean; // When true, renders as slide-in overlay on mobile
   onMobileClose?: () => void; // Callback to close mobile overlay
   currentRepoId?: string; // GitHub repo ID for GitHub/Local toggle

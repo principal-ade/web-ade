@@ -135,7 +135,7 @@ ${layoutToolsPrompt}
 ## GitHub Tools
 ${githubToolsPrompt}
 
-Available panels you can switch to: docs, ai-chat, markdown-viewer, file-city, kanban, terminal, sessions, visual-validation, github-projects, github-search.
+Available panels you can switch to: docs, ai-chat, markdown-viewer, file-city, terminal, sessions, visual-validation, github-projects, github-search.
 
 When a user asks about file contents, use read_file to get the content and then answer based on it.
 When a user wants to view a file, use open_file to display it.
