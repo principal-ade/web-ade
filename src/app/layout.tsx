@@ -3,6 +3,10 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import "./globals.css";
+// Required by SequenceDiagramRenderer (used inside @industry-theme/file-city-panel).
+// Without this, .react-flow__viewport loses `transform-origin: 0 0` and nodes/edges
+// render shifted because the viewport scale pivots around its center.
+import "@xyflow/react/dist/style.css";
 // Initialize OTEL on server startup (fallback for when instrumentation.ts doesn't run)
 // This must be imported at the top level to run on server initialization
 import { initializeOTEL } from "@/lib/otel-server-init";
