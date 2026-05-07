@@ -15,6 +15,7 @@
  */
 
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
@@ -29,15 +30,20 @@ import {
   type FileTree,
 } from '@principal-ai/repository-abstraction';
 import { Logo } from '@principal-ai/logo-component';
+import { MapPinOff, AlertTriangle, Github } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { PrivatePropertySign } from './PrivatePropertySign';
 import type {
   FileCityTrailExplorerPanelActions,
   FileCityTrailExplorerPanelContext,
   FileCityTrailExplorerRepository,
 } from '@industry-theme/file-city-panel';
-import type {
-  TrailPayload,
-  SharedTrailIndexEntry,
+import {
+  ShareErrorCodes,
+  type ShareErrorCode,
+  type TrailPayload,
+  type SharedTrailIndexEntry,
 } from '@/lib/trails/types';
 
 const FileCityTrailExplorerPanel = dynamic(
@@ -92,19 +98,96 @@ function CenteredLogo() {
   );
 }
 
-function TrailErrorView({ message }: { message: string }) {
+function TrailErrorView({
+  message,
+  code,
+}: {
+  message: string;
+  code: ShareErrorCode | null;
+}) {
   const { theme } = useTheme();
+  const { isAuthenticated, login } = useAuth();
+
+  const isNoAccess = code === ShareErrorCodes.NO_REPO_ACCESS;
+  const isNotFound = code === ShareErrorCodes.NOT_FOUND;
+  const showLogin = isNoAccess && !isAuthenticated;
+
+  const Icon = isNotFound ? MapPinOff : AlertTriangle;
+  const title = isNoAccess
+    ? 'This trail is in a private repository'
+    : isNotFound
+      ? 'Trail not found'
+      : 'Trail unavailable';
+  const helper =
+    isNoAccess && !showLogin
+      ? 'Your current GitHub account does not have read access to this repository.'
+      : null;
+
   return (
     <div
-      className="w-screen flex items-center justify-center"
+      className="w-screen flex items-center justify-center px-4"
       style={{ background: theme.colors.background, height: '100vh' }}
     >
       <div
-        className="max-w-md px-6 py-4 rounded text-center"
-        style={{ color: theme.colors.text }}
+        className="w-full max-w-lg overflow-hidden rounded-lg border px-10 py-12 text-center shadow-sm"
+        style={{
+          color: theme.colors.text,
+          background: theme.colors.backgroundSecondary ?? theme.colors.background,
+          borderColor: theme.colors.border ?? 'rgba(255,255,255,0.08)',
+        }}
       >
-        <div className="text-lg mb-2">Trail unavailable</div>
-        <div style={{ color: theme.colors.textMuted }}>{message}</div>
+        {isNoAccess ? (
+          <div className="-mx-10 -mt-12 mb-6 flex items-center justify-center">
+            <PrivatePropertySign />
+          </div>
+        ) : (
+          <div
+            className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full"
+            style={{
+              background: `${theme.colors.accent}1a`,
+              color: theme.colors.accent,
+            }}
+          >
+            <Icon size={30} strokeWidth={1.75} />
+          </div>
+        )}
+        <h1
+          className="text-2xl font-semibold mb-3"
+          style={isNoAccess ? { color: theme.colors.primary } : undefined}
+        >
+          {title}
+        </h1>
+        {(helper || !isNoAccess) && (
+          <p
+            className="text-base leading-relaxed"
+            style={{ color: theme.colors.textMuted }}
+          >
+            {helper ?? message}
+          </p>
+        )}
+        {showLogin && (
+          <button
+            type="button"
+            onClick={() => login()}
+            className="mt-8 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-md text-base font-medium transition-opacity hover:opacity-90"
+            style={{
+              background: theme.colors.accent,
+              color: theme.colors.background,
+            }}
+          >
+            <Github size={18} strokeWidth={2} />
+            Sign in with GitHub
+          </button>
+        )}
+        <div className="mt-8">
+          <Link
+            href="/"
+            className="text-sm underline-offset-2 hover:underline"
+            style={{ color: theme.colors.textMuted }}
+          >
+            Back to home
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -225,7 +308,10 @@ export default function TrailPage() {
   const id = params?.id as string | undefined;
 
   const [data, setData] = useState<TrailContext | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{
+    message: string;
+    code: ShareErrorCode | null;
+  } | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -237,12 +323,14 @@ export default function TrailPage() {
         const res = await fetch(`/api/trails/by-id/${encodeURIComponent(id!)}`);
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw new Error(
+          const message: string =
             body?.error ??
-              (res.status === 404
-                ? 'This trail does not exist or has been removed.'
-                : `Failed to load trail (${res.status}).`),
-          );
+            (res.status === 404
+              ? 'This trail does not exist or has been removed.'
+              : `Failed to load trail (${res.status}).`);
+          if (cancelled) return;
+          setError({ message, code: (body?.code as ShareErrorCode) ?? null });
+          return;
         }
         const trail = (await res.json()) as TrailResponse;
 
@@ -272,7 +360,10 @@ export default function TrailPage() {
         });
       } catch (err) {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : 'Failed to load trail.');
+        setError({
+          message: err instanceof Error ? err.message : 'Failed to load trail.',
+          code: null,
+        });
       }
     }
 
@@ -290,7 +381,8 @@ export default function TrailPage() {
     }
   }, [data]);
 
-  if (error) return <TrailErrorView message={error} />;
+  if (error)
+    return <TrailErrorView message={error.message} code={error.code} />;
   if (!data) return <CenteredLogo />;
   return (
     <TrailViewer
