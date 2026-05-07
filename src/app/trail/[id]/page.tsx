@@ -34,6 +34,7 @@ import { trpc } from '@/lib/trpc/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { PrivatePropertySign } from './PrivatePropertySign';
 import { TrailLoadingAnimation } from '@/components/trail/TrailLoadingAnimation';
+import { TrailHeader } from '@/components/trail/TrailHeader';
 import type {
   FileCityTrailExplorerPanelActions,
   FileCityTrailExplorerPanelContext,
@@ -284,14 +285,17 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
 
   return (
     <div
-      className="w-screen overflow-hidden"
+      className="w-screen flex flex-col overflow-hidden"
       style={{ background: theme.colors.background, height: '100vh' }}
     >
-      <FileCityTrailExplorerPanel
-        context={context}
-        actions={actions}
-        events={events}
-      />
+      <TrailHeader owner={owner} repo={repo} />
+      <div className="flex-1 min-h-0">
+        <FileCityTrailExplorerPanel
+          context={context}
+          actions={actions}
+          events={events}
+        />
+      </div>
     </div>
   );
 }
