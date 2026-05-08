@@ -22,6 +22,7 @@ import {
   type GenerateTrailResult,
 } from '@/lib/pr-trail/generate';
 import { getCachedByPr, setCached } from '@/lib/pr-trail/cache';
+import { getOpenRouterClient, MissingOpenRouterKeyError } from '@/lib/openrouter';
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
@@ -40,12 +41,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'num must be a positive integer' }, { status: 400 });
   }
 
-  const openrouterKey = process.env.OPENROUTER_API_KEY;
-  if (!openrouterKey) {
-    return NextResponse.json(
-      { error: 'OPENROUTER_API_KEY is not configured on the server' },
-      { status: 500 },
-    );
+  let openrouterClient;
+  try {
+    openrouterClient = getOpenRouterClient();
+  } catch (e) {
+    if (e instanceof MissingOpenRouterKeyError) {
+      return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+    throw e;
   }
 
   const githubToken = await getGitHubToken();
@@ -93,7 +96,7 @@ export async function GET(req: NextRequest) {
       owner,
       repo,
       prNumber: num,
-      openrouterApiKey: openrouterKey,
+      openrouterClient,
       githubToken,
     });
   } catch (e) {

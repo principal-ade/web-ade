@@ -7,24 +7,11 @@
 
 import { NextRequest } from 'next/server';
 import crypto from 'crypto';
+import { getOpenRouterClient, MissingOpenRouterKeyError } from '@/lib/openrouter';
 
 // Simple in-memory cache (persists across requests in the same server instance)
 const explanationCache = new Map<string, { text: string; timestamp: number }>();
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-// OpenRouter free models - ordered by preference (fast/simple first)
-const OPENROUTER_MODELS = [
-  'google/gemini-3.1-flash-lite-preview',
-  'deepseek/deepseek-r1:free',
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'google/gemini-3.1-flash-image-preview',
-] as const;
-
-// Track rate-limited models with cooldown
-const rateLimitedModels = new Map<string, number>();
-const RATE_LIMIT_COOLDOWN_MS = 60 * 1000; // 1 minute cooldown after rate limit
-
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 function getCacheKey(commits: CommitData[], audienceLevel: string, repoName: string): string {
   const data = JSON.stringify({ commits, audienceLevel, repoName });
@@ -46,118 +33,6 @@ function getFromCache(key: string): string | null {
 
 function setCache(key: string, text: string): void {
   explanationCache.set(key, { text, timestamp: Date.now() });
-}
-
-function getAvailableModels(): string[] {
-  const now = Date.now();
-  return OPENROUTER_MODELS.filter((model) => {
-    const rateLimitedUntil = rateLimitedModels.get(model);
-    if (!rateLimitedUntil) return true;
-    if (now > rateLimitedUntil) {
-      rateLimitedModels.delete(model);
-      return true;
-    }
-    return false;
-  });
-}
-
-function markModelRateLimited(model: string, retryAfterSeconds?: number): void {
-  const cooldown = retryAfterSeconds
-    ? retryAfterSeconds * 1000
-    : RATE_LIMIT_COOLDOWN_MS;
-  rateLimitedModels.set(model, Date.now() + cooldown);
-  console.log(`[explain-commits] Model ${model} rate limited, cooldown: ${cooldown}ms`);
-}
-
-function parseRetryAfter(errorText: string): number | undefined {
-  // Try to extract retry delay from error message
-  const match = errorText.match(/retry in ([\d.]+)s/i);
-  if (match && match[1]) {
-    return Math.ceil(parseFloat(match[1]));
-  }
-  return undefined;
-}
-
-interface OpenRouterApiResult {
-  success: boolean;
-  text?: string;
-  rateLimited?: boolean;
-  retryAfterSeconds?: number;
-  error?: string;
-}
-
-interface OpenRouterResponse {
-  choices?: Array<{
-    message?: {
-      content?: string;
-    };
-  }>;
-  error?: {
-    message?: string;
-    code?: number;
-  };
-}
-
-async function callOpenRouterApi(
-  model: string,
-  prompt: string,
-  apiKey: string
-): Promise<OpenRouterApiResult> {
-  try {
-    const response = await fetch(OPENROUTER_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://web-ade.dev',
-        'X-Title': 'Web ADE Commit Explainer',
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 512,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-
-      // Check for rate limit (429)
-      if (response.status === 429) {
-        const retryAfter = parseRetryAfter(errorText);
-        return {
-          success: false,
-          rateLimited: true,
-          retryAfterSeconds: retryAfter,
-          error: errorText,
-        };
-      }
-
-      return { success: false, error: errorText };
-    }
-
-    const data = (await response.json()) as OpenRouterResponse;
-
-    if (data.error) {
-      return { success: false, error: data.error.message || 'Unknown error' };
-    }
-
-    const text = data.choices?.[0]?.message?.content;
-
-    if (!text) {
-      return { success: false, error: 'No content in response' };
-    }
-
-    return { success: true, text };
-  } catch (error) {
-    return { success: false, error: String(error) };
-  }
 }
 
 interface CommitData {
@@ -215,13 +90,17 @@ Start directly with the summary. No greetings or preamble.`;
 }
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-
-  if (!apiKey) {
-    return new Response(
-      JSON.stringify({ error: 'OPENROUTER_API_KEY not configured' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+  let openrouter;
+  try {
+    openrouter = getOpenRouterClient();
+  } catch (e) {
+    if (e instanceof MissingOpenRouterKeyError) {
+      return new Response(
+        JSON.stringify({ error: e.message }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    throw e;
   }
 
   try {
@@ -240,113 +119,37 @@ export async function POST(req: NextRequest) {
 
     if (cachedText) {
       console.log('[explain-commits] Cache hit');
-      // Return cached response in SSE format
-      const encoder = new TextEncoder();
-      const stream = new ReadableStream({
-        start(controller) {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: 'text', content: cachedText })}\n\n`)
-          );
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: 'done', cached: true })}\n\n`)
-          );
-          controller.close();
-        },
-      });
-
-      return new Response(stream, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        },
-      });
+      return streamSse(cachedText, true);
     }
 
-    console.log('[explain-commits] Cache miss, calling OpenRouter API');
+    console.log('[explain-commits] Cache miss, calling OpenRouter');
     const prompt = buildPrompt(commits, audienceLevel, repoName);
 
-    // Get available models (not currently rate limited)
-    const availableModels = getAvailableModels();
-
-    if (availableModels.length === 0) {
-      console.error('[explain-commits] All models are rate limited');
-      return new Response(
-        JSON.stringify({
-          error: 'All AI models are currently rate limited. Please try again in a minute.',
-          retryAfter: 60,
-        }),
-        { status: 429, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Try models in order until one succeeds
-    let lastError: string | undefined;
-    let text: string | undefined;
-    let usedModel: string | undefined;
-
-    for (const model of availableModels) {
-      console.log(`[explain-commits] Trying model: ${model}`);
-      const result = await callOpenRouterApi(model, prompt, apiKey);
-
-      if (result.success && result.text) {
-        text = result.text;
-        usedModel = model;
-        console.log(`[explain-commits] Success with model: ${model}`);
-        break;
-      }
-
-      if (result.rateLimited) {
-        markModelRateLimited(model, result.retryAfterSeconds);
-        lastError = result.error;
-        // Continue to next model
-        continue;
-      }
-
-      // Non-rate-limit error - log and try next model
-      console.error(`[explain-commits] Model ${model} error:`, result.error);
-      lastError = result.error;
-    }
-
-    if (!text) {
-      console.error('[explain-commits] All models failed, last error:', lastError);
+    let text: string;
+    try {
+      const { content, model } = await openrouter.chatCompletion({
+        messages: [{ role: 'user', content: prompt }],
+        appTitle: 'Web ADE Commit Explainer',
+        temperature: 0.7,
+        maxTokens: 512,
+      });
+      text = content;
+      console.log(`[explain-commits] Generated with ${model}`);
+    } catch (e) {
+      console.error('[explain-commits] OpenRouter call failed:', e);
       return new Response(
         JSON.stringify({
           error: 'Failed to generate explanation',
-          details: lastError,
+          details: e instanceof Error ? e.message : String(e),
         }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[explain-commits] Generated with ${usedModel}`);
-
-    // Cache the response
     setCache(cacheKey, text);
     console.log('[explain-commits] Cached response');
 
-    // Return as SSE format for compatibility with existing modal
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ type: 'text', content: text })}\n\n`)
-        );
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`)
-        );
-        controller.close();
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
-    });
-
+    return streamSse(text, false);
   } catch (error) {
     console.error('Explain commits error:', error);
     return new Response(
@@ -354,4 +157,27 @@ export async function POST(req: NextRequest) {
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
+}
+
+function streamSse(text: string, cached: boolean): Response {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(
+        encoder.encode(`data: ${JSON.stringify({ type: 'text', content: text })}\n\n`)
+      );
+      controller.enqueue(
+        encoder.encode(`data: ${JSON.stringify({ type: 'done', ...(cached ? { cached: true } : {}) })}\n\n`)
+      );
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  });
 }

@@ -20,71 +20,32 @@
 
 import crypto from 'crypto';
 import type { TrailPayload } from '@industry-theme/file-city-panel';
+import { OpenRouterClient } from '@/lib/openrouter';
 
 // ---------- OpenRouter ----------
 
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+// One retry for the rare case where the meta-router lands on a model that
+// ignores `response_format: json_object` and returns prose. The retry is on
+// the same `openrouter/free` id — the router will pick again.
+const PARSE_RETRY_LIMIT = 2;
 
-// Free-tier OpenRouter models, ordered by judgment-quality / JSON-stability
-// observed in scripts/test-pr-to-trail.ts. The cycle continues on HTTP error,
-// rate-limit, empty response, or unparseable JSON output.
-const OPENROUTER_MODELS = [
-  'qwen/qwen3-next-80b-a3b-instruct:free',
-  'z-ai/glm-4.5-air:free',
-  'openai/gpt-oss-120b:free',
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'nvidia/nemotron-3-super-120b-a12b:free',
-] as const;
-
-interface OpenRouterResponse {
-  choices?: Array<{ message?: { content?: string } }>;
-  error?: { message?: string };
-}
-
-async function callOpenRouter(
-  model: string,
-  apiKey: string,
-  messages: Array<{ role: string; content: string }>,
-): Promise<string> {
-  const res = await fetch(OPENROUTER_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-      'HTTP-Referer': 'https://web-ade.dev',
-      'X-Title': 'web-ade PR Trail',
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.2,
-      max_tokens: 1500,
-      response_format: { type: 'json_object' },
-    }),
-  });
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`HTTP ${res.status}: ${txt.slice(0, 300)}`);
-  }
-  const data = (await res.json()) as OpenRouterResponse;
-  if (data.error) throw new Error(data.error.message ?? 'unknown error');
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error('empty response');
-  return content;
-}
-
-async function callWithCycle<T>(
-  apiKey: string,
-  messages: Array<{ role: string; content: string }>,
+async function callWithParseRetry<T>(
+  client: OpenRouterClient,
+  messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
   parse: (text: string) => T,
 ): Promise<{ value: T; model: string }> {
   let lastErr: unknown;
-  for (const model of OPENROUTER_MODELS) {
+  for (let attempt = 0; attempt < PARSE_RETRY_LIMIT; attempt++) {
     try {
-      const text = await callOpenRouter(model, apiKey, messages);
+      const { content, model } = await client.chatCompletion({
+        messages,
+        appTitle: 'web-ade PR Trail',
+        temperature: 0.2,
+        maxTokens: 1500,
+        responseFormat: { type: 'json_object' },
+      });
       try {
-        const value = parse(text);
-        return { value, model };
+        return { value: parse(content), model };
       } catch (parseErr) {
         lastErr = new Error(
           `${model} unparseable JSON: ${(parseErr as Error).message.slice(0, 120)}`,
@@ -93,9 +54,11 @@ async function callWithCycle<T>(
       }
     } catch (e) {
       lastErr = e;
+      // HTTP/transport errors don't benefit from a same-model retry.
+      throw e;
     }
   }
-  throw new Error(`all models failed; last: ${String(lastErr)}`);
+  throw new Error(`pr-trail: parse retries exhausted; last: ${String(lastErr)}`);
 }
 
 // ---------- GitHub REST ----------
@@ -266,7 +229,7 @@ export interface GenerateTrailInput {
   owner: string;
   repo: string;
   prNumber: number;
-  openrouterApiKey: string;
+  openrouterClient: OpenRouterClient;
   /** GitHub token. May be null for public-repo unauthenticated access (low rate). */
   githubToken: string | null;
 }
@@ -280,7 +243,7 @@ export interface GenerateTrailResult {
 export async function generateTrailFromPr(
   input: GenerateTrailInput,
 ): Promise<GenerateTrailResult> {
-  const { owner, repo, prNumber, openrouterApiKey, githubToken } = input;
+  const { owner, repo, prNumber, openrouterClient, githubToken } = input;
 
   const meta = await ghJson<PrMeta>(
     `/repos/${owner}/${repo}/pulls/${prNumber}`,
@@ -293,8 +256,8 @@ export async function generateTrailFromPr(
 
   const userPrompt = buildUserPrompt(meta, files);
 
-  const { value: parsed, model } = await callWithCycle(
-    openrouterApiKey,
+  const { value: parsed, model } = await callWithParseRetry(
+    openrouterClient,
     [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: userPrompt },

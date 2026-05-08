@@ -24,6 +24,7 @@ import { readFileSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { resolve } from 'path';
 import crypto from 'crypto';
+import { OpenRouterClient } from '../src/lib/openrouter';
 
 // ---------- env loading ----------
 function loadEnvFile(path: string): Record<string, string> {
@@ -120,72 +121,36 @@ function fetchFileAtRef(path: string, ref: string): string {
 }
 
 // ---------- OpenRouter ----------
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_MODELS = [
-  'qwen/qwen3-next-80b-a3b-instruct:free',
-  'z-ai/glm-4.5-air:free',
-  'openai/gpt-oss-120b:free',
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'nvidia/nemotron-3-super-120b-a12b:free',
-] as const;
+const openrouterClient = new OpenRouterClient(OPENROUTER_API_KEY);
 
-interface ORResponse {
-  choices?: Array<{ message?: { content?: string } }>;
-  error?: { message?: string };
-}
+// Same-model parse-retry budget for the rare case the meta-router hands us
+// a free model that ignores `response_format: json_object`.
+const PARSE_RETRY_LIMIT = 2;
 
-async function callOpenRouter(model: string, messages: Array<{ role: string; content: string }>): Promise<string> {
-  const res = await fetch(OPENROUTER_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-      'HTTP-Referer': 'https://web-ade.dev',
-      'X-Title': 'PR-to-Trail Test',
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.2,
-      max_tokens: 1500,
-      response_format: { type: 'json_object' },
-    }),
-  });
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`HTTP ${res.status}: ${txt}`);
-  }
-  const data = (await res.json()) as ORResponse;
-  if (data.error) throw new Error(data.error.message ?? 'unknown error');
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error('empty response');
-  return content;
-}
-
-async function callWithCycle<T>(
-  messages: Array<{ role: string; content: string }>,
+async function callWithParseRetry<T>(
+  messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
   parse: (text: string) => T,
 ): Promise<{ value: T; model: string; raw: string }> {
   let lastErr: unknown;
-  for (const model of OPENROUTER_MODELS) {
+  for (let attempt = 0; attempt < PARSE_RETRY_LIMIT; attempt++) {
+    console.log(`[trail] OpenRouter call (attempt ${attempt + 1}/${PARSE_RETRY_LIMIT})`);
+    const { content, model } = await openrouterClient.chatCompletion({
+      messages,
+      appTitle: 'PR-to-Trail Test',
+      temperature: 0.2,
+      maxTokens: 1500,
+      responseFormat: { type: 'json_object' },
+    });
     try {
-      console.log(`[trail] trying model: ${model}`);
-      const text = await callOpenRouter(model, messages);
-      try {
-        const value = parse(text);
-        console.log(`[trail] success with ${model}`);
-        return { value, model, raw: text };
-      } catch (parseErr) {
-        console.warn(`[trail] ${model} returned unparseable JSON (${(parseErr as Error).message.slice(0, 120)}); first 200 chars: ${text.slice(0, 200).replace(/\s+/g, ' ')}`);
-        lastErr = parseErr;
-        continue;
-      }
-    } catch (e) {
-      console.warn(`[trail] ${model} failed: ${(e as Error).message.slice(0, 200)}`);
-      lastErr = e;
+      const value = parse(content);
+      console.log(`[trail] success with ${model}`);
+      return { value, model, raw: content };
+    } catch (parseErr) {
+      console.warn(`[trail] ${model} returned unparseable JSON (${(parseErr as Error).message.slice(0, 120)}); first 200 chars: ${content.slice(0, 200).replace(/\s+/g, ' ')}`);
+      lastErr = parseErr;
     }
   }
-  throw new Error(`all models failed; last: ${String(lastErr)}`);
+  throw new Error(`parse retries exhausted; last: ${String(lastErr)}`);
 }
 
 // ---------- prompt ----------
@@ -286,7 +251,7 @@ async function main() {
   const userPrompt = buildUserPrompt(meta, files);
   console.log(`[trail] prompt length: ${userPrompt.length} chars`);
 
-  const { value: parsed, model } = await callWithCycle(
+  const { value: parsed, model } = await callWithParseRetry(
     [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: userPrompt },

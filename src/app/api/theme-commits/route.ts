@@ -8,6 +8,7 @@
 
 import { NextRequest } from 'next/server';
 import crypto from 'crypto';
+import { getOpenRouterClient, MissingOpenRouterKeyError } from '@/lib/openrouter';
 
 interface CommitInput {
   sha: string;
@@ -30,32 +31,13 @@ interface ThemeResponse {
 const themeCache = new Map<string, { themes: Theme[]; timestamp: number }>();
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour — themes evolve faster than per-commit explanations
 
-const OPENROUTER_MODELS = [
-  'google/gemini-3.1-flash-lite-preview',
-  'deepseek/deepseek-r1:free',
-  'meta-llama/llama-3.3-70b-instruct:free',
-] as const;
-
-const rateLimitedModels = new Map<string, number>();
-const RATE_LIMIT_COOLDOWN_MS = 60 * 1000;
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+// Same-model parse-retry budget. The meta-router may pick a JSON-shy free
+// model on a given call; rerolling sometimes lands on a stricter one.
+const PARSE_RETRY_LIMIT = 2;
 
 function getCacheKey(commits: CommitInput[], repoName: string): string {
   const shas = commits.map((c) => c.sha).sort().join(',');
   return crypto.createHash('sha256').update(`${repoName}::${shas}`).digest('hex');
-}
-
-function getAvailableModels(): string[] {
-  const now = Date.now();
-  return OPENROUTER_MODELS.filter((model) => {
-    const until = rateLimitedModels.get(model);
-    if (!until) return true;
-    if (now > until) {
-      rateLimitedModels.delete(model);
-      return true;
-    }
-    return false;
-  });
 }
 
 function buildPrompt(commits: CommitInput[], repoName: string): string {
@@ -140,64 +122,15 @@ function parseThemes(raw: string, commits: CommitInput[]): Theme[] | null {
   return themes.length > 0 ? themes : null;
 }
 
-interface OpenRouterResult {
-  success: boolean;
-  text?: string;
-  rateLimited?: boolean;
-  retryAfterSeconds?: number;
-  error?: string;
-}
-
-async function callOpenRouter(model: string, prompt: string, apiKey: string): Promise<OpenRouterResult> {
-  try {
-    const response = await fetch(OPENROUTER_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://web-ade.dev',
-        'X-Title': 'Web ADE Commit Themes',
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.4,
-        max_tokens: 800,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      if (response.status === 429) {
-        const match = errorText.match(/retry in ([\d.]+)s/i);
-        return {
-          success: false,
-          rateLimited: true,
-          retryAfterSeconds: match && match[1] ? Math.ceil(parseFloat(match[1])) : undefined,
-          error: errorText,
-        };
-      }
-      return { success: false, error: errorText };
-    }
-
-    const data = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-      error?: { message?: string };
-    };
-
-    if (data.error) return { success: false, error: data.error.message || 'Unknown error' };
-    const text = data.choices?.[0]?.message?.content;
-    if (!text) return { success: false, error: 'No content in response' };
-    return { success: true, text };
-  } catch (error) {
-    return { success: false, error: String(error) };
-  }
-}
-
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    return Response.json({ error: 'OPENROUTER_API_KEY not configured' }, { status: 500 });
+  let openrouter;
+  try {
+    openrouter = getOpenRouterClient();
+  } catch (e) {
+    if (e instanceof MissingOpenRouterKeyError) {
+      return Response.json({ error: e.message }, { status: 500 });
+    }
+    throw e;
   }
 
   const body = (await req.json()) as { commits?: CommitInput[]; repoName?: string };
@@ -215,43 +148,37 @@ export async function POST(req: NextRequest) {
     return Response.json({ themes: cached.themes, cached: true } satisfies ThemeResponse);
   }
 
-  const available = getAvailableModels();
-  if (available.length === 0) {
-    return Response.json(
-      { error: 'All AI models are currently rate limited', retryAfter: 60 },
-      { status: 429 }
-    );
-  }
-
   const prompt = buildPrompt(commits, repoName);
   let themes: Theme[] | null = null;
   let usedModel: string | undefined;
   let lastError: string | undefined;
 
-  for (const model of available) {
-    console.log(`[theme-commits] Trying model: ${model}`);
-    const result = await callOpenRouter(model, prompt, apiKey);
-
-    if (result.success && result.text) {
-      const parsed = parseThemes(result.text, commits);
-      if (parsed) {
-        themes = parsed;
-        usedModel = model;
-        break;
-      }
-      lastError = 'Failed to parse themes from model output';
-      console.warn(`[theme-commits] Parse failed for ${model}, raw: ${result.text.slice(0, 200)}`);
-      continue;
+  for (let attempt = 0; attempt < PARSE_RETRY_LIMIT; attempt++) {
+    let content: string;
+    let model: string;
+    try {
+      const result = await openrouter.chatCompletion({
+        messages: [{ role: 'user', content: prompt }],
+        appTitle: 'Web ADE Commit Themes',
+        temperature: 0.4,
+        maxTokens: 800,
+      });
+      content = result.content;
+      model = result.model;
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : String(e);
+      console.error('[theme-commits] OpenRouter call failed:', lastError);
+      break;
     }
 
-    if (result.rateLimited) {
-      const cooldown = result.retryAfterSeconds ? result.retryAfterSeconds * 1000 : RATE_LIMIT_COOLDOWN_MS;
-      rateLimitedModels.set(model, Date.now() + cooldown);
-      lastError = result.error;
-      continue;
+    const parsed = parseThemes(content, commits);
+    if (parsed) {
+      themes = parsed;
+      usedModel = model;
+      break;
     }
-
-    lastError = result.error;
+    lastError = 'Failed to parse themes from model output';
+    console.warn(`[theme-commits] Parse failed (attempt ${attempt + 1}, model ${model}); raw: ${content.slice(0, 200)}`);
   }
 
   if (!themes) {
