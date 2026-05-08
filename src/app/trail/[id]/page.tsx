@@ -55,6 +55,24 @@ const FileCityTrailExplorerPanel = dynamic(
   { ssr: false },
 );
 
+// FileCity3D loaded directly so we can warm WebGL / shader caches with a
+// minimal sample scene during the loading screen, without dragging in the
+// trail panel's state machine (which behaved oddly with skeleton data).
+const FileCity3D = dynamic(
+  () => import('@principal-ai/file-city-react').then((m) => m.FileCity3D),
+  { ssr: false },
+);
+
+// Warm both chunks at module evaluate time, in parallel with the trail
+// data fetch. By the time data resolves and TrailViewer mounts, the panel
+// chunk is cached and FC3D has already mounted+rendered behind the loading
+// screen — so the panel's first FC3D mount inherits the warm GPU caches.
+// See docs/nextjs-3d-rendering-issue.md.
+if (typeof window !== 'undefined') {
+  void (FileCityTrailExplorerPanel as { preload?: () => Promise<unknown> }).preload?.();
+  void (FileCity3D as { preload?: () => Promise<unknown> }).preload?.();
+}
+
 interface TrailResponse {
   owner: string;
   repo: string;
@@ -68,6 +86,36 @@ interface TrailContext {
   payload: TrailPayload;
   fileTree: FileTree;
 }
+
+// Sample CityData used to warm FC3D's WebGL / shader caches during the
+// loading screen. Mounted directly (not via the trail panel) so warming
+// is independent of the panel's state machine. Diverse extensions so the
+// full file-color shader set compiles before the real city paints.
+const WARMING_CITY_DATA: import('@principal-ai/file-city-react').CityData = {
+  buildings: [
+    { path: 'src/index.ts', position: { x: 5, y: 0, z: 5 }, dimensions: [8, 12, 8], type: 'file', fileExtension: 'ts', size: 4096, lineCount: 240 },
+    { path: 'src/app.tsx', position: { x: 18, y: 0, z: 5 }, dimensions: [8, 18, 8], type: 'file', fileExtension: 'tsx', size: 8192, lineCount: 480 },
+    { path: 'src/api/client.js', position: { x: 31, y: 0, z: 5 }, dimensions: [6, 9, 6], type: 'file', fileExtension: 'js', size: 3000, lineCount: 180 },
+    { path: 'src/components/Button.tsx', position: { x: 5, y: 0, z: 22 }, dimensions: [6, 6, 6], type: 'file', fileExtension: 'tsx', size: 1024, lineCount: 80 },
+    { path: 'src/components/Modal.tsx', position: { x: 14, y: 0, z: 22 }, dimensions: [6, 14, 6], type: 'file', fileExtension: 'tsx', size: 6000, lineCount: 320 },
+    { path: 'src/utils/helpers.ts', position: { x: 23, y: 0, z: 22 }, dimensions: [6, 9, 6], type: 'file', fileExtension: 'ts', size: 2400, lineCount: 160 },
+    { path: 'src/styles/main.css', position: { x: 31, y: 0, z: 22 }, dimensions: [6, 5, 6], type: 'file', fileExtension: 'css', size: 1500 },
+    { path: 'package.json', position: { x: 5, y: 0, z: 38 }, dimensions: [5, 4, 5], type: 'file', fileExtension: 'json', size: 800 },
+    { path: 'README.md', position: { x: 14, y: 0, z: 38 }, dimensions: [5, 5, 5], type: 'file', fileExtension: 'md', size: 1500 },
+    { path: 'tsconfig.json', position: { x: 23, y: 0, z: 38 }, dimensions: [5, 4, 5], type: 'file', fileExtension: 'json', size: 600 },
+  ],
+  districts: [
+    {
+      path: 'src',
+      worldBounds: { minX: 0, maxX: 38, minZ: 0, maxZ: 30 },
+      fileCount: 7,
+      type: 'directory',
+      label: { text: 'src', bounds: { minX: 0, maxX: 38, minZ: 30, maxZ: 33 }, position: 'bottom' },
+    },
+  ],
+  bounds: { minX: -2, maxX: 40, minZ: -2, maxZ: 42 },
+  metadata: { totalFiles: 10, totalDirectories: 1, rootPath: '/warming', analyzedAt: new Date() },
+};
 
 function nullSlice<T>(name: string): DataSlice<T | null> {
   return {
@@ -316,6 +364,17 @@ export default function TrailPage() {
 
     let cancelled = false;
 
+    // Minimum loading window so the warming FileCity3D (rendered behind
+    // the loading screen) has time to mount, init WebGL, and compile its
+    // shader programs before the real panel takes over. Without this,
+    // very fast trail fetches can dismiss the overlay before warming
+    // completes and the flash returns. See
+    // docs/nextjs-3d-rendering-issue.md.
+    const MIN_LOADING_MS = 2000;
+    const minDelay = new Promise<void>((resolve) =>
+      setTimeout(resolve, MIN_LOADING_MS),
+    );
+
     async function load() {
       try {
         const res = await fetch(`/api/trails/by-id/${encodeURIComponent(id!)}`);
@@ -350,6 +409,9 @@ export default function TrailPage() {
         });
 
         if (cancelled) return;
+        // Hold off the data swap until the warming window has elapsed.
+        await minDelay;
+        if (cancelled) return;
         setData({
           owner: trail.owner,
           repo: trail.repo,
@@ -381,7 +443,30 @@ export default function TrailPage() {
 
   if (error)
     return <TrailErrorView message={error.message} code={error.code} />;
-  if (!data) return <TrailLoadingScreen />;
+
+  if (!data) {
+    // Loading: render a hidden FileCity3D (with sample city data) so the
+    // chunk loads, WebGL context inits, and shaders compile before the
+    // real panel ever mounts. The loading animation overlays it. When
+    // data arrives we unmount the warmer and mount TrailViewer; the
+    // panel's first FC3D mount inherits the warm GPU caches → no flash.
+    return (
+      <>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 0 }}>
+          <FileCity3D
+            cityData={WARMING_CITY_DATA}
+            width="100%"
+            height="100%"
+            showControls={false}
+          />
+        </div>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50 }}>
+          <TrailLoadingScreen />
+        </div>
+      </>
+    );
+  }
+
   return (
     <TrailViewer
       owner={data.owner}
