@@ -1,139 +1,573 @@
 'use client';
 
-import { EditorHeader } from "@/components/EditorHeader";
-import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
-import { ActivityFeedPanel } from "@/panels/ActivityFeedPanel";
-import { LoadingOverlay } from "@/components/LoadingOverlay";
-import { useTheme } from "@principal-ade/industry-theme";
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import type { CommandPaletteData } from "@/components/GlobalCommandPalette";
-import { HomePageProvider } from "@/contexts/HomePageProvider";
+import Link from 'next/link';
+import { useTheme } from '@principal-ade/industry-theme';
+import { Waypoints, X, MoveRight, Copy, Check, ExternalLink } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { TrailCityDiagram } from '@/components/trail/TrailCityDiagram';
 
-// Disable static generation to prevent SSR errors with client-side dependencies
 export const dynamic = 'force-dynamic';
 
-// LocalStorage keys
-const RECENT_REPOS_KEY = 'recent-repositories';
-const RECENT_OWNERS_KEY = 'recent-owners';
-
-function getRecentRepos(max: number = 10): string[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const stored = localStorage.getItem(RECENT_REPOS_KEY);
-    if (!stored) return [];
-
-    const parsed: unknown[] = JSON.parse(stored);
-    return parsed
-      .filter((item): item is { full_name: string } =>
-        item != null && typeof item === 'object' && 'full_name' in item && typeof (item as { full_name: unknown }).full_name === 'string'
-      )
-      .slice(0, max)
-      .map(item => item.full_name);
-  } catch {
-    return [];
-  }
-}
-
-function getRecentOwners(max: number = 10): string[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const stored = localStorage.getItem(RECENT_OWNERS_KEY);
-    if (!stored) return [];
-
-    const parsed: unknown[] = JSON.parse(stored);
-    return parsed
-      .filter((item): item is { login: string } =>
-        item != null && typeof item === 'object' && 'login' in item && typeof (item as { login: unknown }).login === 'string'
-      )
-      .slice(0, max)
-      .map(item => item.login);
-  } catch {
-    return [];
-  }
-}
-
-function HomePageContent() {
+export default function HomePage() {
   const { theme } = useTheme();
-  const openWithMicRef = useRef<(() => void) | null>(null);
-  const [speechSupported, setSpeechSupported] = useState(false);
-  const [recentRepos, setRecentRepos] = useState<string[]>([]);
-  const [recentOwners, setRecentOwners] = useState<string[]>([]);
-
-  // Load recent items from localStorage on mount and listen for updates
-  useEffect(() => {
-    const loadRecent = () => {
-      setRecentRepos(getRecentRepos());
-      setRecentOwners(getRecentOwners());
-    };
-
-    loadRecent();
-
-    window.addEventListener('recent-items-updated', loadRecent);
-    return () => window.removeEventListener('recent-items-updated', loadRecent);
-  }, []);
-
-  const handleOpenWithMic = useCallback(() => {
-    openWithMicRef.current?.();
-  }, []);
-
-  // Build autocomplete data for command palette
-  const autocompleteData: CommandPaletteData = useMemo(() => {
-    return {
-      collections: [],
-      repositories: recentRepos,
-      owners: recentOwners,
-    };
-  }, [recentRepos, recentOwners]);
+  const [view, setView] = useState<'title' | 'fileCity' | 'codeTrail' | 'whyTrails'>('title');
+  const [hintRevealed, setHintRevealed] = useState(false);
+  const [diagramHovered, setDiagramHovered] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const showExplanation = view !== 'title';
+  const showHint = view === 'title' && hintRevealed;
+  const diagramBorderActive = diagramHovered || view === 'fileCity';
 
   return (
     <div
-      className="h-viewport-fixed overflow-hidden flex flex-col"
-      style={{
-        background: theme.colors.background
-      }}
+      className="h-viewport-fixed flex flex-col overflow-auto relative"
+      style={{ background: theme.colors.background, color: theme.colors.text }}
     >
-      <LoadingOverlay />
+      {/* Ambient backdrop — out-of-focus city + trail fragments. */}
+      <TrailBackdrop theme={theme} />
 
-      <EditorHeader
-        onOpenWithMic={speechSupported ? handleOpenWithMic : undefined}
-      />
-
-      {/* Main Content */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        <ActivityFeedPanel />
-      </div>
-
-      {/* Global Command Palette (Cmd+Shift+P) */}
-      <GlobalCommandPalette
-        autocompleteData={autocompleteData}
-        initialSuggestions={[
-          '/repo',
-          '/collection',
-          '/github',
-          '/home',
-        ]}
-        onOpenWithMicReady={(fn) => {
-          openWithMicRef.current = fn;
-          setSpeechSupported(fn !== null);
+      <header
+        className="sticky top-0 z-30 border-b backdrop-blur-xl"
+        style={{
+          borderColor: `color-mix(in srgb, ${theme.colors.border} 60%, transparent)`,
+          background: `color-mix(in srgb, ${theme.colors.background} 55%, transparent)`,
         }}
+      >
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
+          <Link href="/" className="flex items-center">
+            <h1
+              className="text-2xl font-bold m-0"
+              style={{ fontFamily: theme.fonts.body }}
+            >
+              <span style={{ color: theme.colors.text }}>Principal</span>
+              {' '}
+              <span style={{ color: theme.colors.primary }}>AI</span>
+            </h1>
+          </Link>
+        </div>
+      </header>
+
+      <main className="flex-1 flex flex-col relative">
+        <section className="flex-1 w-full max-w-7xl mx-auto px-6 py-16 flex items-center">
+          <div className="w-full grid lg:grid-cols-2 gap-12 lg:gap-10 items-center">
+            <div className="relative text-center lg:text-left min-h-[260px]">
+              {/* Title — fades out when the user opens the file-city explanation. */}
+              <div
+                className={`transition-opacity duration-300 ${showExplanation ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                aria-hidden={showExplanation}
+              >
+                <h1
+                  className="inline-flex items-center gap-4 text-6xl md:text-7xl xl:text-8xl font-semibold tracking-tight leading-[0.95] mb-6"
+                  style={{ color: theme.colors.primary }}
+                >
+                  Code trails
+                  <Waypoints
+                    className="w-[0.85em] h-[0.85em] flex-shrink-0"
+                    strokeWidth={1.75}
+                  />
+                </h1>
+
+                <p
+                  className="text-xl md:text-2xl max-w-xl mx-auto lg:mx-0 lg:pl-5 leading-relaxed mb-6"
+                  style={{ color: theme.colors.text }}
+                >
+                  Collaborate at the speed of AI
+                </p>
+
+                <div
+                  className={`lg:pl-5 flex items-center justify-center lg:justify-start gap-2 transition-all duration-300 ${
+                    showHint
+                      ? 'opacity-100 translate-x-0'
+                      : 'opacity-0 -translate-x-3 pointer-events-none'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setView('fileCity')}
+                    className="inline-flex items-center gap-3 text-2xl md:text-3xl italic font-bold tracking-tight px-4 py-2 rounded-full origin-left transition-transform duration-200 ease-out hover:scale-110"
+                    style={{
+                      color: theme.colors.background,
+                      background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.accent ?? theme.colors.primary})`,
+                      fontFamily: 'Georgia, "Times New Roman", serif',
+                      boxShadow: `0 0 0 3px color-mix(in srgb, ${theme.colors.primary} 35%, transparent), 0 8px 30px -4px color-mix(in srgb, ${theme.colors.primary} 60%, transparent)`,
+                    }}
+                  >
+                    What is that???
+                    <MoveRight
+                      size={28}
+                      strokeWidth={3}
+                      className="hint-arrow-bounce"
+                    />
+                  </button>
+                </div>
+                <style>{`
+                  @keyframes hintArrow {
+                    0%, 100% { transform: translateX(0); }
+                    50% { transform: translateX(6px); }
+                  }
+                  .hint-arrow-bounce { animation: hintArrow 1.1s ease-in-out infinite; }
+                `}</style>
+              </div>
+
+              {/* File-city explanation. */}
+              <div
+                className={`absolute inset-0 transition-opacity duration-300 ${view === 'fileCity' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                aria-hidden={view !== 'fileCity'}
+              >
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <h2
+                    className="text-3xl md:text-4xl font-semibold tracking-tight"
+                    style={{ color: theme.colors.primary }}
+                  >
+                    What&rsquo;s a File City?
+                  </h2>
+                  <button
+                    onClick={() => setView('title')}
+                    className="rounded-md p-1.5 transition-colors hover:opacity-80"
+                    style={{
+                      border: `1px solid color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
+                      color: theme.colors.textMuted,
+                    }}
+                    aria-label="Close explanation"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <div
+                  className="text-base md:text-lg leading-relaxed mb-6"
+                  style={{ color: theme.colors.text }}
+                >
+                  <p>
+                    A 2D view of a file tree where each square is a file.
+                    It allows us to overlay trails.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setView('codeTrail')}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors hover:opacity-80"
+                  style={{
+                    background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
+                    color: theme.colors.primary,
+                  }}
+                >
+                  What is a Code Trail?
+                </button>
+              </div>
+
+              {/* Code-trail explanation. */}
+              <div
+                className={`absolute inset-0 transition-opacity duration-300 ${view === 'codeTrail' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                aria-hidden={view !== 'codeTrail'}
+              >
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <h2
+                    className="text-3xl md:text-4xl font-semibold tracking-tight"
+                    style={{ color: theme.colors.primary }}
+                  >
+                    What is a Code Trail?
+                  </h2>
+                  <button
+                    onClick={() => setView('title')}
+                    className="rounded-md p-1.5 transition-colors hover:opacity-80"
+                    style={{
+                      border: `1px solid color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
+                      color: theme.colors.textMuted,
+                    }}
+                    aria-label="Close explanation"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <div
+                  className="text-base md:text-lg leading-relaxed mb-6"
+                  style={{ color: theme.colors.text }}
+                >
+                  <p>
+                    It is a walk through your codebase that explains a concept.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setView('whyTrails')}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors hover:opacity-80"
+                  style={{
+                    background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
+                    color: theme.colors.primary,
+                  }}
+                >
+                  Why do I need Code Trails?
+                </button>
+              </div>
+
+              {/* Why-trails / Mark Twain quote. */}
+              <div
+                className={`absolute inset-0 transition-opacity duration-300 ${view === 'whyTrails' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                aria-hidden={view !== 'whyTrails'}
+              >
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <h2
+                    className="text-3xl md:text-4xl font-semibold tracking-tight"
+                    style={{ color: theme.colors.primary }}
+                  >
+                    Why do I need Code Trails?
+                  </h2>
+                  <button
+                    onClick={() => setView('title')}
+                    className="rounded-md p-1.5 transition-colors hover:opacity-80"
+                    style={{
+                      border: `1px solid color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
+                      color: theme.colors.textMuted,
+                    }}
+                    aria-label="Close explanation"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <blockquote
+                  className="border-l-2 pl-4 text-base md:text-lg leading-relaxed italic mb-6"
+                  style={{
+                    borderColor: theme.colors.primary,
+                    color: theme.colors.text,
+                  }}
+                >
+                  <p className="mb-2">
+                    &ldquo;It ain&rsquo;t what you don&rsquo;t know that gets
+                    you into trouble. It&rsquo;s what you know for sure that
+                    just ain&rsquo;t so.&rdquo;
+                  </p>
+                  <footer
+                    className="text-sm not-italic"
+                    style={{ color: theme.colors.textMuted }}
+                  >
+                    — Mark Twain
+                  </footer>
+                </blockquote>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-x-3 gap-y-2 text-base">
+                  <a
+                    href="https://app.principal-ade.com/trail/backlog-task-create-flow"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md font-medium transition-opacity hover:opacity-90"
+                    style={{
+                      background: theme.colors.primary,
+                      color: theme.colors.background,
+                    }}
+                  >
+                    Take a stroll through Backlog.md
+                  </a>
+                  <span style={{ color: theme.colors.textMuted }}>or</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(true)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md font-medium transition-colors hover:opacity-80"
+                    style={{
+                      background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
+                      color: theme.colors.primary,
+                    }}
+                  >
+                    create your own trail
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setView(v => (v === 'fileCity' ? 'title' : 'fileCity'))}
+              className="group rounded-2xl overflow-hidden backdrop-blur-xl p-2 cursor-pointer text-left"
+              style={{
+                background: `color-mix(in srgb, ${theme.colors.surface} 35%, transparent)`,
+              }}
+              onMouseEnter={() => {
+                setHintRevealed(true);
+                setDiagramHovered(true);
+              }}
+              onMouseLeave={() => setDiagramHovered(false)}
+              aria-label={showExplanation ? 'Hide file-city explanation' : 'Show file-city explanation'}
+              aria-pressed={showExplanation}
+            >
+              <div
+                className="rounded-xl overflow-hidden transition-colors duration-200"
+                style={{
+                  border: `1px solid ${
+                    diagramBorderActive
+                      ? `color-mix(in srgb, ${theme.colors.primary} 70%, transparent)`
+                      : `color-mix(in srgb, ${theme.colors.border} 50%, transparent)`
+                  }`,
+                }}
+              >
+                <TrailCityDiagram highlightTrail={view === 'codeTrail'} />
+              </div>
+            </button>
+          </div>
+        </section>
+
+      </main>
+
+      <footer
+        className="border-t text-xs backdrop-blur-xl relative z-10"
+        style={{
+          borderColor: `color-mix(in srgb, ${theme.colors.border} 60%, transparent)`,
+          background: `color-mix(in srgb, ${theme.colors.background} 55%, transparent)`,
+          color: theme.colors.textMuted,
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <span>© {new Date().getFullYear()} Principal AI</span>
+        </div>
+      </footer>
+
+      <CreateTrailModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        theme={theme}
       />
     </div>
   );
 }
 
-export default function HomePage() {
+const SKILL_URL = 'https://github.com/principal-ai/skills/blob/main/publish-trail/SKILL.md';
+const CREATE_TRAIL_PROMPT = `Read the publish-trail skill at ${SKILL_URL} and use it to walk me through <topic>.`;
+
+function CreateTrailModal({
+  open,
+  onClose,
+  theme,
+}: {
+  open: boolean;
+  onClose: () => void;
+  theme: ReturnType<typeof useTheme>['theme'];
+}) {
+  const [copied, setCopied] = useState(false);
+
+  // Esc closes the modal.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  // Reset the copied feedback when the modal closes so the next open
+  // starts fresh.
+  useEffect(() => {
+    if (!open) setCopied(false);
+  }, [open]);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(CREATE_TRAIL_PROMPT);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard may be denied — user can select and copy manually.
+    }
+  };
+
+  if (!open) return null;
+
   return (
-    <HomePageProvider
-      workspace={{
-        name: 'web-ade',
-        path: '/workspace',
-      }}
-      repository={{
-        name: 'home',
-        path: '/home',
-      }}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Create your own trail"
     >
-      <HomePageContent />
-    </HomePageProvider>
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 backdrop-blur-md"
+        style={{ background: `color-mix(in srgb, ${theme.colors.background} 70%, transparent)` }}
+      />
+
+      {/* Card */}
+      <div
+        className="relative w-full max-w-xl rounded-2xl p-6 backdrop-blur-xl"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: `color-mix(in srgb, ${theme.colors.surface} 85%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${theme.colors.primary} 35%, transparent)`,
+          boxShadow: `0 30px 80px -20px color-mix(in srgb, ${theme.colors.primary} 25%, transparent)`,
+        }}
+      >
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <h3
+            className="text-2xl font-semibold tracking-tight"
+            style={{ color: theme.colors.primary }}
+          >
+            Create your own trail
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1.5 transition-colors hover:opacity-80"
+            style={{
+              border: `1px solid color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
+              color: theme.colors.textMuted,
+            }}
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <p
+          className="text-sm md:text-base leading-relaxed mb-4"
+          style={{ color: theme.colors.text }}
+        >
+          Drop this prompt into your agent. It uses the{' '}
+          <code style={{ color: theme.colors.primary }}>publish-trail</code>{' '}
+          skill to pick markers from your codebase and publish a shareable
+          trail.
+        </p>
+
+        <div
+          className="rounded-lg p-4 mb-4 font-mono text-sm leading-relaxed whitespace-pre-wrap"
+          style={{
+            background: `color-mix(in srgb, ${theme.colors.background} 70%, transparent)`,
+            border: `1px solid color-mix(in srgb, ${theme.colors.border} 60%, transparent)`,
+            color: theme.colors.text,
+          }}
+        >
+          {CREATE_TRAIL_PROMPT}
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-opacity hover:opacity-90"
+            style={{
+              background: theme.colors.primary,
+              color: theme.colors.background,
+            }}
+          >
+            {copied ? <Check size={16} /> : <Copy size={16} />}
+            {copied ? 'Copied' : 'Copy prompt'}
+          </button>
+          <a
+            href={SKILL_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors hover:opacity-80"
+            style={{
+              background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
+              color: theme.colors.primary,
+            }}
+          >
+            <ExternalLink size={14} />
+            View skill
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface BackdropTheme {
+  colors: {
+    primary?: string;
+    accent?: string;
+    text?: string;
+  };
+}
+
+function TrailBackdrop({ theme }: { theme: BackdropTheme }) {
+  const accent = theme.colors.accent ?? theme.colors.primary ?? '#22d3ee';
+  const primary = theme.colors.primary ?? '#22d3ee';
+  const text = theme.colors.text ?? '#f8fafc';
+
+  // One out-of-focus city + trail spread across the whole viewport.
+  // Coordinates live in a 1600×1000 design space; the SVG uses
+  // preserveAspectRatio="xMidYMid slice" so it covers the page like a
+  // background image regardless of window aspect.
+  const blocks = [
+    { x: 60, y: 80, w: 180, h: 140, fill: primary, op: 0.5 },
+    { x: 280, y: 40, w: 110, h: 180, fill: accent, op: 0.45 },
+    { x: 430, y: 110, w: 160, h: 130, fill: primary, op: 0.35 },
+    { x: 640, y: 60, w: 130, h: 170, fill: accent, op: 0.4 },
+    { x: 820, y: 100, w: 180, h: 150, fill: primary, op: 0.3 },
+    { x: 1050, y: 50, w: 140, h: 200, fill: accent, op: 0.45 },
+    { x: 1240, y: 90, w: 200, h: 160, fill: primary, op: 0.35 },
+    { x: 100, y: 320, w: 150, h: 130, fill: accent, op: 0.4 },
+    { x: 290, y: 360, w: 220, h: 110, fill: primary, op: 0.3 },
+    { x: 560, y: 330, w: 130, h: 160, fill: accent, op: 0.45 },
+    { x: 740, y: 380, w: 180, h: 130, fill: primary, op: 0.35 },
+    { x: 970, y: 320, w: 160, h: 170, fill: accent, op: 0.4 },
+    { x: 1180, y: 360, w: 220, h: 140, fill: primary, op: 0.3 },
+    { x: 50, y: 580, w: 200, h: 140, fill: accent, op: 0.4 },
+    { x: 300, y: 620, w: 130, h: 110, fill: primary, op: 0.35 },
+    { x: 480, y: 580, w: 180, h: 160, fill: accent, op: 0.45 },
+    { x: 710, y: 620, w: 160, h: 120, fill: primary, op: 0.3 },
+    { x: 920, y: 580, w: 200, h: 150, fill: accent, op: 0.4 },
+    { x: 1170, y: 600, w: 180, h: 140, fill: primary, op: 0.35 },
+    { x: 180, y: 800, w: 160, h: 120, fill: text, op: 0.15 },
+    { x: 400, y: 820, w: 220, h: 100, fill: primary, op: 0.3 },
+    { x: 680, y: 800, w: 180, h: 130, fill: accent, op: 0.35 },
+    { x: 920, y: 820, w: 160, h: 110, fill: text, op: 0.18 },
+    { x: 1140, y: 800, w: 200, h: 130, fill: accent, op: 0.3 },
+  ];
+
+  // Trail snakes diagonally across the whole field, hopping between
+  // blocks. Markers sit on each waypoint.
+  const trailPoints = [
+    { x: 150, y: 150 },
+    { x: 360, y: 130 },
+    { x: 720, y: 250 },
+    { x: 920, y: 420 },
+    { x: 1130, y: 380 },
+    { x: 1320, y: 600 },
+    { x: 1080, y: 720 },
+    { x: 760, y: 680 },
+    { x: 480, y: 820 },
+  ];
+  const trailD = trailPoints
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
+    .join(' ');
+
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 overflow-hidden"
+      aria-hidden
+      style={{ filter: 'blur(20px)', opacity: 0.05 }}
+    >
+      <svg
+        viewBox="0 0 1600 1000"
+        preserveAspectRatio="xMidYMid slice"
+        style={{ width: '100%', height: '100%' }}
+      >
+        {blocks.map((b, i) => (
+          <rect
+            key={i}
+            x={b.x}
+            y={b.y}
+            width={b.w}
+            height={b.h}
+            rx={10}
+            fill={b.fill}
+            opacity={b.op}
+          />
+        ))}
+        <path
+          d={trailD}
+          fill="none"
+          stroke={accent}
+          strokeWidth={6}
+          strokeDasharray="14 10"
+          strokeLinecap="round"
+          opacity={0.7}
+        />
+        {trailPoints.map((p, i) => (
+          <circle key={i} cx={p.x} cy={p.y} r={9} fill={accent} opacity={0.85} />
+        ))}
+      </svg>
+    </div>
   );
 }
