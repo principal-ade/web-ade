@@ -1,3 +1,4 @@
+import { isValidPurl } from '@principal-ai/alexandria-core-library';
 import { TrailShareError, ShareErrorCodes } from './types';
 import type {
   CreateSharedTrailRequest,
@@ -170,9 +171,9 @@ function validateRepo(repo: unknown, index: number): TrailRepo {
     );
   }
   const r = repo as Partial<TrailRepo>;
-  if (typeof r.id !== 'string' || !r.id) {
+  if (typeof r.id !== 'string' || !isValidPurl(r.id)) {
     throw new TrailShareError(
-      `Repo ${index}: missing id`,
+      `Repo ${index}: id must be a valid Purl (e.g. pkg:github/owner/name). Mint with PurlBuilders.github(...) or createLocalRepoPurl(...) from @principal-ai/alexandria-core-library.`,
       400,
       ShareErrorCodes.INVALID_PAYLOAD
     );
