@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Waypoints, X, MoveRight, Copy, Check, ExternalLink } from 'lucide-react';
+import { X, MoveRight, Copy, Check, ExternalLink } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { TrailCityDiagram } from '@/components/trail/TrailCityDiagram';
 
@@ -11,12 +11,38 @@ export const dynamic = 'force-dynamic';
 export default function HomePage() {
   const { theme } = useTheme();
   const [view, setView] = useState<'title' | 'fileCity' | 'codeTrail' | 'whyTrails'>('title');
-  const [hintRevealed, setHintRevealed] = useState(false);
+  const [revealStep, setRevealStep] = useState(0);
+  const [stepsRevealed, setStepsRevealed] = useState(0);
+  const [diagramRevealed, setDiagramRevealed] = useState(false);
   const [diagramHovered, setDiagramHovered] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const showExplanation = view !== 'title';
-  const showHint = view === 'title' && hintRevealed;
+  const showTitle = revealStep >= 1;
+  const showSubtitle = revealStep >= 2;
+  const showHint = view === 'title' && revealStep >= 3;
   const diagramBorderActive = diagramHovered || view === 'fileCity';
+
+  const STEP_COUNT = 13;
+  const STEP_INTERVAL = 220;
+  const STEP_START = 300;
+
+  useEffect(() => {
+    const stepTimers = Array.from({ length: STEP_COUNT }, (_, i) =>
+      setTimeout(() => setStepsRevealed(i + 1), STEP_START + i * STEP_INTERVAL),
+    );
+    const stepsDoneAt = STEP_START + STEP_COUNT * STEP_INTERVAL;
+    const diagramTimer = setTimeout(() => setDiagramRevealed(true), stepsDoneAt + 200);
+    const titleTimer = setTimeout(() => setRevealStep(1), stepsDoneAt + 1500);
+    const subtitleTimer = setTimeout(() => setRevealStep(2), stepsDoneAt + 2500);
+    const exploreTimer = setTimeout(() => setRevealStep(3), stepsDoneAt + 3500);
+    return () => {
+      stepTimers.forEach(clearTimeout);
+      clearTimeout(diagramTimer);
+      clearTimeout(titleTimer);
+      clearTimeout(subtitleTimer);
+      clearTimeout(exploreTimer);
+    };
+  }, []);
 
   return (
     <div
@@ -48,54 +74,73 @@ export default function HomePage() {
       </header>
 
       <main className="flex-1 flex flex-col relative">
-        <section className="flex-1 w-full max-w-7xl mx-auto px-6 py-16 flex items-center">
-          <div className="w-full grid lg:grid-cols-2 gap-12 lg:gap-10 items-center">
-            <div className="relative text-center lg:text-left min-h-[260px]">
+        <section className="flex-1 w-full max-w-7xl mx-auto px-6 py-16 flex items-start">
+          <div className="w-full grid lg:grid-cols-2 gap-12 lg:gap-10 items-start">
+            <div className="relative text-center lg:text-left min-h-[260px] lg:pt-24">
               {/* Title — fades out when the user opens the file-city explanation. */}
               <div
                 className={`transition-opacity duration-300 ${showExplanation ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
                 aria-hidden={showExplanation}
               >
+                <div
+                  className="flex items-center justify-center lg:justify-start gap-7 mb-6 h-12"
+                  aria-hidden
+                >
+                  {Array.from({ length: STEP_COUNT }).map((_, i) => {
+                    const side = i % 2 === 0 ? 'left' : 'right';
+                    return (
+                      <span
+                        key={i}
+                        className="inline-block transition-opacity duration-500 ease-out"
+                        style={{
+                          opacity: i < stepsRevealed ? 1 : 0,
+                          transform: `translateY(${side === 'left' ? '-7px' : '7px'}) rotate(90deg)`,
+                          transformOrigin: 'center',
+                        }}
+                      >
+                        <Footprint side={side} size={18} color={theme.colors.primary} />
+                      </span>
+                    );
+                  })}
+                </div>
+
                 <h1
-                  className="inline-flex items-center gap-4 text-6xl md:text-7xl xl:text-8xl font-semibold tracking-tight leading-[0.95] mb-6"
+                  className={`text-6xl md:text-7xl xl:text-8xl font-semibold tracking-tight leading-[0.95] mb-6 transition-opacity duration-700 ease-out ${
+                    showTitle ? 'opacity-100' : 'opacity-0'
+                  }`}
                   style={{ color: theme.colors.primary }}
                 >
                   Code trails
-                  <Waypoints
-                    className="w-[0.85em] h-[0.85em] flex-shrink-0"
-                    strokeWidth={1.75}
-                  />
                 </h1>
 
                 <p
-                  className="text-xl md:text-2xl max-w-xl mx-auto lg:mx-0 lg:pl-5 leading-relaxed mb-6"
+                  className={`text-xl md:text-2xl max-w-xl mx-auto lg:mx-0 lg:pl-5 leading-relaxed mb-6 transition-opacity duration-700 ease-out ${
+                    showSubtitle ? 'opacity-100' : 'opacity-0'
+                  }`}
                   style={{ color: theme.colors.text }}
                 >
-                  Collaborate at the speed of AI
+                  A new way to collaborate on software
                 </p>
 
                 <div
-                  className={`lg:pl-5 flex items-center justify-center lg:justify-start gap-2 transition-all duration-300 ${
-                    showHint
-                      ? 'opacity-100 translate-x-0'
-                      : 'opacity-0 -translate-x-3 pointer-events-none'
+                  className={`lg:pl-5 flex items-center justify-center lg:justify-start gap-2 transition-opacity duration-700 ease-out ${
+                    showHint ? 'opacity-100' : 'opacity-0 pointer-events-none'
                   }`}
                 >
                   <button
                     type="button"
                     onClick={() => setView('fileCity')}
-                    className="inline-flex items-center gap-3 text-2xl md:text-3xl italic font-bold tracking-tight px-4 py-2 rounded-full origin-left transition-transform duration-200 ease-out hover:scale-110"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md text-base font-medium transition-colors hover:opacity-80"
                     style={{
-                      color: theme.colors.background,
-                      background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.accent ?? theme.colors.primary})`,
-                      fontFamily: 'Georgia, "Times New Roman", serif',
-                      boxShadow: `0 0 0 3px color-mix(in srgb, ${theme.colors.primary} 35%, transparent), 0 8px 30px -4px color-mix(in srgb, ${theme.colors.primary} 60%, transparent)`,
+                      background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
+                      color: theme.colors.primary,
                     }}
                   >
-                    What is that???
+                    Explore
                     <MoveRight
-                      size={28}
-                      strokeWidth={3}
+                      size={18}
+                      strokeWidth={2.25}
                       className="hint-arrow-bounce"
                     />
                   </button>
@@ -111,7 +156,7 @@ export default function HomePage() {
 
               {/* File-city explanation. */}
               <div
-                className={`absolute inset-0 transition-opacity duration-300 ${view === 'fileCity' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                className={`absolute inset-x-0 bottom-0 top-32 transition-opacity duration-300 ${view === 'fileCity' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 aria-hidden={view !== 'fileCity'}
               >
                 <div className="flex items-start justify-between gap-4 mb-4">
@@ -158,7 +203,7 @@ export default function HomePage() {
 
               {/* Code-trail explanation. */}
               <div
-                className={`absolute inset-0 transition-opacity duration-300 ${view === 'codeTrail' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                className={`absolute inset-x-0 bottom-0 top-32 transition-opacity duration-300 ${view === 'codeTrail' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 aria-hidden={view !== 'codeTrail'}
               >
                 <div className="flex items-start justify-between gap-4 mb-4">
@@ -204,7 +249,7 @@ export default function HomePage() {
 
               {/* Why-trails / Mark Twain quote. */}
               <div
-                className={`absolute inset-0 transition-opacity duration-300 ${view === 'whyTrails' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                className={`absolute inset-x-0 bottom-0 top-32 transition-opacity duration-300 ${view === 'whyTrails' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 aria-hidden={view !== 'whyTrails'}
               >
                 <div className="flex items-start justify-between gap-4 mb-4">
@@ -226,20 +271,29 @@ export default function HomePage() {
                     <X size={16} />
                   </button>
                 </div>
+                <p
+                  className="text-xl md:text-2xl mb-3"
+                  style={{ color: theme.colors.text }}
+                >
+                  Because
+                </p>
                 <blockquote
-                  className="border-l-2 pl-4 text-base md:text-lg leading-relaxed italic mb-6"
+                  className="border-l-2 pl-5 text-xl md:text-2xl xl:text-3xl leading-relaxed italic mb-6"
                   style={{
                     borderColor: theme.colors.primary,
                     color: theme.colors.text,
                   }}
                 >
-                  <p className="mb-2">
+                  <p className="mb-3">
                     &ldquo;It ain&rsquo;t what you don&rsquo;t know that gets
-                    you into trouble. It&rsquo;s what you know for sure that
-                    just ain&rsquo;t so.&rdquo;
+                    you into trouble.{' '}
+                    <span style={{ color: theme.colors.primary }}>
+                      It&rsquo;s what you know for sure that just ain&rsquo;t so.
+                    </span>
+                    &rdquo;
                   </p>
                   <footer
-                    className="text-sm not-italic"
+                    className="text-base md:text-lg not-italic"
                     style={{ color: theme.colors.textMuted }}
                   >
                     — Mark Twain
@@ -278,17 +332,17 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setView(v => (v === 'fileCity' ? 'title' : 'fileCity'))}
-              className="group rounded-2xl overflow-hidden backdrop-blur-xl p-2 cursor-pointer text-left"
+              className={`group rounded-2xl overflow-hidden backdrop-blur-xl p-2 cursor-pointer text-left transition-opacity duration-700 ease-out ${
+                diagramRevealed ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              }`}
               style={{
                 background: `color-mix(in srgb, ${theme.colors.surface} 35%, transparent)`,
               }}
-              onMouseEnter={() => {
-                setHintRevealed(true);
-                setDiagramHovered(true);
-              }}
+              onMouseEnter={() => setDiagramHovered(true)}
               onMouseLeave={() => setDiagramHovered(false)}
               aria-label={showExplanation ? 'Hide file-city explanation' : 'Show file-city explanation'}
               aria-pressed={showExplanation}
+              aria-hidden={!diagramRevealed}
             >
               <div
                 className="rounded-xl overflow-hidden transition-colors duration-200"
@@ -330,8 +384,60 @@ export default function HomePage() {
   );
 }
 
-const SKILL_URL = 'https://github.com/principal-ai/skills/blob/main/publish-trail/SKILL.md';
-const CREATE_TRAIL_PROMPT = `Read the publish-trail skill at ${SKILL_URL} and use it to walk me through <topic>.`;
+function Footprint({
+  side,
+  size = 24,
+  color,
+  strokeWidth = 2,
+}: {
+  side: 'left' | 'right';
+  size?: number;
+  color: string;
+  strokeWidth?: number;
+}) {
+  return (
+    <svg
+      viewBox="2 1 9 18"
+      width={size}
+      height={size * (18 / 9)}
+      fill="none"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ transform: side === 'right' ? 'scaleX(-1)' : undefined }}
+      aria-hidden
+    >
+      <path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z" />
+      <path d="M4 13h4" />
+    </svg>
+  );
+}
+
+type TrailMode = 'self' | 'share';
+
+const TRAIL_MODES: Record<TrailMode, {
+  label: string;
+  description: string;
+  skillName: string;
+  skillUrl: string;
+  prompt: string;
+}> = {
+  self: {
+    label: 'Trail for Myself',
+    description: 'Walk a codebase locally to learn or onboard — no publish step.',
+    skillName: 'local-trails',
+    skillUrl: 'https://github.com/principal-ai/skills/blob/main/local-trails/SKILL.md',
+    prompt: `Read the local-trails skill at https://github.com/principal-ai/skills/blob/main/local-trails/SKILL.md and use it to walk me through <topic>.`,
+  },
+  share: {
+    label: 'To Share',
+    description: 'Pick markers and publish a shareable trail others can follow.',
+    skillName: 'publish-trail',
+    skillUrl: 'https://github.com/principal-ai/skills/blob/main/publish-trail/SKILL.md',
+    prompt: `Read the publish-trail skill at https://github.com/principal-ai/skills/blob/main/publish-trail/SKILL.md and use it to walk me through <topic>.`,
+  },
+};
 
 function CreateTrailModal({
   open,
@@ -343,6 +449,7 @@ function CreateTrailModal({
   theme: ReturnType<typeof useTheme>['theme'];
 }) {
   const [copied, setCopied] = useState(false);
+  const [mode, setMode] = useState<TrailMode | null>(null);
 
   // Esc closes the modal.
   useEffect(() => {
@@ -354,15 +461,20 @@ function CreateTrailModal({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  // Reset the copied feedback when the modal closes so the next open
-  // starts fresh.
+  // Reset state when the modal closes so the next open starts fresh.
   useEffect(() => {
-    if (!open) setCopied(false);
+    if (!open) {
+      setCopied(false);
+      setMode(null);
+    }
   }, [open]);
 
+  const selected = mode ? TRAIL_MODES[mode] : null;
+
   const handleCopy = async () => {
+    if (!selected) return;
     try {
-      await navigator.clipboard.writeText(CREATE_TRAIL_PROMPT);
+      await navigator.clipboard.writeText(selected.prompt);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -401,7 +513,7 @@ function CreateTrailModal({
             className="text-2xl font-semibold tracking-tight"
             style={{ color: theme.colors.primary }}
           >
-            Create your own trail
+            {selected ? selected.label : 'Create your own trail'}
           </h3>
           <button
             type="button"
@@ -417,55 +529,113 @@ function CreateTrailModal({
           </button>
         </div>
 
-        <p
-          className="text-sm md:text-base leading-relaxed mb-4"
-          style={{ color: theme.colors.text }}
-        >
-          Drop this prompt into your agent. It uses the{' '}
-          <code style={{ color: theme.colors.primary }}>publish-trail</code>{' '}
-          skill to pick markers from your codebase and publish a shareable
-          trail.
-        </p>
+        {!selected ? (
+          <>
+            <p
+              className="text-sm md:text-base leading-relaxed mb-5"
+              style={{ color: theme.colors.text }}
+            >
+              How do you want to use this trail?
+            </p>
+            <div className="flex flex-col gap-3">
+              {(['self', 'share'] as const).map((key) => {
+                const opt = TRAIL_MODES[key];
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setMode(key)}
+                    className="text-left rounded-lg p-4 transition-colors hover:opacity-90"
+                    style={{
+                      background: `color-mix(in srgb, ${theme.colors.primary} 12%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${theme.colors.primary} 45%, transparent)`,
+                    }}
+                  >
+                    <div
+                      className="text-base font-semibold mb-1"
+                      style={{ color: theme.colors.primary }}
+                    >
+                      {opt.label}
+                    </div>
+                    <div
+                      className="text-sm leading-relaxed"
+                      style={{ color: theme.colors.text }}
+                    >
+                      {opt.description}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <>
+            <p
+              className="text-sm md:text-base leading-relaxed mb-4"
+              style={{ color: theme.colors.text }}
+            >
+              Drop this prompt into your agent. It uses the{' '}
+              <code style={{ color: theme.colors.primary }}>{selected.skillName}</code>{' '}
+              skill to {mode === 'self'
+                ? 'walk you through your codebase locally.'
+                : 'pick markers from your codebase and publish a shareable trail.'}
+            </p>
 
-        <div
-          className="rounded-lg p-4 mb-4 font-mono text-sm leading-relaxed whitespace-pre-wrap"
-          style={{
-            background: `color-mix(in srgb, ${theme.colors.background} 70%, transparent)`,
-            border: `1px solid color-mix(in srgb, ${theme.colors.border} 60%, transparent)`,
-            color: theme.colors.text,
-          }}
-        >
-          {CREATE_TRAIL_PROMPT}
-        </div>
+            <div
+              className="rounded-lg p-4 mb-4 font-mono text-sm leading-relaxed whitespace-pre-wrap"
+              style={{
+                background: `color-mix(in srgb, ${theme.colors.background} 70%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${theme.colors.border} 60%, transparent)`,
+                color: theme.colors.text,
+              }}
+            >
+              {selected.prompt}
+            </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-opacity hover:opacity-90"
-            style={{
-              background: theme.colors.primary,
-              color: theme.colors.background,
-            }}
-          >
-            {copied ? <Check size={16} /> : <Copy size={16} />}
-            {copied ? 'Copied' : 'Copy prompt'}
-          </button>
-          <a
-            href={SKILL_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors hover:opacity-80"
-            style={{
-              background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
-              border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
-              color: theme.colors.primary,
-            }}
-          >
-            <ExternalLink size={14} />
-            View skill
-          </a>
-        </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-opacity hover:opacity-90"
+                style={{
+                  background: theme.colors.primary,
+                  color: theme.colors.background,
+                }}
+              >
+                {copied ? <Check size={16} /> : <Copy size={16} />}
+                {copied ? 'Copied' : 'Copy prompt'}
+              </button>
+              <a
+                href={selected.skillUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors hover:opacity-80"
+                style={{
+                  background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
+                  border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
+                  color: theme.colors.primary,
+                }}
+              >
+                <ExternalLink size={14} />
+                View skill
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode(null);
+                  setCopied(false);
+                }}
+                className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors hover:opacity-80 sm:ml-auto"
+                style={{
+                  border: `1px solid color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
+                  color: theme.colors.textMuted,
+                }}
+              >
+                Back
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
