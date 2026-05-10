@@ -5,17 +5,22 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { X, MoveRight, Copy, Check, ExternalLink } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { TrailCityDiagram } from '@/components/trail/TrailCityDiagram';
+import { LgtmStamp, SignOffStampAnimation } from '@/components/trail/LgtmStamp';
 
 export const dynamic = 'force-dynamic';
 
+type StampKind = 'LGTM' | 'ACK';
+
 export default function HomePage() {
   const { theme } = useTheme();
-  const [view, setView] = useState<'title' | 'fileCity' | 'codeTrail' | 'whyTrails'>('title');
+  const [view, setView] = useState<'title' | 'fileCity' | 'codeTrail' | 'whyTrails' | 'stamped'>('title');
   const [revealStep, setRevealStep] = useState(0);
   const [stepsRevealed, setStepsRevealed] = useState(0);
   const [diagramRevealed, setDiagramRevealed] = useState(false);
   const [diagramHovered, setDiagramHovered] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [stamp, setStamp] = useState<StampKind | null>(null);
+  const [stampAnimating, setStampAnimating] = useState(false);
   const showExplanation = view !== 'title';
   const showTitle = revealStep >= 1;
   const showSubtitle = revealStep >= 2;
@@ -25,6 +30,24 @@ export default function HomePage() {
   const STEP_COUNT = 13;
   const STEP_INTERVAL = 220;
   const STEP_START = 300;
+
+  const handleStamp = (kind: StampKind) => {
+    if (stampAnimating || stamp) return;
+    setStamp(kind);
+    setStampAnimating(true);
+    // Match the SignOffStampAnimation keyframe duration; advance to the
+    // backlog / create-your-own step the moment the stamp settles.
+    setTimeout(() => {
+      setStampAnimating(false);
+      setView('stamped');
+    }, 1100);
+  };
+
+  const resetToTitle = () => {
+    setView('title');
+    setStamp(null);
+    setStampAnimating(false);
+  };
 
   useEffect(() => {
     const stepTimers = Array.from({ length: STEP_COUNT }, (_, i) =>
@@ -235,7 +258,7 @@ export default function HomePage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setView('whyTrails')}
+                  onClick={() => setView(stamp ? 'stamped' : 'whyTrails')}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors hover:opacity-80"
                   style={{
                     background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
@@ -247,7 +270,7 @@ export default function HomePage() {
                 </button>
               </div>
 
-              {/* Why-trails / Mark Twain quote. */}
+              {/* Why-trails / Mark Twain quote — sign-off step. */}
               <div
                 className={`absolute inset-x-0 bottom-0 top-32 transition-opacity duration-300 ${view === 'whyTrails' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 aria-hidden={view !== 'whyTrails'}
@@ -299,6 +322,75 @@ export default function HomePage() {
                     — Mark Twain
                   </footer>
                 </blockquote>
+                <p
+                  className="text-sm md:text-base mb-3"
+                  style={{ color: theme.colors.textMuted }}
+                >
+                  Sign off on this trail to continue.
+                </p>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-base">
+                  <button
+                    type="button"
+                    onClick={() => handleStamp('LGTM')}
+                    disabled={stampAnimating || stamp !== null}
+                    className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-md font-mono font-semibold tracking-wider transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+                    style={{
+                      background: theme.colors.success,
+                      color: theme.colors.background,
+                      letterSpacing: '0.12em',
+                    }}
+                    aria-label="Sign off with LGTM"
+                  >
+                    LGTM
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleStamp('ACK')}
+                    disabled={stampAnimating || stamp !== null}
+                    className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-md font-mono font-semibold tracking-wider transition-colors hover:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed"
+                    style={{
+                      background: `color-mix(in srgb, ${theme.colors.success} 16%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${theme.colors.success} 60%, transparent)`,
+                      color: theme.colors.success,
+                      letterSpacing: '0.12em',
+                    }}
+                    aria-label="Acknowledge with ACK"
+                  >
+                    ACK
+                  </button>
+                </div>
+              </div>
+
+              {/* Stamped — backlog / create-your-own follow-ups. */}
+              <div
+                className={`absolute inset-x-0 bottom-0 top-32 transition-opacity duration-300 ${view === 'stamped' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                aria-hidden={view !== 'stamped'}
+              >
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <h2
+                    className="text-3xl md:text-4xl font-semibold tracking-tight"
+                    style={{ color: theme.colors.primary }}
+                  >
+                    Trail signed.
+                  </h2>
+                  <button
+                    onClick={resetToTitle}
+                    className="rounded-md p-1.5 transition-colors hover:opacity-80"
+                    style={{
+                      border: `1px solid color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
+                      color: theme.colors.textMuted,
+                    }}
+                    aria-label="Close"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <p
+                  className="text-base md:text-lg leading-relaxed mb-6"
+                  style={{ color: theme.colors.text }}
+                >
+                  Now take your own walk — explore the backlog or stamp your codebase with a new trail.
+                </p>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-x-3 gap-y-2 text-base">
                   <a
                     href="https://app.principal-ade.com/trail/backlog-task-create-flow"
@@ -329,34 +421,68 @@ export default function HomePage() {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setView(v => (v === 'fileCity' ? 'title' : 'fileCity'))}
-              className={`group rounded-2xl overflow-hidden backdrop-blur-xl p-2 cursor-pointer text-left transition-opacity duration-700 ease-out ${
-                diagramRevealed ? 'opacity-100' : 'opacity-0 pointer-events-none'
-              }`}
-              style={{
-                background: `color-mix(in srgb, ${theme.colors.surface} 35%, transparent)`,
-              }}
-              onMouseEnter={() => setDiagramHovered(true)}
-              onMouseLeave={() => setDiagramHovered(false)}
-              aria-label={showExplanation ? 'Hide file-city explanation' : 'Show file-city explanation'}
-              aria-pressed={showExplanation}
-              aria-hidden={!diagramRevealed}
-            >
-              <div
-                className="rounded-xl overflow-hidden transition-colors duration-200"
-                style={{
-                  border: `1px solid ${
-                    diagramBorderActive
-                      ? `color-mix(in srgb, ${theme.colors.primary} 70%, transparent)`
-                      : `color-mix(in srgb, ${theme.colors.border} 50%, transparent)`
-                  }`,
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  if (stampAnimating) return;
+                  setView(v => (v === 'fileCity' ? 'title' : 'fileCity'));
                 }}
+                className={`group rounded-2xl overflow-hidden backdrop-blur-xl p-2 cursor-pointer text-left transition-opacity duration-700 ease-out w-full ${
+                  diagramRevealed ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                }`}
+                style={{
+                  background: `color-mix(in srgb, ${theme.colors.surface} 35%, transparent)`,
+                }}
+                onMouseEnter={() => setDiagramHovered(true)}
+                onMouseLeave={() => setDiagramHovered(false)}
+                aria-label={showExplanation ? 'Hide file-city explanation' : 'Show file-city explanation'}
+                aria-pressed={showExplanation}
+                aria-hidden={!diagramRevealed}
               >
-                <TrailCityDiagram highlightTrail={view === 'codeTrail'} />
-              </div>
-            </button>
+                <div
+                  className="rounded-xl overflow-hidden transition-colors duration-200"
+                  style={{
+                    border: `1px solid ${
+                      diagramBorderActive
+                        ? `color-mix(in srgb, ${theme.colors.primary} 70%, transparent)`
+                        : `color-mix(in srgb, ${theme.colors.border} 50%, transparent)`
+                    }`,
+                  }}
+                >
+                  <TrailCityDiagram highlightTrail={view === 'codeTrail'} />
+                </div>
+              </button>
+
+              {/* Sign-off stamp animation overlays the diagram during the
+                  1100ms landing beat. */}
+              {stampAnimating && stamp && (
+                <SignOffStampAnimation theme={theme} text={stamp} size={220} />
+              )}
+
+              {/* Persisted stamp once the trail is signed — settles in
+                  the diagram's top-right corner so the trail map stays
+                  legible underneath. */}
+              {!stampAnimating && stamp && (
+                <div
+                  aria-hidden
+                  className="absolute pointer-events-none"
+                  style={{
+                    top: 18,
+                    right: 18,
+                    animation: 'stamp-settle 320ms ease-out both',
+                  }}
+                >
+                  <style>{`
+                    @keyframes stamp-settle {
+                      0%   { transform: scale(1.6) rotate(-8deg); opacity: 0; }
+                      100% { transform: scale(1) rotate(-8deg); opacity: 1; }
+                    }
+                  `}</style>
+                  <LgtmStamp theme={theme} size={96} rotated={false} text={stamp} />
+                </div>
+              )}
+            </div>
           </div>
         </section>
 

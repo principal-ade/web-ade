@@ -50,6 +50,17 @@ import {
   type TrailSignOffDraft,
   type SharedTrailIndexEntry,
 } from '@/lib/trails/types';
+import {
+  LOCAL_AUTHOR,
+  appendLocalNote,
+  appendLocalSignOff,
+  isLocalId,
+  loadLocalMutations,
+  newLocalId,
+  removeLocalNote,
+  removeLocalSignOff,
+  replaceLocalNote,
+} from '@/lib/trails/local-mutations';
 
 const FileCityTrailExplorerPanel = dynamic(
   () =>
@@ -244,49 +255,62 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
   const { theme } = useTheme();
   const { user, login } = useAuth();
 
-  // Live payload — seeded from the server load, then replaced after each
-  // successful note/sign-off mutation so the panel re-renders against
-  // current state without an extra GET round-trip.
-  const [livePayload, setLivePayload] = useState<TrailPayload>(payload);
-  useEffect(() => {
-    setLivePayload(payload);
-  }, [payload]);
+  // Live payload merges three layers: the server payload (immutable
+  // source of truth), any signed-out localStorage mutations made in
+  // this browser, and the in-memory result of the last mutation. The
+  // useEffect re-merges whenever `payload` (from the server) changes
+  // or the user signs in/out.
+  const mergeServerWithLocal = useCallback(
+    (server: TrailPayload): TrailPayload => {
+      const local = loadLocalMutations(server.id);
+      if (local.notes.length === 0 && local.signOffs.length === 0) {
+        return server;
+      }
+      return {
+        ...server,
+        notes: [...(server.notes ?? []), ...local.notes],
+        signOffs: [...(server.signOffs ?? []), ...local.signOffs],
+      };
+    },
+    [],
+  );
 
-  type ToastAction = { label: string; onClick: () => void };
-  const [toast, setToast] = useState<{
-    message: string;
-    tone: 'error' | 'info';
-    action?: ToastAction;
-  } | null>(null);
+  const [livePayload, setLivePayload] = useState<TrailPayload>(() =>
+    mergeServerWithLocal(payload),
+  );
+  useEffect(() => {
+    setLivePayload(mergeServerWithLocal(payload));
+  }, [payload, mergeServerWithLocal]);
+
+  const [toast, setToast] = useState<{ message: string } | null>(null);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 6000);
     return () => clearTimeout(t);
   }, [toast]);
   const showError = useCallback((message: string) => {
-    setToast({ message, tone: 'error' });
+    setToast({ message });
   }, []);
 
   /**
-   * Gate trail-mutation actions on auth. When the visitor isn't signed
-   * in, show an inline prompt with a Sign-in button that bounces them
-   * to the OAuth flow and returns to this trail.
+   * Header-centered status text shown after a localStorage-only
+   * mutation. Auto-clears so the slot returns to empty; the caller
+   * just sets the message string and the header fades it in/out.
    */
-  const requireAuth = useCallback(
-    (verb: string): boolean => {
-      if (user) return true;
-      setToast({
-        message: `Sign in to ${verb}.`,
-        tone: 'info',
-        action: {
-          label: 'Sign in',
-          onClick: () => login(window.location.pathname),
-        },
-      });
-      return false;
-    },
-    [user, login],
-  );
+  const [headerStatus, setHeaderStatus] = useState<string | null>(null);
+  useEffect(() => {
+    if (!headerStatus) return;
+    const t = setTimeout(() => setHeaderStatus(null), 6000);
+    return () => clearTimeout(t);
+  }, [headerStatus]);
+  const showLocalSavedStatus = useCallback(() => {
+    setHeaderStatus(
+      'Saved in this browser only — sign in to share with everyone else.',
+    );
+  }, []);
+  const handleSignIn = useCallback(() => {
+    login(window.location.pathname);
+  }, [login]);
 
   const events = useMemo<PanelEventEmitter>(() => new PanelEventBus(), []);
 
@@ -367,7 +391,39 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
       _payloadId: string,
       draft: TrailNoteDraft,
     ): Promise<TrailNote | null> => {
-      if (!requireAuth('add a note')) return null;
+      if (!user) {
+        const now = new Date().toISOString();
+        const note: TrailNote =
+          draft.kind === 'markdown'
+            ? {
+                id: newLocalId(),
+                kind: 'markdown',
+                scope: draft.scope,
+                anchor: draft.anchor,
+                body: draft.body,
+                author: LOCAL_AUTHOR,
+                createdAt: now,
+                updatedAt: now,
+              }
+            : {
+                id: newLocalId(),
+                kind: 'snippet',
+                scope: draft.scope,
+                anchor: draft.anchor,
+                body: draft.body,
+                author: LOCAL_AUTHOR,
+                createdAt: now,
+                updatedAt: now,
+              };
+        appendLocalNote(trailId, note);
+        setLivePayload((prev) => ({
+          ...prev,
+          notes: [...(prev.notes ?? []), note],
+        }));
+        showLocalSavedStatus();
+        return note;
+      }
+
       try {
         const res = await fetch(`/api/trails/by-id/${trailId}/notes`, {
           method: 'POST',
@@ -390,7 +446,7 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
         return null;
       }
     },
-    [trailId, showError, requireAuth],
+    [trailId, user, showError, showLocalSavedStatus],
   );
 
   const updateTrailNote = useCallback(
@@ -399,7 +455,23 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
       noteId: string,
       body: string,
     ): Promise<TrailNote | null> => {
-      if (!requireAuth('edit notes')) return null;
+      if (isLocalId(noteId)) {
+        const updated = replaceLocalNote(trailId, noteId, body);
+        if (!updated) {
+          showError('Local note not found');
+          return null;
+        }
+        setLivePayload((prev) => ({
+          ...prev,
+          notes: (prev.notes ?? []).map((n) => (n.id === noteId ? updated : n)),
+        }));
+        showLocalSavedStatus();
+        return updated;
+      }
+      if (!user) {
+        showError('Sign in to edit shared notes.');
+        return null;
+      }
       try {
         const res = await fetch(
           `/api/trails/by-id/${trailId}/notes/${encodeURIComponent(noteId)}`,
@@ -425,12 +497,23 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
         return null;
       }
     },
-    [trailId, showError, requireAuth],
+    [trailId, user, showError, showLocalSavedStatus],
   );
 
   const deleteTrailNote = useCallback(
     async (_payloadId: string, noteId: string): Promise<void> => {
-      if (!requireAuth('delete notes')) return;
+      if (isLocalId(noteId)) {
+        removeLocalNote(trailId, noteId);
+        setLivePayload((prev) => ({
+          ...prev,
+          notes: (prev.notes ?? []).filter((n) => n.id !== noteId),
+        }));
+        return;
+      }
+      if (!user) {
+        showError('Sign in to delete shared notes.');
+        return;
+      }
       try {
         const res = await fetch(
           `/api/trails/by-id/${trailId}/notes/${encodeURIComponent(noteId)}`,
@@ -449,7 +532,7 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
         showError(err instanceof Error ? err.message : 'Failed to delete note');
       }
     },
-    [trailId, showError, requireAuth],
+    [trailId, user, showError],
   );
 
   const createTrailSignOff = useCallback(
@@ -457,7 +540,22 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
       _payloadId: string,
       draft: TrailSignOffDraft,
     ): Promise<TrailSignOff | null> => {
-      if (!requireAuth('sign off')) return null;
+      if (!user) {
+        const now = new Date().toISOString();
+        const signOff: TrailSignOff = {
+          id: newLocalId(),
+          author: LOCAL_AUTHOR,
+          signedAt: now,
+          ...(draft.comment !== undefined ? { comment: draft.comment } : {}),
+        };
+        appendLocalSignOff(trailId, signOff);
+        setLivePayload((prev) => ({
+          ...prev,
+          signOffs: [...(prev.signOffs ?? []), signOff],
+        }));
+        showLocalSavedStatus();
+        return signOff;
+      }
       try {
         const res = await fetch(`/api/trails/by-id/${trailId}/sign-offs`, {
           method: 'POST',
@@ -480,12 +578,23 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
         return null;
       }
     },
-    [trailId, showError, requireAuth],
+    [trailId, user, showError, showLocalSavedStatus],
   );
 
   const deleteTrailSignOff = useCallback(
     async (_payloadId: string, signOffId: string): Promise<void> => {
-      if (!requireAuth('remove a sign-off')) return;
+      if (isLocalId(signOffId)) {
+        removeLocalSignOff(trailId, signOffId);
+        setLivePayload((prev) => ({
+          ...prev,
+          signOffs: (prev.signOffs ?? []).filter((s) => s.id !== signOffId),
+        }));
+        return;
+      }
+      if (!user) {
+        showError('Sign in to remove shared sign-offs.');
+        return;
+      }
       try {
         const res = await fetch(
           `/api/trails/by-id/${trailId}/sign-offs/${encodeURIComponent(signOffId)}`,
@@ -508,7 +617,7 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
         );
       }
     },
-    [trailId, showError, requireAuth],
+    [trailId, user, showError],
   );
 
   const actions = useMemo<FileCityTrailExplorerPanelActions>(
@@ -539,52 +648,38 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
       className="w-screen flex flex-col overflow-hidden"
       style={{ background: theme.colors.background, height: '100vh' }}
     >
-      <TrailHeader owner={owner} repo={repo} trailId={trailId} />
+      <TrailHeader
+        owner={owner}
+        repo={repo}
+        trailId={trailId}
+        statusMessage={headerStatus}
+        showSignIn={!user}
+        onSignIn={handleSignIn}
+      />
       <div className="flex-1 min-h-0">
         <FileCityTrailExplorerPanel
           context={context}
           actions={actions}
           events={events}
-          currentAuthor={user?.login}
+          currentAuthor={user?.login ?? LOCAL_AUTHOR}
         />
       </div>
       {toast && (
         <div
           className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg"
           style={{
-            background:
-              toast.tone === 'error'
-                ? theme.colors.error
-                : theme.colors.backgroundSecondary,
-            color: toast.tone === 'error' ? '#fff' : theme.colors.text,
+            background: theme.colors.error,
+            color: '#fff',
             border: `1px solid ${theme.colors.border}`,
           }}
         >
-          {toast.tone === 'error' && (
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1ZM7 4.5a1 1 0 1 1 2 0v3a1 1 0 1 1-2 0v-3Zm1 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z" />
-            </svg>
-          )}
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1ZM7 4.5a1 1 0 1 1 2 0v3a1 1 0 1 1-2 0v-3Zm1 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z" />
+          </svg>
           <span style={{ fontSize: theme.fontSizes[1] }}>{toast.message}</span>
-          {toast.action && (
-            <button
-              onClick={() => {
-                toast.action?.onClick();
-                setToast(null);
-              }}
-              className="ml-2 px-2 py-1 rounded font-medium"
-              style={{
-                background: theme.colors.primary,
-                color: '#fff',
-                fontSize: theme.fontSizes[0],
-              }}
-            >
-              {toast.action.label}
-            </button>
-          )}
           <button
             onClick={() => setToast(null)}
-            className="ml-1 opacity-70 hover:opacity-100"
+            className="ml-2 opacity-70 hover:opacity-100"
             style={{ color: 'inherit' }}
             aria-label="Dismiss"
           >
