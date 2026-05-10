@@ -31,6 +31,14 @@ export type {
   SequenceViewActor,
   SequenceViewLayout,
   TrailNote,
+  TrailNoteDraft,
+  TrailMarkdownNote,
+  TrailMarkdownNoteScope,
+  TrailSnippetNote,
+  TrailSnippetSliceAnchor,
+  TrailSnippetDiffAnchor,
+  TrailSignOff,
+  TrailSignOffDraft,
   BaseTrailIndexEntry,
 } from '@industry-theme/file-city-panel';
 

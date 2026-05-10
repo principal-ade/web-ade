@@ -4,12 +4,20 @@ import type {
   CreateSharedTrailRequest,
   TrailDiffSnippet,
   TrailMarker,
+  TrailMarkdownNoteScope,
+  TrailNoteDraft,
   TrailPayload,
   TrailRepo,
+  TrailSignOffDraft,
   TrailSliceSnippet,
+  TrailSnippetDiffAnchor,
+  TrailSnippetSliceAnchor,
   TrailView,
 } from './types';
 import { MAX_PAYLOAD_BYTES } from './constants';
+
+const MAX_NOTE_BODY_BYTES = 16_000;
+const MAX_SIGNOFF_COMMENT_BYTES = 2_000;
 
 const OWNER_REPO_PATTERN = /^[A-Za-z0-9._-]+$/;
 const ISO_DATETIME_PATTERN =
@@ -448,7 +456,9 @@ export function validatePayload(payload: unknown): TrailPayload {
   }
   p.views.forEach((v, i) => validateView(v, i, markerIds));
 
-  // Build a clean payload — explicitly omit notes (host-only field).
+  // Build a clean payload — explicitly omit notes and signOffs (both
+  // host-mutated only, written through dedicated routes after publish).
+  // The allowlist construction below also drops any other unknown fields.
   const clean: TrailPayload = {
     id: p.id,
     title: p.title,
@@ -459,6 +469,8 @@ export function validatePayload(payload: unknown): TrailPayload {
   };
   if (typeof p.kind === 'string') clean.kind = p.kind;
   if (typeof p.summary === 'string') clean.summary = p.summary;
+  if (typeof p.request === 'string') clean.request = p.request;
+  if (typeof p.author === 'string') clean.author = p.author;
   if (repos.length > 0) clean.repos = repos;
   if (
     isPlainObject(p.authoredAt) &&
@@ -494,6 +506,199 @@ export function validateCreateRequest(
   validateOwnerRepo(b.owner ?? '', b.repo ?? '');
   const payload = validatePayload(b.payload);
   return { owner: b.owner!, repo: b.repo!, payload };
+}
+
+function invalid(message: string): never {
+  throw new TrailShareError(message, 400, ShareErrorCodes.INVALID_PAYLOAD);
+}
+
+function validateMarkdownScope(scope: unknown): TrailMarkdownNoteScope {
+  if (!isPlainObject(scope)) invalid('note.scope must be an object');
+  const kind = (scope as { kind?: unknown }).kind;
+  if (kind === 'summary') return { kind: 'summary' };
+  if (kind === 'description') {
+    const markerId = (scope as { markerId?: unknown }).markerId;
+    if (typeof markerId !== 'string' || markerId.length === 0) {
+      invalid('description-scoped note must include a markerId');
+    }
+    return { kind: 'description', markerId };
+  }
+  return invalid("note.scope.kind must be 'summary' or 'description'");
+}
+
+function validateMarkdownAnchor(anchor: unknown): {
+  kind: 'text-quote';
+  exact: string;
+  prefix?: string;
+  suffix?: string;
+} {
+  if (!isPlainObject(anchor)) invalid('note.anchor must be an object');
+  const a = anchor as Record<string, unknown>;
+  if (a.kind !== 'text-quote') invalid("note.anchor.kind must be 'text-quote'");
+  if (typeof a.exact !== 'string' || a.exact.length === 0) {
+    invalid('note.anchor.exact must be a non-empty string');
+  }
+  const out: { kind: 'text-quote'; exact: string; prefix?: string; suffix?: string } = {
+    kind: 'text-quote',
+    exact: a.exact,
+  };
+  if (typeof a.prefix === 'string') out.prefix = a.prefix;
+  if (typeof a.suffix === 'string') out.suffix = a.suffix;
+  return out;
+}
+
+function validateSnippetSliceAnchor(anchor: unknown): TrailSnippetSliceAnchor {
+  if (!isPlainObject(anchor)) invalid('note.anchor must be an object');
+  const a = anchor as Record<string, unknown>;
+  if (a.kind !== 'slice') invalid("snippet anchor.kind must be 'slice'");
+  if (!Array.isArray(a.ranges) || a.ranges.length === 0) {
+    invalid('snippet anchor.ranges must be a non-empty array');
+  }
+  const ranges = a.ranges.map((r, i) => {
+    if (!isPlainObject(r)) invalid(`anchor.ranges[${i}] must be an object`);
+    const range = r as Record<string, unknown>;
+    if (!isPositiveInt(range.startLine) || !isPositiveInt(range.endLine)) {
+      invalid(`anchor.ranges[${i}] must have positive startLine/endLine`);
+    }
+    if ((range.endLine as number) < (range.startLine as number)) {
+      invalid(`anchor.ranges[${i}] endLine must be >= startLine`);
+    }
+    const out: {
+      startLine: number;
+      endLine: number;
+      startLineText?: string;
+      endLineText?: string;
+    } = {
+      startLine: range.startLine as number,
+      endLine: range.endLine as number,
+    };
+    if (typeof range.startLineText === 'string') out.startLineText = range.startLineText;
+    if (typeof range.endLineText === 'string') out.endLineText = range.endLineText;
+    return out;
+  });
+  return { kind: 'slice', ranges } as TrailSnippetSliceAnchor;
+}
+
+function validateSnippetDiffAnchor(anchor: unknown): TrailSnippetDiffAnchor {
+  // Diff-anchor snippet notes are schema-only today; the panel doesn't
+  // surface them yet (per TRAIL_PANEL_HOST_INTEGRATION.md). Persist the
+  // shape verbatim so a future panel version can render them without a
+  // migration.
+  if (!isPlainObject(anchor)) invalid('note.anchor must be an object');
+  return anchor as unknown as TrailSnippetDiffAnchor;
+}
+
+/**
+ * Validate a `TrailNoteDraft` from a host endpoint. Returns a clean
+ * draft with `author` blanked out — callers overwrite it with the
+ * authenticated identity before persisting.
+ */
+export function validateNoteDraft(input: unknown): TrailNoteDraft {
+  if (!isPlainObject(input)) {
+    throw new TrailShareError(
+      'Note draft must be an object',
+      400,
+      ShareErrorCodes.INVALID_PAYLOAD
+    );
+  }
+  const d = input as Record<string, unknown>;
+  if (typeof d.body !== 'string' || d.body.length === 0) {
+    invalid('note.body must be a non-empty string');
+  }
+  if (Buffer.byteLength(d.body, 'utf8') > MAX_NOTE_BODY_BYTES) {
+    throw new TrailShareError(
+      `note.body exceeds ${MAX_NOTE_BODY_BYTES} bytes`,
+      413,
+      ShareErrorCodes.PAYLOAD_TOO_LARGE
+    );
+  }
+
+  if (d.kind === 'markdown') {
+    return {
+      kind: 'markdown',
+      scope: validateMarkdownScope(d.scope),
+      anchor: validateMarkdownAnchor(d.anchor),
+      body: d.body,
+      author: '',
+    };
+  }
+  if (d.kind === 'snippet') {
+    if (!isPlainObject(d.scope) || typeof (d.scope as { markerId?: unknown }).markerId !== 'string') {
+      invalid('snippet note.scope.markerId is required');
+    }
+    const markerId = (d.scope as { markerId: string }).markerId;
+    const anchorKind = isPlainObject(d.anchor)
+      ? (d.anchor as { kind?: unknown }).kind
+      : undefined;
+    const anchor =
+      anchorKind === 'diff'
+        ? validateSnippetDiffAnchor(d.anchor)
+        : validateSnippetSliceAnchor(d.anchor);
+    return {
+      kind: 'snippet',
+      scope: { markerId },
+      anchor,
+      body: d.body,
+      author: '',
+    };
+  }
+  return invalid("note.kind must be 'markdown' or 'snippet'");
+}
+
+/**
+ * Validate a body for `PATCH /notes/[noteId]`. Only `body` is mutable
+ * post-create; everything else is fixed by the original draft.
+ */
+export function validateNoteBodyUpdate(input: unknown): { body: string } {
+  if (!isPlainObject(input)) {
+    throw new TrailShareError(
+      'Request body must be an object',
+      400,
+      ShareErrorCodes.INVALID_REQUEST
+    );
+  }
+  const body = (input as { body?: unknown }).body;
+  if (typeof body !== 'string' || body.length === 0) {
+    invalid('body must be a non-empty string');
+  }
+  if (Buffer.byteLength(body, 'utf8') > MAX_NOTE_BODY_BYTES) {
+    throw new TrailShareError(
+      `body exceeds ${MAX_NOTE_BODY_BYTES} bytes`,
+      413,
+      ShareErrorCodes.PAYLOAD_TOO_LARGE
+    );
+  }
+  return { body };
+}
+
+/**
+ * Validate a `TrailSignOffDraft`. Returns a clean draft with
+ * `author` blanked out — callers overwrite with authenticated identity.
+ */
+export function validateSignOffDraft(input: unknown): TrailSignOffDraft {
+  if (!isPlainObject(input)) {
+    throw new TrailShareError(
+      'Sign-off draft must be an object',
+      400,
+      ShareErrorCodes.INVALID_PAYLOAD
+    );
+  }
+  const d = input as Record<string, unknown>;
+  const draft: TrailSignOffDraft = { author: '' };
+  if (d.comment !== undefined) {
+    if (typeof d.comment !== 'string') {
+      invalid('signOff.comment must be a string');
+    }
+    if (Buffer.byteLength(d.comment, 'utf8') > MAX_SIGNOFF_COMMENT_BYTES) {
+      throw new TrailShareError(
+        `signOff.comment exceeds ${MAX_SIGNOFF_COMMENT_BYTES} bytes`,
+        413,
+        ShareErrorCodes.PAYLOAD_TOO_LARGE
+      );
+    }
+    draft.comment = d.comment;
+  }
+  return draft;
 }
 
 export function summarizePayload(payload: TrailPayload): {

@@ -249,10 +249,12 @@ function PrTrailViewer({ owner, repo, payload, fileTree, model, cached }: Viewer
         // Experimental viewer has no editor surface to open into; intentional no-op.
       },
       readFile,
-      // Experimental trails are ephemeral — no note persistence.
+      // Experimental trails are ephemeral — no note or sign-off persistence.
       createTrailNote: async () => null,
       updateTrailNote: async () => null,
       deleteTrailNote: async () => {},
+      createTrailSignOff: async () => null,
+      deleteTrailSignOff: async () => {},
     }),
     [readFile],
   );

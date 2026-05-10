@@ -43,7 +43,11 @@ import type {
 import {
   ShareErrorCodes,
   type ShareErrorCode,
+  type TrailNote,
+  type TrailNoteDraft,
   type TrailPayload,
+  type TrailSignOff,
+  type TrailSignOffDraft,
   type SharedTrailIndexEntry,
 } from '@/lib/trails/types';
 
@@ -238,6 +242,51 @@ function TrailErrorView({
 function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
   const trailId = payload.id;
   const { theme } = useTheme();
+  const { user, login } = useAuth();
+
+  // Live payload — seeded from the server load, then replaced after each
+  // successful note/sign-off mutation so the panel re-renders against
+  // current state without an extra GET round-trip.
+  const [livePayload, setLivePayload] = useState<TrailPayload>(payload);
+  useEffect(() => {
+    setLivePayload(payload);
+  }, [payload]);
+
+  type ToastAction = { label: string; onClick: () => void };
+  const [toast, setToast] = useState<{
+    message: string;
+    tone: 'error' | 'info';
+    action?: ToastAction;
+  } | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 6000);
+    return () => clearTimeout(t);
+  }, [toast]);
+  const showError = useCallback((message: string) => {
+    setToast({ message, tone: 'error' });
+  }, []);
+
+  /**
+   * Gate trail-mutation actions on auth. When the visitor isn't signed
+   * in, show an inline prompt with a Sign-in button that bounces them
+   * to the OAuth flow and returns to this trail.
+   */
+  const requireAuth = useCallback(
+    (verb: string): boolean => {
+      if (user) return true;
+      setToast({
+        message: `Sign in to ${verb}.`,
+        tone: 'info',
+        action: {
+          label: 'Sign in',
+          onClick: () => login(window.location.pathname),
+        },
+      });
+      return false;
+    },
+    [user, login],
+  );
 
   const events = useMemo<PanelEventEmitter>(() => new PanelEventBus(), []);
 
@@ -246,9 +295,9 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
     // trails carry no `marker.repo`, so any id passes the filter — we
     // mirror the payload's first registered repo when present and fall
     // back to "owner/repo" as a stable synthetic id otherwise.
-    const id = payload.repos?.[0]?.id ?? `${owner}/${repo}`;
+    const id = livePayload.repos?.[0]?.id ?? `${owner}/${repo}`;
     return { id, owner, name: repo };
-  }, [owner, repo, payload]);
+  }, [owner, repo, livePayload]);
 
   const context = useMemo<
     PanelContextValue<FileCityTrailExplorerPanelContext>
@@ -265,7 +314,7 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
     const trailSlice: DataSlice<TrailPayload | null> = {
       scope: 'repository',
       name: 'trail',
-      data: payload,
+      data: livePayload,
       loading: false,
       error: null,
       refresh: async () => {},
@@ -279,7 +328,7 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
       trail: trailSlice,
       repository,
     };
-  }, [fileTree, payload, repository]);
+  }, [fileTree, livePayload, repository]);
 
   const readFile = useCallback(
     async (path: string): Promise<string> => {
@@ -313,6 +362,155 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
     [owner, repo],
   );
 
+  const createTrailNote = useCallback(
+    async (
+      _payloadId: string,
+      draft: TrailNoteDraft,
+    ): Promise<TrailNote | null> => {
+      if (!requireAuth('add a note')) return null;
+      try {
+        const res = await fetch(`/api/trails/by-id/${trailId}/notes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(draft),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          showError(body?.error || `Failed to create note (${res.status})`);
+          return null;
+        }
+        const { note } = (await res.json()) as { note: TrailNote };
+        setLivePayload((prev) => ({
+          ...prev,
+          notes: [...(prev.notes ?? []), note],
+        }));
+        return note;
+      } catch (err) {
+        showError(err instanceof Error ? err.message : 'Failed to create note');
+        return null;
+      }
+    },
+    [trailId, showError, requireAuth],
+  );
+
+  const updateTrailNote = useCallback(
+    async (
+      _payloadId: string,
+      noteId: string,
+      body: string,
+    ): Promise<TrailNote | null> => {
+      if (!requireAuth('edit notes')) return null;
+      try {
+        const res = await fetch(
+          `/api/trails/by-id/${trailId}/notes/${encodeURIComponent(noteId)}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ body }),
+          },
+        );
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          showError(errBody?.error || `Failed to update note (${res.status})`);
+          return null;
+        }
+        const { note } = (await res.json()) as { note: TrailNote };
+        setLivePayload((prev) => ({
+          ...prev,
+          notes: (prev.notes ?? []).map((n) => (n.id === note.id ? note : n)),
+        }));
+        return note;
+      } catch (err) {
+        showError(err instanceof Error ? err.message : 'Failed to update note');
+        return null;
+      }
+    },
+    [trailId, showError, requireAuth],
+  );
+
+  const deleteTrailNote = useCallback(
+    async (_payloadId: string, noteId: string): Promise<void> => {
+      if (!requireAuth('delete notes')) return;
+      try {
+        const res = await fetch(
+          `/api/trails/by-id/${trailId}/notes/${encodeURIComponent(noteId)}`,
+          { method: 'DELETE' },
+        );
+        if (!res.ok && res.status !== 204) {
+          const errBody = await res.json().catch(() => ({}));
+          showError(errBody?.error || `Failed to delete note (${res.status})`);
+          return;
+        }
+        setLivePayload((prev) => ({
+          ...prev,
+          notes: (prev.notes ?? []).filter((n) => n.id !== noteId),
+        }));
+      } catch (err) {
+        showError(err instanceof Error ? err.message : 'Failed to delete note');
+      }
+    },
+    [trailId, showError, requireAuth],
+  );
+
+  const createTrailSignOff = useCallback(
+    async (
+      _payloadId: string,
+      draft: TrailSignOffDraft,
+    ): Promise<TrailSignOff | null> => {
+      if (!requireAuth('sign off')) return null;
+      try {
+        const res = await fetch(`/api/trails/by-id/${trailId}/sign-offs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(draft),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          showError(body?.error || `Failed to sign off (${res.status})`);
+          return null;
+        }
+        const { signOff } = (await res.json()) as { signOff: TrailSignOff };
+        setLivePayload((prev) => ({
+          ...prev,
+          signOffs: [...(prev.signOffs ?? []), signOff],
+        }));
+        return signOff;
+      } catch (err) {
+        showError(err instanceof Error ? err.message : 'Failed to sign off');
+        return null;
+      }
+    },
+    [trailId, showError, requireAuth],
+  );
+
+  const deleteTrailSignOff = useCallback(
+    async (_payloadId: string, signOffId: string): Promise<void> => {
+      if (!requireAuth('remove a sign-off')) return;
+      try {
+        const res = await fetch(
+          `/api/trails/by-id/${trailId}/sign-offs/${encodeURIComponent(signOffId)}`,
+          { method: 'DELETE' },
+        );
+        if (!res.ok && res.status !== 204) {
+          const errBody = await res.json().catch(() => ({}));
+          showError(
+            errBody?.error || `Failed to remove sign-off (${res.status})`,
+          );
+          return;
+        }
+        setLivePayload((prev) => ({
+          ...prev,
+          signOffs: (prev.signOffs ?? []).filter((s) => s.id !== signOffId),
+        }));
+      } catch (err) {
+        showError(
+          err instanceof Error ? err.message : 'Failed to remove sign-off',
+        );
+      }
+    },
+    [trailId, showError, requireAuth],
+  );
+
   const actions = useMemo<FileCityTrailExplorerPanelActions>(
     () => ({
       openFile: () => {
@@ -320,16 +518,20 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
         // would have nowhere to render. Intentional no-op.
       },
       readFile,
-      // Trail-side note persistence has no host endpoint yet (notes are
-      // host-private per the trail design). The shared viewer can't
-      // write notes back into the read-only S3 payload, so all three
-      // resolve as no-ops — the panel renders existing notes (if any
-      // were authored before publish) but new notes can't be saved.
-      createTrailNote: async () => null,
-      updateTrailNote: async () => null,
-      deleteTrailNote: async () => {},
+      createTrailNote,
+      updateTrailNote,
+      deleteTrailNote,
+      createTrailSignOff,
+      deleteTrailSignOff,
     }),
-    [readFile],
+    [
+      readFile,
+      createTrailNote,
+      updateTrailNote,
+      deleteTrailNote,
+      createTrailSignOff,
+      deleteTrailSignOff,
+    ],
   );
 
   return (
@@ -343,8 +545,55 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
           context={context}
           actions={actions}
           events={events}
+          currentAuthor={user?.login}
         />
       </div>
+      {toast && (
+        <div
+          className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg"
+          style={{
+            background:
+              toast.tone === 'error'
+                ? theme.colors.error
+                : theme.colors.backgroundSecondary,
+            color: toast.tone === 'error' ? '#fff' : theme.colors.text,
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          {toast.tone === 'error' && (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1ZM7 4.5a1 1 0 1 1 2 0v3a1 1 0 1 1-2 0v-3Zm1 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z" />
+            </svg>
+          )}
+          <span style={{ fontSize: theme.fontSizes[1] }}>{toast.message}</span>
+          {toast.action && (
+            <button
+              onClick={() => {
+                toast.action?.onClick();
+                setToast(null);
+              }}
+              className="ml-2 px-2 py-1 rounded font-medium"
+              style={{
+                background: theme.colors.primary,
+                color: '#fff',
+                fontSize: theme.fontSizes[0],
+              }}
+            >
+              {toast.action.label}
+            </button>
+          )}
+          <button
+            onClick={() => setToast(null)}
+            className="ml-1 opacity-70 hover:opacity-100"
+            style={{ color: 'inherit' }}
+            aria-label="Dismiss"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+              <path d="M4.646 4.646a.5.5 0 0 1 .708 0L7 6.293l1.646-1.647a.5.5 0 0 1 .708.708L7.707 7l1.647 1.646a.5.5 0 0 1-.708.708L7 7.707l-1.646 1.647a.5.5 0 0 1-.708-.708L6.293 7 4.646 5.354a.5.5 0 0 1 0-.708z" />
+            </svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

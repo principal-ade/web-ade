@@ -241,6 +241,15 @@ export async function getPayload(
   repo: string,
   id: string
 ): Promise<TrailPayload | null> {
+  const result = await getPayloadWithETag(owner, repo, id);
+  return result ? result.data : null;
+}
+
+async function getPayloadWithETag(
+  owner: string,
+  repo: string,
+  id: string
+): Promise<{ data: TrailPayload; etag: string } | null> {
   try {
     const response = await s3Client.send(
       new GetObjectCommand({
@@ -252,7 +261,10 @@ export async function getPayload(
     const body = await response.Body?.transformToString();
     if (!body) return null;
 
-    return JSON.parse(body) as TrailPayload;
+    return {
+      data: JSON.parse(body) as TrailPayload,
+      etag: response.ETag || '',
+    };
   } catch (error: unknown) {
     if (isNoSuchKey(error)) return null;
 
@@ -276,22 +288,49 @@ export async function putPayload(
   id: string,
   payload: TrailPayload
 ): Promise<{ sizeBytes: number }> {
+  return putPayloadWithETag(owner, repo, id, payload, null);
+}
+
+async function putPayloadWithETag(
+  owner: string,
+  repo: string,
+  id: string,
+  payload: TrailPayload,
+  etag: string | null
+): Promise<{ sizeBytes: number }> {
   const body = JSON.stringify(payload);
   const sizeBytes = Buffer.byteLength(body, 'utf8');
 
   try {
-    await s3Client.send(
-      new PutObjectCommand({
-        Bucket: BUCKET_NAME,
-        Key: buildPayloadKey(owner, repo, id),
-        Body: body,
-        ContentType: 'application/json',
-        CacheControl: PAYLOAD_CACHE_CONTROL,
-      })
-    );
+    const params: {
+      Bucket: string;
+      Key: string;
+      Body: string;
+      ContentType: string;
+      CacheControl: string;
+      IfMatch?: string;
+    } = {
+      Bucket: BUCKET_NAME,
+      Key: buildPayloadKey(owner, repo, id),
+      Body: body,
+      ContentType: 'application/json',
+      CacheControl: PAYLOAD_CACHE_CONTROL,
+    };
+
+    if (etag) params.IfMatch = etag;
+
+    await s3Client.send(new PutObjectCommand(params));
 
     return { sizeBytes };
   } catch (error: unknown) {
+    if (isEtagConflict(error)) {
+      throw new TrailShareError(
+        'Concurrent modification detected',
+        409,
+        ShareErrorCodes.ETAG_CONFLICT
+      );
+    }
+
     console.error('[Trails] Put payload failed:', {
       owner,
       repo,
@@ -304,6 +343,62 @@ export async function putPayload(
       ShareErrorCodes.S3_ERROR
     );
   }
+}
+
+/**
+ * Mutate a trail payload under optimistic concurrency. Mirrors
+ * `updateIndex` — reads the current object with its ETag, applies the
+ * modifier, and writes back with `IfMatch`. Retries up to MAX_ETAG_RETRIES
+ * on conflict before surfacing a 409. Returns the new payload.
+ */
+export async function updatePayload(
+  owner: string,
+  repo: string,
+  id: string,
+  modifier: (data: TrailPayload) => TrailPayload
+): Promise<TrailPayload> {
+  let attempts = 0;
+
+  while (attempts < MAX_ETAG_RETRIES) {
+    const current = await getPayloadWithETag(owner, repo, id);
+    if (!current) {
+      throw new TrailShareError(
+        'Trail not found',
+        404,
+        ShareErrorCodes.NOT_FOUND
+      );
+    }
+
+    const updated = modifier(current.data);
+
+    try {
+      await putPayloadWithETag(owner, repo, id, updated, current.etag);
+      return updated;
+    } catch (error) {
+      if (
+        error instanceof TrailShareError &&
+        error.code === ShareErrorCodes.ETAG_CONFLICT
+      ) {
+        attempts++;
+        if (attempts >= MAX_ETAG_RETRIES) {
+          throw new TrailShareError(
+            'Concurrent modification conflict — please retry',
+            409,
+            ShareErrorCodes.MAX_RETRIES
+          );
+        }
+        await new Promise((r) => setTimeout(r, 100 * attempts));
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new TrailShareError(
+    'Update failed after retries',
+    500,
+    ShareErrorCodes.S3_ERROR
+  );
 }
 
 export async function deletePayload(
