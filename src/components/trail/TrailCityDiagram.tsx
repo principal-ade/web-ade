@@ -100,6 +100,10 @@ export interface TrailCityDiagramProps {
   className?: string;
   /** Hide the side snippet pane + leader line. */
   hideSnippet?: boolean;
+  /** Hide the dashed trail polyline and its numbered markers. Used when
+   *  the surface is explaining the file city itself and the trail would
+   *  be a distraction. */
+  hideTrail?: boolean;
   /**
    * Spotlight the trail: dim the city + snippet so only the dashed
    * polyline and numbered markers are at full visibility. Trail line
@@ -119,6 +123,7 @@ export interface TrailCityDiagramProps {
 export function TrailCityDiagram({
   className,
   hideSnippet = false,
+  hideTrail = false,
   highlightTrail = false,
 }: TrailCityDiagramProps) {
   const { theme } = useTheme();
@@ -229,37 +234,39 @@ export function TrailCityDiagram({
       <rect x={0} y={VIEW_H - 80} width={VIEW_W} height={80} fill={`url(#fade-${uid})`} pointerEvents="none" />
 
       {/* Trail polyline — thickens + animates dashes when spotlighted. */}
-      <path
-        d={trailPath}
-        fill="none"
-        stroke={accent}
-        strokeWidth={highlightTrail ? 3.5 : 2}
-        strokeLinecap="round"
-        strokeDasharray="6 5"
-        opacity={highlightTrail ? 1 : 0.9}
-        style={{
-          transition: 'stroke-width 300ms ease, opacity 300ms ease',
-          filter: highlightTrail
-            ? `drop-shadow(0 0 8px ${withAlpha(accent, 0.7)})`
-            : undefined,
-        }}
-      >
-        {highlightTrail && (
-          <animate
-            attributeName="stroke-dashoffset"
-            from={0}
-            to={-44}
-            dur="1.4s"
-            repeatCount="indefinite"
-          />
-        )}
-      </path>
+      {!hideTrail && (
+        <path
+          d={trailPath}
+          fill="none"
+          stroke={accent}
+          strokeWidth={highlightTrail ? 3.5 : 2}
+          strokeLinecap="round"
+          strokeDasharray="6 5"
+          opacity={highlightTrail ? 1 : 0.9}
+          style={{
+            transition: 'stroke-width 300ms ease, opacity 300ms ease',
+            filter: highlightTrail
+              ? `drop-shadow(0 0 8px ${withAlpha(accent, 0.7)})`
+              : undefined,
+          }}
+        >
+          {highlightTrail && (
+            <animate
+              attributeName="stroke-dashoffset"
+              from={0}
+              to={-44}
+              dur="1.4s"
+              repeatCount="indefinite"
+            />
+          )}
+        </path>
+      )}
 
       {/* L-routed leader line — rendered before markers so the active
         * marker sits on top of the line's endpoint. The snippet card
         * itself stays rendered after the markers (below). Hidden while
         * the trail is being spotlighted to reduce visual noise. */}
-      {!hideSnippet && (
+      {!hideSnippet && !hideTrail && (
         <path
           d={leaderPath}
           fill="none"
@@ -272,6 +279,7 @@ export function TrailCityDiagram({
       )}
 
       {/* Markers */}
+      {!hideTrail && (
       <g>
         {markers.map((m, i) => {
           const isActive = i === markers.length - 1;
@@ -323,6 +331,7 @@ export function TrailCityDiagram({
           );
         })}
       </g>
+      )}
 
       {/* Snippet anchor dot + card — rendered last so they sit above
         * everything. The leader line's path was already drawn before

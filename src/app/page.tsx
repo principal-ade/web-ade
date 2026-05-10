@@ -450,7 +450,11 @@ export default function HomePage() {
                     }`,
                   }}
                 >
-                  <TrailCityDiagram highlightTrail={view === 'codeTrail'} />
+                  <TrailCityDiagram
+                    highlightTrail={view === 'codeTrail'}
+                    hideTrail={view === 'fileCity'}
+                    hideSnippet={view === 'fileCity'}
+                  />
                 </div>
               </button>
 
