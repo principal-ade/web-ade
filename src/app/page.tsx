@@ -453,7 +453,7 @@ export default function HomePage() {
                   <TrailCityDiagram
                     highlightTrail={view === 'codeTrail'}
                     hideTrail={view === 'fileCity'}
-                    hideSnippet={view === 'fileCity'}
+                    hideSnippet={view === 'fileCity' || view === 'codeTrail'}
                   />
                 </div>
               </button>
@@ -464,17 +464,24 @@ export default function HomePage() {
                 <SignOffStampAnimation theme={theme} text={stamp} size={220} />
               )}
 
-              {/* Persisted stamp once the trail is signed — settles in
-                  the diagram's top-right corner so the trail map stays
-                  legible underneath. */}
-              {!stampAnimating && stamp && (
+              {/* Corner stamp — preview on the title view (shows the
+                  goal-state trail), then re-appears once the visitor
+                  actually signs. Hidden during fileCity / codeTrail /
+                  whyTrails so each step reveals one piece at a time. */}
+              {!stampAnimating && (stamp || view === 'title') && (
                 <div
                   aria-hidden
-                  className="absolute pointer-events-none"
+                  className={`absolute pointer-events-none transition-opacity duration-700 ease-out ${
+                    diagramRevealed ? 'opacity-100' : 'opacity-0'
+                  }`}
                   style={{
                     top: 18,
                     right: 18,
-                    animation: 'stamp-settle 320ms ease-out both',
+                    transform: 'rotate(-8deg)',
+                    // Only animate the "lands in the corner" beat after
+                    // a real sign-off; on the title preview the stamp
+                    // shares the diagram's fade-in instead.
+                    animation: stamp ? 'stamp-settle 320ms ease-out both' : undefined,
                   }}
                 >
                   <style>{`
@@ -483,7 +490,12 @@ export default function HomePage() {
                       100% { transform: scale(1) rotate(-8deg); opacity: 1; }
                     }
                   `}</style>
-                  <LgtmStamp theme={theme} size={96} rotated={false} text={stamp} />
+                  <LgtmStamp
+                    theme={theme}
+                    size={96}
+                    rotated={false}
+                    text={stamp ?? 'LGTM'}
+                  />
                 </div>
               )}
             </div>
