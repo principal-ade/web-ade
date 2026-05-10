@@ -12,7 +12,12 @@ import {
 } from '@/lib/trails/s3-storage';
 import { validateOwnerRepo } from '@/lib/trails/validation';
 import { checkRepoAccess } from '@/lib/trails/github-access';
-import { TrailShareError, ShareErrorCodes } from '@/lib/trails/types';
+import {
+  TrailShareError,
+  ShareErrorCodes,
+  toPublicPayload,
+  type StoredTrailPayload,
+} from '@/lib/trails/types';
 
 interface Params {
   params: Promise<{ owner: string; repo: string; id: string }>;
@@ -85,7 +90,10 @@ export async function GET(_request: NextRequest, { params }: Params) {
       });
     }
 
-    return NextResponse.json({ entry, payload });
+    return NextResponse.json({
+      entry,
+      payload: toPublicPayload(payload as StoredTrailPayload),
+    });
   } catch (error) {
     return errorResponse(error, 'Failed to retrieve trail');
   }

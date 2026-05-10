@@ -16,7 +16,23 @@
 import type { TrailNote, TrailSignOff } from './types';
 
 const KEY_PREFIX = 'trail-local-mutations:';
+const VISIT_KEY_PREFIX = 'trail-visited:';
 const LOCAL_AUTHOR = 'You';
+
+/**
+ * Returns true the first time this browser hits a given trail id, and
+ * false on every subsequent call. Used to gate the one-shot
+ * `/visits` POST so reloads don't keep bumping `anonymousCount`.
+ * Server-side has no equivalent dedup for anonymous visitors, so this
+ * client gate is load-bearing.
+ */
+export function markTrailVisited(trailId: string): boolean {
+  if (typeof window === 'undefined') return false;
+  const key = `${VISIT_KEY_PREFIX}${trailId}`;
+  if (window.localStorage.getItem(key)) return false;
+  window.localStorage.setItem(key, new Date().toISOString());
+  return true;
+}
 
 export const LOCAL_ID_PREFIX = 'local-';
 

@@ -56,6 +56,7 @@ import {
   appendLocalSignOff,
   isLocalId,
   loadLocalMutations,
+  markTrailVisited,
   newLocalId,
   removeLocalNote,
   removeLocalSignOff,
@@ -281,6 +282,33 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
   useEffect(() => {
     setLivePayload(mergeServerWithLocal(payload));
   }, [payload, mergeServerWithLocal]);
+
+  // Record the visit once per browser per trail. Fires fire-and-forget;
+  // a failure leaves the count under-reported but never blocks render.
+  // The server identifies verified visitors by GitHub token and
+  // increments the anonymous bucket for everyone else.
+  useEffect(() => {
+    if (!markTrailVisited(trailId)) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/trails/by-id/${trailId}/visits`, {
+          method: 'POST',
+        });
+        if (!res.ok || cancelled) return;
+        const { visitors } = (await res.json()) as {
+          visitors: { named: string[]; anonymousCount: number };
+        };
+        if (cancelled) return;
+        setLivePayload((prev) => ({ ...prev, visitors }));
+      } catch {
+        // Visit recording is best-effort; swallow errors.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [trailId]);
 
   const [toast, setToast] = useState<{ message: string } | null>(null);
   useEffect(() => {

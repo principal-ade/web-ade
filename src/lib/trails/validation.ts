@@ -456,9 +456,10 @@ export function validatePayload(payload: unknown): TrailPayload {
   }
   p.views.forEach((v, i) => validateView(v, i, markerIds));
 
-  // Build a clean payload — explicitly omit notes and signOffs (both
-  // host-mutated only, written through dedicated routes after publish).
-  // The allowlist construction below also drops any other unknown fields.
+  // Build a clean payload — explicitly omit notes, signOffs, and
+  // visitors (all host-mutated only, written through dedicated routes
+  // after publish). The allowlist construction below also drops any
+  // other unknown fields.
   const clean: TrailPayload = {
     id: p.id,
     title: p.title,

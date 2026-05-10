@@ -43,6 +43,33 @@ export type {
 } from '@industry-theme/file-city-panel';
 
 // ============================================================================
+// Host-private payload extension. The shared `TrailPayload` shape is
+// the panel contract; the host stores some bookkeeping fields
+// alongside it that are NEVER sent to clients (stripped before the
+// trail-fetch routes return). Today: anonymous-visitor dedup IDs.
+// ============================================================================
+
+export interface StoredTrailPayload extends TrailPayload {
+  /**
+   * Anonymous-visitor cookie UUIDs that have already been counted
+   * against this trail. Used by `/api/trails/by-id/{id}/visits` to
+   * dedup `visitors.anonymousCount` increments. Stripped from
+   * client-facing reads so the panel never sees raw cookie ids.
+   */
+  _seenAnonIds?: string[];
+}
+
+/**
+ * Strip host-private fields from a stored payload before returning
+ * it to a client. Call this in any route that reads via
+ * `getPayload(...)` and returns to the panel.
+ */
+export function toPublicPayload(stored: StoredTrailPayload): TrailPayload {
+  const { _seenAnonIds: _drop, ...rest } = stored;
+  return rest;
+}
+
+// ============================================================================
 // Web-side index (stored in S3) — extends the shared base with sharer
 // identity and the rename-stable GitHub repo id backstop.
 // ============================================================================

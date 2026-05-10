@@ -17,7 +17,12 @@ import {
 } from '@/lib/trails/s3-storage';
 import { validateOwnerRepo } from '@/lib/trails/validation';
 import { checkRepoAccess } from '@/lib/trails/github-access';
-import { TrailShareError, ShareErrorCodes } from '@/lib/trails/types';
+import {
+  TrailShareError,
+  ShareErrorCodes,
+  toPublicPayload,
+  type StoredTrailPayload,
+} from '@/lib/trails/types';
 import { getCachedById, type ExperimentalTrailEntry } from '@/lib/pr-trail/cache';
 import type { SharedTrailIndexEntry } from '@/lib/trails/types';
 
@@ -133,7 +138,12 @@ export async function GET(_request: NextRequest, { params }: Params) {
       );
     }
 
-    return NextResponse.json({ owner, repo, entry, payload });
+    return NextResponse.json({
+      owner,
+      repo,
+      entry,
+      payload: toPublicPayload(payload as StoredTrailPayload),
+    });
   } catch (error) {
     if (error instanceof TrailShareError) {
       return NextResponse.json(
