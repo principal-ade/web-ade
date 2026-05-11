@@ -75,22 +75,21 @@ function mulberry32(seed: number) {
   };
 }
 
-function lRoutePath(a: { x: number; y: number }, b: { x: number; y: number }, elbowGap = 28, radius = 12) {
-  const elbowX = Math.min(a.x, b.x) - elbowGap;
+/** VH leader from `a` (marker) to `b` (snippet anchor): exits `a` going
+ *  vertically toward `b.y`, then turns and runs horizontally to `b.x`. */
+function lRoutePath(a: { x: number; y: number }, b: { x: number; y: number }, radius = 12) {
   const goingUp = b.y < a.y;
+  const ySign = goingUp ? -1 : 1;
+  const xSign = b.x < a.x ? -1 : 1;
   const r = Math.min(
     radius,
     Math.abs(a.y - b.y) / 2,
-    Math.abs(a.x - elbowX) / 2,
-    Math.abs(b.x - elbowX) / 2,
+    Math.abs(a.x - b.x) / 2,
   );
-  const sign = goingUp ? -1 : 1;
   return [
     `M ${a.x} ${a.y}`,
-    `L ${elbowX + r} ${a.y}`,
-    `Q ${elbowX} ${a.y} ${elbowX} ${a.y + sign * r}`,
-    `L ${elbowX} ${b.y - sign * r}`,
-    `Q ${elbowX} ${b.y} ${elbowX + r} ${b.y}`,
+    `L ${a.x} ${b.y - ySign * r}`,
+    `Q ${a.x} ${b.y} ${a.x + xSign * r} ${b.y}`,
     `L ${b.x} ${b.y}`,
   ].join(' ');
 }
@@ -100,10 +99,27 @@ export interface TrailCityDiagramProps {
   className?: string;
   /** Hide the side snippet pane + leader line. */
   hideSnippet?: boolean;
+  /** When false, the snippet system (leader, marker dot, cell border,
+   *  snippet card) fades out to opacity 0 with a 700ms reveal delay on
+   *  the way back in. Used to hold the snippet until the typed
+   *  explanation finishes. */
+  snippetVisible?: boolean;
   /** Hide the dashed trail polyline and its numbered markers. Used when
    *  the surface is explaining the file city itself and the trail would
    *  be a distraction. */
   hideTrail?: boolean;
+  /** When false, the trail polyline + numbered markers fade out (opacity
+   *  0) without unmounting. Used to hold the trail off-screen until the
+   *  codeTrail step's typed explanation finishes. */
+  trailVisible?: boolean;
+  /** Show a row of small sign-off stamp placeholders under the snippet.
+   *  Four filled "team" stamps + one empty slot to make collaboration
+   *  legible on the whyTrails step. */
+  stampRowVisible?: boolean;
+  /** True once the visitor has signed off. Hides the empty placeholder
+   *  slot so the page's HTML LgtmStamp overlay can occupy it without
+   *  visual conflict. */
+  userStamped?: boolean;
   /**
    * Spotlight the trail: dim the city + snippet so only the dashed
    * polyline and numbered markers are at full visibility. Trail line
@@ -123,9 +139,27 @@ export interface TrailCityDiagramProps {
 export function TrailCityDiagram({
   className,
   hideSnippet = false,
+  snippetVisible = true,
   hideTrail = false,
+  trailVisible = true,
   highlightTrail = false,
+  stampRowVisible = false,
+  userStamped = false,
 }: TrailCityDiagramProps) {
+  const snippetGateStyle = {
+    opacity: snippetVisible ? 1 : 0,
+    transition: 'opacity 500ms ease',
+    transitionDelay: snippetVisible ? '700ms' : '0ms',
+  };
+  const trailGateStyle = {
+    opacity: trailVisible ? 1 : 0,
+    transition: 'opacity 500ms ease',
+  };
+  const stampRowGateStyle = {
+    opacity: stampRowVisible ? 1 : 0,
+    transition: 'opacity 500ms ease',
+    transitionDelay: stampRowVisible ? '700ms' : '0ms',
+  };
   const { theme } = useTheme();
   const uid = useId().replace(/:/g, '');
   const accent = theme.colors.primary ?? '#22d3ee';
@@ -133,6 +167,10 @@ export function TrailCityDiagram({
   const text = theme.colors.text ?? '#f8fafc';
   const muted = theme.colors.textMuted ?? '#94a3b8';
   const bg = theme.colors.background ?? '#0a0f14';
+  const success = theme.colors.success ?? '#10b981';
+  // Silvery white-grey ink for ACK stamps — brighter than `muted` so it
+  // reads cleanly against the dark city.
+  const silver = '#d1d8e0';
 
   const palette = useMemo(
     () => [
@@ -150,7 +188,7 @@ export function TrailCityDiagram({
       { col: 1, row: 10, label: '1' },
       { col: 3, row: 7, label: '2' },
       { col: 6, row: 9, label: '3' },
-      { col: 8, row: 5, label: '4' },
+      { col: 4, row: 5, label: '4' },
     ],
     [],
   );
@@ -196,9 +234,6 @@ export function TrailCityDiagram({
       aria-label="A trail of code locations connected across a top-down city of files"
     >
       <defs>
-        <pattern id={`grid-${uid}`} width={32} height={32} patternUnits="userSpaceOnUse">
-          <path d="M 32 0 L 0 0 0 32" fill="none" stroke={withAlpha(text, 0.04)} strokeWidth={1} />
-        </pattern>
         <linearGradient id={`fade-${uid}`} x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor={bg} stopOpacity={0} />
           <stop offset="100%" stopColor={bg} stopOpacity={0.7} />
@@ -206,7 +241,6 @@ export function TrailCityDiagram({
       </defs>
 
       <rect x={0} y={0} width={VIEW_W} height={VIEW_H} fill={bg} rx={12} />
-      <rect x={0} y={0} width={VIEW_W} height={VIEW_H} fill={`url(#grid-${uid})`} rx={12} />
 
       {/* City — top-down rectangles, varied size + tint. Dimmed when
         * the trail is being spotlighted so the dashed path pops. */}
@@ -231,10 +265,36 @@ export function TrailCityDiagram({
         ))}
       </g>
 
+      {/* Outline around the file the snippet is anchored to, so the
+        * fileCity step can visually say "this square = that code". */}
+      {!hideSnippet && (() => {
+        const activeCell = markerCells[markerCells.length - 1];
+        if (!activeCell) return null;
+        return (
+          <g style={snippetGateStyle}>
+            <rect
+              x={CITY_OFFSET_X + activeCell.col * CELL_W + 4}
+              y={CITY_OFFSET_Y + activeCell.row * CELL_H + 4}
+              width={CELL_W - 8}
+              height={CELL_H - 8}
+              fill="none"
+              stroke={accent}
+              strokeWidth={2}
+              rx={2}
+              style={{
+                opacity: highlightTrail ? 0.2 : 1,
+                transition: 'opacity 300ms ease',
+              }}
+            />
+          </g>
+        );
+      })()}
+
       <rect x={0} y={VIEW_H - 80} width={VIEW_W} height={80} fill={`url(#fade-${uid})`} pointerEvents="none" />
 
       {/* Trail polyline — thickens + animates dashes when spotlighted. */}
       {!hideTrail && (
+        <g style={trailGateStyle}>
         <path
           d={trailPath}
           fill="none"
@@ -260,27 +320,40 @@ export function TrailCityDiagram({
             />
           )}
         </path>
+        </g>
       )}
 
       {/* L-routed leader line — rendered before markers so the active
         * marker sits on top of the line's endpoint. The snippet card
         * itself stays rendered after the markers (below). Hidden while
         * the trail is being spotlighted to reduce visual noise. */}
-      {!hideSnippet && !hideTrail && (
-        <path
-          d={leaderPath}
-          fill="none"
-          stroke={accent}
-          strokeWidth={1.5}
-          strokeDasharray="5 4"
-          opacity={highlightTrail ? 0 : 0.7}
-          style={{ transition: 'opacity 300ms ease' }}
-        />
+      {!hideSnippet && (
+        <g style={snippetGateStyle}>
+          <path
+            d={leaderPath}
+            fill="none"
+            stroke={accent}
+            strokeWidth={1.5}
+            strokeDasharray="5 4"
+            opacity={highlightTrail ? 0 : 0.7}
+            style={{ transition: 'opacity 300ms ease' }}
+          />
+          {activeMarker && (
+            <circle
+              cx={activeMarker.x}
+              cy={activeMarker.y}
+              r={3.5}
+              fill={accent}
+              opacity={highlightTrail ? 0 : 1}
+              style={{ transition: 'opacity 300ms ease' }}
+            />
+          )}
+        </g>
       )}
 
       {/* Markers */}
       {!hideTrail && (
-      <g>
+      <g style={trailGateStyle}>
         {markers.map((m, i) => {
           const isActive = i === markers.length - 1;
           const size = 22;
@@ -337,6 +410,7 @@ export function TrailCityDiagram({
         * everything. The leader line's path was already drawn before
         * the markers so the active marker covers its endpoint. */}
       {!hideSnippet && (
+        <g style={snippetGateStyle}>
         <g
           style={{
             opacity: highlightTrail ? 0.15 : 1,
@@ -353,7 +427,105 @@ export function TrailCityDiagram({
             accent={accent}
           />
         </g>
+        </g>
       )}
+
+      {/* Collaboration preview — four team stamps + one empty slot for
+        * the visitor to fill. Sits under the snippet card on the
+        * whyTrails / stamped steps. */}
+      <g style={stampRowGateStyle}>
+        {[
+          { initials: 'AJ', kind: 'LGTM' as const, rotation: -6 },
+          { initials: 'MK', kind: 'ACK' as const, rotation: 4 },
+          { initials: 'RT', kind: 'LGTM' as const, rotation: -3 },
+          { initials: null, kind: null, rotation: 0 },
+        ].map((s, i) => {
+          const isEmpty = s.initials === null;
+          if (isEmpty && userStamped) return null;
+          const W = 54;
+          const H = 36;
+          const gap = 6;
+          const rowX = snippetAnchor.x;
+          const rowY = snippetAnchor.y + 200;
+          const cx = rowX + i * (W + gap) + W / 2;
+          const cy = rowY + H / 2;
+          const ink = isEmpty ? muted : s.kind === 'LGTM' ? success : silver;
+          return (
+            <g
+              key={i}
+              transform={`translate(${cx}, ${cy}) rotate(${s.rotation})`}
+              opacity={isEmpty ? 0.55 : 0.85}
+            >
+              <rect
+                x={-W / 2}
+                y={-H / 2}
+                width={W}
+                height={H}
+                rx={4}
+                fill={isEmpty ? 'none' : withAlpha(ink, 0.08)}
+                stroke={ink}
+                strokeWidth={1.5}
+                strokeDasharray={isEmpty ? '3 3' : undefined}
+              />
+              {!isEmpty && (
+                <>
+                  <rect
+                    x={-W / 2 + 3}
+                    y={-H / 2 + 3}
+                    width={W - 6}
+                    height={H - 6}
+                    rx={2}
+                    fill="none"
+                    stroke={ink}
+                    strokeWidth={0.75}
+                    opacity={0.7}
+                  />
+                  <text
+                    x={0}
+                    y={-5}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fontSize={11}
+                    fontWeight={700}
+                    fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                    fill={ink}
+                    letterSpacing="0.1em"
+                  >
+                    {s.initials}
+                  </text>
+                  <text
+                    x={0}
+                    y={7}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fontSize={7}
+                    fontWeight={700}
+                    fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                    fill={ink}
+                    letterSpacing="0.14em"
+                  >
+                    {s.kind}
+                  </text>
+                </>
+              )}
+              {isEmpty && (
+                <text
+                  x={0}
+                  y={1}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize={18}
+                  fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                  fill={ink}
+                  opacity={0.7}
+                >
+                  +
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </g>
     </svg>
   );
 }

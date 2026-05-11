@@ -12,13 +12,19 @@ export function LgtmStamp({
   size,
   rotated = true,
   text = 'LGTM',
+  subtitle,
+  ink,
 }: {
   theme: Theme;
   size: number;
   rotated?: boolean;
   text?: string;
+  /** Optional secondary line. When provided, replaces the date. */
+  subtitle?: string;
+  /** Override the success-green ink — e.g. grey for ACK stamps. */
+  ink?: string;
 }) {
-  const inkColor = theme.colors.success;
+  const inkColor = ink ?? theme.colors.success;
   const borderWidth = Math.max(2, Math.round(size / 30));
   return (
     <div
@@ -54,12 +60,13 @@ export function LgtmStamp({
       </div>
       <div
         style={{
-          fontSize: size * 0.1,
+          fontSize: size * 0.13,
           marginTop: size * 0.05,
-          letterSpacing: '0.08em',
+          letterSpacing: '0.1em',
+          fontWeight: theme.fontWeights.bold,
         }}
       >
-        {new Date().toISOString().slice(0, 10)}
+        {subtitle ?? new Date().toISOString().slice(0, 10)}
       </div>
     </div>
   );
@@ -74,23 +81,31 @@ export function LgtmStamp({
 export function SignOffStampAnimation({
   theme,
   text,
-  size = 220,
+  subtitle,
+  ink,
+  size = 80,
+  left = '50%',
+  top = '50%',
 }: {
   theme: Theme;
-  text: 'LGTM' | 'ACK';
+  text: string;
+  subtitle?: string;
+  ink?: string;
   size?: number;
+  /** CSS left/top of the landing point on the parent (`position: relative`). */
+  left?: string;
+  top?: string;
 }) {
   return (
     <div
       aria-hidden
       style={{
         position: 'absolute',
-        inset: 0,
+        left,
+        top,
+        transform: 'translate(-50%, -50%)',
         zIndex: 5,
         pointerEvents: 'none',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
       }}
     >
       <style>{`
@@ -109,7 +124,14 @@ export function SignOffStampAnimation({
           filter: `drop-shadow(0 8px 12px ${theme.colors.background})`,
         }}
       >
-        <LgtmStamp theme={theme} size={size} rotated={false} text={text} />
+        <LgtmStamp
+          theme={theme}
+          size={size}
+          rotated={false}
+          text={text}
+          subtitle={subtitle}
+          ink={ink}
+        />
       </div>
     </div>
   );
