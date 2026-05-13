@@ -322,7 +322,7 @@ export async function generateTrailFromPr(
   const payload: TrailPayload = {
     id: trailId,
     title: parsed.title || meta.title,
-    kind: 'pr-walkthrough',
+    purpose: 'changelog',
     summary: parsed.summary,
     authoredAt: { sha: meta.head.sha, ref: meta.head.ref },
     markers: trailMarkers,

@@ -28,6 +28,7 @@ import { TrailShareError, ShareErrorCodes } from '@/lib/trails/types';
 import type {
   CreateSharedTrailResponse,
   SharedTrailIndexEntry,
+  StoredTrailPayload,
 } from '@/lib/trails/types';
 import { MAX_TRAILS_PER_REPO } from '@/lib/trails/constants';
 
@@ -79,30 +80,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const id = payload.id;
-    const summary = summarizePayload(payload);
+    // Server-minted id is authoritative. Every POST creates a new trail
+    // — no republish path, no client-controlled id collisions. The same
+    // id is reused as `share.id` since this registry IS the share
+    // registry; consumers read `share` as the panel's shared-mode flag.
+    const id = crypto.randomUUID();
+    const storedPayload: StoredTrailPayload = {
+      ...payload,
+      id,
+      share: { id },
+      purpose: payload.purpose ?? 'investigation',
+    };
+    const summary = summarizePayload(storedPayload);
 
-    const { sizeBytes } = await putPayload(owner, repo, id, payload);
+    const { sizeBytes } = await putPayload(owner, repo, id, storedPayload);
     await putIdPointer(owner, repo, id);
 
     const entry: SharedTrailIndexEntry = {
       id,
-      title: payload.title,
+      title: storedPayload.title,
       summaryPreview: summary.summaryPreview,
       markerCount: summary.markerCount,
       repoNames: summary.repoNames,
       hasDiffSnippets: summary.hasDiffSnippets,
       createdBy: { githubId: user.id, githubLogin: user.login },
       githubRepoId: access.githubRepoId,
-      createdAt: payload.createdAt,
-      updatedAt: payload.updatedAt,
+      createdAt: storedPayload.createdAt,
+      updatedAt: storedPayload.updatedAt,
       sizeBytes,
     };
 
     await updateIndex(owner, repo, (data) => {
-      // Replace any existing entry with the same id (republish) so we
-      // don't accumulate duplicates.
-      const next = [...data.entries.filter((e) => e.id !== id), entry];
+      const next = [...data.entries, entry];
       // Soft cap: prune oldest by updatedAt when over the limit.
       if (next.length > MAX_TRAILS_PER_REPO) {
         next.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));

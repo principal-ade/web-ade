@@ -42,6 +42,12 @@ export type {
   BaseTrailIndexEntry,
 } from '@industry-theme/file-city-panel';
 
+// 0.5.81's `TrailPurpose` / `TrailShare` aren't re-exported through the
+// panel's package root, so we derive them from the field types on
+// `TrailPayload`. Drop these aliases once the panel exports them.
+export type TrailPurpose = NonNullable<TrailPayload['purpose']>;
+export type TrailShare = NonNullable<TrailPayload['share']>;
+
 // ============================================================================
 // Host-private payload extension. The shared `TrailPayload` shape is
 // the panel contract; the host stores some bookkeeping fields
@@ -93,7 +99,12 @@ export interface SharedTrailIndex {
 export interface CreateSharedTrailRequest {
   owner: string;
   repo: string;
-  payload: TrailPayload;
+  /**
+   * Incoming payload from the producer. `id` and `share` are stripped /
+   * ignored — the server mints `id` and stamps `share` at publish time
+   * (the registry is authoritative for both).
+   */
+  payload: Omit<TrailPayload, 'id' | 'share'>;
 }
 
 export interface CreateSharedTrailResponse {

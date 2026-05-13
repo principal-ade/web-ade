@@ -7,6 +7,7 @@ import type {
   TrailMarkdownNoteScope,
   TrailNoteDraft,
   TrailPayload,
+  TrailPurpose,
   TrailRepo,
   TrailSignOffDraft,
   TrailSliceSnippet,
@@ -360,9 +361,16 @@ function validateView(
  * — per the trail type docs, notes are mutated only via host endpoints; an
  * external HTTP POST that bundles notes must not have them written through.
  *
+ * `id` and `share` are server-controlled: any client-provided values are
+ * ignored, and the POST handler stamps them after this returns. The result
+ * type therefore omits `id` (must be minted server-side) and `share` (the
+ * server is the registry).
+ *
  * Returns a payload value with `notes` removed.
  */
-export function validatePayload(payload: unknown): TrailPayload {
+export function validatePayload(
+  payload: unknown
+): Omit<TrailPayload, 'id' | 'share'> {
   if (!isPlainObject(payload)) {
     throw new TrailShareError(
       'Payload must be an object',
@@ -371,15 +379,7 @@ export function validatePayload(payload: unknown): TrailPayload {
     );
   }
 
-  const p = payload as Partial<TrailPayload>;
-
-  if (typeof p.id !== 'string' || !p.id) {
-    throw new TrailShareError(
-      'Payload.id is required',
-      400,
-      ShareErrorCodes.INVALID_PAYLOAD
-    );
-  }
+  const p = payload as Partial<TrailPayload> & { kind?: unknown };
 
   if (typeof p.title !== 'string' || !p.title) {
     throw new TrailShareError(
@@ -458,17 +458,34 @@ export function validatePayload(payload: unknown): TrailPayload {
 
   // Build a clean payload — explicitly omit notes, signOffs, and
   // visitors (all host-mutated only, written through dedicated routes
-  // after publish). The allowlist construction below also drops any
-  // other unknown fields.
-  const clean: TrailPayload = {
-    id: p.id,
+  // after publish). `id` and `share` are also omitted: the server mints
+  // `id` and stamps `share` at publish time. The allowlist construction
+  // below drops any other unknown fields.
+  const clean: Omit<TrailPayload, 'id' | 'share'> = {
     title: p.title,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
     markers,
     views: p.views as TrailView[],
   };
-  if (typeof p.kind === 'string') clean.kind = p.kind;
+
+  // `purpose` replaces the legacy free-form `kind` field. Accept `kind`
+  // as a fallback for producers that haven't upgraded yet; unknown
+  // values drop to undefined (panel treats undefined as 'investigation').
+  const purposeCandidate =
+    typeof p.purpose === 'string'
+      ? p.purpose
+      : typeof p.kind === 'string'
+        ? p.kind
+        : undefined;
+  if (
+    purposeCandidate === 'investigation' ||
+    purposeCandidate === 'changelog' ||
+    purposeCandidate === 'informative'
+  ) {
+    clean.purpose = purposeCandidate satisfies TrailPurpose;
+  }
+
   if (typeof p.summary === 'string') clean.summary = p.summary;
   if (typeof p.request === 'string') clean.request = p.request;
   if (typeof p.author === 'string') clean.author = p.author;
@@ -702,7 +719,9 @@ export function validateSignOffDraft(input: unknown): TrailSignOffDraft {
   return draft;
 }
 
-export function summarizePayload(payload: TrailPayload): {
+export function summarizePayload(
+  payload: Pick<TrailPayload, 'markers' | 'summary' | 'repos'>
+): {
   markerCount: number;
   hasDiffSnippets: boolean;
   summaryPreview: string;
