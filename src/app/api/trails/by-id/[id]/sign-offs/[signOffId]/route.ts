@@ -26,6 +26,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     const { owner, repo, user, entry } = resolved.ctx;
 
     let forbidden = false;
+    let publisherStamp = false;
     let notFound = false;
 
     await updatePayload(owner, repo, id, (payload) => {
@@ -33,6 +34,15 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
       const target = signOffs.find((s) => s.id === signOffId);
       if (!target) {
         notFound = true;
+        return payload;
+      }
+      // The trail author's own sign-off is structurally tied to the
+      // publish — for informative trails it IS the verification stamp.
+      // Removing it requires unpublishing the trail, not deleting the
+      // sign-off in isolation. Applies regardless of caller (even the
+      // author themselves can't pull it).
+      if (target.author === entry.createdBy.githubLogin) {
+        publisherStamp = true;
         return payload;
       }
       if (!canModerate(user, entry, target.author)) {
@@ -50,6 +60,16 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
       return NextResponse.json(
         { error: 'Sign-off not found', code: ShareErrorCodes.NOT_FOUND },
         { status: 404 }
+      );
+    }
+    if (publisherStamp) {
+      return NextResponse.json(
+        {
+          error:
+            "The trail author's sign-off can only be removed by unpublishing the trail",
+          code: ShareErrorCodes.NOT_OWNER,
+        },
+        { status: 403 }
       );
     }
     if (forbidden) {

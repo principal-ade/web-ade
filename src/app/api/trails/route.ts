@@ -29,6 +29,7 @@ import type {
   CreateSharedTrailResponse,
   SharedTrailIndexEntry,
   StoredTrailPayload,
+  TrailSignOff,
 } from '@/lib/trails/types';
 import { MAX_TRAILS_PER_REPO } from '@/lib/trails/constants';
 
@@ -85,11 +86,26 @@ export async function POST(request: NextRequest) {
     // id is reused as `share.id` since this registry IS the share
     // registry; consumers read `share` as the panel's shared-mode flag.
     const id = crypto.randomUUID();
+    const purpose = payload.purpose ?? 'investigation';
+    // Informative trails carry stamps and need ≥1 sign-off to be
+    // considered verified panel-side. Publishing is the publisher's
+    // canonical-knowledge assertion, so we materialize their sign-off
+    // at POST time — same shape as any manual sign-off, indistinguishable
+    // by design. Removal requires unpublishing the trail.
+    const publisherSignOff: TrailSignOff | null =
+      purpose === 'informative'
+        ? {
+            id: crypto.randomUUID(),
+            author: user.login,
+            signedAt: payload.createdAt,
+          }
+        : null;
     const storedPayload: StoredTrailPayload = {
       ...payload,
       id,
       share: { id },
-      purpose: payload.purpose ?? 'investigation',
+      purpose,
+      ...(publisherSignOff ? { signOffs: [publisherSignOff] } : {}),
     };
     const summary = summarizePayload(storedPayload);
 

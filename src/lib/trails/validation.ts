@@ -439,6 +439,44 @@ export function validatePayload(
   );
   const markerIds = new Set(markers.map((m) => m.id));
 
+  // `purpose` replaces the legacy free-form `kind` field. Accept `kind`
+  // as a fallback for producers that haven't upgraded yet; unknown
+  // values drop to undefined (panel treats undefined as 'investigation').
+  const purposeCandidate =
+    typeof p.purpose === 'string'
+      ? p.purpose
+      : typeof p.kind === 'string'
+        ? p.kind
+        : undefined;
+  const purpose: TrailPurpose | undefined =
+    purposeCandidate === 'investigation' ||
+    purposeCandidate === 'changelog' ||
+    purposeCandidate === 'informative'
+      ? purposeCandidate
+      : undefined;
+
+  // Subject-marker invariant. Investigation trails (including the
+  // implicit default when purpose is undefined) must have exactly one
+  // marker with kind:'subject' — that's the answer the trail directs
+  // the reader toward. Other purposes don't carry subjects.
+  const effectivePurpose: TrailPurpose = purpose ?? 'investigation';
+  const subjectMarkers = markers.filter((m) => m.kind === 'subject');
+  if (effectivePurpose === 'investigation') {
+    if (subjectMarkers.length !== 1) {
+      throw new TrailShareError(
+        `Investigation trails must have exactly one marker with kind:'subject' (found ${subjectMarkers.length})`,
+        400,
+        ShareErrorCodes.INVALID_PAYLOAD
+      );
+    }
+  } else if (subjectMarkers.length > 0) {
+    throw new TrailShareError(
+      `${effectivePurpose} trails must not have subject markers (found ${subjectMarkers.length})`,
+      400,
+      ShareErrorCodes.INVALID_PAYLOAD
+    );
+  }
+
   // Views
   if (!Array.isArray(p.views)) {
     throw new TrailShareError(
@@ -468,23 +506,7 @@ export function validatePayload(
     markers,
     views: p.views as TrailView[],
   };
-
-  // `purpose` replaces the legacy free-form `kind` field. Accept `kind`
-  // as a fallback for producers that haven't upgraded yet; unknown
-  // values drop to undefined (panel treats undefined as 'investigation').
-  const purposeCandidate =
-    typeof p.purpose === 'string'
-      ? p.purpose
-      : typeof p.kind === 'string'
-        ? p.kind
-        : undefined;
-  if (
-    purposeCandidate === 'investigation' ||
-    purposeCandidate === 'changelog' ||
-    purposeCandidate === 'informative'
-  ) {
-    clean.purpose = purposeCandidate satisfies TrailPurpose;
-  }
+  if (purpose !== undefined) clean.purpose = purpose;
 
   if (typeof p.summary === 'string') clean.summary = p.summary;
   if (typeof p.request === 'string') clean.request = p.request;
