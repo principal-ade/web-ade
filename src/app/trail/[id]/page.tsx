@@ -378,6 +378,9 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
       fileTree: fileTreeSlice,
       lineCounts: nullSlice('lineCounts'),
       trail: trailSlice,
+      // Required since 0.5.88; ignored when a trail is loaded, so a
+      // null slice is the right default here.
+      highlightLayers: nullSlice('highlightLayers'),
       repository,
     };
   }, [fileTree, livePayload, repository]);

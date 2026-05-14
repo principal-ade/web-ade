@@ -215,6 +215,8 @@ function PrTrailViewer({ owner, repo, payload, fileTree, model, cached }: Viewer
       fileTree: fileTreeSlice,
       lineCounts: nullSlice('lineCounts'),
       trail: trailSlice,
+      // Required since 0.5.88; ignored when a trail is loaded.
+      highlightLayers: nullSlice('highlightLayers'),
       repository,
     };
   }, [fileTree, payload, repository]);
