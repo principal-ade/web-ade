@@ -106,8 +106,11 @@ export default function HomePage() {
     'They’re the quickest way for multiple parties to align on intent.';
   const WHY_LINE_2 =
     'Whether it’s you and your agent, or you and your team.';
+  const WHY_LINE_3 =
+    'Code trails help visualize comprehension debt. You don’t have to write the code to maintain a mental model, but you do have to ensure the implementation aligns with your intent.';
   const WHY_LINE_1_END = WHY_LINE_1.length;
-  const WHY_TOTAL = WHY_LINE_1_END + WHY_LINE_2.length;
+  const WHY_LINE_2_END = WHY_LINE_1_END + WHY_LINE_2.length;
+  const WHY_TOTAL = WHY_LINE_2_END + WHY_LINE_3.length;
   const [whyTyped, setWhyTyped] = useState(0);
   const whyTypingDone = whyTyped >= WHY_TOTAL;
 
@@ -120,7 +123,7 @@ export default function HomePage() {
     const delay =
       whyTyped === 0
         ? FILE_CITY_TYPE_DELAY
-        : whyTyped === WHY_LINE_1_END
+        : whyTyped === WHY_LINE_1_END || whyTyped === WHY_LINE_2_END
           ? FILE_CITY_LINE_PAUSE
           : FILE_CITY_TYPE_INTERVAL;
     const timer = setTimeout(() => setWhyTyped((n) => n + 1), delay);
@@ -488,7 +491,27 @@ export default function HomePage() {
                     <p style={{ color: theme.colors.primary }}>
                       {WHY_LINE_2.slice(
                         0,
-                        Math.max(0, whyTyped - WHY_LINE_1_END),
+                        Math.min(
+                          whyTyped - WHY_LINE_1_END,
+                          WHY_LINE_2.length,
+                        ),
+                      )}
+                      {whyTyped <= WHY_LINE_2_END && !whyTypingDone && (
+                        <span
+                          className="typing-caret"
+                          style={{ color: theme.colors.primary }}
+                          aria-hidden="true"
+                        >
+                          ▍
+                        </span>
+                      )}
+                    </p>
+                  )}
+                  {whyTyped > WHY_LINE_2_END && (
+                    <p className="mt-3">
+                      {WHY_LINE_3.slice(
+                        0,
+                        Math.max(0, whyTyped - WHY_LINE_2_END),
                       )}
                       {!whyTypingDone && (
                         <span
