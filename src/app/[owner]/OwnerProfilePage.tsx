@@ -3,9 +3,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Logo } from '@principal-ai/logo-component';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
-import { Globe, MapPin, Star, GitFork, Lock } from 'lucide-react';
+import { Globe, MapPin, Star, GitFork, Lock, Github } from 'lucide-react';
 
 // ---- Types ---------------------------------------------------------------
 
@@ -428,22 +427,61 @@ export function OwnerProfilePage({ owner }: { owner: string }) {
       `}</style>
 
       {/* Header */}
-      <header style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '12px 16px',
-        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
-        background: theme.colors.surface,
-        borderBottom: `1px solid ${theme.colors.border}`,
-        flexShrink: 0, zIndex: 10,
-      }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-          <Logo width={32} height={32} color={theme.colors.accent} particleColor={theme.colors.primary} letterColor={theme.colors.text} />
-          <span style={{ fontSize: 15, fontWeight: 600, color: theme.colors.text }}>
-            Principal <span style={{ color: theme.colors.accent }}>AI</span>
+      <header
+        className="border-b px-4 flex items-center gap-2 flex-shrink-0 relative"
+        style={{
+          background: theme.colors.surface,
+          borderColor: theme.colors.border,
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
+          paddingBottom: '0.5rem',
+          zIndex: 10,
+        }}
+      >
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <Link
+            href="/"
+            className="text-xl font-bold transition-opacity hover:opacity-80"
+            style={{ fontFamily: theme.fonts.body, textDecoration: 'none' }}
+          >
+            <span style={{ color: theme.colors.text }}>Principal</span>{' '}
+            <span style={{ color: theme.colors.primary }}>AI</span>
+          </Link>
+
+          <span
+            className="mx-2"
+            style={{ color: theme.colors.textMuted }}
+            aria-hidden="true"
+          >
+            /
           </span>
-          <span style={{ color: theme.colors.textMuted, fontSize: 13 }}>/ {owner}</span>
-        </Link>
-        <UserAvatarMenu />
+
+          <Link
+            href={`/${owner}`}
+            className="text-base font-semibold transition-opacity hover:opacity-80 truncate"
+            style={{
+              fontFamily: theme.fonts.body,
+              color: theme.colors.text,
+              textDecoration: 'none',
+            }}
+          >
+            {owner}
+          </Link>
+        </div>
+
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <a
+            href={`https://github.com/${owner}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+            style={{ color: theme.colors.text }}
+            title={`Open ${owner} on GitHub`}
+            aria-label={`Open ${owner} on GitHub`}
+          >
+            <Github className="w-5 h-5" />
+          </a>
+          <UserAvatarMenu />
+        </div>
       </header>
 
       {/* Scrollable page body */}
