@@ -4,7 +4,18 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { AlertTriangle, Github, LogIn, Search, FileText } from 'lucide-react';
+import {
+  AlertTriangle,
+  Github,
+  History,
+  LogIn,
+  Search,
+  FileText,
+  Settings,
+  Check,
+} from 'lucide-react';
+import { FileTree as PierreFileTree, useFileTree } from '@pierre/trees/react';
+import { themeToTreeStyles } from '@pierre/trees';
 import {
   PanelEventBus,
   type DataSlice,
@@ -73,6 +84,43 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   // hoveredTrailId will drive highlight layers on the file map once the
   // explorer is wired up. Kept here so the list rows can broadcast it.
   const [hoveredTrailId, setHoveredTrailId] = useState<string | null>(null);
+  // Debt-view toggle — when on, the idle highlight layer flips to the
+  // *undocumented* files (inverse of coverage) so the user can see what
+  // the trails haven't reached yet. Toggled from the header counter.
+  const [debtMode, setDebtMode] = useState(false);
+
+  // Folder include/exclude config — directory paths the user has gated
+  // out of the coverage / debt calculation. Persisted to localStorage
+  // per (owner, repo). Paths are stored *with* a trailing slash so they
+  // can be matched against file paths via prefix.
+  const excludedDirsStorageKey = `principal:trail-excluded-dirs:${owner}/${repo}`;
+  const [excludedDirs, setExcludedDirs] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = window.localStorage.getItem(excludedDirsStorageKey);
+      if (!raw) return [];
+      const parsed: unknown = JSON.parse(raw);
+      return Array.isArray(parsed)
+        ? parsed.filter((p): p is string => typeof p === 'string')
+        : [];
+    } catch {
+      return [];
+    }
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        excludedDirsStorageKey,
+        JSON.stringify(excludedDirs),
+      );
+    } catch {
+      // localStorage may be unavailable (private mode, quota) — best-effort.
+    }
+  }, [excludedDirsStorageKey, excludedDirs]);
+
+  // When true, the left rail swaps the trail list for a directory tree
+  // the user can use to gate folders in / out of the coverage calc.
+  const [configMode, setConfigMode] = useState(false);
 
   useEffect(() => {
     document.title = `${owner}/${repo}`;
@@ -223,10 +271,51 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     ? (payloads.get(selectedTrailId) ?? null)
     : null;
 
+  // Sorted, deduped list of every directory in the repo, with trailing
+  // slashes so Pierre's tree treats them as folders. Feeds the config
+  // pane's file tree (directories-only — files don't show up in the
+  // exclude picker).
+  const dirPaths = useMemo<string[]>(() => {
+    if (!fileTree) return [];
+    const dirs = new Set<string>();
+    for (const f of fileTree.allFiles) {
+      const segments = f.path.split('/');
+      let current = '';
+      // Each segment except the last (the filename) contributes a dir.
+      for (let i = 0; i < segments.length - 1; i++) {
+        const segment = segments[i];
+        if (!segment) continue;
+        current = current ? `${current}/${segment}` : segment;
+        dirs.add(`${current}/`);
+      }
+    }
+    return Array.from(dirs).sort();
+  }, [fileTree]);
+
+  // Effective excluded file set — every file that lives under any
+  // user-excluded directory. Computed once and reused everywhere the
+  // exclusion cascade matters (coverage stats, highlight layers).
+  const excludedFilePaths = useMemo<Set<string>>(() => {
+    const out = new Set<string>();
+    if (excludedDirs.length === 0 || !fileTree) return out;
+    // Normalize: every prefix ends with '/' so startsWith won't match
+    // "src/foo" against an excluded dir named "src/f".
+    const prefixes = excludedDirs.map((d) =>
+      d.endsWith('/') ? d : `${d}/`,
+    );
+    for (const f of fileTree.allFiles) {
+      if (prefixes.some((p) => f.path.startsWith(p))) out.add(f.path);
+    }
+    return out;
+  }, [excludedDirs, fileTree]);
+
   // Repo "explored" metric: how many unique files are touched by at
   // least one trail, vs the total file count. Selection-independent —
   // we want it visible whether or not a trail is open. Returns null
   // until enough data has streamed in to report a meaningful number.
+  // Files under any excluded directory drop out of *both* the numerator
+  // and the denominator so the percentage stays honest as users gate
+  // folders in / out.
   const exploredStats = useMemo<{
     documented: number;
     total: number;
@@ -237,12 +326,18 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     const documented = new Set<string>();
     for (const payload of payloads.values()) {
       for (const m of payload.markers) {
-        if (typeof m.sourcePath === 'string' && m.sourcePath.length > 0) {
+        if (
+          typeof m.sourcePath === 'string' &&
+          m.sourcePath.length > 0 &&
+          !excludedFilePaths.has(m.sourcePath)
+        ) {
           documented.add(m.sourcePath);
         }
       }
     }
-    const total = fileTree.allFiles.length;
+    const total = fileTree.allFiles.filter(
+      (f) => !excludedFilePaths.has(f.path),
+    ).length;
     if (total === 0) return null;
     return {
       documented: documented.size,
@@ -251,7 +346,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
       // label can pick their own precision.
       pct: (documented.size / total) * 100,
     };
-  }, [fileTree, payloads]);
+  }, [fileTree, payloads, excludedFilePaths]);
 
   // Layer item paths must match `building.path` verbatim. Buildings
   // are constructed from `FileTree.allFiles[i].path`, which is the raw
@@ -268,7 +363,11 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     const paths = new Set<string>();
     for (const payload of payloads.values()) {
       for (const marker of payload.markers) {
-        if (typeof marker.sourcePath === 'string' && marker.sourcePath.length > 0) {
+        if (
+          typeof marker.sourcePath === 'string' &&
+          marker.sourcePath.length > 0 &&
+          !excludedFilePaths.has(marker.sourcePath)
+        ) {
           paths.add(marker.sourcePath);
         }
       }
@@ -287,7 +386,48 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         renderStrategy: 'fill' as const,
       })),
     };
-  }, [selectedTrailId, payloads, theme.colors.primary]);
+  }, [selectedTrailId, payloads, excludedFilePaths, theme.colors.primary]);
+
+  // Inverse layer — every file NOT touched by a trail. Used when the
+  // user toggles the debt counter in the header. Requires the file tree
+  // so we can subtract the documented set from the universe of paths.
+  const undocumentedFilesLayer = useMemo<HighlightLayer | null>(() => {
+    if (selectedTrailId) return null;
+    if (!fileTree) return null;
+    if (payloads.size === 0) return null;
+    const documented = new Set<string>();
+    for (const payload of payloads.values()) {
+      for (const marker of payload.markers) {
+        if (typeof marker.sourcePath === 'string' && marker.sourcePath.length > 0) {
+          documented.add(marker.sourcePath);
+        }
+      }
+    }
+    const undocPaths = fileTree.allFiles
+      .map((f) => f.path)
+      .filter((p) => !documented.has(p) && !excludedFilePaths.has(p));
+    if (undocPaths.length === 0) return null;
+    return {
+      id: 'trail-undocumented-files',
+      name: 'Comprehension debt',
+      enabled: true,
+      color: theme.colors.warning ?? theme.colors.accent,
+      opacity: 0.3,
+      priority: 50,
+      items: undocPaths.map((path) => ({
+        path,
+        type: 'file' as const,
+        renderStrategy: 'fill' as const,
+      })),
+    };
+  }, [
+    selectedTrailId,
+    payloads,
+    fileTree,
+    excludedFilePaths,
+    theme.colors.warning,
+    theme.colors.accent,
+  ]);
 
   // Hover layer — overlays the focused trail on top of the base layer.
   const hoveredHighlightLayer = useMemo<HighlightLayer | null>(() => {
@@ -318,13 +458,24 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     };
   }, [hoveredTrailId, selectedTrailId, payloads, theme.colors.accent]);
 
-  // Stack base + hover. Higher priority renders on top.
+  // Stack base + hover. Higher priority renders on top. In debt mode
+  // we swap the base layer to the undocumented set and skip the hover
+  // overlay (which only makes sense over the coverage layer).
   const idleHighlightLayers = useMemo<HighlightLayer[] | null>(() => {
     const layers: HighlightLayer[] = [];
-    if (documentedFilesLayer) layers.push(documentedFilesLayer);
-    if (hoveredHighlightLayer) layers.push(hoveredHighlightLayer);
+    const baseLayer = debtMode ? undocumentedFilesLayer : documentedFilesLayer;
+    if (baseLayer) layers.push(baseLayer);
+    if (!debtMode && hoveredHighlightLayer) layers.push(hoveredHighlightLayer);
     return layers.length > 0 ? layers : null;
-  }, [documentedFilesLayer, hoveredHighlightLayer]);
+  }, [debtMode, documentedFilesLayer, undocumentedFilesLayer, hoveredHighlightLayer]);
+
+  // The highlight-layers slice is "loading" until we have enough data
+  // to compute a final value. Without this the panel can't tell
+  // "no host layers" from "layers haven't streamed in yet" and paints
+  // a one-frame flash of the unfiltered city before hide-mode kicks in.
+  const highlightLayersLoading =
+    state.kind !== 'ready' ||
+    (state.entries.length > 0 && payloads.size === 0);
 
   // Debug: log layers + a few real file-tree paths so we can confirm
   // the LayerItem path format matches the building paths.
@@ -362,6 +513,12 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         repo={repo}
         showSignIn={!user}
         onSignIn={handleSignIn}
+        debtPct={exploredStats ? 100 - exploredStats.pct : null}
+        debtMode={debtMode}
+        onToggleDebt={() => {
+          setDebtMode((m) => !m);
+          setSelectedTrailId(null);
+        }}
       />
       <div className="flex-1 min-h-0 flex">
         <TrailListPane
@@ -375,6 +532,14 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           selectedTrailId={selectedTrailId}
           onSelect={setSelectedTrailId}
           onHover={setHoveredTrailId}
+          configMode={configMode}
+          onToggleConfigMode={() => {
+            setConfigMode((m) => !m);
+            setSelectedTrailId(null);
+          }}
+          dirPaths={dirPaths}
+          excludedDirs={excludedDirs}
+          onExcludedDirsChange={setExcludedDirs}
         />
         <RightPane
           owner={owner}
@@ -383,6 +548,10 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           treeError={treeError}
           selectedPayload={selectedPayload}
           idleHighlightLayers={idleHighlightLayers}
+          highlightLayersLoading={highlightLayersLoading}
+          excludedFolders={excludedDirs.map((d) =>
+            d.endsWith('/') ? d.slice(0, -1) : d,
+          )}
           currentAuthor={user?.login ?? LOCAL_AUTHOR}
         />
       </div>
@@ -399,7 +568,18 @@ const Header: React.FC<{
   repo: string;
   showSignIn?: boolean;
   onSignIn?: () => void;
-}> = ({ owner, repo, showSignIn, onSignIn }) => {
+  debtPct: number | null;
+  debtMode: boolean;
+  onToggleDebt: () => void;
+}> = ({
+  owner,
+  repo,
+  showSignIn,
+  onSignIn,
+  debtPct,
+  debtMode,
+  onToggleDebt,
+}) => {
   const { theme } = useTheme();
   return (
     <header
@@ -457,6 +637,48 @@ const Header: React.FC<{
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
+        {debtPct !== null && (
+          <button
+            type="button"
+            onClick={onToggleDebt}
+            className="flex items-center gap-1.5 px-2.5 h-8 rounded-md text-sm font-semibold leading-none transition-all hover:opacity-90"
+            style={{
+              fontFamily: theme.fonts.body,
+              background: debtMode
+                ? (theme.colors.warning ?? theme.colors.accent)
+                : `color-mix(in srgb, ${theme.colors.warning ?? theme.colors.accent} 14%, transparent)`,
+              color: debtMode
+                ? theme.colors.background
+                : (theme.colors.warning ?? theme.colors.accent),
+              border: `1px solid ${theme.colors.warning ?? theme.colors.accent}`,
+              cursor: 'pointer',
+            }}
+            title={
+              debtMode
+                ? 'Showing comprehension debt — click to return to coverage view'
+                : 'View comprehension debt — files no trail has reached'
+            }
+            aria-pressed={debtMode}
+            aria-label="Toggle comprehension debt view"
+          >
+            <span>{debtPct.toFixed(2)}%</span>
+            <span
+              className="text-xs font-medium"
+              style={{ opacity: 0.85 }}
+            >
+              debt
+            </span>
+          </button>
+        )}
+        <Link
+          href={`/legacy/${owner}/${repo}`}
+          className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+          style={{ color: theme.colors.text }}
+          title="Open legacy view"
+          aria-label="Open legacy view"
+        >
+          <History className="w-5 h-5" />
+        </Link>
         <a
           href={`https://github.com/${owner}/${repo}`}
           target="_blank"
@@ -507,6 +729,11 @@ const TrailListPane: React.FC<{
   selectedTrailId: string | null;
   onSelect: (id: string | null) => void;
   onHover: (id: string | null) => void;
+  configMode: boolean;
+  onToggleConfigMode: () => void;
+  dirPaths: string[];
+  excludedDirs: string[];
+  onExcludedDirsChange: (dirs: string[]) => void;
 }> = ({
   loading,
   entries,
@@ -518,6 +745,11 @@ const TrailListPane: React.FC<{
   selectedTrailId,
   onSelect,
   onHover,
+  configMode,
+  onToggleConfigMode,
+  dirPaths,
+  excludedDirs,
+  onExcludedDirsChange,
 }) => {
   const { theme } = useTheme();
 
@@ -533,71 +765,203 @@ const TrailListPane: React.FC<{
       <TrailSummarySection
         trailCount={entries.length}
         exploredStats={exploredStats}
+        configMode={configMode}
+        onToggleConfigMode={onToggleConfigMode}
       />
 
-      <div
-        className="px-3 py-2 border-b flex items-center gap-2"
-        style={{ borderColor: theme.colors.border }}
-      >
-        <Search size={14} style={{ color: theme.colors.textMuted }} />
-        <input
-          type="text"
-          value={filterQuery}
-          onChange={(e) => onFilterChange(e.target.value)}
-          placeholder="Filter trails"
-          className="flex-1 bg-transparent outline-none text-sm"
-          style={{ color: theme.colors.text }}
+      {configMode ? (
+        <FolderConfigPane
+          dirPaths={dirPaths}
+          excludedDirs={excludedDirs}
+          onExcludedDirsChange={onExcludedDirsChange}
         />
-        {filterQuery && (
-          <button
-            onClick={() => onFilterChange('')}
-            className="text-xs"
-            style={{ color: theme.colors.textMuted }}
+      ) : (
+        <>
+          <div
+            className="px-3 py-2 border-b flex items-center gap-2"
+            style={{ borderColor: theme.colors.border }}
           >
-            Clear
+            <Search size={14} style={{ color: theme.colors.textMuted }} />
+            <input
+              type="text"
+              value={filterQuery}
+              onChange={(e) => onFilterChange(e.target.value)}
+              placeholder="Filter trails"
+              className="flex-1 bg-transparent outline-none text-sm"
+              style={{ color: theme.colors.text }}
+            />
+            {filterQuery && (
+              <button
+                onClick={() => onFilterChange('')}
+                className="text-xs"
+                style={{ color: theme.colors.textMuted }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          <div
+            className="flex-1 min-h-0 overflow-y-auto"
+            onMouseLeave={() => onHover(null)}
+          >
+            {loading ? (
+              <ListMessage>Loading trails…</ListMessage>
+            ) : entries.length === 0 ? (
+              <ListMessage>
+                No trails have been shared for this repository yet.
+              </ListMessage>
+            ) : filteredEntries.length === 0 ? (
+              <ListMessage>No trails match “{filterQuery}”.</ListMessage>
+            ) : (
+              filteredEntries.map((entry) => (
+                <TrailRow
+                  key={entry.id}
+                  entry={entry}
+                  payload={payloads.get(entry.id) ?? null}
+                  selected={entry.id === selectedTrailId}
+                  onSelect={() =>
+                    onSelect(entry.id === selectedTrailId ? null : entry.id)
+                  }
+                  onHover={() => onHover(entry.id)}
+                />
+              ))
+            )}
+          </div>
+        </>
+      )}
+    </aside>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Folder configuration pane — Pierre tree of directories the user can
+// gate in / out of the coverage calc. Pierre's selection state is our
+// "excluded" set (selection = excluded from coverage). Persisted via
+// the caller. Pierre's native click semantics apply: plain click
+// replaces selection, ctrl/cmd-click toggles. We surface that in helper
+// text so the multi-select pattern isn't a guessing game.
+// ---------------------------------------------------------------------------
+
+const FolderConfigPane: React.FC<{
+  dirPaths: string[];
+  excludedDirs: string[];
+  onExcludedDirsChange: (dirs: string[]) => void;
+}> = ({ dirPaths, excludedDirs, onExcludedDirsChange }) => {
+  const { theme } = useTheme();
+
+  // Pierre is a controlled-ish component: selection updates flow through
+  // onSelectionChange; we forward straight to the caller. We pass the
+  // current excludedDirs as `initialSelectedPaths` only once per mount
+  // so re-renders driven by other state don't reset Pierre's selection.
+  const initialSelectedRef = useRef<readonly string[]>(excludedDirs);
+
+  // NOTE on cascade visualization: Pierre's `renderRowDecoration` is
+  // captured at mount (`useFileTree` snapshots options once via a ref),
+  // so a closure over `excludedDirs` would go stale on every toggle.
+  // For v1 we lean on Pierre's native selection styling for explicitly
+  // excluded rows and communicate the cascade via the helper text
+  // above. If we want a live "inherited" badge later, we'll need to
+  // either read from a mutable ref or force-remount on changes.
+  const { model } = useFileTree({
+    paths: dirPaths,
+    initialExpansion: 'closed',
+    initialSelectedPaths: initialSelectedRef.current,
+    search: true,
+    onSelectionChange: (paths) => onExcludedDirsChange([...paths]),
+  });
+
+  const treeStyles = useMemo(
+    () =>
+      themeToTreeStyles({
+        type: 'dark',
+        bg: theme.colors.background,
+        fg: theme.colors.text,
+      }),
+    [theme.colors.background, theme.colors.text],
+  );
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0">
+      <div
+        className="px-4 py-2 border-b text-xs"
+        style={{
+          borderColor: theme.colors.border,
+          color: theme.colors.textSecondary,
+        }}
+      >
+        Click a folder to exclude it (cascades to subfolders). Cmd / Ctrl-click
+        to toggle multiple.
+        {excludedDirs.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onExcludedDirsChange([])}
+            className="ml-2 underline-offset-2 hover:underline"
+            style={{ color: theme.colors.primary, cursor: 'pointer' }}
+          >
+            Clear all
           </button>
         )}
       </div>
-
-      <div className="flex-1 min-h-0 overflow-y-auto" onMouseLeave={() => onHover(null)}>
-        {loading ? (
-          <ListMessage>Loading trails…</ListMessage>
-        ) : entries.length === 0 ? (
-          <ListMessage>No trails have been shared for this repository yet.</ListMessage>
-        ) : filteredEntries.length === 0 ? (
-          <ListMessage>No trails match “{filterQuery}”.</ListMessage>
-        ) : (
-          filteredEntries.map((entry) => (
-            <TrailRow
-              key={entry.id}
-              entry={entry}
-              payload={payloads.get(entry.id) ?? null}
-              selected={entry.id === selectedTrailId}
-              onSelect={() => onSelect(entry.id === selectedTrailId ? null : entry.id)}
-              onHover={() => onHover(entry.id)}
-            />
-          ))
-        )}
+      <div className="flex-1 min-h-0">
+        <PierreFileTree
+          model={model}
+          style={{
+            ...(treeStyles as React.CSSProperties),
+            height: '100%',
+            display: 'block',
+          }}
+        />
       </div>
-    </aside>
+    </div>
   );
 };
 
 const TrailSummarySection: React.FC<{
   trailCount: number;
   exploredStats: { documented: number; total: number; pct: number } | null;
-}> = ({ trailCount, exploredStats }) => {
+  configMode: boolean;
+  onToggleConfigMode: () => void;
+}> = ({ trailCount, exploredStats, configMode, onToggleConfigMode }) => {
   const { theme } = useTheme();
   return (
     <div
       className="px-4 py-3 border-b"
       style={{ borderColor: theme.colors.border }}
     >
-      <div
-        className="text-[10px] uppercase tracking-wide mb-2"
-        style={{ color: theme.colors.textMuted, letterSpacing: 0.6 }}
-      >
-        Trails
+      <div className="flex items-center justify-between mb-2">
+        <div
+          className="text-[10px] uppercase tracking-wide"
+          style={{ color: theme.colors.textSecondary, letterSpacing: 0.6 }}
+        >
+          {configMode ? 'Configure folders' : 'Trails'}
+        </div>
+        <button
+          type="button"
+          onClick={onToggleConfigMode}
+          className="flex items-center justify-center w-6 h-6 rounded transition-opacity hover:opacity-80"
+          style={{
+            color: configMode
+              ? theme.colors.primary
+              : theme.colors.textSecondary,
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+          title={
+            configMode
+              ? 'Done configuring — return to trails'
+              : 'Configure which folders count toward coverage'
+          }
+          aria-pressed={configMode}
+          aria-label={
+            configMode
+              ? 'Exit folder configuration mode'
+              : 'Configure folder inclusion'
+          }
+        >
+          {configMode ? <Check size={14} /> : <Settings size={14} />}
+        </button>
       </div>
       <div className="flex items-baseline gap-3">
         <div
@@ -608,7 +972,7 @@ const TrailSummarySection: React.FC<{
         </div>
         <div
           className="text-xs"
-          style={{ color: theme.colors.textMuted }}
+          style={{ color: theme.colors.textSecondary }}
         >
           explored
         </div>
@@ -627,7 +991,7 @@ const TrailSummarySection: React.FC<{
       </div>
       <div
         className="text-xs mt-2 flex items-center gap-3"
-        style={{ color: theme.colors.textMuted }}
+        style={{ color: theme.colors.textSecondary }}
       >
         <span>
           {exploredStats
@@ -737,6 +1101,8 @@ const RightPane: React.FC<{
   treeError: string | null;
   selectedPayload: TrailPayload | null;
   idleHighlightLayers: HighlightLayer[] | null;
+  highlightLayersLoading: boolean;
+  excludedFolders: string[];
   currentAuthor: string;
 }> = ({
   owner,
@@ -745,6 +1111,8 @@ const RightPane: React.FC<{
   treeError,
   selectedPayload,
   idleHighlightLayers,
+  highlightLayersLoading,
+  excludedFolders,
   currentAuthor,
 }) => {
   const { theme } = useTheme();
@@ -833,7 +1201,14 @@ const RightPane: React.FC<{
       scope: 'repository',
       name: 'highlightLayers',
       data: idleHighlightLayers,
-      loading: false,
+      // `idleHighlightLayers` is derived asynchronously from payloads
+      // that stream in after the trails index lands. Reporting
+      // `loading: false` while the data is still null-because-of-pending-fetch
+      // is indistinguishable from "host has no layers" — the panel paints
+      // the unfiltered city for one frame, then re-renders with hide-mode
+      // applied, producing a visible flash. The parent computes the real
+      // loading state and forwards it here.
+      loading: highlightLayersLoading,
       error: null,
       refresh: async () => {},
     };
@@ -847,7 +1222,13 @@ const RightPane: React.FC<{
       highlightLayers: highlightSlice,
       repository,
     };
-  }, [fileTree, selectedPayload, idleHighlightLayers, repository]);
+  }, [
+    fileTree,
+    selectedPayload,
+    idleHighlightLayers,
+    highlightLayersLoading,
+    repository,
+  ]);
 
   if (treeError) {
     return (
@@ -881,6 +1262,8 @@ const RightPane: React.FC<{
         actions={actions}
         events={events}
         currentAuthor={currentAuthor}
+        defaultIsolationMode="hide"
+        excludedFolders={excludedFolders}
       />
     </main>
   );
