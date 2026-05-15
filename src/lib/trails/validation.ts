@@ -15,7 +15,11 @@ import type {
   TrailSnippetSliceAnchor,
   TrailView,
 } from './types';
-import { MAX_PAYLOAD_BYTES } from './constants';
+import {
+  MAX_PAYLOAD_BYTES,
+  MAX_INBOX_COMMENT_CHARS,
+  MAX_INBOX_RECIPIENTS,
+} from './constants';
 
 const MAX_NOTE_BODY_BYTES = 16_000;
 const MAX_SIGNOFF_COMMENT_BYTES = 2_000;
@@ -739,6 +743,95 @@ export function validateSignOffDraft(input: unknown): TrailSignOffDraft {
     draft.comment = d.comment;
   }
   return draft;
+}
+
+/**
+ * Validate a `POST .../send` request body. Returns a clean shape with
+ * recipients deduped (case-insensitive on login) and the optional sender
+ * comment trimmed. Resolution of logins to GitHub user ids happens in the
+ * route — this layer only checks shape and limits.
+ */
+export interface SendTrailRequest {
+  recipients: string[];
+  comment?: string;
+}
+
+export function validateSendRequest(input: unknown): SendTrailRequest {
+  if (!isPlainObject(input)) {
+    throw new TrailShareError(
+      'Request body must be an object',
+      400,
+      ShareErrorCodes.INVALID_REQUEST
+    );
+  }
+  const body = input as Record<string, unknown>;
+
+  if (!Array.isArray(body.recipients)) {
+    throw new TrailShareError(
+      'recipients must be an array',
+      400,
+      ShareErrorCodes.RECIPIENTS_REQUIRED
+    );
+  }
+
+  const seen = new Set<string>();
+  const recipients: string[] = [];
+  for (const raw of body.recipients) {
+    if (typeof raw !== 'string') {
+      throw new TrailShareError(
+        'recipients entries must be strings',
+        400,
+        ShareErrorCodes.INVALID_REQUEST
+      );
+    }
+    const login = raw.trim();
+    if (login.length === 0) continue;
+    const key = login.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    recipients.push(login);
+  }
+
+  if (recipients.length === 0) {
+    throw new TrailShareError(
+      'recipients must contain at least one login',
+      400,
+      ShareErrorCodes.RECIPIENTS_REQUIRED
+    );
+  }
+
+  if (recipients.length > MAX_INBOX_RECIPIENTS) {
+    throw new TrailShareError(
+      `Too many recipients (max ${MAX_INBOX_RECIPIENTS})`,
+      400,
+      ShareErrorCodes.TOO_MANY_RECIPIENTS
+    );
+  }
+
+  const out: SendTrailRequest = { recipients };
+
+  if (body.comment !== undefined) {
+    if (typeof body.comment !== 'string') {
+      throw new TrailShareError(
+        'comment must be a string',
+        400,
+        ShareErrorCodes.INVALID_REQUEST
+      );
+    }
+    const comment = body.comment.trim();
+    if (comment.length > 0) {
+      if (comment.length > MAX_INBOX_COMMENT_CHARS) {
+        throw new TrailShareError(
+          `comment exceeds ${MAX_INBOX_COMMENT_CHARS} chars`,
+          400,
+          ShareErrorCodes.COMMENT_TOO_LONG
+        );
+      }
+      out.comment = comment;
+    }
+  }
+
+  return out;
 }
 
 export function summarizePayload(

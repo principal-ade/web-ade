@@ -146,7 +146,45 @@ export const ShareErrorCodes = {
   MAX_RETRIES: 'MAX_RETRIES',
   S3_ERROR: 'S3_ERROR',
   GITHUB_API_ERROR: 'GITHUB_API_ERROR',
+  UNKNOWN_RECIPIENT: 'UNKNOWN_RECIPIENT',
+  TOO_MANY_RECIPIENTS: 'TOO_MANY_RECIPIENTS',
+  RECIPIENTS_REQUIRED: 'RECIPIENTS_REQUIRED',
+  COMMENT_TOO_LONG: 'COMMENT_TOO_LONG',
+  INBOX_NOT_FOUND: 'INBOX_NOT_FOUND',
 } as const;
 
 export type ShareErrorCode =
   (typeof ShareErrorCodes)[keyof typeof ShareErrorCodes];
+
+// ============================================================================
+// Inbox — per-recipient delivery layer on top of the repo-centric trail store.
+// See docs/file-city-trail-sharing.md and mobile-app/docs/TRAILS_API.md.
+// ============================================================================
+
+export interface InboxIndexEntry {
+  /** Trail id — foreign key into the existing `/api/trails/by-id/{id}`. */
+  trailId: string;
+  /** Sender identity at send-time. */
+  sender: { githubId: number; githubLogin: string };
+  /** Optional sender note ("why I'm sharing this"). */
+  comment?: string;
+  /** ISO 8601 — server-stamped on send, refreshed on resend. */
+  sentAt: string;
+  /** ISO 8601 — server-stamped when the recipient marks the entry read. */
+  readAt: string | null;
+  /**
+   * Snapshot of the live trail entry at send-time. Lets the inbox list
+   * render without a per-row fan-out. Patched lazily on read when the live
+   * trail's updatedAt has advanced.
+   */
+  snapshot: SharedTrailIndexEntry;
+  /** Resolved owner/repo for the trail — duplicated for fast list rendering. */
+  owner: string;
+  repo: string;
+}
+
+export interface InboxIndex {
+  version: 1;
+  updatedAt: string;
+  entries: InboxIndexEntry[];
+}

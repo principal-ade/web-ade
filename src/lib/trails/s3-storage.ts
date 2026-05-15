@@ -26,6 +26,7 @@ import {
   INDEX_FILE,
   INDEX_CACHE_CONTROL,
   PAYLOAD_CACHE_CONTROL,
+  INBOX_PREFIX,
   MAX_ETAG_RETRIES,
 } from './constants';
 import { TrailShareError, ShareErrorCodes } from './types';
@@ -33,6 +34,8 @@ import type {
   TrailPayload,
   SharedTrailIndex,
   SharedTrailIndexEntry,
+  InboxIndex,
+  InboxIndexEntry,
 } from './types';
 
 const s3Client = new S3Client({ region: BUCKET_REGION });
@@ -515,6 +518,218 @@ export async function deleteIdPointer(id: string): Promise<void> {
     // delete just because the pointer cleanup failed.
     console.error('[Trails] Delete id pointer failed:', {
       id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+// ============================================================================
+// Inbox — per-recipient delivery index keyed by GitHub numeric id so it
+// survives login changes. Mirrors the repo-index ETag-locked update flow.
+// ============================================================================
+
+function inboxPrefix(githubId: number): string {
+  return `${S3_PREFIX}/${INBOX_PREFIX}/${githubId}`;
+}
+
+export function buildInboxIndexKey(githubId: number): string {
+  return `${inboxPrefix(githubId)}/${INDEX_FILE}`;
+}
+
+export function buildInboxEntryKey(githubId: number, trailId: string): string {
+  return `${inboxPrefix(githubId)}/by-trail/${trailId}.json`;
+}
+
+function emptyInbox(): InboxIndex {
+  return {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    entries: [],
+  };
+}
+
+async function getInboxWithETag(
+  githubId: number
+): Promise<{ data: InboxIndex; etag: string } | null> {
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: buildInboxIndexKey(githubId),
+      })
+    );
+
+    const body = await response.Body?.transformToString();
+    if (!body) return null;
+
+    return {
+      data: JSON.parse(body) as InboxIndex,
+      etag: response.ETag || '',
+    };
+  } catch (error: unknown) {
+    if (isNoSuchKey(error)) return null;
+
+    console.error('[Trails] Get inbox failed:', {
+      githubId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new TrailShareError(
+      'Failed to retrieve inbox',
+      500,
+      ShareErrorCodes.S3_ERROR
+    );
+  }
+}
+
+async function putInboxWithETag(
+  githubId: number,
+  data: InboxIndex,
+  etag: string | null
+): Promise<void> {
+  try {
+    const params: {
+      Bucket: string;
+      Key: string;
+      Body: string;
+      ContentType: string;
+      CacheControl: string;
+      IfMatch?: string;
+    } = {
+      Bucket: BUCKET_NAME,
+      Key: buildInboxIndexKey(githubId),
+      Body: JSON.stringify(data, null, 2),
+      ContentType: 'application/json',
+      CacheControl: INDEX_CACHE_CONTROL,
+    };
+
+    if (etag) params.IfMatch = etag;
+
+    await s3Client.send(new PutObjectCommand(params));
+  } catch (error: unknown) {
+    if (isEtagConflict(error)) {
+      throw new TrailShareError(
+        'Concurrent modification detected',
+        409,
+        ShareErrorCodes.ETAG_CONFLICT
+      );
+    }
+
+    console.error('[Trails] Put inbox failed:', {
+      githubId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new TrailShareError(
+      'Failed to save inbox',
+      500,
+      ShareErrorCodes.S3_ERROR
+    );
+  }
+}
+
+export async function getInbox(githubId: number): Promise<InboxIndex> {
+  const result = await getInboxWithETag(githubId);
+  return result ? result.data : emptyInbox();
+}
+
+/**
+ * Mutate the inbox index under optimistic locking. Mirrors `updateIndex`.
+ */
+export async function updateInbox(
+  githubId: number,
+  modifier: (data: InboxIndex) => InboxIndex
+): Promise<InboxIndex> {
+  let attempts = 0;
+
+  while (attempts < MAX_ETAG_RETRIES) {
+    try {
+      const current = await getInboxWithETag(githubId);
+      const data = current ? current.data : emptyInbox();
+      const etag = current ? current.etag : null;
+
+      const updated = modifier(data);
+      updated.updatedAt = new Date().toISOString();
+
+      await putInboxWithETag(githubId, updated, etag);
+      return updated;
+    } catch (error) {
+      if (
+        error instanceof TrailShareError &&
+        error.code === ShareErrorCodes.ETAG_CONFLICT
+      ) {
+        attempts++;
+        if (attempts >= MAX_ETAG_RETRIES) {
+          throw new TrailShareError(
+            'Concurrent modification conflict — please retry',
+            409,
+            ShareErrorCodes.MAX_RETRIES
+          );
+        }
+        await new Promise((r) => setTimeout(r, 100 * attempts));
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new TrailShareError(
+    'Update failed after retries',
+    500,
+    ShareErrorCodes.S3_ERROR
+  );
+}
+
+/**
+ * Write a per-entry inbox object at `trails/_inbox/{githubId}/by-trail/{id}.json`.
+ * Written in the same pass as the inbox index append so point reads of a
+ * single inbox row (e.g. `POST /inbox/{id}/read`) don't have to scan the
+ * whole index.
+ */
+export async function putInboxEntry(
+  githubId: number,
+  entry: InboxIndexEntry
+): Promise<void> {
+  try {
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: buildInboxEntryKey(githubId, entry.trailId),
+        Body: JSON.stringify(entry),
+        ContentType: 'application/json',
+        CacheControl: PAYLOAD_CACHE_CONTROL,
+      })
+    );
+  } catch (error: unknown) {
+    console.error('[Trails] Put inbox entry failed:', {
+      githubId,
+      trailId: entry.trailId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new TrailShareError(
+      'Failed to save inbox entry',
+      500,
+      ShareErrorCodes.S3_ERROR
+    );
+  }
+}
+
+export async function deleteInboxEntry(
+  githubId: number,
+  trailId: string
+): Promise<void> {
+  try {
+    await s3Client.send(
+      new DeleteObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: buildInboxEntryKey(githubId, trailId),
+      })
+    );
+  } catch (error) {
+    // Best-effort like the id-pointer delete: a stale per-entry object is
+    // a rounding error against the inbox index, which is the source of
+    // truth for membership.
+    console.error('[Trails] Delete inbox entry failed:', {
+      githubId,
+      trailId,
       error: error instanceof Error ? error.message : String(error),
     });
   }

@@ -30,6 +30,18 @@ export const MAX_PAYLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
 /** Soft cap on shared trails per repo. Excess oldest entries are pruned. */
 export const MAX_TRAILS_PER_REPO = 200;
 
+/** Soft cap on inbox entries per recipient. Excess oldest are pruned. */
+export const MAX_INBOX_ENTRIES = 500;
+
+/** Inbox sender comment ("why I'm sharing this") max length in chars. */
+export const MAX_INBOX_COMMENT_CHARS = 500;
+
+/** Max recipients per send call. */
+export const MAX_INBOX_RECIPIENTS = 50;
+
+/** Inbox S3 sub-prefix (relative to `trails/`). */
+export const INBOX_PREFIX = '_inbox';
+
 export const MAX_ETAG_RETRIES = 3;
 
 export const INDEX_CACHE_CONTROL = 'max-age=60';

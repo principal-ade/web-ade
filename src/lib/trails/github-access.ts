@@ -30,6 +30,46 @@ export interface RepoAccessInfo {
  * repo regardless of authentication. Private repos still 404 anonymously,
  * which we map to "no access".
  */
+/**
+ * GitHub login pattern: 1-39 chars, alphanumeric or hyphen, can't start
+ * with a hyphen. Used to short-circuit obviously-malformed recipient
+ * logins on `POST .../send` before paying for the GitHub round-trip.
+ */
+const GITHUB_LOGIN_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
+
+export function isValidGitHubLogin(login: unknown): login is string {
+  return typeof login === 'string' && GITHUB_LOGIN_PATTERN.test(login);
+}
+
+/** 24h — login→id mappings are extremely stable (GitHub keeps numeric ids forever). */
+const USER_LOOKUP_CACHE_TTL = 24 * 60 * 60;
+
+/**
+ * Resolve a GitHub login to `{ githubId, githubLogin }` via `GET /users/{login}`.
+ * Returns `null` if the login doesn't exist. Throws on transient errors
+ * (rate limit, 5xx) so the caller can surface them as the request-level
+ * failure they are rather than as per-recipient "unknown_user" noise.
+ */
+export async function resolveGitHubLogin(
+  login: string
+): Promise<{ githubId: number; githubLogin: string } | null> {
+  const cacheKey = `user-lookup:${login.toLowerCase()}`;
+  try {
+    const data = await cachedGitHubFetch<{ id: number; login: string }>(
+      `/users/${login}`,
+      cacheKey,
+      USER_LOOKUP_CACHE_TTL,
+      [CACHE_TAGS.USER_DATA]
+    );
+    return { githubId: data.id, githubLogin: data.login };
+  } catch (error) {
+    if (error instanceof GitHubApiError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
+}
+
 export async function checkRepoAccess(
   owner: string,
   repo: string,
