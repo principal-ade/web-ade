@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   AlertTriangle,
@@ -272,9 +273,9 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     : null;
 
   // Sorted, deduped list of every directory in the repo, with trailing
-  // slashes so Pierre's tree treats them as folders. Feeds the config
-  // pane's file tree (directories-only — files don't show up in the
-  // exclude picker).
+  // slashes so Pierre's tree treats them as folders. Combined with the
+  // file paths below, this is what we feed Pierre — files show in the
+  // tree for context but the kebab is only enabled on folders.
   const dirPaths = useMemo<string[]>(() => {
     if (!fileTree) return [];
     const dirs = new Set<string>();
@@ -292,6 +293,12 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     return Array.from(dirs).sort();
   }, [fileTree]);
 
+  // All file paths in the repo — feeds Pierre alongside `dirPaths`.
+  const filePaths = useMemo<string[]>(
+    () => (fileTree ? fileTree.allFiles.map((f) => f.path) : []),
+    [fileTree],
+  );
+
   // Effective excluded file set — every file that lives under any
   // user-excluded directory. Computed once and reused everywhere the
   // exclusion cascade matters (coverage stats, highlight layers).
@@ -308,6 +315,30 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     }
     return out;
   }, [excludedDirs, fileTree]);
+
+  // Rebuilt FileTree with excluded subtrees stripped — this is what the
+  // panel sees, so excluded folders disappear from the panel's internal
+  // tree views (drawer, navigation) on top of the `excludedFolders`
+  // prop which strips them from `cityData`. Returns the original tree
+  // when nothing is excluded so we don't re-build on every render.
+  const filteredFileTree = useMemo<FileTree | null>(() => {
+    if (!fileTree) return null;
+    if (excludedFilePaths.size === 0) return fileTree;
+    const sourceInfo = (fileTree.metadata.sourceInfo ?? {}) as {
+      commitSha?: string;
+      branch?: string;
+      rootPath?: string;
+    };
+    const files = fileTree.allFiles
+      .filter((f) => !excludedFilePaths.has(f.path))
+      .map((f) => ({ path: f.path, size: f.size }));
+    return new GitFileTreeBuilder().build({
+      files,
+      commitSha: sourceInfo.commitSha ?? fileTree.sha,
+      branch: sourceInfo.branch ?? 'main',
+      rootPath: sourceInfo.rootPath ?? `/${owner}/${repo}`,
+    }) as FileTree;
+  }, [fileTree, excludedFilePaths, owner, repo]);
 
   // Repo "explored" metric: how many unique files are touched by at
   // least one trail, vs the total file count. Selection-independent —
@@ -538,13 +569,14 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             setSelectedTrailId(null);
           }}
           dirPaths={dirPaths}
+          filePaths={filePaths}
           excludedDirs={excludedDirs}
           onExcludedDirsChange={setExcludedDirs}
         />
         <RightPane
           owner={owner}
           repo={repo}
-          fileTree={fileTree}
+          fileTree={configMode ? fileTree : filteredFileTree}
           treeError={treeError}
           selectedPayload={selectedPayload}
           idleHighlightLayers={idleHighlightLayers}
@@ -552,6 +584,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           excludedFolders={excludedDirs.map((d) =>
             d.endsWith('/') ? d.slice(0, -1) : d,
           )}
+          showSpatialContext={configMode}
           currentAuthor={user?.login ?? LOCAL_AUTHOR}
         />
       </div>
@@ -732,6 +765,7 @@ const TrailListPane: React.FC<{
   configMode: boolean;
   onToggleConfigMode: () => void;
   dirPaths: string[];
+  filePaths: string[];
   excludedDirs: string[];
   onExcludedDirsChange: (dirs: string[]) => void;
 }> = ({
@@ -748,6 +782,7 @@ const TrailListPane: React.FC<{
   configMode,
   onToggleConfigMode,
   dirPaths,
+  filePaths,
   excludedDirs,
   onExcludedDirsChange,
 }) => {
@@ -772,6 +807,7 @@ const TrailListPane: React.FC<{
       {configMode ? (
         <FolderConfigPane
           dirPaths={dirPaths}
+          filePaths={filePaths}
           excludedDirs={excludedDirs}
           onExcludedDirsChange={onExcludedDirsChange}
         />
@@ -836,40 +872,78 @@ const TrailListPane: React.FC<{
 
 // ---------------------------------------------------------------------------
 // Folder configuration pane — Pierre tree of directories the user can
-// gate in / out of the coverage calc. Pierre's selection state is our
-// "excluded" set (selection = excluded from coverage). Persisted via
-// the caller. Pierre's native click semantics apply: plain click
-// replaces selection, ctrl/cmd-click toggles. We surface that in helper
-// text so the multi-select pattern isn't a guessing game.
+// gate in / out of the coverage calc. Selection in the Pierre tree is
+// purely a "focus" indicator — picking a row doesn't change the gate.
+// A footer shows the focused folder + an Include / Exclude toggle that
+// adds or removes it from `excludedDirs`. Excluded folders are
+// surfaced as a chip strip at the top with × to remove individually.
 // ---------------------------------------------------------------------------
 
 const FolderConfigPane: React.FC<{
   dirPaths: string[];
+  filePaths: string[];
   excludedDirs: string[];
   onExcludedDirsChange: (dirs: string[]) => void;
-}> = ({ dirPaths, excludedDirs, onExcludedDirsChange }) => {
+}> = ({ dirPaths, filePaths, excludedDirs, onExcludedDirsChange }) => {
   const { theme } = useTheme();
 
-  // Pierre is a controlled-ish component: selection updates flow through
-  // onSelectionChange; we forward straight to the caller. We pass the
-  // current excludedDirs as `initialSelectedPaths` only once per mount
-  // so re-renders driven by other state don't reset Pierre's selection.
-  const initialSelectedRef = useRef<readonly string[]>(excludedDirs);
+  // Pierre is fed every directory and every file path so the tree
+  // shows the full repo. Per-row kebabs are suppressed on file rows
+  // (via `unsafeCSS` below) — only folders are toggleable, since the
+  // gate semantically is "exclude this subtree."
+  //
+  // Pierre's `gitStatus` API surfaces exclusion state on each row:
+  // excluded dirs *and* every descendant file are marked `'ignored'`,
+  // which Pierre styles as a dimmed row natively. The model's
+  // `setGitStatus` lets us update reactively after the initial mount
+  // (the options object is otherwise snapshot-once).
+  const treePaths = useMemo(
+    () => [...dirPaths, ...filePaths],
+    [dirPaths, filePaths],
+  );
+  const gitStatusEntries = useMemo(() => {
+    const prefixes = excludedDirs.map((d) =>
+      d.endsWith('/') ? d : `${d}/`,
+    );
+    const excludedFilesInTree = filePaths.filter((p) =>
+      prefixes.some((prefix) => p.startsWith(prefix)),
+    );
+    return [
+      ...excludedDirs.map((path) => ({ path, status: 'ignored' as const })),
+      ...excludedFilesInTree.map((path) => ({
+        path,
+        status: 'ignored' as const,
+      })),
+    ];
+  }, [excludedDirs, filePaths]);
 
-  // NOTE on cascade visualization: Pierre's `renderRowDecoration` is
-  // captured at mount (`useFileTree` snapshots options once via a ref),
-  // so a closure over `excludedDirs` would go stale on every toggle.
-  // For v1 we lean on Pierre's native selection styling for explicitly
-  // excluded rows and communicate the cascade via the helper text
-  // above. If we want a live "inherited" badge later, we'll need to
-  // either read from a mutable ref or force-remount on changes.
+  // Suppress the kebab button on file rows. Pierre tags each row with
+  // `data-item-type="file"` or `"folder"`, and the trigger button has
+  // `data-type="context-menu-trigger"`.
+  const unsafeCSS = `
+    [data-item-type="file"] [data-type="context-menu-trigger"] {
+      display: none !important;
+    }
+  `;
+
   const { model } = useFileTree({
-    paths: dirPaths,
+    paths: treePaths,
     initialExpansion: 'closed',
-    initialSelectedPaths: initialSelectedRef.current,
-    search: true,
-    onSelectionChange: (paths) => onExcludedDirsChange([...paths]),
+    initialSelectedPaths: [],
+    search: false,
+    gitStatus: gitStatusEntries,
+    unsafeCSS,
+    composition: {
+      contextMenu: {
+        enabled: true,
+        triggerMode: 'both',
+        buttonVisibility: 'always',
+      },
+    },
   });
+  useEffect(() => {
+    model.setGitStatus(gitStatusEntries);
+  }, [model, gitStatusEntries]);
 
   const treeStyles = useMemo(
     () =>
@@ -883,29 +957,107 @@ const FolderConfigPane: React.FC<{
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
+      {/* One-line helper: hint when empty, count + Clear all otherwise */}
       <div
-        className="px-4 py-2 border-b text-xs"
+        className="px-4 py-2 border-b text-xs flex items-center justify-between gap-2"
         style={{
           borderColor: theme.colors.border,
           color: theme.colors.textSecondary,
         }}
       >
-        Click a folder to exclude it (cascades to subfolders). Cmd / Ctrl-click
-        to toggle multiple.
-        {excludedDirs.length > 0 && (
-          <button
-            type="button"
-            onClick={() => onExcludedDirsChange([])}
-            className="ml-2 underline-offset-2 hover:underline"
-            style={{ color: theme.colors.primary, cursor: 'pointer' }}
-          >
-            Clear all
-          </button>
+        {excludedDirs.length === 0 ? (
+          <span>
+            Click the ⋯ on any folder to exclude it. Exclusions cascade.
+          </span>
+        ) : (
+          <>
+            <span>
+              {excludedDirs.length} folder{excludedDirs.length === 1 ? '' : 's'}{' '}
+              excluded
+            </span>
+            <button
+              type="button"
+              onClick={() => onExcludedDirsChange([])}
+              className="underline-offset-2 hover:underline"
+              style={{ color: theme.colors.primary, cursor: 'pointer' }}
+            >
+              Clear all
+            </button>
+          </>
         )}
       </div>
-      <div className="flex-1 min-h-0">
+
+      {/* Pierre directory tree with per-row context menu */}
+      <div
+        className="flex-1 min-h-0 pt-4"
+        style={{ background: theme.colors.background }}
+      >
         <PierreFileTree
           model={model}
+          renderContextMenu={(item, context) => {
+            // Only directories are toggleable. Files reach this only
+            // via right-click since the kebab is hidden on file rows.
+            if (item.kind !== 'directory') return null;
+            const path = item.path;
+            const isExcluded = excludedDirs.includes(path);
+            const toggle = () => {
+              if (isExcluded) {
+                onExcludedDirsChange(
+                  excludedDirs.filter((d) => d !== path),
+                );
+              } else {
+                onExcludedDirsChange([...excludedDirs, path]);
+              }
+              context.close();
+            };
+            // Pierre's default placement anchors the menu to the right
+            // of the kebab. We portal to body and position it ourselves
+            // so the menu opens *left* of the anchor — closer to the
+            // tree row content and away from the panel edge. The
+            // data-* attribute tells Pierre's outside-click handler
+            // that clicks inside the portal are still "inside".
+            const MENU_WIDTH = 200;
+            const GAP = 8;
+            const left = Math.max(
+              8,
+              context.anchorRect.left - MENU_WIDTH - GAP,
+            );
+            const top = context.anchorRect.top;
+            return createPortal(
+              <div
+                data-file-tree-context-menu-root="true"
+                className="rounded-md shadow-lg"
+                style={{
+                  position: 'fixed',
+                  top,
+                  left,
+                  width: MENU_WIDTH,
+                  background: theme.colors.surface,
+                  border: `1px solid ${theme.colors.border}`,
+                  padding: 4,
+                  zIndex: 1000,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={toggle}
+                  className="w-full text-left px-3 py-2 rounded text-sm transition-colors hover:opacity-90"
+                  style={{
+                    background: 'transparent',
+                    color: isExcluded
+                      ? theme.colors.primary
+                      : theme.colors.warning ?? theme.colors.accent,
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: theme.fonts.body,
+                  }}
+                >
+                  {isExcluded ? 'Include in coverage' : 'Exclude from coverage'}
+                </button>
+              </div>,
+              document.body,
+            );
+          }}
           style={{
             ...(treeStyles as React.CSSProperties),
             height: '100%',
@@ -1103,6 +1255,7 @@ const RightPane: React.FC<{
   idleHighlightLayers: HighlightLayer[] | null;
   highlightLayersLoading: boolean;
   excludedFolders: string[];
+  showSpatialContext: boolean;
   currentAuthor: string;
 }> = ({
   owner,
@@ -1113,6 +1266,7 @@ const RightPane: React.FC<{
   idleHighlightLayers,
   highlightLayersLoading,
   excludedFolders,
+  showSpatialContext,
   currentAuthor,
 }) => {
   const { theme } = useTheme();
@@ -1263,6 +1417,7 @@ const RightPane: React.FC<{
         events={events}
         currentAuthor={currentAuthor}
         defaultIsolationMode="hide"
+        hideNonHighlightedBuildings={!showSpatialContext}
         excludedFolders={excludedFolders}
       />
     </main>
