@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
-  AlertTriangle,
   Github,
   History,
   LogIn,
@@ -36,8 +35,9 @@ import type {
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { LOCAL_AUTHOR } from '@/lib/trails/local-mutations';
+import { TrailLoadingScreen } from '@/components/trail/TrailLoadingScreen';
+import { TrailErrorView } from '@/components/trail/TrailErrorView';
 import {
-  ShareErrorCodes,
   type ShareErrorCode,
   type SharedTrailIndexEntry,
   type TrailPayload,
@@ -50,6 +50,49 @@ const FileCityTrailExplorerPanel = dynamic(
     ),
   { ssr: false },
 );
+
+// FileCity3D loaded directly so we can warm WebGL / shader caches with a
+// minimal sample scene during the loading screen, mirroring the trail
+// page. See docs/nextjs-3d-rendering-issue.md.
+const FileCity3D = dynamic(
+  () => import('@principal-ai/file-city-react').then((m) => m.FileCity3D),
+  { ssr: false },
+);
+
+if (typeof window !== 'undefined') {
+  void (
+    FileCityTrailExplorerPanel as { preload?: () => Promise<unknown> }
+  ).preload?.();
+  void (FileCity3D as { preload?: () => Promise<unknown> }).preload?.();
+}
+
+// Sample CityData used to warm FC3D's WebGL / shader caches during the
+// loading screen — same fixture the trail page uses.
+const WARMING_CITY_DATA: import('@principal-ai/file-city-react').CityData = {
+  buildings: [
+    { path: 'src/index.ts', position: { x: 5, y: 0, z: 5 }, dimensions: [8, 12, 8], type: 'file', fileExtension: 'ts', size: 4096, lineCount: 240 },
+    { path: 'src/app.tsx', position: { x: 18, y: 0, z: 5 }, dimensions: [8, 18, 8], type: 'file', fileExtension: 'tsx', size: 8192, lineCount: 480 },
+    { path: 'src/api/client.js', position: { x: 31, y: 0, z: 5 }, dimensions: [6, 9, 6], type: 'file', fileExtension: 'js', size: 3000, lineCount: 180 },
+    { path: 'src/components/Button.tsx', position: { x: 5, y: 0, z: 22 }, dimensions: [6, 6, 6], type: 'file', fileExtension: 'tsx', size: 1024, lineCount: 80 },
+    { path: 'src/components/Modal.tsx', position: { x: 14, y: 0, z: 22 }, dimensions: [6, 14, 6], type: 'file', fileExtension: 'tsx', size: 6000, lineCount: 320 },
+    { path: 'src/utils/helpers.ts', position: { x: 23, y: 0, z: 22 }, dimensions: [6, 9, 6], type: 'file', fileExtension: 'ts', size: 2400, lineCount: 160 },
+    { path: 'src/styles/main.css', position: { x: 31, y: 0, z: 22 }, dimensions: [6, 5, 6], type: 'file', fileExtension: 'css', size: 1500 },
+    { path: 'package.json', position: { x: 5, y: 0, z: 38 }, dimensions: [5, 4, 5], type: 'file', fileExtension: 'json', size: 800 },
+    { path: 'README.md', position: { x: 14, y: 0, z: 38 }, dimensions: [5, 5, 5], type: 'file', fileExtension: 'md', size: 1500 },
+    { path: 'tsconfig.json', position: { x: 23, y: 0, z: 38 }, dimensions: [5, 4, 5], type: 'file', fileExtension: 'json', size: 600 },
+  ],
+  districts: [
+    {
+      path: 'src',
+      worldBounds: { minX: 0, maxX: 38, minZ: 0, maxZ: 30 },
+      fileCount: 7,
+      type: 'directory',
+      label: { text: 'src', bounds: { minX: 0, maxX: 38, minZ: 30, maxZ: 33 }, position: 'bottom' },
+    },
+  ],
+  bounds: { minX: -2, maxX: 40, minZ: -2, maxZ: 42 },
+  metadata: { totalFiles: 10, totalDirectories: 1, rootPath: '/warming', analyzedAt: new Date() },
+};
 
 function nullSlice<T>(name: string): DataSlice<T | null> {
   return {
@@ -77,6 +120,15 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
 
   const { user, login } = useAuth();
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
+  // Minimum loading window so the warming FileCity3D (rendered behind
+  // the loading screen) has time to mount, init WebGL, and compile its
+  // shader programs before the real panel takes over. Mirrors the trail
+  // page's MIN_LOADING_MS. See docs/nextjs-3d-rendering-issue.md.
+  const [minDelayElapsed, setMinDelayElapsed] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setMinDelayElapsed(true), 2000);
+    return () => window.clearTimeout(t);
+  }, []);
   const [filterQuery, setFilterQuery] = useState('');
   const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
   const handleSignIn = useCallback(() => {
@@ -531,7 +583,40 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   }, [idleHighlightLayers, fileTree]);
 
   if (state.kind === 'error') {
-    return <TrailListErrorView message={state.message} code={state.code} />;
+    return (
+      <TrailErrorView
+        message={state.message}
+        code={state.code}
+        noAccessTitle="This repository is private"
+        notFoundTitle="Trails unavailable"
+        fallbackTitle="Trails unavailable"
+      />
+    );
+  }
+
+  // Hold the loading screen until: the trail index has landed, the
+  // file tree has landed, and the warming window has elapsed. Behind
+  // the overlay we mount a hidden FileCity3D with sample data so its
+  // chunk loads, WebGL context inits, and shaders compile before the
+  // real panel mounts — no flash on first paint of the real city.
+  // Errors on the tree fetch take a separate path (inline in RightPane)
+  // so we don't strand the user on a never-resolving overlay.
+  if (state.kind === 'loading' || (fileTree === null && treeError === null) || !minDelayElapsed) {
+    return (
+      <>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 0 }}>
+          <FileCity3D
+            cityData={WARMING_CITY_DATA}
+            width="100%"
+            height="100%"
+            showControls={false}
+          />
+        </div>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50 }}>
+          <TrailLoadingScreen />
+        </div>
+      </>
+    );
   }
 
   return (
@@ -553,8 +638,8 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
       />
       <div className="flex-1 min-h-0 flex">
         <TrailListPane
-          loading={state.kind === 'loading'}
-          entries={state.kind === 'ready' ? state.entries : []}
+          loading={false}
+          entries={state.entries}
           filteredEntries={filteredEntries}
           payloads={payloads}
           exploredStats={exploredStats}
@@ -1314,6 +1399,12 @@ const RightPane: React.FC<{
   // Notes / sign-offs editing is owned by /trail/[id]. Stub the
   // mutators here so the panel still mounts when a trail is selected;
   // clicking through to the full trail page is the path for editing.
+  const trailIdForShare = selectedPayload?.id ?? null;
+  const shareTrail = useCallback(() => {
+    if (!trailIdForShare) return;
+    const url = `${window.location.origin}/trail/${trailIdForShare}`;
+    void navigator.clipboard.writeText(url);
+  }, [trailIdForShare]);
   const actions = useMemo<FileCityTrailExplorerPanelActions>(
     () => ({
       openFile: () => {},
@@ -1323,8 +1414,9 @@ const RightPane: React.FC<{
       deleteTrailNote: async () => {},
       createTrailSignOff: async () => null,
       deleteTrailSignOff: async () => {},
+      shareTrail,
     }),
-    [readFile],
+    [readFile, shareTrail],
   );
 
   const context = useMemo<
@@ -1424,75 +1516,3 @@ const RightPane: React.FC<{
   );
 };
 
-// ---------------------------------------------------------------------------
-// Error view (no access, etc.)
-// ---------------------------------------------------------------------------
-
-const TrailListErrorView: React.FC<{
-  message: string;
-  code: ShareErrorCode | null;
-}> = ({ message, code }) => {
-  const { theme } = useTheme();
-  const { isAuthenticated, login } = useAuth();
-
-  const isNoAccess = code === ShareErrorCodes.NO_REPO_ACCESS;
-  const showLogin = isNoAccess && !isAuthenticated;
-
-  return (
-    <div
-      className="w-screen flex items-center justify-center px-4"
-      style={{ background: theme.colors.background, height: '100vh' }}
-    >
-      <div
-        className="w-full max-w-lg rounded-lg border px-10 py-12 text-center"
-        style={{
-          color: theme.colors.text,
-          background: theme.colors.backgroundSecondary ?? theme.colors.background,
-          borderColor: theme.colors.border ?? 'rgba(255,255,255,0.08)',
-        }}
-      >
-        <div
-          className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full"
-          style={{
-            background: `${theme.colors.accent}1a`,
-            color: theme.colors.accent,
-          }}
-        >
-          <AlertTriangle size={30} strokeWidth={1.75} />
-        </div>
-        <h1 className="text-2xl font-semibold mb-3">
-          {isNoAccess ? 'This repository is private' : 'Trails unavailable'}
-        </h1>
-        <p
-          className="text-base leading-relaxed"
-          style={{ color: theme.colors.textMuted }}
-        >
-          {message}
-        </p>
-        {showLogin && (
-          <button
-            type="button"
-            onClick={() => login()}
-            className="mt-8 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-md text-base font-medium transition-opacity hover:opacity-90"
-            style={{
-              background: theme.colors.accent,
-              color: theme.colors.background,
-            }}
-          >
-            <Github size={18} strokeWidth={2} />
-            Sign in with GitHub
-          </button>
-        )}
-        <div className="mt-8">
-          <Link
-            href="/"
-            className="text-sm underline-offset-2 hover:underline"
-            style={{ color: theme.colors.textMuted }}
-          >
-            Back to home
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-};
