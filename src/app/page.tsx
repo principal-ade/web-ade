@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useTheme } from '@principal-ade/industry-theme';
-import { X, MoveRight, Copy, Check, ExternalLink } from 'lucide-react';
+import { X, MoveRight, Copy, Check, ExternalLink, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TrailCityDiagram } from '@/components/trail/TrailCityDiagram';
 import { LgtmStamp, SignOffStampAnimation } from '@/components/trail/LgtmStamp';
@@ -11,8 +12,68 @@ export const dynamic = 'force-dynamic';
 
 type StampKind = 'LGTM' | 'ACK';
 
+function parseGithubRepoPath(input: string): { owner: string; repo: string } | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  // Strip protocol / host / leading slash so we end up with `owner/repo[/...]`.
+  const stripped = trimmed
+    .replace(/^https?:\/\//i, '')
+    .replace(/^github\.com\//i, '')
+    .replace(/^\/+/, '');
+  const [owner, repoRaw] = stripped.split('/');
+  if (!owner || !repoRaw) return null;
+  const repo = repoRaw.replace(/\.git$/i, '');
+  if (!repo) return null;
+  return { owner, repo };
+}
+
 export default function HomePage() {
   const { theme } = useTheme();
+  const router = useRouter();
+  const [repoUrl, setRepoUrl] = useState('');
+  const [repoFocused, setRepoFocused] = useState(false);
+  const [flashLabel, setFlashLabel] = useState<string | null>(null);
+  const [flashTyped, setFlashTyped] = useState('');
+
+  // Type out the flash label one character at a time, then navigate when done.
+  useEffect(() => {
+    if (flashLabel === null) {
+      setFlashTyped('');
+      return;
+    }
+    setFlashTyped('');
+    let i = 0;
+    const id = setInterval(() => {
+      i++;
+      setFlashTyped(flashLabel.slice(0, i));
+      if (i >= flashLabel.length) clearInterval(id);
+    }, 30);
+    return () => clearInterval(id);
+  }, [flashLabel]);
+
+  const navigateToRepo = (owner: string, repo: string) => {
+    const message = `Opening ${owner}/${repo}`;
+    const duration = message.length * 30 + 350;
+    setFlashLabel(message);
+    setTimeout(() => router.push(`/${owner}/${repo}`), duration);
+  };
+
+  const handleRepoUrlPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = e.clipboardData.getData('text');
+    const parsed = parseGithubRepoPath(pasted);
+    if (!parsed) return;
+    e.preventDefault();
+    setRepoUrl(pasted);
+    navigateToRepo(parsed.owner, parsed.repo);
+  };
+
+  const handleRepoUrlKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const parsed = parseGithubRepoPath(repoUrl);
+    if (!parsed) return;
+    navigateToRepo(parsed.owner, parsed.repo);
+  };
   type View = 'title' | 'fileCity' | 'codeTrail' | 'whyTrails' | 'stamped';
   const [view, setView] = useState<View>('title');
   const [fading, setFading] = useState(false);
@@ -190,7 +251,7 @@ export default function HomePage() {
           background: `color-mix(in srgb, ${theme.colors.background} 55%, transparent)`,
         }}
       >
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 px-6 py-4">
           <Link href="/" className="flex items-center">
             <h1
               className="text-2xl font-bold m-0"
@@ -201,6 +262,62 @@ export default function HomePage() {
               <span style={{ color: theme.colors.primary }}>AI</span>
             </h1>
           </Link>
+          <div
+            role="search"
+            aria-label="Open a GitHub repository"
+            className={`flex items-center gap-2 rounded-md px-3 py-1.5 transition-colors ${
+              flashLabel ? 'repo-url-flash' : ''
+            }`}
+            style={{
+              background: `color-mix(in srgb, ${theme.colors.surface} 60%, transparent)`,
+              border: `1px solid ${
+                flashLabel
+                  ? '#22c55e'
+                  : repoFocused
+                    ? `color-mix(in srgb, ${theme.colors.primary} 70%, transparent)`
+                    : `color-mix(in srgb, ${theme.colors.border} 70%, transparent)`
+              }`,
+              transition: 'border-color 0.2s, box-shadow 0.2s, background-color 0.15s',
+            }}
+          >
+            <style>{`
+              @keyframes repoUrlFlashGlow {
+                0%   { box-shadow: 0 0 0 0px rgba(34,197,94,0.5); }
+                30%  { box-shadow: 0 0 0 4px rgba(34,197,94,0.25); }
+                100% { box-shadow: 0 0 0 3px rgba(34,197,94,0.0); }
+              }
+              .repo-url-flash { animation: repoUrlFlashGlow 0.6s ease-out forwards; }
+            `}</style>
+            {flashLabel ? (
+              <ExternalLink size={14} color="#22c55e" style={{ flexShrink: 0 }} />
+            ) : (
+              <Search
+                size={14}
+                color={repoFocused ? theme.colors.primary : theme.colors.textMuted}
+                style={{ flexShrink: 0, transition: 'color 0.15s' }}
+              />
+            )}
+            <input
+              type="text"
+              inputMode="url"
+              autoComplete="off"
+              spellCheck={false}
+              value={flashLabel !== null ? flashTyped : repoUrl}
+              readOnly={flashLabel !== null}
+              onChange={(e) => setRepoUrl(e.target.value)}
+              onPaste={handleRepoUrlPaste}
+              onKeyDown={handleRepoUrlKeyDown}
+              onFocus={() => setRepoFocused(true)}
+              onBlur={() => setRepoFocused(false)}
+              placeholder="Paste GitHub URL"
+              aria-label="GitHub repository URL"
+              className="w-56 sm:w-72 bg-transparent border-0 outline-none text-sm"
+              style={{
+                color: flashLabel ? '#22c55e' : theme.colors.text,
+                transition: 'color 0.2s',
+              }}
+            />
+          </div>
         </div>
       </header>
 
