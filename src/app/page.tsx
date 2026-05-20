@@ -909,6 +909,48 @@ export default function HomePage() {
 
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
 
+interface SkillLink {
+  name: string;
+  blurb: string;
+  url: string;
+}
+
+const SKILL_URL = (name: string) =>
+  `https://github.com/principal-ai/skills/blob/main/${name}/SKILL.md`;
+
+// Skills that POST to the running desktop app's MCP Bridge.
+const SKILLS_WITH_APP: SkillLink[] = [
+  {
+    name: 'author-informative-trail',
+    blurb: 'Author a durable, canonical trail in the File City panel.',
+    url: SKILL_URL('author-informative-trail'),
+  },
+  {
+    name: 'author-investigation-trail',
+    blurb: 'Lay an exploratory trail as you figure something out.',
+    url: SKILL_URL('author-investigation-trail'),
+  },
+];
+
+// Skills that run via the `principal-ai` CLI — no desktop app required.
+const SKILLS_WITHOUT_APP: SkillLink[] = [
+  {
+    name: 'author-local-informative-trail',
+    blurb: 'Author a canonical trail and view it in the standalone viewer.',
+    url: SKILL_URL('author-local-informative-trail'),
+  },
+  {
+    name: 'author-local-investigation-trail',
+    blurb: 'Lay an exploratory trail locally — no publish, no app.',
+    url: SKILL_URL('author-local-investigation-trail'),
+  },
+  {
+    name: 'create-topic',
+    blurb: 'Curate existing trails into a shareable topic.',
+    url: SKILL_URL('create-topic'),
+  },
+];
+
 function relativeTime(iso: string): string {
   const then = new Date(iso).getTime();
   if (!Number.isFinite(then)) return '';
@@ -1050,20 +1092,27 @@ function SignedInDashboard({
           <TopicList topics={topics} error={topicsError} theme={theme} />
         </DashCard>
 
-        {/* Skills (placeholder) */}
+        {/* Skills — grouped by whether they need the Principal AI desktop app. */}
         <DashCard
           theme={theme}
           icon={<Sparkles size={18} color={theme.colors.primary} />}
           title="Skills"
-          subtitle="Agent skills you can run on this codebase"
+          subtitle="Agent skills you can hand off to your editor"
           className="lg:col-span-2"
         >
-          <div
-            className="text-sm leading-relaxed"
-            style={{ color: theme.colors.textMuted }}
-          >
-            Coming soon — links to the skills your agent can use to publish
-            trails, curate topics, and run reviews from your editor.
+          <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
+            <SkillGroup
+              theme={theme}
+              heading="With app"
+              caption="Runs against the desktop app's File City panel"
+              skills={SKILLS_WITH_APP}
+            />
+            <SkillGroup
+              theme={theme}
+              heading="Without app"
+              caption="Runs from your terminal via the principal-ai CLI"
+              skills={SKILLS_WITHOUT_APP}
+            />
           </div>
         </DashCard>
       </div>
@@ -1119,6 +1168,72 @@ function DashCard({
         {action}
       </div>
       {children}
+    </div>
+  );
+}
+
+function SkillGroup({
+  theme,
+  heading,
+  caption,
+  skills,
+}: {
+  theme: ThemeShape;
+  heading: string;
+  caption: string;
+  skills: SkillLink[];
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="mb-2">
+        <div
+          className="text-xs font-semibold uppercase tracking-wider"
+          style={{ color: theme.colors.primary }}
+        >
+          {heading}
+        </div>
+        <div
+          className="text-xs"
+          style={{ color: theme.colors.textMuted }}
+        >
+          {caption}
+        </div>
+      </div>
+      <ul className="flex flex-col gap-1.5">
+        {skills.map((s) => (
+          <li key={s.name}>
+            <a
+              href={s.url}
+              target="_blank"
+              rel="noreferrer"
+              className="block rounded-md px-3 py-2 transition-colors hover:opacity-80"
+              style={{
+                background: `color-mix(in srgb, ${theme.colors.background} 50%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${theme.colors.border} 40%, transparent)`,
+              }}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <code
+                  className="text-sm font-medium truncate"
+                  style={{ color: theme.colors.text }}
+                >
+                  {s.name}
+                </code>
+                <ExternalLink
+                  size={12}
+                  style={{ color: theme.colors.textMuted, flexShrink: 0 }}
+                />
+              </div>
+              <div
+                className="text-xs mt-0.5 line-clamp-2"
+                style={{ color: theme.colors.textMuted }}
+              >
+                {s.blurb}
+              </div>
+            </a>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
