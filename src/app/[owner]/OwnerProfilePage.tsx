@@ -5,11 +5,16 @@ import Link from 'next/link';
 import { useTheme } from '@principal-ade/industry-theme';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { Globe, MapPin, Star, GitFork, Lock, Github } from 'lucide-react';
+import { TrailList, TopicList } from '@/components/home/SignedInDashboard';
+import type { TrailByUserEntry } from '@/lib/trails/types';
+import type { TopicByUserEntry } from '@/lib/topics/types';
 
 // ---- Types ---------------------------------------------------------------
 
 interface OwnerProfile {
   login: string;
+  /** GitHub numeric user id — used to look up Principal trails/topics manifests. */
+  id: number;
   avatar_url: string;
   name: string | null;
   bio: string | null;
@@ -357,7 +362,7 @@ const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
 export function OwnerProfilePage({ owner }: { owner: string }) {
   const { theme } = useTheme();
-  const [tab, setTab] = useState<'overview' | 'activity'>('overview');
+  const [tab, setTab] = useState<'overview' | 'activity' | 'trails' | 'topics'>('overview');
 
   const [profile, setProfile] = useState<OwnerProfile | null>(null);
   const [repos, setRepos] = useState<Repo[]>([]);
@@ -367,6 +372,12 @@ export function OwnerProfilePage({ owner }: { owner: string }) {
   const [recentActivity, setRecentActivity] = useState<ActivityEvent[]>([]);
   const [contributedRepos, setContributedRepos] = useState<ContributedRepo[]>([]);
   const [activityLoading, setActivityLoading] = useState(true);
+
+  // Principal artifacts — loaded lazily once we have the owner's numeric id.
+  const [trails, setTrails] = useState<TrailByUserEntry[] | null>(null);
+  const [topics, setTopics] = useState<TopicByUserEntry[] | null>(null);
+  const [trailsError, setTrailsError] = useState<string | null>(null);
+  const [topicsError, setTopicsError] = useState<string | null>(null);
 
   useEffect(() => {
     setProfileLoading(true);
@@ -396,6 +407,46 @@ export function OwnerProfilePage({ owner }: { owner: string }) {
       .catch(console.error)
       .finally(() => setActivityLoading(false));
   }, [owner]);
+
+  // Fetch Principal trails/topics once the owner's numeric id resolves. The
+  // by-user manifests are keyed by GitHub id, not login.
+  useEffect(() => {
+    if (!profile?.id) return;
+    let cancelled = false;
+    setTrails(null);
+    setTrailsError(null);
+    fetch(`/api/trails/by-user/${profile.id}`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data: { entries: TrailByUserEntry[] }) => {
+        if (!cancelled) setTrails(data.entries);
+      })
+      .catch((e) => {
+        if (!cancelled) setTrailsError(String(e?.message ?? e));
+      });
+    return () => { cancelled = true; };
+  }, [profile?.id]);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    let cancelled = false;
+    setTopics(null);
+    setTopicsError(null);
+    fetch(`/api/topics/by-user/${profile.id}`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data: { entries: TopicByUserEntry[] }) => {
+        if (!cancelled) setTopics(data.entries);
+      })
+      .catch((e) => {
+        if (!cancelled) setTopicsError(String(e?.message ?? e));
+      });
+    return () => { cancelled = true; };
+  }, [profile?.id]);
 
   const totalCommits = useMemo(() => {
     let s = 0; contributions.forEach(v => { s += v; }); return s;
@@ -594,7 +645,7 @@ export function OwnerProfilePage({ owner }: { owner: string }) {
             {/* Tabs (users only) */}
             {!isOrg && !profileLoading && (
               <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: `1px solid ${theme.colors.border}` }}>
-                {(['overview', 'activity'] as const).map(t => (
+                {(['overview', 'activity', 'trails', 'topics'] as const).map(t => (
                   <button
                     key={t}
                     onClick={() => setTab(t)}
@@ -656,6 +707,22 @@ export function OwnerProfilePage({ owner }: { owner: string }) {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Trails tab */}
+            {!isOrg && tab === 'trails' && !profileLoading && (
+              <div>
+                <SectionLabel>Published Trails</SectionLabel>
+                <TrailList trails={trails} error={trailsError} theme={theme} />
+              </div>
+            )}
+
+            {/* Topics tab */}
+            {!isOrg && tab === 'topics' && !profileLoading && (
+              <div>
+                <SectionLabel>Curated Topics</SectionLabel>
+                <TopicList topics={topics} error={topicsError} theme={theme} />
               </div>
             )}
           </div>
