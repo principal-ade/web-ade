@@ -3,57 +3,13 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { ExternalLink, Folder, Footprints, Plus, Sparkles } from 'lucide-react';
+import { ArrowRight, Folder, Footprints, Plus, Sparkles } from 'lucide-react';
 import type { User } from '@/contexts/AuthContext';
 import type { TopicByUserEntry } from '@/lib/topics/types';
 import type { TrailByUserEntry } from '@/lib/trails/types';
+import { AgentSkillsModal } from './AgentSkillsModal';
 
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
-
-interface SkillLink {
-  name: string;
-  blurb: string;
-  url: string;
-}
-
-const SKILL_URL = (name: string) =>
-  `https://github.com/principal-ai/skills/blob/main/${name}/SKILL.md`;
-
-const SKILLS_WITH_APP: SkillLink[] = [
-  {
-    name: 'author-informative-trail',
-    blurb: 'Author a durable, canonical trail in the File City panel.',
-    url: SKILL_URL('author-informative-trail'),
-  },
-  {
-    name: 'author-investigation-trail',
-    blurb: 'Lay an exploratory trail as you figure something out.',
-    url: SKILL_URL('author-investigation-trail'),
-  },
-];
-
-const SKILLS_WITHOUT_APP: SkillLink[] = [
-  {
-    name: 'author-local-informative-trail',
-    blurb: 'Author a canonical trail and view it in the standalone viewer.',
-    url: SKILL_URL('author-local-informative-trail'),
-  },
-  {
-    name: 'author-local-investigation-trail',
-    blurb: 'Lay an exploratory trail locally — no publish, no app.',
-    url: SKILL_URL('author-local-investigation-trail'),
-  },
-  {
-    name: 'create-topic',
-    blurb: 'Curate existing trails into a shareable topic.',
-    url: SKILL_URL('create-topic'),
-  },
-  {
-    name: 'discover-trails',
-    blurb: 'Browse trails and topics already on web-ade — list, fetch, summarize.',
-    url: SKILL_URL('discover-trails'),
-  },
-];
 
 function relativeTime(iso: string): string {
   const then = new Date(iso).getTime();
@@ -95,6 +51,7 @@ export function SignedInDashboardView({
   topicsError = null,
 }: SignedInDashboardViewProps) {
   const { theme } = useTheme();
+  const [skillsOpen, setSkillsOpen] = useState(false);
   const displayName = user.name || user.login;
 
   return (
@@ -173,26 +130,41 @@ export function SignedInDashboardView({
         <DashCard
           theme={theme}
           icon={<Sparkles size={18} color={theme.colors.primary} />}
-          title="Skills"
-          subtitle="Agent skills you can hand off to your editor"
+          title="Agent skills"
+          subtitle="Get a tailored prompt for your editor agent"
           className="lg:col-span-2"
         >
-          <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
-            <SkillGroup
-              theme={theme}
-              heading="With app"
-              caption="Runs against the desktop app's File City panel"
-              skills={SKILLS_WITH_APP}
-            />
-            <SkillGroup
-              theme={theme}
-              heading="Without app"
-              caption="Runs from your terminal via the principal-ai CLI"
-              skills={SKILLS_WITHOUT_APP}
-            />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p
+              style={{
+                color: theme.colors.text,
+                fontSize: `${theme.fontSizes[2]}px`,
+              }}
+            >
+              Tell us what you want to do — author a trail, curate a topic, or
+              browse what&rsquo;s on web-ade — and we&rsquo;ll hand you the
+              skill name and the exact prompt to paste into your agent.
+            </p>
+            <button
+              type="button"
+              onClick={() => setSkillsOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md transition-opacity hover:opacity-80 flex-shrink-0"
+              style={{
+                background: theme.colors.primary,
+                color: theme.colors.background,
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontWeight: theme.fontWeights.medium,
+              }}
+            >
+              <Sparkles size={14} />
+              Pick a skill
+              <ArrowRight size={14} />
+            </button>
           </div>
         </DashCard>
       </div>
+
+      <AgentSkillsModal open={skillsOpen} onClose={() => setSkillsOpen(false)} />
     </section>
   );
 }
@@ -312,85 +284,6 @@ function DashCard({
         {action}
       </div>
       {children}
-    </div>
-  );
-}
-
-function SkillGroup({
-  theme,
-  heading,
-  caption,
-  skills,
-}: {
-  theme: ThemeShape;
-  heading: string;
-  caption: string;
-  skills: SkillLink[];
-}) {
-  return (
-    <div className="min-w-0">
-      <div className="mb-2">
-        <div
-          className="uppercase tracking-wider"
-          style={{
-            color: theme.colors.primary,
-            fontSize: `${theme.fontSizes[1]}px`,
-            fontWeight: theme.fontWeights.semibold,
-          }}
-        >
-          {heading}
-        </div>
-        <div
-          style={{
-            color: theme.colors.textMuted,
-            fontSize: `${theme.fontSizes[1]}px`,
-          }}
-        >
-          {caption}
-        </div>
-      </div>
-      <ul className="flex flex-col gap-1.5">
-        {skills.map((s) => (
-          <li key={s.name}>
-            <a
-              href={s.url}
-              target="_blank"
-              rel="noreferrer"
-              className="block rounded-md px-3 py-2 transition-colors hover:opacity-80"
-              style={{
-                background: `color-mix(in srgb, ${theme.colors.background} 50%, transparent)`,
-                border: `1px solid color-mix(in srgb, ${theme.colors.border} 40%, transparent)`,
-              }}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <code
-                  className="truncate"
-                  style={{
-                    color: theme.colors.text,
-                    fontSize: `${theme.fontSizes[2]}px`,
-                    fontWeight: theme.fontWeights.medium,
-                  }}
-                >
-                  {s.name}
-                </code>
-                <ExternalLink
-                  size={14}
-                  style={{ color: theme.colors.textMuted, flexShrink: 0 }}
-                />
-              </div>
-              <div
-                className="mt-0.5 line-clamp-2"
-                style={{
-                  color: theme.colors.textMuted,
-                  fontSize: `${theme.fontSizes[1]}px`,
-                }}
-              >
-                {s.blurb}
-              </div>
-            </a>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
