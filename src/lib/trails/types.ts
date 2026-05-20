@@ -138,6 +138,39 @@ export interface ListTrailsByUserResponse {
 }
 
 // ============================================================================
+// Per-user "recently visited" manifest — populated on every signed-in trail
+// open by `/api/trails/by-id/{id}/visits`. Independent from the by-user
+// authorship manifest: this tracks trails the user has *read*, not trails
+// they wrote. Anonymous opens are not recorded here.
+// ============================================================================
+
+export interface TrailRecentlyVisitedEntry {
+  id: string;
+  title: string;
+  owner: string;
+  repo: string;
+  /** The trail's own updatedAt, snapshotted at visit time. */
+  updatedAt: string;
+  /** ISO 8601 — when this user last opened the trail. */
+  lastVisitedAt: string;
+  /** Times this user has opened the trail since tracking began. */
+  visitCount: number;
+  /** Creator's GitHub login, for "{login}'s trail" subtitles. Optional
+   *  because the visits route doesn't always have it on hand. */
+  createdByLogin?: string;
+}
+
+export interface TrailRecentlyVisitedIndex {
+  version: 1;
+  updatedAt: string;
+  entries: TrailRecentlyVisitedEntry[];
+}
+
+export interface ListRecentlyVisitedTrailsResponse {
+  entries: TrailRecentlyVisitedEntry[];
+}
+
+// ============================================================================
 // Errors
 // ============================================================================
 

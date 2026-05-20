@@ -173,12 +173,17 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
     setLivePayload(mergeServerWithLocal(payload));
   }, [payload, mergeServerWithLocal]);
 
-  // Record the visit once per browser per trail. Fires fire-and-forget;
-  // a failure leaves the count under-reported but never blocks render.
-  // The server identifies verified visitors by GitHub token and
-  // increments the anonymous bucket for everyone else.
+  // Record the visit. For anonymous viewers we gate on a localStorage
+  // flag so `anonymousCount` doesn't re-bump on every reload — the server
+  // can't dedup anonymous repeats. For signed-in viewers we always POST,
+  // because the server idempotently dedupes `visitors.named` *and* uses
+  // the same call to bump the viewer's per-user "recently visited"
+  // timestamp — that timestamp must move on every reopen.
+  // Fires fire-and-forget; a failure leaves the count under-reported but
+  // never blocks render.
   useEffect(() => {
-    if (!markTrailVisited(trailId)) return;
+    const signedIn = !!user;
+    if (!signedIn && !markTrailVisited(trailId)) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -198,7 +203,7 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
     return () => {
       cancelled = true;
     };
-  }, [trailId]);
+  }, [trailId, user]);
 
   const [toast, setToast] = useState<{ message: string } | null>(null);
   useEffect(() => {

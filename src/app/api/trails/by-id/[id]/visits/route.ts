@@ -28,6 +28,7 @@ import {
 } from '@/lib/auth/request';
 import {
   getIdPointer,
+  recordTrailVisit,
   updatePayload,
 } from '@/lib/trails/s3-storage';
 import { validateOwnerRepo } from '@/lib/trails/validation';
@@ -93,9 +94,8 @@ export async function POST(request: NextRequest, { params }: Params) {
       );
     }
 
-    const visitorLogin = githubToken
-      ? (await fetchGitHubUser(githubToken))?.login ?? null
-      : null;
+    const visitor = githubToken ? await fetchGitHubUser(githubToken) : null;
+    const visitorLogin = visitor?.login ?? null;
 
     // Anonymous-visitor identifier: a random UUID stored in an
     // HttpOnly cookie. If the cookie isn't present yet we mint a new
@@ -143,6 +143,19 @@ export async function POST(request: NextRequest, { params }: Params) {
       };
       return next;
     })) as StoredTrailPayload;
+
+    // Record this visit in the viewer's per-user "recently visited" manifest
+    // so it can surface on the signed-in dashboard. Best-effort and signed-in
+    // only — anonymous opens don't carry a stable identity to key on.
+    if (visitor) {
+      void recordTrailVisit(visitor.id, {
+        id: updated.id,
+        title: updated.title ?? '(untitled)',
+        owner,
+        repo,
+        updatedAt: updated.updatedAt ?? new Date().toISOString(),
+      });
+    }
 
     const response = NextResponse.json({
       visitors: updated.visitors ?? { named: [], anonymousCount: 0 },

@@ -3,10 +3,20 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { ArrowRight, Folder, Footprints, Plus, Sparkles } from 'lucide-react';
+import {
+  ArrowRight,
+  Folder,
+  Footprints,
+  History,
+  Plus,
+  Sparkles,
+} from 'lucide-react';
 import type { User } from '@/contexts/AuthContext';
 import type { TopicByUserEntry } from '@/lib/topics/types';
-import type { TrailByUserEntry } from '@/lib/trails/types';
+import type {
+  TrailByUserEntry,
+  TrailRecentlyVisitedEntry,
+} from '@/lib/trails/types';
 import { AgentSkillsModal } from './AgentSkillsModal';
 
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
@@ -35,8 +45,11 @@ export interface SignedInDashboardViewProps {
   trails: TrailByUserEntry[] | null;
   /** `null` = loading, `[]` = empty, populated = render. */
   topics: TopicByUserEntry[] | null;
+  /** `null` = loading, `[]` = empty, populated = render. */
+  recentlyVisited: TrailRecentlyVisitedEntry[] | null;
   trailsError?: string | null;
   topicsError?: string | null;
+  recentlyVisitedError?: string | null;
 }
 
 /**
@@ -47,8 +60,10 @@ export function SignedInDashboardView({
   user,
   trails,
   topics,
+  recentlyVisited,
   trailsError = null,
   topicsError = null,
+  recentlyVisitedError = null,
 }: SignedInDashboardViewProps) {
   const { theme } = useTheme();
   const [skillsOpen, setSkillsOpen] = useState(false);
@@ -97,7 +112,7 @@ export function SignedInDashboardView({
         <DashCard
           theme={theme}
           icon={<Footprints size={18} color={theme.colors.primary} />}
-          title="Recent trails"
+          title="Your trails"
           subtitle="Trails you've published"
         >
           <TrailList trails={trails} error={trailsError} theme={theme} />
@@ -105,9 +120,23 @@ export function SignedInDashboardView({
 
         <DashCard
           theme={theme}
+          icon={<History size={18} color={theme.colors.primary} />}
+          title="Recently visited"
+          subtitle="Trails you've opened"
+        >
+          <RecentlyVisitedList
+            trails={recentlyVisited}
+            error={recentlyVisitedError}
+            theme={theme}
+          />
+        </DashCard>
+
+        <DashCard
+          theme={theme}
           icon={<Folder size={18} color={theme.colors.primary} />}
           title="Your topics"
           subtitle="Curated collections of trails"
+          className="lg:col-span-2"
           action={
             <Link
               href="/topic/new"
@@ -176,8 +205,14 @@ export function SignedInDashboardView({
 export function SignedInDashboard({ user }: { user: User }) {
   const [trails, setTrails] = useState<TrailByUserEntry[] | null>(null);
   const [topics, setTopics] = useState<TopicByUserEntry[] | null>(null);
+  const [recentlyVisited, setRecentlyVisited] = useState<
+    TrailRecentlyVisitedEntry[] | null
+  >(null);
   const [trailsError, setTrailsError] = useState<string | null>(null);
   const [topicsError, setTopicsError] = useState<string | null>(null);
+  const [recentlyVisitedError, setRecentlyVisitedError] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -219,13 +254,35 @@ export function SignedInDashboard({ user }: { user: User }) {
     };
   }, [user.id]);
 
+  useEffect(() => {
+    let cancelled = false;
+    setRecentlyVisited(null);
+    setRecentlyVisitedError(null);
+    fetch(`/api/trails/recently-visited/by-user/${user.id}`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data: { entries: TrailRecentlyVisitedEntry[] }) => {
+        if (!cancelled) setRecentlyVisited(data.entries);
+      })
+      .catch((e) => {
+        if (!cancelled) setRecentlyVisitedError(String(e?.message ?? e));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
+
   return (
     <SignedInDashboardView
       user={user}
       trails={trails}
       topics={topics}
+      recentlyVisited={recentlyVisited}
       trailsError={trailsError}
       topicsError={topicsError}
+      recentlyVisitedError={recentlyVisitedError}
     />
   );
 }
@@ -371,6 +428,94 @@ export function TrailList({
               <span>{t.markerCount} markers</span>
               <span aria-hidden>·</span>
               <span>{relativeTime(t.updatedAt)}</span>
+            </div>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function RecentlyVisitedList({
+  trails,
+  error,
+  theme,
+}: {
+  trails: TrailRecentlyVisitedEntry[] | null;
+  error: string | null;
+  theme: ThemeShape;
+}) {
+  if (error) {
+    return (
+      <div
+        style={{
+          color: theme.colors.textMuted,
+          fontSize: `${theme.fontSizes[2]}px`,
+        }}
+      >
+        Couldn&rsquo;t load recent visits: {error}
+      </div>
+    );
+  }
+  if (trails === null) {
+    return (
+      <div
+        style={{
+          color: theme.colors.textMuted,
+          fontSize: `${theme.fontSizes[2]}px`,
+        }}
+      >
+        Loading…
+      </div>
+    );
+  }
+  if (trails.length === 0) {
+    return (
+      <div
+        style={{
+          color: theme.colors.textMuted,
+          fontSize: `${theme.fontSizes[2]}px`,
+        }}
+      >
+        Trails you open will show up here.
+      </div>
+    );
+  }
+  const visible = trails.slice(0, 5);
+  return (
+    <ul className="flex flex-col gap-2">
+      {visible.map((t) => (
+        <li key={t.id}>
+          <Link
+            href={`/trail/${t.id}`}
+            className="block rounded-md px-3 py-2 transition-colors hover:opacity-80"
+            style={{
+              background: `color-mix(in srgb, ${theme.colors.background} 50%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${theme.colors.border} 40%, transparent)`,
+            }}
+          >
+            <div
+              className="truncate"
+              style={{
+                color: theme.colors.text,
+                fontSize: `${theme.fontSizes[2]}px`,
+                fontWeight: theme.fontWeights.medium,
+              }}
+            >
+              {t.title}
+            </div>
+            <div
+              className="flex items-center gap-2 mt-0.5"
+              style={{
+                color: theme.colors.textMuted,
+                fontSize: `${theme.fontSizes[1]}px`,
+              }}
+            >
+              <span className="truncate">
+                {t.owner}/{t.repo}
+              </span>
+              <span aria-hidden>·</span>
+              <span>visited {relativeTime(t.lastVisitedAt)}</span>
             </div>
           </Link>
         </li>

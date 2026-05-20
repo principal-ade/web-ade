@@ -36,6 +36,8 @@ import type {
   SharedTrailIndexEntry,
   TrailByUserEntry,
   TrailByUserIndex,
+  TrailRecentlyVisitedEntry,
+  TrailRecentlyVisitedIndex,
   InboxIndex,
   InboxIndexEntry,
 } from './types';
@@ -68,6 +70,10 @@ export function buildIdPointerKey(id: string): string {
 
 export function buildByUserKey(githubId: number): string {
   return `${S3_PREFIX}/_by-user/${githubId}.json`;
+}
+
+export function buildRecentlyVisitedKey(githubId: number): string {
+  return `${S3_PREFIX}/_recently-visited/${githubId}.json`;
 }
 
 interface IdPointer {
@@ -913,6 +919,179 @@ export async function removeTrailFromUserIndex(
     console.error('[Trails] Remove from by-user index failed:', {
       githubId,
       trailId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+// ============================================================================
+// Per-user "recently visited" manifest — bumped on every signed-in trail
+// open. Same ETag-locked write pattern as the by-user manifest; the cap
+// keeps the manifest size bounded since visits accrue indefinitely.
+// ============================================================================
+
+const RECENTLY_VISITED_CAP = 50;
+
+function emptyRecentlyVisited(): TrailRecentlyVisitedIndex {
+  return {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    entries: [],
+  };
+}
+
+async function getRecentlyVisitedWithETag(
+  githubId: number
+): Promise<{ data: TrailRecentlyVisitedIndex; etag: string } | null> {
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: buildRecentlyVisitedKey(githubId),
+      })
+    );
+    const body = await response.Body?.transformToString();
+    if (!body) return null;
+    return {
+      data: JSON.parse(body) as TrailRecentlyVisitedIndex,
+      etag: response.ETag || '',
+    };
+  } catch (error: unknown) {
+    if (isNoSuchKey(error)) return null;
+    console.error('[Trails] Get recently-visited index failed:', {
+      githubId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new TrailShareError(
+      'Failed to retrieve recently-visited index',
+      500,
+      ShareErrorCodes.S3_ERROR
+    );
+  }
+}
+
+async function putRecentlyVisitedWithETag(
+  githubId: number,
+  data: TrailRecentlyVisitedIndex,
+  etag: string | null
+): Promise<void> {
+  try {
+    const params: {
+      Bucket: string;
+      Key: string;
+      Body: string;
+      ContentType: string;
+      CacheControl: string;
+      IfMatch?: string;
+    } = {
+      Bucket: BUCKET_NAME,
+      Key: buildRecentlyVisitedKey(githubId),
+      Body: JSON.stringify(data, null, 2),
+      ContentType: 'application/json',
+      CacheControl: INDEX_CACHE_CONTROL,
+    };
+    if (etag) params.IfMatch = etag;
+    await s3Client.send(new PutObjectCommand(params));
+  } catch (error: unknown) {
+    if (isEtagConflict(error)) {
+      throw new TrailShareError(
+        'Concurrent modification detected',
+        409,
+        ShareErrorCodes.ETAG_CONFLICT
+      );
+    }
+    console.error('[Trails] Put recently-visited index failed:', {
+      githubId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new TrailShareError(
+      'Failed to save recently-visited index',
+      500,
+      ShareErrorCodes.S3_ERROR
+    );
+  }
+}
+
+export async function getRecentlyVisitedTrails(
+  githubId: number
+): Promise<TrailRecentlyVisitedIndex> {
+  const result = await getRecentlyVisitedWithETag(githubId);
+  return result ? result.data : emptyRecentlyVisited();
+}
+
+async function updateRecentlyVisited(
+  githubId: number,
+  modifier: (data: TrailRecentlyVisitedIndex) => TrailRecentlyVisitedIndex
+): Promise<TrailRecentlyVisitedIndex> {
+  let attempts = 0;
+  while (attempts < MAX_ETAG_RETRIES) {
+    try {
+      const current = await getRecentlyVisitedWithETag(githubId);
+      const data = current ? current.data : emptyRecentlyVisited();
+      const etag = current ? current.etag : null;
+      const updated = modifier(data);
+      updated.updatedAt = new Date().toISOString();
+      await putRecentlyVisitedWithETag(githubId, updated, etag);
+      return updated;
+    } catch (error) {
+      if (
+        error instanceof TrailShareError &&
+        error.code === ShareErrorCodes.ETAG_CONFLICT
+      ) {
+        attempts++;
+        if (attempts >= MAX_ETAG_RETRIES) {
+          throw new TrailShareError(
+            'Concurrent modification conflict — please retry',
+            409,
+            ShareErrorCodes.MAX_RETRIES
+          );
+        }
+        await new Promise((r) => setTimeout(r, 100 * attempts));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new TrailShareError(
+    'Update failed after retries',
+    500,
+    ShareErrorCodes.S3_ERROR
+  );
+}
+
+/**
+ * Record a visit by `githubId` to a trail. Bumps `lastVisitedAt` to now,
+ * increments `visitCount`, and moves the entry to the head of the list.
+ * The manifest is capped at the most-recent {@link RECENTLY_VISITED_CAP}
+ * trails — the dashboard only renders the top handful, and keeping the
+ * manifest bounded protects S3 PUT size as a user's history grows.
+ *
+ * Best-effort: failures are logged but don't sink the visits POST (the
+ * primary job there is updating the trail's `visitors` block).
+ */
+export async function recordTrailVisit(
+  githubId: number,
+  entry: Omit<TrailRecentlyVisitedEntry, 'lastVisitedAt' | 'visitCount'>
+): Promise<void> {
+  try {
+    await updateRecentlyVisited(githubId, (data) => {
+      const now = new Date().toISOString();
+      const existing = data.entries.find((e) => e.id === entry.id);
+      const next: TrailRecentlyVisitedEntry = {
+        ...entry,
+        lastVisitedAt: now,
+        visitCount: (existing?.visitCount ?? 0) + 1,
+      };
+      const others = data.entries.filter((e) => e.id !== entry.id);
+      return {
+        ...data,
+        entries: [next, ...others].slice(0, RECENTLY_VISITED_CAP),
+      };
+    });
+  } catch (error) {
+    console.error('[Trails] Record visit failed:', {
+      trailId: entry.id,
+      githubId,
       error: error instanceof Error ? error.message : String(error),
     });
   }
