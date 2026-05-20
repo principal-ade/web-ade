@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchGitHubUser, getGitHubToken } from '@/lib/auth/request';
 import { getIdPointer } from '@/lib/trails/s3-storage';
-import { putTopic } from '@/lib/topics/s3-storage';
+import { putTopic, upsertTopicInUserIndex } from '@/lib/topics/s3-storage';
 import { validateCreateRequest } from '@/lib/topics/validation';
 import {
   TopicErrorCodes,
@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
     };
 
     await putTopic(topic);
+    await upsertTopicInUserIndex(topic);
 
     const response: CreateTopicResponse = {
       id: topic.id,

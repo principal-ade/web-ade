@@ -8,6 +8,7 @@ import {
   getIndex,
   getPayload,
   putIdPointer,
+  removeTrailFromUserIndex,
   updateIndex,
 } from '@/lib/trails/s3-storage';
 import { validateOwnerRepo } from '@/lib/trails/validation';
@@ -152,6 +153,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
       ...data,
       entries: data.entries.filter((e) => e.id !== id),
     }));
+    await removeTrailFromUserIndex(entry.createdBy.githubId, id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

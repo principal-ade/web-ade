@@ -11,7 +11,9 @@ import { fetchGitHubUser, getGitHubToken } from '@/lib/auth/request';
 import {
   deleteTopic,
   getTopic,
+  removeTopicFromUserIndex,
   updateTopic,
+  upsertTopicInUserIndex,
 } from '@/lib/topics/s3-storage';
 import { validateUpdateRequest } from '@/lib/topics/validation';
 import {
@@ -115,6 +117,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         ? { description: updates.description }
         : {}),
     }));
+    await upsertTopicInUserIndex(updated);
     return NextResponse.json({ topic: updated });
   } catch (error) {
     return errorResponse(error, 'PATCH');
@@ -128,6 +131,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     if (guard.kind === 'response') return guard.response;
 
     await deleteTopic(id);
+    await removeTopicFromUserIndex(guard.topic.createdBy.githubId, id);
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     return errorResponse(error, 'DELETE');

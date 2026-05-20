@@ -3,10 +3,25 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@principal-ade/industry-theme';
-import { X, MoveRight, Copy, Check, ExternalLink, Search } from 'lucide-react';
+import {
+  X,
+  MoveRight,
+  Copy,
+  Check,
+  ExternalLink,
+  Search,
+  Plus,
+  Sparkles,
+  Footprints,
+  Folder,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TrailCityDiagram } from '@/components/trail/TrailCityDiagram';
 import { LgtmStamp, SignOffStampAnimation } from '@/components/trail/LgtmStamp';
+import { UserAvatarMenu } from '@/components/UserAvatarMenu';
+import { useAuth, type User } from '@/contexts/AuthContext';
+import type { TopicByUserEntry } from '@/lib/topics/types';
+import type { TrailByUserEntry } from '@/lib/trails/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +45,8 @@ function parseGithubRepoPath(input: string): { owner: string; repo: string } | n
 export default function HomePage() {
   const { theme } = useTheme();
   const router = useRouter();
+  const { user } = useAuth();
+  const signedIn = !!user;
   const [repoUrl, setRepoUrl] = useState('');
   const [repoFocused, setRepoFocused] = useState(false);
   const [flashLabel, setFlashLabel] = useState<string | null>(null);
@@ -262,6 +279,7 @@ export default function HomePage() {
               <span style={{ color: theme.colors.primary }}>AI</span>
             </h1>
           </Link>
+          <div className="flex items-center gap-3">
           <div
             role="search"
             aria-label="Open a GitHub repository"
@@ -318,10 +336,15 @@ export default function HomePage() {
               }}
             />
           </div>
+            <UserAvatarMenu />
+          </div>
         </div>
       </header>
 
       <main className="flex-1 flex flex-col relative">
+        {signedIn ? (
+          <SignedInDashboard user={user} theme={theme} />
+        ) : (
         <section className="flex-1 w-full max-w-7xl mx-auto px-6 py-16 flex items-start">
           <div className="w-full grid lg:grid-cols-2 gap-12 lg:gap-10 items-start">
             <div className="relative text-center lg:text-left min-h-[260px] lg:pt-24">
@@ -854,6 +877,7 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+        )}
 
       </main>
 
@@ -876,6 +900,368 @@ export default function HomePage() {
         theme={theme}
       />
     </div>
+  );
+}
+
+// ============================================================================
+// Signed-in dashboard
+// ============================================================================
+
+type ThemeShape = ReturnType<typeof useTheme>['theme'];
+
+function relativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return '';
+  const diffMs = Date.now() - then;
+  const sec = Math.round(diffMs / 1000);
+  if (sec < 60) return 'just now';
+  const min = Math.round(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.round(hr / 24);
+  if (day < 30) return `${day}d ago`;
+  const mo = Math.round(day / 30);
+  if (mo < 12) return `${mo}mo ago`;
+  const yr = Math.round(mo / 12);
+  return `${yr}y ago`;
+}
+
+function SignedInDashboard({
+  user,
+  theme,
+}: {
+  user: User;
+  theme: ThemeShape;
+}) {
+  const [trails, setTrails] = useState<TrailByUserEntry[] | null>(null);
+  const [topics, setTopics] = useState<TopicByUserEntry[] | null>(null);
+  const [trailsError, setTrailsError] = useState<string | null>(null);
+  const [topicsError, setTopicsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setTrails(null);
+    setTrailsError(null);
+    fetch(`/api/trails/by-user/${user.id}`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data: { entries: TrailByUserEntry[] }) => {
+        if (!cancelled) setTrails(data.entries);
+      })
+      .catch((e) => {
+        if (!cancelled) setTrailsError(String(e?.message ?? e));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setTopics(null);
+    setTopicsError(null);
+    fetch(`/api/topics/by-user/${user.id}`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data: { entries: TopicByUserEntry[] }) => {
+        if (!cancelled) setTopics(data.entries);
+      })
+      .catch((e) => {
+        if (!cancelled) setTopicsError(String(e?.message ?? e));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
+
+  const displayName = user.name || user.login;
+
+  return (
+    <section className="flex-1 w-full max-w-7xl mx-auto px-6 py-12">
+      {/* Greeting */}
+      <div className="flex items-center gap-4 mb-10">
+        {user.avatar_url && (
+          // Plain <img> intentionally — GitHub avatar URLs are external and the
+          // dashboard runs on the client; bypassing next/image avoids the
+          // remote-pattern config dance for a 56px image.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={user.avatar_url}
+            alt={displayName}
+            className="w-14 h-14 rounded-full"
+            style={{
+              border: `1px solid color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
+            }}
+          />
+        )}
+        <div className="min-w-0">
+          <div
+            className="text-2xl md:text-3xl font-semibold tracking-tight"
+            style={{ color: theme.colors.text }}
+          >
+            Welcome back, {displayName}.
+          </div>
+          <div className="text-sm" style={{ color: theme.colors.textMuted }}>
+            @{user.login}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Recent trails */}
+        <DashCard
+          theme={theme}
+          icon={<Footprints size={18} color={theme.colors.primary} />}
+          title="Recent trails"
+          subtitle="Trails you've published"
+        >
+          <TrailList
+            trails={trails}
+            error={trailsError}
+            theme={theme}
+          />
+        </DashCard>
+
+        {/* Your topics */}
+        <DashCard
+          theme={theme}
+          icon={<Folder size={18} color={theme.colors.primary} />}
+          title="Your topics"
+          subtitle="Curated collections of trails"
+          action={
+            <Link
+              href="/topic/new"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-opacity hover:opacity-80"
+              style={{
+                background: theme.colors.primary,
+                color: theme.colors.background,
+              }}
+            >
+              <Plus size={14} />
+              New topic
+            </Link>
+          }
+        >
+          <TopicList topics={topics} error={topicsError} theme={theme} />
+        </DashCard>
+
+        {/* Skills (placeholder) */}
+        <DashCard
+          theme={theme}
+          icon={<Sparkles size={18} color={theme.colors.primary} />}
+          title="Skills"
+          subtitle="Agent skills you can run on this codebase"
+          className="lg:col-span-2"
+        >
+          <div
+            className="text-sm leading-relaxed"
+            style={{ color: theme.colors.textMuted }}
+          >
+            Coming soon — links to the skills your agent can use to publish
+            trails, curate topics, and run reviews from your editor.
+          </div>
+        </DashCard>
+      </div>
+    </section>
+  );
+}
+
+function DashCard({
+  theme,
+  icon,
+  title,
+  subtitle,
+  action,
+  className,
+  children,
+}: {
+  theme: ThemeShape;
+  icon?: React.ReactNode;
+  title: string;
+  subtitle?: string;
+  action?: React.ReactNode;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={`rounded-2xl p-5 backdrop-blur-xl ${className ?? ''}`}
+      style={{
+        background: `color-mix(in srgb, ${theme.colors.surface} 60%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${theme.colors.border} 50%, transparent)`,
+      }}
+    >
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex items-start gap-2 min-w-0">
+          {icon && <span className="mt-0.5">{icon}</span>}
+          <div className="min-w-0">
+            <h2
+              className="text-lg font-semibold tracking-tight"
+              style={{ color: theme.colors.text }}
+            >
+              {title}
+            </h2>
+            {subtitle && (
+              <p
+                className="text-xs"
+                style={{ color: theme.colors.textMuted }}
+              >
+                {subtitle}
+              </p>
+            )}
+          </div>
+        </div>
+        {action}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function TrailList({
+  trails,
+  error,
+  theme,
+}: {
+  trails: TrailByUserEntry[] | null;
+  error: string | null;
+  theme: ThemeShape;
+}) {
+  if (error) {
+    return (
+      <div className="text-sm" style={{ color: theme.colors.textMuted }}>
+        Couldn&rsquo;t load trails: {error}
+      </div>
+    );
+  }
+  if (trails === null) {
+    return (
+      <div className="text-sm" style={{ color: theme.colors.textMuted }}>
+        Loading…
+      </div>
+    );
+  }
+  if (trails.length === 0) {
+    return (
+      <div className="text-sm" style={{ color: theme.colors.textMuted }}>
+        You haven&rsquo;t published any trails yet. Publish one from the File
+        City panel to see it here.
+      </div>
+    );
+  }
+  const visible = trails.slice(0, 5);
+  return (
+    <ul className="flex flex-col gap-2">
+      {visible.map((t) => (
+        <li key={t.id}>
+          <Link
+            href={`/trail/${t.id}`}
+            className="block rounded-md px-3 py-2 transition-colors hover:opacity-80"
+            style={{
+              background: `color-mix(in srgb, ${theme.colors.background} 50%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${theme.colors.border} 40%, transparent)`,
+            }}
+          >
+            <div
+              className="text-sm font-medium truncate"
+              style={{ color: theme.colors.text }}
+            >
+              {t.title}
+            </div>
+            <div
+              className="text-xs flex items-center gap-2 mt-0.5"
+              style={{ color: theme.colors.textMuted }}
+            >
+              <span className="truncate">
+                {t.owner}/{t.repo}
+              </span>
+              <span aria-hidden>·</span>
+              <span>{t.markerCount} markers</span>
+              <span aria-hidden>·</span>
+              <span>{relativeTime(t.updatedAt)}</span>
+            </div>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function TopicList({
+  topics,
+  error,
+  theme,
+}: {
+  topics: TopicByUserEntry[] | null;
+  error: string | null;
+  theme: ThemeShape;
+}) {
+  if (error) {
+    return (
+      <div className="text-sm" style={{ color: theme.colors.textMuted }}>
+        Couldn&rsquo;t load topics: {error}
+      </div>
+    );
+  }
+  if (topics === null) {
+    return (
+      <div className="text-sm" style={{ color: theme.colors.textMuted }}>
+        Loading…
+      </div>
+    );
+  }
+  if (topics.length === 0) {
+    return (
+      <div className="text-sm" style={{ color: theme.colors.textMuted }}>
+        No topics yet. Create one to curate a set of trails on a shared
+        subject.
+      </div>
+    );
+  }
+  const visible = topics.slice(0, 5);
+  return (
+    <ul className="flex flex-col gap-2">
+      {visible.map((t) => (
+        <li key={t.id}>
+          <Link
+            href={`/topic/${t.id}`}
+            className="block rounded-md px-3 py-2 transition-colors hover:opacity-80"
+            style={{
+              background: `color-mix(in srgb, ${theme.colors.background} 50%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${theme.colors.border} 40%, transparent)`,
+            }}
+          >
+            <div
+              className="text-sm font-medium truncate"
+              style={{ color: theme.colors.text }}
+            >
+              {t.title}
+            </div>
+            <div
+              className="text-xs flex items-center gap-2 mt-0.5"
+              style={{ color: theme.colors.textMuted }}
+            >
+              <span>{t.trailCount} trails</span>
+              <span aria-hidden>·</span>
+              <span>{relativeTime(t.updatedAt)}</span>
+            </div>
+            {t.descriptionPreview && (
+              <div
+                className="text-xs mt-1 line-clamp-2"
+                style={{ color: theme.colors.textMuted }}
+              >
+                {t.descriptionPreview}
+              </div>
+            )}
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }
 

@@ -34,6 +34,8 @@ import type {
   TrailPayload,
   SharedTrailIndex,
   SharedTrailIndexEntry,
+  TrailByUserEntry,
+  TrailByUserIndex,
   InboxIndex,
   InboxIndexEntry,
 } from './types';
@@ -62,6 +64,10 @@ export function buildPayloadKey(
 
 export function buildIdPointerKey(id: string): string {
   return `${S3_PREFIX}/_by-id/${id}.json`;
+}
+
+export function buildByUserKey(githubId: number): string {
+  return `${S3_PREFIX}/_by-user/${githubId}.json`;
 }
 
 interface IdPointer {
@@ -728,6 +734,183 @@ export async function deleteInboxEntry(
     // a rounding error against the inbox index, which is the source of
     // truth for membership.
     console.error('[Trails] Delete inbox entry failed:', {
+      githubId,
+      trailId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+// ============================================================================
+// Per-user trail manifest — powers "your trails" listings without scanning
+// every repo. Written from the publisher path on POST and trimmed on
+// DELETE; mutations use the same ETag-locked pattern the repo index uses.
+// ============================================================================
+
+function emptyByUser(): TrailByUserIndex {
+  return {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    entries: [],
+  };
+}
+
+async function getByUserWithETag(
+  githubId: number
+): Promise<{ data: TrailByUserIndex; etag: string } | null> {
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: buildByUserKey(githubId),
+      })
+    );
+    const body = await response.Body?.transformToString();
+    if (!body) return null;
+    return {
+      data: JSON.parse(body) as TrailByUserIndex,
+      etag: response.ETag || '',
+    };
+  } catch (error: unknown) {
+    if (isNoSuchKey(error)) return null;
+    console.error('[Trails] Get by-user index failed:', {
+      githubId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new TrailShareError(
+      'Failed to retrieve trails index',
+      500,
+      ShareErrorCodes.S3_ERROR
+    );
+  }
+}
+
+async function putByUserWithETag(
+  githubId: number,
+  data: TrailByUserIndex,
+  etag: string | null
+): Promise<void> {
+  try {
+    const params: {
+      Bucket: string;
+      Key: string;
+      Body: string;
+      ContentType: string;
+      CacheControl: string;
+      IfMatch?: string;
+    } = {
+      Bucket: BUCKET_NAME,
+      Key: buildByUserKey(githubId),
+      Body: JSON.stringify(data, null, 2),
+      ContentType: 'application/json',
+      CacheControl: INDEX_CACHE_CONTROL,
+    };
+    if (etag) params.IfMatch = etag;
+    await s3Client.send(new PutObjectCommand(params));
+  } catch (error: unknown) {
+    if (isEtagConflict(error)) {
+      throw new TrailShareError(
+        'Concurrent modification detected',
+        409,
+        ShareErrorCodes.ETAG_CONFLICT
+      );
+    }
+    console.error('[Trails] Put by-user index failed:', {
+      githubId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new TrailShareError(
+      'Failed to save trails index',
+      500,
+      ShareErrorCodes.S3_ERROR
+    );
+  }
+}
+
+export async function getTrailsByUser(
+  githubId: number
+): Promise<TrailByUserIndex> {
+  const result = await getByUserWithETag(githubId);
+  return result ? result.data : emptyByUser();
+}
+
+async function updateByUser(
+  githubId: number,
+  modifier: (data: TrailByUserIndex) => TrailByUserIndex
+): Promise<TrailByUserIndex> {
+  let attempts = 0;
+  while (attempts < MAX_ETAG_RETRIES) {
+    try {
+      const current = await getByUserWithETag(githubId);
+      const data = current ? current.data : emptyByUser();
+      const etag = current ? current.etag : null;
+      const updated = modifier(data);
+      updated.updatedAt = new Date().toISOString();
+      await putByUserWithETag(githubId, updated, etag);
+      return updated;
+    } catch (error) {
+      if (
+        error instanceof TrailShareError &&
+        error.code === ShareErrorCodes.ETAG_CONFLICT
+      ) {
+        attempts++;
+        if (attempts >= MAX_ETAG_RETRIES) {
+          throw new TrailShareError(
+            'Concurrent modification conflict — please retry',
+            409,
+            ShareErrorCodes.MAX_RETRIES
+          );
+        }
+        await new Promise((r) => setTimeout(r, 100 * attempts));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new TrailShareError(
+    'Update failed after retries',
+    500,
+    ShareErrorCodes.S3_ERROR
+  );
+}
+
+/**
+ * Add (or replace) a trail row in its creator's by-user manifest. Called
+ * from the publish path. Manifest writes are best-effort — a failure is
+ * logged but doesn't sink the user-facing publish; the per-repo index is
+ * the source of truth for ownership.
+ */
+export async function upsertTrailInUserIndex(
+  owner: string,
+  repo: string,
+  entry: SharedTrailIndexEntry
+): Promise<void> {
+  try {
+    await updateByUser(entry.createdBy.githubId, (data) => {
+      const next: TrailByUserEntry = { ...entry, owner, repo };
+      const others = data.entries.filter((e) => e.id !== entry.id);
+      return { ...data, entries: [next, ...others] };
+    });
+  } catch (error) {
+    console.error('[Trails] Upsert by-user index failed:', {
+      trailId: entry.id,
+      githubId: entry.createdBy.githubId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+export async function removeTrailFromUserIndex(
+  githubId: number,
+  trailId: string
+): Promise<void> {
+  try {
+    await updateByUser(githubId, (data) => ({
+      ...data,
+      entries: data.entries.filter((e) => e.id !== trailId),
+    }));
+  } catch (error) {
+    console.error('[Trails] Remove from by-user index failed:', {
       githubId,
       trailId,
       error: error instanceof Error ? error.message : String(error),

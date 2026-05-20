@@ -117,6 +117,26 @@ export interface ListSharedTrailsResponse {
   entries: SharedTrailIndexEntry[];
 }
 
+/**
+ * Per-user manifest row — same shape as a repo-index entry plus the
+ * owner/repo pair the trail lives under. Lets a dashboard render a card
+ * with a "{owner}/{repo}" subtitle without resolving the id pointer.
+ */
+export interface TrailByUserEntry extends SharedTrailIndexEntry {
+  owner: string;
+  repo: string;
+}
+
+export interface TrailByUserIndex {
+  version: 1;
+  updatedAt: string;
+  entries: TrailByUserEntry[];
+}
+
+export interface ListTrailsByUserResponse {
+  entries: TrailByUserEntry[];
+}
+
 // ============================================================================
 // Errors
 // ============================================================================

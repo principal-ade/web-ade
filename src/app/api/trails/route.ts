@@ -18,6 +18,7 @@ import {
   putIdPointer,
   putPayload,
   updateIndex,
+  upsertTrailInUserIndex,
 } from '@/lib/trails/s3-storage';
 import {
   summarizePayload,
@@ -135,6 +136,7 @@ export async function POST(request: NextRequest) {
       }
       return { ...data, entries: next };
     });
+    await upsertTrailInUserIndex(owner, repo, entry);
 
     const url = `/trail/${id}`;
     const response: CreateSharedTrailResponse = { id, url, entry };

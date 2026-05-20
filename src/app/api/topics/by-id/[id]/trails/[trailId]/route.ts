@@ -4,7 +4,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchGitHubUser, getGitHubToken } from '@/lib/auth/request';
-import { getTopic, updateTopic } from '@/lib/topics/s3-storage';
+import {
+  getTopic,
+  updateTopic,
+  upsertTopicInUserIndex,
+} from '@/lib/topics/s3-storage';
 import { isUuid } from '@/lib/topics/validation';
 import { TopicErrorCodes, TopicShareError } from '@/lib/topics/types';
 
@@ -54,6 +58,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
       ...cur,
       trailIds: cur.trailIds.filter((tid) => tid !== trailId),
     }));
+    await upsertTopicInUserIndex(updated);
     return NextResponse.json({ topic: updated });
   } catch (error) {
     if (error instanceof TopicShareError) {

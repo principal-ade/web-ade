@@ -9,7 +9,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchGitHubUser, getGitHubToken } from '@/lib/auth/request';
 import { getIdPointer } from '@/lib/trails/s3-storage';
-import { getTopic, updateTopic } from '@/lib/topics/s3-storage';
+import {
+  getTopic,
+  updateTopic,
+  upsertTopicInUserIndex,
+} from '@/lib/topics/s3-storage';
 import {
   validateAddTrailRequest,
   validateReorderRequest,
@@ -120,6 +124,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       ...current,
       trailIds: [...current.trailIds, trailId],
     }));
+    await upsertTopicInUserIndex(updated);
     return NextResponse.json({ topic: updated });
   } catch (error) {
     return errorResponse(error, 'add');
@@ -155,6 +160,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       ...cur,
       trailIds: nextOrder,
     }));
+    await upsertTopicInUserIndex(updated);
     return NextResponse.json({ topic: updated });
   } catch (error) {
     return errorResponse(error, 'reorder');

@@ -36,6 +36,31 @@ export interface CreateTopicResponse {
   topic: TopicPayload;
 }
 
+/**
+ * Slim summary stored in the per-user manifest so "my topics" listings
+ * don't need to fan out a GET per topic. Mirrors `SharedTrailIndexEntry`
+ * but on the topic side: anything a dashboard card needs lives here.
+ */
+export interface TopicByUserEntry {
+  id: string;
+  title: string;
+  /** First ~140 chars of `description`, plaintext, for card previews. */
+  descriptionPreview: string;
+  trailCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TopicByUserIndex {
+  version: 1;
+  updatedAt: string;
+  entries: TopicByUserEntry[];
+}
+
+export interface ListTopicsByUserResponse {
+  entries: TopicByUserEntry[];
+}
+
 export class TopicShareError extends Error {
   constructor(
     message: string,
