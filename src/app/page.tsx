@@ -949,6 +949,11 @@ const SKILLS_WITHOUT_APP: SkillLink[] = [
     blurb: 'Curate existing trails into a shareable topic.',
     url: SKILL_URL('create-topic'),
   },
+  {
+    name: 'discover-trails',
+    blurb: 'Browse trails and topics already on web-ade — list, fetch, summarize.',
+    url: SKILL_URL('discover-trails'),
+  },
 ];
 
 function relativeTime(iso: string): string {
