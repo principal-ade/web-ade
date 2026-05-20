@@ -19,12 +19,12 @@ interface Marker {
 
 const VIEW_W = 700;
 const VIEW_H = 700;
-const CITY_COLS = 11;
-const CITY_ROWS = 13;
-const CELL_W = 52;
-const CELL_H = 48;
-const CITY_OFFSET_X = 40;
-const CITY_OFFSET_Y = 40;
+const CITY_COLS = 12;
+const CITY_ROWS = 12;
+const CELL_W = 50;
+const CELL_H = 50;
+const CITY_OFFSET_X = 50;
+const CITY_OFFSET_Y = 50;
 
 /** Center point of a grid cell, in viewBox coords. */
 function cellCenter(col: number, row: number): { x: number; y: number } {
@@ -44,14 +44,14 @@ function buildCity(palette: string[], pinned: ReadonlySet<string>): Building[] {
       // building so the marker has something to be centered on. Other
       // cells skip occasionally to break up the grid.
       const skipRoll = rng();
-      const sizeRollW = rng();
-      const sizeRollH = rng();
+      // Keep the RNG sequence stable so colors don't shift after dropping
+      // the per-building size jitter.
+      rng();
+      rng();
       const colorRoll = rng();
       if (!isPinned && skipRoll < 0.18) continue;
-      // Pinned buildings are kept full-cell-sized so the marker (also
-      // sized to the cell) sits dead-center on the building.
-      const w = isPinned ? CELL_W - 8 : CELL_W - 8 - Math.floor(sizeRollW * 14);
-      const h = isPinned ? CELL_H - 8 : CELL_H - 8 - Math.floor(sizeRollH * 12);
+      const w = CELL_W - 8;
+      const h = CELL_H - 8;
       cells.push({
         x: CITY_OFFSET_X + c * CELL_W + (CELL_W - w) / 2,
         y: CITY_OFFSET_Y + r * CELL_H + (CELL_H - h) / 2,
