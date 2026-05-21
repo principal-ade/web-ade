@@ -85,6 +85,11 @@ export const TopicErrorCodes = {
   COMMENT_FORBIDDEN: 'COMMENT_FORBIDDEN',
   COMMENT_TOO_LONG: 'COMMENT_TOO_LONG',
   COMMENT_LIMIT_REACHED: 'COMMENT_LIMIT_REACHED',
+  SUGGESTION_NOT_FOUND: 'SUGGESTION_NOT_FOUND',
+  SUGGESTION_FORBIDDEN: 'SUGGESTION_FORBIDDEN',
+  SUGGESTION_ALREADY_RESOLVED: 'SUGGESTION_ALREADY_RESOLVED',
+  SUGGESTION_DUPLICATE: 'SUGGESTION_DUPLICATE',
+  SUGGESTION_LIMIT_REACHED: 'SUGGESTION_LIMIT_REACHED',
   ETAG_CONFLICT: 'ETAG_CONFLICT',
   MAX_RETRIES: 'MAX_RETRIES',
   S3_ERROR: 'S3_ERROR',
@@ -133,4 +138,65 @@ export interface ListCommentsResponse {
 
 export interface CreateCommentResponse {
   comment: TopicComment;
+}
+
+// ============================================================================
+// Trail suggestions — open contribution queue. Any GitHub-authenticated user
+// can suggest a trail (their own or someone else's) for a topic; the topic
+// owner reviews and accepts or rejects. See docs/topic-trail-suggestions.md.
+// Suggestions are stored as a single container object per topic at
+// `topics/_suggestions/{topicId}.json`; mutations are ETag-locked the same
+// way the topic record itself is.
+// ============================================================================
+
+export type SuggestionStatus =
+  | 'pending'
+  | 'accepted'
+  | 'rejected'
+  | 'withdrawn';
+
+export interface TrailSuggestion {
+  id: string;
+  topicId: string;
+  trailId: string;
+  /** Optional one-line "why this fits". */
+  reason?: string;
+  suggestedBy: { githubId: number; githubLogin: string };
+  status: SuggestionStatus;
+  createdAt: string;
+  /** Set when `status` leaves `pending`. */
+  resolvedAt?: string;
+  /**
+   * Whoever transitioned the suggestion out of `pending`. For `accepted` /
+   * `rejected` this is the topic owner; for `withdrawn` it's the suggester.
+   * Read together with `status` to label the actor in the UI.
+   */
+  resolvedBy?: { githubId: number; githubLogin: string };
+}
+
+export interface TopicSuggestionsContainer {
+  version: 1;
+  topicId: string;
+  /** Bumped on every container mutation. */
+  updatedAt: string;
+  suggestions: TrailSuggestion[];
+}
+
+export interface CreateSuggestionRequest {
+  trailId: string;
+  reason?: string;
+}
+
+export interface CreateSuggestionResponse {
+  suggestion: TrailSuggestion;
+}
+
+export interface ListSuggestionsResponse {
+  topicId: string;
+  updatedAt: string;
+  suggestions: TrailSuggestion[];
+}
+
+export interface ResolveSuggestionResponse {
+  suggestion: TrailSuggestion;
 }

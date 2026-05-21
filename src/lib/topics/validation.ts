@@ -1,12 +1,14 @@
 import {
   MAX_COMMENT_CHARS,
   MAX_DESCRIPTION_CHARS,
+  MAX_REASON_CHARS,
   MAX_TITLE_CHARS,
   MAX_TRAILS_PER_TOPIC,
 } from './constants';
 import {
   TopicErrorCodes,
   TopicShareError,
+  type CreateSuggestionRequest,
   type UpdateTopicRequest,
 } from './types';
 
@@ -127,6 +129,30 @@ export function validateUpdateCommentRequest(body: unknown): { body: string } {
   if (!isPlainObject(body)) invalid('request body must be an object');
   if (!('body' in body)) invalid('no fields to update');
   return { body: validateCommentBody(body.body) };
+}
+
+/**
+ * Validate an optional suggestion reason. Trimmed; an explicit empty string
+ * becomes `undefined` so the stored record stays clean. Over-length reasons
+ * surface as the generic INVALID_PAYLOAD path — there's no dedicated code
+ * because the UI caps input before submit.
+ */
+export function validateSuggestionReason(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value !== 'string') invalid('reason must be a string');
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return undefined;
+  if (trimmed.length > MAX_REASON_CHARS)
+    invalid(`reason exceeds ${MAX_REASON_CHARS} chars`);
+  return trimmed;
+}
+
+export function validateSuggestRequest(body: unknown): CreateSuggestionRequest {
+  if (!isPlainObject(body)) invalid('request body must be an object');
+  const { trailId } = body;
+  if (!isUuid(trailId)) invalid('trailId must be a uuid');
+  const reason = validateSuggestionReason(body.reason);
+  return reason === undefined ? { trailId } : { trailId, reason };
 }
 
 /**

@@ -16,6 +16,7 @@ import {
   upsertTopicInUserIndex,
 } from '@/lib/topics/s3-storage';
 import { deleteCommentsContainer } from '@/lib/topics/comments-storage';
+import { deleteSuggestionsContainer } from '@/lib/topics/suggestions-storage';
 import { validateUpdateRequest } from '@/lib/topics/validation';
 import {
   TopicErrorCodes,
@@ -144,6 +145,17 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
           commentsError instanceof Error
             ? commentsError.message
             : String(commentsError),
+      });
+    }
+    try {
+      await deleteSuggestionsContainer(id);
+    } catch (suggestionsError) {
+      console.error('[Topics] Tear down suggestions container failed:', {
+        id,
+        error:
+          suggestionsError instanceof Error
+            ? suggestionsError.message
+            : String(suggestionsError),
       });
     }
     return new NextResponse(null, { status: 204 });
