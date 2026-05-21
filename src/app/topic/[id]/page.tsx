@@ -357,12 +357,13 @@ export default function TopicPage() {
         onDelete={handleDeleteTopic}
       />
 
-      <div className="flex-1 overflow-y-auto">
-        <main className="px-4 md:px-8 py-8 max-w-3xl w-full mx-auto">
+      <div className="flex-1 overflow-y-auto lg:overflow-hidden">
+        <main className="px-4 md:px-8 pt-4 pb-8 w-full lg:h-full lg:grid lg:grid-cols-2 lg:gap-10 lg:pb-0">
+        <div className="lg:h-full lg:flex lg:flex-col lg:overflow-hidden">
         {/* Header block: title + description, with owner edit toggle */}
         {isOwnerEditingHeader ? (
           <div
-            className="rounded-lg border p-4 mb-8"
+            className="rounded-lg border p-4 mb-8 lg:mb-0 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:pb-8 lg:pr-2"
             style={{
               background:
                 theme.colors.backgroundSecondary ?? theme.colors.background,
@@ -439,7 +440,7 @@ export default function TopicPage() {
             </div>
           </div>
         ) : (
-          <div className="mb-4">
+          <div className="mb-8 lg:mb-0 lg:flex-1 lg:flex lg:flex-col lg:min-h-0">
             <div className="flex items-start justify-between gap-4">
               <h1
                 className="text-3xl font-bold leading-tight"
@@ -489,7 +490,7 @@ export default function TopicPage() {
               </a>
             </div>
             {topic.description && (
-              <div className="mt-3">
+              <div className="mt-3 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:pb-8 lg:pr-2">
                 <IndustryMarkdownSlide
                   content={topic.description}
                   theme={theme}
@@ -503,7 +504,9 @@ export default function TopicPage() {
             )}
           </div>
         )}
+        </div>
 
+        <div className="lg:h-full lg:overflow-y-auto lg:pb-8">
         {/* Trail list */}
         <ol className="space-y-3">
           {topic.trailIds.map((tid) => (
@@ -588,6 +591,7 @@ export default function TopicPage() {
             )}
           </div>
         )}
+        </div>
         </main>
       </div>
     </div>
