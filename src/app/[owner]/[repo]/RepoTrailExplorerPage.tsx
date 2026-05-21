@@ -636,7 +636,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           setSelectedTrailId(null);
         }}
       />
-      <div className="flex-1 min-h-0 flex">
+      <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
         <TrailListPane
           loading={false}
           entries={state.entries}
@@ -709,7 +709,7 @@ const Header: React.FC<{
         paddingBottom: '0.5rem',
       }}
     >
-      <div className="flex items-center gap-2 min-w-0 flex-1">
+      <div className="hidden md:flex items-center gap-2 min-w-0 flex-1">
         <Link
           href="/"
           className="text-xl font-bold transition-opacity hover:opacity-80"
@@ -754,12 +754,37 @@ const Header: React.FC<{
         </Link>
       </div>
 
+      <Link
+        href={`/${owner}/${repo}`}
+        className="flex md:hidden items-center gap-2 min-w-0 flex-1 transition-opacity hover:opacity-80"
+        style={{ textDecoration: 'none' }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`https://github.com/${owner}.png?size=64`}
+          alt=""
+          width={32}
+          height={32}
+          className="rounded-full flex-shrink-0"
+          style={{ border: `1px solid ${theme.colors.border}` }}
+        />
+        <span
+          className="text-base font-semibold truncate"
+          style={{
+            fontFamily: theme.fonts.body,
+            color: theme.colors.text,
+          }}
+        >
+          {repo}
+        </span>
+      </Link>
+
       <div className="flex items-center gap-2 flex-shrink-0">
         {debtPct !== null && (
           <button
             type="button"
             onClick={onToggleDebt}
-            className="flex items-center gap-1.5 px-2.5 h-8 rounded-md text-sm font-semibold leading-none transition-all hover:opacity-90"
+            className="hidden md:flex items-center gap-1.5 px-2.5 h-8 rounded-md text-sm font-semibold leading-none transition-all hover:opacity-90"
             style={{
               fontFamily: theme.fonts.body,
               background: debtMode
@@ -790,7 +815,7 @@ const Header: React.FC<{
         )}
         <Link
           href={`/legacy/${owner}/${repo}`}
-          className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+          className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
           style={{ color: theme.colors.text }}
           title="Open legacy view"
           aria-label="Open legacy view"
@@ -801,7 +826,7 @@ const Header: React.FC<{
           href={`https://github.com/${owner}/${repo}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+          className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
           style={{ color: theme.colors.text }}
           title={`Open ${owner}/${repo} on GitHub`}
           aria-label={`Open ${owner}/${repo} on GitHub`}
@@ -875,9 +900,8 @@ const TrailListPane: React.FC<{
 
   return (
     <aside
-      className="flex flex-col shrink-0 border-r"
+      className="flex flex-col shrink-0 w-full md:w-[400px] h-[45%] md:h-auto border-t md:border-t-0 md:border-r"
       style={{
-        width: 400,
         background: theme.colors.backgroundSecondary,
         borderColor: theme.colors.border,
       }}
@@ -1500,7 +1524,7 @@ const RightPane: React.FC<{
 
   return (
     <main
-      className="flex-1 min-w-0"
+      className="flex-1 min-w-0 min-h-0"
       style={{ background: theme.colors.background }}
     >
       <FileCityTrailExplorerPanel
