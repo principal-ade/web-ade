@@ -615,6 +615,130 @@ function TrailCard({
   const state = result?.state ?? 'loading';
   const repoOwner = result?.owner;
 
+  const openRepoOwner = (e: React.MouseEvent | React.KeyboardEvent) => {
+    if (!repoOwner) return;
+    e.preventDefault();
+    e.stopPropagation();
+    window.open(
+      `https://github.com/${repoOwner}`,
+      '_blank',
+      'noopener,noreferrer',
+    );
+  };
+
+  const avatar = repoOwner ? (
+    <span
+      role="link"
+      tabIndex={0}
+      onClick={openRepoOwner}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') openRepoOwner(e);
+      }}
+      className="flex-shrink-0 cursor-pointer hover:opacity-80"
+      title={repoOwner}
+    >
+      <img
+        src={`https://github.com/${repoOwner}.png?size=96`}
+        alt={repoOwner}
+        width={48}
+        height={48}
+        className="w-12 h-12 rounded-full"
+        style={{ border: `1px solid ${theme.colors.border}` }}
+      />
+    </span>
+  ) : (
+    <span
+      className="flex-shrink-0 w-12 h-12 rounded-full"
+      style={{
+        background: theme.colors.background,
+        border: `1px solid ${theme.colors.border}`,
+      }}
+    />
+  );
+
+  const removeButton = isOwner ? (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onRemove();
+      }}
+      className="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-md transition-opacity hover:opacity-80"
+      style={{
+        color: theme.colors.textMuted,
+        border: `1px solid ${theme.colors.border}`,
+        background: 'transparent',
+      }}
+      aria-label="Remove trail from topic"
+      title="Remove trail"
+    >
+      <Trash2 className="w-4 h-4" />
+    </button>
+  ) : null;
+
+  const body = (
+    <div className="flex items-start gap-3 p-4">
+      {avatar}
+
+      <div className="flex-1 min-w-0">
+        {state === 'loading' && (
+          <div
+            className="flex items-center gap-2 text-sm"
+            style={{ color: theme.colors.textMuted }}
+          >
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            Loading trail…
+          </div>
+        )}
+
+        {state === 'ok' && result?.entry && (
+          <>
+            <div
+              className="text-base font-semibold"
+              style={{ color: theme.colors.text }}
+            >
+              {result.entry.title}
+            </div>
+            {result.repo && (
+              <div
+                className="mt-1 text-xs"
+                style={{ color: theme.colors.textMuted }}
+              >
+                {result.repo}
+              </div>
+            )}
+          </>
+        )}
+
+        {state === 'error' && (
+          <div className="text-sm">
+            <div style={{ color: theme.colors.text }}>
+              Trail{' '}
+              <code
+                className="px-1 rounded text-xs"
+                style={{ background: theme.colors.background }}
+              >
+                {trailId.slice(0, 8)}…
+              </code>{' '}
+              {result?.errorCode === ShareErrorCodes.NO_REPO_ACCESS
+                ? 'is in a private repository'
+                : 'unavailable'}
+            </div>
+            <div
+              className="mt-1 text-xs"
+              style={{ color: theme.colors.textMuted }}
+            >
+              {result?.errorMessage}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {removeButton}
+    </div>
+  );
+
   return (
     <li
       className="rounded-lg border overflow-hidden"
@@ -622,108 +746,31 @@ function TrailCard({
         background:
           theme.colors.backgroundSecondary ?? theme.colors.background,
         borderColor: theme.colors.border,
+        transition: 'background-color 0.15s, border-color 0.15s',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = `${theme.colors.primary}1A`;
+        e.currentTarget.style.borderColor = `${theme.colors.primary}66`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor =
+          theme.colors.backgroundSecondary ?? theme.colors.background;
+        e.currentTarget.style.borderColor = theme.colors.border;
       }}
     >
-      <div className="flex items-start gap-3 p-4">
-        {repoOwner ? (
-          <a
-            href={`https://github.com/${repoOwner}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-shrink-0"
-            title={repoOwner}
-          >
-            <img
-              src={`https://github.com/${repoOwner}.png?size=96`}
-              alt={repoOwner}
-              width={48}
-              height={48}
-              className="w-12 h-12 rounded-full"
-              style={{ border: `1px solid ${theme.colors.border}` }}
-            />
-          </a>
-        ) : (
-          <span
-            className="flex-shrink-0 w-12 h-12 rounded-full"
-            style={{
-              background: theme.colors.background,
-              border: `1px solid ${theme.colors.border}`,
-            }}
-          />
-        )}
-
-        <div className="flex-1 min-w-0">
-          {state === 'loading' && (
-            <div
-              className="flex items-center gap-2 text-sm"
-              style={{ color: theme.colors.textMuted }}
-            >
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Loading trail…
-            </div>
-          )}
-
-          {state === 'ok' && result?.entry && (
-            <>
-              <Link
-                href={`/trail/${trailId}`}
-                className="text-base font-semibold hover:underline"
-                style={{ color: theme.colors.text }}
-              >
-                {result.entry.title}
-              </Link>
-              {result.repo && (
-                <div
-                  className="mt-1 text-xs"
-                  style={{ color: theme.colors.textMuted }}
-                >
-                  {result.repo}
-                </div>
-              )}
-            </>
-          )}
-
-          {state === 'error' && (
-            <div className="text-sm">
-              <div style={{ color: theme.colors.text }}>
-                Trail{' '}
-                <code
-                  className="px-1 rounded text-xs"
-                  style={{ background: theme.colors.background }}
-                >
-                  {trailId.slice(0, 8)}…
-                </code>{' '}
-                {result?.errorCode === ShareErrorCodes.NO_REPO_ACCESS
-                  ? 'is in a private repository'
-                  : 'unavailable'}
-              </div>
-              <div
-                className="mt-1 text-xs"
-                style={{ color: theme.colors.textMuted }}
-              >
-                {result?.errorMessage}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {isOwner && (
-          <button
-            type="button"
-            onClick={onRemove}
-            className="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-md transition-opacity hover:opacity-80"
-            style={{
-              color: theme.colors.textMuted,
-              border: `1px solid ${theme.colors.border}`,
-              background: 'transparent',
-            }}
-            aria-label="Remove trail from topic"
-            title="Remove trail"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        )}
-      </div>
+      {state === 'ok' && result?.entry ? (
+        <a
+          href={`/trail/${trailId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block transition-opacity hover:opacity-90"
+          style={{ color: 'inherit', textDecoration: 'none' }}
+        >
+          {body}
+        </a>
+      ) : (
+        body
+      )}
     </li>
   );
 }
