@@ -66,7 +66,7 @@ export function TrailHeader({
         paddingBottom: '0.5rem',
       }}
     >
-      <div className="flex items-center gap-2 min-w-0 flex-1">
+      <div className="hidden md:flex items-center gap-2 min-w-0 flex-1">
         <Link
           href="/"
           className="text-xl font-bold transition-opacity hover:opacity-80"
@@ -111,6 +111,31 @@ export function TrailHeader({
         </Link>
       </div>
 
+      <Link
+        href={`/${owner}/${repo}`}
+        className="flex md:hidden items-center gap-2 min-w-0 flex-1 transition-opacity hover:opacity-80"
+        style={{ textDecoration: 'none' }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`https://github.com/${owner}.png?size=64`}
+          alt=""
+          width={32}
+          height={32}
+          className="rounded-full flex-shrink-0"
+          style={{ border: `1px solid ${theme.colors.border}` }}
+        />
+        <span
+          className="text-base font-semibold truncate"
+          style={{
+            fontFamily: theme.fonts.body,
+            color: theme.colors.text,
+          }}
+        >
+          {repo}
+        </span>
+      </Link>
+
       {/*
         Centered status slot. Absolute-positioned so it occupies the
         true visual center of the header rather than being squeezed
@@ -145,7 +170,7 @@ export function TrailHeader({
         <button
           type="button"
           onClick={handleCopyAgent}
-          className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
+          className="hidden md:flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
           style={{
             background: copied ? theme.colors.primary : 'transparent',
             color: copied ? theme.colors.background : theme.colors.text,
@@ -168,7 +193,7 @@ export function TrailHeader({
           href={`https://github.com/${owner}/${repo}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+          className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
           style={{ color: theme.colors.text }}
           title={`Open ${owner}/${repo} on GitHub`}
           aria-label={`Open ${owner}/${repo} on GitHub`}
