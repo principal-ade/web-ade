@@ -17,6 +17,7 @@ import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { Loader2, Plus, Save, Trash2, X } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { IndustryMarkdownSlide } from 'themed-markdown';
 import { useAuth } from '@/contexts/AuthContext';
 import { TrailHeaderLite } from './TrailHeaderLite';
 import {
@@ -38,6 +39,13 @@ interface TrailFetchResult {
   repo?: string;
   errorMessage?: string;
   errorCode?: ShareErrorCode | null;
+}
+
+interface CuratorProfile {
+  login: string;
+  id: number;
+  name: string | null;
+  avatar_url: string;
 }
 
 const COPY_FEEDBACK_MS = 1500;
@@ -68,6 +76,8 @@ export default function TopicPage() {
   const [addError, setAddError] = useState<string | null>(null);
 
   const [shareCopied, setShareCopied] = useState(false);
+
+  const [curator, setCurator] = useState<CuratorProfile | null>(null);
 
   const isOwner = !!user && !!topic && topic.createdBy.githubId === user.id;
 
@@ -160,6 +170,27 @@ export default function TopicPage() {
       })();
     }
   }, [topic, trailResults]);
+
+  // ---- Load curator profile (avatar + display name) ----------------------
+
+  useEffect(() => {
+    if (!topic) return;
+    const login = topic.createdBy.githubLogin;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/github/user-profile/${login}`);
+        if (!res.ok) return;
+        const profile = (await res.json()) as CuratorProfile;
+        if (!cancelled) setCurator(profile);
+      } catch {
+        // Non-critical — fall back to login.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [topic]);
 
   // ---- Owner mutations ----------------------------------------------------
 
@@ -315,7 +346,7 @@ export default function TopicPage() {
 
   return (
     <div
-      className="min-h-screen flex flex-col"
+      className="h-screen flex flex-col overflow-hidden"
       style={{ background: theme.colors.background, color: theme.colors.text }}
     >
       <TrailHeaderLite
@@ -326,7 +357,8 @@ export default function TopicPage() {
         onDelete={handleDeleteTopic}
       />
 
-      <main className="flex-1 px-4 md:px-8 py-8 max-w-3xl w-full mx-auto">
+      <div className="flex-1 overflow-y-auto">
+        <main className="px-4 md:px-8 py-8 max-w-3xl w-full mx-auto">
         {/* Header block: title + description, with owner edit toggle */}
         {isOwnerEditingHeader ? (
           <div
@@ -407,9 +439,14 @@ export default function TopicPage() {
             </div>
           </div>
         ) : (
-          <div className="mb-8">
+          <div className="mb-4">
             <div className="flex items-start justify-between gap-4">
-              <h1 className="text-3xl font-bold leading-tight">{topic.title}</h1>
+              <h1
+                className="text-3xl font-bold leading-tight"
+                style={{ color: theme.colors.primary }}
+              >
+                {topic.title}
+              </h1>
               {isOwner && (
                 <button
                   type="button"
@@ -421,39 +458,57 @@ export default function TopicPage() {
                 </button>
               )}
             </div>
-            {topic.description && (
-              <p
-                className="mt-3 whitespace-pre-wrap leading-relaxed"
-                style={{ color: theme.colors.textMuted }}
-              >
-                {topic.description}
-              </p>
-            )}
             <div
-              className="mt-4 text-xs"
+              className="mt-3 flex items-center gap-2 text-sm"
               style={{ color: theme.colors.textMuted }}
             >
-              Curated by{' '}
+              <span>by</span>
               <a
                 href={`https://github.com/${topic.createdBy.githubLogin}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:underline"
+                className="inline-flex items-center gap-2 hover:underline"
               >
-                @{topic.createdBy.githubLogin}
-              </a>{' '}
-              · {topic.trailIds.length}{' '}
-              {topic.trailIds.length === 1 ? 'trail' : 'trails'}
+                <img
+                  src={
+                    curator?.avatar_url ??
+                    `https://avatars.githubusercontent.com/u/${topic.createdBy.githubId}?v=4`
+                  }
+                  alt=""
+                  width={32}
+                  height={32}
+                  className="rounded-full"
+                  style={{ border: `1px solid ${theme.colors.border}` }}
+                />
+                <span
+                  className="font-medium"
+                  style={{ color: theme.colors.text }}
+                >
+                  {curator?.name || `@${topic.createdBy.githubLogin}`}
+                </span>
+              </a>
             </div>
+            {topic.description && (
+              <div className="mt-3">
+                <IndustryMarkdownSlide
+                  content={topic.description}
+                  theme={theme}
+                  slideIdPrefix={`topic-${topic.id}-description`}
+                  slideIndex={0}
+                  transparentBackground
+                  disableScroll
+                  disableBasePadding
+                />
+              </div>
+            )}
           </div>
         )}
 
         {/* Trail list */}
         <ol className="space-y-3">
-          {topic.trailIds.map((tid, idx) => (
+          {topic.trailIds.map((tid) => (
             <TrailCard
               key={tid}
-              index={idx + 1}
               trailId={tid}
               result={trailResults[tid]}
               isOwner={isOwner}
@@ -533,13 +588,13 @@ export default function TopicPage() {
             )}
           </div>
         )}
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
 
 interface TrailCardProps {
-  index: number;
   trailId: string;
   result: TrailFetchResult | undefined;
   isOwner: boolean;
@@ -547,7 +602,6 @@ interface TrailCardProps {
 }
 
 function TrailCard({
-  index,
   trailId,
   result,
   isOwner,
@@ -555,6 +609,7 @@ function TrailCard({
 }: TrailCardProps) {
   const { theme } = useTheme();
   const state = result?.state ?? 'loading';
+  const repoOwner = result?.owner;
 
   return (
     <li
@@ -566,16 +621,32 @@ function TrailCard({
       }}
     >
       <div className="flex items-start gap-3 p-4">
-        <span
-          className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold"
-          style={{
-            background: theme.colors.background,
-            color: theme.colors.textMuted,
-            border: `1px solid ${theme.colors.border}`,
-          }}
-        >
-          {index}
-        </span>
+        {repoOwner ? (
+          <a
+            href={`https://github.com/${repoOwner}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-shrink-0"
+            title={repoOwner}
+          >
+            <img
+              src={`https://github.com/${repoOwner}.png?size=96`}
+              alt={repoOwner}
+              width={48}
+              height={48}
+              className="w-12 h-12 rounded-full"
+              style={{ border: `1px solid ${theme.colors.border}` }}
+            />
+          </a>
+        ) : (
+          <span
+            className="flex-shrink-0 w-12 h-12 rounded-full"
+            style={{
+              background: theme.colors.background,
+              border: `1px solid ${theme.colors.border}`,
+            }}
+          />
+        )}
 
         <div className="flex-1 min-w-0">
           {state === 'loading' && (
@@ -597,28 +668,13 @@ function TrailCard({
               >
                 {result.entry.title}
               </Link>
-              <div
-                className="mt-1 text-xs"
-                style={{ color: theme.colors.textMuted }}
-              >
-                {result.owner && result.repo && (
-                  <span>
-                    {result.owner}/{result.repo} · {' '}
-                  </span>
-                )}
-                {result.entry.markerCount}{' '}
-                {result.entry.markerCount === 1 ? 'marker' : 'markers'}
-                {result.entry.createdBy?.githubLogin && (
-                  <span> · by @{result.entry.createdBy.githubLogin}</span>
-                )}
-              </div>
-              {result.entry.summaryPreview && (
-                <p
-                  className="mt-2 text-sm leading-relaxed line-clamp-3"
+              {result.repo && (
+                <div
+                  className="mt-1 text-xs"
                   style={{ color: theme.colors.textMuted }}
                 >
-                  {result.entry.summaryPreview}
-                </p>
+                  {result.repo}
+                </div>
               )}
             </>
           )}
