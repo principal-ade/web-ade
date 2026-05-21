@@ -3,7 +3,7 @@ import React from 'react';
 import { ThemeProvider } from '@principal-ade/industry-theme';
 import TopicPage from './page';
 import { AuthProvider } from '@/contexts/AuthContext';
-import type { TopicPayload } from '@/lib/topics/types';
+import type { TopicComment, TopicPayload } from '@/lib/topics/types';
 import type { SharedTrailIndexEntry } from '@/lib/trails/types';
 
 // ---- Fixtures ---------------------------------------------------------------
@@ -21,6 +21,11 @@ const VIEWER_USER = {
   login: 'visitor',
   email: 'visitor@example.com',
   name: 'Anon Visitor',
+};
+
+const THIRD_PARTY_AUTHOR = {
+  githubId: 776655,
+  githubLogin: 'curious-dev',
 };
 
 const TOPIC_ID = 'topic-fixture-1';
@@ -71,6 +76,64 @@ interface MockState {
     | { status: 'error'; httpStatus: number; error: string; code: string }
     | { status: 'pending' }
   >;
+  comments?: TopicComment[];
+  /** Optional override so a story can force unauth on comment writes. */
+  commentsWriteStatus?: number;
+  commentsWriteError?: { error: string; code: string };
+}
+
+function makeComment(
+  overrides: Partial<TopicComment> & { id: string; body: string },
+): TopicComment {
+  const now = new Date().toISOString();
+  return {
+    topicId: TOPIC_ID,
+    createdAt: now,
+    updatedAt: now,
+    author: THIRD_PARTY_AUTHOR,
+    ...overrides,
+  };
+}
+
+let mockCommentSeq = 1;
+function nextCommentId(): string {
+  return `mock-comment-${Date.now()}-${mockCommentSeq++}`;
+}
+
+/** Fixture: a short discussion mixing the curator with a third-party commenter. */
+function seedDiscussion(): TopicComment[] {
+  const day = 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  return [
+    makeComment({
+      id: 'seed-1',
+      body: 'Nice side-by-side. The Tauri version sidesteps the renderer entirely, right? Curious how cancellation flows back into the Rust task.',
+      author: THIRD_PARTY_AUTHOR,
+      createdAt: new Date(now - 3 * day).toISOString(),
+      updatedAt: new Date(now - 3 * day).toISOString(),
+    }),
+    makeComment({
+      id: 'seed-2',
+      body: 'Yeah — `trail-c` covers exactly that. The renderer listens for a `tokens.refreshed` event and treats anything else as a quiet retry tick.',
+      author: { githubId: OWNER_USER.id, githubLogin: OWNER_USER.login },
+      createdAt: new Date(now - 3 * day + 2 * 60 * 60 * 1000).toISOString(),
+      updatedAt: new Date(now - 3 * day + 2 * 60 * 60 * 1000).toISOString(),
+    }),
+    makeComment({
+      id: 'seed-3',
+      body: 'Heads up — the **electron** trail still references the old `tokenStatus.expiresIn` field. I think we renamed that.',
+      author: { githubId: 998877, githubLogin: 'eagle-eyed' },
+      createdAt: new Date(now - 12 * 60 * 60 * 1000).toISOString(),
+      updatedAt: new Date(now - 11 * 60 * 60 * 1000).toISOString(),
+    }),
+    makeComment({
+      id: 'seed-4',
+      body: 'Quick clarification on the proactive-refresh window — is the 5 min hard-coded or env-driven anywhere?',
+      author: THIRD_PARTY_AUTHOR,
+      createdAt: new Date(now - 20 * 60 * 1000).toISOString(),
+      updatedAt: new Date(now - 20 * 60 * 1000).toISOString(),
+    }),
+  ];
 }
 
 // ---- fetch mock harness -----------------------------------------------------
@@ -173,6 +236,74 @@ function installFetchMock(state: MockState) {
         updatedAt: new Date().toISOString(),
       };
       return jsonResponse({ topic: state.topic });
+    }
+
+    const commentsListMatch = url.match(
+      /\/api\/topics\/by-id\/([^/]+)\/comments$/,
+    );
+    if (commentsListMatch) {
+      if (method === 'GET') {
+        const list = state.comments ?? [];
+        return jsonResponse({
+          topicId: commentsListMatch[1],
+          updatedAt: new Date().toISOString(),
+          comments: list,
+        });
+      }
+      if (method === 'POST') {
+        if (state.commentsWriteError || !state.user) {
+          return jsonResponse(
+            state.commentsWriteError ?? {
+              error: 'Not authenticated',
+              code: 'NOT_AUTHENTICATED',
+            },
+            state.commentsWriteStatus ?? 401,
+          );
+        }
+        const body = init?.body ? JSON.parse(init.body as string) : {};
+        const newComment = makeComment({
+          id: nextCommentId(),
+          body: String(body.body ?? ''),
+          author: {
+            githubId: state.user.id,
+            githubLogin: state.user.login,
+          },
+        });
+        state.comments = [...(state.comments ?? []), newComment];
+        return jsonResponse({ comment: newComment }, 201);
+      }
+    }
+
+    const commentByIdMatch = url.match(
+      /\/api\/topics\/by-id\/([^/]+)\/comments\/([^/]+)$/,
+    );
+    if (commentByIdMatch) {
+      const commentId = commentByIdMatch[2]!;
+      if (method === 'PATCH') {
+        const body = init?.body ? JSON.parse(init.body as string) : {};
+        const existing = (state.comments ?? []).find((c) => c.id === commentId);
+        if (!existing) {
+          return jsonResponse(
+            { error: 'Comment not found', code: 'COMMENT_NOT_FOUND' },
+            404,
+          );
+        }
+        const updated: TopicComment = {
+          ...existing,
+          body: String(body.body ?? existing.body),
+          updatedAt: new Date().toISOString(),
+        };
+        state.comments = (state.comments ?? []).map((c) =>
+          c.id === commentId ? updated : c,
+        );
+        return jsonResponse({ comment: updated });
+      }
+      if (method === 'DELETE') {
+        state.comments = (state.comments ?? []).filter(
+          (c) => c.id !== commentId,
+        );
+        return new Response(null, { status: 204 });
+      }
     }
 
     const trailMatch = url.match(/\/api\/trails\/by-id\/([^/?]+)$/);
@@ -290,6 +421,7 @@ export const PublicViewer: Story = {
           repo: 'desktop-app',
         },
       },
+      comments: seedDiscussion(),
     };
     return (
       <StoryShell state={state}>
@@ -329,6 +461,7 @@ export const OwnerView: Story = {
           repo: 'desktop-app',
         },
       },
+      comments: seedDiscussion(),
     };
     return (
       <StoryShell state={state}>
@@ -364,6 +497,16 @@ export const SignedInVisitor: Story = {
           repo: 'desktop-app',
         },
       },
+      comments: [
+        ...seedDiscussion(),
+        makeComment({
+          id: 'seed-viewer',
+          body: "Adding one of mine so I can demo edit/delete — only this row should show mutate controls for the signed-in visitor.",
+          author: { githubId: VIEWER_USER.id, githubLogin: VIEWER_USER.login },
+          createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+          updatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+        }),
+      ],
     };
     return (
       <StoryShell state={state}>
@@ -495,5 +638,91 @@ export const LoadingTopic: Story = {
     };
     void wrappedState;
     return <Wrapper />;
+  },
+};
+
+/**
+ * Active discussion — owner is viewing a thread that has accumulated several
+ * comments across multiple authors. Demonstrates the owner moderation
+ * affordance (every row gets edit/delete), relative-timestamp variety, and
+ * markdown rendering inside a comment body.
+ */
+export const ActiveDiscussion: Story = {
+  render: () => {
+    const day = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const state: MockState = {
+      topic: makeTopic(),
+      user: OWNER_USER,
+      trails: {
+        'trail-a': {
+          status: 'ok',
+          entry: makeTrailEntry('trail-a', 'Token refresh in web-ade'),
+          owner: 'principal-ade',
+          repo: 'web-ade',
+        },
+        'trail-b': {
+          status: 'ok',
+          entry: makeTrailEntry('trail-b', 'Token refresh in electron-app'),
+          owner: 'principal-ade',
+          repo: 'electron-app',
+        },
+        'trail-c': {
+          status: 'ok',
+          entry: makeTrailEntry('trail-c', 'Token refresh in desktop-app'),
+          owner: 'principal-ade',
+          repo: 'desktop-app',
+        },
+      },
+      comments: [
+        makeComment({
+          id: 'ad-1',
+          body: 'Kicking this off — does anyone else find the 60s tick a little aggressive given how rare actual expiries are?',
+          author: { githubId: 222111, githubLogin: 'opener' },
+          createdAt: new Date(now - 9 * day).toISOString(),
+          updatedAt: new Date(now - 9 * day).toISOString(),
+        }),
+        makeComment({
+          id: 'ad-2',
+          body: "It's mainly a clock-skew hedge. We've seen drifts up to ~30s in the wild; halving the tick made the refresh window a non-event.\n\n```ts\nsetInterval(checkTokenStatus, 60_000);\n```",
+          author: { githubId: OWNER_USER.id, githubLogin: OWNER_USER.login },
+          createdAt: new Date(now - 8 * day - 4 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date(now - 8 * day - 4 * 60 * 60 * 1000).toISOString(),
+        }),
+        makeComment({
+          id: 'ad-3',
+          body: '> halving the tick made the refresh window a non-event\n\nFair. The Tauri side actually leans on a 30s tick because the native clock can be more reliable — worth calling out in the trail.',
+          author: THIRD_PARTY_AUTHOR,
+          createdAt: new Date(now - 5 * day).toISOString(),
+          updatedAt: new Date(now - 5 * day + 30 * 60 * 1000).toISOString(),
+        }),
+        makeComment({
+          id: 'ad-4',
+          body: 'Edge case worth checking: what happens if `fetchUser` succeeds but `tokenStatus` 401s in the same tick?',
+          author: { githubId: 998877, githubLogin: 'eagle-eyed' },
+          createdAt: new Date(now - 3 * day).toISOString(),
+          updatedAt: new Date(now - 3 * day).toISOString(),
+        }),
+        makeComment({
+          id: 'ad-5',
+          body: "Logged that as follow-up on the trail. Treating it as a 'refresh now and retry once' path.",
+          author: { githubId: OWNER_USER.id, githubLogin: OWNER_USER.login },
+          createdAt: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
+        }),
+        makeComment({
+          id: 'ad-6',
+          body: 'Just hit refresh — should appear at "just now".',
+          author: THIRD_PARTY_AUTHOR,
+          createdAt: new Date(now - 10 * 1000).toISOString(),
+          updatedAt: new Date(now - 10 * 1000).toISOString(),
+        }),
+      ],
+    };
+    return (
+      <StoryShell state={state}>
+        <TopicPage />
+      </StoryShell>
+    );
   },
 };

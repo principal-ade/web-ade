@@ -81,6 +81,10 @@ export const TopicErrorCodes = {
   TRAIL_NOT_FOUND: 'TRAIL_NOT_FOUND',
   TRAIL_ALREADY_ADDED: 'TRAIL_ALREADY_ADDED',
   TOO_MANY_TRAILS: 'TOO_MANY_TRAILS',
+  COMMENT_NOT_FOUND: 'COMMENT_NOT_FOUND',
+  COMMENT_FORBIDDEN: 'COMMENT_FORBIDDEN',
+  COMMENT_TOO_LONG: 'COMMENT_TOO_LONG',
+  COMMENT_LIMIT_REACHED: 'COMMENT_LIMIT_REACHED',
   ETAG_CONFLICT: 'ETAG_CONFLICT',
   MAX_RETRIES: 'MAX_RETRIES',
   S3_ERROR: 'S3_ERROR',
@@ -88,3 +92,45 @@ export const TopicErrorCodes = {
 
 export type TopicErrorCode =
   (typeof TopicErrorCodes)[keyof typeof TopicErrorCodes];
+
+// ============================================================================
+// Comments — flat thread attached to a topic. See docs/topic-comments.md.
+// Comments are stored as a single container object per topic at
+// `topics/_comments/{topicId}.json`; mutations are ETag-locked the same way
+// the topic record itself is.
+// ============================================================================
+
+export interface TopicComment {
+  id: string;
+  topicId: string;
+  body: string;
+  author: { githubId: number; githubLogin: string };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TopicCommentsContainer {
+  version: 1;
+  topicId: string;
+  /** Bumped on every container mutation — cheap "any new comments?" probe. */
+  updatedAt: string;
+  comments: TopicComment[];
+}
+
+export interface CreateCommentRequest {
+  body: string;
+}
+
+export interface UpdateCommentRequest {
+  body: string;
+}
+
+export interface ListCommentsResponse {
+  topicId: string;
+  updatedAt: string;
+  comments: TopicComment[];
+}
+
+export interface CreateCommentResponse {
+  comment: TopicComment;
+}

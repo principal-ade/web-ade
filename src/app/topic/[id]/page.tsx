@@ -19,6 +19,7 @@ import { Loader2, Plus, Save, Trash2, X } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
 import { useAuth } from '@/contexts/AuthContext';
+import { CommentThread } from './CommentThread';
 import { TrailHeaderLite } from './TrailHeaderLite';
 import {
   TopicErrorCodes,
@@ -590,6 +591,11 @@ export default function TopicPage() {
             )}
           </div>
         )}
+
+        <CommentThread
+          topicId={topic.id}
+          topicOwnerGithubId={topic.createdBy.githubId}
+        />
         </div>
         </main>
       </div>

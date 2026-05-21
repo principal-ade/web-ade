@@ -15,6 +15,7 @@ import {
   updateTopic,
   upsertTopicInUserIndex,
 } from '@/lib/topics/s3-storage';
+import { deleteCommentsContainer } from '@/lib/topics/comments-storage';
 import { validateUpdateRequest } from '@/lib/topics/validation';
 import {
   TopicErrorCodes,
@@ -132,6 +133,19 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
 
     await deleteTopic(id);
     await removeTopicFromUserIndex(guard.topic.createdBy.githubId, id);
+    // Best-effort: a missing container is a no-op; a failure here logs but
+    // shouldn't fail the topic-delete the user just performed.
+    try {
+      await deleteCommentsContainer(id);
+    } catch (commentsError) {
+      console.error('[Topics] Tear down comments container failed:', {
+        id,
+        error:
+          commentsError instanceof Error
+            ? commentsError.message
+            : String(commentsError),
+      });
+    }
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     return errorResponse(error, 'DELETE');

@@ -29,6 +29,9 @@ export const MAX_TRAILS_PER_TOPIC = 50;
 export const MAX_TITLE_CHARS = 200;
 export const MAX_DESCRIPTION_CHARS = 8_000;
 
+export const MAX_COMMENT_CHARS = 8_000;
+export const MAX_COMMENTS_PER_TOPIC = 500;
+
 export const PAYLOAD_CACHE_CONTROL = 'max-age=60';
 
 export const MAX_ETAG_RETRIES = 3;

@@ -1,4 +1,5 @@
 import {
+  MAX_COMMENT_CHARS,
   MAX_DESCRIPTION_CHARS,
   MAX_TITLE_CHARS,
   MAX_TRAILS_PER_TOPIC,
@@ -86,6 +87,46 @@ export function validateAddTrailRequest(body: unknown): string {
   const { trailId } = body;
   if (!isUuid(trailId)) invalid('trailId must be a uuid');
   return trailId;
+}
+
+/**
+ * Validate a comment body. Comments are markdown but accept plain text;
+ * leading/trailing whitespace is trimmed and an empty body is rejected.
+ * Over-length bodies surface as COMMENT_TOO_LONG so the route can map a
+ * dedicated HTTP code, rather than the generic INVALID_PAYLOAD path.
+ */
+export function validateCommentBody(value: unknown): string {
+  if (typeof value !== 'string')
+    throw new TopicShareError(
+      'body is required',
+      400,
+      TopicErrorCodes.INVALID_PAYLOAD,
+    );
+  const trimmed = value.trim();
+  if (trimmed.length === 0)
+    throw new TopicShareError(
+      'body cannot be empty',
+      400,
+      TopicErrorCodes.INVALID_PAYLOAD,
+    );
+  if (trimmed.length > MAX_COMMENT_CHARS)
+    throw new TopicShareError(
+      `body exceeds ${MAX_COMMENT_CHARS} chars`,
+      413,
+      TopicErrorCodes.COMMENT_TOO_LONG,
+    );
+  return trimmed;
+}
+
+export function validateCreateCommentRequest(body: unknown): { body: string } {
+  if (!isPlainObject(body)) invalid('request body must be an object');
+  return { body: validateCommentBody(body.body) };
+}
+
+export function validateUpdateCommentRequest(body: unknown): { body: string } {
+  if (!isPlainObject(body)) invalid('request body must be an object');
+  if (!('body' in body)) invalid('no fields to update');
+  return { body: validateCommentBody(body.body) };
 }
 
 /**
