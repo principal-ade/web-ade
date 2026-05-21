@@ -490,15 +490,14 @@ export default function TopicPage() {
               </a>
             </div>
             {topic.description && (
-              <div className="mt-3 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:pb-8 lg:pr-2">
+              <div className="mt-3 lg:flex-1 lg:min-h-0">
                 <IndustryMarkdownSlide
                   content={topic.description}
                   theme={theme}
                   slideIdPrefix={`topic-${topic.id}-description`}
                   slideIndex={0}
                   transparentBackground
-                  disableScroll
-                  disableBasePadding
+                  disableBasePadding={{ horizontal: true }}
                 />
               </div>
             )}
