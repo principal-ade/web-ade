@@ -117,15 +117,15 @@ export default function HomePage() {
   const diagramBorderActive = diagramHovered;
 
   const STEP_COUNT = 13;
-  const STEP_INTERVAL = 220;
-  const STEP_START = 300;
+  const STEP_INTERVAL = 110;
+  const STEP_START = 200;
 
   const FILE_CITY_BLURB_LINE_1 = 'A 2D view of a file tree where each square is a file.';
   const FILE_CITY_BLURB_LINE_2 = 'This is the heart of code trails.';
   const FILE_CITY_TOTAL_CHARS = FILE_CITY_BLURB_LINE_1.length + FILE_CITY_BLURB_LINE_2.length;
-  const FILE_CITY_TYPE_INTERVAL = 28;
-  const FILE_CITY_TYPE_DELAY = 900;
-  const FILE_CITY_LINE_PAUSE = 600;
+  const FILE_CITY_TYPE_INTERVAL = 14;
+  const FILE_CITY_TYPE_DELAY = 500;
+  const FILE_CITY_LINE_PAUSE = 350;
   const [fileCityTyped, setFileCityTyped] = useState(0);
   const fileCityTypingDone = fileCityTyped >= FILE_CITY_TOTAL_CHARS;
 
@@ -235,10 +235,10 @@ export default function HomePage() {
       setTimeout(() => setStepsRevealed(i + 1), STEP_START + i * STEP_INTERVAL),
     );
     const stepsDoneAt = STEP_START + STEP_COUNT * STEP_INTERVAL;
-    const diagramTimer = setTimeout(() => setDiagramRevealed(true), stepsDoneAt + 200);
-    const titleTimer = setTimeout(() => setRevealStep(1), stepsDoneAt + 1500);
-    const subtitleTimer = setTimeout(() => setRevealStep(2), stepsDoneAt + 2500);
-    const exploreTimer = setTimeout(() => setRevealStep(3), stepsDoneAt + 3500);
+    const titleTimer = setTimeout(() => setRevealStep(1), stepsDoneAt + 500);
+    const subtitleTimer = setTimeout(() => setRevealStep(2), stepsDoneAt + 1200);
+    const diagramTimer = setTimeout(() => setDiagramRevealed(true), stepsDoneAt + 2000);
+    const exploreTimer = setTimeout(() => setRevealStep(3), stepsDoneAt + 2200);
     return () => {
       stepTimers.forEach(clearTimeout);
       clearTimeout(diagramTimer);
@@ -275,10 +275,26 @@ export default function HomePage() {
             </h1>
           </Link>
           <div className="flex items-center gap-3">
+          {view !== 'title' && (
+            <button
+              type="button"
+              onClick={resetToTitle}
+              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors hover:opacity-80"
+              style={{
+                border: `1px solid color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
+                color: theme.colors.textMuted,
+                background: `color-mix(in srgb, ${theme.colors.surface} 60%, transparent)`,
+              }}
+              aria-label="Exit"
+            >
+              <X size={14} />
+              <span className="hidden sm:inline">Exit</span>
+            </button>
+          )}
           <div
             role="search"
             aria-label="Open a GitHub repository"
-            className={`flex items-center gap-2 rounded-md px-3 py-1.5 transition-colors ${
+            className={`hidden sm:flex items-center gap-2 rounded-md px-3 py-1.5 transition-colors ${
               flashLabel ? 'repo-url-flash' : ''
             }`}
             style={{
@@ -331,7 +347,7 @@ export default function HomePage() {
               }}
             />
           </div>
-            <UserAvatarMenu />
+            <UserAvatarMenu hideLoginButton={view !== 'title'} />
           </div>
         </div>
       </header>
@@ -349,7 +365,7 @@ export default function HomePage() {
                 aria-hidden={view !== 'title' || fading}
               >
                 <div
-                  className="flex items-center justify-center lg:justify-start gap-7 mb-6 h-12"
+                  className="flex items-center justify-center lg:justify-start gap-3 sm:gap-5 lg:gap-7 mb-6 h-10 sm:h-12 [&_svg]:!w-3 [&_svg]:!h-6 sm:[&_svg]:!w-[14px] sm:[&_svg]:!h-7 lg:[&_svg]:!w-[18px] lg:[&_svg]:!h-9"
                   aria-hidden
                 >
                   {Array.from({ length: STEP_COUNT }).map((_, i) => {
@@ -431,28 +447,15 @@ export default function HomePage() {
 
               {/* File-city explanation. */}
               <div
-                className={`absolute inset-x-0 bottom-0 top-32 transition-opacity duration-700 ${view === 'fileCity' && !fading ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                className={`absolute inset-x-0 bottom-0 top-4 lg:top-32 transition-opacity duration-700 ${view === 'fileCity' && !fading ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 aria-hidden={view !== 'fileCity' || fading}
               >
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <h2
-                    className="text-3xl md:text-4xl font-semibold tracking-tight"
-                    style={{ color: theme.colors.primary }}
-                  >
-                    What&rsquo;s a File City?
-                  </h2>
-                  <button
-                    onClick={() => goToView('title')}
-                    className="rounded-md p-1.5 transition-colors hover:opacity-80"
-                    style={{
-                      border: `1px solid color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
-                      color: theme.colors.textMuted,
-                    }}
-                    aria-label="Close explanation"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
+                <h2
+                  className="text-3xl md:text-4xl font-semibold tracking-tight mb-4"
+                  style={{ color: theme.colors.primary }}
+                >
+                  What&rsquo;s a File City?
+                </h2>
                 <div
                   className="text-base md:text-lg leading-relaxed mb-6"
                   style={{ color: theme.colors.text }}
@@ -519,28 +522,15 @@ export default function HomePage() {
 
               {/* Code-trail explanation. */}
               <div
-                className={`absolute inset-x-0 bottom-0 top-32 transition-opacity duration-700 ${view === 'codeTrail' && !fading ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                className={`absolute inset-x-0 bottom-0 top-4 lg:top-32 transition-opacity duration-700 ${view === 'codeTrail' && !fading ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 aria-hidden={view !== 'codeTrail' || fading}
               >
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <h2
-                    className="text-3xl md:text-4xl font-semibold tracking-tight"
-                    style={{ color: theme.colors.primary }}
-                  >
-                    What is a Code Trail?
-                  </h2>
-                  <button
-                    onClick={() => goToView('title')}
-                    className="rounded-md p-1.5 transition-colors hover:opacity-80"
-                    style={{
-                      border: `1px solid color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
-                      color: theme.colors.textMuted,
-                    }}
-                    aria-label="Close explanation"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
+                <h2
+                  className="text-3xl md:text-4xl font-semibold tracking-tight mb-4"
+                  style={{ color: theme.colors.primary }}
+                >
+                  What is a Code Trail?
+                </h2>
                 <div
                   className="text-base md:text-lg leading-relaxed mb-6"
                   style={{ color: theme.colors.text }}
@@ -584,28 +574,15 @@ export default function HomePage() {
 
               {/* Why-trails / Mark Twain quote — sign-off step. */}
               <div
-                className={`absolute inset-x-0 bottom-0 top-32 transition-opacity duration-700 ${view === 'whyTrails' && !fading ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                className={`absolute inset-x-0 bottom-0 top-4 lg:top-32 transition-opacity duration-700 ${view === 'whyTrails' && !fading ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 aria-hidden={view !== 'whyTrails' || fading}
               >
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <h2
-                    className="text-3xl md:text-4xl font-semibold tracking-tight"
-                    style={{ color: theme.colors.primary }}
-                  >
-                    Why do I need Code Trails?
-                  </h2>
-                  <button
-                    onClick={() => goToView('title')}
-                    className="rounded-md p-1.5 transition-colors hover:opacity-80"
-                    style={{
-                      border: `1px solid color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
-                      color: theme.colors.textMuted,
-                    }}
-                    aria-label="Close explanation"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
+                <h2
+                  className="text-3xl md:text-4xl font-semibold tracking-tight mb-4"
+                  style={{ color: theme.colors.primary }}
+                >
+                  Why do I need Code Trails?
+                </h2>
                 <div
                   className="text-base md:text-lg leading-relaxed mb-6"
                   style={{ color: theme.colors.text }}
@@ -660,100 +637,29 @@ export default function HomePage() {
                     </p>
                   )}
                 </div>
-                <p
-                  className="text-sm md:text-base mb-3 transition-opacity duration-500 delay-700"
-                  style={{
-                    color: theme.colors.textMuted,
-                    opacity: whyTypingDone ? 1 : 0,
-                  }}
-                  aria-hidden={!whyTypingDone}
-                >
-                  Sign off on this trail to continue.
-                </p>
-                <div
-                  className="flex flex-col sm:flex-row sm:items-center gap-3 text-base transition-opacity duration-500 delay-700"
-                  style={{
-                    opacity: whyTypingDone ? 1 : 0,
-                    pointerEvents: whyTypingDone ? 'auto' : 'none',
-                  }}
-                  aria-hidden={!whyTypingDone}
-                >
-                  <button
-                    type="button"
-                    onClick={() => handleStamp('LGTM')}
-                    disabled={stampAnimating || stamp !== null || !whyTypingDone}
-                    tabIndex={whyTypingDone ? 0 : -1}
-                    className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-md font-mono font-semibold tracking-wider transition-opacity hover:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed"
-                    style={{
-                      background: theme.colors.success,
-                      color: theme.colors.background,
-                      letterSpacing: '0.12em',
-                    }}
-                    aria-label="Sign off with LGTM"
-                  >
-                    LGTM
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleStamp('ACK')}
-                    disabled={stampAnimating || stamp !== null || !whyTypingDone}
-                    tabIndex={whyTypingDone ? 0 : -1}
-                    className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-md font-mono font-semibold tracking-wider transition-colors hover:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed"
-                    style={{
-                      background: `color-mix(in srgb, ${theme.colors.success} 16%, transparent)`,
-                      border: `1px solid color-mix(in srgb, ${theme.colors.success} 60%, transparent)`,
-                      color: theme.colors.success,
-                      letterSpacing: '0.12em',
-                    }}
-                    aria-label="Acknowledge with ACK"
-                  >
-                    ACK
-                  </button>
-                </div>
               </div>
 
               {/* Stamped — backlog / create-your-own follow-ups. */}
               <div
-                className={`absolute inset-x-0 bottom-0 top-32 transition-opacity duration-700 ${view === 'stamped' && !fading ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                className={`absolute inset-x-0 bottom-0 top-4 lg:top-32 transition-opacity duration-700 ${view === 'stamped' && !fading ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 aria-hidden={view !== 'stamped' || fading}
               >
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <h2
-                    className="text-3xl md:text-4xl font-semibold tracking-tight"
-                    style={{ color: theme.colors.primary }}
-                  >
-                    Trail signed.
-                  </h2>
-                  <button
-                    onClick={resetToTitle}
-                    className="rounded-md p-1.5 transition-colors hover:opacity-80"
-                    style={{
-                      border: `1px solid color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
-                      color: theme.colors.textMuted,
-                    }}
-                    aria-label="Close"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-                <p
-                  className="text-base md:text-lg leading-relaxed mb-6"
-                  style={{ color: theme.colors.text }}
+                <h2
+                  className="text-3xl md:text-4xl font-semibold tracking-tight mb-6"
+                  style={{ color: theme.colors.primary }}
                 >
-                  Now take your own walk — explore the backlog or stamp your codebase with a new trail.
-                </p>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-x-3 gap-y-2 text-base">
+                  Trail Stamped.
+                </h2>
+                <div className="flex flex-col items-center lg:items-start sm:flex-row sm:justify-center lg:justify-start sm:items-center sm:flex-wrap gap-x-3 gap-y-2 text-base">
                   <a
-                    href="https://app.principal-ade.com/trail/backlog-task-create-flow"
-                    target="_blank"
-                    rel="noreferrer"
+                    href="https://app.principal-ade.com/topic/175c9938-d95a-4c3f-87a6-087583e4620a"
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md font-medium transition-opacity hover:opacity-80"
                     style={{
                       background: theme.colors.primary,
                       color: theme.colors.background,
                     }}
                   >
-                    Take a stroll through Backlog.md
+                    View Trails
                   </a>
                   <span style={{ color: theme.colors.textMuted }}>or</span>
                   <button
@@ -766,13 +672,13 @@ export default function HomePage() {
                       color: theme.colors.primary,
                     }}
                   >
-                    create your own trail
+                    Create your own trail
                   </button>
                 </div>
               </div>
             </div>
 
-            <div className="relative">
+            <div className="relative w-full max-w-xs sm:max-w-sm mx-auto lg:max-w-none">
               <button
                 type="button"
                 onClick={() => {
@@ -814,6 +720,85 @@ export default function HomePage() {
                   />
                 </div>
               </button>
+
+              {view === 'title' && (
+                <div
+                  className="mt-4 flex justify-center transition-opacity duration-700 ease-out"
+                  style={{
+                    opacity: revealStep >= 3 ? 1 : 0,
+                    pointerEvents: revealStep >= 3 ? 'auto' : 'none',
+                  }}
+                  aria-hidden={revealStep < 3}
+                >
+                  <a
+                    href="https://app.principal-ade.com/topic/175c9938-d95a-4c3f-87a6-087583e4620a"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-opacity hover:opacity-80"
+                    style={{
+                      background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
+                      color: theme.colors.primary,
+                    }}
+                    tabIndex={revealStep >= 3 ? 0 : -1}
+                  >
+                    View Trails
+                  </a>
+                </div>
+              )}
+
+              {view === 'whyTrails' && (
+                <div className="mt-4">
+                  <p
+                    className="text-sm md:text-base mb-3 text-center transition-opacity duration-500"
+                    style={{
+                      color: theme.colors.textMuted,
+                      opacity: whyTypingDone ? 1 : 0,
+                    }}
+                    aria-hidden={!whyTypingDone}
+                  >
+                    Sign off on this trail to continue.
+                  </p>
+                  <div
+                    className="flex flex-col items-center sm:flex-row sm:justify-center sm:items-center gap-3 text-base transition-opacity duration-500"
+                    style={{
+                      opacity: whyTypingDone ? 1 : 0,
+                      pointerEvents: whyTypingDone ? 'auto' : 'none',
+                    }}
+                    aria-hidden={!whyTypingDone}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleStamp('LGTM')}
+                      disabled={stampAnimating || stamp !== null || !whyTypingDone}
+                      tabIndex={whyTypingDone ? 0 : -1}
+                      className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-md font-mono font-semibold tracking-wider transition-opacity hover:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed"
+                      style={{
+                        background: theme.colors.success,
+                        color: theme.colors.background,
+                        letterSpacing: '0.12em',
+                      }}
+                      aria-label="Sign off with LGTM"
+                    >
+                      LGTM
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStamp('ACK')}
+                      disabled={stampAnimating || stamp !== null || !whyTypingDone}
+                      tabIndex={whyTypingDone ? 0 : -1}
+                      className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-md font-mono font-semibold tracking-wider transition-colors hover:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed"
+                      style={{
+                        background: `color-mix(in srgb, ${theme.colors.success} 16%, transparent)`,
+                        border: `1px solid color-mix(in srgb, ${theme.colors.success} 60%, transparent)`,
+                        color: theme.colors.success,
+                        letterSpacing: '0.12em',
+                      }}
+                      aria-label="Acknowledge with ACK"
+                    >
+                      ACK
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Sign-off stamp lands on the empty placeholder slot in
                   the stamp row, so the visitor's signature visibly joins

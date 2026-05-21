@@ -15,9 +15,9 @@ interface UserOrganization {
   description: string | null;
 }
 
-export function UserAvatarMenu() {
+export function UserAvatarMenu({ hideLoginButton = false }: { hideLoginButton?: boolean } = {}) {
   const { theme } = useTheme();
-  const { user, isAuthenticated, isLoading, login, logout } = useAuth();
+  const { user, isAuthenticated, login, logout } = useAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [organizations, setOrganizations] = useState<UserOrganization[]>([]);
   const [orgsLoading, setOrgsLoading] = useState(false);
@@ -62,15 +62,8 @@ export function UserAvatarMenu() {
     fetchOrganizations();
   }, [userMenuOpen, isAuthenticated, organizations.length]);
 
-  if (isLoading) {
-    return (
-      <div className="text-sm" style={{ color: theme.colors.textMuted }}>
-        Loading...
-      </div>
-    );
-  }
-
   if (!isAuthenticated || !user) {
+    if (hideLoginButton) return null;
     return (
       <button
         onClick={() => login()}

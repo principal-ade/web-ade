@@ -7,7 +7,7 @@
  */
 
 import Link from 'next/link';
-import { Check, Link2, Trash2 } from 'lucide-react';
+import { Check, Share2, Trash2 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 
 interface TrailHeaderLiteProps {
@@ -73,7 +73,7 @@ export function TrailHeaderLite({
           }}
           aria-label="Copy share link"
         >
-          {shareCopied ? <Check className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
+          {shareCopied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
           <span>{shareCopied ? 'Copied' : 'Share'}</span>
         </button>
 
