@@ -123,9 +123,9 @@ export default function HomePage() {
   const FILE_CITY_BLURB_LINE_1 = 'A 2D view of a file tree where each square is a file.';
   const FILE_CITY_BLURB_LINE_2 = 'This is the heart of code trails.';
   const FILE_CITY_TOTAL_CHARS = FILE_CITY_BLURB_LINE_1.length + FILE_CITY_BLURB_LINE_2.length;
-  const FILE_CITY_TYPE_INTERVAL = 14;
-  const FILE_CITY_TYPE_DELAY = 500;
-  const FILE_CITY_LINE_PAUSE = 350;
+  const FILE_CITY_TYPE_INTERVAL = 10;
+  const FILE_CITY_TYPE_DELAY = 120;
+  const FILE_CITY_LINE_PAUSE = 180;
   const [fileCityTyped, setFileCityTyped] = useState(0);
   const fileCityTypingDone = fileCityTyped >= FILE_CITY_TOTAL_CHARS;
 
@@ -721,29 +721,32 @@ export default function HomePage() {
                 </div>
               </button>
 
-              {view === 'title' && (
-                <div
-                  className="mt-4 flex justify-center transition-opacity duration-700 ease-out"
-                  style={{
-                    opacity: revealStep >= 3 ? 1 : 0,
-                    pointerEvents: revealStep >= 3 ? 'auto' : 'none',
-                  }}
-                  aria-hidden={revealStep < 3}
-                >
-                  <a
-                    href="https://app.principal-ade.com/topic/175c9938-d95a-4c3f-87a6-087583e4620a"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-opacity hover:opacity-80"
+              {(view === 'title' || view === 'fileCity' || view === 'codeTrail') && (() => {
+                const visible = view !== 'title' || revealStep >= 3;
+                return (
+                  <div
+                    className="mt-4 flex justify-center transition-opacity duration-700 ease-out"
                     style={{
-                      background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
-                      border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
-                      color: theme.colors.primary,
+                      opacity: visible ? 1 : 0,
+                      pointerEvents: visible ? 'auto' : 'none',
                     }}
-                    tabIndex={revealStep >= 3 ? 0 : -1}
+                    aria-hidden={!visible}
                   >
-                    View Trails
-                  </a>
-                </div>
-              )}
+                    <a
+                      href="https://app.principal-ade.com/topic/175c9938-d95a-4c3f-87a6-087583e4620a"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-opacity hover:opacity-80"
+                      style={{
+                        background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
+                        border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
+                        color: theme.colors.primary,
+                      }}
+                      tabIndex={visible ? 0 : -1}
+                    >
+                      View Trails
+                    </a>
+                  </div>
+                );
+              })()}
 
               {view === 'whyTrails' && (
                 <div className="mt-4">
