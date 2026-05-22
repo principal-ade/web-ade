@@ -7,13 +7,15 @@
  */
 
 import Link from 'next/link';
-import { Check, Share2, Trash2 } from 'lucide-react';
+import { Bot, Check, Plus, Share2, Trash2 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 
 interface TrailHeaderLiteProps {
   topicId: string;
   shareCopied: boolean;
   onShare: () => void;
+  onContribute: () => void;
+  onBriefAgent: () => void;
   isOwner: boolean;
   onDelete: () => void;
 }
@@ -21,6 +23,8 @@ interface TrailHeaderLiteProps {
 export function TrailHeaderLite({
   shareCopied,
   onShare,
+  onContribute,
+  onBriefAgent,
   isOwner,
   onDelete,
 }: TrailHeaderLiteProps) {
@@ -60,6 +64,42 @@ export function TrailHeaderLite({
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
+        <button
+          type="button"
+          onClick={onContribute}
+          className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
+          style={{
+            background: 'transparent',
+            color: theme.colors.text,
+            border: `1px solid ${theme.colors.border}`,
+            fontFamily: theme.fonts.body,
+            cursor: 'pointer',
+          }}
+          aria-label="Contribute a trail to this topic"
+          title="Contribute"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Contribute</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onBriefAgent}
+          className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
+          style={{
+            background: 'transparent',
+            color: theme.colors.text,
+            border: `1px solid ${theme.colors.border}`,
+            fontFamily: theme.fonts.body,
+            cursor: 'pointer',
+          }}
+          aria-label="Copy a brief about this topic for an AI agent"
+          title="Brief an AI agent about this topic"
+        >
+          <Bot className="w-4 h-4" />
+          <span>Brief Agent</span>
+        </button>
+
         <button
           type="button"
           onClick={onShare}

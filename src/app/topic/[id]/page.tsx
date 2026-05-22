@@ -20,6 +20,11 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
 import { useAuth } from '@/contexts/AuthContext';
 import { CommentThread } from './CommentThread';
+import { SuggestionsPanel } from './SuggestionsPanel';
+import {
+  SuggestTrailDialog,
+  type ContributeMode,
+} from './SuggestTrailDialog';
 import { TrailHeaderLite } from './TrailHeaderLite';
 import {
   TopicErrorCodes,
@@ -63,6 +68,10 @@ export default function TopicPage() {
     | { kind: 'ok' }
     | { kind: 'error'; message: string; code: TopicErrorCode | null }
   >({ kind: 'loading' });
+  // Bumped to force a topic refetch after an accepted suggestion appends a
+  // new trail to `trailIds`. The trail-load effect picks up the new id on
+  // its own once the topic state updates.
+  const [topicReloadKey, setTopicReloadKey] = useState(0);
   const [trailResults, setTrailResults] = useState<
     Record<string, TrailFetchResult>
   >({});
@@ -77,6 +86,9 @@ export default function TopicPage() {
   const [addError, setAddError] = useState<string | null>(null);
 
   const [shareCopied, setShareCopied] = useState(false);
+  const [contributeMode, setContributeMode] = useState<ContributeMode | null>(
+    null,
+  );
 
   const [curator, setCurator] = useState<CuratorProfile | null>(null);
 
@@ -118,7 +130,7 @@ export default function TopicPage() {
     return () => {
       cancelled = true;
     };
-  }, [topicId]);
+  }, [topicId, topicReloadKey]);
 
   // ---- Load each trail summary -------------------------------------------
 
@@ -354,8 +366,17 @@ export default function TopicPage() {
         topicId={topicId}
         shareCopied={shareCopied}
         onShare={handleShare}
+        onContribute={() => setContributeMode('suggest')}
+        onBriefAgent={() => setContributeMode('brief')}
         isOwner={isOwner}
         onDelete={handleDeleteTopic}
+      />
+
+      <SuggestTrailDialog
+        topic={topic}
+        trailResults={trailResults}
+        mode={contributeMode}
+        onClose={() => setContributeMode(null)}
       />
 
       <div className="flex-1 overflow-y-auto lg:overflow-hidden">
@@ -507,6 +528,11 @@ export default function TopicPage() {
         </div>
 
         <div className="lg:h-full lg:overflow-y-auto lg:pb-8">
+        <SuggestionsPanel
+          topicId={topic.id}
+          isOwner={isOwner}
+          onTrailAccepted={() => setTopicReloadKey((k) => k + 1)}
+        />
         {/* Trail list */}
         <ol className="space-y-3">
           {topic.trailIds.map((tid) => (
