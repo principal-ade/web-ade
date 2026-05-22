@@ -87,6 +87,7 @@ export default function TopicPage() {
   const [addError, setAddError] = useState<string | null>(null);
 
   const [shareCopied, setShareCopied] = useState(false);
+  const [discussionOpen, setDiscussionOpen] = useState(false);
   const [contributeMode, setContributeMode] = useState<ContributeMode | null>(
     null,
   );
@@ -392,6 +393,8 @@ export default function TopicPage() {
         onContribute={() => setContributeMode('suggest')}
         onSuggestProject={() => setSuggestProjectOpen(true)}
         onBriefAgent={() => setContributeMode('brief')}
+        discussionOpen={discussionOpen}
+        onToggleDiscussion={() => setDiscussionOpen((v) => !v)}
         isOwner={isOwner}
         onDelete={handleDeleteTopic}
       />
@@ -657,10 +660,12 @@ export default function TopicPage() {
           </div>
         )}
 
-        <CommentThread
-          topicId={topic.id}
-          topicOwnerGithubId={topic.createdBy.githubId}
-        />
+        {discussionOpen && (
+          <CommentThread
+            topicId={topic.id}
+            topicOwnerGithubId={topic.createdBy.githubId}
+          />
+        )}
         </div>
         </main>
       </div>

@@ -7,7 +7,7 @@
  */
 
 import Link from 'next/link';
-import { Bot, Check, Github, Plus, Share2, Trash2 } from 'lucide-react';
+import { Bot, Check, Github, MessageSquare, Plus, Share2, Trash2 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 
 interface TrailHeaderLiteProps {
@@ -17,6 +17,8 @@ interface TrailHeaderLiteProps {
   onContribute: () => void;
   onSuggestProject: () => void;
   onBriefAgent: () => void;
+  discussionOpen: boolean;
+  onToggleDiscussion: () => void;
   isOwner: boolean;
   onDelete: () => void;
 }
@@ -27,6 +29,8 @@ export function TrailHeaderLite({
   onContribute,
   onSuggestProject,
   onBriefAgent,
+  discussionOpen,
+  onToggleDiscussion,
   isOwner,
   onDelete,
 }: TrailHeaderLiteProps) {
@@ -118,6 +122,25 @@ export function TrailHeaderLite({
         >
           <Bot className="w-4 h-4" />
           <span>Share With Agent</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onToggleDiscussion}
+          className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
+          style={{
+            background: discussionOpen ? theme.colors.primary : 'transparent',
+            color: discussionOpen ? theme.colors.background : theme.colors.text,
+            border: `1px solid ${discussionOpen ? theme.colors.primary : theme.colors.border}`,
+            fontFamily: theme.fonts.body,
+            cursor: 'pointer',
+          }}
+          aria-label="Toggle discussion"
+          aria-pressed={discussionOpen}
+          title="Toggle discussion"
+        >
+          <MessageSquare className="w-4 h-4" />
+          <span>Discussion</span>
         </button>
 
         <button
