@@ -14,6 +14,7 @@ import {
   updateTopic,
   upsertTopicInUserIndex,
 } from '@/lib/topics/s3-storage';
+import { resolveProjectSuggestionsForRepo } from '@/lib/topics/suggestions-storage';
 import {
   validateAddTrailRequest,
   validateReorderRequest,
@@ -125,6 +126,19 @@ export async function POST(request: NextRequest, { params }: Params) {
       trailIds: [...current.trailIds, trailId],
     }));
     await upsertTopicInUserIndex(updated);
+
+    // Auto-resolve any project suggestions on this topic that point at the
+    // same repo. Best-effort — a failure here doesn't roll back the trail
+    // add; the next match attempt will pick the suggestion up.
+    try {
+      await resolveProjectSuggestionsForRepo(id, {
+        owner: pointer.owner,
+        repo: pointer.repo,
+      });
+    } catch (err) {
+      console.error('[Topics] resolve-on-match failed:', err);
+    }
+
     return NextResponse.json({ topic: updated });
   } catch (error) {
     return errorResponse(error, 'add');

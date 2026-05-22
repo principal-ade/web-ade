@@ -7,7 +7,7 @@
  */
 
 import Link from 'next/link';
-import { Bot, Check, Plus, Share2, Trash2 } from 'lucide-react';
+import { Bot, Check, Github, Plus, Share2, Trash2 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 
 interface TrailHeaderLiteProps {
@@ -15,6 +15,7 @@ interface TrailHeaderLiteProps {
   shareCopied: boolean;
   onShare: () => void;
   onContribute: () => void;
+  onSuggestProject: () => void;
   onBriefAgent: () => void;
   isOwner: boolean;
   onDelete: () => void;
@@ -24,6 +25,7 @@ export function TrailHeaderLite({
   shareCopied,
   onShare,
   onContribute,
+  onSuggestProject,
   onBriefAgent,
   isOwner,
   onDelete,
@@ -84,6 +86,24 @@ export function TrailHeaderLite({
 
         <button
           type="button"
+          onClick={onSuggestProject}
+          className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
+          style={{
+            background: 'transparent',
+            color: theme.colors.text,
+            border: `1px solid ${theme.colors.border}`,
+            fontFamily: theme.fonts.body,
+            cursor: 'pointer',
+          }}
+          aria-label="Suggest a project (repo) for this topic"
+          title="Suggest a project that deserves trails"
+        >
+          <Github className="w-4 h-4" />
+          <span>Suggest Project</span>
+        </button>
+
+        <button
+          type="button"
           onClick={onBriefAgent}
           className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
           style={{
@@ -97,7 +117,7 @@ export function TrailHeaderLite({
           title="Brief an AI agent about this topic"
         >
           <Bot className="w-4 h-4" />
-          <span>Brief Agent</span>
+          <span>Share With Agent</span>
         </button>
 
         <button

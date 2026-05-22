@@ -45,6 +45,9 @@ import {
 import {
   TopicErrorCodes,
   TopicShareError,
+  isProjectSuggestion,
+  type ProjectSuggestion,
+  type TopicSuggestion,
   type TopicSuggestionsContainer,
   type TrailSuggestion,
 } from './types';
@@ -178,7 +181,7 @@ export async function listSuggestions(
 export async function getSuggestion(
   topicId: string,
   suggestionId: string,
-): Promise<TrailSuggestion | null> {
+): Promise<TopicSuggestion | null> {
   const result = await getContainerWithETag(topicId);
   if (!result) return null;
   return result.data.suggestions.find((s) => s.id === suggestionId) ?? null;
@@ -232,6 +235,19 @@ async function modifyContainer(
   );
 }
 
+function checkPendingCap(container: TopicSuggestionsContainer): void {
+  const pendingCount = container.suggestions.filter(
+    (s) => s.status === 'pending',
+  ).length;
+  if (pendingCount >= MAX_PENDING_SUGGESTIONS_PER_TOPIC) {
+    throw new TopicShareError(
+      `Pending suggestion limit reached (${MAX_PENDING_SUGGESTIONS_PER_TOPIC}) for this topic`,
+      409,
+      TopicErrorCodes.SUGGESTION_LIMIT_REACHED,
+    );
+  }
+}
+
 export async function appendSuggestion(
   topicId: string,
   input: {
@@ -244,6 +260,7 @@ export async function appendSuggestion(
   const suggestion: TrailSuggestion = {
     id: randomUUID(),
     topicId,
+    kind: 'trail',
     trailId: input.trailId,
     ...(input.reason ? { reason: input.reason } : {}),
     suggestedBy: input.suggestedBy,
@@ -253,18 +270,11 @@ export async function appendSuggestion(
   await modifyContainer(
     topicId,
     (container) => {
-      const pending = container.suggestions.filter(
-        (s) => s.status === 'pending',
-      );
-      if (pending.length >= MAX_PENDING_SUGGESTIONS_PER_TOPIC) {
-        throw new TopicShareError(
-          `Pending suggestion limit reached (${MAX_PENDING_SUGGESTIONS_PER_TOPIC}) for this topic`,
-          409,
-          TopicErrorCodes.SUGGESTION_LIMIT_REACHED,
-        );
-      }
-      const duplicate = pending.find(
+      checkPendingCap(container);
+      const duplicate = container.suggestions.find(
         (s) =>
+          s.status === 'pending' &&
+          !isProjectSuggestion(s) &&
           s.trailId === input.trailId &&
           s.suggestedBy.githubId === input.suggestedBy.githubId,
       );
@@ -285,6 +295,131 @@ export async function appendSuggestion(
   return suggestion;
 }
 
+/**
+ * Append a project suggestion (a repo flagged as worth trails). Dedup keys
+ * on (owner, repo) per-suggester so the same person can't queue the same
+ * repo twice while it's pending — case-insensitive because GitHub
+ * owner/repo segments are case-folded on the platform side.
+ */
+export async function appendProjectSuggestion(
+  topicId: string,
+  input: {
+    owner: string;
+    repo: string;
+    githubRepoId?: number;
+    reason?: string;
+    suggestedBy: { githubId: number; githubLogin: string };
+  },
+): Promise<ProjectSuggestion> {
+  const now = new Date().toISOString();
+  const suggestion: ProjectSuggestion = {
+    id: randomUUID(),
+    topicId,
+    kind: 'project',
+    owner: input.owner,
+    repo: input.repo,
+    // 0 sentinel keeps the field present but flags it as unverified — the
+    // route can backfill via the GitHub API in a follow-up. Until then the
+    // owner/repo string match handles the join.
+    githubRepoId: input.githubRepoId ?? 0,
+    ...(input.reason ? { reason: input.reason } : {}),
+    suggestedBy: input.suggestedBy,
+    status: 'pending',
+    createdAt: now,
+  };
+  const ownerLc = input.owner.toLowerCase();
+  const repoLc = input.repo.toLowerCase();
+  await modifyContainer(
+    topicId,
+    (container) => {
+      checkPendingCap(container);
+      const duplicate = container.suggestions.find(
+        (s) =>
+          s.status === 'pending' &&
+          isProjectSuggestion(s) &&
+          s.owner.toLowerCase() === ownerLc &&
+          s.repo.toLowerCase() === repoLc &&
+          s.suggestedBy.githubId === input.suggestedBy.githubId,
+      );
+      if (duplicate) {
+        throw new TopicShareError(
+          'You already have a pending suggestion for this project',
+          409,
+          TopicErrorCodes.SUGGESTION_DUPLICATE,
+        );
+      }
+      return {
+        ...container,
+        suggestions: [...container.suggestions, suggestion],
+      };
+    },
+    { createIfMissing: true },
+  );
+  return suggestion;
+}
+
+/**
+ * Auto-flip any pending or accepted project suggestion whose repo matches
+ * `match` to `resolved`. Match is by `githubRepoId` when available (rename-
+ * stable) and falls back to a case-insensitive owner/repo string match for
+ * legacy or unverified records. Called by the trail-add and accept-trail-
+ * suggestion routes after a trail is appended to a topic. Returns the
+ * resolved suggestions so the caller can surface them in the response.
+ *
+ * Best-effort: storage errors propagate but the topic-side write has
+ * already happened, so a failure here just means the suggestion stays in
+ * its pre-resolve state — the next match attempt will fix it.
+ */
+export async function resolveProjectSuggestionsForRepo(
+  topicId: string,
+  match: { owner: string; repo: string; githubRepoId?: number },
+): Promise<ProjectSuggestion[]> {
+  const matchRepoId = match.githubRepoId ?? 0;
+  const ownerLc = match.owner.toLowerCase();
+  const repoLc = match.repo.toLowerCase();
+  let resolved: ProjectSuggestion[] = [];
+  const current = await getContainerWithETag(topicId);
+  if (!current) return [];
+  const matches = current.data.suggestions.filter((s): s is ProjectSuggestion => {
+    if (!isProjectSuggestion(s)) return false;
+    if (s.status !== 'pending' && s.status !== 'accepted') return false;
+    if (s.githubRepoId > 0 && matchRepoId > 0)
+      return s.githubRepoId === matchRepoId;
+    return s.owner.toLowerCase() === ownerLc && s.repo.toLowerCase() === repoLc;
+  });
+  if (matches.length === 0) return [];
+  const matchIds = new Set(matches.map((s) => s.id));
+  const now = new Date().toISOString();
+  await modifyContainer(
+    topicId,
+    (container) => {
+      const next: TopicSuggestion[] = [];
+      const flipped: ProjectSuggestion[] = [];
+      for (const s of container.suggestions) {
+        if (
+          isProjectSuggestion(s) &&
+          matchIds.has(s.id) &&
+          (s.status === 'pending' || s.status === 'accepted')
+        ) {
+          const after: ProjectSuggestion = {
+            ...s,
+            status: 'resolved',
+            resolvedAt: now,
+          };
+          next.push(after);
+          flipped.push(after);
+        } else {
+          next.push(s);
+        }
+      }
+      resolved = flipped;
+      return { ...container, suggestions: next };
+    },
+    { createIfMissing: false },
+  );
+  return resolved;
+}
+
 function resolvePending(
   container: TopicSuggestionsContainer,
   suggestionId: string,
@@ -292,8 +427,9 @@ function resolvePending(
     status: 'accepted' | 'rejected' | 'withdrawn';
     actor: { githubId: number; githubLogin: string };
     requireSuggester?: boolean;
+    reason?: string;
   },
-): { container: TopicSuggestionsContainer; suggestion: TrailSuggestion } {
+): { container: TopicSuggestionsContainer; suggestion: TopicSuggestion } {
   const existing = container.suggestions.find((s) => s.id === suggestionId);
   if (!existing) {
     throw new TopicShareError(
@@ -319,11 +455,12 @@ function resolvePending(
       TopicErrorCodes.SUGGESTION_FORBIDDEN,
     );
   }
-  const next: TrailSuggestion = {
+  const next: TopicSuggestion = {
     ...existing,
     status: patch.status,
     resolvedAt: new Date().toISOString(),
     resolvedBy: patch.actor,
+    ...(patch.reason ? { resolveReason: patch.reason } : {}),
   };
   return {
     container: {
@@ -345,8 +482,8 @@ export async function acceptSuggestion(
   topicId: string,
   suggestionId: string,
   actor: { githubId: number; githubLogin: string },
-): Promise<TrailSuggestion> {
-  let resolved: TrailSuggestion | null = null;
+): Promise<TopicSuggestion> {
+  let resolved: TopicSuggestion | null = null;
   await modifyContainer(
     topicId,
     (container) => {
@@ -373,14 +510,16 @@ export async function rejectSuggestion(
   topicId: string,
   suggestionId: string,
   actor: { githubId: number; githubLogin: string },
-): Promise<TrailSuggestion> {
-  let resolved: TrailSuggestion | null = null;
+  reason?: string,
+): Promise<TopicSuggestion> {
+  let resolved: TopicSuggestion | null = null;
   await modifyContainer(
     topicId,
     (container) => {
       const result = resolvePending(container, suggestionId, {
         status: 'rejected',
         actor,
+        reason,
       });
       resolved = result.suggestion;
       return result.container;
@@ -406,8 +545,8 @@ export async function withdrawSuggestion(
   topicId: string,
   suggestionId: string,
   actor: { githubId: number; githubLogin: string },
-): Promise<TrailSuggestion> {
-  let resolved: TrailSuggestion | null = null;
+): Promise<TopicSuggestion> {
+  let resolved: TopicSuggestion | null = null;
   await modifyContainer(
     topicId,
     (container) => {

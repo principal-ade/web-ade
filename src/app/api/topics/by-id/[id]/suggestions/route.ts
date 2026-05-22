@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchGitHubUser, getGitHubToken } from '@/lib/auth/request';
 import { getTopic } from '@/lib/topics/s3-storage';
 import {
+  appendProjectSuggestion,
   appendSuggestion,
   listSuggestions,
 } from '@/lib/topics/suggestions-storage';
@@ -31,6 +32,7 @@ const STATUS_VALUES: ReadonlySet<SuggestionStatus> = new Set([
   'accepted',
   'rejected',
   'withdrawn',
+  'resolved',
 ]);
 
 function errorResponse(error: unknown, where: string): NextResponse {
@@ -114,7 +116,23 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     const body = await request.json().catch(() => null);
-    const { trailId, reason } = validateSuggestRequest(body);
+    const validated = validateSuggestRequest(body);
+    const suggestedBy = { githubId: user.id, githubLogin: user.login };
+
+    if (validated.kind === 'project') {
+      const suggestion = await appendProjectSuggestion(id, {
+        owner: validated.owner,
+        repo: validated.repo,
+        ...(validated.githubRepoId !== undefined
+          ? { githubRepoId: validated.githubRepoId }
+          : {}),
+        ...(validated.reason !== undefined ? { reason: validated.reason } : {}),
+        suggestedBy,
+      });
+      return NextResponse.json({ suggestion }, { status: 201 });
+    }
+
+    const { trailId, reason } = validated;
 
     // Suggesting a trail already on the topic is meaningless — surface the
     // same code the owner-add path uses so the UI can reuse the message.
@@ -138,8 +156,8 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const suggestion = await appendSuggestion(id, {
       trailId,
-      reason,
-      suggestedBy: { githubId: user.id, githubLogin: user.login },
+      ...(reason !== undefined ? { reason } : {}),
+      suggestedBy,
     });
 
     return NextResponse.json({ suggestion }, { status: 201 });

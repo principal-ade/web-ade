@@ -147,12 +147,68 @@ export function validateSuggestionReason(value: unknown): string | undefined {
   return trimmed;
 }
 
+/**
+ * GitHub owner/repo segments per
+ * https://docs.github.com/en/get-started/learning-about-github/github-glossary.
+ * Lowercased for case-insensitive matching against trail `owner`/`repo`.
+ */
+const GH_SEGMENT_PATTERN = /^[A-Za-z0-9._-]+$/;
+const MAX_GH_SEGMENT_LEN = 100;
+
+function validateGhSegment(value: unknown, field: string): string {
+  if (typeof value !== 'string') invalid(`${field} must be a string`);
+  const trimmed = value.trim();
+  if (trimmed.length === 0) invalid(`${field} cannot be empty`);
+  if (trimmed.length > MAX_GH_SEGMENT_LEN)
+    invalid(`${field} exceeds ${MAX_GH_SEGMENT_LEN} chars`);
+  if (!GH_SEGMENT_PATTERN.test(trimmed)) invalid(`${field} has invalid chars`);
+  return trimmed;
+}
+
+function validateGithubRepoId(value: unknown): number | undefined {
+  if (value == null) return undefined;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0)
+    invalid('githubRepoId must be a positive integer');
+  return value;
+}
+
 export function validateSuggestRequest(body: unknown): CreateSuggestionRequest {
   if (!isPlainObject(body)) invalid('request body must be an object');
-  const { trailId } = body;
-  if (!isUuid(trailId)) invalid('trailId must be a uuid');
+  // Default kind to 'trail' so existing CLI clients posting `{ trailId }`
+  // without the discriminator keep working.
+  const kind = body.kind ?? 'trail';
+  if (kind !== 'trail' && kind !== 'project')
+    invalid('kind must be "trail" or "project"');
   const reason = validateSuggestionReason(body.reason);
-  return reason === undefined ? { trailId } : { trailId, reason };
+  if (kind === 'trail') {
+    const { trailId } = body;
+    if (!isUuid(trailId)) invalid('trailId must be a uuid');
+    return reason === undefined
+      ? { kind: 'trail', trailId }
+      : { kind: 'trail', trailId, reason };
+  }
+  const owner = validateGhSegment(body.owner, 'owner');
+  const repo = validateGhSegment(body.repo, 'repo');
+  const githubRepoId = validateGithubRepoId(body.githubRepoId);
+  const base = { kind: 'project' as const, owner, repo };
+  return {
+    ...base,
+    ...(githubRepoId !== undefined ? { githubRepoId } : {}),
+    ...(reason !== undefined ? { reason } : {}),
+  };
+}
+
+/**
+ * Optional dismissal reason on reject. Same shape/limits as a suggester's
+ * reason — owner-authored note explaining why the suggestion is dismissed.
+ */
+export function validateRejectRequest(
+  body: unknown,
+): { reason?: string } {
+  if (body == null) return {};
+  if (!isPlainObject(body)) invalid('request body must be an object');
+  const reason = validateSuggestionReason(body.reason);
+  return reason === undefined ? {} : { reason };
 }
 
 /**

@@ -14,17 +14,18 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2, Plus, Save, Trash2, X } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
 import { useAuth } from '@/contexts/AuthContext';
 import { CommentThread } from './CommentThread';
-import { SuggestionsPanel } from './SuggestionsPanel';
+import { SuggestionsPanel, type TopicTrailMeta } from './SuggestionsPanel';
 import {
   SuggestTrailDialog,
   type ContributeMode,
 } from './SuggestTrailDialog';
+import { SuggestProjectDialog } from './SuggestProjectDialog';
 import { TrailHeaderLite } from './TrailHeaderLite';
 import {
   TopicErrorCodes,
@@ -89,10 +90,32 @@ export default function TopicPage() {
   const [contributeMode, setContributeMode] = useState<ContributeMode | null>(
     null,
   );
+  const [suggestProjectOpen, setSuggestProjectOpen] = useState(false);
+  // Bumped after a project suggestion is created so the SuggestionsPanel
+  // refetches and the new row appears immediately for the owner.
+  const [suggestionsReloadKey, setSuggestionsReloadKey] = useState(0);
 
   const [curator, setCurator] = useState<CuratorProfile | null>(null);
 
   const isOwner = !!user && !!topic && topic.createdBy.githubId === user.id;
+
+  /**
+   * Repo identity for every trail on the topic, derived from the already-
+   * fetched trail summaries. Fed to SuggestionsPanel so project-suggestion
+   * rows can count matching trails without re-fetching.
+   */
+  const topicTrails: TopicTrailMeta[] = useMemo(() => {
+    if (!topic) return [];
+    return topic.trailIds.map((tid) => {
+      const r = trailResults[tid];
+      return {
+        trailId: tid,
+        owner: r?.owner,
+        repo: r?.repo,
+        title: r?.entry?.title,
+      };
+    });
+  }, [topic, trailResults]);
 
   // ---- Load topic ---------------------------------------------------------
 
@@ -367,6 +390,7 @@ export default function TopicPage() {
         shareCopied={shareCopied}
         onShare={handleShare}
         onContribute={() => setContributeMode('suggest')}
+        onSuggestProject={() => setSuggestProjectOpen(true)}
         onBriefAgent={() => setContributeMode('brief')}
         isOwner={isOwner}
         onDelete={handleDeleteTopic}
@@ -377,6 +401,13 @@ export default function TopicPage() {
         trailResults={trailResults}
         mode={contributeMode}
         onClose={() => setContributeMode(null)}
+      />
+
+      <SuggestProjectDialog
+        topicId={topic.id}
+        open={suggestProjectOpen}
+        onClose={() => setSuggestProjectOpen(false)}
+        onSubmitted={() => setSuggestionsReloadKey((k) => k + 1)}
       />
 
       <div className="flex-1 overflow-y-auto lg:overflow-hidden">
@@ -531,9 +562,17 @@ export default function TopicPage() {
         <SuggestionsPanel
           topicId={topic.id}
           isOwner={isOwner}
+          topicTrails={topicTrails}
+          reloadKey={suggestionsReloadKey}
           onTrailAccepted={() => setTopicReloadKey((k) => k + 1)}
         />
         {/* Trail list */}
+        <h2
+          className="text-lg font-semibold mb-3 mt-4"
+          style={{ color: theme.colors.text }}
+        >
+          Code Trails
+        </h2>
         <ol className="space-y-3">
           {topic.trailIds.map((tid) => (
             <TrailCard

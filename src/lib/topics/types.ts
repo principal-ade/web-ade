@@ -149,17 +149,28 @@ export interface CreateCommentResponse {
 // way the topic record itself is.
 // ============================================================================
 
+/**
+ * Lifecycle:
+ *   - Trail kind:   pending → accepted | rejected | withdrawn
+ *   - Project kind: pending → accepted ("in progress") | rejected ("dismissed")
+ *                            | withdrawn
+ *                   accepted → resolved (auto, when a matching trail lands)
+ *                   pending  → resolved (auto, same)
+ *
+ * `resolved` only applies to project kind; the trail-kind accept path already
+ * appends the trail to the topic, so there's nothing left to auto-fulfill.
+ */
 export type SuggestionStatus =
   | 'pending'
   | 'accepted'
   | 'rejected'
-  | 'withdrawn';
+  | 'withdrawn'
+  | 'resolved';
 
-export interface TrailSuggestion {
+interface SuggestionBase {
   id: string;
   topicId: string;
-  trailId: string;
-  /** Optional one-line "why this fits". */
+  /** Optional one-line "why this fits" (suggester-authored). */
   reason?: string;
   suggestedBy: { githubId: number; githubLogin: string };
   status: SuggestionStatus;
@@ -168,35 +179,93 @@ export interface TrailSuggestion {
   resolvedAt?: string;
   /**
    * Whoever transitioned the suggestion out of `pending`. For `accepted` /
-   * `rejected` this is the topic owner; for `withdrawn` it's the suggester.
-   * Read together with `status` to label the actor in the UI.
+   * `rejected` this is the topic owner; for `withdrawn` it's the suggester;
+   * for `resolved` (project kind only) it's `undefined` because the
+   * transition is system-driven by a matching trail-add event.
    */
   resolvedBy?: { githubId: number; githubLogin: string };
+  /**
+   * Optional note attached at the resolving transition — used by the project
+   * kind for "dismissed because…" reasons. Distinct from `reason`, which
+   * captures the original suggester's pitch.
+   */
+  resolveReason?: string;
 }
+
+/**
+ * Trail suggestion — the original kind. Suggester points at an existing
+ * trail; on accept it gets appended to the topic's trail list.
+ *
+ * `kind` is optional for backward compatibility with pre-discriminator
+ * records on disk; readers should treat its absence as `'trail'`.
+ */
+export interface TrailSuggestion extends SuggestionBase {
+  kind?: 'trail';
+  trailId: string;
+}
+
+/**
+ * Project suggestion — a repo the suggester thinks deserves a trail. Accept
+ * is endorsement ("in progress") rather than a topic mutation; the
+ * suggestion auto-flips to `resolved` once a trail from that repo lands in
+ * the topic. See docs/topic-trail-suggestions.md.
+ */
+export interface ProjectSuggestion extends SuggestionBase {
+  kind: 'project';
+  owner: string;
+  repo: string;
+  /** Rename-stable backstop — matches `SharedTrailIndexEntry.githubRepoId`. */
+  githubRepoId: number;
+}
+
+export type TopicSuggestion = TrailSuggestion | ProjectSuggestion;
 
 export interface TopicSuggestionsContainer {
   version: 1;
   topicId: string;
   /** Bumped on every container mutation. */
   updatedAt: string;
-  suggestions: TrailSuggestion[];
+  suggestions: TopicSuggestion[];
 }
 
-export interface CreateSuggestionRequest {
+export interface CreateTrailSuggestionRequest {
+  kind?: 'trail';
   trailId: string;
   reason?: string;
 }
 
+export interface CreateProjectSuggestionRequest {
+  kind: 'project';
+  owner: string;
+  repo: string;
+  githubRepoId?: number;
+  reason?: string;
+}
+
+export type CreateSuggestionRequest =
+  | CreateTrailSuggestionRequest
+  | CreateProjectSuggestionRequest;
+
 export interface CreateSuggestionResponse {
-  suggestion: TrailSuggestion;
+  suggestion: TopicSuggestion;
 }
 
 export interface ListSuggestionsResponse {
   topicId: string;
   updatedAt: string;
-  suggestions: TrailSuggestion[];
+  suggestions: TopicSuggestion[];
 }
 
 export interface ResolveSuggestionResponse {
-  suggestion: TrailSuggestion;
+  suggestion: TopicSuggestion;
+}
+
+/**
+ * Narrow a stored suggestion to the project kind. Defaults to false for
+ * legacy records that predate the `kind` field — those are trails.
+ */
+export function isProjectSuggestion(
+  s: TopicSuggestion,
+): s is ProjectSuggestion {
+  return s.kind === 'project';
 }

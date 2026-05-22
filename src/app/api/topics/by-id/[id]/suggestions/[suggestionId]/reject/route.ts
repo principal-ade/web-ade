@@ -1,12 +1,15 @@
 /**
- * Reject a trail suggestion. Owner-only. Pure status flip — the topic
- * record is untouched.
+ * Reject (dismiss) a suggestion. Owner-only. Pure status flip — the topic
+ * record is untouched. Accepts an optional `{ reason }` body that is stored
+ * as `resolveReason` on the suggestion, used by the UI to surface
+ * "dismissed because…" notes (project-kind suggestions in particular).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchGitHubUser, getGitHubToken } from '@/lib/auth/request';
 import { getTopic } from '@/lib/topics/s3-storage';
 import { rejectSuggestion } from '@/lib/topics/suggestions-storage';
+import { validateRejectRequest } from '@/lib/topics/validation';
 import { TopicErrorCodes, TopicShareError } from '@/lib/topics/types';
 
 interface Params {
@@ -27,7 +30,7 @@ function errorResponse(error: unknown): NextResponse {
   );
 }
 
-export async function POST(_request: NextRequest, { params }: Params) {
+export async function POST(request: NextRequest, { params }: Params) {
   try {
     const { id, suggestionId } = await params;
 
@@ -60,10 +63,15 @@ export async function POST(_request: NextRequest, { params }: Params) {
       );
     }
 
-    const resolved = await rejectSuggestion(id, suggestionId, {
-      githubId: user.id,
-      githubLogin: user.login,
-    });
+    const body = await request.json().catch(() => null);
+    const { reason } = validateRejectRequest(body);
+
+    const resolved = await rejectSuggestion(
+      id,
+      suggestionId,
+      { githubId: user.id, githubLogin: user.login },
+      reason,
+    );
 
     return NextResponse.json({ suggestion: resolved });
   } catch (error) {

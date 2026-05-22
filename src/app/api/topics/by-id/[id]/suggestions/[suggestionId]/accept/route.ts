@@ -1,10 +1,14 @@
 /**
- * Accept a trail suggestion. Owner-only.
+ * Accept a suggestion. Owner-only.
  *
- * Two-write operation across two S3 objects: the topic record gets the new
- * trailId appended, then the suggestion container flips status to `accepted`.
- * Order is deliberate — see `suggestions-storage.ts` header for the recovery
- * story when the second write fails.
+ * Trail kind: two-write operation across two S3 objects — the topic record
+ * gets the new trailId appended, then the suggestion container flips status
+ * to `accepted`. Order is deliberate — see `suggestions-storage.ts` header
+ * for the recovery story when the second write fails.
+ *
+ * Project kind: endorsement only. No topic mutation; status flips to
+ * `accepted` ("in progress") and waits for a matching trail to auto-resolve
+ * it via `resolveProjectSuggestionsForRepo`.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -17,9 +21,15 @@ import {
 import {
   acceptSuggestion,
   getSuggestion,
+  resolveProjectSuggestionsForRepo,
 } from '@/lib/topics/suggestions-storage';
+import { getIdPointer } from '@/lib/trails/s3-storage';
 import { MAX_TRAILS_PER_TOPIC } from '@/lib/topics/constants';
-import { TopicErrorCodes, TopicShareError } from '@/lib/topics/types';
+import {
+  TopicErrorCodes,
+  TopicShareError,
+  isProjectSuggestion,
+} from '@/lib/topics/types';
 
 interface Params {
   params: Promise<{ id: string; suggestionId: string }>;
@@ -92,29 +102,43 @@ export async function POST(_request: NextRequest, { params }: Params) {
       );
     }
 
-    // If the trail isn't already on the topic, append it. We check the cap
-    // against the resulting list, not the existing one — accepting brings
-    // length from N to N+1.
-    if (!topic.trailIds.includes(suggestion.trailId)) {
-      if (topic.trailIds.length >= MAX_TRAILS_PER_TOPIC) {
-        return NextResponse.json(
-          {
-            error: `Cap of ${MAX_TRAILS_PER_TOPIC} trails per topic reached`,
-            code: TopicErrorCodes.TOO_MANY_TRAILS,
-          },
-          { status: 409 },
-        );
+    // Trail kind: append to topic before flipping status (cross-object
+    // ordering documented in suggestions-storage.ts).
+    // Project kind: skip — endorsement is the entire mutation.
+    if (!isProjectSuggestion(suggestion)) {
+      if (!topic.trailIds.includes(suggestion.trailId)) {
+        if (topic.trailIds.length >= MAX_TRAILS_PER_TOPIC) {
+          return NextResponse.json(
+            {
+              error: `Cap of ${MAX_TRAILS_PER_TOPIC} trails per topic reached`,
+              code: TopicErrorCodes.TOO_MANY_TRAILS,
+            },
+            { status: 409 },
+          );
+        }
+        const updated = await updateTopic(id, (current) => {
+          if (current.trailIds.includes(suggestion.trailId)) return current;
+          return {
+            ...current,
+            trailIds: [...current.trailIds, suggestion.trailId],
+          };
+        });
+        await upsertTopicInUserIndex(updated);
+
+        // Auto-resolve any project suggestions matching this trail's repo.
+        // Best-effort (see trail-add route for the same pattern).
+        try {
+          const pointer = await getIdPointer(suggestion.trailId);
+          if (pointer) {
+            await resolveProjectSuggestionsForRepo(id, {
+              owner: pointer.owner,
+              repo: pointer.repo,
+            });
+          }
+        } catch (err) {
+          console.error('[Topics] resolve-on-match failed:', err);
+        }
       }
-      // Idempotent: if a concurrent path appended the same trail between our
-      // peek and this write, the updater sees the duplicate and skips it.
-      const updated = await updateTopic(id, (current) => {
-        if (current.trailIds.includes(suggestion.trailId)) return current;
-        return {
-          ...current,
-          trailIds: [...current.trailIds, suggestion.trailId],
-        };
-      });
-      await upsertTopicInUserIndex(updated);
     }
 
     const resolved = await acceptSuggestion(id, suggestionId, {
