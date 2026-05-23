@@ -15,7 +15,7 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, Plus, Save, Trash2, X } from 'lucide-react';
+import { Footprints, Github, Loader2, Plus, Save, Trash2, X } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
 import { useAuth } from '@/contexts/AuthContext';
@@ -391,8 +391,6 @@ export default function TopicPage() {
         topicId={topicId}
         shareCopied={shareCopied}
         onShare={handleShare}
-        onContribute={() => setContributeMode('suggest')}
-        onSuggestProject={() => setSuggestProjectOpen(true)}
         onBriefAgent={() => setContributeMode('brief')}
         discussionOpen={discussionOpen}
         onToggleDiscussion={() => setDiscussionOpen((v) => !v)}
@@ -571,12 +569,50 @@ export default function TopicPage() {
           onTrailAccepted={() => setTopicReloadKey((k) => k + 1)}
         />
         {/* Trail list */}
-        <h2
-          className="text-lg font-semibold mb-3 mt-4"
-          style={{ color: theme.colors.text }}
-        >
-          Code Trails
-        </h2>
+        <div className="flex items-center justify-between gap-2 mb-3 mt-4">
+          <h2
+            className="text-lg font-semibold"
+            style={{ color: theme.colors.text }}
+          >
+            Code Trails
+          </h2>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setContributeMode('suggest')}
+              className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
+              style={{
+                background: 'transparent',
+                color: theme.colors.text,
+                border: `1px solid ${theme.colors.border}`,
+                fontFamily: theme.fonts.body,
+                cursor: 'pointer',
+              }}
+              aria-label="Contribute a trail to this topic"
+              title="Contribute"
+            >
+              <Footprints className="w-4 h-4" />
+              <span>Contribute Trail</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSuggestProjectOpen(true)}
+              className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
+              style={{
+                background: 'transparent',
+                color: theme.colors.text,
+                border: `1px solid ${theme.colors.border}`,
+                fontFamily: theme.fonts.body,
+                cursor: 'pointer',
+              }}
+              aria-label="Suggest a project (repo) for this topic"
+              title="Suggest a project that deserves trails"
+            >
+              <Github className="w-4 h-4" />
+              <span>Suggest Project</span>
+            </button>
+          </div>
+        </div>
         <ol className="space-y-3">
           {topic.trailIds.map((tid) => (
             <TrailCard

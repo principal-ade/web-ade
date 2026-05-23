@@ -7,15 +7,14 @@
  */
 
 import Link from 'next/link';
-import { Bot, Check, Github, MessageSquare, Plus, Share2, Trash2 } from 'lucide-react';
+import { Bot, Check, MessageSquare, Share2, Trash2 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 
 interface TrailHeaderLiteProps {
   topicId: string;
   shareCopied: boolean;
   onShare: () => void;
-  onContribute: () => void;
-  onSuggestProject: () => void;
   onBriefAgent: () => void;
   discussionOpen: boolean;
   onToggleDiscussion: () => void;
@@ -26,8 +25,6 @@ interface TrailHeaderLiteProps {
 export function TrailHeaderLite({
   shareCopied,
   onShare,
-  onContribute,
-  onSuggestProject,
   onBriefAgent,
   discussionOpen,
   onToggleDiscussion,
@@ -72,60 +69,6 @@ export function TrailHeaderLite({
       <div className="flex items-center gap-2 flex-shrink-0">
         <button
           type="button"
-          onClick={onContribute}
-          className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
-          style={{
-            background: 'transparent',
-            color: theme.colors.text,
-            border: `1px solid ${theme.colors.border}`,
-            fontFamily: theme.fonts.body,
-            cursor: 'pointer',
-          }}
-          aria-label="Contribute a trail to this topic"
-          title="Contribute"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Contribute</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={onSuggestProject}
-          className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
-          style={{
-            background: 'transparent',
-            color: theme.colors.text,
-            border: `1px solid ${theme.colors.border}`,
-            fontFamily: theme.fonts.body,
-            cursor: 'pointer',
-          }}
-          aria-label="Suggest a project (repo) for this topic"
-          title="Suggest a project that deserves trails"
-        >
-          <Github className="w-4 h-4" />
-          <span>Suggest Project</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={onBriefAgent}
-          className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
-          style={{
-            background: 'transparent',
-            color: theme.colors.text,
-            border: `1px solid ${theme.colors.border}`,
-            fontFamily: theme.fonts.body,
-            cursor: 'pointer',
-          }}
-          aria-label="Copy a brief about this topic for an AI agent"
-          title="Brief an AI agent about this topic"
-        >
-          <Bot className="w-4 h-4" />
-          <span>Share With Agent</span>
-        </button>
-
-        <button
-          type="button"
           onClick={onToggleDiscussion}
           className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
           style={{
@@ -160,6 +103,24 @@ export function TrailHeaderLite({
           <span>{shareCopied ? 'Copied' : 'Share'}</span>
         </button>
 
+        <button
+          type="button"
+          onClick={onBriefAgent}
+          className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
+          style={{
+            background: 'transparent',
+            color: theme.colors.text,
+            border: `1px solid ${theme.colors.border}`,
+            fontFamily: theme.fonts.body,
+            cursor: 'pointer',
+          }}
+          aria-label="Copy a brief about this topic for an AI agent"
+          title="Brief an AI agent about this topic"
+        >
+          <Bot className="w-4 h-4" />
+          <span>Share With Agent</span>
+        </button>
+
         {isOwner && (
           <button
             type="button"
@@ -176,6 +137,8 @@ export function TrailHeaderLite({
             <Trash2 className="w-4 h-4" />
           </button>
         )}
+
+        <UserAvatarMenu />
       </div>
     </header>
   );
