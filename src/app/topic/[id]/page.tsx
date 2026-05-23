@@ -62,7 +62,7 @@ export default function TopicPage() {
   const { theme } = useTheme();
   const params = useParams<{ id: string }>();
   const topicId = params.id;
-  const { user, login } = useAuth();
+  const { user } = useAuth();
 
   const [topic, setTopic] = useState<TopicPayload | null>(null);
   const [loadState, setLoadState] = useState<
@@ -91,6 +91,14 @@ export default function TopicPage() {
   const [discussionOpen, setDiscussionOpen] = useState(false);
   const [starred, setStarred] = useState(false);
   const [starInFlight, setStarInFlight] = useState(false);
+  // Transient header status — e.g. "Sign in to star this topic." after an
+  // anonymous click. Auto-clears so the slot returns to empty.
+  const [headerStatus, setHeaderStatus] = useState<string | null>(null);
+  useEffect(() => {
+    if (!headerStatus) return;
+    const t = window.setTimeout(() => setHeaderStatus(null), 6000);
+    return () => window.clearTimeout(t);
+  }, [headerStatus]);
   const [contributeMode, setContributeMode] = useState<ContributeMode | null>(
     null,
   );
@@ -329,11 +337,12 @@ export default function TopicPage() {
   }, [topicId]);
 
   const handleToggleStar = useCallback(() => {
-    // Signed out: bounce through GitHub OAuth, land back on this page. The
-    // user can then click star again. We deliberately don't auto-star on
-    // return to keep the redirect contract simple.
+    // Signed out: surface a transient prompt in the header status slot
+    // instead of redirecting to OAuth. The avatar menu already exposes a
+    // sign-in path; an unexpected redirect on a read-only "star"
+    // interaction surprises people more than it helps.
     if (!user) {
-      login(window.location.pathname);
+      setHeaderStatus('Sign in to star this topic.');
       return;
     }
     if (starInFlight) return;
@@ -354,7 +363,7 @@ export default function TopicPage() {
         setStarInFlight(false);
       }
     })();
-  }, [user, login, starInFlight, starred, topicId]);
+  }, [user, starInFlight, starred, topicId]);
 
   // ---- Render -------------------------------------------------------------
 
@@ -430,6 +439,7 @@ export default function TopicPage() {
         starred={starred}
         onToggleStar={handleToggleStar}
         starToggleInFlight={starInFlight}
+        statusMessage={headerStatus}
       />
 
       <SuggestTrailDialog

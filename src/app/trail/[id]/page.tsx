@@ -248,11 +248,13 @@ function TrailViewer({
   }, [login]);
 
   const handleToggleStar = useCallback(() => {
-    // Signed out: bounce through GitHub OAuth, land back on this page. The
-    // user can then click the star again — we deliberately don't auto-star
-    // after sign-in to keep the redirect contract simple.
+    // Signed out: show a transient prompt in the header status slot. We
+    // don't auto-redirect to OAuth here — the Sign in button is right
+    // there in the header for users who want to take the next step, and
+    // an unexpected redirect on a read-only "star" interaction surprises
+    // people more than it helps.
     if (!user) {
-      login(window.location.pathname);
+      setHeaderStatus('Sign in to star this trail.');
       return;
     }
     if (starInFlight) return;
@@ -276,7 +278,7 @@ function TrailViewer({
         setStarInFlight(false);
       }
     })();
-  }, [user, login, starInFlight, starred, trailId, showError]);
+  }, [user, starInFlight, starred, trailId, showError]);
 
   const events = useMemo<PanelEventEmitter>(() => new PanelEventBus(), []);
 

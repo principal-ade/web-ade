@@ -30,6 +30,12 @@ interface TrailHeaderLiteProps {
   onToggleStar?: () => void;
   /** Disable the star button while a previous toggle is in flight. */
   starToggleInFlight?: boolean;
+  /**
+   * Transient status text shown centered in the header (e.g.
+   * "Sign in to star this topic."). Caller controls the lifecycle — set
+   * the message, the header fades it in; clear it, it fades out.
+   */
+  statusMessage?: string | null;
 }
 
 export function TrailHeaderLite({
@@ -43,11 +49,12 @@ export function TrailHeaderLite({
   starred,
   onToggleStar,
   starToggleInFlight,
+  statusMessage,
 }: TrailHeaderLiteProps) {
   const { theme } = useTheme();
   return (
     <header
-      className="border-b px-4 flex items-center gap-2 flex-shrink-0"
+      className="border-b px-4 flex items-center gap-2 flex-shrink-0 relative"
       style={{
         background: theme.colors.surface,
         borderColor: theme.colors.border,
@@ -76,6 +83,34 @@ export function TrailHeaderLite({
           style={{ color: theme.colors.text }}
         >
           Topic
+        </span>
+      </div>
+
+      {/*
+        Centered status slot — mirrors TrailHeader. Absolute-positioned so
+        it sits at the true visual center of the header rather than being
+        squeezed between the brand and actions groups. `pointer-events-
+        none` lets users click through onto the buttons behind it.
+      */}
+      <div
+        className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center justify-center pointer-events-none"
+        style={{
+          top: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
+          bottom: '0.5rem',
+        }}
+        aria-live="polite"
+      >
+        <span
+          className="px-3 py-1 rounded-md text-sm font-medium transition-opacity duration-300 whitespace-nowrap"
+          style={{
+            opacity: statusMessage ? 1 : 0,
+            background: theme.colors.backgroundSecondary,
+            color: theme.colors.text,
+            border: `1px solid ${theme.colors.border}`,
+            fontFamily: theme.fonts.body,
+          }}
+        >
+          {statusMessage ?? ' '}
         </span>
       </div>
 
