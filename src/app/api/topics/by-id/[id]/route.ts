@@ -12,9 +12,14 @@ import {
   deleteTopic,
   getTopic,
   removeTopicFromUserIndex,
+  topicToByUserEntry,
   updateTopic,
   upsertTopicInUserIndex,
 } from '@/lib/topics/s3-storage';
+import {
+  isTopicStarred,
+  refreshStarredTopicSnapshot,
+} from '@/lib/stars/s3-storage';
 import { deleteCommentsContainer } from '@/lib/topics/comments-storage';
 import { deleteSuggestionsContainer } from '@/lib/topics/suggestions-storage';
 import { validateUpdateRequest } from '@/lib/topics/validation';
@@ -97,7 +102,28 @@ export async function GET(_request: NextRequest, { params }: Params) {
         { status: 404 },
       );
     }
-    return NextResponse.json({ topic });
+
+    // `starred` is per-user; anonymous callers (no token) always get false
+    // and skip the per-user S3 read entirely. For authed callers, also
+    // refresh the snapshot fire-and-forget if it's starred — this is the
+    // "lazy on item open" half of the snapshot-freshness policy.
+    let starred = false;
+    const token = await getGitHubToken();
+    if (token) {
+      const user = await fetchGitHubUser(token);
+      if (user) {
+        starred = await isTopicStarred(user.id, id);
+        if (starred) {
+          void refreshStarredTopicSnapshot(
+            user.id,
+            id,
+            topicToByUserEntry(topic),
+          );
+        }
+      }
+    }
+
+    return NextResponse.json({ topic, starred });
   } catch (error) {
     return errorResponse(error, 'GET');
   }

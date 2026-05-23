@@ -25,9 +25,22 @@ export default defineConfig({
         test: {
           name: 'unit',
           include: ['src/**/__tests__/**/*.test.{ts,tsx}'],
+          exclude: ['src/**/__tests__/**/*.node.test.{ts,tsx}'],
           environment: 'jsdom',
           globals: true,
           setupFiles: ['./vitest.setup.ts'],
+        },
+      },
+      // Node-env tests (API route handlers, server-side code). Kept
+      // separate so they don't pick up the jsdom-targeted setupFiles in
+      // vitest.setup.ts (which monkey-patches global.setTimeout).
+      {
+        extends: true,
+        test: {
+          name: 'node',
+          include: ['src/**/__tests__/**/*.node.test.{ts,tsx}'],
+          environment: 'node',
+          globals: true,
         },
       },
       // Storybook tests project (existing)

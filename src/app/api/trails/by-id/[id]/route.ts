@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getGitHubToken } from '@/lib/auth/request';
+import { fetchGitHubUser, getGitHubToken } from '@/lib/auth/request';
 import {
   findIndexEntry,
   getIdPointer,
@@ -25,6 +25,10 @@ import {
 } from '@/lib/trails/types';
 import { getCachedById, type ExperimentalTrailEntry } from '@/lib/pr-trail/cache';
 import type { SharedTrailIndexEntry } from '@/lib/trails/types';
+import {
+  isTrailStarred,
+  refreshStarredTrailSnapshot,
+} from '@/lib/stars/s3-storage';
 
 /**
  * Synthesize a SharedTrailIndexEntry for an experimental in-memory trail so
@@ -92,11 +96,15 @@ export async function GET(_request: NextRequest, { params }: Params) {
           { status: 403 }
         );
       }
+      // Experimental trails can't be starred (POST /star requires a real
+      // by-id pointer in S3, which they don't have). Hardcode false rather
+      // than incur a per-user S3 read for a value that can't be true.
       return NextResponse.json({
         owner: experimental.owner,
         repo: experimental.repo,
         entry: synthesizeEntry(experimental),
         payload: experimental.payload,
+        starred: false,
       });
     }
 
@@ -138,11 +146,27 @@ export async function GET(_request: NextRequest, { params }: Params) {
       );
     }
 
+    // `starred` is per-user. Anonymous callers always get false (the by-id
+    // route is reachable via public-repo paths without a token). For authed
+    // callers with the trail starred, also refresh the snapshot fire-and-
+    // forget — the "lazy on item open" half of the snapshot-freshness policy.
+    let starred = false;
+    if (githubToken) {
+      const user = await fetchGitHubUser(githubToken);
+      if (user) {
+        starred = await isTrailStarred(user.id, id);
+        if (starred) {
+          void refreshStarredTrailSnapshot(user.id, id, entry);
+        }
+      }
+    }
+
     return NextResponse.json({
       owner,
       repo,
       entry,
       payload: toPublicPayload(payload as StoredTrailPayload),
+      starred,
     });
   } catch (error) {
     if (error instanceof TrailShareError) {
