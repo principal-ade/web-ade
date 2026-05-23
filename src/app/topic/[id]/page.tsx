@@ -27,6 +27,7 @@ import {
 } from './SuggestTrailDialog';
 import { SuggestProjectDialog } from './SuggestProjectDialog';
 import { TrailHeaderLite } from './TrailHeaderLite';
+import { TrailSequencePreview } from '@/components/topic/TrailSequencePreview';
 import {
   TopicErrorCodes,
   type TopicErrorCode,
@@ -689,6 +690,7 @@ function TrailCard({
   const { theme } = useTheme();
   const state = result?.state ?? 'loading';
   const repoOwner = result?.owner;
+  const [expanded, setExpanded] = useState(false);
 
   const openRepoOwner = (e: React.MouseEvent | React.KeyboardEvent) => {
     if (!repoOwner) return;
@@ -834,17 +836,63 @@ function TrailCard({
       }}
     >
       {state === 'ok' && result?.entry ? (
-        <a
-          href={`/trail/${trailId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block transition-opacity hover:opacity-90"
-          style={{ color: 'inherit', textDecoration: 'none' }}
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          className="block w-full text-left transition-opacity hover:opacity-90"
+          style={{
+            color: 'inherit',
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+          }}
         >
           {body}
-        </a>
+        </button>
       ) : (
         body
+      )}
+      {state === 'ok' && (
+        <div
+          className="grid"
+          style={{
+            gridTemplateRows: expanded ? '1fr' : '0fr',
+            transition: 'grid-template-rows 240ms ease',
+          }}
+        >
+          <div style={{ overflow: 'hidden', minHeight: 0 }}>
+            <div
+              className="border-t px-4 py-3"
+              style={{
+                borderColor: theme.colors.border,
+                opacity: expanded ? 1 : 0,
+                transition: 'opacity 200ms ease',
+              }}
+            >
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span
+                  className="text-xs font-semibold uppercase tracking-wide"
+                  style={{ color: theme.colors.textMuted }}
+                >
+                  Trail Overview
+                </span>
+                <a
+                  href={`/trail/${trailId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-xs hover:opacity-80"
+                  style={{ color: theme.colors.primary }}
+                >
+                  Open full trail →
+                </a>
+              </div>
+              {expanded && <TrailSequencePreview trailId={trailId} />}
+            </div>
+          </div>
+        </div>
       )}
     </li>
   );
