@@ -62,7 +62,7 @@ export default function TopicPage() {
   const { theme } = useTheme();
   const params = useParams<{ id: string }>();
   const topicId = params.id;
-  const { user } = useAuth();
+  const { user, login } = useAuth();
 
   const [topic, setTopic] = useState<TopicPayload | null>(null);
   const [loadState, setLoadState] = useState<
@@ -89,6 +89,8 @@ export default function TopicPage() {
 
   const [shareCopied, setShareCopied] = useState(false);
   const [discussionOpen, setDiscussionOpen] = useState(false);
+  const [starred, setStarred] = useState(false);
+  const [starInFlight, setStarInFlight] = useState(false);
   const [contributeMode, setContributeMode] = useState<ContributeMode | null>(
     null,
   );
@@ -142,6 +144,7 @@ export default function TopicPage() {
         setTopic(t);
         setDraftTitle(t.title);
         setDraftDescription(t.description);
+        setStarred(Boolean(body.starred));
         setLoadState({ kind: 'ok' });
       } catch (err) {
         if (cancelled) return;
@@ -325,6 +328,34 @@ export default function TopicPage() {
     }
   }, [topicId]);
 
+  const handleToggleStar = useCallback(() => {
+    // Signed out: bounce through GitHub OAuth, land back on this page. The
+    // user can then click star again. We deliberately don't auto-star on
+    // return to keep the redirect contract simple.
+    if (!user) {
+      login(window.location.pathname);
+      return;
+    }
+    if (starInFlight) return;
+    const previous = starred;
+    setStarred(!previous);
+    setStarInFlight(true);
+    void (async () => {
+      try {
+        const res = await fetch(`/api/topics/by-id/${topicId}/star`, {
+          method: previous ? 'DELETE' : 'POST',
+        });
+        if (!res.ok && res.status !== 204) {
+          setStarred(previous);
+        }
+      } catch {
+        setStarred(previous);
+      } finally {
+        setStarInFlight(false);
+      }
+    })();
+  }, [user, login, starInFlight, starred, topicId]);
+
   // ---- Render -------------------------------------------------------------
 
   if (loadState.kind === 'loading') {
@@ -396,6 +427,9 @@ export default function TopicPage() {
         onToggleDiscussion={() => setDiscussionOpen((v) => !v)}
         isOwner={isOwner}
         onDelete={handleDeleteTopic}
+        starred={starred}
+        onToggleStar={handleToggleStar}
+        starToggleInFlight={starInFlight}
       />
 
       <SuggestTrailDialog

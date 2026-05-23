@@ -91,6 +91,8 @@ interface TrailResponse {
   repo: string;
   entry: SharedTrailIndexEntry;
   payload: TrailPayload;
+  /** Per-user. `false` for anon callers; drives the header star toggle. */
+  starred: boolean;
 }
 
 interface TrailContext {
@@ -98,6 +100,8 @@ interface TrailContext {
   repo: string;
   payload: TrailPayload;
   fileTree: FileTree;
+  /** Initial starred state from the by-id GET; the viewer owns subsequent flips. */
+  initialStarred: boolean;
 }
 
 // Sample CityData used to warm FC3D's WebGL / shader caches during the
@@ -141,10 +145,18 @@ function nullSlice<T>(name: string): DataSlice<T | null> {
   };
 }
 
-function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
+function TrailViewer({
+  owner,
+  repo,
+  payload,
+  fileTree,
+  initialStarred,
+}: TrailContext) {
   const trailId = payload.id;
   const { theme } = useTheme();
   const { user, login } = useAuth();
+  const [starred, setStarred] = useState(initialStarred);
+  const [starInFlight, setStarInFlight] = useState(false);
 
   // Live payload merges three layers: the server payload (immutable
   // source of truth), any signed-out localStorage mutations made in
@@ -234,6 +246,37 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
   const handleSignIn = useCallback(() => {
     login(window.location.pathname);
   }, [login]);
+
+  const handleToggleStar = useCallback(() => {
+    // Signed out: bounce through GitHub OAuth, land back on this page. The
+    // user can then click the star again — we deliberately don't auto-star
+    // after sign-in to keep the redirect contract simple.
+    if (!user) {
+      login(window.location.pathname);
+      return;
+    }
+    if (starInFlight) return;
+    const previous = starred;
+    setStarred(!previous);
+    setStarInFlight(true);
+    void (async () => {
+      try {
+        const res = await fetch(`/api/trails/by-id/${trailId}/star`, {
+          method: previous ? 'DELETE' : 'POST',
+        });
+        if (!res.ok && res.status !== 204) {
+          setStarred(previous);
+          const body = await res.json().catch(() => ({}));
+          showError(body?.error || `Failed to update star (${res.status})`);
+        }
+      } catch (err) {
+        setStarred(previous);
+        showError(err instanceof Error ? err.message : 'Failed to update star');
+      } finally {
+        setStarInFlight(false);
+      }
+    })();
+  }, [user, login, starInFlight, starred, trailId, showError]);
 
   const events = useMemo<PanelEventEmitter>(() => new PanelEventBus(), []);
 
@@ -588,6 +631,9 @@ function TrailViewer({ owner, repo, payload, fileTree }: TrailContext) {
         statusMessage={headerStatus}
         showSignIn={!user}
         onSignIn={handleSignIn}
+        starred={starred}
+        onToggleStar={handleToggleStar}
+        starToggleInFlight={starInFlight}
       />
       <div className="flex-1 min-h-0">
         <FileCityTrailExplorerPanel
@@ -694,6 +740,7 @@ export default function TrailPage() {
           repo: trail.repo,
           payload: trail.payload,
           fileTree: tree,
+          initialStarred: trail.starred ?? false,
         });
       } catch (err) {
         if (cancelled) return;
@@ -750,6 +797,7 @@ export default function TrailPage() {
       repo={data.repo}
       payload={data.payload}
       fileTree={data.fileTree}
+      initialStarred={data.initialStarred}
     />
   );
 }

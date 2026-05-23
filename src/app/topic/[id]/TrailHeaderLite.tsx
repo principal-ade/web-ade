@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { Bot, Check, MessageSquare, Share2, Trash2 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
+import { StarButton } from '@/components/StarButton';
 
 interface TrailHeaderLiteProps {
   topicId: string;
@@ -20,6 +21,15 @@ interface TrailHeaderLiteProps {
   onToggleDiscussion: () => void;
   isOwner: boolean;
   onDelete: () => void;
+  /**
+   * Current starred state. When `onToggleStar` is provided the header
+   * renders a star button; otherwise the slot is omitted.
+   */
+  starred?: boolean;
+  /** Forward click. Parent owns the optimistic update and the API call. */
+  onToggleStar?: () => void;
+  /** Disable the star button while a previous toggle is in flight. */
+  starToggleInFlight?: boolean;
 }
 
 export function TrailHeaderLite({
@@ -30,6 +40,9 @@ export function TrailHeaderLite({
   onToggleDiscussion,
   isOwner,
   onDelete,
+  starred,
+  onToggleStar,
+  starToggleInFlight,
 }: TrailHeaderLiteProps) {
   const { theme } = useTheme();
   return (
@@ -67,6 +80,14 @@ export function TrailHeaderLite({
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
+        {onToggleStar && (
+          <StarButton
+            starred={!!starred}
+            onClick={onToggleStar}
+            disabled={starToggleInFlight}
+          />
+        )}
+
         <button
           type="button"
           onClick={onToggleDiscussion}

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Check, Github, LogIn, Terminal } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { StarButton } from '@/components/StarButton';
 
 const COPY_FEEDBACK_MS = 1500;
 
@@ -25,6 +26,18 @@ interface TrailHeaderProps {
   showSignIn?: boolean;
   /** Called when the user clicks the Sign in button. */
   onSignIn?: () => void;
+  /**
+   * Current starred state. When `onToggleStar` is provided the header
+   * renders a star button; otherwise the slot is omitted.
+   */
+  starred?: boolean;
+  /**
+   * Forward click on the star button. Parent owns the optimistic update
+   * and the API call (or, for signed-out callers, the sign-in redirect).
+   */
+  onToggleStar?: () => void;
+  /** Disable the star button while a previous toggle is in flight. */
+  starToggleInFlight?: boolean;
 }
 
 export function TrailHeader({
@@ -34,6 +47,9 @@ export function TrailHeader({
   statusMessage,
   showSignIn,
   onSignIn,
+  starred,
+  onToggleStar,
+  starToggleInFlight,
 }: TrailHeaderProps) {
   const { theme } = useTheme();
   const [copied, setCopied] = useState(false);
@@ -167,6 +183,14 @@ export function TrailHeader({
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
+        {onToggleStar && (
+          <StarButton
+            starred={!!starred}
+            onClick={onToggleStar}
+            disabled={starToggleInFlight}
+          />
+        )}
+
         <button
           type="button"
           onClick={handleCopyAgent}
