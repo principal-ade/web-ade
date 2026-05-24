@@ -643,6 +643,9 @@ function TrailViewer({
           actions={actions}
           events={events}
           currentAuthor={user?.login ?? LOCAL_AUTHOR}
+          briefLayout="split"
+          defaultShowSequenceDrawer={false}
+          defaultHideMap
         />
       </div>
       {toast && (
