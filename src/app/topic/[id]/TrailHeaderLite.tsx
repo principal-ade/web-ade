@@ -7,10 +7,9 @@
  */
 
 import Link from 'next/link';
-import { Bot, Check, MessageSquare, Share2, Trash2 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
-import { StarButton } from '@/components/StarButton';
+import { TopicActions } from './TopicActions';
 
 interface TrailHeaderLiteProps {
   topicId: string;
@@ -115,84 +114,25 @@ export function TrailHeaderLite({
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
-        {onToggleStar && (
-          <StarButton
-            starred={!!starred}
-            onClick={onToggleStar}
-            disabled={starToggleInFlight}
+        {/*
+          Action buttons render in the header on tablet+ and move under
+          the curator row on mobile (see TopicPage). UserAvatarMenu stays
+          in the header at every breakpoint.
+        */}
+        <div className="hidden md:flex items-center gap-2">
+          <TopicActions
+            shareCopied={shareCopied}
+            onShare={onShare}
+            onBriefAgent={onBriefAgent}
+            discussionOpen={discussionOpen}
+            onToggleDiscussion={onToggleDiscussion}
+            isOwner={isOwner}
+            onDelete={onDelete}
+            starred={starred}
+            onToggleStar={onToggleStar}
+            starToggleInFlight={starToggleInFlight}
           />
-        )}
-
-        <button
-          type="button"
-          onClick={onToggleDiscussion}
-          className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
-          style={{
-            background: discussionOpen ? theme.colors.primary : 'transparent',
-            color: discussionOpen ? theme.colors.background : theme.colors.text,
-            border: `1px solid ${discussionOpen ? theme.colors.primary : theme.colors.border}`,
-            fontFamily: theme.fonts.body,
-            cursor: 'pointer',
-          }}
-          aria-label="Toggle discussion"
-          aria-pressed={discussionOpen}
-          title="Toggle discussion"
-        >
-          <MessageSquare className="w-4 h-4" />
-          <span>Discussion</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={onShare}
-          className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
-          style={{
-            background: shareCopied ? theme.colors.primary : 'transparent',
-            color: shareCopied ? theme.colors.background : theme.colors.text,
-            border: `1px solid ${shareCopied ? theme.colors.primary : theme.colors.border}`,
-            fontFamily: theme.fonts.body,
-            cursor: 'pointer',
-          }}
-          aria-label="Copy share link"
-        >
-          {shareCopied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-          <span>{shareCopied ? 'Copied' : 'Share'}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={onBriefAgent}
-          className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
-          style={{
-            background: 'transparent',
-            color: theme.colors.text,
-            border: `1px solid ${theme.colors.border}`,
-            fontFamily: theme.fonts.body,
-            cursor: 'pointer',
-          }}
-          aria-label="Copy a brief about this topic for an AI agent"
-          title="Brief an AI agent about this topic"
-        >
-          <Bot className="w-4 h-4" />
-          <span>Share With Agent</span>
-        </button>
-
-        {isOwner && (
-          <button
-            type="button"
-            onClick={onDelete}
-            className="flex items-center justify-center w-8 h-8 rounded-md transition-opacity hover:opacity-80"
-            style={{
-              color: theme.colors.textMuted,
-              border: `1px solid ${theme.colors.border}`,
-              background: 'transparent',
-            }}
-            aria-label="Delete topic"
-            title="Delete topic"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        )}
+        </div>
 
         <UserAvatarMenu />
       </div>

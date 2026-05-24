@@ -26,6 +26,7 @@ import {
   type ContributeMode,
 } from './SuggestTrailDialog';
 import { SuggestProjectDialog } from './SuggestProjectDialog';
+import { TopicActions } from './TopicActions';
 import { TrailHeaderLite } from './TrailHeaderLite';
 import { TrailSequencePreview } from '@/components/topic/TrailSequencePreview';
 import {
@@ -457,8 +458,8 @@ export default function TopicPage() {
       />
 
       <div className="flex-1 overflow-y-auto lg:overflow-hidden">
-        <main className="px-4 md:px-8 pt-4 pb-8 w-full lg:h-full lg:grid lg:grid-cols-2 lg:gap-10 lg:pb-0">
-        <div className="lg:h-full lg:flex lg:flex-col lg:overflow-hidden">
+        <main className="px-4 md:px-8 pt-4 pb-8 w-full lg:h-full lg:grid lg:grid-cols-[minmax(0,1fr)_720px_minmax(0,1fr)] lg:pb-0">
+        <div className="lg:col-start-2 lg:h-full lg:flex lg:flex-col lg:overflow-hidden lg:w-full">
         {/* Header block: title + description, with owner edit toggle */}
         {isOwnerEditingHeader ? (
           <div
@@ -588,6 +589,25 @@ export default function TopicPage() {
                 </span>
               </a>
             </div>
+            {/*
+              Mobile-only action row. The same buttons render inside
+              TrailHeaderLite at md+; here they sit under the curator so
+              the mobile header stays compact (brand + avatar menu only).
+            */}
+            <div className="mt-3 flex md:hidden items-center gap-2 flex-wrap">
+              <TopicActions
+                shareCopied={shareCopied}
+                onShare={handleShare}
+                onBriefAgent={() => setContributeMode('brief')}
+                discussionOpen={discussionOpen}
+                onToggleDiscussion={() => setDiscussionOpen((v) => !v)}
+                isOwner={isOwner}
+                onDelete={handleDeleteTopic}
+                starred={starred}
+                onToggleStar={handleToggleStar}
+                starToggleInFlight={starInFlight}
+              />
+            </div>
             {topic.description && (
               <div className="mt-3 lg:flex-1 lg:min-h-0">
                 <IndustryMarkdownSlide
@@ -604,7 +624,7 @@ export default function TopicPage() {
         )}
         </div>
 
-        <div className="lg:h-full lg:overflow-y-auto lg:pb-8">
+        <div className="lg:col-start-1 lg:row-start-1 lg:h-full lg:overflow-y-auto lg:pb-8 lg:pr-8">
         <SuggestionsPanel
           topicId={topic.id}
           isOwner={isOwner}
