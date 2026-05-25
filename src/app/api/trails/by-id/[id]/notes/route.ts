@@ -45,16 +45,26 @@ export async function POST(request: NextRequest, { params }: Params) {
             createdAt: now,
             updatedAt: now,
           }
-        : {
-            id: noteId,
-            kind: 'snippet',
-            scope: draft.scope,
-            anchor: draft.anchor,
-            body: draft.body,
-            author: user.login,
-            createdAt: now,
-            updatedAt: now,
-          };
+        : draft.kind === 'marker'
+          ? {
+              id: noteId,
+              kind: 'marker',
+              scope: draft.scope,
+              body: draft.body,
+              author: user.login,
+              createdAt: now,
+              updatedAt: now,
+            }
+          : {
+              id: noteId,
+              kind: 'snippet',
+              scope: draft.scope,
+              anchor: draft.anchor,
+              body: draft.body,
+              author: user.login,
+              createdAt: now,
+              updatedAt: now,
+            };
 
     await updatePayload(owner, repo, id, (payload) => ({
       ...payload,

@@ -34,6 +34,7 @@ export type {
   TrailNoteDraft,
   TrailMarkdownNote,
   TrailMarkdownNoteScope,
+  TrailMarkerNote,
   TrailSnippetNote,
   TrailSnippetSliceAnchor,
   TrailSnippetDiffAnchor,

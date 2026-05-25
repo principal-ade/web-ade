@@ -686,7 +686,22 @@ export function validateNoteDraft(input: unknown): TrailNoteDraft {
       author: '',
     };
   }
-  return invalid("note.kind must be 'markdown' or 'snippet'");
+  if (d.kind === 'marker') {
+    if (
+      !isPlainObject(d.scope) ||
+      typeof (d.scope as { markerId?: unknown }).markerId !== 'string'
+    ) {
+      invalid('marker note.scope.markerId is required');
+    }
+    const markerId = (d.scope as { markerId: string }).markerId;
+    return {
+      kind: 'marker',
+      scope: { markerId },
+      body: d.body,
+      author: '',
+    };
+  }
+  return invalid("note.kind must be 'markdown', 'snippet', or 'marker'");
 }
 
 /**

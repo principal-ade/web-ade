@@ -376,16 +376,26 @@ function TrailViewer({
                 createdAt: now,
                 updatedAt: now,
               }
-            : {
-                id: newLocalId(),
-                kind: 'snippet',
-                scope: draft.scope,
-                anchor: draft.anchor,
-                body: draft.body,
-                author: LOCAL_AUTHOR,
-                createdAt: now,
-                updatedAt: now,
-              };
+            : draft.kind === 'marker'
+              ? {
+                  id: newLocalId(),
+                  kind: 'marker',
+                  scope: draft.scope,
+                  body: draft.body,
+                  author: LOCAL_AUTHOR,
+                  createdAt: now,
+                  updatedAt: now,
+                }
+              : {
+                  id: newLocalId(),
+                  kind: 'snippet',
+                  scope: draft.scope,
+                  anchor: draft.anchor,
+                  body: draft.body,
+                  author: LOCAL_AUTHOR,
+                  createdAt: now,
+                  updatedAt: now,
+                };
         appendLocalNote(trailId, note);
         setLivePayload((prev) => ({
           ...prev,
