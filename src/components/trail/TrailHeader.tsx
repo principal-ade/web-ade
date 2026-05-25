@@ -5,6 +5,7 @@ import { Check, Github, LogIn, Terminal } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StarButton } from '@/components/StarButton';
+import { RepoInfoModal } from '@/components/trail/RepoInfoModal';
 
 const COPY_FEEDBACK_MS = 1500;
 
@@ -53,6 +54,7 @@ export function TrailHeader({
 }: TrailHeaderProps) {
   const { theme } = useTheme();
   const [copied, setCopied] = useState(false);
+  const [repoInfoOpen, setRepoInfoOpen] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -127,10 +129,12 @@ export function TrailHeader({
         </Link>
       </div>
 
-      <Link
-        href={`/${owner}/${repo}`}
-        className="flex md:hidden items-center gap-2 min-w-0 flex-1 transition-opacity hover:opacity-80"
-        style={{ textDecoration: 'none' }}
+      <button
+        type="button"
+        onClick={() => setRepoInfoOpen(true)}
+        className="flex md:hidden items-center gap-2 min-w-0 flex-1 transition-opacity hover:opacity-80 bg-transparent border-0 p-0 text-left"
+        style={{ cursor: 'pointer', color: 'inherit' }}
+        aria-label={`Show info for ${owner}/${repo}`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -150,7 +154,7 @@ export function TrailHeader({
         >
           {repo}
         </span>
-      </Link>
+      </button>
 
       {/*
         Centered status slot. Absolute-positioned so it occupies the
@@ -244,6 +248,14 @@ export function TrailHeader({
           </button>
         )}
       </div>
+
+      {repoInfoOpen && (
+        <RepoInfoModal
+          owner={owner}
+          repo={repo}
+          onClose={() => setRepoInfoOpen(false)}
+        />
+      )}
     </header>
   );
 }
