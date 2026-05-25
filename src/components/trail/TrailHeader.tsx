@@ -1,13 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { Check, Github, LogIn, Terminal } from 'lucide-react';
+import { Check, Github, LogIn, Stamp, Terminal, Undo2 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { StarButton } from '@/components/StarButton';
 import { RepoInfoModal } from '@/components/trail/RepoInfoModal';
+import { SignOffStampAnimation } from '@/components/trail/LgtmStamp';
 
 const COPY_FEEDBACK_MS = 1500;
+const LGTM_ANIMATION_MS = 1100;
+const LGTM_HOLD_MS = 600;
+const lgtmStorageKey = (trailId: string) => `trail-lgtm:${trailId}`;
 
 const buildAgentCommand = (trailId: string) =>
   `npx -y @principal-ai/principal-view-cli@latest trail ${trailId}`;
@@ -39,6 +44,11 @@ interface TrailHeaderProps {
   onToggleStar?: () => void;
   /** Disable the star button while a previous toggle is in flight. */
   starToggleInFlight?: boolean;
+  /**
+   * Whether the viewer has any notes attached. Drives the stamp label —
+   * "LGTM" when empty, "Reviewed" once the user has left at least one note.
+   */
+  hasNotes?: boolean;
 }
 
 export function TrailHeader({
@@ -51,17 +61,35 @@ export function TrailHeader({
   starred,
   onToggleStar,
   starToggleInFlight,
+  hasNotes,
 }: TrailHeaderProps) {
+  const stampLabel = hasNotes ? 'Reviewed' : 'LGTM';
   const { theme } = useTheme();
   const [copied, setCopied] = useState(false);
   const [repoInfoOpen, setRepoInfoOpen] = useState(false);
+  const [lgtmSigned, setLgtmSigned] = useState(false);
+  const [lgtmAnimating, setLgtmAnimating] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lgtmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (lgtmTimeoutRef.current) clearTimeout(lgtmTimeoutRef.current);
     };
   }, []);
+
+  // Restore prior sign-off from localStorage. Keyed per trail so different
+  // trails track independently. Wrapped in try/catch because storage can
+  // be disabled (private mode, quota, etc.) and we'd rather render than
+  // throw.
+  useEffect(() => {
+    try {
+      setLgtmSigned(localStorage.getItem(lgtmStorageKey(trailId)) === '1');
+    } catch {
+      setLgtmSigned(false);
+    }
+  }, [trailId]);
 
   const handleCopyAgent = useCallback(async () => {
     try {
@@ -73,6 +101,32 @@ export function TrailHeader({
       // clipboard may be denied — fail quietly; user can refresh and retry
     }
   }, [trailId]);
+
+  const handleLgtm = useCallback(() => {
+    if (lgtmAnimating) return;
+    // Toggle off if already signed — keeps the testing loop quick without
+    // needing devtools to clear localStorage.
+    if (lgtmSigned) {
+      try {
+        localStorage.removeItem(lgtmStorageKey(trailId));
+      } catch {
+        // ignore
+      }
+      setLgtmSigned(false);
+      return;
+    }
+    setLgtmAnimating(true);
+    try {
+      localStorage.setItem(lgtmStorageKey(trailId), '1');
+    } catch {
+      // ignore
+    }
+    if (lgtmTimeoutRef.current) clearTimeout(lgtmTimeoutRef.current);
+    lgtmTimeoutRef.current = setTimeout(() => {
+      setLgtmSigned(true);
+      setLgtmAnimating(false);
+    }, LGTM_ANIMATION_MS + LGTM_HOLD_MS);
+  }, [lgtmAnimating, lgtmSigned, trailId]);
 
   return (
     <header
@@ -187,6 +241,73 @@ export function TrailHeader({
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
+        {lgtmSigned ? (
+          <button
+            type="button"
+            onClick={handleLgtm}
+            disabled={lgtmAnimating}
+            className="flex md:hidden items-center justify-center bg-transparent"
+            style={{
+              border: 'none',
+              padding: '4px 10px',
+              gap: 18,
+              cursor: lgtmAnimating ? 'wait' : 'pointer',
+              // Wrapper keeps the click target rectangular while the
+              // inner stamp can rotate without skewing layout.
+            }}
+            aria-label={`Remove ${stampLabel} sign-off`}
+            aria-pressed
+            title={`Tap to undo ${stampLabel}`}
+          >
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '3px 10px',
+                border: `2px double ${theme.colors.success}`,
+                borderRadius: 4,
+                color: theme.colors.success,
+                fontFamily: theme.fonts.monospace,
+                fontWeight: 700,
+                fontSize: 13,
+                letterSpacing: '0.12em',
+                transform: 'rotate(-8deg)',
+                background: `color-mix(in srgb, ${theme.colors.background} 65%, transparent)`,
+                userSelect: 'none',
+              }}
+            >
+              {stampLabel}
+            </span>
+            <Undo2
+              className="w-4 h-4"
+              style={{ color: theme.colors.textMuted, opacity: 0.8 }}
+              aria-hidden
+            />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleLgtm}
+            disabled={lgtmAnimating}
+            className="flex md:hidden items-center gap-1.5 px-3 h-8 rounded-md text-sm font-semibold transition-all hover:opacity-90"
+            style={{
+              background: 'transparent',
+              color: theme.colors.success,
+              border: `1px solid ${theme.colors.success}`,
+              fontFamily: theme.fonts.monospace,
+              letterSpacing: '0.08em',
+              cursor: lgtmAnimating ? 'wait' : 'pointer',
+              opacity: lgtmAnimating ? 0.7 : 1,
+            }}
+            aria-label="Stamp sign-off"
+            aria-pressed={false}
+          >
+            <Stamp className="w-4 h-4" />
+            <span>Stamp</span>
+          </button>
+        )}
+
         {onToggleStar && (
           <div className="hidden md:flex">
             <StarButton
@@ -258,6 +379,33 @@ export function TrailHeader({
           onClose={() => setRepoInfoOpen(false)}
         />
       )}
+
+      {lgtmAnimating &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            aria-hidden
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 2147483646,
+              pointerEvents: 'none',
+              background: `color-mix(in srgb, ${theme.colors.background} 35%, transparent)`,
+              animation: 'lgtm-overlay-fade 1700ms ease-out both',
+            }}
+          >
+            <style>{`
+              @keyframes lgtm-overlay-fade {
+                0%   { opacity: 0; }
+                20%  { opacity: 1; }
+                80%  { opacity: 1; }
+                100% { opacity: 0; }
+              }
+            `}</style>
+            <SignOffStampAnimation theme={theme} text={stampLabel} size={220} />
+          </div>,
+          document.body,
+        )}
     </header>
   );
 }

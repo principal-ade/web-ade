@@ -639,6 +639,7 @@ function TrailViewer({
         starred={starred}
         onToggleStar={handleToggleStar}
         starToggleInFlight={starInFlight}
+        hasNotes={(livePayload.notes ?? []).length > 0}
       />
       <div className="flex-1 min-h-0">
         <FileCityTrailExplorerPanel

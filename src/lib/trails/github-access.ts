@@ -70,6 +70,39 @@ export async function resolveGitHubLogin(
   }
 }
 
+/**
+ * Return a GitHub user's display name (the `name` field they set in their
+ * profile), or `null` if the user has no name set or the lookup fails.
+ *
+ * Callers should fall back to the login when this returns null — GitHub
+ * lets users leave `name` empty, in which case the login *is* their
+ * public identity.
+ *
+ * Uses the same 24h cache as `resolveGitHubLogin` since the underlying
+ * endpoint (`GET /users/{login}`) returns both — kept separate so each
+ * caller can opt into one piece of the response without paying for the
+ * other's typing.
+ */
+export async function getGitHubDisplayName(
+  login: string
+): Promise<string | null> {
+  const cacheKey = `user-lookup:${login.toLowerCase()}`;
+  try {
+    const data = await cachedGitHubFetch<{
+      id: number;
+      login: string;
+      name: string | null;
+    }>(`/users/${login}`, cacheKey, USER_LOOKUP_CACHE_TTL, [
+      CACHE_TAGS.USER_DATA,
+    ]);
+    return data.name && data.name.trim().length > 0 ? data.name : null;
+  } catch {
+    // Never block a trail read because we couldn't resolve a name —
+    // the caller falls back to the login.
+    return null;
+  }
+}
+
 export async function checkRepoAccess(
   owner: string,
   repo: string,

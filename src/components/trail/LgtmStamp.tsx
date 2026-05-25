@@ -26,6 +26,12 @@ export function LgtmStamp({
 }) {
   const inkColor = ink ?? theme.colors.success;
   const borderWidth = Math.max(2, Math.round(size / 30));
+  // Shrink the main text proportionally once it grows past the 4-char
+  // baseline ("LGTM") so longer words like "Reviewed" stay inside the
+  // stamp border instead of bleeding past it.
+  const baseChars = 4;
+  const textScale = Math.min(1, baseChars / Math.max(baseChars, text.length));
+  const titleFontSize = size * 0.26 * textScale;
   return (
     <div
       aria-hidden
@@ -51,7 +57,7 @@ export function LgtmStamp({
     >
       <div
         style={{
-          fontSize: size * 0.26,
+          fontSize: titleFontSize,
           fontWeight: theme.fontWeights.bold,
           lineHeight: 1,
         }}

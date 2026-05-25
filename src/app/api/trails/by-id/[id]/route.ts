@@ -16,7 +16,7 @@ import {
   getPayload,
 } from '@/lib/trails/s3-storage';
 import { validateOwnerRepo } from '@/lib/trails/validation';
-import { checkRepoAccess } from '@/lib/trails/github-access';
+import { checkRepoAccess, getGitHubDisplayName } from '@/lib/trails/github-access';
 import {
   TrailShareError,
   ShareErrorCodes,
@@ -161,11 +161,23 @@ export async function GET(_request: NextRequest, { params }: Params) {
       }
     }
 
+    const publicPayload = toPublicPayload(payload as StoredTrailPayload);
+    // The panel's brief renders `From: <author>` from `payload.author`,
+    // but CLI/MCP authoring doesn't always set it. Fall back to the
+    // creator's GitHub display name (cached 24h via /users/{login});
+    // if that isn't set, fall back to the login so the line always
+    // shows *something*.
+    if (!publicPayload.author && entry.createdBy?.githubLogin) {
+      const login = entry.createdBy.githubLogin;
+      const displayName = await getGitHubDisplayName(login);
+      publicPayload.author = displayName ?? login;
+    }
+
     return NextResponse.json({
       owner,
       repo,
       entry,
-      payload: toPublicPayload(payload as StoredTrailPayload),
+      payload: publicPayload,
       starred,
     });
   } catch (error) {

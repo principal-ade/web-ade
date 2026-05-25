@@ -12,7 +12,7 @@ import {
   updateIndex,
 } from '@/lib/trails/s3-storage';
 import { validateOwnerRepo } from '@/lib/trails/validation';
-import { checkRepoAccess } from '@/lib/trails/github-access';
+import { checkRepoAccess, getGitHubDisplayName } from '@/lib/trails/github-access';
 import {
   TrailShareError,
   ShareErrorCodes,
@@ -91,9 +91,20 @@ export async function GET(_request: NextRequest, { params }: Params) {
       });
     }
 
+    const publicPayload = toPublicPayload(payload as StoredTrailPayload);
+    // See `by-id` route for rationale: backfill `author` from the
+    // creator's GitHub display name (cached 24h), falling back to the
+    // login if the user hasn't set a name, so the panel's brief always
+    // has something to show for `From:`.
+    if (!publicPayload.author && entry.createdBy?.githubLogin) {
+      const login = entry.createdBy.githubLogin;
+      const displayName = await getGitHubDisplayName(login);
+      publicPayload.author = displayName ?? login;
+    }
+
     return NextResponse.json({
       entry,
-      payload: toPublicPayload(payload as StoredTrailPayload),
+      payload: publicPayload,
     });
   } catch (error) {
     return errorResponse(error, 'Failed to retrieve trail');
