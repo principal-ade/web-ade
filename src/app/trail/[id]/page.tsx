@@ -651,6 +651,7 @@ function TrailViewer({
           defaultHideMap
           hideGraphToggle
           hideVisitorsRoster
+          hideNotesByRoster
         />
       </div>
       {toast && (
