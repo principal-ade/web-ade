@@ -601,11 +601,6 @@ function TrailViewer({
     [trailId, user, showError],
   );
 
-  const shareTrail = useCallback(() => {
-    const url = `${window.location.origin}/trail/${trailId}`;
-    void navigator.clipboard.writeText(url);
-  }, [trailId]);
-
   const actions = useMemo<FileCityTrailExplorerPanelActions>(
     () => ({
       openFile: () => {
@@ -618,7 +613,6 @@ function TrailViewer({
       deleteTrailNote,
       createTrailSignOff,
       deleteTrailSignOff,
-      shareTrail,
     }),
     [
       readFile,
@@ -627,7 +621,6 @@ function TrailViewer({
       deleteTrailNote,
       createTrailSignOff,
       deleteTrailSignOff,
-      shareTrail,
     ],
   );
 
@@ -656,6 +649,8 @@ function TrailViewer({
           briefLayout="split"
           defaultShowSequenceDrawer={false}
           defaultHideMap
+          hideGraphToggle
+          hideVisitorsRoster
         />
       </div>
       {toast && (
