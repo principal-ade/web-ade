@@ -30,6 +30,12 @@ const config: StorybookConfig = {
       "@": path.resolve(__dirname, "../src"),
       // Mock File City packages to avoid bundling issues
       "@principal-ai/file-city-react": path.resolve(__dirname, "./mocks/file-city-react.tsx"),
+      // file-city-builder's package.json points "module" at a non-existent index.mjs;
+      // alias the bare specifier to the real dist/index.js so Vite/esbuild can resolve it.
+      "@principal-ai/file-city-builder": path.resolve(
+        __dirname,
+        "../node_modules/@principal-ai/file-city-builder/dist/index.js",
+      ),
     };
 
     return config;

@@ -98,3 +98,26 @@ export interface FileTree {
   };
   metadata: unknown;
 }
+
+// Additional re-exports pulled in by @industry-theme/file-city-panel.
+// These are stubs — Storybook never exercises the FileCity3D code path.
+export const FileCity3D: React.FC<Record<string, unknown>> = () => null;
+
+export const getFileColorMapping = (): Record<string, string> => ({});
+
+export const rotateCameraBy = (..._args: unknown[]): void => {};
+
+export const createFileColorHighlightLayers = (
+  ..._args: unknown[]
+): HighlightLayer[] => [];
+
+export const buildFolderIndex = (..._args: unknown[]): Map<string, unknown> =>
+  new Map();
+
+export const buildFolderElevatedPanels = (..._args: unknown[]): unknown[] => [];
+
+export const getCameraPosition = (
+  ..._args: unknown[]
+): { x: number; y: number; z: number } => ({ x: 0, y: 0, z: 0 });
+
+export const setCameraFlatView = (..._args: unknown[]): void => {};
