@@ -1,16 +1,26 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 
+// useLayoutEffect warns under SSR; fall back to useEffect on the server.
+const useIsoLayoutEffect =
+  typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
 export interface TrailLoadingAnimationProps {
-  /** Pixel width of the animation */
+  /** Pixel width of the animation. When omitted, the component measures its parent. */
   width?: number;
-  /** Pixel height of the animation */
+  /** Pixel height of the animation. When omitted, the component measures its parent. */
   height?: number;
-  /** Number of grid columns */
+  /** Number of grid columns. When omitted, derived from measured width. */
   cols?: number;
-  /** Number of grid rows */
+  /** Number of grid rows. When omitted, derived from measured height. */
   rows?: number;
   /** Optional message rendered under the animation */
   message?: string;
@@ -20,6 +30,14 @@ export interface TrailLoadingAnimationProps {
   maxTrails?: number;
   /** 0..1 — probability that a given column is included in a trail */
   density?: number;
+  /** Upper bound for the fluid surface (px). Ignored when width is set explicitly. */
+  maxWidth?: number;
+  /** Upper bound for the fluid surface (px). Ignored when height is set explicitly. */
+  maxHeight?: number;
+  /** Approximate target cell size (px) when auto-deriving cols/rows */
+  targetCellSize?: number;
+  /** Padding (px) reserved around the grid inside the measured surface */
+  padding?: number;
 }
 
 function mulberry32(seed: number): () => number {
@@ -75,6 +93,10 @@ function pickTrailRows(
 interface Trail {
   id: number;
   color: string;
+  picks: PickedRow[];
+}
+
+interface ResolvedTrail extends Trail {
   points: { col: number; row: number; cx: number; cy: number }[];
   pathD: string;
 }
@@ -85,21 +107,80 @@ function trailColor(id: number): string {
   return `hsl(${hue.toFixed(1)}, 78%, 62%)`;
 }
 
+const FLUID_FALLBACK_W = 480;
+const FLUID_FALLBACK_H = 220;
+
 export const TrailLoadingAnimation: React.FC<TrailLoadingAnimationProps> = ({
-  width = 480,
-  height = 220,
-  cols = 12,
-  rows = 6,
-  message = 'Loading trail…',
+  width: widthProp,
+  height: heightProp,
+  cols: colsProp,
+  rows: rowsProp,
+  message = 'Loading trail',
   cycleDuration = 4500,
   maxTrails = 6,
   density = 0.55,
+  maxWidth = 720,
+  maxHeight = 320,
+  targetCellSize = 40,
+  padding = 24,
 }) => {
   const { theme } = useTheme();
 
-  const cellW = width / cols;
-  const cellH = height / rows;
-  const squareSize = Math.min(cellW, cellH) * 0.62;
+  const fluid = widthProp == null || heightProp == null;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [measured, setMeasured] = useState<{ w: number; h: number }>({
+    w: widthProp ?? FLUID_FALLBACK_W,
+    h: heightProp ?? FLUID_FALLBACK_H,
+  });
+  const [ready, setReady] = useState<boolean>(!fluid);
+
+  useIsoLayoutEffect(() => {
+    if (!fluid) {
+      setReady(true);
+      return;
+    }
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      const rect = el.getBoundingClientRect();
+      const w = Math.max(120, Math.min(maxWidth, rect.width || FLUID_FALLBACK_W));
+      const h = Math.max(80, Math.min(maxHeight, rect.height || FLUID_FALLBACK_H));
+      setMeasured((prev) =>
+        Math.abs(prev.w - w) < 0.5 && Math.abs(prev.h - h) < 0.5
+          ? prev
+          : { w, h },
+      );
+      setReady(true);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fluid, maxWidth, maxHeight]);
+
+  const width = widthProp ?? measured.w;
+  const height = heightProp ?? measured.h;
+
+  // Usable area shrinks by the padding so the grid never reaches the
+  // container edge by default.
+  const usableW = Math.max(60, width - padding * 2);
+  const usableH = Math.max(40, height - padding * 2);
+
+  const cols =
+    colsProp ??
+    Math.max(6, Math.min(20, Math.round(usableW / targetCellSize)));
+  const rows =
+    rowsProp ??
+    Math.max(3, Math.min(10, Math.round(usableH / targetCellSize)));
+
+  // Single cell pitch so the grid is genuinely square — independent
+  // width/cols vs height/rows would give rectangular cells.
+  const cellSize = Math.min(usableW / cols, usableH / rows);
+  const cellW = cellSize;
+  const cellH = cellSize;
+  const gridW = cellSize * cols;
+  const gridH = cellSize * rows;
+  const squareSize = cellSize * 0.62;
   const dotR = squareSize * 0.14;
 
   const cells = useMemo(() => {
@@ -119,9 +200,47 @@ export const TrailLoadingAnimation: React.FC<TrailLoadingAnimationProps> = ({
 
   const buildTrail = useMemo(
     () =>
-      (id: number): Trail => {
-        const picks = pickTrailRows(cols, rows, density, 0x1337 + id * 17);
-        const points = picks.map((p) => ({
+      (id: number): Trail => ({
+        id,
+        color: trailColor(id),
+        picks: pickTrailRows(cols, rows, density, 0x1337 + id * 17),
+      }),
+    [cols, rows, density],
+  );
+
+  const [trails, setTrails] = useState<Trail[]>(() => [buildTrail(0)]);
+
+  // When the grid shape changes (resize, prop change), regenerate picks so
+  // trails stay on-grid. Layout effect so the corrected picks are committed
+  // before the browser paints — otherwise the first paint shows a trail
+  // computed against the previous grid and the user sees it "snap".
+  useIsoLayoutEffect(() => {
+    setTrails((prev) =>
+      prev.map((t) => ({
+        ...t,
+        picks: pickTrailRows(cols, rows, density, 0x1337 + t.id * 17),
+      })),
+    );
+  }, [cols, rows, density]);
+
+  useEffect(() => {
+    let nextId = (trails[trails.length - 1]?.id ?? 0) + 1;
+    const id = window.setInterval(() => {
+      const newTrail = buildTrail(nextId++);
+      setTrails((prev) => {
+        const next = [...prev, newTrail];
+        if (next.length > maxTrails) next.splice(0, next.length - maxTrails);
+        return next;
+      });
+    }, cycleDuration);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buildTrail, cycleDuration, maxTrails]);
+
+  const resolvedTrails: ResolvedTrail[] = useMemo(
+    () =>
+      trails.map((t) => {
+        const points = t.picks.map((p) => ({
           col: p.col,
           row: p.row,
           cx: cellW * (p.col + 0.5),
@@ -133,33 +252,18 @@ export const TrailLoadingAnimation: React.FC<TrailLoadingAnimationProps> = ({
               `${i === 0 ? 'M' : 'L'} ${p.cx.toFixed(2)} ${p.cy.toFixed(2)}`,
           )
           .join(' ');
-        return { id, color: trailColor(id), points, pathD };
-      },
-    [cols, rows, cellW, cellH, density],
+        return { ...t, points, pathD };
+      }),
+    [trails, cellW, cellH],
   );
 
-  const [trails, setTrails] = useState<Trail[]>(() => [buildTrail(0)]);
-
-  useEffect(() => {
-    let nextId = 1;
-    const id = window.setInterval(() => {
-      const newTrail = buildTrail(nextId++);
-      setTrails((prev) => {
-        const next = [...prev, newTrail];
-        if (next.length > maxTrails) next.splice(0, next.length - maxTrails);
-        return next;
-      });
-    }, cycleDuration);
-    return () => window.clearInterval(id);
-  }, [buildTrail, cycleDuration, maxTrails]);
-
-  const latest = trails[trails.length - 1];
-  const settled = trails.slice(0, -1);
+  const latest = resolvedTrails[resolvedTrails.length - 1];
+  const settled = resolvedTrails.slice(0, -1);
 
   // Map of "col:row" -> array of trails passing through that cell (for
   // persisted colored dot stacks on settled trails).
   const settledHits = useMemo(() => {
-    const m = new Map<string, Trail[]>();
+    const m = new Map<string, ResolvedTrail[]>();
     for (const t of settled) {
       for (const p of t.points) {
         const k = `${p.col}:${p.row}`;
@@ -199,17 +303,50 @@ export const TrailLoadingAnimation: React.FC<TrailLoadingAnimationProps> = ({
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: 16,
+        width: fluid ? '100%' : undefined,
+        height: fluid ? '100%' : undefined,
       }}
     >
-      <svg
-        width={width}
-        height={height}
-        viewBox={`0 0 ${width} ${height}`}
-        style={{ overflow: 'visible' }}
-        role="img"
-        aria-label={message || 'Loading'}
+      {message && (
+        <div
+          style={{
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[4] ?? '1.5rem',
+            fontWeight: 600,
+            letterSpacing: '0.01em',
+            color: theme.colors.textMuted,
+            animation: 'trailTextPulse 2s ease-in-out infinite',
+          }}
+        >
+          {message}
+        </div>
+      )}
+
+      <div
+        ref={containerRef}
+        style={{
+          width: fluid ? '100%' : width,
+          height: fluid ? '100%' : height,
+          maxWidth: fluid ? maxWidth : undefined,
+          maxHeight: fluid ? maxHeight : undefined,
+          minWidth: 0,
+          minHeight: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
       >
+        {ready && (
+        <svg
+          width={gridW}
+          height={gridH}
+          viewBox={`0 0 ${gridW} ${gridH}`}
+          style={{ overflow: 'visible', maxWidth: '100%', maxHeight: '100%' }}
+          role="img"
+          aria-label={message || 'Loading'}
+        >
         {/* Base grid: squares + dots */}
         {cells.map((cell) => {
           const sx = cell.cx - squareSize / 2;
@@ -330,20 +467,9 @@ export const TrailLoadingAnimation: React.FC<TrailLoadingAnimationProps> = ({
             })}
           </>
         )}
-      </svg>
-
-      {message && (
-        <div
-          style={{
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[1],
-            color: theme.colors.textMuted,
-            animation: 'trailTextPulse 2s ease-in-out infinite',
-          }}
-        >
-          {message}
-        </div>
-      )}
+        </svg>
+        )}
+      </div>
 
       <style>{`
         @keyframes trailDraw {
