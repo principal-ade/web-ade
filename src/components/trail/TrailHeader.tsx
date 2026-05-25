@@ -188,11 +188,13 @@ export function TrailHeader({
 
       <div className="flex items-center gap-2 flex-shrink-0">
         {onToggleStar && (
-          <StarButton
-            starred={!!starred}
-            onClick={onToggleStar}
-            disabled={starToggleInFlight}
-          />
+          <div className="hidden md:flex">
+            <StarButton
+              starred={!!starred}
+              onClick={onToggleStar}
+              disabled={starToggleInFlight}
+            />
+          </div>
         )}
 
         <button
@@ -233,7 +235,7 @@ export function TrailHeader({
           <button
             type="button"
             onClick={onSignIn}
-            className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-90"
+            className="hidden md:flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-90"
             style={{
               background: theme.colors.primary,
               color: theme.colors.background,
