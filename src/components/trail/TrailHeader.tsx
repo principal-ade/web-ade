@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Check, Github, LogIn, Stamp, Terminal, Undo2 } from 'lucide-react';
+import { Check, Github, LogIn, MessageSquareOff, MessageSquarePlus, Stamp, Terminal, Undo2 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -49,6 +49,17 @@ interface TrailHeaderProps {
    * "LGTM" when empty, "Reviewed" once the user has left at least one note.
    */
   hasNotes?: boolean;
+  /**
+   * Owner-only toggle: when true, render the "Allow anonymous notes"
+   * control. Parent computes ownership (`user.id === entry.createdBy.githubId`).
+   */
+  showAnonNotesToggle?: boolean;
+  /** Current value of the trail's `allowAnonNotes` flag. */
+  allowAnonNotes?: boolean;
+  /** Click handler — parent owns the PATCH + optimistic update. */
+  onToggleAnonNotes?: () => void;
+  /** Disable the toggle while a previous PATCH is in flight. */
+  anonNotesToggleInFlight?: boolean;
 }
 
 export function TrailHeader({
@@ -62,6 +73,10 @@ export function TrailHeader({
   onToggleStar,
   starToggleInFlight,
   hasNotes,
+  showAnonNotesToggle,
+  allowAnonNotes,
+  onToggleAnonNotes,
+  anonNotesToggleInFlight,
 }: TrailHeaderProps) {
   const stampLabel = hasNotes ? 'Reviewed' : 'LGTM';
   const { theme } = useTheme();
@@ -305,6 +320,40 @@ export function TrailHeader({
           >
             <Stamp className="w-4 h-4" />
             <span>Stamp</span>
+          </button>
+        )}
+
+        {showAnonNotesToggle && onToggleAnonNotes && (
+          <button
+            type="button"
+            onClick={onToggleAnonNotes}
+            disabled={anonNotesToggleInFlight}
+            className="hidden md:flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
+            style={{
+              background: allowAnonNotes ? theme.colors.primary : 'transparent',
+              color: allowAnonNotes
+                ? theme.colors.background
+                : theme.colors.text,
+              border: `1px solid ${
+                allowAnonNotes ? theme.colors.primary : theme.colors.border
+              }`,
+              fontFamily: theme.fonts.body,
+              cursor: anonNotesToggleInFlight ? 'wait' : 'pointer',
+              opacity: anonNotesToggleInFlight ? 0.7 : 1,
+            }}
+            aria-pressed={!!allowAnonNotes}
+            title={
+              allowAnonNotes
+                ? 'Anonymous viewers can post notes on this trail. Click to disable.'
+                : 'Click to allow anonymous viewers to post notes on this trail.'
+            }
+          >
+            {allowAnonNotes ? (
+              <MessageSquarePlus className="w-4 h-4" />
+            ) : (
+              <MessageSquareOff className="w-4 h-4" />
+            )}
+            <span>{allowAnonNotes ? 'Anon notes on' : 'Anon notes off'}</span>
           </button>
         )}
 

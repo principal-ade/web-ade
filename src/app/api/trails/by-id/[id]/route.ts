@@ -15,6 +15,7 @@ import {
   getIndex,
   getPayload,
 } from '@/lib/trails/s3-storage';
+import { getAnonNotes } from '@/lib/trails/anon-notes-storage';
 import { validateOwnerRepo } from '@/lib/trails/validation';
 import { checkRepoAccess, getGitHubDisplayName } from '@/lib/trails/github-access';
 import {
@@ -105,6 +106,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
         entry: synthesizeEntry(experimental),
         payload: experimental.payload,
         starred: false,
+        allowAnonNotes: false,
       });
     }
 
@@ -131,9 +133,10 @@ export async function GET(_request: NextRequest, { params }: Params) {
       );
     }
 
-    const [payload, index] = await Promise.all([
+    const [payload, index, anonNotes] = await Promise.all([
       getPayload(owner, repo, id),
       getIndex(owner, repo),
+      getAnonNotes(id),
     ]);
 
     const entry = findIndexEntry(index, id);
@@ -161,7 +164,14 @@ export async function GET(_request: NextRequest, { params }: Params) {
       }
     }
 
-    const publicPayload = toPublicPayload(payload as StoredTrailPayload);
+    const stored = payload as StoredTrailPayload;
+    const publicPayload = toPublicPayload(stored);
+    // Merge anon notes into the panel-facing notes array. They carry
+    // an `anon-` id prefix so the trail page can route deletes to
+    // the anon-notes endpoint instead of the authored-notes one.
+    if (anonNotes.length > 0) {
+      publicPayload.notes = [...(publicPayload.notes ?? []), ...anonNotes];
+    }
     // The panel's brief renders `From: <author>` from `payload.author`,
     // but CLI/MCP authoring doesn't always set it. Fall back to the
     // creator's GitHub display name (cached 24h via /users/{login});
@@ -179,6 +189,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
       entry,
       payload: publicPayload,
       starred,
+      allowAnonNotes: stored.allowAnonNotes ?? false,
     });
   } catch (error) {
     if (error instanceof TrailShareError) {

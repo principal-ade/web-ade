@@ -22,7 +22,15 @@ import {
 } from './constants';
 
 const MAX_NOTE_BODY_BYTES = 16_000;
+const MAX_ANON_NOTE_BODY_BYTES = 2_000;
 const MAX_SIGNOFF_COMMENT_BYTES = 2_000;
+
+// Anonymous notes are restricted to plain text: unicode letters, digits,
+// whitespace, and a small set of conversational punctuation. No URL
+// characters (no `/`, `:`, `@`, `#`, etc.) — keeps anon submissions from
+// being a vector for link spam. Authored notes have no equivalent gate;
+// the trail owner is trusted with the full 16 KB markdown surface.
+const ANON_NOTE_ALLOWED_CHARS = /^[\p{L}\p{N}\s.,?!:;'"\-()]*$/u;
 
 const OWNER_REPO_PATTERN = /^[A-Za-z0-9._-]+$/;
 const ISO_DATETIME_PATTERN =
@@ -702,6 +710,36 @@ export function validateNoteDraft(input: unknown): TrailNoteDraft {
     };
   }
   return invalid("note.kind must be 'markdown', 'snippet', or 'marker'");
+}
+
+/**
+ * Validate a `TrailNoteDraft` submitted by an anonymous viewer. Same
+ * shape as `validateNoteDraft`, but with two extra gates:
+ *   - body must match `ANON_NOTE_ALLOWED_CHARS` (no URL chars, no
+ *     emoji, no symbols beyond basic punctuation)
+ *   - body is capped at `MAX_ANON_NOTE_BODY_BYTES` (2 KB) instead of
+ *     the 16 KB authored cap
+ *
+ * Returns a clean draft with `author` blanked — the anon POST route
+ * stamps `"Anonymous"`.
+ */
+export function validateAnonNoteDraft(input: unknown): TrailNoteDraft {
+  const draft = validateNoteDraft(input);
+  if (Buffer.byteLength(draft.body, 'utf8') > MAX_ANON_NOTE_BODY_BYTES) {
+    throw new TrailShareError(
+      `Anonymous note exceeds ${MAX_ANON_NOTE_BODY_BYTES} bytes`,
+      413,
+      ShareErrorCodes.PAYLOAD_TOO_LARGE
+    );
+  }
+  if (!ANON_NOTE_ALLOWED_CHARS.test(draft.body)) {
+    throw new TrailShareError(
+      'Anonymous notes may only contain letters, numbers, whitespace, and basic punctuation (. , ? ! : ; \' " - ( ))',
+      400,
+      ShareErrorCodes.ANON_NOTE_INVALID_CHARS
+    );
+  }
+  return draft;
 }
 
 /**

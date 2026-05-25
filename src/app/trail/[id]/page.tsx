@@ -93,6 +93,12 @@ interface TrailResponse {
   payload: TrailPayload;
   /** Per-user. `false` for anon callers; drives the header star toggle. */
   starred: boolean;
+  /**
+   * Owner-controlled flag. When true, signed-out viewers' new notes
+   * are POSTed to `/anon-notes` (visible to everyone) instead of
+   * being kept in localStorage. See `anon-notes-storage.ts`.
+   */
+  allowAnonNotes: boolean;
 }
 
 interface TrailContext {
@@ -102,6 +108,19 @@ interface TrailContext {
   fileTree: FileTree;
   /** Initial starred state from the by-id GET; the viewer owns subsequent flips. */
   initialStarred: boolean;
+  initialAllowAnonNotes: boolean;
+  /** GitHub user id of the trail creator. Used to gate owner-only UI. */
+  ownerGithubId: number;
+}
+
+/**
+ * Anon-note id prefix. Mirrors the server constant in
+ * `src/lib/trails/anon-notes-storage.ts` — duplicated here because
+ * that module pulls in the AWS SDK and isn't client-safe.
+ */
+const ANON_NOTE_ID_PREFIX = 'anon-';
+function isAnonNoteId(id: string): boolean {
+  return id.startsWith(ANON_NOTE_ID_PREFIX);
 }
 
 // Sample CityData used to warm FC3D's WebGL / shader caches during the
@@ -151,12 +170,17 @@ function TrailViewer({
   payload,
   fileTree,
   initialStarred,
+  initialAllowAnonNotes,
+  ownerGithubId,
 }: TrailContext) {
   const trailId = payload.id;
   const { theme } = useTheme();
   const { user, login } = useAuth();
   const [starred, setStarred] = useState(initialStarred);
   const [starInFlight, setStarInFlight] = useState(false);
+  const [allowAnonNotes, setAllowAnonNotes] = useState(initialAllowAnonNotes);
+  const [anonToggleInFlight, setAnonToggleInFlight] = useState(false);
+  const isOwner = !!user && user.id === ownerGithubId;
 
   // Live payload merges three layers: the server payload (immutable
   // source of truth), any signed-out localStorage mutations made in
@@ -280,6 +304,41 @@ function TrailViewer({
     })();
   }, [user, starInFlight, starred, trailId, showError]);
 
+  const handleToggleAnonNotes = useCallback(() => {
+    // Owner-only. The header gates rendering, but defend against
+    // anyone else triggering this via devtools — the server enforces
+    // the same check, so the request would 403 anyway.
+    if (!isOwner || anonToggleInFlight) return;
+    const previous = allowAnonNotes;
+    const next = !previous;
+    setAllowAnonNotes(next);
+    setAnonToggleInFlight(true);
+    void (async () => {
+      try {
+        const res = await fetch(
+          `/api/trails/by-id/${trailId}/settings`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ allowAnonNotes: next }),
+          },
+        );
+        if (!res.ok) {
+          setAllowAnonNotes(previous);
+          const body = await res.json().catch(() => ({}));
+          showError(body?.error || `Failed to update setting (${res.status})`);
+        }
+      } catch (err) {
+        setAllowAnonNotes(previous);
+        showError(
+          err instanceof Error ? err.message : 'Failed to update setting',
+        );
+      } finally {
+        setAnonToggleInFlight(false);
+      }
+    })();
+  }, [isOwner, anonToggleInFlight, allowAnonNotes, trailId, showError]);
+
   const events = useMemo<PanelEventEmitter>(() => new PanelEventBus(), []);
 
   const repository = useMemo<FileCityTrailExplorerRepository>(() => {
@@ -363,6 +422,42 @@ function TrailViewer({
       draft: TrailNoteDraft,
     ): Promise<TrailNote | null> => {
       if (!user) {
+        // Signed-out viewers get two paths:
+        //   - If the trail owner enabled anon notes, POST to the
+        //     server endpoint so the note is visible to everyone.
+        //   - Otherwise, fall back to localStorage so the viewer can
+        //     still scribble for themselves (today's default).
+        if (allowAnonNotes) {
+          try {
+            const res = await fetch(
+              `/api/trails/by-id/${trailId}/anon-notes`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(draft),
+              },
+            );
+            if (!res.ok) {
+              const body = await res.json().catch(() => ({}));
+              showError(
+                body?.error || `Failed to post anonymous note (${res.status})`,
+              );
+              return null;
+            }
+            const { note } = (await res.json()) as { note: TrailNote };
+            setLivePayload((prev) => ({
+              ...prev,
+              notes: [...(prev.notes ?? []), note],
+            }));
+            return note;
+          } catch (err) {
+            showError(
+              err instanceof Error ? err.message : 'Failed to post anonymous note',
+            );
+            return null;
+          }
+        }
+
         const now = new Date().toISOString();
         const note: TrailNote =
           draft.kind === 'markdown'
@@ -427,7 +522,7 @@ function TrailViewer({
         return null;
       }
     },
-    [trailId, user, showError, showLocalSavedStatus],
+    [trailId, user, allowAnonNotes, showError, showLocalSavedStatus],
   );
 
   const updateTrailNote = useCallback(
@@ -436,6 +531,13 @@ function TrailViewer({
       noteId: string,
       body: string,
     ): Promise<TrailNote | null> => {
+      // Anon notes are write-once: no edit path exists, server-side.
+      // Surface that constraint here so the panel's editor doesn't
+      // sit waiting on a 404.
+      if (isAnonNoteId(noteId)) {
+        showError('Anonymous notes cannot be edited.');
+        return null;
+      }
       if (isLocalId(noteId)) {
         const updated = replaceLocalNote(trailId, noteId, body);
         if (!updated) {
@@ -495,11 +597,14 @@ function TrailViewer({
         showError('Sign in to delete shared notes.');
         return;
       }
+      // Anon notes go through a separate owner-only endpoint. The
+      // server rejects with 403 if `user.id !== entry.createdBy.githubId`,
+      // so non-owners hitting the delete button will see an error.
+      const endpoint = isAnonNoteId(noteId)
+        ? `/api/trails/by-id/${trailId}/anon-notes/${encodeURIComponent(noteId)}`
+        : `/api/trails/by-id/${trailId}/notes/${encodeURIComponent(noteId)}`;
       try {
-        const res = await fetch(
-          `/api/trails/by-id/${trailId}/notes/${encodeURIComponent(noteId)}`,
-          { method: 'DELETE' },
-        );
+        const res = await fetch(endpoint, { method: 'DELETE' });
         if (!res.ok && res.status !== 204) {
           const errBody = await res.json().catch(() => ({}));
           showError(errBody?.error || `Failed to delete note (${res.status})`);
@@ -640,6 +745,10 @@ function TrailViewer({
         onToggleStar={handleToggleStar}
         starToggleInFlight={starInFlight}
         hasNotes={(livePayload.notes ?? []).length > 0}
+        showAnonNotesToggle={isOwner}
+        allowAnonNotes={allowAnonNotes}
+        onToggleAnonNotes={handleToggleAnonNotes}
+        anonNotesToggleInFlight={anonToggleInFlight}
       />
       <div className="flex-1 min-h-0">
         <FileCityTrailExplorerPanel
@@ -753,6 +862,8 @@ export default function TrailPage() {
           payload: trail.payload,
           fileTree: tree,
           initialStarred: trail.starred ?? false,
+          initialAllowAnonNotes: trail.allowAnonNotes ?? false,
+          ownerGithubId: trail.entry.createdBy.githubId,
         });
       } catch (err) {
         if (cancelled) return;
@@ -810,6 +921,8 @@ export default function TrailPage() {
       payload={data.payload}
       fileTree={data.fileTree}
       initialStarred={data.initialStarred}
+      initialAllowAnonNotes={data.initialAllowAnonNotes}
+      ownerGithubId={data.ownerGithubId}
     />
   );
 }

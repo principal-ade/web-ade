@@ -64,15 +64,27 @@ export interface StoredTrailPayload extends TrailPayload {
    * client-facing reads so the panel never sees raw cookie ids.
    */
   _seenAnonIds?: string[];
+  /**
+   * Trail-owner opt-in: when true, anonymous viewers may submit notes
+   * via `POST /api/trails/by-id/{id}/anon-notes`, stored in a separate
+   * side-table (see `anon-notes-storage.ts`) and merged into the
+   * `notes[]` array on read. When false/undefined, anon viewers fall
+   * back to localStorage-only notes (see `local-mutations.ts`).
+   * Flipped by the trail owner via `PATCH /settings`.
+   */
+  allowAnonNotes?: boolean;
 }
 
 /**
  * Strip host-private fields from a stored payload before returning
  * it to a client. Call this in any route that reads via
- * `getPayload(...)` and returns to the panel.
+ * `getPayload(...)` and returns to the panel. `allowAnonNotes` is
+ * also stripped here — it's surfaced as a sibling field on the GET
+ * response envelope instead, since it isn't part of the panel
+ * contract.
  */
 export function toPublicPayload(stored: StoredTrailPayload): TrailPayload {
-  const { _seenAnonIds: _drop, ...rest } = stored;
+  const { _seenAnonIds: _drop, allowAnonNotes: _drop2, ...rest } = stored;
   return rest;
 }
 
@@ -205,6 +217,9 @@ export const ShareErrorCodes = {
   RECIPIENTS_REQUIRED: 'RECIPIENTS_REQUIRED',
   COMMENT_TOO_LONG: 'COMMENT_TOO_LONG',
   INBOX_NOT_FOUND: 'INBOX_NOT_FOUND',
+  ANON_NOTES_DISABLED: 'ANON_NOTES_DISABLED',
+  ANON_NOTE_INVALID_CHARS: 'ANON_NOTE_INVALID_CHARS',
+  RATE_LIMITED: 'RATE_LIMITED',
 } as const;
 
 export type ShareErrorCode =
