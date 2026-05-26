@@ -10,13 +10,14 @@ const StoryWrapper: React.FC<{
   <ThemeProvider>
     <div
       style={{
+        width: '100vw',
+        height: '100vh',
         padding: 40,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: 360,
         background: dark ? '#0f1117' : '#f8f9fa',
-        borderRadius: 12,
+        boxSizing: 'border-box',
       }}
     >
       {children}
@@ -28,7 +29,7 @@ const meta: Meta<typeof TrailLoadingAnimation> = {
   title: 'Trail/TrailLoadingAnimation',
   component: TrailLoadingAnimation,
   parameters: {
-    layout: 'centered',
+    layout: 'fullscreen',
   },
   tags: ['autodocs'],
 };
@@ -52,55 +53,10 @@ export const Dark: Story = {
   ),
 };
 
-export const Compact: Story = {
+export const CustomMessage: Story = {
   render: () => (
     <StoryWrapper>
-      <TrailLoadingAnimation
-        width={280}
-        height={140}
-        cols={8}
-        rows={4}
-        message="Loading…"
-      />
-    </StoryWrapper>
-  ),
-};
-
-export const Wide: Story = {
-  render: () => (
-    <StoryWrapper dark>
-      <TrailLoadingAnimation
-        width={720}
-        height={260}
-        cols={18}
-        rows={7}
-      />
-    </StoryWrapper>
-  ),
-};
-
-export const DenseGrid: Story = {
-  render: () => (
-    <StoryWrapper dark>
-      <TrailLoadingAnimation
-        width={520}
-        height={260}
-        cols={20}
-        rows={10}
-      />
-    </StoryWrapper>
-  ),
-};
-
-export const ChunkyGrid: Story = {
-  render: () => (
-    <StoryWrapper dark>
-      <TrailLoadingAnimation
-        width={480}
-        height={220}
-        cols={8}
-        rows={4}
-      />
+      <TrailLoadingAnimation message="Loading…" />
     </StoryWrapper>
   ),
 };
@@ -116,14 +72,7 @@ export const SlowCycle: Story = {
 export const ManyTrails: Story = {
   render: () => (
     <StoryWrapper dark>
-      <TrailLoadingAnimation
-        width={640}
-        height={260}
-        cols={16}
-        rows={7}
-        maxTrails={10}
-        cycleDuration={2200}
-      />
+      <TrailLoadingAnimation maxTrails={10} cycleDuration={2200} />
     </StoryWrapper>
   ),
 };

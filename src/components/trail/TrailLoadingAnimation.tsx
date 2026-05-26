@@ -30,9 +30,9 @@ export interface TrailLoadingAnimationProps {
   maxTrails?: number;
   /** 0..1 — probability that a given column is included in a trail */
   density?: number;
-  /** Upper bound for the fluid surface (px). Ignored when width is set explicitly. */
+  /** Upper bound for the fluid surface (px). Ignored when width is set explicitly. Pass Infinity to disable. */
   maxWidth?: number;
-  /** Upper bound for the fluid surface (px). Ignored when height is set explicitly. */
+  /** Upper bound for the fluid surface (px). Ignored when height is set explicitly. Pass Infinity to disable. */
   maxHeight?: number;
   /** Approximate target cell size (px) when auto-deriving cols/rows */
   targetCellSize?: number;
@@ -108,7 +108,7 @@ function trailColor(id: number): string {
 }
 
 const FLUID_FALLBACK_W = 480;
-const FLUID_FALLBACK_H = 220;
+const FLUID_FALLBACK_H = 480;
 
 export const TrailLoadingAnimation: React.FC<TrailLoadingAnimationProps> = ({
   width: widthProp,
@@ -119,8 +119,8 @@ export const TrailLoadingAnimation: React.FC<TrailLoadingAnimationProps> = ({
   cycleDuration = 4500,
   maxTrails = 6,
   density = 0.55,
-  maxWidth = 720,
-  maxHeight = 320,
+  maxWidth = Infinity,
+  maxHeight = Infinity,
   targetCellSize = 40,
   padding = 24,
 }) => {
@@ -140,21 +140,27 @@ export const TrailLoadingAnimation: React.FC<TrailLoadingAnimationProps> = ({
       return;
     }
     const el = containerRef.current;
-    if (!el) return;
+    const parent = el?.parentElement;
+    if (!el || !parent) return;
     const update = () => {
-      const rect = el.getBoundingClientRect();
-      const w = Math.max(120, Math.min(maxWidth, rect.width || FLUID_FALLBACK_W));
-      const h = Math.max(80, Math.min(maxHeight, rect.height || FLUID_FALLBACK_H));
+      // Measure the PARENT's available space, then collapse to a square so
+      // the grid never ends up rectangular. Measuring the container itself
+      // would just echo whatever rectangle CSS gave it.
+      const rect = parent.getBoundingClientRect();
+      const side = Math.min(
+        Math.max(120, Math.min(maxWidth, rect.width || FLUID_FALLBACK_W)),
+        Math.max(120, Math.min(maxHeight, rect.height || FLUID_FALLBACK_H)),
+      );
       setMeasured((prev) =>
-        Math.abs(prev.w - w) < 0.5 && Math.abs(prev.h - h) < 0.5
+        Math.abs(prev.w - side) < 0.5 && Math.abs(prev.h - side) < 0.5
           ? prev
-          : { w, h },
+          : { w: side, h: side },
       );
       setReady(true);
     };
     update();
     const ro = new ResizeObserver(update);
-    ro.observe(el);
+    ro.observe(parent);
     return () => ro.disconnect();
   }, [fluid, maxWidth, maxHeight]);
 
@@ -162,16 +168,19 @@ export const TrailLoadingAnimation: React.FC<TrailLoadingAnimationProps> = ({
   const height = heightProp ?? measured.h;
 
   // Usable area shrinks by the padding so the grid never reaches the
-  // container edge by default.
+  // container edge by default. When auto-deriving cols/rows we collapse
+  // to a single side length so the grid stays square — independent
+  // width/height-based counts produced a wide rectangle.
   const usableW = Math.max(60, width - padding * 2);
-  const usableH = Math.max(40, height - padding * 2);
+  const usableH = Math.max(60, height - padding * 2);
+  const usableSide = Math.min(usableW, usableH);
 
-  const cols =
-    colsProp ??
-    Math.max(6, Math.min(20, Math.round(usableW / targetCellSize)));
-  const rows =
-    rowsProp ??
-    Math.max(3, Math.min(10, Math.round(usableH / targetCellSize)));
+  const autoCount = Math.max(
+    6,
+    Math.min(16, Math.round(usableSide / targetCellSize)),
+  );
+  const cols = colsProp ?? autoCount;
+  const rows = rowsProp ?? autoCount;
 
   // Single cell pitch so the grid is genuinely square — independent
   // width/cols vs height/rows would give rectangular cells.
@@ -327,10 +336,8 @@ export const TrailLoadingAnimation: React.FC<TrailLoadingAnimationProps> = ({
       <div
         ref={containerRef}
         style={{
-          width: fluid ? '100%' : width,
-          height: fluid ? '100%' : height,
-          maxWidth: fluid ? maxWidth : undefined,
-          maxHeight: fluid ? maxHeight : undefined,
+          width: fluid ? measured.w : width,
+          height: fluid ? measured.h : height,
           minWidth: 0,
           minHeight: 0,
           display: 'flex',

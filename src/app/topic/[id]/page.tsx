@@ -19,6 +19,7 @@ import { Footprints, Github, Loader2, Plus, Save, Trash2, X } from 'lucide-react
 import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
 import { useAuth } from '@/contexts/AuthContext';
+import { TrailLoadingAnimation } from '@/components/trail/TrailLoadingAnimation';
 import { CommentThread } from './CommentThread';
 import { SuggestionsPanel, type TopicTrailMeta } from './SuggestionsPanel';
 import {
@@ -371,14 +372,12 @@ export default function TopicPage() {
   if (loadState.kind === 'loading') {
     return (
       <div
-        className="w-screen flex items-center justify-center"
+        className="w-screen flex items-center justify-center overflow-hidden"
         style={{ background: theme.colors.background, height: '100vh' }}
       >
-        <Loader2
-          className="animate-spin"
-          size={28}
-          style={{ color: theme.colors.textMuted }}
-        />
+        <div style={{ width: 'min(80vmin, 600px)', height: 'min(80vmin, 600px)' }}>
+          <TrailLoadingAnimation message="Loading topic" />
+        </div>
       </div>
     );
   }

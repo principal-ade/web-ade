@@ -10,7 +10,9 @@ export function TrailLoadingScreen() {
       className="w-screen flex items-center justify-center overflow-hidden"
       style={{ background: theme.colors.background, height: '100vh' }}
     >
-      <TrailLoadingAnimation />
+      <div style={{ width: 'min(80vmin, 600px)', height: 'min(80vmin, 600px)' }}>
+        <TrailLoadingAnimation />
+      </div>
     </div>
   );
 }
