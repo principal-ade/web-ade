@@ -61,12 +61,35 @@ interface TrailHeaderProps {
   /** Disable the toggle while a previous PATCH is in flight. */
   anonNotesToggleInFlight?: boolean;
   /**
-   * When provided, the header renders a close button at the left edge in
-   * place of the Principal AI brand. Used when the trail viewer is
-   * embedded (e.g. on the topic page) so the caller can dismiss the
-   * viewer and return to the surrounding context.
+   * When provided, the header renders a close button so the caller can
+   * dismiss the trail viewer. Placement is controlled by
+   * `closeButtonPosition`.
    */
   onClose?: () => void;
+  /**
+   * Where the close button sits. `'left'` (default) replaces the
+   * Principal AI brand at the start of the header; `'right'` drops it
+   * at the end of the right-side action group, useful when the
+   * surrounding surface already has its own brand on the left.
+   */
+  closeButtonPosition?: 'left' | 'right';
+  // ----- Section visibility (all default to true). Embedded surfaces
+  // pass `false` to drop the parts they don't want, e.g. the topic page
+  // hides star/stamp/agent/github when surfacing a trail inline.
+  /** Star button (desktop). Defaults to true; ignored when no `onToggleStar`. */
+  showStar?: boolean;
+  /** LGTM / Reviewed stamp button (mobile). Defaults to true. */
+  showStamp?: boolean;
+  /** "Share With Agent" copy-to-clipboard button (desktop). Defaults to true. */
+  showAgentCopy?: boolean;
+  /** GitHub repo link icon (desktop). Defaults to true. */
+  showGithubLink?: boolean;
+  /**
+   * How the owner segment of the breadcrumb renders. `'name'` (default)
+   * shows the owner login as text; `'avatar'` swaps it for the owner's
+   * GitHub avatar so the embedded header stays compact.
+   */
+  ownerDisplay?: 'name' | 'avatar';
 }
 
 export function TrailHeader({
@@ -85,7 +108,15 @@ export function TrailHeader({
   onToggleAnonNotes,
   anonNotesToggleInFlight,
   onClose,
+  closeButtonPosition = 'left',
+  showStar = true,
+  showStamp = true,
+  showAgentCopy = true,
+  showGithubLink = true,
+  ownerDisplay = 'name',
 }: TrailHeaderProps) {
+  const closeOnLeft = !!onClose && closeButtonPosition === 'left';
+  const closeOnRight = !!onClose && closeButtonPosition === 'right';
   const stampLabel = hasNotes ? 'Reviewed' : 'LGTM';
   const { theme } = useTheme();
   const [copied, setCopied] = useState(false);
@@ -162,7 +193,7 @@ export function TrailHeader({
       }}
     >
       <div className="hidden md:flex items-center gap-2 min-w-0 flex-1">
-        {onClose ? (
+        {closeOnLeft ? (
           <button
             type="button"
             onClick={onClose}
@@ -178,7 +209,7 @@ export function TrailHeader({
           >
             <X className="w-4 h-4" />
           </button>
-        ) : (
+        ) : !onClose ? (
           <Link
             href="/"
             className="text-xl font-bold transition-opacity hover:opacity-80"
@@ -187,30 +218,56 @@ export function TrailHeader({
             <span style={{ color: theme.colors.text }}>Principal</span>{' '}
             <span style={{ color: theme.colors.primary }}>AI</span>
           </Link>
+        ) : null}
+
+        {/* Leading separator only matters when something rendered before
+            it — when onClose lives on the right, the breadcrumb begins
+            with the owner so we drop this slash. */}
+        {!closeOnRight && (
+          <span
+            className="mx-2"
+            style={{ color: theme.colors.textMuted }}
+            aria-hidden="true"
+          >
+            /
+          </span>
         )}
 
-        <span
-          className="mx-2"
-          style={{ color: theme.colors.textMuted }}
-          aria-hidden="true"
-        >
-          /
-        </span>
-
-        <Link
-          href={`/${owner}`}
-          className="text-base font-semibold transition-opacity hover:opacity-80 truncate"
-          style={{
-            fontFamily: theme.fonts.body,
-            color: theme.colors.text,
-            textDecoration: 'none',
-          }}
-        >
-          {owner}
-        </Link>
-        <span style={{ color: theme.colors.textMuted }} aria-hidden="true">
-          /
-        </span>
+        {ownerDisplay === 'avatar' ? (
+          <Link
+            href={`/${owner}`}
+            className="flex-shrink-0 transition-opacity hover:opacity-80"
+            title={owner}
+            aria-label={owner}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`https://github.com/${owner}.png?size=64`}
+              alt=""
+              width={28}
+              height={28}
+              className="rounded-full"
+              style={{ border: `1px solid ${theme.colors.border}` }}
+            />
+          </Link>
+        ) : (
+          <Link
+            href={`/${owner}`}
+            className="text-base font-semibold transition-opacity hover:opacity-80 truncate"
+            style={{
+              fontFamily: theme.fonts.body,
+              color: theme.colors.text,
+              textDecoration: 'none',
+            }}
+          >
+            {owner}
+          </Link>
+        )}
+        {ownerDisplay !== 'avatar' && (
+          <span style={{ color: theme.colors.textMuted }} aria-hidden="true">
+            /
+          </span>
+        )}
         <Link
           href={`/${owner}/${repo}`}
           className="text-base font-semibold transition-opacity hover:opacity-80 truncate"
@@ -225,7 +282,7 @@ export function TrailHeader({
       </div>
 
       <div className="flex md:hidden items-center gap-2 min-w-0 flex-1">
-        {onClose && (
+        {closeOnLeft && (
           <button
             type="button"
             onClick={onClose}
@@ -301,7 +358,7 @@ export function TrailHeader({
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
-        {lgtmSigned ? (
+        {showStamp && (lgtmSigned ? (
           <button
             type="button"
             onClick={handleLgtm}
@@ -366,7 +423,7 @@ export function TrailHeader({
             <Stamp className="w-4 h-4" />
             <span>Stamp</span>
           </button>
-        )}
+        ))}
 
         {showAnonNotesToggle && onToggleAnonNotes && (
           <button
@@ -402,7 +459,7 @@ export function TrailHeader({
           </button>
         )}
 
-        {onToggleStar && (
+        {showStar && onToggleStar && (
           <div className="hidden md:flex">
             <StarButton
               starred={!!starred}
@@ -412,39 +469,43 @@ export function TrailHeader({
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={handleCopyAgent}
-          className="hidden md:flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
-          style={{
-            background: copied ? theme.colors.primary : 'transparent',
-            color: copied ? theme.colors.background : theme.colors.text,
-            border: `1px solid ${copied ? theme.colors.primary : theme.colors.border}`,
-            fontFamily: theme.fonts.body,
-            cursor: 'pointer',
-          }}
-          title={`Copies: ${buildAgentCommand(trailId)}`}
-          aria-label="Copy CLI command for agents"
-        >
-          {copied ? (
-            <Check className="w-4 h-4" />
-          ) : (
-            <Terminal className="w-4 h-4" />
-          )}
-          <span>{copied ? 'Copied' : 'Share With Agent'}</span>
-        </button>
+        {showAgentCopy && (
+          <button
+            type="button"
+            onClick={handleCopyAgent}
+            className="hidden md:flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
+            style={{
+              background: copied ? theme.colors.primary : 'transparent',
+              color: copied ? theme.colors.background : theme.colors.text,
+              border: `1px solid ${copied ? theme.colors.primary : theme.colors.border}`,
+              fontFamily: theme.fonts.body,
+              cursor: 'pointer',
+            }}
+            title={`Copies: ${buildAgentCommand(trailId)}`}
+            aria-label="Copy CLI command for agents"
+          >
+            {copied ? (
+              <Check className="w-4 h-4" />
+            ) : (
+              <Terminal className="w-4 h-4" />
+            )}
+            <span>{copied ? 'Copied' : 'Share With Agent'}</span>
+          </button>
+        )}
 
-        <a
-          href={`https://github.com/${owner}/${repo}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
-          style={{ color: theme.colors.text }}
-          title={`Open ${owner}/${repo} on GitHub`}
-          aria-label={`Open ${owner}/${repo} on GitHub`}
-        >
-          <Github className="w-5 h-5" />
-        </a>
+        {showGithubLink && (
+          <a
+            href={`https://github.com/${owner}/${repo}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+            style={{ color: theme.colors.text }}
+            title={`Open ${owner}/${repo} on GitHub`}
+            aria-label={`Open ${owner}/${repo} on GitHub`}
+          >
+            <Github className="w-5 h-5" />
+          </a>
+        )}
 
         {showSignIn && (
           <button
@@ -462,6 +523,24 @@ export function TrailHeader({
           >
             <LogIn className="w-4 h-4" />
             <span>Sign in</span>
+          </button>
+        )}
+
+        {closeOnRight && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-md flex-shrink-0 transition-opacity hover:opacity-80"
+            style={{
+              background: 'transparent',
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+              cursor: 'pointer',
+            }}
+            aria-label="Close trail viewer"
+            title="Close"
+          >
+            <X className="w-4 h-4" />
           </button>
         )}
       </div>

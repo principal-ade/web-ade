@@ -30,7 +30,8 @@ import { SuggestProjectDialog } from './SuggestProjectDialog';
 import { TopicActions } from './TopicActions';
 import { TrailHeaderLite } from './TrailHeaderLite';
 import { TrailSequencePreview } from '@/components/topic/TrailSequencePreview';
-import { TrailViewer } from '@/components/trail/TrailViewer';
+import { TrailViewer, useTrailSession } from '@/components/trail/TrailViewer';
+import { TrailHeader } from '@/components/trail/TrailHeader';
 import {
   TopicErrorCodes,
   type TopicErrorCode,
@@ -124,20 +125,37 @@ export default function TopicPage() {
   // Which repo card is currently expanded in the center column. Trails for
   // that repo render inline beneath the cards row.
   const [selectedRepoKey, setSelectedRepoKey] = useState<string | null>(null);
-  // When a trail card inside the repo expansion is clicked, we open a
-  // full-viewport sheet with the TrailViewer. `trailOverlayClosing` lets
-  // us delay the unmount so the close animation can play out before the
-  // viewer (and its WebGL panel) is torn down.
+  // When a trail card inside the repo expansion is clicked, we surface
+  // the TrailViewer. On lg+ it docks into the right grid column inline;
+  // below lg it opens as a slide-up sheet over the body. `trailOverlayClosing`
+  // is only used on the sheet — it delays unmount so the close animation
+  // can play out before the WebGL panel is torn down.
   const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
   const [trailOverlayClosing, setTrailOverlayClosing] = useState(false);
 
+  // Tailwind's lg breakpoint is 1024px. Mirroring it here lets us pick
+  // the right placement (right column vs sheet) and skip the slide
+  // animation on desktop where it doesn't fit the surface.
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    setIsDesktop(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
   const closeTrailOverlay = useCallback(() => {
+    if (isDesktop) {
+      setSelectedTrailId(null);
+      return;
+    }
     setTrailOverlayClosing(true);
     window.setTimeout(() => {
       setSelectedTrailId(null);
       setTrailOverlayClosing(false);
     }, TRAIL_SHEET_ANIM_MS);
-  }, []);
+  }, [isDesktop]);
 
   // Opening a different trail mid-animation would leave the closing
   // state stuck on. Clear it whenever a fresh trail is chosen.
@@ -545,25 +563,21 @@ export default function TopicPage() {
 
       <div className="flex-1 min-h-0 relative">
         {/*
-          Trail sheet — slides up from below the topic header and covers
-          only the body, leaving the topic chrome visible above it. We
-          delay unmount until the close transition finishes, otherwise
-          the WebGL panel would tear down mid-animation.
+          Mobile/tablet trail sheet — slides up from below the topic
+          header and covers only the body, leaving the topic chrome
+          visible above it. On lg+ the viewer docks into the right grid
+          column instead (see the col-start-3 sibling inside <main>),
+          so this sheet is gated on !isDesktop. We delay unmount until
+          the close transition finishes, otherwise the WebGL panel
+          would tear down mid-animation.
         */}
-        {selectedTrailId && (
-          <div
-            className="absolute inset-0 z-40 overflow-hidden"
-            style={{
-              background: theme.colors.background,
-              animation: `${trailOverlayClosing ? 'topicTrailSheetDown' : 'topicTrailSheetUp'} ${TRAIL_SHEET_ANIM_MS}ms cubic-bezier(0.16, 1, 0.3, 1) forwards`,
-              willChange: 'transform',
-            }}
-          >
-            <TrailViewer
-              trailId={selectedTrailId}
-              onClose={closeTrailOverlay}
-            />
-          </div>
+        {selectedTrailId && !isDesktop && (
+          <TopicTrailLayer
+            trailId={selectedTrailId}
+            onClose={closeTrailOverlay}
+            chrome="sheet"
+            closing={trailOverlayClosing}
+          />
         )}
         <div className="absolute inset-0 overflow-y-auto lg:overflow-hidden">
         <main className="px-4 md:px-8 pt-4 pb-8 w-full lg:h-full lg:grid lg:grid-cols-[minmax(0,1fr)_720px_minmax(0,1fr)] lg:pb-0">
@@ -732,12 +746,32 @@ export default function TopicPage() {
 
               <div className="flex items-center gap-2 flex-wrap">
                 {repoGroups.map((g) => {
-                  const selected = selectedRepoKey === g.key;
+                  const single = g.trailIds.length === 1;
+                  // Visually selected when this repo's expansion is open
+                  // OR when the currently-open trail belongs to this repo
+                  // (true for single-trail repos that skip the expansion).
+                  const selected =
+                    selectedRepoKey === g.key ||
+                    (selectedTrailId !== null &&
+                      g.trailIds.includes(selectedTrailId));
                   return (
                     <button
                       key={g.key}
                       type="button"
                       onClick={() => {
+                        if (single) {
+                          // Skip the expansion — open the only trail
+                          // directly. Re-clicking the same trail closes
+                          // it; clicking a different repo's card swaps.
+                          const only = g.trailIds[0]!;
+                          setSelectedRepoKey(null);
+                          if (selectedTrailId === only) {
+                            closeTrailOverlay();
+                          } else {
+                            openTrailOverlay(only);
+                          }
+                          return;
+                        }
                         if (selectedTrailId) closeTrailOverlay();
                         setSelectedRepoKey((prev) =>
                           prev === g.key ? null : g.key,
@@ -912,6 +946,20 @@ export default function TopicPage() {
           </div>
         )}
         </div>
+
+        {/*
+          Desktop trail dock — only mounted on lg+. Sits in col-3 of the
+          main grid; the slide-up sheet above is mobile-only so the two
+          render paths are mutually exclusive (one TrailViewer instance
+          at a time, no duplicate WebGL contexts).
+        */}
+        {selectedTrailId && isDesktop && (
+          <TopicTrailLayer
+            trailId={selectedTrailId}
+            onClose={closeTrailOverlay}
+            chrome="dock"
+          />
+        )}
 
         <div className="lg:col-start-1 lg:row-start-1 lg:h-full lg:overflow-y-auto lg:pb-8 lg:pr-8">
         <SuggestionsPanel
@@ -1233,5 +1281,86 @@ function TrailCard({
         </div>
       )}
     </li>
+  );
+}
+
+interface TopicTrailLayerProps {
+  trailId: string;
+  onClose: () => void;
+  /**
+   * "sheet" = mobile slide-up overlay positioned inside the body
+   * container. "dock" = desktop col-3 inline panel inside the main
+   * grid. Each chrome wraps the same TrailHeader + TrailViewer pair.
+   */
+  chrome: 'sheet' | 'dock';
+  /** Sheet only — drives the down-slide animation before unmount. */
+  closing?: boolean;
+}
+
+/**
+ * Embedded trail surface for the topic page. Calls `useTrailSession`
+ * once (component mounts only when a trail is selected) and renders a
+ * minimal TrailHeader — breadcrumb + close + sign-in only — above the
+ * viewer. Star, stamp, agent-copy, github link, anon-notes toggle are
+ * intentionally hidden in embed mode; the standalone /trail/{id} page
+ * is where the full chrome lives.
+ */
+function TopicTrailLayer({
+  trailId,
+  onClose,
+  chrome,
+  closing,
+}: TopicTrailLayerProps) {
+  const { theme } = useTheme();
+  const session = useTrailSession(trailId);
+
+  const content = (
+    <div className="w-full h-full flex flex-col overflow-hidden">
+      {session.state === 'ok' && (
+        <TrailHeader
+          owner={session.owner}
+          repo={session.repo}
+          trailId={session.trailId}
+          onClose={onClose}
+          closeButtonPosition="right"
+          statusMessage={session.headerStatus}
+          hasNotes={session.hasNotes}
+          ownerDisplay="avatar"
+          showStar={false}
+          showStamp={false}
+          showAgentCopy={false}
+          showGithubLink={false}
+        />
+      )}
+      <div className="flex-1 min-h-0">
+        <TrailViewer session={session} />
+      </div>
+    </div>
+  );
+
+  if (chrome === 'dock') {
+    return (
+      <div className="hidden lg:block lg:col-start-3 lg:row-start-1 lg:h-full lg:pl-4 lg:overflow-hidden">
+        <div
+          className="w-full h-full rounded-lg overflow-hidden border"
+          style={{ borderColor: theme.colors.border }}
+        >
+          {content}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="absolute inset-0 z-40 overflow-hidden"
+      style={{
+        background: theme.colors.background,
+        animation: `${closing ? 'topicTrailSheetDown' : 'topicTrailSheetUp'} ${TRAIL_SHEET_ANIM_MS}ms cubic-bezier(0.16, 1, 0.3, 1) forwards`,
+        willChange: 'transform',
+      }}
+    >
+      {content}
+    </div>
   );
 }
