@@ -580,7 +580,24 @@ export default function TopicPage() {
           />
         )}
         <div className="absolute inset-0 overflow-y-auto lg:overflow-hidden">
-        <main className="px-4 md:px-8 pt-4 pb-8 w-full lg:h-full lg:grid lg:grid-cols-[minmax(0,1fr)_720px_minmax(0,1fr)] lg:pb-0">
+        <main
+          className="px-4 md:px-8 pt-4 pb-8 w-full lg:h-full lg:grid lg:pb-0"
+          style={{
+            // Inline so the transition can interpolate. Using fr units
+            // throughout keeps the template animatable — grid tracks
+            // mixing px and fr (the original 720px center) don't
+            // interpolate, so the layout would snap instead of slide.
+            // Closed: 1fr 2fr 1fr = roughly 25% / 50% / 25%.
+            // Open:   0fr 1fr 1fr = 0% / 50% / 50%, splitting between
+            // the center column and the trail dock.
+            gridTemplateColumns:
+              isDesktop && selectedTrailId
+                ? '0fr 1fr 1fr'
+                : '1fr 2fr 1fr',
+            transition:
+              'grid-template-columns 480ms cubic-bezier(0.16, 1, 0.3, 1)',
+          }}
+        >
         <div className="lg:col-start-2 lg:h-full lg:flex lg:flex-col lg:overflow-hidden lg:w-full">
         {/* Header block: title + description, with owner edit toggle */}
         {isOwnerEditingHeader ? (
@@ -961,7 +978,7 @@ export default function TopicPage() {
           />
         )}
 
-        <div className="lg:col-start-1 lg:row-start-1 lg:h-full lg:overflow-y-auto lg:pb-8 lg:pr-8">
+        <div className="lg:col-start-1 lg:row-start-1 lg:h-full lg:overflow-y-auto lg:overflow-x-hidden lg:pb-8 lg:pr-8">
         <SuggestionsPanel
           topicId={topic.id}
           isOwner={isOwner}
