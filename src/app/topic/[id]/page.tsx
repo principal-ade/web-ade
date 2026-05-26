@@ -30,6 +30,7 @@ import { SuggestProjectDialog } from './SuggestProjectDialog';
 import { TopicActions } from './TopicActions';
 import { TrailHeaderLite } from './TrailHeaderLite';
 import { TrailSequencePreview } from '@/components/topic/TrailSequencePreview';
+import { TrailViewer } from '@/components/trail/TrailViewer';
 import {
   TopicErrorCodes,
   type TopicErrorCode,
@@ -63,6 +64,11 @@ const COPY_FEEDBACK_MS = 1500;
 // Sentinel key for the "+" card in the repo cards row — selecting it
 // reveals the contribute / suggest options inline like a repo expansion.
 const ADD_CARD_KEY = '__add__';
+
+// Duration of the trail sheet slide-up/down animation. Shared between
+// the CSS keyframes and the unmount timeout so the WebGL viewer stays
+// mounted for the full transition.
+const TRAIL_SHEET_ANIM_MS = 480;
 
 export default function TopicPage() {
   const { theme } = useTheme();
@@ -118,6 +124,27 @@ export default function TopicPage() {
   // Which repo card is currently expanded in the center column. Trails for
   // that repo render inline beneath the cards row.
   const [selectedRepoKey, setSelectedRepoKey] = useState<string | null>(null);
+  // When a trail card inside the repo expansion is clicked, we open a
+  // full-viewport sheet with the TrailViewer. `trailOverlayClosing` lets
+  // us delay the unmount so the close animation can play out before the
+  // viewer (and its WebGL panel) is torn down.
+  const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
+  const [trailOverlayClosing, setTrailOverlayClosing] = useState(false);
+
+  const closeTrailOverlay = useCallback(() => {
+    setTrailOverlayClosing(true);
+    window.setTimeout(() => {
+      setSelectedTrailId(null);
+      setTrailOverlayClosing(false);
+    }, TRAIL_SHEET_ANIM_MS);
+  }, []);
+
+  // Opening a different trail mid-animation would leave the closing
+  // state stuck on. Clear it whenever a fresh trail is chosen.
+  const openTrailOverlay = useCallback((trailId: string) => {
+    setTrailOverlayClosing(false);
+    setSelectedTrailId(trailId);
+  }, []);
 
   const isOwner = !!user && !!topic && topic.createdBy.githubId === user.id;
 
@@ -476,6 +503,17 @@ export default function TopicPage() {
       className="h-screen flex flex-col overflow-hidden"
       style={{ background: theme.colors.background, color: theme.colors.text }}
     >
+      <style>{`
+        @keyframes topicTrailSheetUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+        @keyframes topicTrailSheetDown {
+          from { transform: translateY(0); }
+          to { transform: translateY(100%); }
+        }
+      `}</style>
+
       <TrailHeaderLite
         topicId={topicId}
         shareCopied={shareCopied}
@@ -505,7 +543,29 @@ export default function TopicPage() {
         onSubmitted={() => setSuggestionsReloadKey((k) => k + 1)}
       />
 
-      <div className="flex-1 overflow-y-auto lg:overflow-hidden">
+      <div className="flex-1 min-h-0 relative">
+        {/*
+          Trail sheet — slides up from below the topic header and covers
+          only the body, leaving the topic chrome visible above it. We
+          delay unmount until the close transition finishes, otherwise
+          the WebGL panel would tear down mid-animation.
+        */}
+        {selectedTrailId && (
+          <div
+            className="absolute inset-0 z-40 overflow-hidden"
+            style={{
+              background: theme.colors.background,
+              animation: `${trailOverlayClosing ? 'topicTrailSheetDown' : 'topicTrailSheetUp'} ${TRAIL_SHEET_ANIM_MS}ms cubic-bezier(0.16, 1, 0.3, 1) forwards`,
+              willChange: 'transform',
+            }}
+          >
+            <TrailViewer
+              trailId={selectedTrailId}
+              onClose={closeTrailOverlay}
+            />
+          </div>
+        )}
+        <div className="absolute inset-0 overflow-y-auto lg:overflow-hidden">
         <main className="px-4 md:px-8 pt-4 pb-8 w-full lg:h-full lg:grid lg:grid-cols-[minmax(0,1fr)_720px_minmax(0,1fr)] lg:pb-0">
         <div className="lg:col-start-2 lg:h-full lg:flex lg:flex-col lg:overflow-hidden lg:w-full">
         {/* Header block: title + description, with owner edit toggle */}
@@ -667,7 +727,7 @@ export default function TopicPage() {
                 className="text-xs font-semibold uppercase tracking-wide mb-3"
                 style={{ color: theme.colors.textMuted }}
               >
-                Code Trails
+                Project Trails
               </h2>
 
               <div className="flex items-center gap-2 flex-wrap">
@@ -677,11 +737,12 @@ export default function TopicPage() {
                     <button
                       key={g.key}
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
+                        if (selectedTrailId) closeTrailOverlay();
                         setSelectedRepoKey((prev) =>
                           prev === g.key ? null : g.key,
-                        )
-                      }
+                        );
+                      }}
                       className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:opacity-90"
                       style={{
                         background: selected
@@ -729,11 +790,12 @@ export default function TopicPage() {
                   return (
                     <button
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
+                        setSelectedTrailId(null);
                         setSelectedRepoKey((prev) =>
                           prev === ADD_CARD_KEY ? null : ADD_CARD_KEY,
-                        )
-                      }
+                        );
+                      }}
                       className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:opacity-90"
                       style={{
                         background: selected
@@ -828,6 +890,7 @@ export default function TopicPage() {
                       result={trailResults[tid]}
                       isOwner={isOwner}
                       onRemove={() => handleRemoveTrail(tid)}
+                      onOpen={() => openTrailOverlay(tid)}
                     />
                   ))}
                 </ol>
@@ -930,6 +993,7 @@ export default function TopicPage() {
         )}
         </div>
         </main>
+        </div>
       </div>
     </div>
   );
@@ -940,6 +1004,12 @@ interface TrailCardProps {
   result: TrailFetchResult | undefined;
   isOwner: boolean;
   onRemove: () => void;
+  /**
+   * When provided, clicking the card body fires this instead of toggling
+   * the inline TrailSequencePreview. Topic page uses this to surface the
+   * full TrailViewer in the section's expansion slot.
+   */
+  onOpen?: () => void;
 }
 
 function TrailCard({
@@ -947,6 +1017,7 @@ function TrailCard({
   result,
   isOwner,
   onRemove,
+  onOpen,
 }: TrailCardProps) {
   const { theme } = useTheme();
   const state = result?.state ?? 'loading';
@@ -1099,8 +1170,14 @@ function TrailCard({
       {state === 'ok' && result?.entry ? (
         <button
           type="button"
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
+          onClick={() => {
+            if (onOpen) {
+              onOpen();
+              return;
+            }
+            setExpanded((v) => !v);
+          }}
+          aria-expanded={onOpen ? undefined : expanded}
           className="block w-full text-left transition-opacity hover:opacity-90"
           style={{
             color: 'inherit',
@@ -1115,7 +1192,7 @@ function TrailCard({
       ) : (
         body
       )}
-      {state === 'ok' && (
+      {state === 'ok' && !onOpen && (
         <div
           className="grid"
           style={{

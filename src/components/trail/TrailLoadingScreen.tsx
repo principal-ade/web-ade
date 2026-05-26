@@ -7,8 +7,8 @@ export function TrailLoadingScreen() {
   const { theme } = useTheme();
   return (
     <div
-      className="w-screen flex items-center justify-center overflow-hidden"
-      style={{ background: theme.colors.background, height: '100vh' }}
+      className="w-full h-full flex items-center justify-center overflow-hidden"
+      style={{ background: theme.colors.background }}
     >
       <div style={{ width: 'min(80vmin, 600px)', height: 'min(80vmin, 600px)' }}>
         <TrailLoadingAnimation />

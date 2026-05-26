@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Check, Github, LogIn, MessageSquareOff, MessageSquarePlus, Stamp, Terminal, Undo2 } from 'lucide-react';
+import { Check, Github, LogIn, MessageSquareOff, MessageSquarePlus, Stamp, Terminal, Undo2, X } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -60,6 +60,13 @@ interface TrailHeaderProps {
   onToggleAnonNotes?: () => void;
   /** Disable the toggle while a previous PATCH is in flight. */
   anonNotesToggleInFlight?: boolean;
+  /**
+   * When provided, the header renders a close button at the left edge in
+   * place of the Principal AI brand. Used when the trail viewer is
+   * embedded (e.g. on the topic page) so the caller can dismiss the
+   * viewer and return to the surrounding context.
+   */
+  onClose?: () => void;
 }
 
 export function TrailHeader({
@@ -77,6 +84,7 @@ export function TrailHeader({
   allowAnonNotes,
   onToggleAnonNotes,
   anonNotesToggleInFlight,
+  onClose,
 }: TrailHeaderProps) {
   const stampLabel = hasNotes ? 'Reviewed' : 'LGTM';
   const { theme } = useTheme();
@@ -154,14 +162,32 @@ export function TrailHeader({
       }}
     >
       <div className="hidden md:flex items-center gap-2 min-w-0 flex-1">
-        <Link
-          href="/"
-          className="text-xl font-bold transition-opacity hover:opacity-80"
-          style={{ fontFamily: theme.fonts.body, textDecoration: 'none' }}
-        >
-          <span style={{ color: theme.colors.text }}>Principal</span>{' '}
-          <span style={{ color: theme.colors.primary }}>AI</span>
-        </Link>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-md transition-opacity hover:opacity-80"
+            style={{
+              background: 'transparent',
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+              cursor: 'pointer',
+            }}
+            aria-label="Close trail viewer"
+            title="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        ) : (
+          <Link
+            href="/"
+            className="text-xl font-bold transition-opacity hover:opacity-80"
+            style={{ fontFamily: theme.fonts.body, textDecoration: 'none' }}
+          >
+            <span style={{ color: theme.colors.text }}>Principal</span>{' '}
+            <span style={{ color: theme.colors.primary }}>AI</span>
+          </Link>
+        )}
 
         <span
           className="mx-2"
@@ -198,32 +224,51 @@ export function TrailHeader({
         </Link>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setRepoInfoOpen(true)}
-        className="flex md:hidden items-center gap-2 min-w-0 flex-1 transition-opacity hover:opacity-80 bg-transparent border-0 p-0 text-left"
-        style={{ cursor: 'pointer', color: 'inherit' }}
-        aria-label={`Show info for ${owner}/${repo}`}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`https://github.com/${owner}.png?size=64`}
-          alt=""
-          width={32}
-          height={32}
-          className="rounded-full flex-shrink-0"
-          style={{ border: `1px solid ${theme.colors.border}` }}
-        />
-        <span
-          className="text-base font-semibold truncate"
-          style={{
-            fontFamily: theme.fonts.body,
-            color: theme.colors.text,
-          }}
+      <div className="flex md:hidden items-center gap-2 min-w-0 flex-1">
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-md flex-shrink-0 transition-opacity hover:opacity-80"
+            style={{
+              background: 'transparent',
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+              cursor: 'pointer',
+            }}
+            aria-label="Close trail viewer"
+            title="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setRepoInfoOpen(true)}
+          className="flex items-center gap-2 min-w-0 flex-1 transition-opacity hover:opacity-80 bg-transparent border-0 p-0 text-left"
+          style={{ cursor: 'pointer', color: 'inherit' }}
+          aria-label={`Show info for ${owner}/${repo}`}
         >
-          {repo}
-        </span>
-      </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`https://github.com/${owner}.png?size=64`}
+            alt=""
+            width={32}
+            height={32}
+            className="rounded-full flex-shrink-0"
+            style={{ border: `1px solid ${theme.colors.border}` }}
+          />
+          <span
+            className="text-base font-semibold truncate"
+            style={{
+              fontFamily: theme.fonts.body,
+              color: theme.colors.text,
+            }}
+          >
+            {repo}
+          </span>
+        </button>
+      </div>
 
       {/*
         Centered status slot. Absolute-positioned so it occupies the
