@@ -60,6 +60,10 @@ interface CuratorProfile {
 
 const COPY_FEEDBACK_MS = 1500;
 
+// Sentinel key for the "+" card in the repo cards row — selecting it
+// reveals the contribute / suggest options inline like a repo expansion.
+const ADD_CARD_KEY = '__add__';
+
 export default function TopicPage() {
   const { theme } = useTheme();
   const params = useParams<{ id: string }>();
@@ -111,6 +115,10 @@ export default function TopicPage() {
 
   const [curator, setCurator] = useState<CuratorProfile | null>(null);
 
+  // Which repo card is currently expanded in the center column. Trails for
+  // that repo render inline beneath the cards row.
+  const [selectedRepoKey, setSelectedRepoKey] = useState<string | null>(null);
+
   const isOwner = !!user && !!topic && topic.createdBy.githubId === user.id;
 
   /**
@@ -130,6 +138,47 @@ export default function TopicPage() {
       };
     });
   }, [topic, trailResults]);
+
+  /**
+   * Group trails by `owner/repo`. Each group renders as a single repo card
+   * in the center column; clicking the card reveals the trails belonging to
+   * that repo. Trails still loading are skipped — they'll surface as cards
+   * once their summary fetch lands.
+   */
+  const repoGroups = useMemo(() => {
+    if (!topic) return [] as Array<{
+      key: string;
+      owner: string;
+      repo: string;
+      trailIds: string[];
+    }>;
+    const map = new Map<
+      string,
+      { key: string; owner: string; repo: string; trailIds: string[] }
+    >();
+    for (const tid of topic.trailIds) {
+      const r = trailResults[tid];
+      if (!r?.owner || !r?.repo) continue;
+      const key = `${r.owner}/${r.repo}`;
+      let group = map.get(key);
+      if (!group) {
+        group = { key, owner: r.owner, repo: r.repo, trailIds: [] };
+        map.set(key, group);
+      }
+      group.trailIds.push(tid);
+    }
+    return Array.from(map.values());
+  }, [topic, trailResults]);
+
+  // If the selected repo disappears (e.g. its last trail was removed),
+  // collapse the expansion so we don't render against a stale key. The
+  // sentinel "+" card is exempt — it doesn't correspond to a repo group.
+  useEffect(() => {
+    if (!selectedRepoKey || selectedRepoKey === ADD_CARD_KEY) return;
+    if (!repoGroups.some((g) => g.key === selectedRepoKey)) {
+      setSelectedRepoKey(null);
+    }
+  }, [repoGroups, selectedRepoKey]);
 
   // ---- Load topic ---------------------------------------------------------
 
@@ -607,8 +656,186 @@ export default function TopicPage() {
                 starToggleInFlight={starInFlight}
               />
             </div>
+
+            {/*
+              Repo cards — one per unique owner/repo across the topic's
+              trails. Clicking a card expands an inline trail list below.
+              The trail list itself no longer lives in the left column.
+            */}
+            <div className="mt-5">
+              <h2
+                className="text-xs font-semibold uppercase tracking-wide mb-3"
+                style={{ color: theme.colors.textMuted }}
+              >
+                Code Trails
+              </h2>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {repoGroups.map((g) => {
+                  const selected = selectedRepoKey === g.key;
+                  return (
+                    <button
+                      key={g.key}
+                      type="button"
+                      onClick={() =>
+                        setSelectedRepoKey((prev) =>
+                          prev === g.key ? null : g.key,
+                        )
+                      }
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:opacity-90"
+                      style={{
+                        background: selected
+                          ? theme.colors.backgroundSecondary ??
+                            theme.colors.background
+                          : 'transparent',
+                        border: `1px solid ${selected ? theme.colors.primary : theme.colors.border}`,
+                        color: theme.colors.text,
+                        cursor: 'pointer',
+                      }}
+                      aria-pressed={selected}
+                      aria-label={`Show trails for ${g.owner}/${g.repo}`}
+                    >
+                      <img
+                        src={`https://github.com/${g.owner}.png?size=64`}
+                        alt=""
+                        width={28}
+                        height={28}
+                        className="w-7 h-7 rounded-full flex-shrink-0"
+                        style={{ border: `1px solid ${theme.colors.border}` }}
+                      />
+                      <div className="flex flex-col items-start leading-tight">
+                        <span className="text-sm font-medium">{g.repo}</span>
+                        <span
+                          className="text-xs"
+                          style={{ color: theme.colors.textMuted }}
+                        >
+                          {g.owner}
+                          {g.trailIds.length > 1
+                            ? ` · ${g.trailIds.length} trails`
+                            : ''}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+
+                {/*
+                  "+" card — shares the cards row and toggles the same
+                  expansion state with a sentinel key so the contribute /
+                  suggest options surface inline like a repo's trails do.
+                */}
+                {(() => {
+                  const selected = selectedRepoKey === ADD_CARD_KEY;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedRepoKey((prev) =>
+                          prev === ADD_CARD_KEY ? null : ADD_CARD_KEY,
+                        )
+                      }
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:opacity-90"
+                      style={{
+                        background: selected
+                          ? theme.colors.backgroundSecondary ??
+                            theme.colors.background
+                          : 'transparent',
+                        border: `1px dashed ${selected ? theme.colors.primary : theme.colors.border}`,
+                        color: theme.colors.text,
+                        cursor: 'pointer',
+                      }}
+                      aria-pressed={selected}
+                      aria-label="Add a trail or suggest a project"
+                    >
+                      <span
+                        className="flex items-center justify-center w-7 h-7 rounded-full flex-shrink-0"
+                        style={{
+                          border: `1px solid ${theme.colors.border}`,
+                          color: theme.colors.textMuted,
+                        }}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </span>
+                      <div className="flex flex-col items-start leading-tight">
+                        <span className="text-sm font-medium">Add</span>
+                        <span
+                          className="text-xs"
+                          style={{ color: theme.colors.textMuted }}
+                        >
+                          trail or project
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })()}
+              </div>
+
+              {repoGroups.length === 0 && selectedRepoKey !== ADD_CARD_KEY && (
+                <p
+                  className="text-sm italic mt-3"
+                  style={{ color: theme.colors.textMuted }}
+                >
+                  {topic.trailIds.length === 0
+                    ? 'No trails attached yet.'
+                    : 'Loading trails…'}
+                </p>
+              )}
+
+              {selectedRepoKey === ADD_CARD_KEY ? (
+                <div className="mt-4 flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setContributeMode('suggest')}
+                    className="flex items-center gap-1.5 px-3 h-9 rounded-md text-sm font-medium transition-all hover:opacity-80"
+                    style={{
+                      background: 'transparent',
+                      color: theme.colors.text,
+                      border: `1px solid ${theme.colors.border}`,
+                      fontFamily: theme.fonts.body,
+                      cursor: 'pointer',
+                    }}
+                    aria-label="Contribute a trail to this topic"
+                  >
+                    <Footprints className="w-4 h-4" />
+                    <span>Contribute Trail</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSuggestProjectOpen(true)}
+                    className="flex items-center gap-1.5 px-3 h-9 rounded-md text-sm font-medium transition-all hover:opacity-80"
+                    style={{
+                      background: 'transparent',
+                      color: theme.colors.text,
+                      border: `1px solid ${theme.colors.border}`,
+                      fontFamily: theme.fonts.body,
+                      cursor: 'pointer',
+                    }}
+                    aria-label="Suggest a project (repo) for this topic"
+                  >
+                    <Github className="w-4 h-4" />
+                    <span>Suggest Project</span>
+                  </button>
+                </div>
+              ) : selectedRepoKey ? (
+                <ol className="mt-4 space-y-3">
+                  {(
+                    repoGroups.find((g) => g.key === selectedRepoKey)
+                      ?.trailIds ?? []
+                  ).map((tid) => (
+                    <TrailCard
+                      key={tid}
+                      trailId={tid}
+                      result={trailResults[tid]}
+                      isOwner={isOwner}
+                      onRemove={() => handleRemoveTrail(tid)}
+                    />
+                  ))}
+                </ol>
+              ) : null}
+            </div>
+
             {topic.description && (
-              <div className="mt-3 lg:flex-1 lg:min-h-0">
+              <div className="mt-5 lg:flex-1 lg:min-h-0">
                 <IndustryMarkdownSlide
                   content={topic.description}
                   theme={theme}
@@ -631,71 +858,6 @@ export default function TopicPage() {
           reloadKey={suggestionsReloadKey}
           onTrailAccepted={() => setTopicReloadKey((k) => k + 1)}
         />
-        {/* Trail list */}
-        <div className="flex items-center justify-between gap-2 mb-3 mt-4">
-          <h2
-            className="text-lg font-semibold"
-            style={{ color: theme.colors.text }}
-          >
-            Code Trails
-          </h2>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button
-              type="button"
-              onClick={() => setContributeMode('suggest')}
-              className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
-              style={{
-                background: 'transparent',
-                color: theme.colors.text,
-                border: `1px solid ${theme.colors.border}`,
-                fontFamily: theme.fonts.body,
-                cursor: 'pointer',
-              }}
-              aria-label="Contribute a trail to this topic"
-              title="Contribute"
-            >
-              <Footprints className="w-4 h-4" />
-              <span>Contribute Trail</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setSuggestProjectOpen(true)}
-              className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-80"
-              style={{
-                background: 'transparent',
-                color: theme.colors.text,
-                border: `1px solid ${theme.colors.border}`,
-                fontFamily: theme.fonts.body,
-                cursor: 'pointer',
-              }}
-              aria-label="Suggest a project (repo) for this topic"
-              title="Suggest a project that deserves trails"
-            >
-              <Github className="w-4 h-4" />
-              <span>Suggest Project</span>
-            </button>
-          </div>
-        </div>
-        <ol className="space-y-3">
-          {topic.trailIds.map((tid) => (
-            <TrailCard
-              key={tid}
-              trailId={tid}
-              result={trailResults[tid]}
-              isOwner={isOwner}
-              onRemove={() => handleRemoveTrail(tid)}
-            />
-          ))}
-        </ol>
-
-        {topic.trailIds.length === 0 && !isOwner && (
-          <p
-            className="text-sm italic"
-            style={{ color: theme.colors.textMuted }}
-          >
-            No trails attached yet.
-          </p>
-        )}
 
         {isOwner && (
           <div
