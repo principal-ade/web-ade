@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { Check, Github, LogIn, MessageSquareOff, MessageSquarePlus, Stamp, Terminal, Undo2, X } from 'lucide-react';
+import { Check, Github, MessageSquareOff, MessageSquarePlus, Stamp, Terminal, Undo2, X } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { StarButton } from '@/components/StarButton';
+import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { RepoInfoModal } from '@/components/trail/RepoInfoModal';
 import { SignOffStampAnimation } from '@/components/trail/LgtmStamp';
 
@@ -28,10 +29,6 @@ interface TrailHeaderProps {
    * fade transition so it appears smoothly.
    */
   statusMessage?: string | null;
-  /** Render a Sign in button next to the GitHub link. */
-  showSignIn?: boolean;
-  /** Called when the user clicks the Sign in button. */
-  onSignIn?: () => void;
   /**
    * Current starred state. When `onToggleStar` is provided the header
    * renders a star button; otherwise the slot is omitted.
@@ -85,6 +82,14 @@ interface TrailHeaderProps {
   /** GitHub repo link icon (desktop). Defaults to true. */
   showGithubLink?: boolean;
   /**
+   * Avatar menu / login button at the end of the right-side action
+   * group. Defaults to true so standalone surfaces (e.g. /trail/[id],
+   * legacy PR view) get auth chrome for free. Embedded surfaces whose
+   * outer chrome already renders one (e.g. topic page's TrailHeaderLite)
+   * pass `false` to avoid a duplicate.
+   */
+  showUserMenu?: boolean;
+  /**
    * How the owner segment of the breadcrumb renders. `'name'` (default)
    * shows the owner login as text; `'avatar'` swaps it for the owner's
    * GitHub avatar so the embedded header stays compact.
@@ -97,8 +102,6 @@ export function TrailHeader({
   repo,
   trailId,
   statusMessage,
-  showSignIn,
-  onSignIn,
   starred,
   onToggleStar,
   starToggleInFlight,
@@ -113,6 +116,7 @@ export function TrailHeader({
   showStamp = true,
   showAgentCopy = true,
   showGithubLink = true,
+  showUserMenu = true,
   ownerDisplay = 'name',
 }: TrailHeaderProps) {
   const closeOnLeft = !!onClose && closeButtonPosition === 'left';
@@ -507,24 +511,7 @@ export function TrailHeader({
           </a>
         )}
 
-        {showSignIn && (
-          <button
-            type="button"
-            onClick={onSignIn}
-            className="hidden md:flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-90"
-            style={{
-              background: theme.colors.primary,
-              color: theme.colors.background,
-              border: `1px solid ${theme.colors.primary}`,
-              fontFamily: theme.fonts.body,
-              cursor: 'pointer',
-            }}
-            aria-label="Sign in"
-          >
-            <LogIn className="w-4 h-4" />
-            <span>Sign in</span>
-          </button>
-        )}
+        {showUserMenu && <UserAvatarMenu />}
 
         {closeOnRight && (
           <button

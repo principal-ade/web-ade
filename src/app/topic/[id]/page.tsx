@@ -1347,6 +1347,7 @@ function TopicTrailLayer({
           showStamp={false}
           showAgentCopy={false}
           showGithubLink={false}
+          showUserMenu={false}
         />
       )}
       <div className="flex-1 min-h-0">

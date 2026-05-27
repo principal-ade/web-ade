@@ -43,8 +43,6 @@ export default function TrailPage() {
           repo={session.repo}
           trailId={session.trailId}
           statusMessage={session.headerStatus}
-          showSignIn={session.showSignIn}
-          onSignIn={session.onSignIn}
           starred={session.starred}
           onToggleStar={session.onToggleStar}
           starToggleInFlight={session.starToggleInFlight}
