@@ -114,6 +114,7 @@ export default function HomePage() {
   const showTitle = revealStep >= 1;
   const showSubtitle = revealStep >= 2;
   const showHint = view === 'title' && revealStep >= 3;
+  const showSecondaryCta = view === 'title' && revealStep >= 4;
   const diagramBorderActive = diagramHovered;
 
   const STEP_COUNT = 13;
@@ -237,14 +238,16 @@ export default function HomePage() {
     const stepsDoneAt = STEP_START + STEP_COUNT * STEP_INTERVAL;
     const titleTimer = setTimeout(() => setRevealStep(1), stepsDoneAt + 500);
     const subtitleTimer = setTimeout(() => setRevealStep(2), stepsDoneAt + 1200);
-    const diagramTimer = setTimeout(() => setDiagramRevealed(true), stepsDoneAt + 2000);
+    const diagramTimer = setTimeout(() => setDiagramRevealed(true), stepsDoneAt + 500);
     const exploreTimer = setTimeout(() => setRevealStep(3), stepsDoneAt + 2200);
+    const secondaryTimer = setTimeout(() => setRevealStep(4), stepsDoneAt + 3000);
     return () => {
       stepTimers.forEach(clearTimeout);
       clearTimeout(diagramTimer);
       clearTimeout(titleTimer);
       clearTimeout(subtitleTimer);
       clearTimeout(exploreTimer);
+      clearTimeout(secondaryTimer);
     };
   }, []);
 
@@ -405,21 +408,46 @@ export default function HomePage() {
                 </p>
 
                 <div
-                  className={`lg:pl-5 flex items-center justify-center lg:justify-start gap-2 transition-opacity duration-700 ease-out ${
+                  className={`lg:pl-5 flex flex-col items-center lg:items-start gap-2 transition-opacity duration-700 ease-out ${
                     showHint ? 'opacity-100' : 'opacity-0 pointer-events-none'
                   }`}
                 >
-                  <button
-                    type="button"
-                    onClick={() => goToView('fileCity')}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md text-base font-medium transition-colors hover:opacity-80"
+                  <a
+                    href="https://app.principal-ade.com/topic/175c9938-d95a-4c3f-87a6-087583e4620a"
+                    className="inline-flex items-center justify-center gap-1.5 w-64 px-5 py-2.5 rounded-md text-base font-medium transition-opacity hover:opacity-80"
                     style={{
                       background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
                       border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
                       color: theme.colors.primary,
                     }}
+                    tabIndex={showHint ? 0 : -1}
                   >
-                    It starts with a File City
+                    View Trails
+                  </a>
+                  <span
+                    className={`text-sm w-64 text-center transition-opacity duration-700 ease-out ${
+                      showSecondaryCta ? 'opacity-100' : 'opacity-0'
+                    }`}
+                    style={{ color: theme.colors.textMuted }}
+                    aria-hidden
+                  >
+                    or
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => goToView('fileCity')}
+                    className={`inline-flex items-center justify-center gap-2 w-64 px-5 py-2.5 rounded-md text-base font-medium transition-opacity duration-700 ease-out hover:opacity-80 ${
+                      showSecondaryCta ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                    }`}
+                    style={{
+                      background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
+                      color: theme.colors.primary,
+                    }}
+                    tabIndex={showSecondaryCta ? 0 : -1}
+                    aria-hidden={!showSecondaryCta}
+                  >
+                    Click to Learn More
                     <MoveRight
                       size={18}
                       strokeWidth={2.25}
@@ -720,33 +748,6 @@ export default function HomePage() {
                   />
                 </div>
               </button>
-
-              {(view === 'title' || view === 'fileCity' || view === 'codeTrail') && (() => {
-                const visible = view !== 'title' || revealStep >= 3;
-                return (
-                  <div
-                    className="mt-4 flex justify-center transition-opacity duration-700 ease-out"
-                    style={{
-                      opacity: visible ? 1 : 0,
-                      pointerEvents: visible ? 'auto' : 'none',
-                    }}
-                    aria-hidden={!visible}
-                  >
-                    <a
-                      href="https://app.principal-ade.com/topic/175c9938-d95a-4c3f-87a6-087583e4620a"
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-opacity hover:opacity-80"
-                      style={{
-                        background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
-                        border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
-                        color: theme.colors.primary,
-                      }}
-                      tabIndex={visible ? 0 : -1}
-                    >
-                      View Trails
-                    </a>
-                  </div>
-                );
-              })()}
 
               {view === 'whyTrails' && (
                 <div className="mt-4">
