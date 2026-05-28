@@ -18,6 +18,7 @@ import {
   GetObjectCommand,
   PutObjectCommand,
   DeleteObjectCommand,
+  ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
 import {
   BUCKET_NAME,
@@ -448,6 +449,75 @@ export function findIndexEntry(
   id: string
 ): SharedTrailIndexEntry | undefined {
   return index.entries.find((e) => e.id === id);
+}
+
+// ============================================================================
+// Repo enumeration — powers `/explore` (all public repos with trails).
+// Uses S3's `Delimiter` to walk the `trails/{owner}/{repo}/` tree at the
+// prefix level rather than scanning every key. Synthetic top-level
+// segments (`_by-id`, `_by-user`, `_inbox`, `_recently-visited`) are
+// filtered out — those are host bookkeeping, not real repos.
+// ============================================================================
+
+/**
+ * Enumerate every `{owner, repo}` pair that has an index in S3. Two
+ * `LIST` passes total (one for owners, one per owner for repos); the
+ * delimiter keeps the response tiny regardless of how many trails each
+ * repo holds. Caller decides whether to filter on visibility.
+ */
+export async function listRepoPrefixes(): Promise<
+  Array<{ owner: string; repo: string }>
+> {
+  const pairs: Array<{ owner: string; repo: string }> = [];
+
+  const owners = await listChildPrefixes(`${S3_PREFIX}/`);
+  for (const owner of owners) {
+    // Skip synthetic top-level segments. They all start with `_` (see
+    // `INBOX_PREFIX` and the `_by-id` / `_by-user` / `_recently-visited`
+    // key builders above).
+    if (owner.startsWith('_')) continue;
+
+    const repos = await listChildPrefixes(`${S3_PREFIX}/${owner}/`);
+    for (const repo of repos) {
+      pairs.push({ owner, repo });
+    }
+  }
+
+  return pairs;
+}
+
+/**
+ * Returns the immediate child "directory" segments under `prefix`,
+ * stripped of the parent prefix and trailing slash. Pages through
+ * continuation tokens automatically.
+ */
+async function listChildPrefixes(prefix: string): Promise<string[]> {
+  const out: string[] = [];
+  let continuationToken: string | undefined;
+
+  do {
+    const response = await s3Client.send(
+      new ListObjectsV2Command({
+        Bucket: BUCKET_NAME,
+        Prefix: prefix,
+        Delimiter: '/',
+        ContinuationToken: continuationToken,
+      })
+    );
+
+    for (const cp of response.CommonPrefixes ?? []) {
+      if (!cp.Prefix) continue;
+      // `cp.Prefix` is e.g. `trails/{owner}/`; strip parent + trailing `/`.
+      const child = cp.Prefix.slice(prefix.length, -1);
+      if (child) out.push(child);
+    }
+
+    continuationToken = response.IsTruncated
+      ? response.NextContinuationToken
+      : undefined;
+  } while (continuationToken);
+
+  return out;
 }
 
 // ============================================================================

@@ -103,6 +103,16 @@ export interface SharedTrailIndex {
   version: 1;
   updatedAt: string;
   entries: SharedTrailIndexEntry[];
+  /**
+   * GitHub repo visibility as observed at last index write (or lazy
+   * backfill). Powers `/explore` and any "all public repos with trails"
+   * listing without per-request GitHub calls. Visibility on actual trail
+   * reads is still verified live by `checkRepoAccess`; this field is a
+   * hint for listing only.
+   */
+  repoVisibility?: 'public' | 'private';
+  /** ISO 8601 — when `repoVisibility` was last refreshed. */
+  repoVisibilityCheckedAt?: string;
 }
 
 // ============================================================================
@@ -128,6 +138,23 @@ export interface CreateSharedTrailResponse {
 
 export interface ListSharedTrailsResponse {
   entries: SharedTrailIndexEntry[];
+}
+
+/**
+ * A row in the `/explore` listing — one per public repo that has at
+ * least one trail. Sourced from `trails/{owner}/{repo}/index.json`
+ * after filtering on `repoVisibility === 'public'`.
+ */
+export interface PublicRepoWithTrails {
+  owner: string;
+  repo: string;
+  trailCount: number;
+  /** Index `updatedAt` — when the most recent trail mutation happened. */
+  lastUpdated: string;
+}
+
+export interface ListPublicReposWithTrailsResponse {
+  repos: PublicRepoWithTrails[];
 }
 
 /**

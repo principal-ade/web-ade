@@ -134,7 +134,12 @@ export async function POST(request: NextRequest) {
         next.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
         next.length = MAX_TRAILS_PER_REPO;
       }
-      return { ...data, entries: next };
+      return {
+        ...data,
+        entries: next,
+        repoVisibility: access.private ? 'private' : 'public',
+        repoVisibilityCheckedAt: new Date().toISOString(),
+      };
     });
     await upsertTrailInUserIndex(owner, repo, entry);
 

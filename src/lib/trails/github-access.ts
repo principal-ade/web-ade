@@ -19,6 +19,9 @@ export interface RepoAccessInfo {
   /** GitHub numeric repo id, used as a rename-stable backstop on index entries. */
   githubRepoId: number;
   fullName: string;
+  /** GitHub `private` flag at access-check time. Stamped onto the per-repo
+   *  index so `/explore` can filter without re-asking GitHub. */
+  private: boolean;
 }
 
 /**
@@ -111,21 +114,33 @@ export async function checkRepoAccess(
   const baseKey = `repo-access:${owner.toLowerCase()}/${repo.toLowerCase()}`;
   try {
     const data = token
-      ? await cachedUserGitHubFetch<{ id: number; full_name: string }>(
+      ? await cachedUserGitHubFetch<{
+          id: number;
+          full_name: string;
+          private: boolean;
+        }>(
           `/repos/${owner}/${repo}`,
           baseKey,
           REPO_ACCESS_CACHE_TTL,
           token,
           [CACHE_TAGS.REPOS]
         )
-      : await cachedGitHubFetch<{ id: number; full_name: string }>(
+      : await cachedGitHubFetch<{
+          id: number;
+          full_name: string;
+          private: boolean;
+        }>(
           `/repos/${owner}/${repo}`,
           `anon:${baseKey}`,
           REPO_ACCESS_CACHE_TTL,
           [CACHE_TAGS.REPOS]
         );
 
-    return { githubRepoId: data.id, fullName: data.full_name };
+    return {
+      githubRepoId: data.id,
+      fullName: data.full_name,
+      private: Boolean(data.private),
+    };
   } catch (error) {
     if (error instanceof GitHubApiError) {
       if (error.status === 404 || error.status === 403) {

@@ -173,6 +173,8 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     await updateIndex(owner, repo, (data) => ({
       ...data,
       entries: data.entries.filter((e) => e.id !== id),
+      repoVisibility: access.private ? 'private' : 'public',
+      repoVisibilityCheckedAt: new Date().toISOString(),
     }));
     await removeTrailFromUserIndex(entry.createdBy.githubId, id);
 
