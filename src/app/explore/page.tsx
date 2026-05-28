@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useTheme } from '@principal-ade/industry-theme';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
+import { TrailBackdrop } from '@/components/home/TrailBackdrop';
 import type {
   ListPublicReposWithTrailsResponse,
   PublicRepoWithTrails,
@@ -56,18 +57,24 @@ export default function ExplorePage() {
   return (
     <div
       style={{
-        minHeight: '100vh',
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative',
         background: theme.colors.background,
         color: theme.colors.text,
       }}
     >
+      <TrailBackdrop theme={theme} />
+
       <header
-        className="border-b px-4 flex items-center gap-2 flex-shrink-0 relative"
+        className="border-b px-4 flex items-center gap-2 flex-shrink-0 backdrop-blur-xl"
         style={{
-          background: theme.colors.surface,
-          borderColor: theme.colors.border,
+          background: `color-mix(in srgb, ${theme.colors.surface} 60%, transparent)`,
+          borderColor: `color-mix(in srgb, ${theme.colors.border} 60%, transparent)`,
           paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
           paddingBottom: '0.5rem',
+          position: 'relative',
           zIndex: 10,
         }}
       >
@@ -104,11 +111,15 @@ export default function ExplorePage() {
 
       <main
         style={{
-          maxWidth: 1100,
-          margin: '0 auto',
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
           padding: '32px 24px 80px',
+          position: 'relative',
+          zIndex: 1,
         }}
       >
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
 
         {state.kind === 'loading' && (
           <div style={{ color: theme.colors.textMuted, fontSize: 14 }}>
@@ -144,6 +155,7 @@ export default function ExplorePage() {
             ))}
           </div>
         )}
+        </div>
       </main>
     </div>
   );
