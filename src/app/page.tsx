@@ -413,8 +413,8 @@ export default function HomePage() {
                     showHint ? 'opacity-100' : 'opacity-0 pointer-events-none'
                   }`}
                 >
-                  <a
-                    href="https://app.principal-ade.com/topic/175c9938-d95a-4c3f-87a6-087583e4620a"
+                  <Link
+                    href="/explore"
                     className="inline-flex items-center justify-center gap-1.5 w-64 px-5 py-2.5 rounded-md text-base font-medium transition-opacity hover:opacity-80"
                     style={{
                       background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
@@ -424,7 +424,7 @@ export default function HomePage() {
                     tabIndex={showHint ? 0 : -1}
                   >
                     View Trails
-                  </a>
+                  </Link>
                   <span
                     className={`text-sm w-64 text-center transition-opacity duration-700 ease-out ${
                       showSecondaryCta ? 'opacity-100' : 'opacity-0'
@@ -680,8 +680,8 @@ export default function HomePage() {
                   Trail Stamped.
                 </h2>
                 <div className="flex flex-col items-center lg:items-start sm:flex-row sm:justify-center lg:justify-start sm:items-center sm:flex-wrap gap-x-3 gap-y-2 text-base">
-                  <a
-                    href="https://app.principal-ade.com/topic/175c9938-d95a-4c3f-87a6-087583e4620a"
+                  <Link
+                    href="/explore"
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md font-medium transition-opacity hover:opacity-80"
                     style={{
                       background: theme.colors.primary,
@@ -689,7 +689,7 @@ export default function HomePage() {
                     }}
                   >
                     View Trails
-                  </a>
+                  </Link>
                   <span style={{ color: theme.colors.textMuted }}>or</span>
                   <button
                     type="button"
