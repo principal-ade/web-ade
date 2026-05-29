@@ -131,7 +131,6 @@ export default function HomePage() {
     if (view === 'trails' || view === 'topics') url.searchParams.set('view', view);
     else url.searchParams.delete('view');
     window.history.replaceState(window.history.state, '', url);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
   const [revealStep, setRevealStep] = useState(0);
   const [stepsRevealed, setStepsRevealed] = useState(0);
