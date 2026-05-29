@@ -19,6 +19,7 @@ import { SignedInDashboard } from '@/components/home/SignedInDashboard';
 import { TrailBackdrop } from '@/components/home/TrailBackdrop';
 import { TrailsExplorer } from '@/components/home/TrailsExplorer';
 import { TopicsFeed } from '@/components/home/TopicsFeed';
+import { NewTopicButton } from '@/components/NewTopicButton';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const dynamic = 'force-dynamic';
@@ -115,22 +116,51 @@ export default function HomePage() {
   }, []);
 
   // Persist the trails/topics body views in the `?view=` query param so
-  // navigating away and back lands on the same one. First run hydrates from the
-  // URL; later runs write the URL (clearing the param for every other view).
+  // navigating away and back lands on the same one, and so the browser Back
+  // button steps out of a view. Genuine view switches push a history entry;
+  // Back/Forward fire `popstate`, which syncs `view` from the URL (the
+  // skip-flag stops that sync from pushing a redundant entry back).
   const viewHydratedRef = useRef(false);
+  const skipHistoryRef = useRef(false);
+
   useEffect(() => {
+    const onPopState = () => {
+      const param = new URLSearchParams(window.location.search).get('view');
+      const next: View = param === 'trails' || param === 'topics' ? param : 'title';
+      skipHistoryRef.current = true;
+      setView(next);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
+    const writeUrl = (push: boolean) => {
+      const url = new URL(window.location.href);
+      if (view === 'trails' || view === 'topics') url.searchParams.set('view', view);
+      else url.searchParams.delete('view');
+      const fn = push ? 'pushState' : 'replaceState';
+      window.history[fn](window.history.state, '', url);
+    };
+
     if (!viewHydratedRef.current) {
       viewHydratedRef.current = true;
       const param = new URLSearchParams(window.location.search).get('view');
       if ((param === 'trails' || param === 'topics') && param !== view) {
+        skipHistoryRef.current = true;
         setView(param);
         return; // wait for the re-render before writing the URL back
       }
+      writeUrl(false); // normalize the initial entry without adding history
+      return;
     }
-    const url = new URL(window.location.href);
-    if (view === 'trails' || view === 'topics') url.searchParams.set('view', view);
-    else url.searchParams.delete('view');
-    window.history.replaceState(window.history.state, '', url);
+
+    if (skipHistoryRef.current) {
+      skipHistoryRef.current = false;
+      return; // change came from hydrate/popstate — URL is already correct
+    }
+
+    writeUrl(true); // user-driven view switch → a Back-able history entry
   }, [view]);
   const [revealStep, setRevealStep] = useState(0);
   const [stepsRevealed, setStepsRevealed] = useState(0);
@@ -337,7 +367,8 @@ export default function HomePage() {
             )}
           </div>
           <div className="flex items-center gap-3">
-          {view !== 'title' && (
+          {view === 'topics' && <NewTopicButton />}
+          {view !== 'title' && view !== 'topics' && view !== 'trails' && (
             <button
               type="button"
               onClick={resetToTitle}
@@ -353,6 +384,7 @@ export default function HomePage() {
               <span className="hidden sm:inline">Exit</span>
             </button>
           )}
+          {view !== 'topics' && (
           <div
             role="search"
             aria-label="Open a GitHub repository"
@@ -409,7 +441,12 @@ export default function HomePage() {
               }}
             />
           </div>
-            <UserAvatarMenu hideLoginButton={view !== 'title'} />
+          )}
+            <UserAvatarMenu
+              hideLoginButton={
+                view !== 'title' && view !== 'trails' && view !== 'topics'
+              }
+            />
           </div>
         </div>
       </header>

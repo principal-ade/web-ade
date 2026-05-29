@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useTheme } from '@principal-ade/industry-theme';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
+import { NewTopicButton } from '@/components/NewTopicButton';
 import { TrailBackdrop } from '@/components/home/TrailBackdrop';
 import { TopicsFeed } from '@/components/home/TopicsFeed';
 
@@ -60,6 +61,7 @@ export default function TopicsPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
+          <NewTopicButton />
           <UserAvatarMenu />
         </div>
       </header>
