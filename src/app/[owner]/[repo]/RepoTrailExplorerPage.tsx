@@ -140,7 +140,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   // Debt-view toggle — when on, the idle highlight layer flips to the
   // *undocumented* files (inverse of coverage) so the user can see what
   // the trails haven't reached yet. Toggled from the header counter.
-  const [debtMode, setDebtMode] = useState(false);
+  const [debtMode] = useState(false);
 
   // Folder include/exclude config — directory paths the user has gated
   // out of the coverage / debt calculation. Persisted to localStorage
@@ -629,12 +629,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         repo={repo}
         showSignIn={!user}
         onSignIn={handleSignIn}
-        debtPct={exploredStats ? 100 - exploredStats.pct : null}
-        debtMode={debtMode}
-        onToggleDebt={() => {
-          setDebtMode((m) => !m);
-          setSelectedTrailId(null);
-        }}
+        exploredStats={exploredStats}
       />
       <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
         <TrailListPane
@@ -686,17 +681,13 @@ const Header: React.FC<{
   repo: string;
   showSignIn?: boolean;
   onSignIn?: () => void;
-  debtPct: number | null;
-  debtMode: boolean;
-  onToggleDebt: () => void;
+  exploredStats: { documented: number; total: number; pct: number } | null;
 }> = ({
   owner,
   repo,
   showSignIn,
   onSignIn,
-  debtPct,
-  debtMode,
-  onToggleDebt,
+  exploredStats,
 }) => {
   const { theme } = useTheme();
   return (
@@ -729,18 +720,21 @@ const Header: React.FC<{
 
         <Link
           href={`/${owner}`}
-          className="text-base font-semibold transition-opacity hover:opacity-80 truncate"
-          style={{
-            fontFamily: theme.fonts.body,
-            color: theme.colors.text,
-            textDecoration: 'none',
-          }}
+          className="flex-shrink-0 transition-opacity hover:opacity-80"
+          title={owner}
+          aria-label={owner}
+          style={{ textDecoration: 'none' }}
         >
-          {owner}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`https://github.com/${owner}.png?size=64`}
+            alt=""
+            width={28}
+            height={28}
+            className="rounded-full"
+            style={{ border: `1px solid ${theme.colors.border}` }}
+          />
         </Link>
-        <span style={{ color: theme.colors.textMuted }} aria-hidden="true">
-          /
-        </span>
         <Link
           href={`/${owner}/${repo}`}
           className="text-base font-semibold transition-opacity hover:opacity-80 truncate"
@@ -779,40 +773,39 @@ const Header: React.FC<{
         </span>
       </Link>
 
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {debtPct !== null && (
-          <button
-            type="button"
-            onClick={onToggleDebt}
-            className="hidden md:flex items-center gap-1.5 px-2.5 h-8 rounded-md text-sm font-semibold leading-none transition-all hover:opacity-90"
-            style={{
-              fontFamily: theme.fonts.body,
-              background: debtMode
-                ? (theme.colors.warning ?? theme.colors.accent)
-                : `color-mix(in srgb, ${theme.colors.warning ?? theme.colors.accent} 14%, transparent)`,
-              color: debtMode
-                ? theme.colors.background
-                : (theme.colors.warning ?? theme.colors.accent),
-              border: `1px solid ${theme.colors.warning ?? theme.colors.accent}`,
-              cursor: 'pointer',
-            }}
-            title={
-              debtMode
-                ? 'Showing comprehension debt — click to return to coverage view'
-                : 'View comprehension debt — files no trail has reached'
-            }
-            aria-pressed={debtMode}
-            aria-label="Toggle comprehension debt view"
+      {exploredStats && (
+        <div
+          className="hidden md:flex items-center gap-2 absolute left-1/2 -translate-x-1/2 pointer-events-none"
+          aria-label={`${exploredStats.pct.toFixed(2)}% explored`}
+        >
+          <span
+            className="text-sm font-semibold leading-none"
+            style={{ color: theme.colors.text, fontFamily: theme.fonts.body }}
           >
-            <span>{debtPct.toFixed(2)}%</span>
-            <span
-              className="text-xs font-medium"
-              style={{ opacity: 0.85 }}
-            >
-              debt
-            </span>
-          </button>
-        )}
+            {exploredStats.pct.toFixed(2)}%
+          </span>
+          <span
+            className="text-xs"
+            style={{ color: theme.colors.textSecondary }}
+          >
+            explored
+          </span>
+          <div
+            className="w-24 h-1.5 rounded-full overflow-hidden"
+            style={{ background: theme.colors.border }}
+          >
+            <div
+              className="h-full transition-[width] duration-300"
+              style={{
+                width: `${exploredStats.pct}%`,
+                background: theme.colors.primary,
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 flex-shrink-0">
         <Link
           href={`/legacy/${owner}/${repo}`}
           className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
@@ -907,7 +900,6 @@ const TrailListPane: React.FC<{
       }}
     >
       <TrailSummarySection
-        trailCount={entries.length}
         exploredStats={exploredStats}
         configMode={configMode}
         onToggleConfigMode={onToggleConfigMode}
@@ -922,29 +914,31 @@ const TrailListPane: React.FC<{
         />
       ) : (
         <>
-          <div
-            className="px-3 py-2 border-b flex items-center gap-2"
-            style={{ borderColor: theme.colors.border }}
-          >
-            <Search size={14} style={{ color: theme.colors.textMuted }} />
-            <input
-              type="text"
-              value={filterQuery}
-              onChange={(e) => onFilterChange(e.target.value)}
-              placeholder="Filter trails"
-              className="flex-1 bg-transparent outline-none text-sm"
-              style={{ color: theme.colors.text }}
-            />
-            {filterQuery && (
-              <button
-                onClick={() => onFilterChange('')}
-                className="text-xs"
-                style={{ color: theme.colors.textMuted }}
-              >
-                Clear
-              </button>
-            )}
-          </div>
+          {entries.length >= 10 && (
+            <div
+              className="px-3 py-2 border-b flex items-center gap-2"
+              style={{ borderColor: theme.colors.border }}
+            >
+              <Search size={14} style={{ color: theme.colors.textMuted }} />
+              <input
+                type="text"
+                value={filterQuery}
+                onChange={(e) => onFilterChange(e.target.value)}
+                placeholder="Filter trails"
+                className="flex-1 bg-transparent outline-none text-sm"
+                style={{ color: theme.colors.text }}
+              />
+              {filterQuery && (
+                <button
+                  onClick={() => onFilterChange('')}
+                  className="text-xs"
+                  style={{ color: theme.colors.textMuted }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          )}
 
           <div
             className="flex-1 min-h-0 overflow-y-auto"
@@ -1178,91 +1172,61 @@ const FolderConfigPane: React.FC<{
   );
 };
 
+// Folder-coverage configuration is hidden for now. All the plumbing
+// (config mode, folder include/exclude) is kept intact — flip this to
+// true to re-enable the settings button, which we may do in the future.
+const SHOW_FOLDER_CONFIG = false;
+
 const TrailSummarySection: React.FC<{
-  trailCount: number;
   exploredStats: { documented: number; total: number; pct: number } | null;
   configMode: boolean;
   onToggleConfigMode: () => void;
-}> = ({ trailCount, exploredStats, configMode, onToggleConfigMode }) => {
+}> = ({ exploredStats, configMode, onToggleConfigMode }) => {
   const { theme } = useTheme();
   return (
     <div
       className="px-4 py-3 border-b"
       style={{ borderColor: theme.colors.border }}
     >
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between">
         <div
-          className="text-[10px] uppercase tracking-wide"
-          style={{ color: theme.colors.textSecondary, letterSpacing: 0.6 }}
-        >
-          {configMode ? 'Configure folders' : 'Trails'}
-        </div>
-        <button
-          type="button"
-          onClick={onToggleConfigMode}
-          className="flex items-center justify-center w-6 h-6 rounded transition-opacity hover:opacity-80"
-          style={{
-            color: configMode
-              ? theme.colors.primary
-              : theme.colors.textSecondary,
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-          }}
-          title={
-            configMode
-              ? 'Done configuring — return to trails'
-              : 'Configure which folders count toward coverage'
-          }
-          aria-pressed={configMode}
-          aria-label={
-            configMode
-              ? 'Exit folder configuration mode'
-              : 'Configure folder inclusion'
-          }
-        >
-          {configMode ? <Check size={14} /> : <Settings size={14} />}
-        </button>
-      </div>
-      <div className="flex items-baseline gap-3">
-        <div
-          className="text-2xl font-semibold leading-none"
-          style={{ color: theme.colors.text }}
-        >
-          {exploredStats ? `${exploredStats.pct.toFixed(2)}%` : '—'}
-        </div>
-        <div
-          className="text-xs"
+          className="text-sm font-semibold"
           style={{ color: theme.colors.textSecondary }}
         >
-          explored
+          {configMode
+            ? 'Configure folders'
+            : exploredStats
+              ? `Trails cover ${exploredStats.documented} of ${exploredStats.total} files`
+              : 'Trails'}
         </div>
-      </div>
-      <div
-        className="mt-2 h-1.5 rounded-full overflow-hidden"
-        style={{ background: theme.colors.border }}
-      >
-        <div
-          className="h-full transition-[width] duration-300"
-          style={{
-            width: `${exploredStats?.pct ?? 0}%`,
-            background: theme.colors.primary,
-          }}
-        />
-      </div>
-      <div
-        className="text-xs mt-2 flex items-center gap-3"
-        style={{ color: theme.colors.textSecondary }}
-      >
-        <span>
-          {exploredStats
-            ? `${exploredStats.documented} / ${exploredStats.total} files`
-            : 'Computing coverage…'}
-        </span>
-        <span>·</span>
-        <span>
-          {trailCount} {trailCount === 1 ? 'trail' : 'trails'}
-        </span>
+        {SHOW_FOLDER_CONFIG && (
+          <button
+            type="button"
+            onClick={onToggleConfigMode}
+            className="flex items-center justify-center w-6 h-6 rounded transition-opacity hover:opacity-80"
+            style={{
+              color: configMode
+                ? theme.colors.primary
+                : theme.colors.textSecondary,
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+            title={
+              configMode
+                ? 'Done configuring — return to trails'
+                : 'Configure which folders count toward coverage'
+            }
+            aria-pressed={configMode}
+            aria-label={
+              configMode
+                ? 'Exit folder configuration mode'
+                : 'Configure folder inclusion'
+            }
+          >
+            {configMode ? <Check size={14} /> : <Settings size={14} />}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -1301,27 +1265,15 @@ const TrailRow: React.FC<{
       onClick={onSelect}
       onMouseEnter={onHover}
       onFocus={onHover}
-      className="w-full text-left px-4 py-3 border-b transition-colors flex items-start gap-3"
+      className="w-full text-left px-4 py-3 border-b transition-colors"
       style={{
         background: selected ? theme.colors.background : 'transparent',
         borderColor: theme.colors.border,
         color: theme.colors.text,
-        borderLeft: `3px solid ${selected ? theme.colors.accent : 'transparent'}`,
       }}
     >
-      {avatarUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={avatarUrl}
-          alt={author?.githubLogin ?? ''}
-          className="rounded-full shrink-0"
-          width={32}
-          height={32}
-          style={{ background: theme.colors.backgroundSecondary }}
-        />
-      )}
-      <div className="min-w-0 flex-1">
-        <div className="text-base font-semibold truncate">{entry.title}</div>
+      <div className="min-w-0">
+        <div className="text-base font-semibold break-words">{entry.title}</div>
         <div
           className="text-xs mt-1.5 flex items-center gap-3"
           style={{ color: theme.colors.textMuted }}
@@ -1331,7 +1283,20 @@ const TrailRow: React.FC<{
             {fileCount ?? '—'} {fileCount === 1 ? 'file' : 'files'}
           </span>
           {author?.githubLogin && (
-            <span className="truncate">{author.githubLogin}</span>
+            <span className="inline-flex items-center gap-1.5 min-w-0">
+              {avatarUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="rounded-full shrink-0"
+                  width={16}
+                  height={16}
+                  style={{ background: theme.colors.backgroundSecondary }}
+                />
+              )}
+              <span className="truncate">{author.githubLogin}</span>
+            </span>
           )}
         </div>
       </div>
