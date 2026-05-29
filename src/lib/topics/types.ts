@@ -54,11 +54,48 @@ export interface TopicByUserEntry {
 export interface TopicByUserIndex {
   version: 1;
   updatedAt: string;
+  /**
+   * Owner's GitHub login. Optional for back-compat with manifests written
+   * before this field existed — those are lazily backfilled by the feed
+   * route (it reads one topic record, which always carries `createdBy`).
+   * Single-writer (only the owner mutates), so it stays coherent under the
+   * same ETag-locked write path as `entries`.
+   */
+  githubLogin?: string;
   entries: TopicByUserEntry[];
 }
 
 export interface ListTopicsByUserResponse {
   entries: TopicByUserEntry[];
+}
+
+/**
+ * One row in the global topics feed (`/topics`). A `TopicByUserEntry`
+ * lifted out of its owner's manifest and stamped with the author so the
+ * HN-style feed can render a byline without a per-topic fan-out.
+ */
+export interface TopicFeedEntry {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  author: {
+    githubId: number;
+    githubLogin: string;
+    /** GitHub display name, falling back to the login when unset. */
+    displayName: string;
+  };
+  /**
+   * Distinct repos whose trails this topic pulls together, sorted by
+   * owner then repo. Drives the collapsed owner-avatar row and the
+   * expandable repo list. Resolved via the trail id→{owner,repo} pointer
+   * store, not the full trail records.
+   */
+  repos: Array<{ owner: string; repo: string }>;
+}
+
+export interface ListTopicsFeedResponse {
+  topics: TopicFeedEntry[];
 }
 
 export class TopicShareError extends Error {

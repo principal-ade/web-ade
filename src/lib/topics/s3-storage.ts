@@ -12,6 +12,7 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -360,7 +361,13 @@ export async function upsertTopicInUserIndex(topic: TopicPayload): Promise<void>
     await updateTopicsByUser(topic.createdBy.githubId, (data) => {
       const entry = topicToByUserEntry(topic);
       const others = data.entries.filter((e) => e.id !== topic.id);
-      return { ...data, entries: [entry, ...others] };
+      // Stamp the owner login so the global feed can render bylines without
+      // a per-topic fan-out. We always have it here (`createdBy`).
+      return {
+        ...data,
+        githubLogin: topic.createdBy.githubLogin,
+        entries: [entry, ...others],
+      };
     });
   } catch (error) {
     console.error('[Topics] Upsert by-user index failed:', {
@@ -387,4 +394,47 @@ export async function removeTopicFromUserIndex(
       error: error instanceof Error ? error.message : String(error),
     });
   }
+}
+
+// ============================================================================
+// Owner enumeration — powers the global `/topics` feed. The per-user
+// manifests live as flat objects at `topics/_by-user/{githubId}.json`, so a
+// single `LIST` of that prefix yields every creator who has at least one
+// topic. (Unlike trails' repo tree, there's no nesting to walk here.)
+// ============================================================================
+
+/**
+ * Enumerate every GitHub id that owns a by-user manifest. One `LIST` pass
+ * (paged) over the `_by-user/` prefix; the caller fans out a manifest read
+ * per id to build the feed.
+ */
+export async function listTopicOwnerIds(): Promise<number[]> {
+  const prefix = `${S3_PREFIX}/_by-user/`;
+  const ids: number[] = [];
+  let continuationToken: string | undefined;
+
+  do {
+    const response = await s3Client.send(
+      new ListObjectsV2Command({
+        Bucket: BUCKET_NAME,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      }),
+    );
+
+    for (const obj of response.Contents ?? []) {
+      if (!obj.Key) continue;
+      // `obj.Key` is `topics/_by-user/{githubId}.json`.
+      const file = obj.Key.slice(prefix.length);
+      const match = /^(\d+)\.json$/.exec(file);
+      if (!match) continue;
+      ids.push(Number(match[1]));
+    }
+
+    continuationToken = response.IsTruncated
+      ? response.NextContinuationToken
+      : undefined;
+  } while (continuationToken);
+
+  return ids;
 }
