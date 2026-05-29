@@ -637,7 +637,6 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           entries={state.entries}
           filteredEntries={filteredEntries}
           payloads={payloads}
-          exploredStats={exploredStats}
           filterQuery={filterQuery}
           onFilterChange={setFilterQuery}
           selectedTrailId={selectedTrailId}
@@ -703,8 +702,13 @@ const Header: React.FC<{
       <div className="hidden md:flex items-center gap-2 min-w-0 flex-1">
         <Link
           href="/"
-          className="text-xl font-bold transition-opacity hover:opacity-80"
-          style={{ fontFamily: theme.fonts.body, textDecoration: 'none' }}
+          className="transition-opacity hover:opacity-80"
+          style={{
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[4],
+            fontWeight: theme.fontWeights.bold,
+            textDecoration: 'none',
+          }}
         >
           <span style={{ color: theme.colors.text }}>Principal</span>{' '}
           <span style={{ color: theme.colors.primary }}>AI</span>
@@ -737,9 +741,11 @@ const Header: React.FC<{
         </Link>
         <Link
           href={`/${owner}/${repo}`}
-          className="text-base font-semibold transition-opacity hover:opacity-80 truncate"
+          className="transition-opacity hover:opacity-80 truncate"
           style={{
             fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[2],
+            fontWeight: theme.fontWeights.semibold,
             color: theme.colors.text,
             textDecoration: 'none',
           }}
@@ -763,9 +769,11 @@ const Header: React.FC<{
           style={{ border: `1px solid ${theme.colors.border}` }}
         />
         <span
-          className="text-base font-semibold truncate"
+          className="truncate"
           style={{
             fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[2],
+            fontWeight: theme.fontWeights.semibold,
             color: theme.colors.text,
           }}
         >
@@ -779,14 +787,21 @@ const Header: React.FC<{
           aria-label={`${exploredStats.pct.toFixed(2)}% explored`}
         >
           <span
-            className="text-sm font-semibold leading-none"
-            style={{ color: theme.colors.text, fontFamily: theme.fonts.body }}
+            className="leading-none"
+            style={{
+              color: theme.colors.text,
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[1],
+              fontWeight: theme.fontWeights.semibold,
+            }}
           >
             {exploredStats.pct.toFixed(2)}%
           </span>
           <span
-            className="text-xs"
-            style={{ color: theme.colors.textSecondary }}
+            style={{
+              color: theme.colors.textSecondary,
+              fontSize: theme.fontSizes[0],
+            }}
           >
             explored
           </span>
@@ -831,12 +846,14 @@ const Header: React.FC<{
           <button
             type="button"
             onClick={onSignIn}
-            className="flex items-center gap-1.5 px-3 h-8 rounded-md text-sm font-medium transition-all hover:opacity-90"
+            className="flex items-center gap-1.5 px-3 h-8 rounded-md transition-all hover:opacity-90"
             style={{
               background: theme.colors.primary,
               color: theme.colors.background,
               border: `1px solid ${theme.colors.primary}`,
               fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[1],
+              fontWeight: theme.fontWeights.medium,
               cursor: 'pointer',
             }}
             aria-label="Sign in"
@@ -859,7 +876,6 @@ const TrailListPane: React.FC<{
   entries: SharedTrailIndexEntry[];
   filteredEntries: SharedTrailIndexEntry[];
   payloads: Map<string, TrailPayload>;
-  exploredStats: { documented: number; total: number; pct: number } | null;
   filterQuery: string;
   onFilterChange: (q: string) => void;
   selectedTrailId: string | null;
@@ -876,7 +892,6 @@ const TrailListPane: React.FC<{
   entries,
   filteredEntries,
   payloads,
-  exploredStats,
   filterQuery,
   onFilterChange,
   selectedTrailId,
@@ -900,7 +915,6 @@ const TrailListPane: React.FC<{
       }}
     >
       <TrailSummarySection
-        exploredStats={exploredStats}
         configMode={configMode}
         onToggleConfigMode={onToggleConfigMode}
       />
@@ -925,14 +939,20 @@ const TrailListPane: React.FC<{
                 value={filterQuery}
                 onChange={(e) => onFilterChange(e.target.value)}
                 placeholder="Filter trails"
-                className="flex-1 bg-transparent outline-none text-sm"
-                style={{ color: theme.colors.text }}
+                className="flex-1 bg-transparent outline-none"
+                style={{
+                  color: theme.colors.text,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[1],
+                }}
               />
               {filterQuery && (
                 <button
                   onClick={() => onFilterChange('')}
-                  className="text-xs"
-                  style={{ color: theme.colors.textMuted }}
+                  style={{
+                    color: theme.colors.textMuted,
+                    fontSize: theme.fontSizes[0],
+                  }}
                 >
                   Clear
                 </button>
@@ -1062,10 +1082,11 @@ const FolderConfigPane: React.FC<{
     <div className="flex flex-col flex-1 min-h-0">
       {/* One-line helper: hint when empty, count + Clear all otherwise */}
       <div
-        className="px-4 py-2 border-b text-xs flex items-center justify-between gap-2"
+        className="px-4 py-2 border-b flex items-center justify-between gap-2"
         style={{
           borderColor: theme.colors.border,
           color: theme.colors.textSecondary,
+          fontSize: theme.fontSizes[0],
         }}
       >
         {excludedDirs.length === 0 ? (
@@ -1144,7 +1165,7 @@ const FolderConfigPane: React.FC<{
                 <button
                   type="button"
                   onClick={toggle}
-                  className="w-full text-left px-3 py-2 rounded text-sm transition-colors hover:opacity-90"
+                  className="w-full text-left px-3 py-2 rounded transition-colors hover:opacity-90"
                   style={{
                     background: 'transparent',
                     color: isExcluded
@@ -1153,6 +1174,7 @@ const FolderConfigPane: React.FC<{
                     border: 'none',
                     cursor: 'pointer',
                     fontFamily: theme.fonts.body,
+                    fontSize: theme.fontSizes[1],
                   }}
                 >
                   {isExcluded ? 'Include in coverage' : 'Exclude from coverage'}
@@ -1178,10 +1200,9 @@ const FolderConfigPane: React.FC<{
 const SHOW_FOLDER_CONFIG = false;
 
 const TrailSummarySection: React.FC<{
-  exploredStats: { documented: number; total: number; pct: number } | null;
   configMode: boolean;
   onToggleConfigMode: () => void;
-}> = ({ exploredStats, configMode, onToggleConfigMode }) => {
+}> = ({ configMode, onToggleConfigMode }) => {
   const { theme } = useTheme();
   return (
     <div
@@ -1190,14 +1211,14 @@ const TrailSummarySection: React.FC<{
     >
       <div className="flex items-center justify-between">
         <div
-          className="text-sm font-semibold"
-          style={{ color: theme.colors.textSecondary }}
+          style={{
+            color: theme.colors.primary,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[2],
+            fontWeight: theme.fontWeights.semibold,
+          }}
         >
-          {configMode
-            ? 'Configure folders'
-            : exploredStats
-              ? `Trails cover ${exploredStats.documented} of ${exploredStats.total} files`
-              : 'Trails'}
+          {configMode ? 'Configure folders' : 'Trails'}
         </div>
         {SHOW_FOLDER_CONFIG && (
           <button
@@ -1273,10 +1294,18 @@ const TrailRow: React.FC<{
       }}
     >
       <div className="min-w-0">
-        <div className="text-base font-semibold break-words">{entry.title}</div>
         <div
-          className="text-xs mt-1.5 flex items-center gap-3"
-          style={{ color: theme.colors.textMuted }}
+          className="break-words"
+          style={{
+            fontSize: theme.fontSizes[2],
+            fontWeight: theme.fontWeights.semibold,
+          }}
+        >
+          {entry.title}
+        </div>
+        <div
+          className="mt-1.5 flex items-center gap-3"
+          style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[0] }}
         >
           <span className="inline-flex items-center gap-1">
             <FileText size={12} />
@@ -1308,8 +1337,8 @@ const ListMessage: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { theme } = useTheme();
   return (
     <div
-      className="px-4 py-6 text-sm text-center"
-      style={{ color: theme.colors.textMuted }}
+      className="px-4 py-6 text-center"
+      style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
     >
       {children}
     </div>
@@ -1471,7 +1500,12 @@ const RightPane: React.FC<{
         className="flex-1 min-w-0 flex items-center justify-center px-6"
         style={{ background: theme.colors.background, color: theme.colors.textMuted }}
       >
-        <div className="text-sm text-center max-w-md">{treeError}</div>
+        <div
+          className="text-center max-w-md"
+          style={{ fontSize: theme.fontSizes[1] }}
+        >
+          {treeError}
+        </div>
       </main>
     );
   }
@@ -1482,7 +1516,7 @@ const RightPane: React.FC<{
         className="flex-1 min-w-0 flex items-center justify-center"
         style={{ background: theme.colors.background, color: theme.colors.textMuted }}
       >
-        <div className="text-sm">Loading repository…</div>
+        <div style={{ fontSize: theme.fontSizes[1] }}>Loading repository…</div>
       </main>
     );
   }
