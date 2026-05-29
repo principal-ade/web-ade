@@ -905,6 +905,17 @@ export function useTrailSession(trailId: string): TrailSession {
 
 export interface TrailViewerProps {
   session: TrailSession;
+  /**
+   * At mobile width (<768px), keep the city map visible as a fixed-size
+   * band beneath the brief. Defaults to the panel's own default (false).
+   */
+  mobileShowMap?: boolean;
+  /**
+   * Top/bottom orientation of the mobile map band (only meaningful
+   * alongside mobileShowMap). Defaults to the panel's own
+   * default ('bottom') when omitted.
+   */
+  mobileMapSide?: 'top' | 'bottom';
 }
 
 /**
@@ -913,7 +924,11 @@ export interface TrailViewerProps {
  * are responsible for rendering whatever header they want above this
  * (or none at all).
  */
-export function TrailViewer({ session }: TrailViewerProps) {
+export function TrailViewer({
+  session,
+  mobileShowMap,
+  mobileMapSide,
+}: TrailViewerProps) {
   const { theme } = useTheme();
 
   if (session.state === 'error') {
@@ -955,6 +970,8 @@ export function TrailViewer({ session }: TrailViewerProps) {
           briefLayout="split"
           defaultShowSequenceDrawer={false}
           defaultHideMap
+          mobileShowMap={mobileShowMap}
+          mobileMapSide={mobileMapSide}
           hideGraphToggle
           hideVisitorsRoster
           hideNotesByRoster

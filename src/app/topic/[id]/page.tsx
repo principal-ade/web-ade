@@ -1351,7 +1351,7 @@ function TopicTrailLayer({
         />
       )}
       <div className="flex-1 min-h-0">
-        <TrailViewer session={session} />
+        <TrailViewer session={session} mobileShowMap mobileMapSide="top" />
       </div>
     </div>
   );

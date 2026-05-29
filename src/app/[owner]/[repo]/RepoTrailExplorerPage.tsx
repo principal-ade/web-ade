@@ -1533,6 +1533,7 @@ const RightPane: React.FC<{
         events={events}
         currentAuthor={currentAuthor}
         defaultIsolationMode="hide"
+        briefSide="leading"
         hideNonHighlightedBuildings={!showSpatialContext}
         excludedFolders={excludedFolders}
       />
