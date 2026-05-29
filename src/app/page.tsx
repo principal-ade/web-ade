@@ -113,6 +113,26 @@ export default function HomePage() {
   useEffect(() => () => {
     if (viewTimerRef.current) clearTimeout(viewTimerRef.current);
   }, []);
+
+  // Persist the trails/topics body views in the `?view=` query param so
+  // navigating away and back lands on the same one. First run hydrates from the
+  // URL; later runs write the URL (clearing the param for every other view).
+  const viewHydratedRef = useRef(false);
+  useEffect(() => {
+    if (!viewHydratedRef.current) {
+      viewHydratedRef.current = true;
+      const param = new URLSearchParams(window.location.search).get('view');
+      if ((param === 'trails' || param === 'topics') && param !== view) {
+        setView(param);
+        return; // wait for the re-render before writing the URL back
+      }
+    }
+    const url = new URL(window.location.href);
+    if (view === 'trails' || view === 'topics') url.searchParams.set('view', view);
+    else url.searchParams.delete('view');
+    window.history.replaceState(window.history.state, '', url);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
   const [revealStep, setRevealStep] = useState(0);
   const [stepsRevealed, setStepsRevealed] = useState(0);
   const [diagramRevealed, setDiagramRevealed] = useState(false);
