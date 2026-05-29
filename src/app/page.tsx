@@ -17,6 +17,8 @@ import { LgtmStamp, SignOffStampAnimation } from '@/components/trail/LgtmStamp';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { SignedInDashboard } from '@/components/home/SignedInDashboard';
 import { TrailBackdrop } from '@/components/home/TrailBackdrop';
+import { TrailsExplorer } from '@/components/home/TrailsExplorer';
+import { TopicsFeed } from '@/components/home/TopicsFeed';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const dynamic = 'force-dynamic';
@@ -87,7 +89,14 @@ export default function HomePage() {
     if (!parsed) return;
     navigateToRepo(parsed.owner, parsed.repo);
   };
-  type View = 'title' | 'fileCity' | 'codeTrail' | 'whyTrails' | 'stamped';
+  type View =
+    | 'title'
+    | 'fileCity'
+    | 'codeTrail'
+    | 'whyTrails'
+    | 'stamped'
+    | 'trails'
+    | 'topics';
   const [view, setView] = useState<View>('title');
   const [fading, setFading] = useState(false);
   const VIEW_FADE_MS = 700;
@@ -268,16 +277,46 @@ export default function HomePage() {
         }}
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 px-6 py-4">
-          <Link href="/" className="flex items-center">
-            <h1
-              className="text-2xl font-bold m-0"
-              style={{ fontFamily: theme.fonts.body }}
+          <div className="flex items-center min-w-0 gap-2">
+            <Link
+              href="/"
+              className="flex items-center transition-opacity hover:opacity-80"
+              onClick={(e) => {
+                // Already on `/`; turn the logo into "back to the landing
+                // view" whenever a body other than the hero is showing.
+                if (view !== 'title') {
+                  e.preventDefault();
+                  resetToTitle();
+                }
+              }}
             >
-              <span style={{ color: theme.colors.text }}>Principal</span>
-              {' '}
-              <span style={{ color: theme.colors.primary }}>AI</span>
-            </h1>
-          </Link>
+              <h1
+                className="text-2xl font-bold m-0"
+                style={{ fontFamily: theme.fonts.body }}
+              >
+                <span style={{ color: theme.colors.text }}>Principal</span>
+                {' '}
+                <span style={{ color: theme.colors.primary }}>AI</span>
+              </h1>
+            </Link>
+            {(view === 'trails' || view === 'topics') && (
+              <>
+                <span
+                  className="text-2xl"
+                  style={{ color: theme.colors.textMuted }}
+                  aria-hidden="true"
+                >
+                  /
+                </span>
+                <span
+                  className="text-base font-semibold truncate"
+                  style={{ fontFamily: theme.fonts.body, color: theme.colors.text }}
+                >
+                  {view === 'trails' ? 'Trails' : 'Topics'}
+                </span>
+              </>
+            )}
+          </div>
           <div className="flex items-center gap-3">
           {view !== 'title' && (
             <button
@@ -357,7 +396,15 @@ export default function HomePage() {
       </header>
 
       <main className="flex-1 flex flex-col relative">
-        {signedIn ? (
+        {view === 'trails' || view === 'topics' ? (
+          <section
+            className={`flex-1 w-full px-6 py-10 transition-opacity duration-700 ${
+              fading ? 'opacity-0' : 'opacity-100'
+            }`}
+          >
+            {view === 'trails' ? <TrailsExplorer /> : <TopicsFeed />}
+          </section>
+        ) : signedIn ? (
           <SignedInDashboard user={user} />
         ) : (
         <section className="flex-1 w-full max-w-7xl mx-auto px-6 py-16 flex items-start">
@@ -413,8 +460,9 @@ export default function HomePage() {
                     showHint ? 'opacity-100' : 'opacity-0 pointer-events-none'
                   }`}
                 >
-                  <Link
-                    href="/explore"
+                  <button
+                    type="button"
+                    onClick={() => goToView('trails')}
                     className="inline-flex items-center justify-center gap-1.5 w-64 px-5 py-2.5 rounded-md text-base font-medium transition-opacity hover:opacity-80"
                     style={{
                       background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
@@ -424,7 +472,20 @@ export default function HomePage() {
                     tabIndex={showHint ? 0 : -1}
                   >
                     View Trails
-                  </Link>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => goToView('topics')}
+                    className="inline-flex items-center justify-center gap-1.5 w-64 px-5 py-2.5 rounded-md text-base font-medium transition-opacity hover:opacity-80"
+                    style={{
+                      background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
+                      color: theme.colors.primary,
+                    }}
+                    tabIndex={showHint ? 0 : -1}
+                  >
+                    View Topics
+                  </button>
                   <span
                     className={`text-sm w-64 text-center transition-opacity duration-700 ease-out ${
                       showSecondaryCta ? 'opacity-100' : 'opacity-0'
@@ -680,8 +741,9 @@ export default function HomePage() {
                   Trail Stamped.
                 </h2>
                 <div className="flex flex-col items-center lg:items-start sm:flex-row sm:justify-center lg:justify-start sm:items-center sm:flex-wrap gap-x-3 gap-y-2 text-base">
-                  <Link
-                    href="/explore"
+                  <button
+                    type="button"
+                    onClick={() => goToView('trails')}
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md font-medium transition-opacity hover:opacity-80"
                     style={{
                       background: theme.colors.primary,
@@ -689,7 +751,19 @@ export default function HomePage() {
                     }}
                   >
                     View Trails
-                  </Link>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => goToView('topics')}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md font-medium transition-opacity hover:opacity-80"
+                    style={{
+                      background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
+                      color: theme.colors.primary,
+                    }}
+                  >
+                    View Topics
+                  </button>
                   <span style={{ color: theme.colors.textMuted }}>or</span>
                   <button
                     type="button"
