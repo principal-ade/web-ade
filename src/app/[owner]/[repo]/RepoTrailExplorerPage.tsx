@@ -12,6 +12,7 @@ import {
   FileText,
   Settings,
   Check,
+  X,
 } from 'lucide-react';
 import { FileTree as PierreFileTree, useFileTree } from '@pierre/trees/react';
 import { themeToTreeStyles } from '@pierre/trees';
@@ -172,6 +173,14 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   // When true, the left rail swaps the trail list for a directory tree
   // the user can use to gate folders in / out of the coverage calc.
   const [configMode, setConfigMode] = useState(false);
+
+  // The "Trails" header doubles as a switch between the trail list and a
+  // file tree of every file the trails touch (mirrors the desktop app's
+  // Files tab). `selectedFilePath` lights up the picked file on the map.
+  const [leftViewMode, setLeftViewMode] = useState<'trails' | 'files'>(
+    'trails',
+  );
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = `${owner}/${repo}`;
@@ -425,6 +434,47 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     };
   }, [fileTree, payloads, excludedFilePaths]);
 
+  // Files-view rows — every file touched by at least one trail, with a
+  // count of how many distinct trails reference it. Selection-independent;
+  // rebuilt as payloads stream in. A file is counted once per trail even
+  // if several markers point at it. Excluded folders drop out so the tree
+  // matches the coverage stats.
+  const trailFileRows = useMemo<{ path: string; trailCount: number }[]>(() => {
+    if (payloads.size === 0) return [];
+    const counts = new Map<string, number>();
+    for (const payload of payloads.values()) {
+      const seenInTrail = new Set<string>();
+      for (const marker of payload.markers) {
+        const p = marker.sourcePath;
+        if (typeof p !== 'string' || p.length === 0) continue;
+        if (seenInTrail.has(p) || excludedFilePaths.has(p)) continue;
+        seenInTrail.add(p);
+        counts.set(p, (counts.get(p) ?? 0) + 1);
+      }
+    }
+    return Array.from(counts.entries()).map(([path, trailCount]) => ({
+      path,
+      trailCount,
+    }));
+  }, [payloads, excludedFilePaths]);
+
+  // Trails that touch the file picked in the Explored Files tree — feeds
+  // the overlay shown over the panel. Index order (newest first). Empty
+  // unless we're in files view with a file selected and its payload(s) in.
+  const selectedFileTrails = useMemo<SharedTrailIndexEntry[]>(() => {
+    if (leftViewMode !== 'files' || !selectedFilePath) return [];
+    if (state.kind !== 'ready') return [];
+    const out: SharedTrailIndexEntry[] = [];
+    for (const entry of state.entries) {
+      const payload = payloads.get(entry.id);
+      if (!payload) continue;
+      if (payload.markers.some((m) => m.sourcePath === selectedFilePath)) {
+        out.push(entry);
+      }
+    }
+    return out;
+  }, [leftViewMode, selectedFilePath, state, payloads]);
+
   // Layer item paths must match `building.path` verbatim. Buildings
   // are constructed from `FileTree.allFiles[i].path`, which is the raw
   // input path from the GitHub tree API (repo-relative — no rootPath
@@ -535,6 +585,29 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     };
   }, [hoveredTrailId, selectedTrailId, payloads, theme.colors.accent]);
 
+  // Files-view selection overlay — when a file is picked in the file
+  // tree, light up its building on top of the documented base so it's
+  // easy to spot. Only meaningful while no trail is selected (idle map).
+  const selectedFileLayer = useMemo<HighlightLayer | null>(() => {
+    if (leftViewMode !== 'files' || !selectedFilePath) return null;
+    return {
+      id: `trail-file-selection-${selectedFilePath}`,
+      name: selectedFilePath,
+      enabled: true,
+      color: theme.colors.accent,
+      opacity: 0.85,
+      priority: 120,
+      items: [
+        {
+          path: selectedFilePath,
+          type: 'file' as const,
+          renderStrategy: 'fill' as const,
+        },
+      ],
+      dynamic: true,
+    };
+  }, [leftViewMode, selectedFilePath, theme.colors.accent]);
+
   // Stack base + hover. Higher priority renders on top. In debt mode
   // we swap the base layer to the undocumented set and skip the hover
   // overlay (which only makes sense over the coverage layer).
@@ -543,8 +616,15 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     const baseLayer = debtMode ? undocumentedFilesLayer : documentedFilesLayer;
     if (baseLayer) layers.push(baseLayer);
     if (!debtMode && hoveredHighlightLayer) layers.push(hoveredHighlightLayer);
+    if (selectedFileLayer) layers.push(selectedFileLayer);
     return layers.length > 0 ? layers : null;
-  }, [debtMode, documentedFilesLayer, undocumentedFilesLayer, hoveredHighlightLayer]);
+  }, [
+    debtMode,
+    documentedFilesLayer,
+    undocumentedFilesLayer,
+    hoveredHighlightLayer,
+    selectedFileLayer,
+  ]);
 
   // The highlight-layers slice is "loading" until we have enough data
   // to compute a final value. Without this the panel can't tell
@@ -639,6 +719,26 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             setConfigMode((m) => !m);
             setSelectedTrailId(null);
           }}
+          leftViewMode={leftViewMode}
+          onSetViewMode={(mode) => {
+            setLeftViewMode(mode);
+            // Switching views clears the other view's selection so the map
+            // returns to the idle coverage layer between them.
+            if (mode === 'files') {
+              setSelectedTrailId(null);
+            } else {
+              setSelectedFilePath(null);
+            }
+          }}
+          trailFileRows={trailFileRows}
+          selectedFilePath={selectedFilePath}
+          onSelectFile={(path) => {
+            // Picking a file spotlights it on the idle map and opens the
+            // associated-trails overlay — clear any open trail so it's the
+            // file (not a stale trail) showing behind the overlay.
+            setSelectedFilePath(path);
+            setSelectedTrailId(null);
+          }}
           dirPaths={dirPaths}
           filePaths={filePaths}
           excludedDirs={excludedDirs}
@@ -657,6 +757,14 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           )}
           showSpatialContext={configMode}
           currentAuthor={user?.login ?? LOCAL_AUTHOR}
+          overlayFilePath={leftViewMode === 'files' ? selectedFilePath : null}
+          overlayTrails={selectedFileTrails}
+          overlaySelectedTrailId={selectedTrailId}
+          onSelectOverlayTrail={(id) => {
+            setSelectedTrailId(id);
+            setSelectedFilePath(null);
+          }}
+          onCloseOverlay={() => setSelectedFilePath(null)}
         />
       </div>
     </div>
@@ -842,6 +950,11 @@ const TrailListPane: React.FC<{
   onHover: (id: string | null) => void;
   configMode: boolean;
   onToggleConfigMode: () => void;
+  leftViewMode: 'trails' | 'files';
+  onSetViewMode: (mode: 'trails' | 'files') => void;
+  trailFileRows: { path: string; trailCount: number }[];
+  selectedFilePath: string | null;
+  onSelectFile: (path: string | null) => void;
   dirPaths: string[];
   filePaths: string[];
   excludedDirs: string[];
@@ -858,6 +971,11 @@ const TrailListPane: React.FC<{
   onHover,
   configMode,
   onToggleConfigMode,
+  leftViewMode,
+  onSetViewMode,
+  trailFileRows,
+  selectedFilePath,
+  onSelectFile,
   dirPaths,
   filePaths,
   excludedDirs,
@@ -876,6 +994,8 @@ const TrailListPane: React.FC<{
       <TrailSummarySection
         configMode={configMode}
         onToggleConfigMode={onToggleConfigMode}
+        leftViewMode={leftViewMode}
+        onSetViewMode={onSetViewMode}
       />
 
       {configMode ? (
@@ -884,6 +1004,12 @@ const TrailListPane: React.FC<{
           filePaths={filePaths}
           excludedDirs={excludedDirs}
           onExcludedDirsChange={onExcludedDirsChange}
+        />
+      ) : leftViewMode === 'files' ? (
+        <TrailFilesPane
+          fileRows={trailFileRows}
+          selectedPath={selectedFilePath}
+          onSelectFile={onSelectFile}
         />
       ) : (
         <>
@@ -1153,6 +1279,115 @@ const FolderConfigPane: React.FC<{
   );
 };
 
+// ---------------------------------------------------------------------------
+// Files pane — Pierre tree of every file the trails touch. Built from the
+// union of all loaded payloads' marker sourcePaths; each file row carries a
+// "×N" badge for how many distinct trails reference it. Selecting a file
+// lights up its building on the map; folder rows are non-selecting.
+// ---------------------------------------------------------------------------
+
+const TrailFilesPane: React.FC<{
+  fileRows: { path: string; trailCount: number }[];
+  selectedPath: string | null;
+  onSelectFile: (path: string | null) => void;
+}> = ({ fileRows, selectedPath, onSelectFile }) => {
+  const { theme } = useTheme();
+
+  // Deduped, sorted path list fed to Pierre. Payloads stream in after
+  // mount, so this grows over time — kept in sync via `resetPaths` below.
+  const paths = useMemo<string[]>(
+    () => Array.from(new Set(fileRows.map((f) => f.path))).sort(),
+    [fileRows],
+  );
+
+  // `useFileTree` snapshots its options once, so the decoration renderer
+  // captured at construction would read a stale count map. Mirror the
+  // latest counts through a ref the renderer reads on every paint.
+  const countByPathRef = useRef(new Map<string, number>());
+  countByPathRef.current = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const f of fileRows) m.set(f.path, f.trailCount);
+    return m;
+  }, [fileRows]);
+
+  const modelRef = useRef<ReturnType<typeof useFileTree>['model'] | null>(null);
+  const isFirstSync = useRef(true);
+
+  const { model } = useFileTree({
+    paths,
+    search: true,
+    flattenEmptyDirectories: true,
+    initialExpansion: 'closed',
+    initialSelectedPaths: selectedPath ? [selectedPath] : [],
+    onSelectionChange: (selected) => {
+      const next = selected[0] ?? null;
+      // Folder rows aren't a file selection — ignore them so the map
+      // overlay only ever tracks an actual file.
+      if (next) {
+        const item = modelRef.current?.getItem(next);
+        if (item && item.isDirectory()) return;
+      }
+      onSelectFile(next);
+    },
+    renderRowDecoration: ({ row }) => {
+      if (row.kind !== 'file') return null;
+      const count = countByPathRef.current.get(row.path);
+      if (!count) return null;
+      return {
+        text: `×${count}`,
+        title: `In ${count} ${count === 1 ? 'trail' : 'trails'}`,
+      };
+    },
+  });
+  modelRef.current = model;
+
+  // Keep the tree in sync as payloads (and therefore paths) stream in.
+  // Skip the very first run — the model already built from `paths`.
+  useEffect(() => {
+    if (isFirstSync.current) {
+      isFirstSync.current = false;
+      return;
+    }
+    model.resetPaths(paths, {});
+  }, [model, paths]);
+
+  // Match the trail list: it has no background of its own and shows the
+  // aside's `backgroundSecondary` through transparent rows. Build the tree
+  // on the same token and override Pierre's own bg to transparent so the
+  // two views read as one surface.
+  const treeStyles = useMemo(
+    () =>
+      themeToTreeStyles({
+        type: 'dark',
+        bg: theme.colors.backgroundSecondary,
+        fg: theme.colors.text,
+      }),
+    [theme.colors.backgroundSecondary, theme.colors.text],
+  );
+
+  if (fileRows.length === 0) {
+    return (
+      <div className="flex-1 min-h-0">
+        <ListMessage>No files have been touched by trails yet.</ListMessage>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 min-h-0 pt-2">
+      <PierreFileTree
+        model={model}
+        style={{
+          ...(treeStyles as React.CSSProperties),
+          '--trees-bg-override': 'transparent',
+          height: '100%',
+          display: 'block',
+        } as React.CSSProperties}
+      />
+    </div>
+  );
+};
+
 // Folder-coverage configuration is hidden for now. All the plumbing
 // (config mode, folder include/exclude) is kept intact — flip this to
 // true to re-enable the settings button, which we may do in the future.
@@ -1161,7 +1396,9 @@ const SHOW_FOLDER_CONFIG = false;
 const TrailSummarySection: React.FC<{
   configMode: boolean;
   onToggleConfigMode: () => void;
-}> = ({ configMode, onToggleConfigMode }) => {
+  leftViewMode: 'trails' | 'files';
+  onSetViewMode: (mode: 'trails' | 'files') => void;
+}> = ({ configMode, onToggleConfigMode, leftViewMode, onSetViewMode }) => {
   const { theme } = useTheme();
   return (
     <div
@@ -1169,16 +1406,86 @@ const TrailSummarySection: React.FC<{
       style={{ borderColor: theme.colors.border }}
     >
       <div className="flex items-center justify-between">
-        <div
-          style={{
-            color: theme.colors.primary,
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[2],
-            fontWeight: theme.fontWeights.semibold,
-          }}
-        >
-          {configMode ? 'Configure folders' : 'Trails'}
-        </div>
+        {configMode ? (
+          <div
+            style={{
+              color: theme.colors.primary,
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[2],
+              fontWeight: theme.fontWeights.semibold,
+            }}
+          >
+            Configure folders
+          </div>
+        ) : (
+          <div
+            role="tablist"
+            aria-label="Switch between trails and files"
+            className="relative flex flex-1 rounded-md p-0.5"
+            style={{
+              background: theme.colors.background,
+              border: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            {/* Sliding thumb sits behind the labels and animates to the
+                active tab. Width is half the inner track (minus the 2px
+                padding); translateX(100%) lands it exactly on the right
+                tab. */}
+            <div
+              aria-hidden="true"
+              className="absolute rounded"
+              style={{
+                top: 2,
+                bottom: 2,
+                left: 2,
+                width: 'calc(50% - 2px)',
+                background: theme.colors.backgroundSecondary,
+                transform:
+                  leftViewMode === 'files'
+                    ? 'translateX(100%)'
+                    : 'translateX(0)',
+                transition: 'transform 0.2s ease',
+              }}
+            />
+            {(
+              [
+                { value: 'trails', label: 'Trails' },
+                { value: 'files', label: 'Explored Files' },
+              ] as const
+            ).map((option) => {
+              const active = leftViewMode === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => onSetViewMode(option.value)}
+                  title={
+                    option.value === 'files'
+                      ? 'File tree of every file the trails touch'
+                      : 'List of shared trails'
+                  }
+                  className="relative flex-1 px-3 py-1 rounded text-center transition-colors"
+                  style={{
+                    zIndex: 1,
+                    background: 'transparent',
+                    color: active
+                      ? theme.colors.primary
+                      : theme.colors.textSecondary,
+                    fontFamily: theme.fonts.body,
+                    fontSize: theme.fontSizes[1],
+                    fontWeight: theme.fontWeights.semibold,
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
         {SHOW_FOLDER_CONFIG && (
           <button
             type="button"
@@ -1305,6 +1612,224 @@ const ListMessage: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 // ---------------------------------------------------------------------------
+// Explored-file → trails overlay. Floats over the panel listing every trail
+// that touches the file picked in the Explored Files tree. Clicking a row
+// opens that trail in the panel behind it; the backdrop or × dismisses.
+// Mirrors the desktop app's TrailFileTrailsOverlay.
+// ---------------------------------------------------------------------------
+
+const TrailFileTrailsOverlay: React.FC<{
+  filePath: string;
+  trails: SharedTrailIndexEntry[];
+  selectedTrailId: string | null;
+  onSelectTrail: (id: string) => void;
+  onClose: () => void;
+}> = ({ filePath, trails, selectedTrailId, onSelectTrail, onClose }) => {
+  const { theme } = useTheme();
+  const accent = theme.colors.primary ?? '#3b82f6';
+  const basename = filePath.split('/').pop() || filePath;
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 20,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+        padding: 12,
+        backgroundColor: 'rgba(0,0,0,0.35)',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0,
+          maxHeight: '100%',
+          maxWidth: 460,
+          width: '100%',
+          margin: '0 auto',
+          borderRadius: 10,
+          border: `1px solid ${theme.colors.border}`,
+          backgroundColor: theme.colors.backgroundSecondary,
+          boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Header — file identity + close. */}
+        <div
+          style={{
+            flex: '0 0 auto',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 8,
+            padding: '12px 12px 10px',
+            borderBottom: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              title={filePath}
+              style={{
+                fontFamily: theme.fonts.monospace ?? theme.fonts.body,
+                fontSize: theme.fontSizes[2],
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.text,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {basename}
+            </div>
+            <div
+              style={{
+                marginTop: 2,
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[0],
+                color: theme.colors.textSecondary,
+              }}
+            >
+              {trails.length} {trails.length === 1 ? 'trail' : 'trails'}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            title="Close"
+            style={{
+              all: 'unset',
+              flex: '0 0 auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 24,
+              height: 24,
+              borderRadius: 6,
+              cursor: 'pointer',
+              color: theme.colors.textSecondary,
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Trail list. */}
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
+            padding: 10,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+          }}
+        >
+          {trails.map((trail) => {
+            const isSelected = selectedTrailId === trail.id;
+            const selectedBg = `color-mix(in srgb, ${accent} 22%, ${theme.colors.background})`;
+            const author = trail.createdBy;
+            const avatarUrl = author
+              ? `https://avatars.githubusercontent.com/u/${author.githubId}?v=4&s=40`
+              : null;
+            return (
+              <button
+                key={trail.id}
+                type="button"
+                onClick={() => onSelectTrail(trail.id)}
+                title={trail.title || 'Untitled trail'}
+                style={{
+                  all: 'unset',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
+                  padding: '8px 10px',
+                  borderRadius: 8,
+                  border: `1px solid ${accent}`,
+                  backgroundColor: isSelected ? selectedBg : 'transparent',
+                  cursor: 'pointer',
+                  transition:
+                    'background-color 120ms ease, border-color 120ms ease',
+                }}
+              >
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                >
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      backgroundColor: accent,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span
+                    style={{
+                      flex: 1,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      color: isSelected ? '#ffffff' : accent,
+                      fontFamily: theme.fonts.body,
+                      fontSize: theme.fontSizes[1],
+                      fontWeight: theme.fontWeights.semibold,
+                    }}
+                  >
+                    {trail.title || 'Untitled trail'}
+                  </span>
+                </div>
+                {author?.githubLogin && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingLeft: 16,
+                      fontFamily: theme.fonts.body,
+                      fontSize: theme.fontSizes[0],
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    {avatarUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={avatarUrl}
+                        alt=""
+                        className="rounded-full shrink-0"
+                        width={14}
+                        height={14}
+                        style={{ background: theme.colors.background }}
+                      />
+                    )}
+                    <span
+                      style={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {author.githubLogin}
+                    </span>
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
 // Right pane (file map / trail explorer)
 // ---------------------------------------------------------------------------
 
@@ -1319,6 +1844,11 @@ const RightPane: React.FC<{
   excludedFolders: string[];
   showSpatialContext: boolean;
   currentAuthor: string;
+  overlayFilePath: string | null;
+  overlayTrails: SharedTrailIndexEntry[];
+  overlaySelectedTrailId: string | null;
+  onSelectOverlayTrail: (id: string) => void;
+  onCloseOverlay: () => void;
 }> = ({
   owner,
   repo,
@@ -1330,6 +1860,11 @@ const RightPane: React.FC<{
   excludedFolders,
   showSpatialContext,
   currentAuthor,
+  overlayFilePath,
+  overlayTrails,
+  overlaySelectedTrailId,
+  onSelectOverlayTrail,
+  onCloseOverlay,
 }) => {
   const { theme } = useTheme();
   const events = useMemo<PanelEventEmitter>(() => new PanelEventBus(), []);
@@ -1482,7 +2017,7 @@ const RightPane: React.FC<{
 
   return (
     <main
-      className="flex-1 min-w-0 min-h-0"
+      className="flex-1 min-w-0 min-h-0 relative"
       style={{ background: theme.colors.background }}
     >
       <FileCityTrailExplorerPanel
@@ -1495,6 +2030,15 @@ const RightPane: React.FC<{
         hideNonHighlightedBuildings={!showSpatialContext}
         excludedFolders={excludedFolders}
       />
+      {overlayFilePath && overlayTrails.length > 0 && (
+        <TrailFileTrailsOverlay
+          filePath={overlayFilePath}
+          trails={overlayTrails}
+          selectedTrailId={overlaySelectedTrailId}
+          onSelectTrail={onSelectOverlayTrail}
+          onClose={onCloseOverlay}
+        />
+      )}
       {shareTrailId && (
         <TrailShareModal
           trailId={shareTrailId}
