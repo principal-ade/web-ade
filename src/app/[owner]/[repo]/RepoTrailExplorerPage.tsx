@@ -8,7 +8,6 @@ import { useTheme } from '@principal-ade/industry-theme';
 import {
   Github,
   History,
-  LogIn,
   Search,
   FileText,
   Settings,
@@ -35,8 +34,10 @@ import type {
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { LOCAL_AUTHOR } from '@/lib/trails/local-mutations';
+import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { TrailLoadingScreen } from '@/components/trail/TrailLoadingScreen';
 import { TrailErrorView } from '@/components/trail/TrailErrorView';
+import { TrailShareModal } from '@/components/trail/TrailShareModal';
 import {
   type ShareErrorCode,
   type SharedTrailIndexEntry,
@@ -118,7 +119,7 @@ type LoadState =
 export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProps) {
   const { theme } = useTheme();
 
-  const { user, login } = useAuth();
+  const { user } = useAuth();
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   // Minimum loading window so the warming FileCity3D (rendered behind
   // the loading screen) has time to mount, init WebGL, and compile its
@@ -131,9 +132,6 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   }, []);
   const [filterQuery, setFilterQuery] = useState('');
   const [selectedTrailId, setSelectedTrailId] = useState<string | null>(null);
-  const handleSignIn = useCallback(() => {
-    login(window.location.pathname);
-  }, [login]);
   // hoveredTrailId will drive highlight layers on the file map once the
   // explorer is wired up. Kept here so the list rows can broadcast it.
   const [hoveredTrailId, setHoveredTrailId] = useState<string | null>(null);
@@ -627,8 +625,6 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
       <Header
         owner={owner}
         repo={repo}
-        showSignIn={!user}
-        onSignIn={handleSignIn}
         exploredStats={exploredStats}
       />
       <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
@@ -678,14 +674,10 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
 const Header: React.FC<{
   owner: string;
   repo: string;
-  showSignIn?: boolean;
-  onSignIn?: () => void;
   exploredStats: { documented: number; total: number; pct: number } | null;
 }> = ({
   owner,
   repo,
-  showSignIn,
-  onSignIn,
   exploredStats,
 }) => {
   const { theme } = useTheme();
@@ -842,26 +834,7 @@ const Header: React.FC<{
           <Github className="w-5 h-5" />
         </a>
 
-        {showSignIn && (
-          <button
-            type="button"
-            onClick={onSignIn}
-            className="flex items-center gap-1.5 px-3 h-8 rounded-md transition-all hover:opacity-90"
-            style={{
-              background: theme.colors.primary,
-              color: theme.colors.background,
-              border: `1px solid ${theme.colors.primary}`,
-              fontFamily: theme.fonts.body,
-              fontSize: theme.fontSizes[1],
-              fontWeight: theme.fontWeights.medium,
-              cursor: 'pointer',
-            }}
-            aria-label="Sign in"
-          >
-            <LogIn className="w-4 h-4" />
-            <span>Sign in</span>
-          </button>
-        )}
+        <UserAvatarMenu />
       </div>
     </header>
   );
@@ -1418,10 +1391,10 @@ const RightPane: React.FC<{
   // mutators here so the panel still mounts when a trail is selected;
   // clicking through to the full trail page is the path for editing.
   const trailIdForShare = selectedPayload?.id ?? null;
+  const [shareTrailId, setShareTrailId] = useState<string | null>(null);
   const shareTrail = useCallback(() => {
     if (!trailIdForShare) return;
-    const url = `${window.location.origin}/trail/${trailIdForShare}`;
-    void navigator.clipboard.writeText(url);
+    setShareTrailId(trailIdForShare);
   }, [trailIdForShare]);
   const actions = useMemo<FileCityTrailExplorerPanelActions>(
     () => ({
@@ -1536,6 +1509,15 @@ const RightPane: React.FC<{
         hideNonHighlightedBuildings={!showSpatialContext}
         excludedFolders={excludedFolders}
       />
+      {shareTrailId && (
+        <TrailShareModal
+          trailId={shareTrailId}
+          trailTitle={
+            selectedPayload?.id === shareTrailId ? selectedPayload?.title : null
+          }
+          onClose={() => setShareTrailId(null)}
+        />
+      )}
     </main>
   );
 };
