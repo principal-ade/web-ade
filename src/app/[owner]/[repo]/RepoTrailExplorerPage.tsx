@@ -400,7 +400,6 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   const exploredStats = useMemo<{
     documented: number;
     total: number;
-    pct: number;
   } | null>(() => {
     if (!fileTree) return null;
     if (payloads.size === 0) return null;
@@ -423,9 +422,6 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     return {
       documented: documented.size,
       total,
-      // Raw float; formatted at display site so the bar width and the
-      // label can pick their own precision.
-      pct: (documented.size / total) * 100,
     };
   }, [fileTree, payloads, excludedFilePaths]);
 
@@ -674,7 +670,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
 const Header: React.FC<{
   owner: string;
   repo: string;
-  exploredStats: { documented: number; total: number; pct: number } | null;
+  exploredStats: { documented: number; total: number } | null;
 }> = ({
   owner,
   repo,
@@ -776,39 +772,29 @@ const Header: React.FC<{
       {exploredStats && (
         <div
           className="hidden md:flex items-center gap-2 absolute left-1/2 -translate-x-1/2 pointer-events-none"
-          aria-label={`${exploredStats.pct.toFixed(2)}% explored`}
+          aria-label={`${exploredStats.documented} of ${exploredStats.total} files explored`}
         >
           <span
             className="leading-none"
             style={{
               color: theme.colors.text,
               fontFamily: theme.fonts.body,
-              fontSize: theme.fontSizes[1],
+              fontSize: theme.fontSizes[2],
               fontWeight: theme.fontWeights.semibold,
             }}
           >
-            {exploredStats.pct.toFixed(2)}%
+            {exploredStats.documented.toLocaleString()} of{' '}
+            {exploredStats.total.toLocaleString()}
           </span>
           <span
             style={{
+              fontFamily: theme.fonts.body,
               color: theme.colors.textSecondary,
-              fontSize: theme.fontSizes[0],
+              fontSize: theme.fontSizes[1],
             }}
           >
-            explored
+            files explored
           </span>
-          <div
-            className="w-24 h-1.5 rounded-full overflow-hidden"
-            style={{ background: theme.colors.border }}
-          >
-            <div
-              className="h-full transition-[width] duration-300"
-              style={{
-                width: `${exploredStats.pct}%`,
-                background: theme.colors.primary,
-              }}
-            />
-          </div>
         </div>
       )}
 

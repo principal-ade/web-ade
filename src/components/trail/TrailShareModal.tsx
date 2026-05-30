@@ -18,6 +18,9 @@ import { Check, Copy, Share2, X } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 
 const COPY_FEEDBACK_MS = 1500;
+// After copying the human link, let the "Link copied" state show briefly,
+// then dismiss the modal — the user's done once the link is on the clipboard.
+const LINK_COPIED_DISMISS_MS = 900;
 
 // Matches the command shown on the trail page header (TrailHeader.tsx).
 const buildAgentCommand = (trailId: string) =>
@@ -78,6 +81,14 @@ export function TrailShareModal({
     const t = setTimeout(() => setCopied(null), COPY_FEEDBACK_MS);
     return () => clearTimeout(t);
   }, [copied]);
+
+  // Copying the human link is the terminal action, so close the modal after
+  // a brief pause once "Link copied" is showing.
+  useEffect(() => {
+    if (copied !== 'link') return;
+    const t = setTimeout(onClose, LINK_COPIED_DISMISS_MS);
+    return () => clearTimeout(t);
+  }, [copied, onClose]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
