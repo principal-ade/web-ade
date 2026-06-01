@@ -40,6 +40,14 @@ describe('TTS Generation with OTEL', () => {
       'https://s3.amazonaws.com/test-bucket/cached-audio.mp3'
     );
 
+    // Options are merged before the cache check, so this must be stubbed even
+    // on the fast path (generateLegacyS3Key reads options.voice).
+    vi.mocked(elevenlabsClient.mergeTTSOptions).mockReturnValue({
+      voice: '21m00Tcm4TlvDq8ikWAM',
+      speed: 1.0,
+      model: 'eleven_v3',
+    });
+
     // Create request
     const request = new NextRequest('http://localhost:3000/api/tts/generate', {
       method: 'POST',
@@ -47,7 +55,7 @@ describe('TTS Generation with OTEL', () => {
         owner: 'test-owner',
         repo: 'test-repo',
         path: 'tours/test-tour.json',
-        commitSha: 'abc123',
+        commitSha: 'abc1234def5678abc1234def5678abc1234def56',
         stepId: 'step-1',
       }),
     });
@@ -110,7 +118,7 @@ describe('TTS Generation with OTEL', () => {
         owner: 'test-owner',
         repo: 'test-repo',
         path: 'tours/test-tour.json',
-        commitSha: 'abc123',
+        commitSha: 'abc1234def5678abc1234def5678abc1234def56',
         stepId: 'step-1',
       }),
     });
@@ -153,7 +161,7 @@ describe('TTS Generation with OTEL', () => {
         owner: 'test-owner',
         repo: 'test-repo',
         path: 'tours/missing-tour.json',
-        commitSha: 'abc123',
+        commitSha: 'abc1234def5678abc1234def5678abc1234def56',
         stepId: 'step-1',
       }),
     });
@@ -203,7 +211,7 @@ describe('TTS Generation with OTEL', () => {
         owner: 'test-owner',
         repo: 'test-repo',
         path: 'tours/test-tour.json',
-        commitSha: 'abc123',
+        commitSha: 'abc1234def5678abc1234def5678abc1234def56',
         stepId: 'invalid-step',
       }),
     });
@@ -261,7 +269,7 @@ describe('TTS Generation with OTEL', () => {
         owner: 'test-owner',
         repo: 'test-repo',
         path: 'tours/test-tour.json',
-        commitSha: 'abc123',
+        commitSha: 'abc1234def5678abc1234def5678abc1234def56',
         stepId: 'step-1',
       }),
     });
