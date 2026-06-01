@@ -1,27 +1,10 @@
 import React from 'react';
-import {
-  setInterval as nodeSetInterval,
-  clearInterval as nodeClearInterval,
-  setTimeout as nodeSetTimeout,
-  clearTimeout as nodeClearTimeout,
-} from 'node:timers';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from '../AuthContext';
 
 // Deterministic device id so we can assert the bootstrap body.
 vi.mock('@/lib/device-id', () => ({ getDeviceId: () => 'browser-test' }));
-
-// vitest.setup.ts replaces global.setInterval/setTimeout with mocks whose
-// bodies call setInterval/setTimeout again — infinite recursion for any code
-// (the provider's 60s poll, or waitFor's poller) that actually calls them.
-// Restore real Node timers for these tests.
-beforeEach(() => {
-  vi.stubGlobal('setInterval', nodeSetInterval);
-  vi.stubGlobal('clearInterval', nodeClearInterval);
-  vi.stubGlobal('setTimeout', nodeSetTimeout);
-  vi.stubGlobal('clearTimeout', nodeClearTimeout);
-});
 
 const ALICE = { login: 'alice', email: 'alice@example.com', name: 'Alice', id: 100 };
 

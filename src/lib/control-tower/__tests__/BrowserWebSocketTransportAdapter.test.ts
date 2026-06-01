@@ -76,7 +76,8 @@ describe('BrowserWebSocketTransportAdapter', () => {
 
       await adapterWithToken.connect('ws://localhost:3000');
       // Token should be in query param
-      expect(adapter.getState()).toBe('connected');
+      expect(adapterWithToken.getState()).toBe('connected');
+      await adapterWithToken.disconnect();
     });
 
     it('should handle connection timeout', async () => {
@@ -84,17 +85,23 @@ describe('BrowserWebSocketTransportAdapter', () => {
         connectionTimeout: 50,
       });
 
-      // Override WebSocket to delay connection
+      // Override WebSocket with one that never opens, so the connectionTimeout
+      // fires. (Extending MockWebSocket would call its constructor, which
+      // schedules onopen after 10ms — connect would resolve before the timeout.)
       const OriginalWS = global.WebSocket;
-      global.WebSocket = class extends MockWebSocket {
-        constructor(url: string) {
-          super(url);
-          // Never trigger onopen
-          setTimeout(() => {
-            this.readyState = MockWebSocket.OPEN;
-            // Don't call onopen
-          }, 1000);
+      global.WebSocket = class {
+        static OPEN = 1;
+        static CLOSED = 3;
+        readyState = 0;
+        onopen: ((event: Event) => void) | null = null;
+        onmessage: ((event: MessageEvent) => void) | null = null;
+        onerror: ((event: Event) => void) | null = null;
+        onclose: ((event: CloseEvent) => void) | null = null;
+        constructor(public url: string) {
+          // Intentionally never transitions to OPEN.
         }
+        send() {}
+        close() {}
       } as any;
 
       await expect(slowAdapter.connect('ws://localhost:3000')).rejects.toThrow(

@@ -9,13 +9,20 @@ afterEach(() => {
   clearSpans();
 });
 
-// Mock window.setTimeout and window.setInterval to use numbers instead of NodeJS.Timeout
-global.setTimeout = vi.fn(((cb: () => void, ms: number) => {
-  return setTimeout(cb, ms) as unknown as number;
+// Wrap the timer functions in spies that return numbers instead of
+// NodeJS.Timeout. Capture the REAL implementations first: the previous version
+// called the bare `setTimeout`/`setInterval` inside the override, which — after
+// the global was reassigned to the spy — resolved back to the spy and recursed
+// until the stack overflowed for any code that scheduled a timer.
+const realSetTimeout = globalThis.setTimeout.bind(globalThis);
+const realSetInterval = globalThis.setInterval.bind(globalThis);
+
+global.setTimeout = vi.fn(((cb: () => void, ms?: number, ...args: unknown[]) => {
+  return realSetTimeout(cb, ms, ...args) as unknown as number;
 }) as typeof global.setTimeout);
 
-global.setInterval = vi.fn(((cb: () => void, ms: number) => {
-  return setInterval(cb, ms) as unknown as number;
+global.setInterval = vi.fn(((cb: () => void, ms?: number, ...args: unknown[]) => {
+  return realSetInterval(cb, ms, ...args) as unknown as number;
 }) as typeof global.setInterval);
 
 // Extend expect with custom matchers if needed
