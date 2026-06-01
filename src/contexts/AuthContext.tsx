@@ -82,6 +82,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshFailureCount = useRef(0);
   // Prevent concurrent refresh attempts
   const isRefreshing = useRef(false);
+  // Cold-start recovery is attempted at most once per provider lifetime.
+  const hasTriedBootstrap = useRef(false);
+
+  /**
+   * Cold-start recovery. When /api/auth/me reports unauthenticated, the
+   * short-lived access cookies may have expired (>1h idle) while the 30-day
+   * refresh_token survives. Ask the server to rebuild the session from that
+   * refresh token. Runs at most once per lifetime to avoid loops.
+   * @returns true if a rehydration was performed (caller should re-check /me)
+   */
+  const bootstrapSession = useCallback(async (): Promise<boolean> => {
+    if (hasTriedBootstrap.current) return false;
+    hasTriedBootstrap.current = true;
+
+    try {
+      const response = await fetch('/api/auth/bootstrap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_id: getDeviceId() }),
+      });
+      return response.ok;
+    } catch (error) {
+      console.error('Session bootstrap failed:', error);
+      return false;
+    }
+  }, []);
 
   /**
    * Fetches current user from /api/auth/me
@@ -89,8 +115,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const fetchUser = useCallback(async () => {
     try {
-      const response = await fetch('/api/auth/me');
-      const data = response.ok ? await response.json() : null;
+      let response = await fetch('/api/auth/me');
+      let data = response.ok ? await response.json() : null;
+
+      // Cold-start recovery: access cookies may have expired while a long-lived
+      // refresh_token survives. Try one server-side rehydration, then re-check.
+      if (!data?.isAuthenticated && (await bootstrapSession())) {
+        response = await fetch('/api/auth/me');
+        data = response.ok ? await response.json() : null;
+      }
 
       setState({
         user: data?.user ?? null,
@@ -105,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading: false,
       });
     }
-  }, []);
+  }, [bootstrapSession]);
 
   /**
    * Initiates login by redirecting to /api/auth/login
