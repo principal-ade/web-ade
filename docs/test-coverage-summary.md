@@ -16,14 +16,7 @@ Comprehensive test suite created for the browser-compatible Control Tower Core c
 | `JWTAuthAdapter.test.ts` | 90 | 100% | ✅ Complete |
 | **Total** | **294** | **~94%** | **✅** |
 
-### 2. WebRTC Tests (`src/lib/webrtc/__tests__/`)
-
-| Test File | Lines | Coverage | Status |
-|-----------|-------|----------|--------|
-| `WebRTCSignalingClient.test.ts` | 243 | ~95% | ✅ Complete |
-| **Total** | **243** | **~95%** | **✅** |
-
-### 3. Configuration Files
+### 2. Configuration Files
 
 | File | Purpose | Status |
 |------|---------|--------|
@@ -31,7 +24,7 @@ Comprehensive test suite created for the browser-compatible Control Tower Core c
 | `vitest.setup.ts` | Global test setup and mocks | ✅ Created |
 | `package.json` | Added test scripts | ✅ Updated |
 
-### 4. Documentation
+### 3. Documentation
 
 | File | Content | Status |
 |------|---------|--------|
@@ -100,41 +93,16 @@ npm run test:coverage
 
 **Total**: 10 test cases
 
-### WebRTCSignalingClient (95%)
-
-**Test Categories:**
-- ✅ Sending Methods (3 tests)
-  - Send offer
-  - Send answer
-  - Send ICE candidate
-
-- ✅ Receiving Methods (3 tests)
-  - Offer handler
-  - Answer handler
-  - ICE candidate handler
-
-- ✅ Message Filtering (3 tests)
-  - Filter by target peer ID
-  - Ignore messages without sender
-  - Ignore non-WebRTC messages
-
-- ✅ Handler Management (3 tests)
-  - Handler registration
-  - Handler unsubscription
-  - Multiple handlers
-
-**Total**: 12 test cases
-
 ## Overall Statistics
 
 | Metric | Value |
 |--------|-------|
-| **Total Test Files** | 3 |
-| **Total Test Cases** | 36 |
-| **Total Lines of Test Code** | 537 |
-| **Average Coverage** | ~93% |
-| **Modules Tested** | 3/5 |
-| **Mocks Created** | 2 (WebSocket, BaseClient) |
+| **Total Test Files** | 2 |
+| **Total Test Cases** | 24 |
+| **Total Lines of Test Code** | 294 |
+| **Average Coverage** | ~94% |
+| **Modules Tested** | 2/3 |
+| **Mocks Created** | 1 (WebSocket) |
 
 ## Not Yet Tested (Future Work)
 
@@ -145,11 +113,6 @@ npm run test:coverage
    - State updates
    - Event subscriptions
    - Cleanup
-
-2. **useWebRTCSignaling** - Needs React Testing Library
-   - Hook initialization
-   - Method callbacks
-   - Handler registration
 
 **Recommendation**: Add integration tests using `@testing-library/react` and `@testing-library/react-hooks`
 
@@ -168,18 +131,6 @@ class MockWebSocket {
 
 **Why**: Browser WebSocket is a global, needs mocking for unit tests
 
-### 2. BaseClient Mock
-
-```typescript
-class MockBaseClient {
-  - Event handler registration
-  - Event simulation for testing
-  - User ID mocking
-}
-```
-
-**Why**: Control Tower Core dependency, isolated testing
-
 ## Running the Tests
 
 ### Quick Start
@@ -194,10 +145,9 @@ npm test
 # Expected output:
 # ✓ BrowserWebSocketTransportAdapter (14)
 # ✓ JWTAuthAdapter (10)
-# ✓ WebRTCSignalingClient (12)
 #
-# Test Files  3 passed (3)
-#      Tests  36 passed (36)
+# Test Files  2 passed (2)
+#      Tests  24 passed (24)
 ```
 
 ### Watch Mode (Development)
@@ -272,9 +222,8 @@ jobs:
 
 ### Short-Term
 1. Add integration tests for React hooks
-2. Add E2E tests for WebRTC signaling flow
-3. Set up coverage reporting in CI/CD
-4. Add test badges to README
+2. Set up coverage reporting in CI/CD
+3. Add test badges to README
 
 ### Long-Term
 1. Visual regression testing for UI components
@@ -297,10 +246,9 @@ jobs:
 - [Vitest Documentation](https://vitest.dev/)
 - [Testing Best Practices](https://testingjavascript.com/)
 - [Control Tower Core](../../../messaging-server/control-tower-core/)
-- [WebRTC Testing Guide](https://webrtc.org/getting-started/testing)
 
 ---
 
 **Test Coverage Status**: ✅ **COMPLETE**
 **Ready for Production**: ✅ **YES**
-**Confidence Level**: ✅ **HIGH** (93% coverage, 36 test cases)
+**Confidence Level**: ✅ **HIGH** (94% coverage, 24 test cases)

@@ -52,28 +52,6 @@ Tests cover:
 - Should decode token with special characters
 - Should return supported credential types
 
-### WebRTCSignalingClient (95% coverage)
-
-**File**: `../webrtc/__tests__/WebRTCSignalingClient.test.ts`
-
-Tests cover:
-- ✅ Offer/answer/ICE candidate broadcasting
-- ✅ Event handler registration
-- ✅ Message routing to correct peers
-- ✅ Multiple handler support
-- ✅ Handler unsubscription
-- ✅ Message filtering
-
-**Key Test Cases**:
-- Should broadcast offer message
-- Should broadcast answer message
-- Should broadcast ICE candidate message
-- Should call handler when offer received
-- Should not call handler for offers to other users
-- Should support unsubscribing
-- Should ignore messages without sender info
-- Should call all registered handlers
-
 ## Running Tests
 
 ### Run all unit tests
@@ -113,12 +91,6 @@ src/lib/
 │   ├── BrowserWebSocketTransportAdapter.ts
 │   ├── JWTAuthAdapter.ts
 │   └── useControlTowerClient.ts
-│
-└── webrtc/
-    ├── __tests__/
-    │   └── WebRTCSignalingClient.test.ts
-    ├── WebRTCSignalingClient.ts
-    └── useWebRTCSignaling.ts
 ```
 
 ## Mocking Strategy
@@ -160,52 +132,13 @@ class MockWebSocket {
 }
 ```
 
-### BaseClient Mock
-
-For WebRTC signaling tests, we mock the BaseClient:
-
-```typescript
-class MockBaseClient {
-  private eventHandlers: Map<string, Set<Function>> = new Map();
-  private mockUserId = 'test-user-123';
-
-  on(event: string, handler: Function) {
-    if (!this.eventHandlers.has(event)) {
-      this.eventHandlers.set(event, new Set());
-    }
-    this.eventHandlers.get(event)!.add(handler);
-    return () => {
-      this.eventHandlers.get(event)?.delete(handler);
-    };
-  }
-
-  async broadcast(event: Event) {
-    // Mock broadcast
-  }
-
-  getUserId() {
-    return this.mockUserId;
-  }
-
-  // Test helper
-  simulateEvent(event: any) {
-    const handlers = this.eventHandlers.get('event_received');
-    if (handlers) {
-      handlers.forEach(handler => handler({ event }));
-    }
-  }
-}
-```
-
 ## Code Coverage Goals
 
 | Module | Target | Current | Status |
 |--------|--------|---------|--------|
 | BrowserWebSocketTransportAdapter | 90% | 89% | ✅ |
 | JWTAuthAdapter | 95% | 100% | ✅ |
-| WebRTCSignalingClient | 90% | 95% | ✅ |
 | useControlTowerClient | 80% | N/A* | 🔄 |
-| useWebRTCSignaling | 80% | N/A* | 🔄 |
 
 *React hooks require integration tests with React Testing Library
 

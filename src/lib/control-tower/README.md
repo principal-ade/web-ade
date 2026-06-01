@@ -4,7 +4,7 @@ Browser-compatible implementation of the `@principal-ai/control-tower-core` clie
 
 ## Overview
 
-This library provides a browser-compatible WebSocket transport adapter and React hooks for using Control Tower Core in Next.js/React applications. It enables real-time communication with the repository-traffic-controller server and supports WebRTC signaling for peer-to-peer connections.
+This library provides a browser-compatible WebSocket transport adapter and React hooks for using Control Tower Core in Next.js/React applications. It enables real-time communication with the repository-traffic-controller server.
 
 ## Components
 
@@ -212,14 +212,6 @@ return (
 );
 ```
 
-## Testing
-
-A test page is available at `/test/webrtc-signaling` that demonstrates:
-- WebSocket connection to traffic controller
-- Room joining
-- WebRTC signaling message exchange
-- Peer-to-peer connection establishment
-
 ## Troubleshooting
 
 ### "Already connected or connecting" error
@@ -255,7 +247,6 @@ const transport = new BrowserWebSocketTransportAdapter({
 ## References
 
 - [Control Tower Core Documentation](../../../messaging-server/control-tower-core/README.md)
-- [WebRTC Browser Client Guide](../../../messaging-server/control-tower-core/WEBRTC_BROWSER_CLIENT_GUIDE.md)
 - [Desktop App Implementation](../../../desktop-app/electron-app/src/main/services/GitSyncWebSocketManager.ts)
 
 ## License
