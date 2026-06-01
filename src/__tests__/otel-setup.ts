@@ -50,6 +50,14 @@ export function clearSpans() {
  *                       If not provided, exports to __executions__ (deprecated)
  */
 export function exportSpansToOTLP(testName: string, workflowPath?: string) {
+  // Writing execution captures to .principal-views/ is OPT-IN. A normal
+  // `npm test` run should not litter the working tree with generated
+  // *.otel.json files (they are ephemeral run output, not source). Set
+  // EXPORT_TEST_SPANS=1 to regenerate the principal-views dashboards.
+  if (!process.env.EXPORT_TEST_SPANS) {
+    return;
+  }
+
   const spans = getCapturedSpans();
 
   if (spans.length === 0) {
