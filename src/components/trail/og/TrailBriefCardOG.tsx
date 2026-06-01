@@ -22,6 +22,7 @@ import {
   OG_MIX,
   OG_FONT,
   ogInitials,
+  ogTruncate,
 } from './ogTheme';
 
 export interface TrailBriefCardOGProps {
@@ -98,6 +99,13 @@ export function TrailBriefCardOG({
   const shownReviewers = reviewers.slice(0, MAX_AVATARS);
   const overflowReviewers = reviewers.length - shownReviewers.length;
 
+  // The live Satori build ignores `lineClamp`, so we clamp by character
+  // budget to keep both fields inside their fixed regions: ~2 lines of
+  // heading (≈42 chars/line at 48px) and ~2 lines of summary. Sizing the
+  // text to whole lines avoids the ugly mid-line clip overflow:hidden gives.
+  const clampedHeading = ogTruncate(heading, 84);
+  const clampedSummary = summary ? ogTruncate(summary, 168) : undefined;
+
   // Compact metrics that ride the footer strip's right edge.
   const metrics: string[] = [];
   if (typeof stopCount === 'number') metrics.push(`${stopCount} STOPS`);
@@ -165,16 +173,13 @@ export function TrailBriefCardOG({
           <div
             style={{
               display: 'flex',
-              fontSize: 54,
+              fontSize: 48,
               fontWeight: 700,
-              lineHeight: 1.1,
+              lineHeight: 1.15,
               color: OG_COLORS.text,
-              // Two-line clamp for long headings.
-              maxHeight: 130,
-              overflow: 'hidden',
             }}
           >
-            {heading}
+            {clampedHeading}
           </div>
 
           <div
@@ -206,7 +211,7 @@ export function TrailBriefCardOG({
             overflow: 'hidden',
           }}
         >
-          {summary || 'A guided trail through the codebase.'}
+          {clampedSummary || 'A guided trail through the codebase.'}
         </div>
 
         {/* Footer cohort strip */}
