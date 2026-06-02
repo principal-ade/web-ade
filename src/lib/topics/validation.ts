@@ -2,6 +2,10 @@ import {
   MAX_COMMENT_CHARS,
   MAX_DESCRIPTION_CHARS,
   MAX_REASON_CHARS,
+  MAX_STATUS_LABEL_CHARS,
+  MAX_STATUS_NOTE_CHARS,
+  MAX_STATUS_REF_TITLE_CHARS,
+  MAX_STATUS_REF_VALUE_CHARS,
   MAX_TITLE_CHARS,
   MAX_TRAILS_PER_TOPIC,
 } from './constants';
@@ -9,6 +13,8 @@ import {
   TopicErrorCodes,
   TopicShareError,
   type CreateSuggestionRequest,
+  type TopicStatus,
+  type TopicStatusState,
   type UpdateTopicRequest,
 } from './types';
 
@@ -56,16 +62,130 @@ function validateTrailIds(value: unknown): string[] {
   return Array.from(new Set(value as string[]));
 }
 
+const STATUS_STATES: readonly TopicStatusState[] = [
+  'active',
+  'needs-attention',
+  'waiting',
+  'done',
+];
+const STATUS_REF_KINDS = ['url', 'pr', 'issue', 'topic', 'trail'] as const;
+
+/** Trimmed free-form text; empty becomes `undefined` so stored status stays clean. */
+function validateStatusText(
+  value: unknown,
+  field: string,
+  max: number,
+): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value !== 'string') invalid(`${field} must be a string`);
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return undefined;
+  if (trimmed.length > max) invalid(`${field} exceeds ${max} chars`);
+  return trimmed;
+}
+
+function validateStatusUntil(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value !== 'string')
+    invalid('status.waitingOn.until must be a string');
+  if (Number.isNaN(Date.parse(value)))
+    invalid('status.waitingOn.until must be an ISO 8601 date');
+  return value;
+}
+
+function validateStatusRef(value: unknown): {
+  kind: (typeof STATUS_REF_KINDS)[number];
+  value: string;
+  title?: string;
+} {
+  if (!isPlainObject(value)) invalid('status.waitingOn.ref must be an object');
+  const kind = value.kind;
+  if (
+    typeof kind !== 'string' ||
+    !STATUS_REF_KINDS.includes(kind as (typeof STATUS_REF_KINDS)[number])
+  )
+    invalid(`status.waitingOn.ref.kind must be one of ${STATUS_REF_KINDS.join(', ')}`);
+  const refValue = validateStatusText(
+    value.value,
+    'status.waitingOn.ref.value',
+    MAX_STATUS_REF_VALUE_CHARS,
+  );
+  if (refValue === undefined) invalid('status.waitingOn.ref.value is required');
+  const title = validateStatusText(
+    value.title,
+    'status.waitingOn.ref.title',
+    MAX_STATUS_REF_TITLE_CHARS,
+  );
+  return {
+    kind: kind as (typeof STATUS_REF_KINDS)[number],
+    value: refValue,
+    ...(title !== undefined ? { title } : {}),
+  };
+}
+
+function validateWaitingOn(value: unknown): TopicStatus['waitingOn'] {
+  if (!isPlainObject(value))
+    invalid('status.waitingOn must be an object');
+  const note = validateStatusText(
+    value.note,
+    'status.waitingOn.note',
+    MAX_STATUS_NOTE_CHARS,
+  );
+  const until = validateStatusUntil(value.until);
+  const ref = 'ref' in value && value.ref != null
+    ? validateStatusRef(value.ref)
+    : undefined;
+  // Collapse an all-empty waitingOn to undefined so it doesn't linger in storage.
+  if (note === undefined && until === undefined && ref === undefined)
+    return undefined;
+  return {
+    ...(note !== undefined ? { note } : {}),
+    ...(until !== undefined ? { until } : {}),
+    ...(ref !== undefined ? { ref } : {}),
+  };
+}
+
+/**
+ * Validate a topic status. `state` is required; `label` and `waitingOn` are
+ * optional and normalized (trimmed, empties dropped). Mirrors the desktop
+ * `TopicStatus` shape — see {@link file://./types.ts}.
+ */
+export function validateStatus(value: unknown): TopicStatus {
+  if (!isPlainObject(value)) invalid('status must be an object');
+  const state = value.state;
+  if (
+    typeof state !== 'string' ||
+    !STATUS_STATES.includes(state as TopicStatusState)
+  )
+    invalid(`status.state must be one of ${STATUS_STATES.join(', ')}`);
+  const label = validateStatusText(
+    value.label,
+    'status.label',
+    MAX_STATUS_LABEL_CHARS,
+  );
+  const waitingOn =
+    'waitingOn' in value && value.waitingOn != null
+      ? validateWaitingOn(value.waitingOn)
+      : undefined;
+  return {
+    state: state as TopicStatusState,
+    ...(label !== undefined ? { label } : {}),
+    ...(waitingOn !== undefined ? { waitingOn } : {}),
+  };
+}
+
 export function validateCreateRequest(body: unknown): {
   title: string;
   description: string;
   trailIds: string[];
+  status?: TopicStatus;
 } {
   if (!isPlainObject(body)) invalid('request body must be an object');
   return {
     title: validateTitle(body.title),
     description: validateDescription(body.description),
     trailIds: validateTrailIds(body.trailIds),
+    ...(body.status != null ? { status: validateStatus(body.status) } : {}),
   };
 }
 
@@ -74,7 +194,12 @@ export function validateUpdateRequest(body: unknown): UpdateTopicRequest {
   const out: UpdateTopicRequest = {};
   if ('title' in body) out.title = validateTitle(body.title);
   if ('description' in body) out.description = validateDescription(body.description);
-  if (out.title === undefined && out.description === undefined)
+  if ('status' in body) out.status = validateStatus(body.status);
+  if (
+    out.title === undefined &&
+    out.description === undefined &&
+    out.status === undefined
+  )
     invalid('no fields to update');
   return out;
 }

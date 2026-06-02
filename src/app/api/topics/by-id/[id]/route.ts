@@ -144,6 +144,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       ...(updates.description !== undefined
         ? { description: updates.description }
         : {}),
+      ...(updates.status !== undefined ? { status: updates.status } : {}),
     }));
     await upsertTopicInUserIndex(updated);
     return NextResponse.json({ topic: updated });

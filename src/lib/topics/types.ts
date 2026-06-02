@@ -7,6 +7,44 @@
  * plus a title and description.
  */
 
+/**
+ * Workflow status of a topic.
+ *
+ * This is the server's own copy of the wire contract — intentionally separate
+ * from the desktop client's `TopicStatus` in `@principal-ai/alexandria-core-library`.
+ * web-ade is a trust boundary, so the shape it accepts/returns is owned here
+ * and changes only in web-ade's own diff, alongside the validator that
+ * enforces it ({@link file://../validation.ts validateStatus}). It mirrors the
+ * client shape so a published topic round-trips unchanged; the two are kept in
+ * sync by review, not by a shared import.
+ *
+ * A structured `state` axis, an optional free-form `label`, and a `waitingOn`
+ * descriptor for holding-pattern topics parked on something external. Optional
+ * everywhere — absence is treated as `active`.
+ */
+export type TopicStatusState =
+  | 'active'
+  | 'needs-attention'
+  | 'waiting'
+  | 'done';
+
+export interface TopicStatus {
+  state: TopicStatusState;
+  /** Free-form text shown in place of the default per-state label. */
+  label?: string;
+  /** External blocker — meaningful when `state` is `waiting`. */
+  waitingOn?: {
+    note?: string;
+    /** ISO 8601 — when the hold is expected to lift. */
+    until?: string;
+    ref?: {
+      kind: 'url' | 'pr' | 'issue' | 'topic' | 'trail';
+      value: string;
+      title?: string;
+    };
+  };
+}
+
 export interface TopicPayload {
   id: string;
   title: string;
@@ -17,17 +55,21 @@ export interface TopicPayload {
   createdBy: { githubId: number; githubLogin: string };
   createdAt: string;
   updatedAt: string;
+  /** Optional workflow status. Absent means `active`. See {@link TopicStatus}. */
+  status?: TopicStatus;
 }
 
 export interface CreateTopicRequest {
   title: string;
   description?: string;
   trailIds?: string[];
+  status?: TopicStatus;
 }
 
 export interface UpdateTopicRequest {
   title?: string;
   description?: string;
+  status?: TopicStatus;
 }
 
 export interface CreateTopicResponse {
@@ -49,6 +91,8 @@ export interface TopicByUserEntry {
   trailCount: number;
   createdAt: string;
   updatedAt: string;
+  /** Mirrors {@link TopicPayload.status} so listing cards can render a badge. */
+  status?: TopicStatus;
 }
 
 export interface TopicByUserIndex {

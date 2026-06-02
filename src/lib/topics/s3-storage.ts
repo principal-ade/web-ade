@@ -55,6 +55,7 @@ export function topicToByUserEntry(topic: TopicPayload): TopicByUserEntry {
     trailCount: topic.trailIds.length,
     createdAt: topic.createdAt,
     updatedAt: topic.updatedAt,
+    ...(topic.status !== undefined ? { status: topic.status } : {}),
   };
 }
 

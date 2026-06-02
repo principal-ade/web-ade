@@ -62,7 +62,7 @@
     "@principal-ade/panels": "^1.0.88",
     "@principal-ade/utcp-panel-event": "^0.1.0",
     "@principal-ai/alexandria-collections": "^1.5.0",
-    "@principal-ai/alexandria-core-library": "^0.3.4",
+    "@principal-ai/alexandria-core-library": "^0.6.2",
     "@principal-ai/codebase-composition": "^0.2.56",
     "@principal-ai/codebase-quality-lenses": "^0.1.65",
     "@principal-ai/control-tower-core": "^0.2.1",

@@ -41,6 +41,12 @@ export const MAX_PENDING_SUGGESTIONS_PER_TOPIC = 100;
 
 export const MAX_REASON_CHARS = 500;
 
+/** Caps on the free-form text fields of a topic's status. */
+export const MAX_STATUS_LABEL_CHARS = 80;
+export const MAX_STATUS_NOTE_CHARS = 500;
+export const MAX_STATUS_REF_VALUE_CHARS = 500;
+export const MAX_STATUS_REF_TITLE_CHARS = 200;
+
 export const PAYLOAD_CACHE_CONTROL = 'max-age=60';
 
 export const MAX_ETAG_RETRIES = 3;

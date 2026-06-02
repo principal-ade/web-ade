@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => null);
-    const { title, description, trailIds } = validateCreateRequest(body);
+    const { title, description, trailIds, status } = validateCreateRequest(body);
 
     // Confirm every trail id resolves before we mint the topic. Cheaper than
     // failing later on read, and prevents typos from sticking.
@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
       createdBy: { githubId: user.id, githubLogin: user.login },
       createdAt: now,
       updatedAt: now,
+      ...(status !== undefined ? { status } : {}),
     };
 
     await putTopic(topic);
