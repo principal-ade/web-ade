@@ -968,7 +968,7 @@ export function TrailViewer({
           events={session.events}
           currentAuthor={session.currentAuthor}
           briefLayout="split"
-          defaultShowSequenceDrawer={false}
+          defaultShowSequenceDrawer={true}
           defaultHideMap
           mobileShowMap={mobileShowMap}
           mobileMapSide={mobileMapSide}
