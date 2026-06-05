@@ -5,7 +5,7 @@ import { Check, Github, MessageSquareOff, MessageSquarePlus, Stamp, Terminal, Un
 import { useTheme } from '@principal-ade/industry-theme';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { StarButton } from '@/components/StarButton';
+import { BookmarkButton } from '@/components/BookmarkButton';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { RepoInfoModal } from '@/components/trail/RepoInfoModal';
 import { SignOffStampAnimation } from '@/components/trail/LgtmStamp';
@@ -30,17 +30,17 @@ interface TrailHeaderProps {
    */
   statusMessage?: string | null;
   /**
-   * Current starred state. When `onToggleStar` is provided the header
-   * renders a star button; otherwise the slot is omitted.
+   * Current bookmarked state. When `onToggleBookmark` is provided the header
+   * renders a bookmark button; otherwise the slot is omitted.
    */
-  starred?: boolean;
+  bookmarked?: boolean;
   /**
-   * Forward click on the star button. Parent owns the optimistic update
+   * Forward click on the bookmark button. Parent owns the optimistic update
    * and the API call (or, for signed-out callers, the sign-in redirect).
    */
-  onToggleStar?: () => void;
-  /** Disable the star button while a previous toggle is in flight. */
-  starToggleInFlight?: boolean;
+  onToggleBookmark?: () => void;
+  /** Disable the bookmark button while a previous toggle is in flight. */
+  bookmarkToggleInFlight?: boolean;
   /**
    * Whether the viewer has any notes attached. Drives the stamp label —
    * "LGTM" when empty, "Reviewed" once the user has left at least one note.
@@ -72,9 +72,9 @@ interface TrailHeaderProps {
   closeButtonPosition?: 'left' | 'right';
   // ----- Section visibility (all default to true). Embedded surfaces
   // pass `false` to drop the parts they don't want, e.g. the topic page
-  // hides star/stamp/agent/github when surfacing a trail inline.
-  /** Star button (desktop). Defaults to true; ignored when no `onToggleStar`. */
-  showStar?: boolean;
+  // hides bookmark/stamp/agent/github when surfacing a trail inline.
+  /** Bookmark button (desktop). Defaults to true; ignored when no `onToggleBookmark`. */
+  showBookmark?: boolean;
   /** LGTM / Reviewed stamp button (mobile). Defaults to true. */
   showStamp?: boolean;
   /** "Share With Agent" copy-to-clipboard button (desktop). Defaults to true. */
@@ -102,9 +102,9 @@ export function TrailHeader({
   repo,
   trailId,
   statusMessage,
-  starred,
-  onToggleStar,
-  starToggleInFlight,
+  bookmarked,
+  onToggleBookmark,
+  bookmarkToggleInFlight,
   hasNotes,
   showAnonNotesToggle,
   allowAnonNotes,
@@ -112,7 +112,7 @@ export function TrailHeader({
   anonNotesToggleInFlight,
   onClose,
   closeButtonPosition = 'left',
-  showStar = true,
+  showBookmark = true,
   showStamp = true,
   showAgentCopy = true,
   showGithubLink = true,
@@ -463,12 +463,12 @@ export function TrailHeader({
           </button>
         )}
 
-        {showStar && onToggleStar && (
+        {showBookmark && onToggleBookmark && (
           <div className="hidden md:flex">
-            <StarButton
-              starred={!!starred}
-              onClick={onToggleStar}
-              disabled={starToggleInFlight}
+            <BookmarkButton
+              bookmarked={!!bookmarked}
+              onClick={onToggleBookmark}
+              disabled={bookmarkToggleInFlight}
             />
           </div>
         )}

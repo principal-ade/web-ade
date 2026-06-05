@@ -1,14 +1,14 @@
 // @vitest-environment node
 
 /**
- * Route-level integration tests for the per-user starred indirection.
+ * Route-level integration tests for the per-user bookmarked indirection.
  *
  * Covers the four cases the build spec calls out:
- *   1. Idempotency on POST .../star.
- *   2. Repo-access gate on POST trail/star (and that DELETE bypasses it).
+ *   1. Idempotency on POST .../bookmark.
+ *   2. Repo-access gate on POST trail/bookmark (and that DELETE bypasses it).
  *   3. 404-on-deleted-target — POST against missing record, and `gone: true`
- *      on GET when a starred target gets deleted afterwards.
- *   4. `starred` field correctness on GET by-id for authed-with,
+ *      on GET when a bookmarked target gets deleted afterwards.
+ *   4. `bookmarked` field correctness on GET by-id for authed-with,
  *      authed-without, and anonymous callers.
  *
  * Auth + GitHub helpers are mocked at the seam (`fetchGitHubUser`,
@@ -28,24 +28,24 @@ import {
 } from '@/lib/topics/s3-storage';
 import { buildIdPointerKey, buildIndexKey } from '@/lib/trails/s3-storage';
 import {
-  buildStarredTopicsKey,
-  buildStarredTrailsKey,
-} from '@/lib/stars/s3-storage';
+  buildBookmarkedTopicsKey,
+  buildBookmarkedTrailsKey,
+} from '@/lib/bookmarks/s3-storage';
 import type { TopicPayload } from '@/lib/topics/types';
 import type {
   SharedTrailIndex,
   SharedTrailIndexEntry,
 } from '@/lib/trails/types';
 import type {
-  StarredTopicsIndex,
-  StarredTrailsIndex,
-} from '@/lib/stars/types';
-import { POST as postTopicStar } from '@/app/api/topics/by-id/[id]/star/route';
-import { GET as getStarredTopics } from '@/app/api/topics/starred/route';
+  BookmarkedTopicsIndex,
+  BookmarkedTrailsIndex,
+} from '@/lib/bookmarks/types';
+import { POST as postTopicBookmark } from '@/app/api/topics/by-id/[id]/bookmark/route';
+import { GET as getBookmarkedTopics } from '@/app/api/topics/bookmarks/route';
 import {
-  POST as postTrailStar,
-  DELETE as deleteTrailStar,
-} from '@/app/api/trails/by-id/[id]/star/route';
+  POST as postTrailBookmark,
+  DELETE as deleteTrailBookmark,
+} from '@/app/api/trails/by-id/[id]/bookmark/route';
 import { GET as getTopicById } from '@/app/api/topics/by-id/[id]/route';
 
 // `vi.mock` is hoisted by vitest above all imports regardless of source
@@ -166,34 +166,34 @@ function seedTrail(): SharedTrailIndexEntry {
 // 1. Idempotency
 // ============================================================================
 
-describe('POST /api/topics/by-id/:id/star — idempotency', () => {
-  it('starring twice keeps a single entry and refreshes starredAt', async () => {
+describe('POST /api/topics/by-id/:id/bookmark — idempotency', () => {
+  it('bookmarkring twice keeps a single entry and refreshes bookmarkedAt', async () => {
     seedTopic();
 
-    const first = await postTopicStar(
-      makeRequest('POST', `/api/topics/by-id/${TOPIC_ID}/star`),
+    const first = await postTopicBookmark(
+      makeRequest('POST', `/api/topics/by-id/${TOPIC_ID}/bookmark`),
       { params: Promise.resolve({ id: TOPIC_ID }) },
     );
     expect(first.status).toBe(200);
-    const firstBody = await asJson<{ entry: { starredAt: string } }>(first);
+    const firstBody = await asJson<{ entry: { bookmarkedAt: string } }>(first);
 
     // Force a measurable timestamp gap between calls.
     await new Promise((r) => setTimeout(r, 5));
 
-    const second = await postTopicStar(
-      makeRequest('POST', `/api/topics/by-id/${TOPIC_ID}/star`),
+    const second = await postTopicBookmark(
+      makeRequest('POST', `/api/topics/by-id/${TOPIC_ID}/bookmark`),
       { params: Promise.resolve({ id: TOPIC_ID }) },
     );
     expect(second.status).toBe(200);
-    const secondBody = await asJson<{ entry: { starredAt: string } }>(second);
+    const secondBody = await asJson<{ entry: { bookmarkedAt: string } }>(second);
 
-    const stored = s3.store.read<StarredTopicsIndex>(buildStarredTopicsKey(ALICE.id));
+    const stored = s3.store.read<BookmarkedTopicsIndex>(buildBookmarkedTopicsKey(ALICE.id));
     expect(stored).not.toBeNull();
     expect(stored!.entries).toHaveLength(1);
     expect(stored!.entries[0]!.topicId).toBe(TOPIC_ID);
     expect(
-      Date.parse(secondBody.entry.starredAt),
-    ).toBeGreaterThan(Date.parse(firstBody.entry.starredAt));
+      Date.parse(secondBody.entry.bookmarkedAt),
+    ).toBeGreaterThan(Date.parse(firstBody.entry.bookmarkedAt));
   });
 });
 
@@ -201,50 +201,50 @@ describe('POST /api/topics/by-id/:id/star — idempotency', () => {
 // 2. Repo-access gate (trails only)
 // ============================================================================
 
-describe('POST /api/trails/by-id/:id/star — repo-access gate', () => {
+describe('POST /api/trails/by-id/:id/bookmark — repo-access gate', () => {
   it('returns 403 NO_REPO_ACCESS when the caller cannot read the repo', async () => {
     seedTrail();
     mockedCheckRepo.mockResolvedValue(null);
 
-    const res = await postTrailStar(
-      makeRequest('POST', `/api/trails/by-id/${TRAIL_ID}/star`),
+    const res = await postTrailBookmark(
+      makeRequest('POST', `/api/trails/by-id/${TRAIL_ID}/bookmark`),
       { params: Promise.resolve({ id: TRAIL_ID }) },
     );
     expect(res.status).toBe(403);
     const body = await asJson<{ code: string }>(res);
     expect(body.code).toBe('NO_REPO_ACCESS');
 
-    expect(s3.store.read(buildStarredTrailsKey(ALICE.id))).toBeNull();
+    expect(s3.store.read(buildBookmarkedTrailsKey(ALICE.id))).toBeNull();
   });
 
   it('DELETE unstar succeeds even after the caller loses repo access', async () => {
     seedTrail();
-    // Pre-seed an existing star so we have something to unstar.
-    const starred: StarredTrailsIndex = {
+    // Pre-seed an existing bookmark so we have something to unstar.
+    const bookmarked: BookmarkedTrailsIndex = {
       version: 1,
       updatedAt: new Date().toISOString(),
       entries: [
         {
           trailId: TRAIL_ID,
-          starredAt: '2026-01-03T00:00:00.000Z',
+          bookmarkedAt: '2026-01-03T00:00:00.000Z',
           owner: OWNER,
           repo: REPO,
           snapshot: fakeIndexEntry(),
         },
       ],
     };
-    s3.store.put(buildStarredTrailsKey(ALICE.id), starred);
+    s3.store.put(buildBookmarkedTrailsKey(ALICE.id), bookmarked);
 
-    // Repo access lost between starring and unstarring.
+    // Repo access lost between bookmarkring and unstarring.
     mockedCheckRepo.mockResolvedValue(null);
 
-    const res = await deleteTrailStar(
-      makeRequest('DELETE', `/api/trails/by-id/${TRAIL_ID}/star`),
+    const res = await deleteTrailBookmark(
+      makeRequest('DELETE', `/api/trails/by-id/${TRAIL_ID}/bookmark`),
       { params: Promise.resolve({ id: TRAIL_ID }) },
     );
     expect(res.status).toBe(204);
 
-    const stored = s3.store.read<StarredTrailsIndex>(buildStarredTrailsKey(ALICE.id));
+    const stored = s3.store.read<BookmarkedTrailsIndex>(buildBookmarkedTrailsKey(ALICE.id));
     expect(stored!.entries).toHaveLength(0);
   });
 });
@@ -253,39 +253,39 @@ describe('POST /api/trails/by-id/:id/star — repo-access gate', () => {
 // 3. 404 on deleted target
 // ============================================================================
 
-describe('starred — 404-on-deleted-target', () => {
-  it('POST star against a missing topic returns 404 NOT_FOUND', async () => {
+describe('bookmarked — 404-on-deleted-target', () => {
+  it('POST bookmark against a missing topic returns 404 NOT_FOUND', async () => {
     // No seedTopic — the by-id key doesn't exist.
 
-    const res = await postTopicStar(
-      makeRequest('POST', `/api/topics/by-id/${TOPIC_ID}/star`),
+    const res = await postTopicBookmark(
+      makeRequest('POST', `/api/topics/by-id/${TOPIC_ID}/bookmark`),
       { params: Promise.resolve({ id: TOPIC_ID }) },
     );
     expect(res.status).toBe(404);
     const body = await asJson<{ code: string }>(res);
     expect(body.code).toBe('NOT_FOUND');
 
-    expect(s3.store.read(buildStarredTopicsKey(ALICE.id))).toBeNull();
+    expect(s3.store.read(buildBookmarkedTopicsKey(ALICE.id))).toBeNull();
   });
 
-  it('GET /api/topics/starred flags gone: true when the underlying topic is deleted', async () => {
+  it('GET /api/topics/bookmarks flags gone: true when the underlying topic is deleted', async () => {
     seedTopic();
 
-    // Star it.
-    const post = await postTopicStar(
-      makeRequest('POST', `/api/topics/by-id/${TOPIC_ID}/star`),
+    // Bookmark it.
+    const post = await postTopicBookmark(
+      makeRequest('POST', `/api/topics/by-id/${TOPIC_ID}/bookmark`),
       { params: Promise.resolve({ id: TOPIC_ID }) },
     );
     expect(post.status).toBe(200);
 
-    // Delete the underlying topic out from under the starred index.
+    // Delete the underlying topic out from under the bookmarked index.
     s3.store.remove(buildTopicKey(TOPIC_ID));
     // Also clear the owner's by-user index (would be cleaned up by the real
     // DELETE topic route — but for `gone` detection only the by-id key
     // matters).
     s3.store.remove(buildTopicByUserKey(BOB.id));
 
-    const list = await getStarredTopics();
+    const list = await getBookmarkedTopics();
     expect(list.status).toBe(200);
     const body = await asJson<{
       entries: Array<{ topicId: string; gone?: true }>;
@@ -297,16 +297,16 @@ describe('starred — 404-on-deleted-target', () => {
 });
 
 // ============================================================================
-// 4. `starred` field correctness on GET by-id
+// 4. `bookmarked` field correctness on GET by-id
 // ============================================================================
 
-describe('GET /api/topics/by-id/:id — starred field', () => {
-  it('is true for an authed caller who has the topic starred', async () => {
+describe('GET /api/topics/by-id/:id — bookmarked field', () => {
+  it('is true for an authed caller who has the topic bookmarked', async () => {
     seedTopic();
 
-    // Star first so the index contains this topic.
-    await postTopicStar(
-      makeRequest('POST', `/api/topics/by-id/${TOPIC_ID}/star`),
+    // Bookmark first so the index contains this topic.
+    await postTopicBookmark(
+      makeRequest('POST', `/api/topics/by-id/${TOPIC_ID}/bookmark`),
       { params: Promise.resolve({ id: TOPIC_ID }) },
     );
 
@@ -315,11 +315,11 @@ describe('GET /api/topics/by-id/:id — starred field', () => {
       { params: Promise.resolve({ id: TOPIC_ID }) },
     );
     expect(res.status).toBe(200);
-    const body = await asJson<{ starred: boolean }>(res);
-    expect(body.starred).toBe(true);
+    const body = await asJson<{ bookmarked: boolean }>(res);
+    expect(body.bookmarked).toBe(true);
   });
 
-  it('is false for an authed caller without the topic starred', async () => {
+  it('is false for an authed caller without the topic bookmarked', async () => {
     seedTopic();
 
     const res = await getTopicById(
@@ -327,8 +327,8 @@ describe('GET /api/topics/by-id/:id — starred field', () => {
       { params: Promise.resolve({ id: TOPIC_ID }) },
     );
     expect(res.status).toBe(200);
-    const body = await asJson<{ starred: boolean }>(res);
-    expect(body.starred).toBe(false);
+    const body = await asJson<{ bookmarked: boolean }>(res);
+    expect(body.bookmarked).toBe(false);
   });
 
   it('is false for an anonymous caller — no per-user S3 read attempted', async () => {
@@ -340,8 +340,8 @@ describe('GET /api/topics/by-id/:id — starred field', () => {
       { params: Promise.resolve({ id: TOPIC_ID }) },
     );
     expect(res.status).toBe(200);
-    const body = await asJson<{ starred: boolean }>(res);
-    expect(body.starred).toBe(false);
+    const body = await asJson<{ bookmarked: boolean }>(res);
+    expect(body.bookmarked).toBe(false);
 
     // fetchGitHubUser should not have been called — the token short-circuited.
     expect(mockedFetchUser).not.toHaveBeenCalled();

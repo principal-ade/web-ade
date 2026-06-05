@@ -83,7 +83,7 @@ interface TrailResponse {
   repo: string;
   entry: SharedTrailIndexEntry;
   payload: TrailPayload;
-  starred: boolean;
+  bookmarked: boolean;
   allowAnonNotes: boolean;
 }
 
@@ -148,10 +148,10 @@ export interface TrailSessionOk {
   /** Derived: livePayload.notes.length > 0. Useful for the LGTM/Reviewed label. */
   hasNotes: boolean;
 
-  // Star ---------------------------------------------------------------
-  starred: boolean;
-  starToggleInFlight: boolean;
-  onToggleStar: () => void;
+  // Bookmark ---------------------------------------------------------------
+  bookmarked: boolean;
+  bookmarkToggleInFlight: boolean;
+  onToggleBookmark: () => void;
 
   // Anonymous-notes toggle (owner-only) -------------------------------
   isOwner: boolean;
@@ -188,7 +188,7 @@ interface TrailContextResolved {
   repo: string;
   payload: TrailPayload;
   fileTree: FileTree;
-  initialStarred: boolean;
+  initialBookmarked: boolean;
   initialAllowAnonNotes: boolean;
   ownerGithubId: number;
 }
@@ -270,7 +270,7 @@ export function useTrailSession(trailId: string): TrailSession {
           repo: trail.repo,
           payload: trail.payload,
           fileTree: tree,
-          initialStarred: trail.starred ?? false,
+          initialBookmarked: trail.bookmarked ?? false,
           initialAllowAnonNotes: trail.allowAnonNotes ?? false,
           ownerGithubId: trail.entry.createdBy.githubId,
         });
@@ -289,12 +289,12 @@ export function useTrailSession(trailId: string): TrailSession {
     };
   }, [trailId]);
 
-  // --- Star --------------------------------------------------------------
+  // --- Bookmark --------------------------------------------------------------
 
-  const [starred, setStarred] = useState(false);
-  const [starInFlight, setStarInFlight] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarkInFlight, setBookmarkInFlight] = useState(false);
   useEffect(() => {
-    if (resolved) setStarred(resolved.initialStarred);
+    if (resolved) setBookmarked(resolved.initialBookmarked);
   }, [resolved]);
 
   // --- Anon notes --------------------------------------------------------
@@ -386,35 +386,35 @@ export function useTrailSession(trailId: string): TrailSession {
     };
   }, [trailId, user, resolved]);
 
-  // --- Star toggle -------------------------------------------------------
+  // --- Bookmark toggle -------------------------------------------------------
 
-  const onToggleStar = useCallback(() => {
+  const onToggleBookmark = useCallback(() => {
     if (!user) {
-      setHeaderStatus('Sign in to star this trail.');
+      setHeaderStatus('Sign in to bookmark this trail.');
       return;
     }
-    if (starInFlight) return;
-    const previous = starred;
-    setStarred(!previous);
-    setStarInFlight(true);
+    if (bookmarkInFlight) return;
+    const previous = bookmarked;
+    setBookmarked(!previous);
+    setBookmarkInFlight(true);
     void (async () => {
       try {
-        const res = await fetch(`/api/trails/by-id/${trailId}/star`, {
+        const res = await fetch(`/api/trails/by-id/${trailId}/bookmark`, {
           method: previous ? 'DELETE' : 'POST',
         });
         if (!res.ok && res.status !== 204) {
-          setStarred(previous);
+          setBookmarked(previous);
           const body = await res.json().catch(() => ({}));
-          showError(body?.error || `Failed to update star (${res.status})`);
+          showError(body?.error || `Failed to update bookmark (${res.status})`);
         }
       } catch (err) {
-        setStarred(previous);
-        showError(err instanceof Error ? err.message : 'Failed to update star');
+        setBookmarked(previous);
+        showError(err instanceof Error ? err.message : 'Failed to update bookmark');
       } finally {
-        setStarInFlight(false);
+        setBookmarkInFlight(false);
       }
     })();
-  }, [user, starInFlight, starred, trailId, showError]);
+  }, [user, bookmarkInFlight, bookmarked, trailId, showError]);
 
   // --- Anon notes toggle (owner-only) ------------------------------------
 
@@ -880,9 +880,9 @@ export function useTrailSession(trailId: string): TrailSession {
     repo: resolved.repo,
     livePayload,
     hasNotes: (livePayload.notes ?? []).length > 0,
-    starred,
-    starToggleInFlight: starInFlight,
-    onToggleStar,
+    bookmarked,
+    bookmarkToggleInFlight: bookmarkInFlight,
+    onToggleBookmark,
     isOwner,
     allowAnonNotes,
     anonNotesToggleInFlight: anonToggleInFlight,

@@ -2,7 +2,7 @@
 
 import { Bot, Check, MessageSquare, Share2, Trash2 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { StarButton } from '@/components/StarButton';
+import { BookmarkButton } from '@/components/BookmarkButton';
 
 interface TopicActionsProps {
   shareCopied: boolean;
@@ -12,9 +12,9 @@ interface TopicActionsProps {
   onToggleDiscussion: () => void;
   isOwner: boolean;
   onDelete: () => void;
-  starred?: boolean;
-  onToggleStar?: () => void;
-  starToggleInFlight?: boolean;
+  bookmarked?: boolean;
+  onToggleBookmark?: () => void;
+  bookmarkToggleInFlight?: boolean;
 }
 
 export function TopicActions({
@@ -25,18 +25,18 @@ export function TopicActions({
   onToggleDiscussion,
   isOwner,
   onDelete,
-  starred,
-  onToggleStar,
-  starToggleInFlight,
+  bookmarked,
+  onToggleBookmark,
+  bookmarkToggleInFlight,
 }: TopicActionsProps) {
   const { theme } = useTheme();
   return (
     <>
-      {onToggleStar && (
-        <StarButton
-          starred={!!starred}
-          onClick={onToggleStar}
-          disabled={starToggleInFlight}
+      {onToggleBookmark && (
+        <BookmarkButton
+          bookmarked={!!bookmarked}
+          onClick={onToggleBookmark}
+          disabled={bookmarkToggleInFlight}
         />
       )}
 

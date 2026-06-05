@@ -1,5 +1,5 @@
 /**
- * Test harness for the stars route integration tests.
+ * Test harness for the bookmarks route integration tests.
  *
  * Pieces:
  *

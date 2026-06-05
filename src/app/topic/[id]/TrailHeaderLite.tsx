@@ -21,17 +21,17 @@ interface TrailHeaderLiteProps {
   isOwner: boolean;
   onDelete: () => void;
   /**
-   * Current starred state. When `onToggleStar` is provided the header
-   * renders a star button; otherwise the slot is omitted.
+   * Current bookmarked state. When `onToggleBookmark` is provided the header
+   * renders a bookmark button; otherwise the slot is omitted.
    */
-  starred?: boolean;
+  bookmarked?: boolean;
   /** Forward click. Parent owns the optimistic update and the API call. */
-  onToggleStar?: () => void;
-  /** Disable the star button while a previous toggle is in flight. */
-  starToggleInFlight?: boolean;
+  onToggleBookmark?: () => void;
+  /** Disable the bookmark button while a previous toggle is in flight. */
+  bookmarkToggleInFlight?: boolean;
   /**
    * Transient status text shown centered in the header (e.g.
-   * "Sign in to star this topic."). Caller controls the lifecycle — set
+   * "Sign in to bookmark this topic."). Caller controls the lifecycle — set
    * the message, the header fades it in; clear it, it fades out.
    */
   statusMessage?: string | null;
@@ -45,9 +45,9 @@ export function TrailHeaderLite({
   onToggleDiscussion,
   isOwner,
   onDelete,
-  starred,
-  onToggleStar,
-  starToggleInFlight,
+  bookmarked,
+  onToggleBookmark,
+  bookmarkToggleInFlight,
   statusMessage,
 }: TrailHeaderLiteProps) {
   const { theme } = useTheme();
@@ -128,9 +128,9 @@ export function TrailHeaderLite({
             onToggleDiscussion={onToggleDiscussion}
             isOwner={isOwner}
             onDelete={onDelete}
-            starred={starred}
-            onToggleStar={onToggleStar}
-            starToggleInFlight={starToggleInFlight}
+            bookmarked={bookmarked}
+            onToggleBookmark={onToggleBookmark}
+            bookmarkToggleInFlight={bookmarkToggleInFlight}
           />
         </div>
 

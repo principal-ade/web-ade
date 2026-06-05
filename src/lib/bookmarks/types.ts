@@ -1,12 +1,12 @@
 /**
- * Stars Sharing Types
+ * Bookmarks Sharing Types
  *
- * The Starred tab on mobile is per-user, two-list: starred topics and starred
+ * The Bookmarked tab on mobile is per-user, two-list: bookmarked topics and bookmarked
  * trails. Storage parallels the inbox subsystem in [[../trails/types.ts]] but
  * is keyed on `(githubId, targetId)` only — no sender, no comment, no read
  * state.
  *
- * See mobile-app/docs/STARRED_TOPICS_TRAILS_API.md for the full contract.
+ * See mobile-app/docs/BOOKMARKED_TOPICS_TRAILS_API.md for the full contract.
  */
 
 import type { TopicByUserEntry } from '../topics/types';
@@ -16,13 +16,13 @@ import type { SharedTrailIndexEntry } from '../trails/types';
 // Index entries
 // ============================================================================
 
-export interface StarredTopicEntry {
+export interface BookmarkedTopicEntry {
   /** Foreign key into `topics/_by-id/{id}.json`. */
   topicId: string;
-  /** ISO 8601 — server-stamped on star, refreshed on re-star. */
-  starredAt: string;
+  /** ISO 8601 — server-stamped on bookmark, refreshed on re-bookmark. */
+  bookmarkedAt: string;
   /**
-   * Slim snapshot captured at star-time so the list renders without fanning
+   * Slim snapshot captured at bookmark-time so the list renders without fanning
    * out a GET per row. Refreshed lazily on detail open, never on list read.
    */
   snapshot: TopicByUserEntry;
@@ -34,58 +34,58 @@ export interface StarredTopicEntry {
   gone?: true;
 }
 
-export interface StarredTopicsIndex {
+export interface BookmarkedTopicsIndex {
   version: 1;
   updatedAt: string;
-  /** Sorted by `starredAt` desc. */
-  entries: StarredTopicEntry[];
+  /** Sorted by `bookmarkedAt` desc. */
+  entries: BookmarkedTopicEntry[];
 }
 
-export interface StarredTrailEntry {
+export interface BookmarkedTrailEntry {
   /** Foreign key into `trails/_by-id/{id}.json`. */
   trailId: string;
-  /** ISO 8601 — server-stamped on star, refreshed on re-star. */
-  starredAt: string;
+  /** ISO 8601 — server-stamped on bookmark, refreshed on re-bookmark. */
+  bookmarkedAt: string;
   /** Resolved owner/repo for the trail — duplicated from the by-id pointer. */
   owner: string;
   repo: string;
   /**
-   * Slim snapshot captured at star-time. Refreshed lazily on detail open,
+   * Slim snapshot captured at bookmark-time. Refreshed lazily on detail open,
    * never on list read.
    */
   snapshot: SharedTrailIndexEntry;
-  /** Server-set on GET responses only — see `StarredTopicEntry.gone`. */
+  /** Server-set on GET responses only — see `BookmarkedTopicEntry.gone`. */
   gone?: true;
 }
 
-export interface StarredTrailsIndex {
+export interface BookmarkedTrailsIndex {
   version: 1;
   updatedAt: string;
-  /** Sorted by `starredAt` desc. */
-  entries: StarredTrailEntry[];
+  /** Sorted by `bookmarkedAt` desc. */
+  entries: BookmarkedTrailEntry[];
 }
 
 // ============================================================================
 // Response envelopes
 // ============================================================================
 
-export interface ListStarredTopicsResponse {
-  entries: StarredTopicEntry[];
+export interface ListBookmarkedTopicsResponse {
+  entries: BookmarkedTopicEntry[];
 }
 
-export interface ListStarredTrailsResponse {
-  entries: StarredTrailEntry[];
+export interface ListBookmarkedTrailsResponse {
+  entries: BookmarkedTrailEntry[];
 }
 
-export interface StarTopicResponse {
-  entry: StarredTopicEntry;
-  /** Advisory codes; omitted when empty. See `StarWarningCodes`. */
+export interface BookmarkTopicResponse {
+  entry: BookmarkedTopicEntry;
+  /** Advisory codes; omitted when empty. See `BookmarkWarningCodes`. */
   warnings?: string[];
 }
 
-export interface StarTrailResponse {
-  entry: StarredTrailEntry;
-  /** Advisory codes; omitted when empty. See `StarWarningCodes`. */
+export interface BookmarkTrailResponse {
+  entry: BookmarkedTrailEntry;
+  /** Advisory codes; omitted when empty. See `BookmarkWarningCodes`. */
   warnings?: string[];
 }
 
@@ -93,18 +93,18 @@ export interface StarTrailResponse {
 // Errors and warnings
 // ============================================================================
 
-export class StarError extends Error {
+export class BookmarkError extends Error {
   constructor(
     message: string,
     public statusCode: number,
     public code: string,
   ) {
     super(message);
-    this.name = 'StarError';
+    this.name = 'BookmarkError';
   }
 }
 
-export const StarErrorCodes = {
+export const BookmarkErrorCodes = {
   NOT_AUTHENTICATED: 'NOT_AUTHENTICATED',
   NOT_FOUND: 'NOT_FOUND',
   NO_REPO_ACCESS: 'NO_REPO_ACCESS',
@@ -113,17 +113,17 @@ export const StarErrorCodes = {
   S3_ERROR: 'S3_ERROR',
 } as const;
 
-export type StarErrorCode =
-  (typeof StarErrorCodes)[keyof typeof StarErrorCodes];
+export type BookmarkErrorCode =
+  (typeof BookmarkErrorCodes)[keyof typeof BookmarkErrorCodes];
 
 /**
  * Warning codes attached to a 200 response via `warnings: string[]`. Never
  * raised; never blocks the operation.
  */
-export const StarWarningCodes = {
+export const BookmarkWarningCodes = {
   /** 500-entry cap hit on append; oldest entry pruned. */
-  STAR_LIMIT_REACHED: 'STAR_LIMIT_REACHED',
+  BOOKMARK_LIMIT_REACHED: 'BOOKMARK_LIMIT_REACHED',
 } as const;
 
-export type StarWarningCode =
-  (typeof StarWarningCodes)[keyof typeof StarWarningCodes];
+export type BookmarkWarningCode =
+  (typeof BookmarkWarningCodes)[keyof typeof BookmarkWarningCodes];

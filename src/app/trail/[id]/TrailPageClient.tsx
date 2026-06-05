@@ -48,9 +48,9 @@ export default function TrailPageClient() {
           repo={session.repo}
           trailId={session.trailId}
           statusMessage={session.headerStatus}
-          starred={session.starred}
-          onToggleStar={session.onToggleStar}
-          starToggleInFlight={session.starToggleInFlight}
+          bookmarked={session.bookmarked}
+          onToggleBookmark={session.onToggleBookmark}
+          bookmarkToggleInFlight={session.bookmarkToggleInFlight}
           hasNotes={session.hasNotes}
           showAnonNotesToggle={session.isOwner}
           allowAnonNotes={session.allowAnonNotes}

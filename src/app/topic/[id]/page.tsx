@@ -102,9 +102,9 @@ export default function TopicPage() {
 
   const [shareCopied, setShareCopied] = useState(false);
   const [discussionOpen, setDiscussionOpen] = useState(false);
-  const [starred, setStarred] = useState(false);
-  const [starInFlight, setStarInFlight] = useState(false);
-  // Transient header status — e.g. "Sign in to star this topic." after an
+  const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarkInFlight, setBookmarkInFlight] = useState(false);
+  // Transient header status — e.g. "Sign in to bookmark this topic." after an
   // anonymous click. Auto-clears so the slot returns to empty.
   const [headerStatus, setHeaderStatus] = useState<string | null>(null);
   useEffect(() => {
@@ -248,7 +248,7 @@ export default function TopicPage() {
         setTopic(t);
         setDraftTitle(t.title);
         setDraftDescription(t.description);
-        setStarred(Boolean(body.starred));
+        setBookmarked(Boolean(body.bookmarked));
         setLoadState({ kind: 'ok' });
       } catch (err) {
         if (cancelled) return;
@@ -432,34 +432,34 @@ export default function TopicPage() {
     }
   }, [topicId]);
 
-  const handleToggleStar = useCallback(() => {
+  const handleToggleBookmark = useCallback(() => {
     // Signed out: surface a transient prompt in the header status slot
     // instead of redirecting to OAuth. The avatar menu already exposes a
-    // sign-in path; an unexpected redirect on a read-only "star"
+    // sign-in path; an unexpected redirect on a read-only "bookmark"
     // interaction surprises people more than it helps.
     if (!user) {
-      setHeaderStatus('Sign in to star this topic.');
+      setHeaderStatus('Sign in to bookmark this topic.');
       return;
     }
-    if (starInFlight) return;
-    const previous = starred;
-    setStarred(!previous);
-    setStarInFlight(true);
+    if (bookmarkInFlight) return;
+    const previous = bookmarked;
+    setBookmarked(!previous);
+    setBookmarkInFlight(true);
     void (async () => {
       try {
-        const res = await fetch(`/api/topics/by-id/${topicId}/star`, {
+        const res = await fetch(`/api/topics/by-id/${topicId}/bookmark`, {
           method: previous ? 'DELETE' : 'POST',
         });
         if (!res.ok && res.status !== 204) {
-          setStarred(previous);
+          setBookmarked(previous);
         }
       } catch {
-        setStarred(previous);
+        setBookmarked(previous);
       } finally {
-        setStarInFlight(false);
+        setBookmarkInFlight(false);
       }
     })();
-  }, [user, starInFlight, starred, topicId]);
+  }, [user, bookmarkInFlight, bookmarked, topicId]);
 
   // ---- Render -------------------------------------------------------------
 
@@ -541,9 +541,9 @@ export default function TopicPage() {
         onToggleDiscussion={() => setDiscussionOpen((v) => !v)}
         isOwner={isOwner}
         onDelete={handleDeleteTopic}
-        starred={starred}
-        onToggleStar={handleToggleStar}
-        starToggleInFlight={starInFlight}
+        bookmarked={bookmarked}
+        onToggleBookmark={handleToggleBookmark}
+        bookmarkToggleInFlight={bookmarkInFlight}
         statusMessage={headerStatus}
       />
 
@@ -742,9 +742,9 @@ export default function TopicPage() {
                 onToggleDiscussion={() => setDiscussionOpen((v) => !v)}
                 isOwner={isOwner}
                 onDelete={handleDeleteTopic}
-                starred={starred}
-                onToggleStar={handleToggleStar}
-                starToggleInFlight={starInFlight}
+                bookmarked={bookmarked}
+                onToggleBookmark={handleToggleBookmark}
+                bookmarkToggleInFlight={bookmarkInFlight}
               />
             </div>
 
@@ -1318,7 +1318,7 @@ interface TopicTrailLayerProps {
  * Embedded trail surface for the topic page. Calls `useTrailSession`
  * once (component mounts only when a trail is selected) and renders a
  * minimal TrailHeader — breadcrumb + close + sign-in only — above the
- * viewer. Star, stamp, agent-copy, github link, anon-notes toggle are
+ * viewer. Bookmark, stamp, agent-copy, github link, anon-notes toggle are
  * intentionally hidden in embed mode; the standalone /trail/{id} page
  * is where the full chrome lives.
  */
@@ -1343,7 +1343,7 @@ function TopicTrailLayer({
           statusMessage={session.headerStatus}
           hasNotes={session.hasNotes}
           ownerDisplay="avatar"
-          showStar={false}
+          showBookmark={false}
           showStamp={false}
           showAgentCopy={false}
           showGithubLink={false}

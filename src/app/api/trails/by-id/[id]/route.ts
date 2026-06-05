@@ -27,9 +27,9 @@ import {
 import { getCachedById, type ExperimentalTrailEntry } from '@/lib/pr-trail/cache';
 import type { SharedTrailIndexEntry } from '@/lib/trails/types';
 import {
-  isTrailStarred,
-  refreshStarredTrailSnapshot,
-} from '@/lib/stars/s3-storage';
+  isTrailBookmarked,
+  refreshBookmarkedTrailSnapshot,
+} from '@/lib/bookmarks/s3-storage';
 
 /**
  * Synthesize a SharedTrailIndexEntry for an experimental in-memory trail so
@@ -97,7 +97,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
           { status: 403 }
         );
       }
-      // Experimental trails can't be starred (POST /star requires a real
+      // Experimental trails can't be bookmarked (POST /bookmark requires a real
       // by-id pointer in S3, which they don't have). Hardcode false rather
       // than incur a per-user S3 read for a value that can't be true.
       return NextResponse.json({
@@ -105,7 +105,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
         repo: experimental.repo,
         entry: synthesizeEntry(experimental),
         payload: experimental.payload,
-        starred: false,
+        bookmarked: false,
         allowAnonNotes: false,
       });
     }
@@ -149,17 +149,17 @@ export async function GET(_request: NextRequest, { params }: Params) {
       );
     }
 
-    // `starred` is per-user. Anonymous callers always get false (the by-id
+    // `bookmarked` is per-user. Anonymous callers always get false (the by-id
     // route is reachable via public-repo paths without a token). For authed
-    // callers with the trail starred, also refresh the snapshot fire-and-
+    // callers with the trail bookmarked, also refresh the snapshot fire-and-
     // forget — the "lazy on item open" half of the snapshot-freshness policy.
-    let starred = false;
+    let bookmarked = false;
     if (githubToken) {
       const user = await fetchGitHubUser(githubToken);
       if (user) {
-        starred = await isTrailStarred(user.id, id);
-        if (starred) {
-          void refreshStarredTrailSnapshot(user.id, id, entry);
+        bookmarked = await isTrailBookmarked(user.id, id);
+        if (bookmarked) {
+          void refreshBookmarkedTrailSnapshot(user.id, id, entry);
         }
       }
     }
@@ -188,7 +188,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
       repo,
       entry,
       payload: publicPayload,
-      starred,
+      bookmarked,
       allowAnonNotes: stored.allowAnonNotes ?? false,
     });
   } catch (error) {

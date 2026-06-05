@@ -1,17 +1,17 @@
 /**
- * S3 storage for per-user starred lists.
+ * S3 storage for per-user bookmarked lists.
  *
  * Layout:
- *   topics/_starred/{githubId}/index.json   - starred topics for a user
- *   trails/_starred/{githubId}/index.json   - starred trails for a user
+ *   topics/_bookmarked/{githubId}/index.json   - bookmarked topics for a user
+ *   trails/_bookmarked/{githubId}/index.json   - bookmarked trails for a user
  *
  * Both indexes use ETag-locked read-modify-write (same pattern as the trails
- * inbox in `../trails/s3-storage.ts`). The starred entry shapes are small
+ * inbox in `../trails/s3-storage.ts`). The bookmarked entry shapes are small
  * (snapshot only) and the cap is 500, so single-file indexes are fine — no
  * per-entry sidecars.
  *
- * The stars surface deliberately does NOT mutate the underlying topic /
- * trail records. The by-id record is the source of truth; star indexes are
+ * The bookmarks surface deliberately does NOT mutate the underlying topic /
+ * trail records. The by-id record is the source of truth; bookmark indexes are
  * thin recipient-side indirection.
  */
 
@@ -26,17 +26,17 @@ import {
   BUCKET_NAME,
   BUCKET_REGION,
   MAX_ETAG_RETRIES,
-  MAX_STARRED_ENTRIES,
+  MAX_BOOKMARKED_ENTRIES,
   PAYLOAD_CACHE_CONTROL,
-  STARRED_PREFIX,
+  BOOKMARKED_PREFIX,
 } from './constants';
 import {
-  StarError,
-  StarErrorCodes,
-  type StarredTopicEntry,
-  type StarredTopicsIndex,
-  type StarredTrailEntry,
-  type StarredTrailsIndex,
+  BookmarkError,
+  BookmarkErrorCodes,
+  type BookmarkedTopicEntry,
+  type BookmarkedTopicsIndex,
+  type BookmarkedTrailEntry,
+  type BookmarkedTrailsIndex,
 } from './types';
 
 const s3Client = new S3Client({ region: BUCKET_REGION });
@@ -45,12 +45,12 @@ const s3Client = new S3Client({ region: BUCKET_REGION });
 // Key builders
 // ============================================================================
 
-export function buildStarredTopicsKey(githubId: number): string {
-  return `${TOPICS_PREFIX}/${STARRED_PREFIX}/${githubId}/index.json`;
+export function buildBookmarkedTopicsKey(githubId: number): string {
+  return `${TOPICS_PREFIX}/${BOOKMARKED_PREFIX}/${githubId}/index.json`;
 }
 
-export function buildStarredTrailsKey(githubId: number): string {
-  return `${TRAILS_PREFIX}/${STARRED_PREFIX}/${githubId}/index.json`;
+export function buildBookmarkedTrailsKey(githubId: number): string {
+  return `${TRAILS_PREFIX}/${BOOKMARKED_PREFIX}/${githubId}/index.json`;
 }
 
 // ============================================================================
@@ -77,10 +77,10 @@ function isEtagConflict(error: unknown): boolean {
 }
 
 // ============================================================================
-// Starred topics — read / write
+// Bookmarked topics — read / write
 // ============================================================================
 
-function emptyTopicsIndex(): StarredTopicsIndex {
+function emptyTopicsIndex(): BookmarkedTopicsIndex {
   return {
     version: 1,
     updatedAt: new Date().toISOString(),
@@ -88,39 +88,39 @@ function emptyTopicsIndex(): StarredTopicsIndex {
   };
 }
 
-async function getStarredTopicsWithETag(
+async function getBookmarkedTopicsWithETag(
   githubId: number,
-): Promise<{ data: StarredTopicsIndex; etag: string } | null> {
+): Promise<{ data: BookmarkedTopicsIndex; etag: string } | null> {
   try {
     const response = await s3Client.send(
       new GetObjectCommand({
         Bucket: BUCKET_NAME,
-        Key: buildStarredTopicsKey(githubId),
+        Key: buildBookmarkedTopicsKey(githubId),
       }),
     );
     const body = await response.Body?.transformToString();
     if (!body) return null;
     return {
-      data: JSON.parse(body) as StarredTopicsIndex,
+      data: JSON.parse(body) as BookmarkedTopicsIndex,
       etag: response.ETag || '',
     };
   } catch (error: unknown) {
     if (isNoSuchKey(error)) return null;
-    console.error('[Stars] Get starred-topics index failed:', {
+    console.error('[Bookmarks] Get bookmarked-topics index failed:', {
       githubId,
       error: error instanceof Error ? error.message : String(error),
     });
-    throw new StarError(
-      'Failed to retrieve starred topics index',
+    throw new BookmarkError(
+      'Failed to retrieve bookmarked topics index',
       500,
-      StarErrorCodes.S3_ERROR,
+      BookmarkErrorCodes.S3_ERROR,
     );
   }
 }
 
-async function putStarredTopicsWithETag(
+async function putBookmarkedTopicsWithETag(
   githubId: number,
-  data: StarredTopicsIndex,
+  data: BookmarkedTopicsIndex,
   etag: string | null,
 ): Promise<void> {
   try {
@@ -133,7 +133,7 @@ async function putStarredTopicsWithETag(
       IfMatch?: string;
     } = {
       Bucket: BUCKET_NAME,
-      Key: buildStarredTopicsKey(githubId),
+      Key: buildBookmarkedTopicsKey(githubId),
       Body: JSON.stringify(data, null, 2),
       ContentType: 'application/json',
       CacheControl: PAYLOAD_CACHE_CONTROL,
@@ -142,56 +142,56 @@ async function putStarredTopicsWithETag(
     await s3Client.send(new PutObjectCommand(params));
   } catch (error: unknown) {
     if (isEtagConflict(error)) {
-      throw new StarError(
+      throw new BookmarkError(
         'Concurrent modification detected',
         409,
-        StarErrorCodes.ETAG_CONFLICT,
+        BookmarkErrorCodes.ETAG_CONFLICT,
       );
     }
-    console.error('[Stars] Put starred-topics index failed:', {
+    console.error('[Bookmarks] Put bookmarked-topics index failed:', {
       githubId,
       error: error instanceof Error ? error.message : String(error),
     });
-    throw new StarError(
-      'Failed to save starred topics index',
+    throw new BookmarkError(
+      'Failed to save bookmarked topics index',
       500,
-      StarErrorCodes.S3_ERROR,
+      BookmarkErrorCodes.S3_ERROR,
     );
   }
 }
 
-export async function getStarredTopics(
+export async function getBookmarkedTopics(
   githubId: number,
-): Promise<StarredTopicsIndex> {
-  const result = await getStarredTopicsWithETag(githubId);
+): Promise<BookmarkedTopicsIndex> {
+  const result = await getBookmarkedTopicsWithETag(githubId);
   return result ? result.data : emptyTopicsIndex();
 }
 
-export async function updateStarredTopics(
+export async function updateBookmarkedTopics(
   githubId: number,
-  modifier: (data: StarredTopicsIndex) => StarredTopicsIndex,
-): Promise<StarredTopicsIndex> {
+  modifier: (data: BookmarkedTopicsIndex) => BookmarkedTopicsIndex,
+): Promise<BookmarkedTopicsIndex> {
   let attempts = 0;
   while (attempts < MAX_ETAG_RETRIES) {
     try {
-      const current = await getStarredTopicsWithETag(githubId);
+      const current = await getBookmarkedTopicsWithETag(githubId);
       const data = current ? current.data : emptyTopicsIndex();
       const etag = current ? current.etag : null;
       const updated = modifier(data);
       updated.updatedAt = new Date().toISOString();
-      await putStarredTopicsWithETag(githubId, updated, etag);
+      await putBookmarkedTopicsWithETag(githubId, updated, etag);
       return updated;
     } catch (error) {
       if (
-        error instanceof StarError &&
-        error.code === StarErrorCodes.ETAG_CONFLICT
+        error instanceof BookmarkError &&
+        error.code === BookmarkErrorCodes.ETAG_CONFLICT
       ) {
         attempts++;
         if (attempts >= MAX_ETAG_RETRIES) {
-          throw new StarError(
+          throw new BookmarkError(
             'Concurrent modification conflict — please retry',
             409,
-            StarErrorCodes.MAX_RETRIES,
+            BookmarkErrorCodes.MAX_RETRIES,
           );
         }
         await new Promise((r) => setTimeout(r, 100 * attempts));
@@ -200,18 +200,18 @@ export async function updateStarredTopics(
       throw error;
     }
   }
-  throw new StarError(
+  throw new BookmarkError(
     'Update failed after retries',
     500,
-    StarErrorCodes.S3_ERROR,
+    BookmarkErrorCodes.S3_ERROR,
   );
 }
 
 // ============================================================================
-// Starred trails — read / write
+// Bookmarked trails — read / write
 // ============================================================================
 
-function emptyTrailsIndex(): StarredTrailsIndex {
+function emptyTrailsIndex(): BookmarkedTrailsIndex {
   return {
     version: 1,
     updatedAt: new Date().toISOString(),
@@ -219,39 +219,39 @@ function emptyTrailsIndex(): StarredTrailsIndex {
   };
 }
 
-async function getStarredTrailsWithETag(
+async function getBookmarkedTrailsWithETag(
   githubId: number,
-): Promise<{ data: StarredTrailsIndex; etag: string } | null> {
+): Promise<{ data: BookmarkedTrailsIndex; etag: string } | null> {
   try {
     const response = await s3Client.send(
       new GetObjectCommand({
         Bucket: BUCKET_NAME,
-        Key: buildStarredTrailsKey(githubId),
+        Key: buildBookmarkedTrailsKey(githubId),
       }),
     );
     const body = await response.Body?.transformToString();
     if (!body) return null;
     return {
-      data: JSON.parse(body) as StarredTrailsIndex,
+      data: JSON.parse(body) as BookmarkedTrailsIndex,
       etag: response.ETag || '',
     };
   } catch (error: unknown) {
     if (isNoSuchKey(error)) return null;
-    console.error('[Stars] Get starred-trails index failed:', {
+    console.error('[Bookmarks] Get bookmarked-trails index failed:', {
       githubId,
       error: error instanceof Error ? error.message : String(error),
     });
-    throw new StarError(
-      'Failed to retrieve starred trails index',
+    throw new BookmarkError(
+      'Failed to retrieve bookmarked trails index',
       500,
-      StarErrorCodes.S3_ERROR,
+      BookmarkErrorCodes.S3_ERROR,
     );
   }
 }
 
-async function putStarredTrailsWithETag(
+async function putBookmarkedTrailsWithETag(
   githubId: number,
-  data: StarredTrailsIndex,
+  data: BookmarkedTrailsIndex,
   etag: string | null,
 ): Promise<void> {
   try {
@@ -264,7 +264,7 @@ async function putStarredTrailsWithETag(
       IfMatch?: string;
     } = {
       Bucket: BUCKET_NAME,
-      Key: buildStarredTrailsKey(githubId),
+      Key: buildBookmarkedTrailsKey(githubId),
       Body: JSON.stringify(data, null, 2),
       ContentType: 'application/json',
       CacheControl: PAYLOAD_CACHE_CONTROL,
@@ -273,56 +273,56 @@ async function putStarredTrailsWithETag(
     await s3Client.send(new PutObjectCommand(params));
   } catch (error: unknown) {
     if (isEtagConflict(error)) {
-      throw new StarError(
+      throw new BookmarkError(
         'Concurrent modification detected',
         409,
-        StarErrorCodes.ETAG_CONFLICT,
+        BookmarkErrorCodes.ETAG_CONFLICT,
       );
     }
-    console.error('[Stars] Put starred-trails index failed:', {
+    console.error('[Bookmarks] Put bookmarked-trails index failed:', {
       githubId,
       error: error instanceof Error ? error.message : String(error),
     });
-    throw new StarError(
-      'Failed to save starred trails index',
+    throw new BookmarkError(
+      'Failed to save bookmarked trails index',
       500,
-      StarErrorCodes.S3_ERROR,
+      BookmarkErrorCodes.S3_ERROR,
     );
   }
 }
 
-export async function getStarredTrails(
+export async function getBookmarkedTrails(
   githubId: number,
-): Promise<StarredTrailsIndex> {
-  const result = await getStarredTrailsWithETag(githubId);
+): Promise<BookmarkedTrailsIndex> {
+  const result = await getBookmarkedTrailsWithETag(githubId);
   return result ? result.data : emptyTrailsIndex();
 }
 
-export async function updateStarredTrails(
+export async function updateBookmarkedTrails(
   githubId: number,
-  modifier: (data: StarredTrailsIndex) => StarredTrailsIndex,
-): Promise<StarredTrailsIndex> {
+  modifier: (data: BookmarkedTrailsIndex) => BookmarkedTrailsIndex,
+): Promise<BookmarkedTrailsIndex> {
   let attempts = 0;
   while (attempts < MAX_ETAG_RETRIES) {
     try {
-      const current = await getStarredTrailsWithETag(githubId);
+      const current = await getBookmarkedTrailsWithETag(githubId);
       const data = current ? current.data : emptyTrailsIndex();
       const etag = current ? current.etag : null;
       const updated = modifier(data);
       updated.updatedAt = new Date().toISOString();
-      await putStarredTrailsWithETag(githubId, updated, etag);
+      await putBookmarkedTrailsWithETag(githubId, updated, etag);
       return updated;
     } catch (error) {
       if (
-        error instanceof StarError &&
-        error.code === StarErrorCodes.ETAG_CONFLICT
+        error instanceof BookmarkError &&
+        error.code === BookmarkErrorCodes.ETAG_CONFLICT
       ) {
         attempts++;
         if (attempts >= MAX_ETAG_RETRIES) {
-          throw new StarError(
+          throw new BookmarkError(
             'Concurrent modification conflict — please retry',
             409,
-            StarErrorCodes.MAX_RETRIES,
+            BookmarkErrorCodes.MAX_RETRIES,
           );
         }
         await new Promise((r) => setTimeout(r, 100 * attempts));
@@ -331,10 +331,10 @@ export async function updateStarredTrails(
       throw error;
     }
   }
-  throw new StarError(
+  throw new BookmarkError(
     'Update failed after retries',
     500,
-    StarErrorCodes.S3_ERROR,
+    BookmarkErrorCodes.S3_ERROR,
   );
 }
 
@@ -342,110 +342,110 @@ export async function updateStarredTrails(
 // High-level mutations
 //
 // Returned `pruned` flag tells the caller whether the 500-entry cap was hit
-// on this append. Route handlers translate that into a `STAR_LIMIT_REACHED`
+// on this append. Route handlers translate that into a `BOOKMARK_LIMIT_REACHED`
 // warning on the 200 response.
 // ============================================================================
 
-export interface StarUpsertResult<TEntry> {
+export interface BookmarkUpsertResult<TEntry> {
   entry: TEntry;
   pruned: boolean;
 }
 
 /**
- * Insert-or-refresh a topic in the user's starred list. Re-starring an
- * already-starred topic moves the row to the head (refreshed `starredAt`)
+ * Insert-or-refresh a topic in the user's bookmarked list. Re-bookmarkring an
+ * already-bookmarked topic moves the row to the head (refreshed `bookmarkedAt`)
  * and replaces the snapshot.
  */
-export async function upsertStarredTopic(
+export async function upsertBookmarkedTopic(
   githubId: number,
-  entry: StarredTopicEntry,
-): Promise<StarUpsertResult<StarredTopicEntry>> {
+  entry: BookmarkedTopicEntry,
+): Promise<BookmarkUpsertResult<BookmarkedTopicEntry>> {
   let pruned = false;
-  await updateStarredTopics(githubId, (data) => {
+  await updateBookmarkedTopics(githubId, (data) => {
     const others = data.entries.filter((e) => e.topicId !== entry.topicId);
     const next = [entry, ...others];
-    if (next.length > MAX_STARRED_ENTRIES) {
+    if (next.length > MAX_BOOKMARKED_ENTRIES) {
       pruned = true;
-      next.length = MAX_STARRED_ENTRIES;
+      next.length = MAX_BOOKMARKED_ENTRIES;
     }
     return { ...data, entries: next };
   });
   return { entry, pruned };
 }
 
-export async function removeStarredTopic(
+export async function removeBookmarkedTopic(
   githubId: number,
   topicId: string,
 ): Promise<void> {
-  await updateStarredTopics(githubId, (data) => ({
+  await updateBookmarkedTopics(githubId, (data) => ({
     ...data,
     entries: data.entries.filter((e) => e.topicId !== topicId),
   }));
 }
 
-export async function upsertStarredTrail(
+export async function upsertBookmarkedTrail(
   githubId: number,
-  entry: StarredTrailEntry,
-): Promise<StarUpsertResult<StarredTrailEntry>> {
+  entry: BookmarkedTrailEntry,
+): Promise<BookmarkUpsertResult<BookmarkedTrailEntry>> {
   let pruned = false;
-  await updateStarredTrails(githubId, (data) => {
+  await updateBookmarkedTrails(githubId, (data) => {
     const others = data.entries.filter((e) => e.trailId !== entry.trailId);
     const next = [entry, ...others];
-    if (next.length > MAX_STARRED_ENTRIES) {
+    if (next.length > MAX_BOOKMARKED_ENTRIES) {
       pruned = true;
-      next.length = MAX_STARRED_ENTRIES;
+      next.length = MAX_BOOKMARKED_ENTRIES;
     }
     return { ...data, entries: next };
   });
   return { entry, pruned };
 }
 
-export async function removeStarredTrail(
+export async function removeBookmarkedTrail(
   githubId: number,
   trailId: string,
 ): Promise<void> {
-  await updateStarredTrails(githubId, (data) => ({
+  await updateBookmarkedTrails(githubId, (data) => ({
     ...data,
     entries: data.entries.filter((e) => e.trailId !== trailId),
   }));
 }
 
 // ============================================================================
-// Membership checks — back the `starred` field on by-id GET responses.
+// Membership checks — back the `bookmarked` field on by-id GET responses.
 // These do a full index read; the index is small (max 500 entries) and S3
 // cache-control gives detail-fetch traffic a 60s warm window.
 // ============================================================================
 
-export async function isTopicStarred(
+export async function isTopicBookmarked(
   githubId: number,
   topicId: string,
 ): Promise<boolean> {
-  const index = await getStarredTopics(githubId);
+  const index = await getBookmarkedTopics(githubId);
   return index.entries.some((e) => e.topicId === topicId);
 }
 
-export async function isTrailStarred(
+export async function isTrailBookmarked(
   githubId: number,
   trailId: string,
 ): Promise<boolean> {
-  const index = await getStarredTrails(githubId);
+  const index = await getBookmarkedTrails(githubId);
   return index.entries.some((e) => e.trailId === trailId);
 }
 
 // ============================================================================
 // Lazy snapshot refresh — called from the detail-fetch path. If the caller
-// has the topic / trail starred and its `updatedAt` has advanced since the
+// has the topic / trail bookmarked and its `updatedAt` has advanced since the
 // snapshot was taken, patch the snapshot in the index. Best-effort: a
 // failure here is logged but doesn't fail the user-facing read.
 // ============================================================================
 
-export async function refreshStarredTopicSnapshot(
+export async function refreshBookmarkedTopicSnapshot(
   githubId: number,
   topicId: string,
-  liveSnapshot: StarredTopicEntry['snapshot'],
+  liveSnapshot: BookmarkedTopicEntry['snapshot'],
 ): Promise<void> {
   try {
-    await updateStarredTopics(githubId, (data) => {
+    await updateBookmarkedTopics(githubId, (data) => {
       const idx = data.entries.findIndex((e) => e.topicId === topicId);
       const existing = idx === -1 ? undefined : data.entries[idx];
       if (!existing) return data;
@@ -455,7 +455,7 @@ export async function refreshStarredTopicSnapshot(
       return { ...data, entries: next };
     });
   } catch (error) {
-    console.error('[Stars] Refresh starred-topic snapshot failed:', {
+    console.error('[Bookmarks] Refresh bookmarked-topic snapshot failed:', {
       githubId,
       topicId,
       error: error instanceof Error ? error.message : String(error),
@@ -463,13 +463,13 @@ export async function refreshStarredTopicSnapshot(
   }
 }
 
-export async function refreshStarredTrailSnapshot(
+export async function refreshBookmarkedTrailSnapshot(
   githubId: number,
   trailId: string,
-  liveSnapshot: StarredTrailEntry['snapshot'],
+  liveSnapshot: BookmarkedTrailEntry['snapshot'],
 ): Promise<void> {
   try {
-    await updateStarredTrails(githubId, (data) => {
+    await updateBookmarkedTrails(githubId, (data) => {
       const idx = data.entries.findIndex((e) => e.trailId === trailId);
       const existing = idx === -1 ? undefined : data.entries[idx];
       if (!existing) return data;
@@ -479,7 +479,7 @@ export async function refreshStarredTrailSnapshot(
       return { ...data, entries: next };
     });
   } catch (error) {
-    console.error('[Stars] Refresh starred-trail snapshot failed:', {
+    console.error('[Bookmarks] Refresh bookmarked-trail snapshot failed:', {
       githubId,
       trailId,
       error: error instanceof Error ? error.message : String(error),
