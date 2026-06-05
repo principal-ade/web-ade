@@ -42,6 +42,12 @@ export const MAX_INBOX_RECIPIENTS = 50;
 /** Inbox S3 sub-prefix (relative to `trails/`). */
 export const INBOX_PREFIX = '_inbox';
 
+/** Soft cap on outbox entries per sender. Excess oldest are pruned. */
+export const MAX_OUTBOX_ENTRIES = 500;
+
+/** Outbox (sent-items) S3 sub-prefix (relative to `trails/`). */
+export const OUTBOX_PREFIX = '_outbox';
+
 export const MAX_ETAG_RETRIES = 3;
 
 export const INDEX_CACHE_CONTROL = 'max-age=60';

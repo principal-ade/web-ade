@@ -284,3 +284,45 @@ export interface InboxIndex {
   updatedAt: string;
   entries: InboxIndexEntry[];
 }
+
+// ============================================================================
+// Outbox — sender-side mirror of the inbox. The send route writes one row per
+// trail into the sender's outbox so a "Sent" view can list what they shared
+// without scanning every recipient's inbox. Keyed by the sender's numeric
+// GitHub id; one entry per trail (sender is always self), with the recipient
+// set merged across resends.
+// ============================================================================
+
+export interface OutboxRecipient {
+  githubId: number;
+  githubLogin: string;
+}
+
+export interface OutboxIndexEntry {
+  /** Trail id — foreign key into `/api/trails/by-id/{id}`. */
+  trailId: string;
+  /**
+   * Everyone this trail has been delivered to, deduped by githubId. Resends
+   * merge new recipients in rather than replacing — the outbox is a record of
+   * "who has this trail", not just the most recent send.
+   */
+  recipients: OutboxRecipient[];
+  /** Optional sender note from the most recent send. */
+  comment?: string;
+  /** ISO 8601 — most recent send/resend time. */
+  sentAt: string;
+  /**
+   * Snapshot of the live trail entry at send-time. Patched lazily on read
+   * when the live trail's updatedAt has advanced. Mirrors the inbox.
+   */
+  snapshot: SharedTrailIndexEntry;
+  /** Resolved owner/repo for the trail — duplicated for fast list rendering. */
+  owner: string;
+  repo: string;
+}
+
+export interface OutboxIndex {
+  version: 1;
+  updatedAt: string;
+  entries: OutboxIndexEntry[];
+}

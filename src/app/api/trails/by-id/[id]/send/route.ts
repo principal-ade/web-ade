@@ -20,6 +20,7 @@ import {
   getIndex,
   putInboxEntry,
   updateInbox,
+  updateOutbox,
 } from '@/lib/trails/s3-storage';
 import { validateOwnerRepo, validateSendRequest } from '@/lib/trails/validation';
 import {
@@ -27,11 +28,12 @@ import {
   isValidGitHubLogin,
   resolveGitHubLogin,
 } from '@/lib/trails/github-access';
-import { MAX_INBOX_ENTRIES } from '@/lib/trails/constants';
+import { MAX_INBOX_ENTRIES, MAX_OUTBOX_ENTRIES } from '@/lib/trails/constants';
 import {
   ShareErrorCodes,
   TrailShareError,
   type InboxIndexEntry,
+  type OutboxIndexEntry,
 } from '@/lib/trails/types';
 
 interface Params {
@@ -179,6 +181,43 @@ export async function POST(request: NextRequest, { params }: Params) {
       await putInboxEntry(recipient.githubId, newEntry).catch(() => undefined);
 
       delivered.push({ login: recipient.login, githubId: recipient.githubId });
+    }
+
+    // Sender-side mirror: record what was shared so a "Sent" view can list it
+    // without scanning every recipient's inbox. One row per trail; resends
+    // merge new recipients in and refresh sentAt. Best-effort — the inbox
+    // deliveries above are the primary effect, so a failure here must not fail
+    // a send the recipients already received.
+    if (delivered.length > 0) {
+      await updateOutbox(sender.id, (outbox) => {
+        const existing = outbox.entries.find((e) => e.trailId === id);
+
+        // Merge delivered recipients into the prior set, deduped by githubId.
+        const byId = new Map<number, { githubId: number; githubLogin: string }>();
+        for (const r of existing?.recipients ?? []) byId.set(r.githubId, r);
+        for (const r of delivered) {
+          byId.set(r.githubId, { githubId: r.githubId, githubLogin: r.login });
+        }
+
+        const newEntry: OutboxIndexEntry = {
+          trailId: id,
+          recipients: [...byId.values()],
+          ...(comment ? { comment } : {}),
+          sentAt,
+          snapshot,
+          owner,
+          repo,
+        };
+
+        const filtered = outbox.entries.filter((e) => e.trailId !== id);
+        const next = [newEntry, ...filtered];
+        if (next.length > MAX_OUTBOX_ENTRIES) {
+          next.length = MAX_OUTBOX_ENTRIES;
+        }
+        return { ...outbox, entries: next };
+      }).catch((error) => {
+        console.error('[Trails] Outbox write failed (non-fatal):', error);
+      });
     }
 
     return NextResponse.json({ delivered, failed });

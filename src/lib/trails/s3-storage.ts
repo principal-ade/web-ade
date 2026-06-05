@@ -28,6 +28,7 @@ import {
   INDEX_CACHE_CONTROL,
   PAYLOAD_CACHE_CONTROL,
   INBOX_PREFIX,
+  OUTBOX_PREFIX,
   MAX_ETAG_RETRIES,
 } from './constants';
 import { TrailShareError, ShareErrorCodes } from './types';
@@ -41,6 +42,7 @@ import type {
   TrailRecentlyVisitedIndex,
   InboxIndex,
   InboxIndexEntry,
+  OutboxIndex,
 } from './types';
 
 const s3Client = new S3Client({ region: BUCKET_REGION });
@@ -815,6 +817,159 @@ export async function deleteInboxEntry(
       error: error instanceof Error ? error.message : String(error),
     });
   }
+}
+
+// ============================================================================
+// Outbox — sender-side mirror of the inbox keyed by the sender's numeric
+// GitHub id. Written from the send route so a "Sent" view can list what the
+// user has shared without scanning every recipient's inbox. Same ETag-locked
+// update flow as the inbox; no per-entry object (no read-state to point-read).
+// ============================================================================
+
+function outboxPrefix(githubId: number): string {
+  return `${S3_PREFIX}/${OUTBOX_PREFIX}/${githubId}`;
+}
+
+export function buildOutboxIndexKey(githubId: number): string {
+  return `${outboxPrefix(githubId)}/${INDEX_FILE}`;
+}
+
+function emptyOutbox(): OutboxIndex {
+  return {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    entries: [],
+  };
+}
+
+async function getOutboxWithETag(
+  githubId: number
+): Promise<{ data: OutboxIndex; etag: string } | null> {
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: buildOutboxIndexKey(githubId),
+      })
+    );
+
+    const body = await response.Body?.transformToString();
+    if (!body) return null;
+
+    return {
+      data: JSON.parse(body) as OutboxIndex,
+      etag: response.ETag || '',
+    };
+  } catch (error: unknown) {
+    if (isNoSuchKey(error)) return null;
+
+    console.error('[Trails] Get outbox failed:', {
+      githubId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new TrailShareError(
+      'Failed to retrieve outbox',
+      500,
+      ShareErrorCodes.S3_ERROR
+    );
+  }
+}
+
+async function putOutboxWithETag(
+  githubId: number,
+  data: OutboxIndex,
+  etag: string | null
+): Promise<void> {
+  try {
+    const params: {
+      Bucket: string;
+      Key: string;
+      Body: string;
+      ContentType: string;
+      CacheControl: string;
+      IfMatch?: string;
+    } = {
+      Bucket: BUCKET_NAME,
+      Key: buildOutboxIndexKey(githubId),
+      Body: JSON.stringify(data, null, 2),
+      ContentType: 'application/json',
+      CacheControl: INDEX_CACHE_CONTROL,
+    };
+
+    if (etag) params.IfMatch = etag;
+
+    await s3Client.send(new PutObjectCommand(params));
+  } catch (error: unknown) {
+    if (isEtagConflict(error)) {
+      throw new TrailShareError(
+        'Concurrent modification detected',
+        409,
+        ShareErrorCodes.ETAG_CONFLICT
+      );
+    }
+
+    console.error('[Trails] Put outbox failed:', {
+      githubId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new TrailShareError(
+      'Failed to save outbox',
+      500,
+      ShareErrorCodes.S3_ERROR
+    );
+  }
+}
+
+export async function getOutbox(githubId: number): Promise<OutboxIndex> {
+  const result = await getOutboxWithETag(githubId);
+  return result ? result.data : emptyOutbox();
+}
+
+/**
+ * Mutate the outbox index under optimistic locking. Mirrors `updateInbox`.
+ */
+export async function updateOutbox(
+  githubId: number,
+  modifier: (data: OutboxIndex) => OutboxIndex
+): Promise<OutboxIndex> {
+  let attempts = 0;
+
+  while (attempts < MAX_ETAG_RETRIES) {
+    try {
+      const current = await getOutboxWithETag(githubId);
+      const data = current ? current.data : emptyOutbox();
+      const etag = current ? current.etag : null;
+
+      const updated = modifier(data);
+      updated.updatedAt = new Date().toISOString();
+
+      await putOutboxWithETag(githubId, updated, etag);
+      return updated;
+    } catch (error) {
+      if (
+        error instanceof TrailShareError &&
+        error.code === ShareErrorCodes.ETAG_CONFLICT
+      ) {
+        attempts++;
+        if (attempts >= MAX_ETAG_RETRIES) {
+          throw new TrailShareError(
+            'Concurrent modification conflict — please retry',
+            409,
+            ShareErrorCodes.MAX_RETRIES
+          );
+        }
+        await new Promise((r) => setTimeout(r, 100 * attempts));
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new TrailShareError(
+    'Update failed after retries',
+    500,
+    ShareErrorCodes.S3_ERROR
+  );
 }
 
 // ============================================================================
