@@ -65,7 +65,7 @@
     "@principal-ai/alexandria-core-library": "^0.6.2",
     "@principal-ai/codebase-composition": "^0.2.56",
     "@principal-ai/codebase-quality-lenses": "^0.1.65",
-    "@principal-ai/control-tower-core": "^0.2.1",
+    "@principal-ai/control-tower-core": "^0.6.2",
     "@principal-ai/file-city-builder": "^0.4.11",
     "@principal-ai/file-city-react": "^0.5.53",
     "@principal-ai/file-city-server": "^0.3.9",
