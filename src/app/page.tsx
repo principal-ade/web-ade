@@ -497,7 +497,7 @@ export default function HomePage() {
                   className={`text-6xl md:text-7xl xl:text-8xl font-semibold tracking-tight leading-[0.95] mb-6 transition-opacity duration-700 ease-out ${
                     showTitle ? 'opacity-100' : 'opacity-0'
                   }`}
-                  style={{ color: theme.colors.primary }}
+                  style={{ color: theme.colors.text }}
                 >
                   Code trails
                 </h1>
