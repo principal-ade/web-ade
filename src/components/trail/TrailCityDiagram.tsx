@@ -174,11 +174,11 @@ export function TrailCityDiagram({
 
   const palette = useMemo(
     () => [
-      withAlpha(accent, 0.18),
-      withAlpha(accent, 0.32),
-      withAlpha(text, 0.08),
-      withAlpha(text, 0.14),
-      withAlpha(text, 0.22),
+      withAlpha(accent, 0.36),
+      withAlpha(accent, 0.55),
+      withAlpha(text, 0.18),
+      withAlpha(text, 0.3),
+      withAlpha(text, 0.45),
     ],
     [accent, text],
   );
@@ -246,7 +246,7 @@ export function TrailCityDiagram({
         * the trail is being spotlighted so the dashed path pops. */}
       <g
         style={{
-          opacity: highlightTrail ? 0.2 : 1,
+          opacity: highlightTrail ? 0.4 : 1,
           transition: 'opacity 300ms ease',
         }}
       >
