@@ -34,7 +34,6 @@ import type {
 } from '@industry-theme/file-city-panel';
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { LOCAL_AUTHOR } from '@/lib/trails/local-mutations';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { TrailLoadingScreen } from '@/components/trail/TrailLoadingScreen';
 import { TrailErrorView } from '@/components/trail/TrailErrorView';
@@ -756,7 +755,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             d.endsWith('/') ? d.slice(0, -1) : d,
           )}
           showSpatialContext={configMode}
-          currentAuthor={user?.login ?? LOCAL_AUTHOR}
+          currentAuthor={user?.login}
           overlayFilePath={leftViewMode === 'files' ? selectedFilePath : null}
           overlayTrails={selectedFileTrails}
           overlaySelectedTrailId={selectedTrailId}
@@ -1843,7 +1842,8 @@ const RightPane: React.FC<{
   highlightLayersLoading: boolean;
   excludedFolders: string[];
   showSpatialContext: boolean;
-  currentAuthor: string;
+  /** Undefined for anonymous viewers — gates the panel's note Edit/Delete. */
+  currentAuthor?: string;
   overlayFilePath: string | null;
   overlayTrails: SharedTrailIndexEntry[];
   overlaySelectedTrailId: string | null;

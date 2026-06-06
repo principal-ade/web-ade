@@ -171,7 +171,8 @@ export interface TrailSessionOk {
   context: PanelContextValue<FileCityTrailExplorerPanelContext>;
   actions: FileCityTrailExplorerPanelActions;
   events: PanelEventEmitter;
-  currentAuthor: string;
+  /** Undefined for anonymous viewers — gates the panel's note Edit/Delete. */
+  currentAuthor?: string;
 
   // Toast (errors raised by mutations) --------------------------------
   toast: { message: string } | null;
@@ -893,7 +894,10 @@ export function useTrailSession(trailId: string): TrailSession {
     context,
     actions,
     events,
-    currentAuthor: user?.login ?? LOCAL_AUTHOR,
+    // Anonymous viewers get no `currentAuthor`, so the panel hides the
+    // inline note Edit/Delete buttons. (Local anon notes are authored
+    // LOCAL_AUTHOR; we deliberately don't surface them as editable here.)
+    currentAuthor: user?.login,
     toast,
     dismissToast,
   };
