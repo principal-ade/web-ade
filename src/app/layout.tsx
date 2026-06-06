@@ -41,7 +41,7 @@ export const viewport: Viewport = {
 
 const SITE_TITLE = "Principal AI";
 const SITE_DESCRIPTION =
-  "A full-featured browser-based IDE with real-time collaboration";
+  "Code Trails: Frame.io for code collaboration";
 
 async function resolveBaseUrl(): Promise<string> {
   const h = await headers();
