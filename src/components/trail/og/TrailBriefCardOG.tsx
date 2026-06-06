@@ -3,13 +3,13 @@
  * (`@industry-theme/file-city-panel`), rendered at 1200×628 for social link
  * previews (Open Graph / Twitter cards).
  *
- * It is NOT the real card: Satori (next/og) can't run the interactive
- * component (theme hooks, markdown, tabs, note composers, `color-mix`). This
- * reproduces the card's *look* — published-chrome frame, eyebrow → heading →
- * CREATED/BY metadata row, summary body, and the REVIEWED BY / VISITORS
- * cohort strip — from a flat view-model with hand-ported styles (see
- * `ogTheme.ts`). Type scale is enlarged from the 640px modal to read on a
- * 1200px canvas.
+ * Styled after the marketing card (`TrailMarketingCardOG`): a left-aligned
+ * eyebrow → heading → CREATED/BY meta → summary, beside a File City map on the
+ * right. The map shows only the trail's *touched* files (the buildings its
+ * markers' `sourcePath`s point at), top-down projected and colored by file
+ * type, with a dashed trail threading them in order — mirroring the trail
+ * explorer's filtered view. The map geometry is computed upstream
+ * (`projectTouchedCity`) and passed in, so this component stays presentational.
  *
  * Pure presentational + plain inline styles, so the same component renders in
  * the OG route (Satori) and in Storybook (DOM). Every container sets
@@ -17,261 +17,269 @@
  */
 
 import React from 'react';
-import {
-  OG_COLORS,
-  OG_MIX,
-  OG_FONT,
-  ogInitials,
-  ogTruncate,
-} from './ogTheme';
+import { OG_COLORS, OG_FONT, ogTruncate } from './ogTheme';
+import type { FileMapData } from './fileCityProjection';
+import { FILE_CITY_LOGO_DATA_URI } from './fileCityLogo';
+
+/** A person/repo identity — display name + optional avatar (a data URI or URL). */
+export interface OgIdentity {
+  name: string;
+  avatarUrl?: string;
+}
 
 export interface TrailBriefCardOGProps {
   /** Card heading — the trail's `request` phrase (shared) or `title`. */
   heading: string;
-  /** Eyebrow kicker above the heading, e.g. `INVESTIGATION TRAIL`. */
-  eyebrow?: string;
-  /** `BY <author>` byline. */
-  author?: string;
-  /** Preformatted CREATED stamp (e.g. `3d ago`). Caller owns "now". */
-  createdLabel?: string;
+  /** Trail author — shown as "Code Trail by [avatar] name" in the kicker. */
+  author?: OgIdentity;
   /** Plain-text summary (markdown stripped/truncated upstream). */
   summary?: string;
-  /** Marker count, surfaced as `· N STOPS`. */
-  stopCount?: number;
-  /** Reviewer display names — REVIEWED BY avatar strip (ringed). */
-  reviewers?: string[];
-  /** Count of distinct note authors — NOTES BY metric. */
-  noteAuthorCount?: number;
-  /** Total visitors (verified + anonymous) — VISITORS metric. */
-  visitorCount?: number;
-  /** Optional `owner/repo` tag shown top-right. */
-  repoLabel?: string;
+  /** Repo — owner avatar + repo name, pinned bottom-left. */
+  repo?: OgIdentity;
+  /** Projected File City map of the trail's touched files (right panel). */
+  fileMap?: FileMapData | null;
 }
 
-const MAX_AVATARS = 5;
-
-/** Initials circle, ported from the live card's `Avatar`. */
-function OgAvatar({ name, ringed }: { name: string; ringed?: boolean }) {
+/** Avatar (if present) + name. `avatarRadius` toggles circle (default) vs a
+ *  rounded square (e.g. for a repo owner). */
+function AvatarLabel({
+  identity,
+  size,
+  fontSize,
+  avatarRadius = 9999,
+}: {
+  identity: OgIdentity;
+  size: number;
+  fontSize: number;
+  avatarRadius?: number;
+}) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 44,
-        height: 44,
-        borderRadius: 9999,
-        border: ringed ? `3px solid ${OG_COLORS.success}` : 'none',
-        background: OG_MIX.avatarBg,
-        color: OG_COLORS.text,
-        fontSize: 18,
-        fontWeight: 700,
-        letterSpacing: 0.4,
-      }}
-    >
-      {ogInitials(name)}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      {identity.avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={identity.avatarUrl}
+          width={size}
+          height={size}
+          alt=""
+          style={{ width: size, height: size, borderRadius: avatarRadius }}
+        />
+      ) : null}
+      <span style={{ color: OG_COLORS.textSecondary, fontSize, fontWeight: 500 }}>
+        {identity.name}
+      </span>
     </div>
   );
 }
 
-/** A single uppercase metadata item: `LABEL value`. */
-function MetaItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-      <span style={{ color: OG_COLORS.textTertiary }}>{label}</span>
-      <span style={{ color: OG_COLORS.textSecondary }}>{value}</span>
-    </div>
-  );
-}
-
-export function TrailBriefCardOG({
-  heading,
-  eyebrow,
-  author,
-  createdLabel,
-  summary,
-  stopCount,
-  reviewers = [],
-  noteAuthorCount = 0,
-  visitorCount = 0,
-  repoLabel,
-}: TrailBriefCardOGProps) {
-  const shownReviewers = reviewers.slice(0, MAX_AVATARS);
-  const overflowReviewers = reviewers.length - shownReviewers.length;
-
-  // The live Satori build ignores `lineClamp`, so we clamp by character
-  // budget to keep both fields inside their fixed regions: ~2 lines of
-  // heading (≈42 chars/line at 48px) and ~2 lines of summary. Sizing the
-  // text to whole lines avoids the ugly mid-line clip overflow:hidden gives.
-  const clampedHeading = ogTruncate(heading, 84);
-  const clampedSummary = summary ? ogTruncate(summary, 168) : undefined;
-
-  // Compact metrics that ride the footer strip's right edge.
-  const metrics: string[] = [];
-  if (typeof stopCount === 'number') metrics.push(`${stopCount} STOPS`);
-  if (noteAuthorCount > 0) metrics.push(`NOTED BY ${noteAuthorCount}`);
-  if (visitorCount > 0) metrics.push(`VISITORS ${visitorCount}`);
+/** The File City map panel — touched-file squares + dashed trail, with the
+ *  repo (owner avatar + name) overlaid as a chip in the corner. */
+function FileMapPanel({ map, repo }: { map: FileMapData; repo?: OgIdentity }) {
+  const trailPath =
+    map.centers.length > 1
+      ? `M ${map.centers[0]!.x} ${map.centers[0]!.y} ` +
+        map.centers
+          .slice(1)
+          .map((c) => `L ${c.x} ${c.y}`)
+          .join(' ')
+      : '';
 
   return (
     <div
       style={{
+        position: 'absolute',
+        top: (628 - map.h) / 2,
+        right: 50,
+        width: map.w,
+        height: map.h,
         display: 'flex',
-        width: 1200,
-        height: 628,
-        padding: 40,
-        background: '#141517',
-        fontFamily: OG_FONT,
-        color: OG_COLORS.text,
+        background: OG_COLORS.backgroundSecondary,
+        border: `1px solid ${OG_COLORS.border}`,
+        borderRadius: 16,
+        overflow: 'hidden',
       }}
     >
-      {/* Published-chrome card: square corners + accent-tinted border. */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          flex: 1,
-          background: OG_COLORS.backgroundSecondary,
-          border: `2px solid ${OG_MIX.accentBorder}`,
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.25)',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Header */}
+      {/* Touched file squares, colored by file type. */}
+      {map.rects.map((r, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            left: r.x,
+            top: r.y,
+            width: r.w,
+            height: r.h,
+            background: r.color,
+            borderRadius: 3,
+            display: 'flex',
+          }}
+        />
+      ))}
+
+      {/* Dashed trail above the file squares. */}
+      {trailPath ? (
+        <svg
+          width={map.w}
+          height={map.h}
+          viewBox={`0 0 ${map.w} ${map.h}`}
+          style={{ position: 'absolute', top: 0, left: 0 }}
+        >
+          <path
+            d={trailPath}
+            fill="none"
+            stroke={OG_COLORS.primary}
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray="6 5"
+            opacity={0.85}
+          />
+        </svg>
+      ) : null}
+
+      {/* Stop dots — one per touched building center, on top of the trail. */}
+      {map.centers.map((c, i) => {
+        const d = 11;
+        return (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              left: c.x - d / 2,
+              top: c.y - d / 2,
+              width: d,
+              height: d,
+              borderRadius: 9999,
+              background: OG_COLORS.primary,
+              border: `2px solid ${OG_COLORS.background}`,
+              display: 'flex',
+            }}
+          />
+        );
+      })}
+
+      {/* Repo chip — owner avatar + repo name, overlaid centered at the bottom. */}
+      {repo ? (
         <div
           style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 18,
             display: 'flex',
-            flexDirection: 'column',
-            gap: 16,
-            padding: '40px 48px 32px',
-            borderBottom: `1px solid ${OG_COLORS.border}`,
+            justifyContent: 'center',
           }}
         >
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
+              padding: '11px 30px 11px 11px',
+              background: OG_COLORS.background,
+              border: `1px solid ${OG_COLORS.border}`,
+              borderRadius: 16,
             }}
           >
-            <span
-              style={{
-                color: OG_COLORS.accent,
-                fontSize: 20,
-                fontWeight: 700,
-                letterSpacing: 3,
-              }}
-            >
-              {eyebrow ?? 'CODE TRAIL'}
-            </span>
-            {repoLabel ? (
-              <span style={{ color: OG_COLORS.textTertiary, fontSize: 20, letterSpacing: 1 }}>
-                {repoLabel}
-              </span>
-            ) : null}
+            <AvatarLabel identity={repo} size={68} fontSize={32} avatarRadius={14} />
           </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
-          <div
+export function TrailBriefCardOG({
+  heading,
+  author,
+  summary,
+  repo,
+  fileMap,
+}: TrailBriefCardOGProps) {
+  const clampedHeading = ogTruncate(heading, 84);
+  const clampedSummary = summary ? ogTruncate(summary, 180) : undefined;
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        display: 'flex',
+        width: 1200,
+        height: 628,
+        background: OG_COLORS.background,
+        fontFamily: OG_FONT,
+        color: OG_COLORS.text,
+        overflow: 'hidden',
+      }}
+    >
+      {/* File City map — right side, with the repo chip overlaid. */}
+      {fileMap ? <FileMapPanel map={fileMap} repo={repo} /> : null}
+
+      {/* Left column — top-aligned (the bottom-left is reserved for the logo). */}
+      <div
+        style={{
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-start',
+          width: fileMap ? 620 : 1200,
+          height: 628,
+          padding: '64px 56px 0 72px',
+        }}
+      >
+        <div style={{ display: 'flex', marginBottom: 22 }}>
+          <span
             style={{
-              display: 'flex',
-              fontSize: 48,
+              color: OG_COLORS.primary,
+              fontSize: 20,
               fontWeight: 700,
-              lineHeight: 1.15,
-              color: OG_COLORS.text,
-            }}
-          >
-            {clampedHeading}
-          </div>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              gap: 28,
-              fontSize: 22,
-              letterSpacing: 1,
+              letterSpacing: 3,
               textTransform: 'uppercase',
             }}
           >
-            {createdLabel ? <MetaItem label="CREATED" value={createdLabel} /> : null}
-            {author ? <MetaItem label="BY" value={author} /> : null}
+            Code Trail
+          </span>
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            fontSize: 52,
+            fontWeight: 700,
+            lineHeight: 1.1,
+            letterSpacing: -1,
+            color: OG_COLORS.text,
+          }}
+        >
+          {clampedHeading}
+        </div>
+
+        {/* "by [avatar] author" byline, under the title. */}
+        {author ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 24 }}>
+            <span style={{ color: OG_COLORS.textTertiary, fontSize: 26 }}>by</span>
+            <AvatarLabel identity={author} size={44} fontSize={26} />
           </div>
-        </div>
+        ) : null}
 
-        {/* Body — summary. Pre-truncated by the caller (the live Satori build
-            ignores `lineClamp`, so length is bounded upstream); overflow:hidden
-            is a belt-and-braces guard against an over-long line. */}
-        <div
-          style={{
-            display: 'flex',
-            flex: 1,
-            padding: '32px 48px',
-            fontSize: 26,
-            lineHeight: 1.5,
-            color: summary ? OG_COLORS.text : OG_COLORS.textMuted,
-            overflow: 'hidden',
-          }}
-        >
-          {clampedSummary || 'A guided trail through the codebase.'}
-        </div>
+        {clampedSummary ? (
+          <div
+            style={{
+              display: 'flex',
+              marginTop: 28,
+              fontSize: 25,
+              lineHeight: 1.5,
+              color: OG_COLORS.text,
+            }}
+          >
+            {clampedSummary}
+          </div>
+        ) : null}
+      </div>
 
-        {/* Footer cohort strip */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 16,
-            margin: '0 48px 40px',
-            padding: '16px 24px',
-            background: OG_COLORS.background,
-            border: `1px solid ${OG_COLORS.border}`,
-          }}
-        >
-          {shownReviewers.length > 0 ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span
-                style={{
-                  color: OG_COLORS.textTertiary,
-                  fontSize: 20,
-                  letterSpacing: 1,
-                }}
-              >
-                REVIEWED BY
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {shownReviewers.map((name) => (
-                  <OgAvatar key={name} name={name} ringed />
-                ))}
-                {overflowReviewers > 0 ? (
-                  <span style={{ color: OG_COLORS.textSecondary, fontSize: 20 }}>
-                    +{overflowReviewers}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          ) : (
-            <span style={{ color: OG_COLORS.textTertiary, fontSize: 20, letterSpacing: 1 }}>
-              UNREVIEWED
-            </span>
-          )}
-
-          {metrics.length > 0 ? (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 20,
-                marginLeft: 'auto',
-                color: OG_COLORS.textTertiary,
-                fontSize: 20,
-                letterSpacing: 1,
-              }}
-            >
-              {metrics.map((m) => (
-                <span key={m}>{m}</span>
-              ))}
-            </div>
-          ) : null}
-        </div>
+      {/* File City logo — bottom-left brand mark. */}
+      <div style={{ position: 'absolute', bottom: 40, left: 72, display: 'flex' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={FILE_CITY_LOGO_DATA_URI} width={96} height={96} alt="" />
       </div>
     </div>
   );

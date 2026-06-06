@@ -1,6 +1,34 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
 import { TrailBriefCardOG } from './TrailBriefCardOG';
+import { projectTouchedCity } from './fileCityProjection';
+import type { CityData } from '@principal-ai/file-city-builder';
+
+/**
+ * Sample File City (a slice of `tj/commander.js`, real treemap positions/sizes)
+ * + a spread-out set of "touched" files in trail order. Run through the real
+ * `projectTouchedCity` so the map previews 1:1 with the OG route, which builds
+ * the city from the live GitHub tree.
+ */
+const SAMPLE_CITY: CityData = {
+  buildings: [
+    { path: 'examples/action-this.js', position: { x: 69, y: 2, z: 1183 }, dimensions: [69, 7, 80], type: 'file', fileExtension: '.js' },
+    { path: 'index.js', position: { x: 1262, y: 2, z: 1249 }, dimensions: [119, 7, 69], type: 'file', fileExtension: '.js' },
+    { path: 'typings/index.d.ts', position: { x: 1231, y: 2, z: 760 }, dimensions: [56, 40, 140], type: 'file', fileExtension: '.ts' },
+    { path: 'lib/option.js', position: { x: 1440, y: 2, z: 589 }, dimensions: [145, 40, 54], type: 'file', fileExtension: '.js' },
+    { path: 'lib/command.js', position: { x: 1479, y: 2, z: 374 }, dimensions: [71, 40, 113], type: 'file', fileExtension: '.js' },
+  ],
+  districts: [],
+  bounds: { minX: 0, maxX: 1520, minZ: 0, maxZ: 1520 },
+  metadata: { totalFiles: 5, totalDirectories: 0, analyzedAt: new Date(0), rootPath: '' },
+};
+
+const SAMPLE_FILE_MAP = projectTouchedCity(
+  SAMPLE_CITY,
+  ['examples/action-this.js', 'index.js', 'typings/index.d.ts', 'lib/option.js', 'lib/command.js'],
+  500,
+  500,
+);
 
 /**
  * Stories for the trail social-preview card. The card is fixed at 1200×628
@@ -25,62 +53,45 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+// Sample author (kicker) + repo (bottom tag). Repo matches SAMPLE_FILE_MAP
+// (tj/commander.js); avatars use real GitHub logins so they load in Storybook.
+const SAMPLE_AUTHOR = { name: 'Fernando', avatarUrl: 'https://github.com/sindresorhus.png?size=120' };
+const SAMPLE_REPO = { name: 'commander.js', avatarUrl: 'https://github.com/tj.png?size=120' };
+
 export const Investigation: Story = {
   args: {
-    eyebrow: 'INVESTIGATION TRAIL',
     heading: 'How does a shared trail resolve from a bare /trail/:id link?',
-    author: 'Fernando',
-    createdLabel: '3d ago',
-    // ~200 chars — mirrors the route's truncation so this previews 1:1.
-    summary:
-      'Traces the by-id pointer resolver: the /trail/:id page hits /api/trails/by-id/{id}, which reads the trails/_by-id/{id}.json pointer to find the owning {owner, repo}, then verifies repo access…',
-    stopCount: 7,
-    reviewers: ['Ada Lovelace', 'Grace Hopper'],
-    noteAuthorCount: 3,
-    visitorCount: 42,
-    repoLabel: 'principal-ai/web-ade',
+    author: SAMPLE_AUTHOR,
+    repo: SAMPLE_REPO,
+    fileMap: SAMPLE_FILE_MAP,
   },
 };
 
 export const Changelog: Story = {
   args: {
-    eyebrow: 'CHANGELOG TRAIL',
     heading: 'Trails/Explored Files switch with file→trails overlay',
-    author: 'Fernando',
-    createdLabel: '2w ago',
-    summary:
-      'Adds a switch between the Trails and Explored Files views, with an overlay that maps explored files back onto the trails that touched them.',
-    stopCount: 4,
-    reviewers: ['Alan Turing'],
-    visitorCount: 12,
-    repoLabel: 'principal-ai/web-ade',
+    author: SAMPLE_AUTHOR,
+    summary: 'A short example summary, the way it renders under the heading.',
+    repo: SAMPLE_REPO,
+    fileMap: SAMPLE_FILE_MAP,
   },
 };
 
 export const InformativeVerified: Story = {
   args: {
-    eyebrow: 'VERIFIED TRAIL',
     heading: 'Cross-repo type sharing for File City panels',
-    author: 'Fernando',
-    createdLabel: 'just now',
-    summary:
-      'File City payload, marker, snippet, and index-entry types come from @industry-theme/file-city-panel — the shared cross-repo source of truth also consumed by the electron app…',
-    stopCount: 9,
-    reviewers: ['Ada Lovelace', 'Grace Hopper', 'Alan Turing', 'Katherine Johnson', 'Margaret Hamilton', 'Barbara Liskov'],
-    noteAuthorCount: 5,
-    visitorCount: 128,
-    repoLabel: 'principal-ai/web-ade',
+    author: SAMPLE_AUTHOR,
+    summary: 'A short example summary, the way it renders under the heading.',
+    repo: SAMPLE_REPO,
+    fileMap: SAMPLE_FILE_MAP,
   },
 };
 
-/** Long heading that must clamp; no summary; no reviewers. */
+/** Long heading that must clamp; no summary; no map. */
 export const Minimal: Story = {
   args: {
-    eyebrow: 'UNVERIFIED TRAIL',
     heading:
       'A deliberately very long trail heading that should wrap to two lines and then clamp without spilling past the header region of the card',
-    author: 'Fernando',
-    createdLabel: '5mo ago',
-    stopCount: 2,
+    author: SAMPLE_AUTHOR,
   },
 };
