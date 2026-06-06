@@ -10,8 +10,8 @@ import {
 } from '@principal-ade/industry-theme';
 
 export const availableThemes = [
-  { name: 'Light', theme: iceTangerineTheme },
   { name: 'Dark', theme: iceTangerineDarkTheme },
+  { name: 'Light', theme: iceTangerineTheme },
   { name: 'Neon', theme: slateNeonTheme },
 ] as const;
 
