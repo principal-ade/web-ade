@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
@@ -38,18 +39,61 @@ export const viewport: Viewport = {
   viewportFit: "cover", // Re-enabled to extend into safe areas
 };
 
-export const metadata: Metadata = {
-  title: "Principal AI",
-  description: "A full-featured browser-based IDE with real-time collaboration",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Principal AI",
-  },
-  formatDetection: {
-    telephone: false,
-  },
-};
+const SITE_TITLE = "Principal AI";
+const SITE_DESCRIPTION =
+  "A full-featured browser-based IDE with real-time collaboration";
+
+async function resolveBaseUrl(): Promise<string> {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") || h.get("host") || "localhost:3000";
+  const proto =
+    h.get("x-forwarded-proto") ||
+    (process.env.NODE_ENV === "production" ? "https" : "http");
+  return (
+    process.env.APP_URL ||
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    `${proto}://${host}`
+  );
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const baseUrl = await resolveBaseUrl();
+  const imageUrl = `${baseUrl}/api/og`;
+
+  return {
+    metadataBase: new URL(baseUrl),
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "black-translucent",
+      title: SITE_TITLE,
+    },
+    formatDetection: {
+      telephone: false,
+    },
+    openGraph: {
+      title: SITE_TITLE,
+      description: SITE_DESCRIPTION,
+      type: "website",
+      url: baseUrl,
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 628,
+          alt: "Principal AI — Code trails",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: SITE_TITLE,
+      description: SITE_DESCRIPTION,
+      images: [imageUrl],
+    },
+  };
+}
 
 export default function RootLayout({
   children,

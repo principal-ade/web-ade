@@ -7,25 +7,25 @@
  *
  * So the OG cards can't import the live `TrailBriefCard` or call
  * `useTheme()`. Instead we hand-port the bits we need: the resolved
- * `slateNeonTheme` color tokens (the app's default theme — see
+ * `iceTangerineDarkTheme` color tokens (the app's default theme — see
  * `src/contexts/ThemeContext.tsx`) frozen as plain hex, plus the handful of
  * `color-mix(...)` results the real card computes at runtime, precomputed
  * here as static hex. Keep these in sync if the default theme changes.
  */
 
-/** Resolved `slateNeonTheme.colors` tokens used by the OG cards. */
+/** Resolved `iceTangerineDarkTheme.colors` tokens used by the OG cards. */
 export const OG_COLORS = {
-  text: '#d0d6e0',
-  textSecondary: '#e5e7eb',
-  textTertiary: '#6b7280',
-  textMuted: '#4b5563',
-  background: '#1a1c1e',
-  backgroundSecondary: '#22252a',
-  surface: '#1f2124',
+  text: '#d0e5ea',
+  textSecondary: '#9fc4d4',
+  textTertiary: '#7ba8bc',
+  textMuted: '#5a8a9e',
+  background: '#0d274d',
+  backgroundSecondary: '#0f2e58',
+  surface: '#0f2e58',
   primary: '#ff6b35',
   secondary: '#ff8257',
-  accent: '#00ff00',
-  border: '#2d3034',
+  accent: '#0893d2',
+  border: '#1e3a5f',
   success: '#10b981',
 } as const;
 
@@ -38,10 +38,10 @@ export const OG_COLORS = {
  *    avatar fill (see `Avatar` in TrailBriefCard).
  */
 export const OG_MIX = {
-  /** color-mix(in srgb, #00ff00 55%, #2d3034) */
-  accentBorder: '#14a217',
-  /** color-mix(in srgb, #00ff00 30%, #1a1c1e) */
-  avatarBg: '#126015',
+  /** color-mix(in srgb, #0893d2 55%, #1e3a5f) */
+  accentBorder: '#126b9e',
+  /** color-mix(in srgb, #0893d2 30%, #0d274d) */
+  avatarBg: '#0c4775',
 } as const;
 
 /** System sans stack. Satori falls back to its bundled font regardless; this
