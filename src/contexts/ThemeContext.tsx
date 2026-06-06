@@ -3,14 +3,16 @@
 import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useMemo } from 'react';
 import {
   slateNeonTheme,
+  iceTangerineTheme,
   iceTangerineDarkTheme,
   overrideColors,
   type Theme,
 } from '@principal-ade/industry-theme';
 
 export const availableThemes = [
-  { name: 'Neon', theme: slateNeonTheme },
+  { name: 'Light', theme: iceTangerineTheme },
   { name: 'Dark', theme: iceTangerineDarkTheme },
+  { name: 'Neon', theme: slateNeonTheme },
 ] as const;
 
 // Themes to skip when cycling
