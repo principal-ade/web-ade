@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useMemo } from 'react';
 import {
-  slateNeonTheme,
   iceTangerineTheme,
   iceTangerineDarkTheme,
   overrideColors,
@@ -12,7 +11,6 @@ import {
 export const availableThemes = [
   { name: 'Dark', theme: iceTangerineDarkTheme },
   { name: 'Light', theme: iceTangerineTheme },
-  { name: 'Neon', theme: slateNeonTheme },
 ] as const;
 
 // Themes to skip when cycling
