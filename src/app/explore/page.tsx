@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useTheme } from '@principal-ade/industry-theme';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { TrailBackdrop } from '@/components/home/TrailBackdrop';
-import { TrailsExplorer } from '@/components/home/TrailsExplorer';
+import { TrailsFeed } from '@/components/home/TrailsFeed';
 
 export default function ExplorePage() {
   const { theme } = useTheme();
@@ -74,7 +74,7 @@ export default function ExplorePage() {
           zIndex: 1,
         }}
       >
-        <TrailsExplorer />
+        <TrailsFeed />
       </main>
     </div>
   );

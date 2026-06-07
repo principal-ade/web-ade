@@ -20,6 +20,7 @@ import React from 'react';
 import { OG_COLORS, OG_FONT, ogTruncate } from './ogTheme';
 import type { FileMapData } from './fileCityProjection';
 import { FILE_CITY_LOGO_DATA_URI } from './fileCityLogo';
+import { FileMapPanel } from './TrailFileMapPanel';
 
 /** A person/repo identity — display name + optional avatar (a data URI or URL). */
 export interface OgIdentity {
@@ -68,113 +69,6 @@ function AvatarLabel({
       <span style={{ color: OG_COLORS.textSecondary, fontSize, fontWeight: 500 }}>
         {identity.name}
       </span>
-    </div>
-  );
-}
-
-/** The File City map panel — touched-file squares + dashed trail. */
-function FileMapPanel({ map }: { map: FileMapData }) {
-  const trailPath =
-    map.centers.length > 1
-      ? `M ${map.centers[0]!.x} ${map.centers[0]!.y} ` +
-        map.centers
-          .slice(1)
-          .map((c) => `L ${c.x} ${c.y}`)
-          .join(' ')
-      : '';
-
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: (628 - map.h) / 2,
-        right: 50,
-        width: map.w,
-        height: map.h,
-        display: 'flex',
-        background: OG_COLORS.backgroundSecondary,
-        border: `1px solid ${OG_COLORS.border}`,
-        borderRadius: 16,
-        overflow: 'hidden',
-      }}
-    >
-      {/* Directory platforms — back layer, the whole repo's folder structure. */}
-      {map.districts.map((d, i) => (
-        <div
-          key={`d${i}`}
-          style={{
-            position: 'absolute',
-            left: d.x,
-            top: d.y,
-            width: d.w,
-            height: d.h,
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: `1px solid ${OG_COLORS.border}`,
-            borderRadius: 4,
-            display: 'flex',
-          }}
-        />
-      ))}
-
-      {/* Touched file squares, colored by file type. */}
-      {map.rects.map((r, i) => (
-        <div
-          key={i}
-          style={{
-            position: 'absolute',
-            left: r.x,
-            top: r.y,
-            width: r.w,
-            height: r.h,
-            background: r.color,
-            borderRadius: 3,
-            display: 'flex',
-          }}
-        />
-      ))}
-
-      {/* Dashed trail above the file squares. */}
-      {trailPath ? (
-        <svg
-          width={map.w}
-          height={map.h}
-          viewBox={`0 0 ${map.w} ${map.h}`}
-          style={{ position: 'absolute', top: 0, left: 0 }}
-        >
-          <path
-            d={trailPath}
-            fill="none"
-            stroke={OG_COLORS.primary}
-            strokeWidth={2.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeDasharray="6 5"
-            opacity={0.85}
-          />
-        </svg>
-      ) : null}
-
-      {/* Stop dots — one per touched building center, on top of the trail. */}
-      {map.centers.map((c, i) => {
-        const d = 11;
-        return (
-          <div
-            key={i}
-            style={{
-              position: 'absolute',
-              left: c.x - d / 2,
-              top: c.y - d / 2,
-              width: d,
-              height: d,
-              borderRadius: 9999,
-              background: OG_COLORS.primary,
-              border: `2px solid ${OG_COLORS.background}`,
-              display: 'flex',
-            }}
-          />
-        );
-      })}
-
     </div>
   );
 }

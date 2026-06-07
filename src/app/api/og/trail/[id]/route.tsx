@@ -18,9 +18,8 @@ import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { TrailBriefCardOG } from '@/components/trail/og/TrailBriefCardOG';
 import { TrailMarketingCardOG } from '@/components/trail/og/TrailMarketingCardOG';
-import { projectTouchedCity } from '@/components/trail/og/fileCityProjection';
+import { buildTrailFileMap } from '@/lib/trails/trail-file-map';
 import type { TrailPayload } from '@/lib/trails/types';
-import type { CityData } from '@principal-ai/file-city-builder';
 
 // File City map panel size (matches `TrailBriefCardOG`'s right panel).
 const MAP_SIZE = 500;
@@ -93,25 +92,7 @@ export async function GET(
     // Build the trail's File City map: the same full-tree → touched-files
     // projection the preview uses, sourced from this trail's repo + markers.
     // Best-effort — a tree-fetch failure just drops the map, never the card.
-    const touchedPaths = (payload.markers ?? [])
-      .map((m) => m.sourcePath)
-      .filter((p): p is string => !!p);
-
-    let fileMap = null;
-    if (touchedPaths.length > 0) {
-      try {
-        const cityRes = await fetch(
-          `${baseUrl}/api/file-city-data/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,
-          { cache: 'no-store' },
-        );
-        if (cityRes.ok) {
-          const { cityData }: { cityData: CityData } = await cityRes.json();
-          fileMap = projectTouchedCity(cityData, touchedPaths, MAP_SIZE, MAP_SIZE);
-        }
-      } catch {
-        // Map is optional; render the card without it.
-      }
-    }
+    const fileMap = await buildTrailFileMap(baseUrl, owner, repo, payload, MAP_SIZE);
 
     const isShared = !!payload.share;
     const request_ = payload.request?.trim();

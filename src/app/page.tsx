@@ -17,7 +17,7 @@ import { LgtmStamp, SignOffStampAnimation } from '@/components/trail/LgtmStamp';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { SignedInDashboard } from '@/components/home/SignedInDashboard';
 import { TrailBackdrop } from '@/components/home/TrailBackdrop';
-import { TrailsExplorer } from '@/components/home/TrailsExplorer';
+import { TrailsFeed } from '@/components/home/TrailsFeed';
 import { TopicsFeed } from '@/components/home/TopicsFeed';
 import { NewTopicButton } from '@/components/NewTopicButton';
 import { useAuth } from '@/contexts/AuthContext';
@@ -458,7 +458,7 @@ export default function HomePage() {
               fading ? 'opacity-0' : 'opacity-100'
             }`}
           >
-            {view === 'trails' ? <TrailsExplorer /> : <TopicsFeed />}
+            {view === 'trails' ? <TrailsFeed /> : <TopicsFeed />}
           </section>
         ) : signedIn ? (
           <SignedInDashboard user={user} />
@@ -529,6 +529,8 @@ export default function HomePage() {
                   >
                     View Trails
                   </button>
+                  {/* Topics CTA temporarily hidden. */}
+                  {false && (
                   <button
                     type="button"
                     onClick={() => goToView('topics')}
@@ -542,6 +544,7 @@ export default function HomePage() {
                   >
                     View Topics
                   </button>
+                  )}
                   <span
                     className={`text-sm w-64 text-center transition-opacity duration-700 ease-out ${
                       showSecondaryCta ? 'opacity-100' : 'opacity-0'

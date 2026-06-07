@@ -158,6 +158,23 @@ export interface ListPublicReposWithTrailsResponse {
 }
 
 /**
+ * A single public trail in the flat home/explore feed — the repo-index entry
+ * plus the owner/repo it lives under, so a card can render + link without
+ * resolving the id pointer. Sourced from each public repo's
+ * `trails/{owner}/{repo}/index.json`. See `listPublicTrails`.
+ */
+export interface PublicTrailEntry extends SharedTrailIndexEntry {
+  owner: string;
+  repo: string;
+}
+
+export interface ListPublicTrailsResponse {
+  entries: PublicTrailEntry[];
+  /** `updatedAt` of the last returned entry when more remain; else absent. */
+  nextCursor?: string;
+}
+
+/**
  * Per-user manifest row — same shape as a repo-index entry plus the
  * owner/repo pair the trail lives under. Lets a dashboard render a card
  * with a "{owner}/{repo}" subtitle without resolving the id pointer.
