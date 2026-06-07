@@ -4,7 +4,7 @@
  * previews (Open Graph / Twitter cards).
  *
  * Styled after the marketing card (`TrailMarketingCardOG`): a left-aligned
- * eyebrow → heading → CREATED/BY meta → summary, beside a File City map on the
+ * eyebrow → heading → author byline, beside a File City map on the
  * right. The map shows only the trail's *touched* files (the buildings its
  * markers' `sourcePath`s point at), top-down projected and colored by file
  * type, with a dashed trail threading them in order — mirroring the trail
@@ -19,7 +19,6 @@
 import React from 'react';
 import { OG_COLORS, OG_FONT, ogTruncate } from './ogTheme';
 import type { FileMapData } from './fileCityProjection';
-import { FILE_CITY_LOGO_DATA_URI } from './fileCityLogo';
 
 /** A person/repo identity — display name + optional avatar (a data URI or URL). */
 export interface OgIdentity {
@@ -32,10 +31,10 @@ export interface TrailBriefCardOGProps {
   heading: string;
   /** Trail author — shown as "Code Trail by [avatar] name" in the kicker. */
   author?: OgIdentity;
-  /** Plain-text summary (markdown stripped/truncated upstream). */
-  summary?: string;
-  /** Repo — owner avatar + repo name, pinned bottom-left. */
+  /** Repo — owner avatar + repo name, shown in the top slot. */
   repo?: OgIdentity;
+  /** Repo owner login — shown under the repo name in the top slot. */
+  owner?: string;
   /** Projected File City map of the trail's touched files (right panel). */
   fileMap?: FileMapData | null;
 }
@@ -72,9 +71,8 @@ function AvatarLabel({
   );
 }
 
-/** The File City map panel — touched-file squares + dashed trail, with the
- *  repo (owner avatar + name) overlaid as a chip in the corner. */
-function FileMapPanel({ map, repo }: { map: FileMapData; repo?: OgIdentity }) {
+/** The File City map panel — touched-file squares + dashed trail. */
+function FileMapPanel({ map }: { map: FileMapData }) {
   const trailPath =
     map.centers.length > 1
       ? `M ${map.centers[0]!.x} ${map.centers[0]!.y} ` +
@@ -99,6 +97,24 @@ function FileMapPanel({ map, repo }: { map: FileMapData; repo?: OgIdentity }) {
         overflow: 'hidden',
       }}
     >
+      {/* Directory platforms — back layer, the whole repo's folder structure. */}
+      {map.districts.map((d, i) => (
+        <div
+          key={`d${i}`}
+          style={{
+            position: 'absolute',
+            left: d.x,
+            top: d.y,
+            width: d.w,
+            height: d.h,
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: `1px solid ${OG_COLORS.border}`,
+            borderRadius: 4,
+            display: 'flex',
+          }}
+        />
+      ))}
+
       {/* Touched file squares, colored by file type. */}
       {map.rects.map((r, i) => (
         <div
@@ -158,32 +174,6 @@ function FileMapPanel({ map, repo }: { map: FileMapData; repo?: OgIdentity }) {
         );
       })}
 
-      {/* Repo chip — owner avatar + repo name, overlaid centered at the bottom. */}
-      {repo ? (
-        <div
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            top: 18,
-            display: 'flex',
-            justifyContent: 'center',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '11px 30px 11px 11px',
-              background: OG_COLORS.background,
-              border: `1px solid ${OG_COLORS.border}`,
-              borderRadius: 16,
-            }}
-          >
-            <AvatarLabel identity={repo} size={68} fontSize={32} avatarRadius={14} />
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -191,12 +181,11 @@ function FileMapPanel({ map, repo }: { map: FileMapData; repo?: OgIdentity }) {
 export function TrailBriefCardOG({
   heading,
   author,
-  summary,
   repo,
+  owner,
   fileMap,
 }: TrailBriefCardOGProps) {
   const clampedHeading = ogTruncate(heading, 84);
-  const clampedSummary = summary ? ogTruncate(summary, 180) : undefined;
 
   return (
     <div
@@ -211,10 +200,10 @@ export function TrailBriefCardOG({
         overflow: 'hidden',
       }}
     >
-      {/* File City map — right side, with the repo chip overlaid. */}
-      {fileMap ? <FileMapPanel map={fileMap} repo={repo} /> : null}
+      {/* File City map — right side. */}
+      {fileMap ? <FileMapPanel map={fileMap} /> : null}
 
-      {/* Left column — top-aligned (the bottom-left is reserved for the logo). */}
+      {/* Left column — top-aligned, led by the brand mark above the eyebrow. */}
       <div
         style={{
           position: 'relative',
@@ -226,6 +215,33 @@ export function TrailBriefCardOG({
           padding: '64px 56px 0 72px',
         }}
       >
+        {/* Repo — owner avatar + repo name, with the owner login stacked
+            underneath. Leads the column in the top slot. */}
+        {repo ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 26 }}>
+            {repo.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={repo.avatarUrl}
+                width={60}
+                height={60}
+                alt=""
+                style={{ width: 60, height: 60, borderRadius: 14 }}
+              />
+            ) : null}
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ color: OG_COLORS.text, fontSize: 30, fontWeight: 600 }}>
+                {repo.name}
+              </span>
+              {owner ? (
+                <span style={{ color: OG_COLORS.textTertiary, fontSize: 22, marginTop: 2 }}>
+                  {owner}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         <div style={{ display: 'flex', marginBottom: 22 }}>
           <span
             style={{
@@ -260,26 +276,6 @@ export function TrailBriefCardOG({
             <AvatarLabel identity={author} size={44} fontSize={26} />
           </div>
         ) : null}
-
-        {clampedSummary ? (
-          <div
-            style={{
-              display: 'flex',
-              marginTop: 28,
-              fontSize: 25,
-              lineHeight: 1.5,
-              color: OG_COLORS.text,
-            }}
-          >
-            {clampedSummary}
-          </div>
-        ) : null}
-      </div>
-
-      {/* File City logo — bottom-left brand mark. */}
-      <div style={{ position: 'absolute', bottom: 40, left: 72, display: 'flex' }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={FILE_CITY_LOGO_DATA_URI} width={96} height={96} alt="" />
       </div>
     </div>
   );

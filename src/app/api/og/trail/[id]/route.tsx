@@ -18,7 +18,6 @@ import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { TrailBriefCardOG } from '@/components/trail/og/TrailBriefCardOG';
 import { TrailMarketingCardOG } from '@/components/trail/og/TrailMarketingCardOG';
-import { ogStripMarkdown, ogTruncate } from '@/components/trail/og/ogTheme';
 import { projectTouchedCity } from '@/components/trail/og/fileCityProjection';
 import type { TrailPayload } from '@/lib/trails/types';
 import type { CityData } from '@principal-ai/file-city-builder';
@@ -125,12 +124,6 @@ export async function GET(
       ? await ghAvatarDataUri(payload.author)
       : undefined;
 
-    // ~200 chars ≈ 3 lines — bounded upstream since the live Satori build
-    // ignores `lineClamp`.
-    const summary = payload.summary
-      ? ogTruncate(ogStripMarkdown(payload.summary), 200)
-      : undefined;
-
     return ogResponse(
       <TrailBriefCardOG
         heading={heading}
@@ -139,8 +132,8 @@ export async function GET(
             ? { name: payload.author, avatarUrl: authorAvatarUrl }
             : undefined
         }
-        summary={summary}
         repo={{ name: repo, avatarUrl: ownerAvatarUrl }}
+        owner={owner}
         fileMap={fileMap}
       />,
       noCache,

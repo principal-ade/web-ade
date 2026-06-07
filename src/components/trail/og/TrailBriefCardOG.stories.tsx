@@ -18,7 +18,22 @@ const SAMPLE_CITY: CityData = {
     { path: 'lib/option.js', position: { x: 1440, y: 2, z: 589 }, dimensions: [145, 40, 54], type: 'file', fileExtension: '.js' },
     { path: 'lib/command.js', position: { x: 1479, y: 2, z: 374 }, dimensions: [71, 40, 113], type: 'file', fileExtension: '.js' },
   ],
-  districts: [],
+  districts: [
+    { path: 'examples', worldBounds: { minX: 0, maxX: 620, minZ: 1080, maxZ: 1520 }, fileCount: 12, type: 'directory' },
+    { path: 'lib', worldBounds: { minX: 1340, maxX: 1520, minZ: 280, maxZ: 660 }, fileCount: 6, type: 'directory' },
+    { path: 'typings', worldBounds: { minX: 1180, maxX: 1320, minZ: 660, maxZ: 870 }, fileCount: 2, type: 'directory' },
+    { path: 'tests', worldBounds: { minX: 0, maxX: 700, minZ: 0, maxZ: 1060 }, fileCount: 20, type: 'directory' },
+    { path: 'docs', worldBounds: { minX: 720, maxX: 1160, minZ: 0, maxZ: 600 }, fileCount: 8, type: 'directory' },
+    {
+      path: 'src',
+      worldBounds: { minX: 720, maxX: 1160, minZ: 620, maxZ: 1520 },
+      fileCount: 14,
+      type: 'directory',
+      children: [
+        { path: 'src/utils', worldBounds: { minX: 760, maxX: 1120, minZ: 1000, maxZ: 1480 }, fileCount: 5, type: 'directory' },
+      ],
+    },
+  ],
   bounds: { minX: 0, maxX: 1520, minZ: 0, maxZ: 1520 },
   metadata: { totalFiles: 5, totalDirectories: 0, analyzedAt: new Date(0), rootPath: '' },
 };
@@ -63,6 +78,7 @@ export const Investigation: Story = {
     heading: 'How does a shared trail resolve from a bare /trail/:id link?',
     author: SAMPLE_AUTHOR,
     repo: SAMPLE_REPO,
+    owner: 'tj',
     fileMap: SAMPLE_FILE_MAP,
   },
 };
@@ -71,8 +87,8 @@ export const Changelog: Story = {
   args: {
     heading: 'Trails/Explored Files switch with file→trails overlay',
     author: SAMPLE_AUTHOR,
-    summary: 'A short example summary, the way it renders under the heading.',
     repo: SAMPLE_REPO,
+    owner: 'tj',
     fileMap: SAMPLE_FILE_MAP,
   },
 };
@@ -81,8 +97,8 @@ export const InformativeVerified: Story = {
   args: {
     heading: 'Cross-repo type sharing for File City panels',
     author: SAMPLE_AUTHOR,
-    summary: 'A short example summary, the way it renders under the heading.',
     repo: SAMPLE_REPO,
+    owner: 'tj',
     fileMap: SAMPLE_FILE_MAP,
   },
 };
