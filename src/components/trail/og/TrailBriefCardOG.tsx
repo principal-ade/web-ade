@@ -19,6 +19,7 @@
 import React from 'react';
 import { OG_COLORS, OG_FONT, ogTruncate } from './ogTheme';
 import type { FileMapData } from './fileCityProjection';
+import { FILE_CITY_LOGO_DATA_URI } from './fileCityLogo';
 
 /** A person/repo identity — display name + optional avatar (a data URI or URL). */
 export interface OgIdentity {
@@ -212,9 +213,15 @@ export function TrailBriefCardOG({
           justifyContent: 'flex-start',
           width: fileMap ? 620 : 1200,
           height: 628,
-          padding: '64px 56px 56px 72px',
+          padding: 50,
         }}
       >
+        {/* File City logo — brand mark above the eyebrow. */}
+        <div style={{ display: 'flex', marginBottom: 20 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={FILE_CITY_LOGO_DATA_URI} width={44} height={44} alt="" />
+        </div>
+
         <div style={{ display: 'flex', marginBottom: 22 }}>
           <span
             style={{
