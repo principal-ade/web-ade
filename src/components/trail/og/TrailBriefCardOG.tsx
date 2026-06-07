@@ -203,7 +203,7 @@ export function TrailBriefCardOG({
       {/* File City map — right side. */}
       {fileMap ? <FileMapPanel map={fileMap} /> : null}
 
-      {/* Left column — top-aligned, led by the brand mark above the eyebrow. */}
+      {/* Left column — eyebrow → heading → byline at top, repo pinned bottom. */}
       <div
         style={{
           position: 'relative',
@@ -212,36 +212,9 @@ export function TrailBriefCardOG({
           justifyContent: 'flex-start',
           width: fileMap ? 620 : 1200,
           height: 628,
-          padding: '64px 56px 0 72px',
+          padding: '64px 56px 56px 72px',
         }}
       >
-        {/* Repo — owner avatar + repo name, with the owner login stacked
-            underneath. Leads the column in the top slot. */}
-        {repo ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 26 }}>
-            {repo.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={repo.avatarUrl}
-                width={60}
-                height={60}
-                alt=""
-                style={{ width: 60, height: 60, borderRadius: 14 }}
-              />
-            ) : null}
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ color: OG_COLORS.text, fontSize: 30, fontWeight: 600 }}>
-                {repo.name}
-              </span>
-              {owner ? (
-                <span style={{ color: OG_COLORS.textTertiary, fontSize: 22, marginTop: 2 }}>
-                  {owner}
-                </span>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
-
         <div style={{ display: 'flex', marginBottom: 22 }}>
           <span
             style={{
@@ -274,6 +247,33 @@ export function TrailBriefCardOG({
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 24 }}>
             <span style={{ color: OG_COLORS.textTertiary, fontSize: 26 }}>by</span>
             <AvatarLabel identity={author} size={44} fontSize={26} />
+          </div>
+        ) : null}
+
+        {/* Repo — owner avatar + repo name, with the owner login stacked
+            underneath. Pinned to the bottom of the column. */}
+        {repo ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 'auto' }}>
+            {repo.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={repo.avatarUrl}
+                width={84}
+                height={84}
+                alt=""
+                style={{ width: 84, height: 84, borderRadius: 18 }}
+              />
+            ) : null}
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ color: OG_COLORS.text, fontSize: 30, fontWeight: 600, lineHeight: 1.1 }}>
+                {repo.name}
+              </span>
+              {owner ? (
+                <span style={{ color: OG_COLORS.textTertiary, fontSize: 22, lineHeight: 1.1, marginTop: 2 }}>
+                  {owner}
+                </span>
+              ) : null}
+            </div>
           </div>
         ) : null}
       </div>
