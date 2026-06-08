@@ -6,8 +6,6 @@ import { useTheme } from '@principal-ade/industry-theme';
 import {
   X,
   MoveRight,
-  Copy,
-  Check,
   ExternalLink,
   Search,
 } from 'lucide-react';
@@ -19,6 +17,7 @@ import { SignedInDashboard } from '@/components/home/SignedInDashboard';
 import { TrailBackdrop } from '@/components/home/TrailBackdrop';
 import { TrailsFeed } from '@/components/home/TrailsFeed';
 import { TopicsFeed } from '@/components/home/TopicsFeed';
+import { CreateTrailModal } from '@/components/home/CreateTrailModal';
 import { NewTopicButton } from '@/components/NewTopicButton';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -518,6 +517,18 @@ export default function HomePage() {
                 >
                   <button
                     type="button"
+                    onClick={() => setShowCreateModal(true)}
+                    className="inline-flex items-center justify-center gap-1.5 w-64 px-5 py-2.5 rounded-md text-base font-medium transition-opacity hover:opacity-80"
+                    style={{
+                      background: theme.colors.primary,
+                      color: theme.colors.background,
+                    }}
+                    tabIndex={showHint ? 0 : -1}
+                  >
+                    Create a Trail
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => goToView('trails')}
                     className="inline-flex items-center justify-center gap-1.5 w-64 px-5 py-2.5 rounded-md text-base font-medium transition-opacity hover:opacity-80"
                     style={{
@@ -1015,7 +1026,6 @@ export default function HomePage() {
       <CreateTrailModal
         open={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        theme={theme}
       />
     </div>
   );
@@ -1048,233 +1058,6 @@ function Footprint({
       <path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z" />
       <path d="M4 13h4" />
     </svg>
-  );
-}
-
-type TrailMode = 'self' | 'share';
-
-const TRAIL_MODES: Record<TrailMode, {
-  label: string;
-  description: string;
-  skillName: string;
-  skillUrl: string;
-  prompt: string;
-}> = {
-  self: {
-    label: 'Trail for Myself',
-    description: 'Walk a codebase locally to learn or onboard — no publish step.',
-    skillName: 'local-trails',
-    skillUrl: 'https://github.com/principal-ai/skills/blob/main/local-trails/SKILL.md',
-    prompt: `Read the local-trails skill at https://github.com/principal-ai/skills/blob/main/local-trails/SKILL.md and use it to walk me through <topic>.`,
-  },
-  share: {
-    label: 'To Share',
-    description: 'Pick markers and publish a shareable trail others can follow.',
-    skillName: 'publish-trail',
-    skillUrl: 'https://github.com/principal-ai/skills/blob/main/publish-trail/SKILL.md',
-    prompt: `Read the publish-trail skill at https://github.com/principal-ai/skills/blob/main/publish-trail/SKILL.md and use it to walk me through <topic>.`,
-  },
-};
-
-function CreateTrailModal({
-  open,
-  onClose,
-  theme,
-}: {
-  open: boolean;
-  onClose: () => void;
-  theme: ReturnType<typeof useTheme>['theme'];
-}) {
-  const [copied, setCopied] = useState(false);
-  const [mode, setMode] = useState<TrailMode | null>(null);
-
-  // Esc closes the modal.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
-
-  // Reset state when the modal closes so the next open starts fresh.
-  useEffect(() => {
-    if (!open) {
-      setCopied(false);
-      setMode(null);
-    }
-  }, [open]);
-
-  const selected = mode ? TRAIL_MODES[mode] : null;
-
-  const handleCopy = async () => {
-    if (!selected) return;
-    try {
-      await navigator.clipboard.writeText(selected.prompt);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // clipboard may be denied — user can select and copy manually.
-    }
-  };
-
-  if (!open) return null;
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Create your own trail"
-    >
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 backdrop-blur-md"
-        style={{ background: `color-mix(in srgb, ${theme.colors.background} 70%, transparent)` }}
-      />
-
-      {/* Card */}
-      <div
-        className="relative w-full max-w-xl rounded-2xl p-6 backdrop-blur-xl"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: `color-mix(in srgb, ${theme.colors.surface} 85%, transparent)`,
-          border: `1px solid color-mix(in srgb, ${theme.colors.primary} 35%, transparent)`,
-          boxShadow: `0 30px 80px -20px color-mix(in srgb, ${theme.colors.primary} 25%, transparent)`,
-        }}
-      >
-        <div className="flex items-start justify-between gap-4 mb-4">
-          <h3
-            className="text-2xl font-semibold tracking-tight"
-            style={{ color: theme.colors.primary }}
-          >
-            {selected ? selected.label : 'Create your own trail'}
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md p-1.5 transition-colors hover:opacity-80"
-            style={{
-              border: `1px solid color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
-              color: theme.colors.textMuted,
-            }}
-            aria-label="Close"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {!selected ? (
-          <>
-            <p
-              className="text-sm md:text-base leading-relaxed mb-5"
-              style={{ color: theme.colors.text }}
-            >
-              How do you want to use this trail?
-            </p>
-            <div className="flex flex-col gap-3">
-              {(['self', 'share'] as const).map((key) => {
-                const opt = TRAIL_MODES[key];
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setMode(key)}
-                    className="text-left rounded-lg p-4 transition-opacity hover:opacity-80"
-                    style={{
-                      background: `color-mix(in srgb, ${theme.colors.primary} 12%, transparent)`,
-                      border: `1px solid color-mix(in srgb, ${theme.colors.primary} 45%, transparent)`,
-                    }}
-                  >
-                    <div
-                      className="text-base font-semibold mb-1"
-                      style={{ color: theme.colors.primary }}
-                    >
-                      {opt.label}
-                    </div>
-                    <div
-                      className="text-sm leading-relaxed"
-                      style={{ color: theme.colors.text }}
-                    >
-                      {opt.description}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        ) : (
-          <>
-            <p
-              className="text-sm md:text-base leading-relaxed mb-4"
-              style={{ color: theme.colors.text }}
-            >
-              Drop this prompt into your agent. It uses the{' '}
-              <code style={{ color: theme.colors.primary }}>{selected.skillName}</code>{' '}
-              skill to {mode === 'self'
-                ? 'walk you through your codebase locally.'
-                : 'pick markers from your codebase and publish a shareable trail.'}
-            </p>
-
-            <div
-              className="rounded-lg p-4 mb-4 font-mono text-sm leading-relaxed whitespace-pre-wrap"
-              style={{
-                background: `color-mix(in srgb, ${theme.colors.background} 70%, transparent)`,
-                border: `1px solid color-mix(in srgb, ${theme.colors.border} 60%, transparent)`,
-                color: theme.colors.text,
-              }}
-            >
-              {selected.prompt}
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <button
-                type="button"
-                onClick={handleCopy}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-opacity hover:opacity-80"
-                style={{
-                  background: theme.colors.primary,
-                  color: theme.colors.background,
-                }}
-              >
-                {copied ? <Check size={16} /> : <Copy size={16} />}
-                {copied ? 'Copied' : 'Copy prompt'}
-              </button>
-              <a
-                href={selected.skillUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors hover:opacity-80"
-                style={{
-                  background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
-                  border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
-                  color: theme.colors.primary,
-                }}
-              >
-                <ExternalLink size={14} />
-                View skill
-              </a>
-              <button
-                type="button"
-                onClick={() => {
-                  setMode(null);
-                  setCopied(false);
-                }}
-                className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors hover:opacity-80 sm:ml-auto"
-                style={{
-                  border: `1px solid color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
-                  color: theme.colors.textMuted,
-                }}
-              >
-                Back
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
   );
 }
 

@@ -17,7 +17,7 @@ import type {
   TrailByUserEntry,
   TrailRecentlyVisitedEntry,
 } from '@/lib/trails/types';
-import { AgentSkillsModal } from './AgentSkillsModal';
+import { CreateTrailModal } from './CreateTrailModal';
 
 type ThemeShape = ReturnType<typeof useTheme>['theme'];
 
@@ -66,7 +66,7 @@ export function SignedInDashboardView({
   recentlyVisitedError = null,
 }: SignedInDashboardViewProps) {
   const { theme } = useTheme();
-  const [skillsOpen, setSkillsOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const displayName = user.name || user.login;
 
   return (
@@ -159,8 +159,8 @@ export function SignedInDashboardView({
         <DashCard
           theme={theme}
           icon={<Sparkles size={18} color={theme.colors.primary} />}
-          title="Agent skills"
-          subtitle="Get a tailored prompt for your editor agent"
+          title="Create a trail"
+          subtitle="Author a trail locally, or get the desktop app"
           className="lg:col-span-2"
         >
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -170,13 +170,13 @@ export function SignedInDashboardView({
                 fontSize: `${theme.fontSizes[2]}px`,
               }}
             >
-              Tell us what you want to do — author a trail, curate a topic, or
-              browse what&rsquo;s on web-ade — and we&rsquo;ll hand you the
-              skill name and the exact prompt to paste into your agent.
+              Drop a ready-made prompt into your editor agent to walk a codebase
+              as a trail locally — or download the desktop app for the full File
+              City experience.
             </p>
             <button
               type="button"
-              onClick={() => setSkillsOpen(true)}
+              onClick={() => setCreateOpen(true)}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-md transition-opacity hover:opacity-80 flex-shrink-0"
               style={{
                 background: theme.colors.primary,
@@ -186,14 +186,14 @@ export function SignedInDashboardView({
               }}
             >
               <Sparkles size={14} />
-              Pick a skill
+              Create a trail
               <ArrowRight size={14} />
             </button>
           </div>
         </DashCard>
       </div>
 
-      <AgentSkillsModal open={skillsOpen} onClose={() => setSkillsOpen(false)} />
+      <CreateTrailModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </section>
   );
 }
