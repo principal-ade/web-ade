@@ -51,7 +51,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => null);
-    const { title, description, trailIds, status } = validateCreateRequest(body);
+    const { title, description, trailIds, status, visibility } =
+      validateCreateRequest(body);
 
     // Confirm every trail id resolves before we mint the topic. Cheaper than
     // failing later on read, and prevents typos from sticking.
@@ -78,6 +79,9 @@ export async function POST(request: NextRequest) {
       createdAt: now,
       updatedAt: now,
       ...(status !== undefined ? { status } : {}),
+      // Absent visibility means private (see TopicVisibility). Only persist
+      // the field when the creator explicitly opted into 'public'.
+      ...(visibility !== undefined ? { visibility } : {}),
     };
 
     await putTopic(topic);

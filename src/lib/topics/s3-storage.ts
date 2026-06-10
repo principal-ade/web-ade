@@ -19,7 +19,11 @@ import {
 import {
   BUCKET_NAME,
   BUCKET_REGION,
+  INBOX_PREFIX,
+  INDEX_CACHE_CONTROL,
+  INDEX_FILE,
   MAX_ETAG_RETRIES,
+  OUTBOX_PREFIX,
   PAYLOAD_CACHE_CONTROL,
   S3_PREFIX,
 } from './constants';
@@ -28,6 +32,9 @@ import {
   TopicShareError,
   type TopicByUserEntry,
   type TopicByUserIndex,
+  type TopicInboxIndex,
+  type TopicInboxIndexEntry,
+  type TopicOutboxIndex,
   type TopicPayload,
 } from './types';
 
@@ -56,6 +63,7 @@ export function topicToByUserEntry(topic: TopicPayload): TopicByUserEntry {
     createdAt: topic.createdAt,
     updatedAt: topic.updatedAt,
     ...(topic.status !== undefined ? { status: topic.status } : {}),
+    ...(topic.visibility !== undefined ? { visibility: topic.visibility } : {}),
   };
 }
 
@@ -438,4 +446,387 @@ export async function listTopicOwnerIds(): Promise<number[]> {
   } while (continuationToken);
 
   return ids;
+}
+
+// ============================================================================
+// Inbox — per-recipient topic delivery index keyed by GitHub numeric id so it
+// survives login changes. Mirrors the trails inbox store
+// ([[../trails/s3-storage.ts]]); the only difference is the topic-shaped
+// entry/snapshot and the `topics/` prefix.
+// ============================================================================
+
+function inboxPrefix(githubId: number): string {
+  return `${S3_PREFIX}/${INBOX_PREFIX}/${githubId}`;
+}
+
+export function buildTopicInboxIndexKey(githubId: number): string {
+  return `${inboxPrefix(githubId)}/${INDEX_FILE}`;
+}
+
+export function buildTopicInboxEntryKey(
+  githubId: number,
+  topicId: string,
+): string {
+  return `${inboxPrefix(githubId)}/by-topic/${topicId}.json`;
+}
+
+function emptyInbox(): TopicInboxIndex {
+  return {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    entries: [],
+  };
+}
+
+async function getInboxWithETag(
+  githubId: number,
+): Promise<{ data: TopicInboxIndex; etag: string } | null> {
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: buildTopicInboxIndexKey(githubId),
+      }),
+    );
+    const body = await response.Body?.transformToString();
+    if (!body) return null;
+    return {
+      data: JSON.parse(body) as TopicInboxIndex,
+      etag: response.ETag || '',
+    };
+  } catch (error: unknown) {
+    if (isNoSuchKey(error)) return null;
+    console.error('[Topics] Get inbox failed:', {
+      githubId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new TopicShareError(
+      'Failed to retrieve inbox',
+      500,
+      TopicErrorCodes.S3_ERROR,
+    );
+  }
+}
+
+async function putInboxWithETag(
+  githubId: number,
+  data: TopicInboxIndex,
+  etag: string | null,
+): Promise<void> {
+  try {
+    const params: {
+      Bucket: string;
+      Key: string;
+      Body: string;
+      ContentType: string;
+      CacheControl: string;
+      IfMatch?: string;
+    } = {
+      Bucket: BUCKET_NAME,
+      Key: buildTopicInboxIndexKey(githubId),
+      Body: JSON.stringify(data, null, 2),
+      ContentType: 'application/json',
+      CacheControl: INDEX_CACHE_CONTROL,
+    };
+    if (etag) params.IfMatch = etag;
+    await s3Client.send(new PutObjectCommand(params));
+  } catch (error: unknown) {
+    if (isEtagConflict(error)) {
+      throw new TopicShareError(
+        'Concurrent modification detected',
+        409,
+        TopicErrorCodes.ETAG_CONFLICT,
+      );
+    }
+    console.error('[Topics] Put inbox failed:', {
+      githubId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new TopicShareError(
+      'Failed to save inbox',
+      500,
+      TopicErrorCodes.S3_ERROR,
+    );
+  }
+}
+
+export async function getTopicInbox(
+  githubId: number,
+): Promise<TopicInboxIndex> {
+  const result = await getInboxWithETag(githubId);
+  return result ? result.data : emptyInbox();
+}
+
+/** Mutate the topic inbox index under optimistic locking. */
+export async function updateTopicInbox(
+  githubId: number,
+  modifier: (data: TopicInboxIndex) => TopicInboxIndex,
+): Promise<TopicInboxIndex> {
+  let attempts = 0;
+  while (attempts < MAX_ETAG_RETRIES) {
+    try {
+      const current = await getInboxWithETag(githubId);
+      const data = current ? current.data : emptyInbox();
+      const etag = current ? current.etag : null;
+      const updated = modifier(data);
+      updated.updatedAt = new Date().toISOString();
+      await putInboxWithETag(githubId, updated, etag);
+      return updated;
+    } catch (error) {
+      if (
+        error instanceof TopicShareError &&
+        error.code === TopicErrorCodes.ETAG_CONFLICT
+      ) {
+        attempts++;
+        if (attempts >= MAX_ETAG_RETRIES) {
+          throw new TopicShareError(
+            'Concurrent modification conflict — please retry',
+            409,
+            TopicErrorCodes.MAX_RETRIES,
+          );
+        }
+        await new Promise((r) => setTimeout(r, 100 * attempts));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new TopicShareError(
+    'Update failed after retries',
+    500,
+    TopicErrorCodes.S3_ERROR,
+  );
+}
+
+/**
+ * Write a per-entry inbox object at
+ * `topics/_inbox/{githubId}/by-topic/{topicId}.json` so point reads of a
+ * single row (e.g. `POST /inbox/{id}/read`) don't scan the whole index.
+ */
+export async function putTopicInboxEntry(
+  githubId: number,
+  entry: TopicInboxIndexEntry,
+): Promise<void> {
+  try {
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: buildTopicInboxEntryKey(githubId, entry.topicId),
+        Body: JSON.stringify(entry),
+        ContentType: 'application/json',
+        CacheControl: PAYLOAD_CACHE_CONTROL,
+      }),
+    );
+  } catch (error: unknown) {
+    console.error('[Topics] Put inbox entry failed:', {
+      githubId,
+      topicId: entry.topicId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new TopicShareError(
+      'Failed to save inbox entry',
+      500,
+      TopicErrorCodes.S3_ERROR,
+    );
+  }
+}
+
+export async function deleteTopicInboxEntry(
+  githubId: number,
+  topicId: string,
+): Promise<void> {
+  try {
+    await s3Client.send(
+      new DeleteObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: buildTopicInboxEntryKey(githubId, topicId),
+      }),
+    );
+  } catch (error) {
+    // Best-effort: a stale per-entry object is a rounding error against the
+    // inbox index, which is the source of truth for membership.
+    console.error('[Topics] Delete inbox entry failed:', {
+      githubId,
+      topicId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * Point-read a single inbox row by `(githubId, topicId)` — one S3 GET against
+ * the per-entry object, no full-index scan. Returns `null` when the topic was
+ * never delivered to this user. Powers the private-topic read gate
+ * ("was this topic sent to me?") without paging the whole inbox.
+ */
+export async function getTopicInboxEntry(
+  githubId: number,
+  topicId: string,
+): Promise<TopicInboxIndexEntry | null> {
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: buildTopicInboxEntryKey(githubId, topicId),
+      }),
+    );
+    const body = await response.Body?.transformToString();
+    if (!body) return null;
+    return JSON.parse(body) as TopicInboxIndexEntry;
+  } catch (error: unknown) {
+    if (isNoSuchKey(error)) return null;
+    console.error('[Topics] Get inbox entry failed:', {
+      githubId,
+      topicId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new TopicShareError(
+      'Failed to retrieve inbox entry',
+      500,
+      TopicErrorCodes.S3_ERROR,
+    );
+  }
+}
+
+// ============================================================================
+// Outbox — sender-side mirror of the inbox keyed by the sender's numeric
+// GitHub id. Written from the send route so a "Sent" view can list what the
+// user has shared without scanning every recipient's inbox. Same ETag-locked
+// flow as the inbox; no per-entry object (no read-state to point-read).
+// ============================================================================
+
+function outboxPrefix(githubId: number): string {
+  return `${S3_PREFIX}/${OUTBOX_PREFIX}/${githubId}`;
+}
+
+export function buildTopicOutboxIndexKey(githubId: number): string {
+  return `${outboxPrefix(githubId)}/${INDEX_FILE}`;
+}
+
+function emptyOutbox(): TopicOutboxIndex {
+  return {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    entries: [],
+  };
+}
+
+async function getOutboxWithETag(
+  githubId: number,
+): Promise<{ data: TopicOutboxIndex; etag: string } | null> {
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: buildTopicOutboxIndexKey(githubId),
+      }),
+    );
+    const body = await response.Body?.transformToString();
+    if (!body) return null;
+    return {
+      data: JSON.parse(body) as TopicOutboxIndex,
+      etag: response.ETag || '',
+    };
+  } catch (error: unknown) {
+    if (isNoSuchKey(error)) return null;
+    console.error('[Topics] Get outbox failed:', {
+      githubId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new TopicShareError(
+      'Failed to retrieve outbox',
+      500,
+      TopicErrorCodes.S3_ERROR,
+    );
+  }
+}
+
+async function putOutboxWithETag(
+  githubId: number,
+  data: TopicOutboxIndex,
+  etag: string | null,
+): Promise<void> {
+  try {
+    const params: {
+      Bucket: string;
+      Key: string;
+      Body: string;
+      ContentType: string;
+      CacheControl: string;
+      IfMatch?: string;
+    } = {
+      Bucket: BUCKET_NAME,
+      Key: buildTopicOutboxIndexKey(githubId),
+      Body: JSON.stringify(data, null, 2),
+      ContentType: 'application/json',
+      CacheControl: INDEX_CACHE_CONTROL,
+    };
+    if (etag) params.IfMatch = etag;
+    await s3Client.send(new PutObjectCommand(params));
+  } catch (error: unknown) {
+    if (isEtagConflict(error)) {
+      throw new TopicShareError(
+        'Concurrent modification detected',
+        409,
+        TopicErrorCodes.ETAG_CONFLICT,
+      );
+    }
+    console.error('[Topics] Put outbox failed:', {
+      githubId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new TopicShareError(
+      'Failed to save outbox',
+      500,
+      TopicErrorCodes.S3_ERROR,
+    );
+  }
+}
+
+export async function getTopicOutbox(
+  githubId: number,
+): Promise<TopicOutboxIndex> {
+  const result = await getOutboxWithETag(githubId);
+  return result ? result.data : emptyOutbox();
+}
+
+/** Mutate the topic outbox index under optimistic locking. */
+export async function updateTopicOutbox(
+  githubId: number,
+  modifier: (data: TopicOutboxIndex) => TopicOutboxIndex,
+): Promise<TopicOutboxIndex> {
+  let attempts = 0;
+  while (attempts < MAX_ETAG_RETRIES) {
+    try {
+      const current = await getOutboxWithETag(githubId);
+      const data = current ? current.data : emptyOutbox();
+      const etag = current ? current.etag : null;
+      const updated = modifier(data);
+      updated.updatedAt = new Date().toISOString();
+      await putOutboxWithETag(githubId, updated, etag);
+      return updated;
+    } catch (error) {
+      if (
+        error instanceof TopicShareError &&
+        error.code === TopicErrorCodes.ETAG_CONFLICT
+      ) {
+        attempts++;
+        if (attempts >= MAX_ETAG_RETRIES) {
+          throw new TopicShareError(
+            'Concurrent modification conflict — please retry',
+            409,
+            TopicErrorCodes.MAX_RETRIES,
+          );
+        }
+        await new Promise((r) => setTimeout(r, 100 * attempts));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new TopicShareError(
+    'Update failed after retries',
+    500,
+    TopicErrorCodes.S3_ERROR,
+  );
 }

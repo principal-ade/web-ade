@@ -48,5 +48,32 @@ export const MAX_STATUS_REF_VALUE_CHARS = 500;
 export const MAX_STATUS_REF_TITLE_CHARS = 200;
 
 export const PAYLOAD_CACHE_CONTROL = 'max-age=60';
+export const INDEX_CACHE_CONTROL = 'max-age=60';
 
 export const MAX_ETAG_RETRIES = 3;
+
+// ============================================================================
+// Inbox / Outbox — per-user topic delivery layer. Parallels the trails store
+// ([[../trails/constants.ts]]); the limits and sub-prefixes are kept separate
+// from trails so the two surfaces can drift independently.
+// ============================================================================
+
+export const INDEX_FILE = 'index.json';
+
+/** Soft cap on inbox entries per recipient. Excess oldest are pruned. */
+export const MAX_INBOX_ENTRIES = 500;
+
+/** Soft cap on outbox entries per sender. Excess oldest are pruned. */
+export const MAX_OUTBOX_ENTRIES = 500;
+
+/** Inbox sender comment ("why I'm sharing this") max length in chars. */
+export const MAX_INBOX_COMMENT_CHARS = 500;
+
+/** Max recipients per send call. */
+export const MAX_INBOX_RECIPIENTS = 50;
+
+/** Inbox S3 sub-prefix (relative to `topics/`). */
+export const INBOX_PREFIX = '_inbox';
+
+/** Outbox (sent-items) S3 sub-prefix (relative to `topics/`). */
+export const OUTBOX_PREFIX = '_outbox';

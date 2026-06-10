@@ -45,6 +45,21 @@ export interface TopicStatus {
   };
 }
 
+/**
+ * Who can read a topic.
+ *
+ * - `private` — creator and recipients only (recipients = users the topic has
+ *   been sent to, tracked by the topic inbox). Excluded from the public feed.
+ * - `public`  — anyone, by link or via the global `/topics` feed (the original
+ *   topic-share behavior).
+ *
+ * **Absence means `private`.** New topics are private unless explicitly made
+ * public, and pre-visibility topics (no field on disk) are treated as private
+ * — they drop out of the feed and become creator/recipient-only with no
+ * backfill. Going public is an explicit owner action (PATCH `visibility`).
+ */
+export type TopicVisibility = 'private' | 'public';
+
 export interface TopicPayload {
   id: string;
   title: string;
@@ -57,6 +72,13 @@ export interface TopicPayload {
   updatedAt: string;
   /** Optional workflow status. Absent means `active`. See {@link TopicStatus}. */
   status?: TopicStatus;
+  /** Read access. Absent means `private`. See {@link TopicVisibility}. */
+  visibility?: TopicVisibility;
+}
+
+/** A topic is public only when explicitly marked so; absence is private. */
+export function isPublicTopic(topic: Pick<TopicPayload, 'visibility'>): boolean {
+  return topic.visibility === 'public';
 }
 
 export interface CreateTopicRequest {
@@ -64,12 +86,16 @@ export interface CreateTopicRequest {
   description?: string;
   trailIds?: string[];
   status?: TopicStatus;
+  /** Read access. Absent on create means `private`. */
+  visibility?: TopicVisibility;
 }
 
 export interface UpdateTopicRequest {
   title?: string;
   description?: string;
   status?: TopicStatus;
+  /** Flip a topic between `private` and `public`. */
+  visibility?: TopicVisibility;
 }
 
 export interface CreateTopicResponse {
@@ -93,6 +119,12 @@ export interface TopicByUserEntry {
   updatedAt: string;
   /** Mirrors {@link TopicPayload.status} so listing cards can render a badge. */
   status?: TopicStatus;
+  /**
+   * Mirrors {@link TopicPayload.visibility} so the public feed can filter on
+   * the manifest without reading each topic record. Absent (pre-visibility
+   * manifest rows) is treated as `private` and excluded from the feed.
+   */
+  visibility?: TopicVisibility;
 }
 
 export interface TopicByUserIndex {
@@ -171,6 +203,9 @@ export const TopicErrorCodes = {
   SUGGESTION_ALREADY_RESOLVED: 'SUGGESTION_ALREADY_RESOLVED',
   SUGGESTION_DUPLICATE: 'SUGGESTION_DUPLICATE',
   SUGGESTION_LIMIT_REACHED: 'SUGGESTION_LIMIT_REACHED',
+  RECIPIENTS_REQUIRED: 'RECIPIENTS_REQUIRED',
+  TOO_MANY_RECIPIENTS: 'TOO_MANY_RECIPIENTS',
+  INBOX_NOT_FOUND: 'INBOX_NOT_FOUND',
   ETAG_CONFLICT: 'ETAG_CONFLICT',
   MAX_RETRIES: 'MAX_RETRIES',
   S3_ERROR: 'S3_ERROR',
@@ -349,4 +384,99 @@ export function isProjectSuggestion(
   s: TopicSuggestion,
 ): s is ProjectSuggestion {
   return s.kind === 'project';
+}
+
+// ============================================================================
+// Inbox / Outbox — per-user topic delivery layer. Mirrors the trail
+// send/inbox machinery (src/lib/trails/types.ts) on the topic side: a sender
+// designates GitHub-login recipients, the server writes one inbox row per
+// recipient, and mirrors a "sent" row into the sender's outbox. Both are keyed
+// by the recipient/sender's numeric GitHub id so delivery survives a login
+// change. See docs and the trails store for the shape this parallels.
+// ============================================================================
+
+/**
+ * Snapshot of a topic at send-time so the inbox list renders without a
+ * per-row GET. Reuses the slim {@link TopicByUserEntry} shape (title,
+ * descriptionPreview, trailCount, status); patched lazily on read when the
+ * live topic's `updatedAt` has advanced.
+ */
+export type TopicInboxSnapshot = TopicByUserEntry;
+
+export interface TopicInboxIndexEntry {
+  /** Topic id — foreign key into `topics/_by-id/{id}.json`. */
+  topicId: string;
+  /** Sender identity at send-time. */
+  sender: { githubId: number; githubLogin: string };
+  /** Optional sender note ("why I'm sharing this"). */
+  comment?: string;
+  /** ISO 8601 — server-stamped on send, refreshed on resend. */
+  sentAt: string;
+  /** ISO 8601 — server-stamped when the recipient marks the entry read. */
+  readAt: string | null;
+  /** Slim topic summary at send-time; patched lazily on read. */
+  snapshot: TopicInboxSnapshot;
+}
+
+export interface TopicInboxIndex {
+  version: 1;
+  updatedAt: string;
+  entries: TopicInboxIndexEntry[];
+}
+
+export interface TopicOutboxRecipient {
+  githubId: number;
+  githubLogin: string;
+}
+
+export interface TopicOutboxIndexEntry {
+  /** Topic id — foreign key into `topics/_by-id/{id}.json`. */
+  topicId: string;
+  /**
+   * Everyone this topic has been delivered to, deduped by githubId. Resends
+   * merge new recipients in rather than replacing.
+   */
+  recipients: TopicOutboxRecipient[];
+  /** Optional sender note from the most recent send. */
+  comment?: string;
+  /** ISO 8601 — most recent send/resend time. */
+  sentAt: string;
+  /** Slim topic summary at send-time; patched lazily on read. */
+  snapshot: TopicInboxSnapshot;
+}
+
+export interface TopicOutboxIndex {
+  version: 1;
+  updatedAt: string;
+  entries: TopicOutboxIndexEntry[];
+}
+
+// ============================================================================
+// Send request / response envelopes. The request shape matches the trail send
+// route's `{ recipients, comment }` so clients can reuse one contract.
+// ============================================================================
+
+export type SendTopicFailureReason = 'unknown_user' | 'invalid_login';
+
+export interface SendTopicRequest {
+  /** GitHub login recipients. */
+  recipients: string[];
+  /** Optional sender note. */
+  comment?: string;
+}
+
+export interface SendTopicResponse {
+  delivered: Array<{ login: string; githubId: number }>;
+  failed: Array<{ login: string; reason: SendTopicFailureReason }>;
+}
+
+export interface ListTopicInboxResponse {
+  entries: TopicInboxIndexEntry[];
+  unreadCount: number;
+  cursor?: string;
+}
+
+export interface ListTopicSentResponse {
+  entries: TopicOutboxIndexEntry[];
+  cursor?: string;
 }

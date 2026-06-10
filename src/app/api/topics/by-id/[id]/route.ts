@@ -20,6 +20,7 @@ import {
   isTopicBookmarked,
   refreshBookmarkedTopicSnapshot,
 } from '@/lib/bookmarks/s3-storage';
+import { canReadTopic } from '@/lib/topics/access';
 import { deleteCommentsContainer } from '@/lib/topics/comments-storage';
 import { deleteSuggestionsContainer } from '@/lib/topics/suggestions-storage';
 import { validateUpdateRequest } from '@/lib/topics/validation';
@@ -103,23 +104,34 @@ export async function GET(_request: NextRequest, { params }: Params) {
       );
     }
 
-    // `bookmarked` is per-user; anonymous callers (no token) always get false
-    // and skip the per-user S3 read entirely. For authed callers, also
-    // refresh the snapshot fire-and-forget if it's bookmarked — this is the
-    // "lazy on item open" half of the snapshot-freshness policy.
-    let bookmarked = false;
+    // Resolve the caller's identity once. Optional for public topics
+    // (anonymous reads allowed), required to clear the private gate below.
     const token = await getGitHubToken();
-    if (token) {
-      const user = await fetchGitHubUser(token);
-      if (user) {
-        bookmarked = await isTopicBookmarked(user.id, id);
-        if (bookmarked) {
-          void refreshBookmarkedTopicSnapshot(
-            user.id,
-            id,
-            topicToByUserEntry(topic),
-          );
-        }
+    const user = token ? await fetchGitHubUser(token) : null;
+
+    // Private gate: readable only by creator or recipient. Anyone else —
+    // including anonymous callers — gets a 404 rather than a 403, so a private
+    // topic's existence isn't disclosed.
+    if (!(await canReadTopic(topic, user?.id ?? null))) {
+      return NextResponse.json(
+        { error: 'Topic not found', code: TopicErrorCodes.NOT_FOUND },
+        { status: 404 },
+      );
+    }
+
+    // Access granted. `bookmarked` is per-user; anonymous callers always get
+    // false. For authed callers, also refresh the snapshot fire-and-forget if
+    // it's bookmarked — the "lazy on item open" half of the snapshot-freshness
+    // policy.
+    let bookmarked = false;
+    if (user) {
+      bookmarked = await isTopicBookmarked(user.id, id);
+      if (bookmarked) {
+        void refreshBookmarkedTopicSnapshot(
+          user.id,
+          id,
+          topicToByUserEntry(topic),
+        );
       }
     }
 
@@ -145,6 +157,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         ? { description: updates.description }
         : {}),
       ...(updates.status !== undefined ? { status: updates.status } : {}),
+      ...(updates.visibility !== undefined
+        ? { visibility: updates.visibility }
+        : {}),
     }));
     await upsertTopicInUserIndex(updated);
     return NextResponse.json({ topic: updated });

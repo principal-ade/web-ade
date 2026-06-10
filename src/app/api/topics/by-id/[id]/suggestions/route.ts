@@ -1,15 +1,18 @@
 /**
- * Topic trail suggestions — GET (public list) + POST (authenticated suggest).
+ * Topic trail suggestions — GET (list) + POST (authenticated suggest).
  *
- * Any GitHub-authenticated user can suggest any resolvable trail — their own
- * or someone else's. The topic owner is not in the loop here; accept/reject
- * lives on the sibling [suggestionId] routes. See
- * docs/topic-trail-suggestions.md.
+ * Read and write follow the topic's visibility: on a public topic any
+ * GitHub-authenticated user can suggest any resolvable trail; on a private
+ * topic the suggestion queue is visible and writable only to the creator and
+ * recipients (same {@link canReadTopic} gate as the topic record). The topic
+ * owner is not in the loop for the suggest action here; accept/reject lives on
+ * the sibling [suggestionId] routes. See docs/topic-trail-suggestions.md.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchGitHubUser, getGitHubToken } from '@/lib/auth/request';
 import { getTopic } from '@/lib/topics/s3-storage';
+import { canReadTopic } from '@/lib/topics/access';
 import {
   appendProjectSuggestion,
   appendSuggestion,
@@ -56,6 +59,17 @@ export async function GET(request: NextRequest, { params }: Params) {
     // empty list — empty-on-missing would mask typos in the URL.
     const topic = await getTopic(id);
     if (!topic) {
+      return NextResponse.json(
+        { error: 'Topic not found', code: TopicErrorCodes.NOT_FOUND },
+        { status: 404 },
+      );
+    }
+
+    // Private topics expose their suggestion queue only to creator +
+    // recipients. Deny → 404, matching the topic record's gate.
+    const token = await getGitHubToken();
+    const user = token ? await fetchGitHubUser(token) : null;
+    if (!(await canReadTopic(topic, user?.id ?? null))) {
       return NextResponse.json(
         { error: 'Topic not found', code: TopicErrorCodes.NOT_FOUND },
         { status: 404 },
@@ -109,6 +123,14 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const topic = await getTopic(id);
     if (!topic) {
+      return NextResponse.json(
+        { error: 'Topic not found', code: TopicErrorCodes.NOT_FOUND },
+        { status: 404 },
+      );
+    }
+
+    // A user who can't read a private topic can't suggest to it.
+    if (!(await canReadTopic(topic, user.id))) {
       return NextResponse.json(
         { error: 'Topic not found', code: TopicErrorCodes.NOT_FOUND },
         { status: 404 },

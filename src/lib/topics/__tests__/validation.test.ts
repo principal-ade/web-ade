@@ -3,8 +3,12 @@ import {
   validateStatus,
   validateCreateRequest,
   validateUpdateRequest,
+  validateSendRequest,
+  validateVisibility,
 } from '../validation';
 import {
+  MAX_INBOX_COMMENT_CHARS,
+  MAX_INBOX_RECIPIENTS,
   MAX_STATUS_LABEL_CHARS,
   MAX_STATUS_NOTE_CHARS,
 } from '../constants';
@@ -128,5 +132,130 @@ describe('validateUpdateRequest with status', () => {
 
   it('still rejects an empty update', () => {
     expect(() => validateUpdateRequest({})).toThrow(/no fields to update/);
+  });
+});
+
+describe('validateVisibility', () => {
+  it('accepts the two literals', () => {
+    expect(validateVisibility('private')).toBe('private');
+    expect(validateVisibility('public')).toBe('public');
+  });
+
+  it('rejects anything else', () => {
+    expect(() => validateVisibility('hidden')).toThrow(
+      /visibility must be 'private' or 'public'/,
+    );
+    expect(() => validateVisibility(undefined)).toThrow(/visibility must be/);
+    expect(() => validateVisibility(true)).toThrow(/visibility must be/);
+  });
+});
+
+describe('visibility on create/update', () => {
+  it('omits visibility when not provided on create (absent = private)', () => {
+    const out = validateCreateRequest({ title: 'T' });
+    expect('visibility' in out).toBe(false);
+  });
+
+  it('keeps an explicit visibility on create', () => {
+    expect(validateCreateRequest({ title: 'T', visibility: 'public' })).toEqual({
+      title: 'T',
+      description: '',
+      trailIds: [],
+      visibility: 'public',
+    });
+  });
+
+  it('rejects a bad visibility on create', () => {
+    expect(() =>
+      validateCreateRequest({ title: 'T', visibility: 'nope' }),
+    ).toThrow(/visibility must be/);
+  });
+
+  it('allows a visibility-only update', () => {
+    expect(validateUpdateRequest({ visibility: 'private' })).toEqual({
+      visibility: 'private',
+    });
+  });
+
+  it('rejects a bad visibility on update', () => {
+    expect(() => validateUpdateRequest({ visibility: 42 })).toThrow(
+      /visibility must be/,
+    );
+  });
+});
+
+describe('validateSendRequest', () => {
+  it('accepts a single recipient', () => {
+    expect(validateSendRequest({ recipients: ['octocat'] })).toEqual({
+      recipients: ['octocat'],
+    });
+  });
+
+  it('keeps an optional trimmed comment', () => {
+    expect(
+      validateSendRequest({ recipients: ['octocat'], comment: '  look  ' }),
+    ).toEqual({ recipients: ['octocat'], comment: 'look' });
+  });
+
+  it('drops an empty/whitespace comment', () => {
+    expect(
+      validateSendRequest({ recipients: ['octocat'], comment: '   ' }),
+    ).toEqual({ recipients: ['octocat'] });
+  });
+
+  it('dedupes recipients case-insensitively, preserving first spelling', () => {
+    expect(
+      validateSendRequest({ recipients: ['Octocat', 'octocat', ' OCTOCAT '] }),
+    ).toEqual({ recipients: ['Octocat'] });
+  });
+
+  it('rejects a non-object body', () => {
+    expect(() => validateSendRequest('nope')).toThrow(
+      /Request body must be an object/,
+    );
+  });
+
+  it('rejects a missing or non-array recipients', () => {
+    expect(() => validateSendRequest({})).toThrow(/recipients must be an array/);
+    expect(() => validateSendRequest({ recipients: 'octocat' })).toThrow(
+      /recipients must be an array/,
+    );
+  });
+
+  it('rejects non-string recipient entries', () => {
+    expect(() => validateSendRequest({ recipients: [123] })).toThrow(
+      /recipients entries must be strings/,
+    );
+  });
+
+  it('rejects an effectively-empty recipient list', () => {
+    expect(() => validateSendRequest({ recipients: ['', '  '] })).toThrow(
+      /at least one login/,
+    );
+  });
+
+  it('caps the recipient count', () => {
+    const many = Array.from(
+      { length: MAX_INBOX_RECIPIENTS + 1 },
+      (_, i) => `user${i}`,
+    );
+    expect(() => validateSendRequest({ recipients: many })).toThrow(
+      /Too many recipients/,
+    );
+  });
+
+  it('caps the comment length', () => {
+    expect(() =>
+      validateSendRequest({
+        recipients: ['octocat'],
+        comment: 'x'.repeat(MAX_INBOX_COMMENT_CHARS + 1),
+      }),
+    ).toThrow(/comment exceeds/);
+  });
+
+  it('rejects a non-string comment', () => {
+    expect(() =>
+      validateSendRequest({ recipients: ['octocat'], comment: 42 }),
+    ).toThrow(/comment must be a string/);
   });
 });

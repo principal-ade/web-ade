@@ -193,12 +193,20 @@ export async function GET() {
         const githubLogin = await resolveOwnerLogin(githubId, index);
         if (!githubLogin) return [];
 
+        // Only explicitly-public topics surface in the global feed. Private
+        // and pre-visibility (absent) rows are excluded — the feed is the
+        // public discovery surface, not a directory of every topic.
+        const publicEntries = index.entries.filter(
+          (entry) => entry.visibility === 'public',
+        );
+        if (publicEntries.length === 0) return [];
+
         // Anonymous, 24h-cached; null when the user has no name set, so we
         // fall back to the login.
         const displayName =
           (await getGitHubDisplayName(githubLogin)) ?? githubLogin;
 
-        return index.entries.map((entry) => ({
+        return publicEntries.map((entry) => ({
           id: entry.id,
           title: entry.title,
           createdAt: entry.createdAt,

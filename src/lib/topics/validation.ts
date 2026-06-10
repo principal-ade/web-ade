@@ -1,6 +1,8 @@
 import {
   MAX_COMMENT_CHARS,
   MAX_DESCRIPTION_CHARS,
+  MAX_INBOX_COMMENT_CHARS,
+  MAX_INBOX_RECIPIENTS,
   MAX_REASON_CHARS,
   MAX_STATUS_LABEL_CHARS,
   MAX_STATUS_NOTE_CHARS,
@@ -13,8 +15,10 @@ import {
   TopicErrorCodes,
   TopicShareError,
   type CreateSuggestionRequest,
+  type SendTopicRequest,
   type TopicStatus,
   type TopicStatusState,
+  type TopicVisibility,
   type UpdateTopicRequest,
 } from './types';
 
@@ -174,11 +178,18 @@ export function validateStatus(value: unknown): TopicStatus {
   };
 }
 
+/** Validate a topic visibility. Only the two literals are accepted. */
+export function validateVisibility(value: unknown): TopicVisibility {
+  if (value === 'private' || value === 'public') return value;
+  invalid("visibility must be 'private' or 'public'");
+}
+
 export function validateCreateRequest(body: unknown): {
   title: string;
   description: string;
   trailIds: string[];
   status?: TopicStatus;
+  visibility?: TopicVisibility;
 } {
   if (!isPlainObject(body)) invalid('request body must be an object');
   return {
@@ -186,6 +197,9 @@ export function validateCreateRequest(body: unknown): {
     description: validateDescription(body.description),
     trailIds: validateTrailIds(body.trailIds),
     ...(body.status != null ? { status: validateStatus(body.status) } : {}),
+    ...(body.visibility != null
+      ? { visibility: validateVisibility(body.visibility) }
+      : {}),
   };
 }
 
@@ -195,10 +209,12 @@ export function validateUpdateRequest(body: unknown): UpdateTopicRequest {
   if ('title' in body) out.title = validateTitle(body.title);
   if ('description' in body) out.description = validateDescription(body.description);
   if ('status' in body) out.status = validateStatus(body.status);
+  if ('visibility' in body) out.visibility = validateVisibility(body.visibility);
   if (
     out.title === undefined &&
     out.description === undefined &&
-    out.status === undefined
+    out.status === undefined &&
+    out.visibility === undefined
   )
     invalid('no fields to update');
   return out;
@@ -346,5 +362,91 @@ export function extractTrailId(input: string): string | null {
   const match = trimmed.match(/trail\/([0-9a-f-]+)/i);
   if (match && isUuid(match[1])) return match[1];
   return null;
+}
+
+/**
+ * Validate a `POST .../send` request body. Returns a clean shape with
+ * recipients deduped (case-insensitive on login) and the optional sender
+ * comment trimmed. Resolution of logins to GitHub user ids happens in the
+ * route — this layer only checks shape and limits. Mirrors the trail
+ * `validateSendRequest` ([[../trails/validation.ts]]) so clients share one
+ * request contract across trails and topics.
+ */
+export function validateSendRequest(input: unknown): SendTopicRequest {
+  if (!isPlainObject(input)) {
+    throw new TopicShareError(
+      'Request body must be an object',
+      400,
+      TopicErrorCodes.INVALID_REQUEST,
+    );
+  }
+  const body = input as Record<string, unknown>;
+
+  if (!Array.isArray(body.recipients)) {
+    throw new TopicShareError(
+      'recipients must be an array',
+      400,
+      TopicErrorCodes.RECIPIENTS_REQUIRED,
+    );
+  }
+
+  const seen = new Set<string>();
+  const recipients: string[] = [];
+  for (const raw of body.recipients) {
+    if (typeof raw !== 'string') {
+      throw new TopicShareError(
+        'recipients entries must be strings',
+        400,
+        TopicErrorCodes.INVALID_REQUEST,
+      );
+    }
+    const login = raw.trim();
+    if (login.length === 0) continue;
+    const key = login.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    recipients.push(login);
+  }
+
+  if (recipients.length === 0) {
+    throw new TopicShareError(
+      'recipients must contain at least one login',
+      400,
+      TopicErrorCodes.RECIPIENTS_REQUIRED,
+    );
+  }
+
+  if (recipients.length > MAX_INBOX_RECIPIENTS) {
+    throw new TopicShareError(
+      `Too many recipients (max ${MAX_INBOX_RECIPIENTS})`,
+      400,
+      TopicErrorCodes.TOO_MANY_RECIPIENTS,
+    );
+  }
+
+  const out: SendTopicRequest = { recipients };
+
+  if (body.comment !== undefined) {
+    if (typeof body.comment !== 'string') {
+      throw new TopicShareError(
+        'comment must be a string',
+        400,
+        TopicErrorCodes.INVALID_REQUEST,
+      );
+    }
+    const comment = body.comment.trim();
+    if (comment.length > 0) {
+      if (comment.length > MAX_INBOX_COMMENT_CHARS) {
+        throw new TopicShareError(
+          `comment exceeds ${MAX_INBOX_COMMENT_CHARS} chars`,
+          400,
+          TopicErrorCodes.COMMENT_TOO_LONG,
+        );
+      }
+      out.comment = comment;
+    }
+  }
+
+  return out;
 }
 
