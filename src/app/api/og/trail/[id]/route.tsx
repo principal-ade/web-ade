@@ -114,7 +114,6 @@ export async function GET(
             : undefined
         }
         repo={{ name: repo, avatarUrl: ownerAvatarUrl }}
-        owner={owner}
         fileMap={fileMap}
       />,
       noCache,

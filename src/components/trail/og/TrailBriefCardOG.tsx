@@ -4,7 +4,7 @@
  * previews (Open Graph / Twitter cards).
  *
  * Styled after the marketing card (`TrailMarketingCardOG`): a left-aligned
- * eyebrow → heading → author byline, beside a File City map on the
+ * repo identity header → heading → author byline, beside a File City map on the
  * right. The map shows only the trail's *touched* files (the buildings its
  * markers' `sourcePath`s point at), top-down projected and colored by file
  * type, with a dashed trail threading them in order — mirroring the trail
@@ -19,7 +19,6 @@
 import React from 'react';
 import { OG_COLORS, OG_FONT, ogTruncate } from './ogTheme';
 import type { FileMapData } from './fileCityProjection';
-import { FILE_CITY_LOGO_DATA_URI } from './fileCityLogo';
 import { FileMapPanel } from './TrailFileMapPanel';
 
 /** A person/repo identity — display name + optional avatar (a data URI or URL). */
@@ -31,12 +30,10 @@ export interface OgIdentity {
 export interface TrailBriefCardOGProps {
   /** Card heading — the trail's `request` phrase (shared) or `title`. */
   heading: string;
-  /** Trail author — shown as "Code Trail by [avatar] name" in the kicker. */
+  /** Trail author — shown as "by [avatar] name" in the byline. */
   author?: OgIdentity;
-  /** Repo — owner avatar + repo name, shown in the top slot. */
+  /** Repo — owner avatar + repo name, shown in the top header slot. */
   repo?: OgIdentity;
-  /** Repo owner login — shown under the repo name in the top slot. */
-  owner?: string;
   /** Projected File City map of the trail's touched files (right panel). */
   fileMap?: FileMapData | null;
 }
@@ -77,7 +74,6 @@ export function TrailBriefCardOG({
   heading,
   author,
   repo,
-  owner,
   fileMap,
 }: TrailBriefCardOGProps) {
   const clampedHeading = ogTruncate(heading, 84);
@@ -98,7 +94,7 @@ export function TrailBriefCardOG({
       {/* File City map — right side. */}
       {fileMap ? <FileMapPanel map={fileMap} /> : null}
 
-      {/* Left column — eyebrow → heading → byline at top, repo pinned bottom. */}
+      {/* Left column — repo header → heading, byline pinned bottom. */}
       <div
         style={{
           position: 'relative',
@@ -110,25 +106,48 @@ export function TrailBriefCardOG({
           padding: 50,
         }}
       >
-        {/* File City logo — brand mark above the eyebrow. */}
-        <div style={{ display: 'flex', marginBottom: 20 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={FILE_CITY_LOGO_DATA_URI} width={44} height={44} alt="" />
-        </div>
-
-        <div style={{ display: 'flex', marginBottom: 22 }}>
-          <span
-            style={{
-              color: OG_COLORS.primary,
-              fontSize: 20,
-              fontWeight: 700,
-              letterSpacing: 3,
-              textTransform: 'uppercase',
-            }}
-          >
-            Code Trail
-          </span>
-        </div>
+        {/* Repo identity header — owner avatar above the repo name, the name
+            sitting where (and styled like) the old "Code Trail" eyebrow was. */}
+        {repo ? (
+          <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 28 }}>
+            {repo.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={repo.avatarUrl}
+                width={64}
+                height={64}
+                alt=""
+                style={{ width: 64, height: 64, borderRadius: 14, marginBottom: 20 }}
+              />
+            ) : null}
+            <span
+              style={{
+                color: OG_COLORS.primary,
+                fontSize: 20,
+                fontWeight: 700,
+                letterSpacing: 3,
+                textTransform: 'uppercase',
+              }}
+            >
+              {repo.name}
+            </span>
+          </div>
+        ) : (
+          // Fallback for cards with no repo identity: the original eyebrow.
+          <div style={{ display: 'flex', marginBottom: 28 }}>
+            <span
+              style={{
+                color: OG_COLORS.primary,
+                fontSize: 20,
+                fontWeight: 700,
+                letterSpacing: 3,
+                textTransform: 'uppercase',
+              }}
+            >
+              Code Trail
+            </span>
+          </div>
+        )}
 
         <div
           style={{
@@ -143,38 +162,11 @@ export function TrailBriefCardOG({
           {clampedHeading}
         </div>
 
-        {/* "by [avatar] author" byline, under the title. */}
+        {/* "by [avatar] author" byline — directly under the heading. */}
         {author ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 24 }}>
             <span style={{ color: OG_COLORS.textTertiary, fontSize: 26 }}>by</span>
             <AvatarLabel identity={author} size={44} fontSize={26} />
-          </div>
-        ) : null}
-
-        {/* Repo — owner avatar + repo name, with the owner login stacked
-            underneath. Pinned to the bottom of the column. */}
-        {repo ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 'auto' }}>
-            {repo.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={repo.avatarUrl}
-                width={84}
-                height={84}
-                alt=""
-                style={{ width: 84, height: 84, borderRadius: 18 }}
-              />
-            ) : null}
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ color: OG_COLORS.text, fontSize: 30, fontWeight: 600, lineHeight: 1.1 }}>
-                {repo.name}
-              </span>
-              {owner ? (
-                <span style={{ color: OG_COLORS.textTertiary, fontSize: 22, lineHeight: 1.1, marginTop: 2 }}>
-                  {owner}
-                </span>
-              ) : null}
-            </div>
           </div>
         ) : null}
       </div>

@@ -78,7 +78,6 @@ export const Investigation: Story = {
     heading: 'How does a shared trail resolve from a bare /trail/:id link?',
     author: SAMPLE_AUTHOR,
     repo: SAMPLE_REPO,
-    owner: 'tj',
     fileMap: SAMPLE_FILE_MAP,
   },
 };
@@ -88,7 +87,6 @@ export const Changelog: Story = {
     heading: 'Trails/Explored Files switch with file→trails overlay',
     author: SAMPLE_AUTHOR,
     repo: SAMPLE_REPO,
-    owner: 'tj',
     fileMap: SAMPLE_FILE_MAP,
   },
 };
@@ -98,7 +96,6 @@ export const InformativeVerified: Story = {
     heading: 'Cross-repo type sharing for File City panels',
     author: SAMPLE_AUTHOR,
     repo: SAMPLE_REPO,
-    owner: 'tj',
     fileMap: SAMPLE_FILE_MAP,
   },
 };

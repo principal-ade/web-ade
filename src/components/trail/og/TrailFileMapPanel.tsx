@@ -52,7 +52,7 @@ export function FileMapPanel({
               top: (628 - map.h) / 2,
               right: 50,
               border: `1px solid ${OG_COLORS.border}`,
-              borderRadius: 16,
+              borderRadius: 0,
             }),
         width: map.w,
         height: map.h,
@@ -73,7 +73,7 @@ export function FileMapPanel({
             height: d.h,
             background: 'rgba(255, 255, 255, 0.03)',
             border: `1px solid ${OG_COLORS.border}`,
-            borderRadius: 4,
+            borderRadius: 0,
             display: 'flex',
           }}
         />
@@ -90,7 +90,7 @@ export function FileMapPanel({
             width: r.w,
             height: r.h,
             background: r.color,
-            borderRadius: 3,
+            borderRadius: 0,
             display: 'flex',
           }}
         />
