@@ -63,7 +63,36 @@ interface Params {
   params: Promise<{ id: string }>;
 }
 
-export async function GET(_request: NextRequest, { params }: Params) {
+/**
+ * Self-describing affordances for non-browser callers. The `/trail/{id}` page
+ * is client-hydrated, so an agent handed the bare share link only sees the
+ * shell + OG tags (see the <noscript> pointer in the page). Once it follows
+ * that pointer here, `_links` lets it traverse to the related sub-resources
+ * without knowing the URL scheme, and `_hints` describes the payload shape.
+ * Links are absolute (resolved from forwarded proxy headers) so they work
+ * verbatim when the JSON is read out-of-band by a tool.
+ */
+function agentEnvelope(request: NextRequest, id: string) {
+  const h = request.headers;
+  const host =
+    h.get('x-forwarded-host') || h.get('host') || request.nextUrl.host;
+  const proto =
+    h.get('x-forwarded-proto') || request.nextUrl.protocol.replace(':', '');
+  const safeId = encodeURIComponent(id);
+  const base = `${proto}://${host}/api/trails/by-id/${safeId}`;
+  return {
+    _links: {
+      self: base,
+      notes: `${base}/notes`,
+      signOffs: `${base}/sign-offs`,
+      humanView: `${proto}://${host}/trail/${safeId}`,
+    },
+    _hints:
+      'Principal code trail, returned as JSON. `payload.markers` is an ordered list of steps, each pinned to a file and line range with an optional code slice or diff (`marker.snippet`). `payload.summary` and `payload.request` state intent; `payload.repos` lists the source repositories; `payload.views` holds the visualization layouts. Follow `_links` for notes, sign-offs, and the human-viewable page. Access is gated by GitHub repo read-access, so only public trails resolve for anonymous callers.',
+  };
+}
+
+export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
 
@@ -107,6 +136,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
         payload: experimental.payload,
         bookmarked: false,
         allowAnonNotes: false,
+        ...agentEnvelope(request, id),
       });
     }
 
@@ -190,6 +220,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
       payload: publicPayload,
       bookmarked,
       allowAnonNotes: stored.allowAnonNotes ?? false,
+      ...agentEnvelope(request, id),
     });
   } catch (error) {
     if (error instanceof TrailShareError) {

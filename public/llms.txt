@@ -1,0 +1,43 @@
+# Principal ADE — Code Trails
+
+> Principal ADE is a platform for authoring and sharing "code trails": guided,
+> ordered walkthroughs of a codebase. A trail is a sequence of markers — each
+> pinned to a file and line range, optionally carrying a code slice or diff —
+> that together explain how a flow, request path, or piece of architecture
+> works. app.principal-ade.com is the public sharing-and-discovery surface;
+> trails are authored in the Principal ADE desktop app and published here.
+
+## What a trail is
+
+A trail is structured data, not prose. Its parts:
+
+- **markers** — ordered steps, each pinned to a file + line range; each may carry a `snippet`.
+- **snippet** — a code `slice` (lines of source) or a `diff` (before/after) attached to a marker.
+- **views** — visualization layouts over the markers: `sequence`, `timeline`, `linear`, `tree`, `graph`.
+- **repos** — the source repositories the markers reference; a single trail can span several.
+- **notes** — markdown annotations pinned to a marker/snippet or to the whole trail.
+- **sign-offs** — verification stamps recording who signed and when.
+- **purpose** — `investigation` (exploratory; carries exactly one "subject" marker that answers the question the trail poses), `informative` (canonical/declarative; the publisher's sign-off is stamped at publish time and ≥1 sign-off marks it verified), or `changelog`.
+
+## Reading trails (public, no auth — gated by GitHub repository read-access)
+
+- [Trail JSON](https://app.principal-ade.com/api/trails/by-id/{id}): Full payload for one trail — title, summary, request, ordered `markers[]` with code slices/diffs, `views`, `repos`, `notes`, `signOffs`. Includes a `_links` map (related sub-resources, human view) and a `_hints` field describing the shape. Only public-repo trails resolve for anonymous callers; private-repo trails return 403.
+- [Public trail feed](https://app.principal-ade.com/api/trails/feed): Newest-first list of trails in publicly-readable repos, cursor-paginated.
+- [Repos with trails](https://app.principal-ade.com/api/trails/repos): Every public repository that has at least one trail.
+
+## Human-facing pages
+
+- [Trail viewer](https://app.principal-ade.com/trail/{id}): Interactive 3D "File City" viewer for a single trail. The content is client-rendered — to read a trail programmatically, fetch the Trail JSON endpoint above rather than scraping this page.
+- [Explore](https://app.principal-ade.com/explore): Browse public trails and the repositories that have them.
+
+## Authoring trails
+
+Trails are **not** authored through this website. They are created in the
+Principal ADE desktop app, where an agent lays a trail against the app's local
+MCP bridge using skills such as `author-investigation-trail` (exploratory) or
+`author-informative-trail` (canonical), then publishes it — publishing pushes
+the payload to app.principal-ade.com so it becomes shareable and discoverable
+via the surfaces above. An agent consuming this site can read and traverse
+trails, but cannot create one here.
+
+- [Get the app](https://principal-ade.com/download): Download Principal ADE to author and publish trails.

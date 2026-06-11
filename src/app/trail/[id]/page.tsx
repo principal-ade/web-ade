@@ -100,6 +100,37 @@ export async function generateMetadata({
   };
 }
 
-export default function TrailPage() {
-  return <TrailPageClient />;
+export default async function TrailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const baseUrl = await resolveBaseUrl();
+  const apiUrl = `${baseUrl}/api/trails/by-id/${encodeURIComponent(id)}`;
+
+  // The interactive viewer is client-hydrated, so an automated agent handed the
+  // bare share link only sees this shell + the OG tags. Surface a machine-
+  // readable pointer to the structured JSON for the no-JS path (crawlers and
+  // LLM fetchers read <noscript> text; real users never see it once JS runs).
+  return (
+    <>
+      <noscript>
+        <article>
+          <h1>Principal code trail</h1>
+          <p>
+            This is an interactive trail viewer that requires JavaScript. If you
+            are an automated agent, fetch the structured JSON for this trail —
+            title, summary, and ordered markers with file/line references and
+            code — from <a href={apiUrl}>{apiUrl}</a>. That response carries a{' '}
+            <code>_links</code> map (notes, sign-offs, human view) and a{' '}
+            <code>_hints</code> field describing its shape. Access is gated by
+            GitHub repository read-access, so only public trails are returned to
+            anonymous agents.
+          </p>
+        </article>
+      </noscript>
+      <TrailPageClient />
+    </>
+  );
 }
