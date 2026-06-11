@@ -16,7 +16,14 @@ export async function buildTrailFileMap(
   owner: string,
   repo: string,
   payload: TrailPayload,
-  size: number
+  size: number,
+  /**
+   * Inset (in panel px) of the city within the square map — the
+   * `backgroundSecondary` margin around the projected city. The full OG card
+   * leaves the default breathing room; the feed map image passes a tight value
+   * so the city fills the square (less dead space against the card's text).
+   */
+  pad?: number
 ): Promise<FileMapData | null> {
   const touchedPaths = (payload.markers ?? [])
     .map((m) => m.sourcePath)
@@ -31,7 +38,7 @@ export async function buildTrailFileMap(
     );
     if (!cityRes.ok) return null;
     const { cityData }: { cityData: CityData } = await cityRes.json();
-    return projectTouchedCity(cityData, touchedPaths, size, size);
+    return projectTouchedCity(cityData, touchedPaths, size, size, pad);
   } catch {
     return null;
   }

@@ -59,7 +59,7 @@ export default function TrailPageClient() {
         />
       )}
       <div className="flex-1 min-h-0">
-        <TrailViewer session={session} mobileShowMap mobileMapSide="top" />
+        <TrailViewer session={session} mobileMapSide="top" />
       </div>
     </div>
   );

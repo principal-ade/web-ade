@@ -128,7 +128,7 @@ function FeedSkeleton() {
       {Array.from({ length: 3 }).map((_, i) => (
         <div
           key={i}
-          className="flex flex-col-reverse sm:flex-row overflow-hidden rounded-2xl"
+          className="flex flex-col-reverse sm:flex-row overflow-hidden"
           style={{
             background: theme.colors.surface,
             border: `1px solid ${theme.colors.border}`,

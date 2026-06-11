@@ -25,6 +25,10 @@ import { buildTrailFileMap } from '@/lib/trails/trail-file-map';
 import { getIdPointer, getIndex, getPayload } from '@/lib/trails/s3-storage';
 
 const MAP_SIZE = 500;
+// Tight inset for the feed map image so the city fills the square — the
+// full OG card keeps the projection's default breathing room, but here the
+// map sits flush against the card's text, so dead space reads as a gap.
+const MAP_PAD = 10;
 
 /** A blank square panel — the graceful fallback when there's no map. */
 function blankPanel() {
@@ -79,7 +83,7 @@ export async function GET(
     const payload = await getPayload(owner, repo, id);
     if (!payload) return mapResponse(blankPanel(), noCache);
 
-    const fileMap = await buildTrailFileMap(baseUrl, owner, repo, payload, MAP_SIZE);
+    const fileMap = await buildTrailFileMap(baseUrl, owner, repo, payload, MAP_SIZE, MAP_PAD);
     if (!fileMap) return mapResponse(blankPanel(), noCache);
 
     return mapResponse(<FileMapPanel map={fileMap} standalone />, noCache);

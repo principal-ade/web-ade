@@ -101,7 +101,7 @@ export function TrailCard({
       href={`/trail/${encodeURIComponent(id)}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="flex flex-col sm:flex-row overflow-hidden rounded-2xl no-underline transition-colors"
+      className="flex flex-col sm:flex-row overflow-hidden no-underline transition-colors"
       style={{
         background: theme.colors.surface,
         border: `1px solid ${
@@ -118,7 +118,7 @@ export function TrailCard({
           them, i.e. repo identity above the map, trail details below it. */}
       <div className="contents sm:flex sm:flex-1 sm:flex-col sm:min-w-0 sm:p-6">
         {/* Repo header — owner avatar + repo name / owner + time. */}
-        <div className="order-1 flex min-w-0 items-center gap-3 p-6 pb-4 sm:order-none sm:mb-4 sm:p-0">
+        <div className="order-1 flex min-w-0 items-center gap-3 p-6 pb-3 sm:order-none sm:mb-4 sm:p-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`https://github.com/${encodeURIComponent(owner)}.png?size=96`}
@@ -150,7 +150,7 @@ export function TrailCard({
         </div>
 
         {/* Trail details — heading, byline at bottom. */}
-        <div className="order-3 flex min-w-0 flex-1 flex-col p-6 pt-4 sm:order-none sm:p-0">
+        <div className="order-3 flex min-w-0 flex-1 flex-col p-6 pt-3 sm:order-none sm:p-0">
           <h3
             className="m-0 text-2xl font-bold leading-tight"
             style={{
@@ -166,7 +166,7 @@ export function TrailCard({
           </h3>
 
           {authorLogin && (
-            <div className="mt-auto flex items-center gap-2 pt-6">
+            <div className="flex items-center gap-2 pt-5">
               <span className="text-sm" style={{ color: theme.colors.textTertiary }}>
                 by
               </span>
