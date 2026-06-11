@@ -39,11 +39,18 @@ export async function POST() {
     await updateInbox(user.id, (inbox) => {
       const next: InboxIndexEntry[] = [];
       for (const entry of inbox.entries) {
-        if (entry.readAt !== null) {
+        const noteCount = entry.snapshot.noteCount ?? 0;
+        const hasNewNotes = noteCount > (entry.notesSeenCount ?? 0);
+        // Clear every dot: unopened entries and opened-but-re-noted ones.
+        if (entry.readAt !== null && !hasNewNotes) {
           next.push(entry);
           continue;
         }
-        const patched: InboxIndexEntry = { ...entry, readAt };
+        const patched: InboxIndexEntry = {
+          ...entry,
+          readAt: entry.readAt ?? readAt,
+          notesSeenCount: noteCount,
+        };
         newlyMarked.push(patched);
         next.push(patched);
       }

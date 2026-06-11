@@ -9,6 +9,7 @@
 import { NextResponse } from 'next/server';
 import { fetchGitHubUser, getGitHubToken } from '@/lib/auth/request';
 import { getInbox } from '@/lib/trails/s3-storage';
+import { deriveInboxNotification } from '@/lib/trails/notifications';
 import { ShareErrorCodes, TrailShareError } from '@/lib/trails/types';
 
 export async function GET() {
@@ -30,8 +31,10 @@ export async function GET() {
     }
 
     const inbox = await getInbox(user.id);
+    // Mirror the inbox list's "needs attention" derivation: unopened OR has
+    // new notes since last open.
     const count = inbox.entries.reduce(
-      (acc, entry) => (entry.readAt === null ? acc + 1 : acc),
+      (acc, entry) => (deriveInboxNotification(entry).dot ? acc + 1 : acc),
       0
     );
 

@@ -151,6 +151,8 @@ export async function POST(request: NextRequest, { params }: Params) {
         ...(comment ? { comment } : {}),
         sentAt,
         readAt: null,
+        // Unopened: every note on the snapshot reads as new until first open.
+        notesSeenCount: 0,
         snapshot,
         owner,
         repo,

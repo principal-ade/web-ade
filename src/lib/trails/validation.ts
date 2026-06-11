@@ -888,12 +888,13 @@ export function validateSendRequest(input: unknown): SendTrailRequest {
 }
 
 export function summarizePayload(
-  payload: Pick<TrailPayload, 'markers' | 'summary' | 'repos'>
+  payload: Pick<TrailPayload, 'markers' | 'summary' | 'repos' | 'notes'>
 ): {
   markerCount: number;
   hasDiffSnippets: boolean;
   summaryPreview: string;
   repoNames: string[];
+  noteCount: number;
 } {
   const markerCount = payload.markers.length;
   const hasDiffSnippets = payload.markers.some(
@@ -902,5 +903,9 @@ export function summarizePayload(
   const summaryPreview =
     typeof payload.summary === 'string' ? payload.summary.slice(0, 200) : '';
   const repoNames = (payload.repos ?? []).map((r) => r.name);
-  return { markerCount, hasDiffSnippets, summaryPreview, repoNames };
+  // Authored notes only — anon notes live in a side-table and are folded in
+  // later by `syncTrailNoteSummary`. A brand-new trail has no anon notes,
+  // so this is exact at create time.
+  const noteCount = payload.notes?.length ?? 0;
+  return { markerCount, hasDiffSnippets, summaryPreview, repoNames, noteCount };
 }

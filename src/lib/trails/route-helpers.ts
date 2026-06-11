@@ -16,7 +16,10 @@ import {
   findIndexEntry,
   getIdPointer,
   getIndex,
+  getPayload,
+  updateIndex,
 } from '@/lib/trails/s3-storage';
+import { getAnonNotes } from '@/lib/trails/anon-notes-storage';
 import { validateOwnerRepo } from '@/lib/trails/validation';
 import { checkRepoAccess } from '@/lib/trails/github-access';
 import {
@@ -143,4 +146,34 @@ export function canModerate(
 ): boolean {
   if (user.login === authorLogin) return true;
   return user.id === entry.createdBy.githubId;
+}
+
+/**
+ * Recompute a trail's total note count (authored notes on the payload +
+ * anonymous notes in the side-table) and write it onto the repo index
+ * entry, bumping `updatedAt` so the inbox/outbox lazy snapshot refresh
+ * carries the fresh count to recipients without a per-row fan-out.
+ *
+ * Call after any note mutation (create/delete, authored or anon). Edits
+ * don't change the count and don't need it. Best-effort by contract — note
+ * routes await it but swallow failures, since the note write is the primary
+ * effect and a lagging index self-heals on the next note mutation.
+ */
+export async function syncTrailNoteSummary(
+  owner: string,
+  repo: string,
+  id: string
+): Promise<void> {
+  const [payload, anonNotes] = await Promise.all([
+    getPayload(owner, repo, id),
+    getAnonNotes(id).catch(() => []),
+  ]);
+  const noteCount = (payload?.notes?.length ?? 0) + anonNotes.length;
+  const updatedAt = new Date().toISOString();
+  await updateIndex(owner, repo, (data) => ({
+    ...data,
+    entries: data.entries.map((e) =>
+      e.id === id ? { ...e, noteCount, updatedAt } : e
+    ),
+  }));
 }

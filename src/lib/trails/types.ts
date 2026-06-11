@@ -97,6 +97,13 @@ export interface SharedTrailIndexEntry extends BaseTrailIndexEntry {
   createdBy: { githubId: number; githubLogin: string };
   /** GitHub numeric repo id at upload time, used as a rename-stable backstop. */
   githubRepoId: number;
+  /**
+   * Total notes on the trail (authored + anonymous) at snapshot time, kept
+   * fresh by `syncTrailNoteSummary` on every note mutation. Feeds the inbox
+   * "& N notes" label and the "(N new)" watermark math. Absent on index
+   * entries written before notification states shipped — treat as 0.
+   */
+  noteCount?: number;
 }
 
 export interface SharedTrailIndex {
@@ -285,6 +292,13 @@ export interface InboxIndexEntry {
   sentAt: string;
   /** ISO 8601 — server-stamped when the recipient marks the entry read. */
   readAt: string | null;
+  /**
+   * Count of notes the recipient had seen the last time they opened the
+   * trail (mark-read). Watermark for the "(N new)" badge: new notes are
+   * `max(0, snapshot.noteCount - notesSeenCount)`. Absent on entries
+   * created before notification states shipped — treat as 0.
+   */
+  notesSeenCount?: number;
   /**
    * Snapshot of the live trail entry at send-time. Lets the inbox list
    * render without a per-row fan-out. Patched lazily on read when the live

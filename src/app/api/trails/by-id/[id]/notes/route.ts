@@ -12,6 +12,7 @@ import { updatePayload } from '@/lib/trails/s3-storage';
 import { validateNoteDraft } from '@/lib/trails/validation';
 import {
   resolveTrailForMutation,
+  syncTrailNoteSummary,
   trailErrorResponse,
 } from '@/lib/trails/route-helpers';
 import type { TrailNote } from '@/lib/trails/types';
@@ -71,6 +72,10 @@ export async function POST(request: NextRequest, { params }: Params) {
       notes: [...(payload.notes ?? []), note],
       updatedAt: now,
     }));
+
+    // Refresh the index entry's noteCount so recipients' inboxes re-badge.
+    // Best-effort — the note is already persisted.
+    await syncTrailNoteSummary(owner, repo, id).catch(() => undefined);
 
     return NextResponse.json({ note }, { status: 201 });
   } catch (error) {

@@ -59,9 +59,12 @@ export async function POST(_request: NextRequest, { params }: Params) {
           continue;
         }
         found = true;
-        // Idempotent: keep the original readAt if already read.
+        // Idempotent on readAt: keep the original timestamp if already read.
         const readAt = entry.readAt ?? new Date().toISOString();
-        const patched: InboxIndexEntry = { ...entry, readAt };
+        // Opening always advances the notes watermark to the count the
+        // recipient is now looking at, clearing any "(N new)" badge.
+        const notesSeenCount = entry.snapshot.noteCount ?? 0;
+        const patched: InboxIndexEntry = { ...entry, readAt, notesSeenCount };
         patchedEntry = patched;
         next.push(patched);
       }

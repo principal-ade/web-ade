@@ -31,6 +31,7 @@ import {
   type InboxIndexEntry,
   type SharedTrailIndex,
 } from '@/lib/trails/types';
+import { deriveInboxNotification } from '@/lib/trails/notifications';
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
@@ -181,13 +182,16 @@ export async function GET(request: NextRequest) {
     const sorted = [...fullInbox.entries].sort(
       (a, b) => Date.parse(b.sentAt) - Date.parse(a.sentAt)
     );
+    // "Unread" now means "needs attention" — unopened OR has new notes since
+    // the recipient last looked. Derived in one place so the badge, the
+    // filter, and the per-row notification all agree.
     const unreadCount = sorted.reduce(
-      (acc, e) => (e.readAt === null ? acc + 1 : acc),
+      (acc, e) => (deriveInboxNotification(e).dot ? acc + 1 : acc),
       0
     );
 
     const filtered = sorted.filter((entry) => {
-      if (unreadOnly && entry.readAt !== null) return false;
+      if (unreadOnly && !deriveInboxNotification(entry).dot) return false;
       if (since !== null && Date.parse(entry.sentAt) <= since) return false;
       return true;
     });
@@ -216,7 +220,10 @@ export async function GET(request: NextRequest) {
     const hasMore = nextOffset < filtered.length;
 
     return NextResponse.json({
-      entries: patched,
+      entries: patched.map((entry) => ({
+        ...entry,
+        notification: deriveInboxNotification(entry),
+      })),
       unreadCount,
       ...(hasMore ? { cursor: encodeCursor({ offset: nextOffset }) } : {}),
     });

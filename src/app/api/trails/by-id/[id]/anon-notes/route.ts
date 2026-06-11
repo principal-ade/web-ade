@@ -30,6 +30,7 @@ import {
   validateOwnerRepo,
 } from '@/lib/trails/validation';
 import {
+  syncTrailNoteSummary,
   trailErrorResponse,
 } from '@/lib/trails/route-helpers';
 import {
@@ -140,6 +141,9 @@ export async function POST(request: NextRequest, { params }: Params) {
             };
 
     await appendAnonNote(id, note);
+
+    // Anon notes count toward the recipient's badge — refresh the index.
+    await syncTrailNoteSummary(owner, repo, id).catch(() => undefined);
 
     return NextResponse.json({ note }, { status: 201 });
   } catch (error) {

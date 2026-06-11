@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   resolveTrailForMutation,
+  syncTrailNoteSummary,
   trailErrorResponse,
 } from '@/lib/trails/route-helpers';
 import { deleteAnonNote } from '@/lib/trails/anon-notes-storage';
@@ -25,7 +26,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     const { id, noteId } = await params;
     const resolved = await resolveTrailForMutation(id);
     if (!resolved.ok) return resolved.response;
-    const { user, entry } = resolved.ctx;
+    const { owner, repo, user, entry } = resolved.ctx;
 
     if (user.id !== entry.createdBy.githubId) {
       return NextResponse.json(
@@ -44,6 +45,9 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
         { status: 404 }
       );
     }
+
+    // Anon note removed — recompute the index noteCount.
+    await syncTrailNoteSummary(owner, repo, id).catch(() => undefined);
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {

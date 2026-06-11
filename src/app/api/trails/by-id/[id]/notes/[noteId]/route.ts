@@ -16,6 +16,7 @@ import { validateNoteBodyUpdate } from '@/lib/trails/validation';
 import {
   canModerate,
   resolveTrailForMutation,
+  syncTrailNoteSummary,
   trailErrorResponse,
 } from '@/lib/trails/route-helpers';
 import { ShareErrorCodes } from '@/lib/trails/types';
@@ -127,6 +128,9 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
         { status: 403 }
       );
     }
+
+    // Note removed — recompute the index noteCount so the badge clears.
+    await syncTrailNoteSummary(owner, repo, id).catch(() => undefined);
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {

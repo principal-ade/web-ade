@@ -155,6 +155,7 @@ export async function POST(request: NextRequest) {
       markerCount: summary.markerCount,
       repoNames: summary.repoNames,
       hasDiffSnippets: summary.hasDiffSnippets,
+      noteCount: summary.noteCount,
       createdBy: { githubId: user.id, githubLogin: user.login },
       githubRepoId: access.githubRepoId,
       createdAt: storedPayload.createdAt,
