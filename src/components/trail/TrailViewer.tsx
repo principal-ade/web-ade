@@ -192,6 +192,13 @@ interface TrailContextResolved {
   initialBookmarked: boolean;
   initialAllowAnonNotes: boolean;
   ownerGithubId: number;
+  /**
+   * Commit the trail was authored against. All content resolution (file
+   * tree + snippet reads) is pinned to it so markers don't drift onto a
+   * newer HEAD. Undefined for older trails with no recorded provenance,
+   * in which case resolution falls back to HEAD.
+   */
+  authoredSha?: string;
 }
 
 /**
@@ -246,9 +253,20 @@ export function useTrailSession(trailId: string): TrailSession {
         }
         const trail = (await res.json()) as TrailResponse;
 
+        // Resolve the commit the trail was authored against — registry
+        // form (repos[0]) first, then the single-repo shorthand. Bare
+        // line numbers against a moving branch silently drift; pinning to
+        // this sha keeps every marker on the code the author actually saw.
+        // The sha is stamped into the payload at publish time (see
+        // POST /api/trails), so well-formed trails always carry one.
+        const authoredSha =
+          trail.payload.repos?.[0]?.authoredAtSha ??
+          trail.payload.authoredAt?.sha;
+
         const treeData = await trpc.github.getTree.query({
           owner: trail.owner,
           repo: trail.repo,
+          ...(authoredSha ? { ref: authoredSha } : {}),
         });
         const files = treeData.tree
           .filter((entry) => entry.type === 'blob')
@@ -274,6 +292,7 @@ export function useTrailSession(trailId: string): TrailSession {
           initialBookmarked: trail.bookmarked ?? false,
           initialAllowAnonNotes: trail.allowAnonNotes ?? false,
           ownerGithubId: trail.entry.createdBy.githubId,
+          authoredSha,
         });
       } catch (err) {
         if (cancelled) return;
@@ -456,6 +475,7 @@ export function useTrailSession(trailId: string): TrailSession {
   const owner = resolved?.owner;
   const repo = resolved?.repo;
   const fileTree = resolved?.fileTree;
+  const authoredSha = resolved?.authoredSha;
 
   const repository = useMemo<FileCityTrailExplorerRepository | null>(() => {
     if (!owner || !repo) return null;
@@ -511,7 +531,9 @@ export function useTrailSession(trailId: string): TrailSession {
       }
 
       const response = await fetch(
-        `/api/github/repo/${owner}/${repo}?action=file&path=${encodeURIComponent(cleanPath)}`,
+        `/api/github/repo/${owner}/${repo}?action=file&path=${encodeURIComponent(cleanPath)}${
+          authoredSha ? `&ref=${encodeURIComponent(authoredSha)}` : ''
+        }`,
       );
       if (!response.ok) {
         throw new Error(`Failed to read file: ${response.statusText}`);
@@ -527,7 +549,7 @@ export function useTrailSession(trailId: string): TrailSession {
       }
       return typeof data.content === 'string' ? data.content : '';
     },
-    [owner, repo],
+    [owner, repo, authoredSha],
   );
 
   const createTrailNote = useCallback(

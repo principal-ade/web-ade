@@ -24,7 +24,7 @@ import {
   summarizePayload,
   validateCreateRequest,
 } from '@/lib/trails/validation';
-import { checkRepoAccess } from '@/lib/trails/github-access';
+import { checkRepoAccess, resolveHeadSha } from '@/lib/trails/github-access';
 import { TrailShareError, ShareErrorCodes } from '@/lib/trails/types';
 import type {
   CreateSharedTrailResponse,
@@ -108,6 +108,41 @@ export async function POST(request: NextRequest) {
       purpose,
       ...(publisherSignOff ? { signOffs: [publisherSignOff] } : {}),
     };
+
+    // Pin provenance at publish time. A trail that arrives without a
+    // commit sha will silently drift onto a newer HEAD when read later
+    // (line numbers re-resolve against whatever the branch points at
+    // now), so if the producer didn't stamp one we resolve the repo's
+    // current HEAD here and bake it into the stored payload — once, for
+    // good. Best-effort: a failed lookup just leaves the trail unpinned,
+    // exactly as before.
+    const hasProvenanceSha =
+      !!payload.authoredAt?.sha ||
+      (payload.repos ?? []).some((r) => !!r.authoredAtSha);
+    if (!hasProvenanceSha) {
+      const headSha = await resolveHeadSha(owner, repo, githubToken);
+      if (headSha) {
+        if (storedPayload.repos && storedPayload.repos.length > 0) {
+          // Registry form: stamp the entry that points at this repo (or
+          // the sole entry). Other repos in a multi-repo trail aren't
+          // resolvable from this request, so they're left as-is.
+          storedPayload.repos = storedPayload.repos.map((r, _i, arr) => {
+            if (r.authoredAtSha) return r;
+            const matchesThisRepo =
+              r.remote?.host === 'github' &&
+              r.remote?.owner === owner &&
+              r.remote?.name === repo;
+            return arr.length === 1 || matchesThisRepo
+              ? { ...r, authoredAtSha: headSha }
+              : r;
+          });
+        } else {
+          // Single-repo shorthand.
+          storedPayload.authoredAt = { sha: headSha };
+        }
+      }
+    }
+
     const summary = summarizePayload(storedPayload);
 
     const { sizeBytes } = await putPayload(owner, repo, id, storedPayload);

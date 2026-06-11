@@ -248,9 +248,21 @@ export async function GET(
             { status: 400 },
           );
         }
+        // Optional commit/branch/tag pin. When a trail records the sha it
+        // was authored against, the viewer passes it here so snippets read
+        // the file as it existed then — not whatever HEAD is now. The ref
+        // is part of the cache key so pinned reads don't collide with the
+        // unpinned (HEAD) read of the same path.
+        const ref = searchParams.get("ref");
+        const endpoint = ref
+          ? `/repos/${owner}/${name}/contents/${filePath}?ref=${encodeURIComponent(ref)}`
+          : `/repos/${owner}/${name}/contents/${filePath}`;
+        const cacheKey = ref
+          ? `repo-file-${owner}-${name}-${ref}-${filePath}`
+          : `repo-file-${owner}-${name}-${filePath}`;
         data = await makeCachedGitHubRequest<GitHubFileResponse>(
-          `/repos/${owner}/${name}/contents/${filePath}`,
-          `repo-file-${owner}-${name}-${filePath}`,
+          endpoint,
+          cacheKey,
           CACHE_DURATIONS.file,
           userToken,
         );

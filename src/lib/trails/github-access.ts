@@ -106,6 +106,39 @@ export async function getGitHubDisplayName(
   }
 }
 
+/** Short TTL — at publish time we want the repo's current tip, not a
+ *  minutes-old cached sha. Still cached briefly so a burst of publishes
+ *  to the same repo doesn't re-hit GitHub for each one. */
+const HEAD_SHA_CACHE_TTL = 30;
+
+/**
+ * Resolve a repo's current default-branch HEAD to a concrete commit sha.
+ *
+ * Used to stamp trail provenance at publish time: a trail that arrives
+ * without its own authored sha would otherwise drift onto whatever HEAD
+ * is when it's later read. Baking the sha in at creation pins it to a
+ * fixed commit forever. Returns `null` on any failure — provenance
+ * stamping is best-effort and must never block publishing.
+ */
+export async function resolveHeadSha(
+  owner: string,
+  repo: string,
+  token: string
+): Promise<string | null> {
+  try {
+    const data = await cachedUserGitHubFetch<{ sha: string }>(
+      `/repos/${owner}/${repo}/commits/HEAD`,
+      `head-sha:${owner.toLowerCase()}/${repo.toLowerCase()}`,
+      HEAD_SHA_CACHE_TTL,
+      token,
+      [CACHE_TAGS.REPOS]
+    );
+    return data.sha ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function checkRepoAccess(
   owner: string,
   repo: string,
