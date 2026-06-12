@@ -9,6 +9,43 @@ pipeline — opencode + the authoring brief + the `emit_trail` contract + payloa
 assembly + marker validation — while skipping **both** the Freestyle VM **and** the
 GitHub token / auth setup.
 
+## Pipeline at a glance
+
+```mermaid
+flowchart TD
+    Q["Question + local checkout"]
+
+    subgraph L0["Stage L0 — capture (no Freestyle, no token)"]
+        OC["opencode via @opencode-ai/sdk<br/>brief + read-only tools · agent: build"]
+        CAP["capture emit_trail args<br/>response parts ‖ EMIT_TRAIL_OUT file"]
+        OC -->|"emit_trail (flat args)"| CAP
+    end
+
+    subgraph L1["Stage L1 — assemble + validate (offline)"]
+        ASM["assemble-payload<br/>mint id + timestamps · authoredAt<br/>sequence view · subject marker"]
+        VP["validatePayload()<br/>the real POST /api/trails gate"]
+        TR["marker tree-resolution<br/>sourcePath + line range exist"]
+        ASM --> VP
+        ASM --> TR
+    end
+
+    Q --> OC
+    CAP --> ASM
+    VP --> OK{"green?"}
+    TR --> OK
+    OK -->|yes| PAY["publishable TrailPayload"]
+
+    subgraph L2["Stage L2 — optional eyes-on (needs a token)"]
+        REND["POST /api/trails → /trail/:id in File City"]
+    end
+    PAY -.-> REND
+
+    SKIP["Deferred to the cloud stages:<br/>Freestyle VM · GitHub token / auth"]
+
+    classDef deferred fill:#fff3f3,stroke:#cc6666,color:#902020;
+    class SKIP deferred;
+```
+
 ## 1. The core realization: both VM and token are skippable
 
 The production pipeline has two pieces of setup we'd rather not build just to test the
