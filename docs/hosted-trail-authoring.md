@@ -139,7 +139,7 @@ Proposed home: `src/lib/authoring/` + `src/app/api/authoring/`.
 | `opencode-client.ts` | thin wrapper over opencode's OpenAPI: open session, send message, stream SSE, capture the `emit_trail` tool call. |
 | `assemble-payload.ts` | flat `emit_trail` args → full `TrailPayload` (mint id, timestamps, `authoredAt`, sequence view, subject marker). |
 | `validate-payload.ts` | re-check every marker `sourcePath` exists and `startLine`/`endLine` are within the file, **in the VM against the real tree**. Reject or auto-repair (open decision). |
-| `publish.ts` | `POST /api/trails` with service GitHub auth. Returns `/trail/{id}`. |
+| `publish.ts` | `POST /api/trails` with the **user's GitHub token** (reused from their web-ade session — see §9). Made by the host, never from inside the VM. Returns `/trail/{id}`. |
 | `app/api/authoring/runs/route.ts` | `POST` to start a run; async — returns a run id, delivers the trail URL via inbox/feed. |
 
 ## 6. Driving opencode (headless)
@@ -222,7 +222,12 @@ plumbing opencode + Freestyle in behind it.
 ## 9. Open decisions (tracked on the topic)
 
 - **Sync vs async delivery** — leaning async (authoring is slow); reuse inbox/feed.
-- **Private-repo auth** — GitHub App vs user-supplied token for the VM checkout.
+- **Private-repo auth** — **DECIDED: reuse the user's GitHub token** that web-ade
+  already holds from their session (not a GitHub App), for both the VM checkout
+  and the host-side `POST /api/trails`. The publish call is made by the host
+  authoring-service, never from inside the VM, so the token never enters the
+  sandbox; `createdBy` and the route's repo-access gating stay the user's,
+  matching today's bridge flow.
 - **VM lifecycle** — fork-per-question off a warm base vs one paused VM per repo
   (leaning paused-per-repo).
 - **Validation strictness** — reject vs auto-repair markers whose line ranges drifted.

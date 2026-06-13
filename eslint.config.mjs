@@ -18,6 +18,8 @@ const eslintConfig = [
       "build/**",
       "coverage/**",
       "dist/**",
+      "**/.vm-dist/**",
+      "**/.out/**",
       "storybook-static/**",
       "*.min.js",
       "**/*.min.js",
