@@ -124,9 +124,18 @@ export default async function TrailPage({
             title, summary, and ordered markers with file/line references and
             code — from <a href={apiUrl}>{apiUrl}</a>. That response carries a{' '}
             <code>_links</code> map (notes, sign-offs, human view) and a{' '}
-            <code>_hints</code> field describing its shape. Access is gated by
-            GitHub repository read-access, so only public trails are returned to
-            anonymous agents.
+            <code>_hints</code> field describing its shape. Sending{' '}
+            <code>Accept: text/markdown</code> (or just <code>curl</code>-ing this
+            page) returns a human-readable Markdown rendering instead.
+          </p>
+          <p>
+            Access is gated by GitHub repository read access, so only public
+            trails are returned to anonymous callers. For a private trail, view
+            it authenticated with the Principal CLI —{' '}
+            <code>npx @principal-ai/principal-view-cli trail view {id}</code> —
+            which resolves your GitHub token (via the <code>gh</code> CLI or a
+            git credential helper) and calls the same API with a Bearer token, or
+            open this page in a browser while signed in to Principal.
           </p>
         </article>
       </noscript>
