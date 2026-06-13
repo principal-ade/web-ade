@@ -302,7 +302,9 @@ describe('bookmarked — 404-on-deleted-target', () => {
 
 describe('GET /api/topics/by-id/:id — bookmarked field', () => {
   it('is true for an authed caller who has the topic bookmarked', async () => {
-    seedTopic();
+    // Public so the read clears `canReadTopic` — Alice is the caller, but Bob
+    // is the creator and she isn't a recipient, so a private topic would 404.
+    seedTopic(fakeTopic({ visibility: 'public' }));
 
     // Bookmark first so the index contains this topic.
     await postTopicBookmark(
@@ -320,7 +322,7 @@ describe('GET /api/topics/by-id/:id — bookmarked field', () => {
   });
 
   it('is false for an authed caller without the topic bookmarked', async () => {
-    seedTopic();
+    seedTopic(fakeTopic({ visibility: 'public' }));
 
     const res = await getTopicById(
       makeRequest('GET', `/api/topics/by-id/${TOPIC_ID}`),
@@ -332,7 +334,8 @@ describe('GET /api/topics/by-id/:id — bookmarked field', () => {
   });
 
   it('is false for an anonymous caller — no per-user S3 read attempted', async () => {
-    seedTopic();
+    // Public — only public topics are readable by anonymous callers.
+    seedTopic(fakeTopic({ visibility: 'public' }));
     mockedGetToken.mockResolvedValue(null);
 
     const res = await getTopicById(
