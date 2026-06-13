@@ -21,6 +21,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { freestyle } from 'freestyle';
 import { publishTrail } from '../publish';
+import type { AuthoringErrorCode } from '../run-types';
 
 /** Default model — free, tool-calling, UI-selectable later (pass `opts.model`). */
 export const DEFAULT_MODEL = 'openrouter/nvidia/nemotron-3-super-120b-a12b:free';
@@ -29,12 +30,7 @@ const VM_WORKDIR = '/work';
 const VM_BUNDLE_DIR = '/opt/authoring';
 const VM_BUNDLE_PATH = `${VM_BUNDLE_DIR}/run-in-vm.cjs`;
 
-export type AuthoringErrorCode =
-  | 'REPO_RESOLVE_FAILED'
-  | 'AGENT_NO_EMIT'
-  | 'VALIDATION_FAILED'
-  | 'PUBLISH_FAILED'
-  | 'TIMEOUT';
+export type { AuthoringErrorCode };
 
 export class AuthoringError extends Error {
   constructor(
@@ -65,6 +61,8 @@ export interface FreestyleRunOpts {
 export interface FreestyleRunResult {
   payload: Record<string, unknown>;
   /** Present when `publish !== false`. */
+  trailId?: string;
+  /** Present when `publish !== false`. `/trail/{id}`. */
   trailUrl?: string;
 }
 
@@ -213,7 +211,7 @@ export async function runInFreestyle(
 
     // 7. Publish on the HOST with the user's token.
     try {
-      const { url } = await publishTrail({
+      const { id, url } = await publishTrail({
         host: webAdeOrigin,
         token: opts.userToken,
         owner: opts.owner,
@@ -221,7 +219,7 @@ export async function runInFreestyle(
         payload,
       });
       onProgress('published', url);
-      return { payload, trailUrl: url };
+      return { payload, trailId: id, trailUrl: url };
     } catch (err) {
       throw new AuthoringError(
         'PUBLISH_FAILED',
