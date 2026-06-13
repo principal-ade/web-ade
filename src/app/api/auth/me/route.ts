@@ -2,56 +2,14 @@
  * GET /api/auth/me
  *
  * Returns current authenticated user information.
- * Reads GitHub token from HTTP-only cookie and fetches user profile.
- * If token is invalid, attempts to sync from central token store.
+ * Reads the GitHub token from an HTTP-only cookie and fetches the GitHub
+ * profile. If the token is invalid, responds with `needsSync` so the client can
+ * re-establish it from its WorkOS session via /api/auth/bootstrap.
  */
 
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { getGitHubToken, getGitHubUserId } from '@/lib/auth/cookies';
+import { getGitHubToken } from '@/lib/auth/cookies';
 import { trace } from '@opentelemetry/api';
-
-/**
- * Sync token from auth server's central token store
- */
-async function syncTokenFromServer(
-  githubUserId: number,
-  currentToken: string
-): Promise<string | null> {
-  try {
-    const authServerUrl = process.env.AUTH_SERVER_URL;
-    if (!authServerUrl) {
-      console.log('[Auth/me] AUTH_SERVER_URL not configured, skipping sync');
-      return null;
-    }
-
-    const url = new URL(`${authServerUrl}/api/auth/token/current`);
-    url.searchParams.set('github_user_id', String(githubUserId));
-
-    const response = await fetch(url.toString(), {
-      headers: {
-        Authorization: `Bearer ${currentToken}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      console.log('[Auth/me] Failed to sync token from server:', response.status);
-      return null;
-    }
-
-    const data = await response.json();
-    if (data.github_token && data.github_token !== currentToken) {
-      console.log('[Auth/me] Got newer token from server');
-      return data.github_token;
-    }
-
-    return null;
-  } catch (error) {
-    console.error('[Auth/me] Error syncing token:', error);
-    return null;
-  }
-}
 
 export async function GET() {
   // Get the active span (created by Next.js auto-instrumentation)
@@ -59,7 +17,7 @@ export async function GET() {
 
   try {
     // Get GitHub token from HTTP-only cookie
-    let githubToken = await getGitHubToken();
+    const githubToken = await getGitHubToken();
 
     span?.addEvent('auth.me.get_token', {
       has_token: !!githubToken,
@@ -74,7 +32,7 @@ export async function GET() {
     }
 
     // Fetch user profile from GitHub API
-    let response = await fetch('https://api.github.com/user', {
+    const response = await fetch('https://api.github.com/user', {
       headers: {
         Authorization: `Bearer ${githubToken}`,
         Accept: 'application/vnd.github.v3+json',
@@ -85,58 +43,16 @@ export async function GET() {
       'response.status': response.status,
     });
 
-    // If token is invalid, try to sync from central token store
-    if (!response.ok && response.status === 401) {
-      console.log('[Auth/me] Token invalid, attempting to sync from server...');
+    // Invalid/expired GitHub token: signal the client to re-establish it from
+    // its WorkOS session via /api/auth/bootstrap. We no longer sync the token
+    // from token/current here — that endpoint requires a verified WorkOS
+    // credential, which this browser route does not hold.
+    if (response.status === 401) {
+      span?.addEvent('auth.me.unauthenticated', {
+        reason: 'invalid_token',
+      });
 
-      // Get stored GitHub user ID to fetch the new token
-      const storedUserId = await getGitHubUserId();
-      if (storedUserId) {
-        // Try to fetch the current valid token from the server
-        const syncedToken = await syncTokenFromServer(storedUserId, githubToken);
-
-        span?.addEvent('auth.me.sync_token', {
-          synced: !!syncedToken,
-        });
-
-        if (syncedToken) {
-          console.log('[Auth/me] Successfully synced new token from server');
-
-          // Update the cookie with the new token
-          const cookieStore = await cookies();
-          cookieStore.set('github_token', syncedToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
-            maxAge: 60 * 60, // 1 hour
-          });
-
-          // Retry the GitHub API call with the new token
-          response = await fetch('https://api.github.com/user', {
-            headers: {
-              Authorization: `Bearer ${syncedToken}`,
-              Accept: 'application/vnd.github.v3+json',
-            },
-          });
-
-          if (response.ok) {
-            githubToken = syncedToken;
-            // Continue to userData parsing below
-          }
-        }
-      }
-
-      // If we still don't have a valid response, treat as unauthenticated
-      if (!response.ok) {
-        console.error('GitHub API error after sync attempt:', response.status, response.statusText);
-
-        span?.addEvent('auth.me.unauthenticated', {
-          reason: 'invalid_token_after_sync',
-        });
-
-        return NextResponse.json({ isAuthenticated: false, user: null, needsSync: true });
-      }
+      return NextResponse.json({ isAuthenticated: false, user: null, needsSync: true });
     }
 
     if (!response.ok) {
@@ -145,21 +61,6 @@ export async function GET() {
     }
 
     const userData = await response.json();
-
-    // Now that we have the user ID, sync from server to ensure we have the latest token
-    const syncedToken = await syncTokenFromServer(userData.id, githubToken);
-    if (syncedToken) {
-      // Update the cookie with the new token
-      const cookieStore = await cookies();
-      cookieStore.set('github_token', syncedToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 60 * 60, // 1 hour
-      });
-      githubToken = syncedToken;
-    }
 
     // Return user data (no tokens!)
     span?.addEvent('auth.me.success', {
