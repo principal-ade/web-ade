@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import React from 'react';
 import { ThemeProvider } from '@principal-ade/industry-theme';
-import TopicPage from './page';
+import TopicPage from './TopicPageClient';
 import { AuthProvider } from '@/contexts/AuthContext';
 import type { TopicComment, TopicPayload } from '@/lib/topics/types';
 import type { SharedTrailIndexEntry } from '@/lib/trails/types';

@@ -32,6 +32,7 @@ import {
 } from '@/lib/bookmarks/s3-storage';
 import {
   cliHint,
+  markdownResponse,
   negotiateFormat,
   notFoundMarkdown,
   privateTrailMarkdown,
@@ -99,13 +100,6 @@ function agentEnvelope(request: NextRequest, id: string) {
     _hints:
       'Principal code trail, returned as JSON. `payload.markers` is an ordered list of steps, each pinned to a file and line range with an optional code slice or diff (`marker.snippet`). `payload.summary` and `payload.request` state intent; `payload.repos` lists the source repositories; `payload.views` holds the visualization layouts. Follow `_links` for notes, sign-offs, and the human-viewable page. Access is gated by GitHub repo read-access, so only public trails resolve for anonymous callers.',
   };
-}
-
-function markdownResponse(body: string, status = 200) {
-  return new NextResponse(body, {
-    status,
-    headers: { 'content-type': 'text/markdown; charset=utf-8' },
-  });
 }
 
 /**

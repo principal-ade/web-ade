@@ -1,17 +1,17 @@
 /**
  * Content negotiation for share links.
  *
- * The `/trail/{id}` page is a client-hydrated SPA: a browser navigation needs
- * the HTML shell (and, for link-preview crawlers, the Open Graph tags), but a
- * programmatic caller — curl, an LLM fetcher, an agent handed the bare link —
- * only gets a "Loading trail" shell and a <noscript> breadcrumb it has to
- * parse out. This middleware reads the request's intent from its headers and,
- * for non-browser callers, rewrites the same URL to the structured by-id API
- * so `curl https://app.principal-ade.com/trail/<id>` returns Markdown (or JSON
- * on request) directly, at the canonical URL, with no breadcrumb to follow.
+ * The `/trail/{id}` and `/topic/{id}` pages are client-hydrated SPAs: a browser
+ * navigation needs the HTML shell (and, for link-preview crawlers, the Open
+ * Graph tags), but a programmatic caller — curl, an LLM fetcher, an agent
+ * handed the bare link — only gets a "Loading…" shell and a <noscript>
+ * breadcrumb it has to parse out. This middleware reads the request's intent
+ * from its headers and, for non-browser callers, rewrites the same URL to the
+ * structured by-id API so `curl https://app.principal-ade.com/trail/<id>`
+ * returns Markdown (or JSON on request) directly, at the canonical URL, with no
+ * breadcrumb to follow.
  *
- * Browsers and OG crawlers pass through untouched. Topics will follow once the
- * trail path is proven (see the matcher).
+ * Browsers and OG crawlers pass through untouched.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -21,10 +21,26 @@ import { NextRequest, NextResponse } from 'next/server';
 const OG_CRAWLERS =
   /(twitterbot|slackbot|facebookexternalhit|discordbot|linkedinbot|whatsapp|telegrambot|googlebot|bingbot|bsky|mastodon|embedly|redditbot)/i;
 
+// Single-segment share links → their structured by-id API. The page noun in
+// the URL (`trail`/`topic`) maps to the API collection segment.
+const SHARE_ROUTES: Array<{ re: RegExp; api: (id: string) => string }> = [
+  { re: /^\/trail\/([^/]+)\/?$/, api: (id) => `/api/trails/by-id/${id}` },
+  { re: /^\/topic\/([^/]+)\/?$/, api: (id) => `/api/topics/by-id/${id}` },
+];
+
 export function middleware(request: NextRequest): NextResponse {
-  const match = request.nextUrl.pathname.match(/^\/trail\/([^/]+)\/?$/);
-  if (!match) return NextResponse.next();
-  const id = match[1];
+  const pathname = request.nextUrl.pathname;
+  let id: string | undefined;
+  let apiPath: string | undefined;
+  for (const r of SHARE_ROUTES) {
+    const captured = r.re.exec(pathname)?.[1];
+    if (captured) {
+      id = captured;
+      apiPath = r.api(captured);
+      break;
+    }
+  }
+  if (!id || !apiPath) return NextResponse.next();
 
   const accept = request.headers.get('accept') ?? '';
   const ua = request.headers.get('user-agent') ?? '';
@@ -48,8 +64,9 @@ export function middleware(request: NextRequest): NextResponse {
 
   // Everything else is a programmatic caller. Rewrite to the structured API at
   // the same URL — Markdown by default, JSON when the caller explicitly asks
-  // for it and not Markdown. The API enforces the same repo-access gate, so a
-  // private trail comes back as a CLI-aware 403.
+  // for it and not Markdown. The API enforces the same access gate, so a
+  // private trail comes back as a CLI-aware 403 and a private topic as a
+  // CLI-aware 404.
   //
   // The format is passed as a request header rather than a query param: query
   // params added during a rewrite don't reliably survive into the destination
@@ -59,12 +76,11 @@ export function middleware(request: NextRequest): NextResponse {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-agent-format', wantsJson ? 'json' : 'md');
   const url = request.nextUrl.clone();
-  url.pathname = `/api/trails/by-id/${id}`;
+  url.pathname = apiPath;
   return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
 }
 
 export const config = {
-  // Single-segment trail share links only. Topics, and any nested paths, are
-  // intentionally excluded for now.
-  matcher: ['/trail/:id'],
+  // Single-segment trail and topic share links. Nested paths are excluded.
+  matcher: ['/trail/:id', '/topic/:id'],
 };
