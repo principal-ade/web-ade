@@ -23,6 +23,40 @@ import { MAX_INBOX_ENTRIES } from '@/lib/trails/constants';
 import type { InboxIndexEntry } from '@/lib/trails/types';
 import type { AuthoringErrorCode } from './run-types';
 
+/**
+ * True for connection/transport-level failures (vs. application errors) — a
+ * dropped or refused HTTP request anywhere in the host→Freestyle/GitHub path.
+ * Node's undici surfaces these as `TypeError: fetch failed` with the real cause
+ * (ECONNRESET, ETIMEDOUT, socket hang up, …) nested in `.cause`, so we walk the
+ * cause chain. These are infra (retry-later), never "the agent produced no
+ * trail".
+ */
+function isTransportError(err: unknown): boolean {
+  const NEEDLES = [
+    'fetch failed',
+    'econnreset',
+    'econnrefused',
+    'etimedout',
+    'enotfound',
+    'eai_again',
+    'socket hang up',
+    'network',
+    'and the request timed out',
+    'terminated',
+  ];
+  let cur: unknown = err;
+  for (let depth = 0; cur && depth < 5; depth++) {
+    if (cur instanceof Error) {
+      const hay = `${cur.message} ${(cur as { code?: string }).code ?? ''}`.toLowerCase();
+      if (NEEDLES.some((n) => hay.includes(n))) return true;
+      cur = (cur as { cause?: unknown }).cause;
+    } else {
+      break;
+    }
+  }
+  return false;
+}
+
 export interface AuthoringJobParams {
   runId: string;
   /** User's GitHub token — host-only (resolve + clone + publish). Never reaches the agent. */
@@ -103,8 +137,16 @@ export async function runAuthoringJob(p: AuthoringJobParams): Promise<void> {
       trailUrl: trailUrl ?? null,
     });
   } catch (err) {
-    const code: AuthoringErrorCode =
-      err instanceof AuthoringError ? err.code : 'AGENT_NO_EMIT';
+    // Classify: an explicit AuthoringError carries its own code; a raw
+    // transport failure (e.g. a Freestyle connection drop surfacing as
+    // `fetch failed`) is infra, not the agent — report it as UNAVAILABLE so the
+    // client says "retry later" instead of "rephrase". Anything else falls back
+    // to AGENT_NO_EMIT.
+    const code: AuthoringErrorCode = err instanceof AuthoringError
+      ? err.code
+      : isTransportError(err)
+        ? 'UNAVAILABLE'
+        : 'AGENT_NO_EMIT';
     const message = err instanceof Error ? err.message : String(err);
     console.error('[authoring] run failed', p.runId, code, message);
     await patchRun(p.runId, {

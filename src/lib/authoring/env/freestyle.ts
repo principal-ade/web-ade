@@ -71,6 +71,63 @@ function shq(s: string): string {
   return `'${s.replace(/'/g, `'\\''`)}'`;
 }
 
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Import a GitHub repo into a fresh Freestyle Git repo, server-side. Freestyle
+ * fetches from github.com on its own (well-connected) network, so the VM never
+ * has to reach github.com. The user's token is embedded in the source URL to
+ * authenticate the import for private repos — it lives only in this host-side
+ * call and the (short-lived, deleted) Freestyle repo config; it never enters the
+ * VM. Returns the new repoId. Classifies auth/not-found as REPO_RESOLVE_FAILED,
+ * everything else as UNAVAILABLE (infra).
+ */
+async function importToFreestyleGit(
+  owner: string,
+  repo: string,
+  ref: string | undefined,
+  userToken: string
+): Promise<string> {
+  const url = `https://x-access-token:${userToken}@github.com/${owner}/${repo}`;
+  try {
+    const res = await freestyle.git.repos.create({
+      name: `authoring-${owner}-${repo}`,
+      // Shallow, single-revision import — just the tip we need.
+      source: { url, branch: ref ?? null, depth: 1 },
+    });
+    return res.repoId;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/not found|404|403|unauthor|denied|authentication|permission/i.test(msg)) {
+      throw new AuthoringError('REPO_RESOLVE_FAILED', `repo import failed: ${msg}`);
+    }
+    throw new AuthoringError('UNAVAILABLE', `Freestyle Git import failed: ${msg}`);
+  }
+}
+
+/**
+ * Mint a scoped, read-only Freestyle identity token for one repo — the
+ * credential the VM uses to clone it in-network. Returns the identityId (for
+ * teardown) and the token.
+ */
+async function mintRepoReadToken(
+  repoId: string
+): Promise<{ identityId: string; token: string }> {
+  try {
+    const { identityId } = await freestyle.identities.create();
+    const ident = freestyle.identities.ref({ identityId });
+    await ident.permissions.git.grant({ repoId, permission: 'read' });
+    const { token } = await ident.tokens.create();
+    return { identityId, token };
+  } catch (err) {
+    throw new AuthoringError(
+      'UNAVAILABLE',
+      `Freestyle identity/token mint failed: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+}
+
 /** The validated payload is the final `{…}` line of stdout (opencode noise precedes it). */
 function lastJsonLine(stdout: string): Record<string, unknown> {
   const lines = stdout
@@ -146,43 +203,103 @@ export async function runInFreestyle(
   }
   const webAdeOrigin = process.env.WEB_ADE_ORIGIN ?? 'http://localhost:3000';
 
-  // 1. Resolve access + pin sha on the host (no VM yet).
+  // 1. Resolve access + sha on the host (gating only — fail fast before we
+  //    allocate any Freestyle resources). The authoritative authoredAt.sha is
+  //    stamped in-VM from the real .git after the clone.
   const sha = await resolveSha(opts.owner, opts.repo, opts.ref, opts.userToken);
   onProgress('resolved sha', `${opts.owner}/${opts.repo}@${sha.slice(0, 8)}`);
 
   const bundle = readVmBundle();
 
-  // 2. Boot a fresh VM off the baked base snapshot.
-  const created = (await freestyle.vms.create({
-    name: `authoring-${opts.owner}-${opts.repo}`,
-    snapshotId: baseSnapshot,
-  })) as { vm: VmHandle; vmId: string };
-  const vm = created.vm;
-  const vmId = created.vmId;
-  onProgress('vm booted', vmId);
+  // Freestyle resources to tear down in `finally` (each may be undefined if we
+  // failed before creating it).
+  let repoId: string | undefined;
+  let identityId: string | undefined;
+  let vmId: string | undefined;
 
   try {
-    // 3. Write the self-contained runner bundle into the VM.
+    // 2. Import the GitHub repo into Freestyle Git — server-side, on Freestyle's
+    //    own network (NOT from the VM, whose egress to github.com is flaky). The
+    //    user's token authenticates the import for private repos and stays on the
+    //    host; it never enters the VM.
+    repoId = await importToFreestyleGit(opts.owner, opts.repo, opts.ref, opts.userToken);
+    onProgress('repo imported to freestyle git', repoId);
+
+    // 3. Mint a scoped, read-only Freestyle identity token so the VM can clone
+    //    the imported repo in-network.
+    const minted = await mintRepoReadToken(repoId);
+    identityId = minted.identityId;
+    const gitToken = minted.token;
+
+    // 4. Boot a fresh VM off the baked base snapshot. A failure here is the
+    //    execution substrate being unreachable/erroring — surface it as
+    //    UNAVAILABLE so the client retries rather than rephrasing.
+    let created: { vm: VmHandle; vmId: string };
+    try {
+      created = (await freestyle.vms.create({
+        name: `authoring-${opts.owner}-${opts.repo}`,
+        snapshotId: baseSnapshot,
+      })) as { vm: VmHandle; vmId: string };
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      throw new AuthoringError('UNAVAILABLE', `failed to create authoring VM: ${detail}`);
+    }
+    const vm = created.vm;
+    vmId = created.vmId;
+    onProgress('vm booted', vmId);
+
+    // 5. Write the self-contained runner bundle into the VM.
     await vm.exec(`mkdir -p ${VM_BUNDLE_DIR}`);
     await vm.fs.writeTextFile(VM_BUNDLE_PATH, bundle);
     onProgress('bundle written', VM_BUNDLE_PATH);
 
-    // 4. Clone @sha with the token, then scrub the credential from the remote.
-    const remote = `github.com/${opts.owner}/${opts.repo}.git`;
-    const clone = await vm.exec(
+    // 6. Clone the imported repo from Freestyle Git — IN-NETWORK (git.freestyle.sh),
+    //    not github.com. Auth is the scoped read-only identity token; scrub it
+    //    from the remote afterwards so opencode never sees a credential. The
+    //    clone keeps a real .git, so the in-VM `git rev-parse HEAD` still stamps
+    //    authoredAt.sha. A failure here is in-network infra → UNAVAILABLE.
+    //    The source import (step 2) populates the Freestyle repo asynchronously,
+    //    so an immediate clone can race it and get a transient 500 / empty repo;
+    //    Freestyle's git http can also blip. Retry with backoff — early misses
+    //    while the import finishes, later attempts succeed. Persistent failure is
+    //    infra → UNAVAILABLE.
+    const freestyleRemote = `git.freestyle.sh/${repoId}`;
+    const cloneCmd =
       `export HOME=/root; rm -rf ${VM_WORKDIR} && ` +
-        `git clone https://x-access-token:${opts.userToken}@${remote} ${VM_WORKDIR} && ` +
-        `cd ${VM_WORKDIR} && git checkout ${sha} && ` +
-        `git remote set-url origin https://${remote}`
-    );
-    if (clone.statusCode !== 0) {
-      throw new AuthoringError('REPO_RESOLVE_FAILED', clone.stderr ?? 'clone failed');
+      `git clone --depth 1 https://x-access-token:${gitToken}@${freestyleRemote} ${VM_WORKDIR} && ` +
+      `cd ${VM_WORKDIR} && git remote set-url origin https://${freestyleRemote}`;
+    const CLONE_ATTEMPTS = 8;
+    const CLONE_BACKOFF_MS = 4000;
+    let clone: { statusCode?: number | null; stderr?: string | null } | null = null;
+    let cloneThrew: unknown = null;
+    for (let attempt = 1; attempt <= CLONE_ATTEMPTS; attempt++) {
+      cloneThrew = null;
+      try {
+        clone = await vm.exec({ command: cloneCmd, timeoutMs: 90000 });
+      } catch (err) {
+        cloneThrew = err;
+        clone = null;
+      }
+      if (clone && clone.statusCode === 0) break;
+      onProgress(
+        'freestyle clone retry',
+        `${attempt}/${CLONE_ATTEMPTS}${clone?.statusCode != null ? ` (exit ${clone.statusCode})` : ''}`
+      );
+      if (attempt < CLONE_ATTEMPTS) await sleep(CLONE_BACKOFF_MS);
     }
-    onProgress('cloned + scrubbed', sha.slice(0, 8));
+    if (!clone || clone.statusCode !== 0) {
+      throw new AuthoringError(
+        'UNAVAILABLE',
+        `freestyle git clone failed after ${CLONE_ATTEMPTS} attempts ` +
+          `(import may not have populated): ` +
+          `${cloneThrew instanceof Error ? cloneThrew.message : clone?.stderr ?? ''}`.trim()
+      );
+    }
+    onProgress('cloned from freestyle git', sha.slice(0, 8));
 
-    // 5. Run the SAME core inside the VM, egress-less, printing one JSON line.
-    //    OPENROUTER_API_KEY authenticates opencode's provider; the user's
-    //    GitHub token is NOT passed here — the agent never sees it.
+    // 7. Run the SAME core inside the VM, egress-less, printing one JSON line.
+    //    OPENROUTER_API_KEY authenticates opencode's provider; no GitHub or
+    //    Freestyle credential is passed here — the agent never sees one.
     onProgress('driving opencode in VM', model);
     const timeoutSecs = opts.timeoutSecs ?? 540;
     // The opencode run can take minutes; the default synchronous-exec timeout
@@ -227,10 +344,19 @@ export async function runInFreestyle(
       );
     }
   } finally {
-    // 8. Full teardown — fork-per-question leaves nothing live. (Swap to
-    //    `vm.stop()` for the paused-per-repo lifecycle once §7 is decided.)
-    await freestyle.vms.delete({ vmId }).catch(() => {});
-    onProgress('vm deleted', vmId);
+    // 8. Full teardown — cold-create-per-question leaves nothing live: the VM,
+    //    the scoped identity, and the imported Freestyle repo are all removed.
+    if (vmId) {
+      await freestyle.vms.delete({ vmId }).catch(() => {});
+      onProgress('vm deleted', vmId);
+    }
+    if (identityId) {
+      await freestyle.identities.delete({ identityId }).catch(() => {});
+    }
+    if (repoId) {
+      await freestyle.git.repos.delete({ repoId }).catch(() => {});
+      onProgress('freestyle repo deleted', repoId);
+    }
   }
 }
 

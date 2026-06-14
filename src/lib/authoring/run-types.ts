@@ -13,7 +13,11 @@ export type AuthoringErrorCode =
   | 'AGENT_NO_EMIT'
   | 'VALIDATION_FAILED'
   | 'PUBLISH_FAILED'
-  | 'TIMEOUT';
+  | 'TIMEOUT'
+  // The execution substrate (Freestyle) was unreachable / errored — an infra
+  // failure, not a problem with the question or repo. Retrying later is the
+  // right remedy (vs. rephrasing).
+  | 'UNAVAILABLE';
 
 export interface AuthoringRunError {
   message: string;
