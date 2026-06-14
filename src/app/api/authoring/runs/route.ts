@@ -106,6 +106,7 @@ export async function POST(request: NextRequest) {
       ref,
       question,
       model,
+      isPublic: !access.private,
       requester: { id: user.id, login: user.login },
     }).catch((e) => console.error('[authoring] job crashed', runId, e));
 

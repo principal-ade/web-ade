@@ -13,6 +13,8 @@
  */
 import { runInFreestyle, AuthoringError } from './env/freestyle';
 import { patchRun } from './run-store';
+import { recordUnsupportedRepo } from './unsupported-store';
+import { isCuratedRepo } from './curated-repos';
 import {
   getIndex,
   findIndexEntry,
@@ -66,6 +68,11 @@ export interface AuthoringJobParams {
   ref?: string;
   question: string;
   model?: string;
+  /**
+   * Whether the repo is public. Gates recording into the GLOBAL unsupported
+   * list on failure — a private repo's name must never be served to everyone.
+   */
+  isPublic: boolean;
   /** The requesting user — the trail is self-delivered to their inbox. */
   requester: { id: number; login: string };
 }
@@ -142,7 +149,8 @@ export async function runAuthoringJob(p: AuthoringJobParams): Promise<void> {
     // `fetch failed`) is infra, not the agent — report it as UNAVAILABLE so the
     // client says "retry later" instead of "rephrase". Anything else falls back
     // to AGENT_NO_EMIT.
-    const code: AuthoringErrorCode = err instanceof AuthoringError
+    const isAuthoringError = err instanceof AuthoringError;
+    const code: AuthoringErrorCode = isAuthoringError
       ? err.code
       : isTransportError(err)
         ? 'UNAVAILABLE'
@@ -155,5 +163,28 @@ export async function runAuthoringJob(p: AuthoringJobParams): Promise<void> {
     }).catch((e) =>
       console.error('[authoring] failed-state write failed', p.runId, e)
     );
+
+    // Track repos that can't be imported so the picker can warn next time. We
+    // record ONLY a deliberate UNAVAILABLE thrown by the substrate layer
+    // (`AuthoringError` from `freestyle.ts` — bad import/clone/VM), because that
+    // is the failure that's actually attributable to the repo. We deliberately
+    // do NOT record:
+    //   - raw transport blips (`fetch failed`) that `isTransportError` mapped to
+    //     UNAVAILABLE — those are transient and can hit any host→GitHub/Freestyle
+    //     hop (incl. the long opencode exec), well after a successful import;
+    //   - private repos (this list is served globally — never leak the name);
+    //   - curated repos (verified to import — a failure there is by definition
+    //     transient, not an import verdict).
+    // Best-effort: a failure here must not change run state.
+    if (
+      code === 'UNAVAILABLE' &&
+      isAuthoringError &&
+      p.isPublic &&
+      !isCuratedRepo(p.owner, p.repo)
+    ) {
+      await recordUnsupportedRepo(p.owner, p.repo, { code, message }).catch((e) =>
+        console.error('[authoring] unsupported-record failed', p.runId, e)
+      );
+    }
   }
 }
