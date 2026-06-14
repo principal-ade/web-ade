@@ -18,15 +18,19 @@
  * client shape so a published topic round-trips unchanged; the two are kept in
  * sync by review, not by a shared import.
  *
- * A structured `state` axis, an optional free-form `label`, and a `waitingOn`
- * descriptor for holding-pattern topics parked on something external. Optional
- * everywhere — absence is treated as `active`.
+ * A structured `state` axis (ordered by a feature's "aliveness", from nascent
+ * idea to retired), an optional free-form `label`, and a `waitingOn` descriptor
+ * for holding-pattern topics parked on something external. Optional everywhere
+ * — absence is treated as `new-thought`.
  */
 export type TopicStatusState =
-  | 'active'
-  | 'needs-attention'
+  | 'new-thought'
+  | 'working'
+  | 'paused'
   | 'waiting'
-  | 'done';
+  | 'done-for-now'
+  | 'deprecated'
+  | 'abandoned';
 
 export interface TopicStatus {
   state: TopicStatusState;
@@ -70,7 +74,7 @@ export interface TopicPayload {
   createdBy: { githubId: number; githubLogin: string };
   createdAt: string;
   updatedAt: string;
-  /** Optional workflow status. Absent means `active`. See {@link TopicStatus}. */
+  /** Optional workflow status. Absent means `new-thought`. See {@link TopicStatus}. */
   status?: TopicStatus;
   /** Read access. Absent means `private`. See {@link TopicVisibility}. */
   visibility?: TopicVisibility;

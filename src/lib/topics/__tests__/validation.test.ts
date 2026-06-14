@@ -17,9 +17,9 @@ const UUID = '11111111-1111-4111-8111-111111111111';
 
 describe('validateStatus', () => {
   it('accepts a bare state', () => {
-    expect(validateStatus({ state: 'active' })).toEqual({ state: 'active' });
-    expect(validateStatus({ state: 'needs-attention' })).toEqual({
-      state: 'needs-attention',
+    expect(validateStatus({ state: 'working' })).toEqual({ state: 'working' });
+    expect(validateStatus({ state: 'paused' })).toEqual({
+      state: 'paused',
     });
   });
 
@@ -32,17 +32,20 @@ describe('validateStatus', () => {
   });
 
   it('trims a label and drops an empty one', () => {
-    expect(validateStatus({ state: 'done', label: '  done for now  ' })).toEqual(
-      { state: 'done', label: 'done for now' },
-    );
-    expect(validateStatus({ state: 'done', label: '   ' })).toEqual({
-      state: 'done',
+    expect(
+      validateStatus({ state: 'done-for-now', label: '  done for now  ' }),
+    ).toEqual({ state: 'done-for-now', label: 'done for now' });
+    expect(validateStatus({ state: 'done-for-now', label: '   ' })).toEqual({
+      state: 'done-for-now',
     });
   });
 
   it('caps label length', () => {
     expect(() =>
-      validateStatus({ state: 'done', label: 'x'.repeat(MAX_STATUS_LABEL_CHARS + 1) }),
+      validateStatus({
+        state: 'done-for-now',
+        label: 'x'.repeat(MAX_STATUS_LABEL_CHARS + 1),
+      }),
     ).toThrow(/label exceeds/);
   });
 
@@ -111,9 +114,9 @@ describe('validateCreateRequest with status', () => {
   it('validates status when present', () => {
     const out = validateCreateRequest({
       title: 'T',
-      status: { state: 'needs-attention', label: 'revisit' },
+      status: { state: 'paused', label: 'revisit' },
     });
-    expect(out.status).toEqual({ state: 'needs-attention', label: 'revisit' });
+    expect(out.status).toEqual({ state: 'paused', label: 'revisit' });
   });
 
   it('rejects an invalid status on create', () => {
@@ -125,8 +128,8 @@ describe('validateCreateRequest with status', () => {
 
 describe('validateUpdateRequest with status', () => {
   it('allows a status-only update', () => {
-    expect(validateUpdateRequest({ status: { state: 'done' } })).toEqual({
-      status: { state: 'done' },
+    expect(validateUpdateRequest({ status: { state: 'done-for-now' } })).toEqual({
+      status: { state: 'done-for-now' },
     });
   });
 

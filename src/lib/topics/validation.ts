@@ -67,10 +67,13 @@ function validateTrailIds(value: unknown): string[] {
 }
 
 const STATUS_STATES: readonly TopicStatusState[] = [
-  'active',
-  'needs-attention',
+  'new-thought',
+  'working',
+  'paused',
   'waiting',
-  'done',
+  'done-for-now',
+  'deprecated',
+  'abandoned',
 ];
 const STATUS_REF_KINDS = ['url', 'pr', 'issue', 'topic', 'trail'] as const;
 
