@@ -13,10 +13,10 @@ import { cookies, headers } from 'next/headers';
 import {
   getOrCreateCommitFeedState,
   storeCommitFeedState,
-} from '@/lib/feed-collections/s3-storage';
+} from '@/lib/commit-feed/s3-storage';
 import type {
   SavedActivityCard,
-} from '@/lib/feed-collections/types';
+} from '@/lib/commit-feed/types';
 
 // ============================================================================
 // Auth Helpers
