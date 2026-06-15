@@ -3,10 +3,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, Home, Calendar, User, UserPlus } from 'lucide-react';
+import { LogOut, Home, Calendar, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FollowsSettingsPanel } from './FollowsSettingsPanel';
 
 interface UserOrganization {
   id: number;
@@ -21,7 +20,6 @@ export function UserAvatarMenu({ hideLoginButton = false }: { hideLoginButton?: 
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [organizations, setOrganizations] = useState<UserOrganization[]>([]);
   const [orgsLoading, setOrgsLoading] = useState(false);
-  const [showFollowsSettings, setShowFollowsSettings] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const isHomePage = pathname === '/';
@@ -179,18 +177,6 @@ export function UserAvatarMenu({ hideLoginButton = false }: { hideLoginButton?: 
             <Calendar className="w-4 h-4" />
             Feed
           </Link>
-          {/* Manage Follows */}
-          <button
-            onClick={() => {
-              setUserMenuOpen(false);
-              setShowFollowsSettings(true);
-            }}
-            className="flex items-center gap-2 px-3 py-2 text-sm w-full transition-colors hover:opacity-80"
-            style={{ color: theme.colors.text }}
-          >
-            <UserPlus className="w-4 h-4" />
-            Manage Follows
-          </button>
           <div
             className="my-1 h-px"
             style={{ background: theme.colors.border }}
@@ -208,12 +194,6 @@ export function UserAvatarMenu({ hideLoginButton = false }: { hideLoginButton?: 
           </button>
         </div>
       )}
-
-      {/* Follows Settings Panel */}
-      <FollowsSettingsPanel
-        isOpen={showFollowsSettings}
-        onClose={() => setShowFollowsSettings(false)}
-      />
     </div>
   );
 }
