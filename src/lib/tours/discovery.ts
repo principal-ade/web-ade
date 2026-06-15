@@ -18,7 +18,49 @@ import {
   GitHubApiError,
 } from '../github-cache';
 import { getCached, getTourAvailabilityCacheKey } from '../redis-cache';
-import type { TourListItem } from './types';
+import { mergeTTSOptions } from '../tts/elevenlabs-client';
+import { readManifest, computeTourAudioStatus } from '../tts/manifest';
+import type { IntroductionTour } from '@principal-ai/file-city-builder';
+import type { TourAudioStatus, TourListItem } from './types';
+
+/** Status used when audio state can't be read (S3 down, etc.). */
+const UNKNOWN_AUDIO_STATUS: TourAudioStatus = {
+  state: 'none',
+  totalSteps: 0,
+  readySteps: 0,
+  lastGeneratedAt: null,
+  canGenerateAt: null,
+};
+
+/**
+ * Best-effort audio status for a tour. Reads the per-tour manifest and compares
+ * recorded keys to current step keys. Never throws — a failure (missing creds,
+ * S3 error) falls back to "no audio" so the tours list still renders.
+ */
+async function resolveAudioStatus(
+  owner: string,
+  repo: string,
+  path: string,
+  tour: IntroductionTour
+): Promise<TourAudioStatus> {
+  try {
+    const options = mergeTTSOptions();
+    const manifest = await readManifest(owner, repo, path);
+    // `parseTour` yields the file-city-builder tour type; the TTS helpers use
+    // the structurally-equivalent local tour type. The shapes match at runtime
+    // (id + narration/description/content per step) — cast across the boundary.
+    const ttsTour = tour as unknown as Parameters<
+      typeof computeTourAudioStatus
+    >[2];
+    return await computeTourAudioStatus(owner, repo, ttsTour, options, manifest);
+  } catch (error) {
+    console.warn(
+      `[tours] Audio status unavailable for ${owner}/${repo}/${path}:`,
+      error instanceof Error ? error.message : error
+    );
+    return UNKNOWN_AUDIO_STATUS;
+  }
+}
 
 const TOUR_FILE_SUFFIX = '.tour.json';
 // Revalidation window for the cached GitHub reads. Matches the legacy
@@ -223,9 +265,16 @@ export async function listToursForRepo(
       if (!raw) continue;
       const result = parseTour(raw);
       if (result.success && result.tour) {
+        const audioStatus = await resolveAudioStatus(
+          src.owner,
+          src.repo,
+          path,
+          result.tour
+        );
         items.push({
           tour: result.tour,
           audio: { owner: src.owner, repo: src.repo, path, commitSha },
+          audioStatus,
         });
       } else {
         const detail =

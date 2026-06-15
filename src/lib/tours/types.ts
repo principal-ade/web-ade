@@ -18,10 +18,38 @@ export interface TourAudioRef {
   commitSha: string | null;
 }
 
+/**
+ * Audio-generation status for one tour, surfaced on the list so a row can show
+ * whether narration exists, is stale, or needs generating — and whether the
+ * once-per-hour cooldown currently blocks (re)generation.
+ */
+export interface TourAudioStatus {
+  /**
+   * - `ready`    — every text-bearing step has current audio.
+   * - `outdated` — audio was generated before but a step's text changed since.
+   * - `partial`  — some steps have audio, no completed prior generation.
+   * - `none`     — no audio generated yet.
+   */
+  state: 'none' | 'partial' | 'ready' | 'outdated';
+  /** Text-bearing steps (the denominator for "ready"). */
+  totalSteps: number;
+  /** Steps whose current audio is present. */
+  readySteps: number;
+  /** ISO 8601 of the last generation attempt; null if never. */
+  lastGeneratedAt: string | null;
+  /**
+   * ISO 8601 of when generation is next allowed, or null when allowed now.
+   * Set while inside the per-tour hourly cooldown.
+   */
+  canGenerateAt: string | null;
+}
+
 /** A discovered tour plus the coordinates needed to fetch its audio. */
 export interface TourListItem {
   tour: IntroductionTour;
   audio: TourAudioRef;
+  /** Generation status used to render the row's audio badge + button. */
+  audioStatus: TourAudioStatus;
 }
 
 export interface ListToursResponse {

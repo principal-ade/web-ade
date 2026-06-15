@@ -7,6 +7,7 @@
 import {
   S3Client,
   HeadObjectCommand,
+  GetObjectCommand,
   PutObjectCommand,
   HeadObjectCommandOutput,
 } from '@aws-sdk/client-s3';
@@ -101,6 +102,63 @@ export async function getS3Metadata(
     return response.Metadata || null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Reads and parses a JSON object from S3.
+ *
+ * Used for small sidecar metadata (e.g. the per-tour audio manifest), not audio
+ * blobs. Returns `null` when the key is absent or the body can't be parsed, so
+ * callers can treat "no manifest yet" and "unreadable manifest" the same way.
+ *
+ * @param key - S3 object key
+ * @returns Parsed object, or null if missing/unreadable
+ */
+export async function getS3Json<T>(key: string): Promise<T | null> {
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: key,
+      })
+    );
+    const body = await response.Body?.transformToString();
+    if (!body) return null;
+    return JSON.parse(body) as T;
+  } catch {
+    // Missing key, access error, or invalid JSON — caller falls back to default.
+    return null;
+  }
+}
+
+/**
+ * Writes a value as a JSON object to S3.
+ *
+ * No long-lived cache headers (unlike audio): manifests change as tours are
+ * generated/edited, so they must always reflect the latest write.
+ *
+ * @param key - S3 object key
+ * @param value - JSON-serializable value
+ * @throws Error if upload fails
+ */
+export async function putS3Json(key: string, value: unknown): Promise<void> {
+  try {
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: key,
+        Body: JSON.stringify(value),
+        ContentType: 'application/json',
+        CacheControl: 'no-cache',
+      })
+    );
+  } catch (error) {
+    console.error('[S3 Cache] JSON upload failed:', {
+      key,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new Error('S3_ERROR');
   }
 }
 

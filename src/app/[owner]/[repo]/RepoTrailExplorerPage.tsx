@@ -14,6 +14,10 @@ import {
   Check,
   X,
   Compass,
+  Volume2,
+  AlertTriangle,
+  Loader2,
+  Mic,
 } from 'lucide-react';
 import { FileTree as PierreFileTree, useFileTree } from '@pierre/trees/react';
 import { themeToTreeStyles } from '@pierre/trees';
@@ -37,7 +41,7 @@ import type {
   HighlightLayer,
 } from '@industry-theme/file-city-panel';
 import type { IntroductionTour } from '@principal-ai/file-city-builder';
-import type { TourListItem } from '@/lib/tours/types';
+import type { TourAudioStatus, TourListItem } from '@/lib/tours/types';
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
@@ -49,6 +53,20 @@ import {
   type SharedTrailIndexEntry,
   type TrailPayload,
 } from '@/lib/trails/types';
+
+/**
+ * Live state of a tour's audio-generation run, keyed by tour id. Present only
+ * while a run is active (or just errored); cleared on success.
+ */
+interface TourGenProgress {
+  phase: 'running' | 'error';
+  /** Steps with audio so far (includes those already cached at start). */
+  done: number;
+  /** Text-bearing steps total. */
+  total: number;
+  /** Short message shown on the row when `phase === 'error'`. */
+  error?: string;
+}
 
 const FileCityTrailExplorerPanel = dynamic(
   () =>
@@ -385,6 +403,98 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   const selectedTour = selectedTourId
     ? (tours.find((t) => t.tour.id === selectedTourId) ?? null)
     : null;
+
+  // Deliberate, rate-limited audio generation. Driven from the tours list so
+  // the user sees per-step progress; selecting a tour never generates.
+  const [tourGenProgress, setTourGenProgress] = useState<
+    Map<string, TourGenProgress>
+  >(() => new Map());
+
+  const setProgress = useCallback(
+    (tourId: string, value: TourGenProgress | null) => {
+      setTourGenProgress((prev) => {
+        const next = new Map(prev);
+        if (value) next.set(tourId, value);
+        else next.delete(tourId);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const handleGenerateTourAudio = useCallback(
+    async (item: TourListItem) => {
+      const tourId = item.tour.id;
+      const base = {
+        owner: item.audio.owner,
+        repo: item.audio.repo,
+        path: item.audio.path,
+        commitSha: item.audio.commitSha ?? undefined,
+      };
+      const stepGuess = Array.isArray(item.tour.steps)
+        ? item.tour.steps.length
+        : 0;
+      setProgress(tourId, { phase: 'running', done: 0, total: stepGuess });
+
+      // Claim the hourly slot + fetch the work list. A rejection here is
+      // terminal (cooldown or fetch failure) — nothing to finalize.
+      let begin: { stepIds: string[]; totalSteps: number; cachedSteps: number };
+      try {
+        begin = await trpc.tts.beginTourGeneration.mutate(base);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '';
+        const cooldown =
+          /TOO_MANY_REQUESTS/i.test(message) || /generated recently/i.test(message);
+        setProgress(tourId, {
+          phase: 'error',
+          done: 0,
+          total: 0,
+          error: cooldown ? 'Recently generated — try again later' : 'Generation failed',
+        });
+        return;
+      }
+
+      let done = begin.cachedSteps;
+      const total = begin.totalSteps;
+      setProgress(tourId, { phase: 'running', done, total });
+
+      let stepFailed = false;
+      for (const stepId of begin.stepIds) {
+        try {
+          await trpc.tts.generateTourStep.mutate({ ...base, stepId });
+          done += 1;
+          setProgress(tourId, { phase: 'running', done, total });
+        } catch {
+          stepFailed = true;
+          break;
+        }
+      }
+
+      // Always finalize to persist whatever landed and refresh the badge.
+      try {
+        const status = await trpc.tts.finishTourGeneration.mutate(base);
+        setTours((prev) =>
+          prev.map((t) =>
+            t.tour.id === tourId ? { ...t, audioStatus: status } : t,
+          ),
+        );
+      } catch {
+        // Status refresh failed; the row keeps its prior badge.
+      }
+
+      if (stepFailed) {
+        setProgress(tourId, {
+          phase: 'error',
+          done,
+          total,
+          error: 'Some steps failed — try again',
+        });
+      } else {
+        setProgress(tourId, null);
+      }
+    },
+    [setProgress],
+  );
 
   // Sorted, deduped list of every directory in the repo, with trailing
   // slashes so Pierre's tree treats them as folders. Combined with the
@@ -815,6 +925,8 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
               setSelectedFilePath(null);
             }
           }}
+          tourGenProgress={tourGenProgress}
+          onGenerateTourAudio={handleGenerateTourAudio}
           dirPaths={dirPaths}
           filePaths={filePaths}
           excludedDirs={excludedDirs}
@@ -1036,6 +1148,8 @@ const TrailListPane: React.FC<{
   toursLoading: boolean;
   selectedTourId: string | null;
   onSelectTour: (id: string | null) => void;
+  tourGenProgress: Map<string, TourGenProgress>;
+  onGenerateTourAudio: (item: TourListItem) => void;
   dirPaths: string[];
   filePaths: string[];
   excludedDirs: string[];
@@ -1061,6 +1175,8 @@ const TrailListPane: React.FC<{
   toursLoading,
   selectedTourId,
   onSelectTour,
+  tourGenProgress,
+  onGenerateTourAudio,
   dirPaths,
   filePaths,
   excludedDirs,
@@ -1102,6 +1218,8 @@ const TrailListPane: React.FC<{
           loading={toursLoading}
           selectedTourId={selectedTourId}
           onSelectTour={onSelectTour}
+          genProgress={tourGenProgress}
+          onGenerateAudio={onGenerateTourAudio}
         />
       ) : (
         <>
@@ -1716,7 +1834,16 @@ const ToursPane: React.FC<{
   loading: boolean;
   selectedTourId: string | null;
   onSelectTour: (id: string | null) => void;
-}> = ({ tours, loading, selectedTourId, onSelectTour }) => {
+  genProgress: Map<string, TourGenProgress>;
+  onGenerateAudio: (item: TourListItem) => void;
+}> = ({
+  tours,
+  loading,
+  selectedTourId,
+  onSelectTour,
+  genProgress,
+  onGenerateAudio,
+}) => {
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
       {loading ? (
@@ -1726,14 +1853,19 @@ const ToursPane: React.FC<{
           No tours have been authored for this repository yet.
         </ListMessage>
       ) : (
-        tours.map(({ tour }) => (
+        tours.map((item) => (
           <TourRow
-            key={tour.id}
-            tour={tour}
-            selected={tour.id === selectedTourId}
+            key={item.tour.id}
+            tour={item.tour}
+            audioStatus={item.audioStatus}
+            progress={genProgress.get(item.tour.id)}
+            selected={item.tour.id === selectedTourId}
             onSelect={() =>
-              onSelectTour(tour.id === selectedTourId ? null : tour.id)
+              onSelectTour(
+                item.tour.id === selectedTourId ? null : item.tour.id,
+              )
             }
+            onGenerate={() => onGenerateAudio(item)}
           />
         ))
       )}
@@ -1743,9 +1875,12 @@ const ToursPane: React.FC<{
 
 const TourRow: React.FC<{
   tour: IntroductionTour;
+  audioStatus: TourAudioStatus;
+  progress: TourGenProgress | undefined;
   selected: boolean;
   onSelect: () => void;
-}> = ({ tour, selected, onSelect }) => {
+  onGenerate: () => void;
+}> = ({ tour, audioStatus, progress, selected, onSelect, onGenerate }) => {
   const { theme } = useTheme();
   const stepCount = Array.isArray(tour.steps) ? tour.steps.length : 0;
   // `audience` is an optional, loosely-typed field on the tour schema — read
@@ -1754,53 +1889,183 @@ const TourRow: React.FC<{
   const audience = typeof audienceRaw === 'string' ? audienceRaw : null;
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className="w-full text-left px-4 py-3 border-b transition-colors"
+    <div
+      className="border-b transition-colors"
       style={{
         background: selected ? theme.colors.background : 'transparent',
         borderColor: theme.colors.border,
         color: theme.colors.text,
       }}
     >
-      <div className="min-w-0">
-        <div
-          className="break-words"
-          style={{
-            fontSize: theme.fontSizes[2],
-            fontWeight: theme.fontWeights.semibold,
-          }}
-        >
-          {tour.title}
-        </div>
-        <div
-          className="mt-1.5 flex items-center gap-3"
-          style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[0] }}
-        >
-          <span className="inline-flex items-center gap-1">
-            <Compass size={12} />
-            {stepCount} {stepCount === 1 ? 'step' : 'steps'}
-          </span>
-          {audience && <span className="truncate">{audience}</span>}
-        </div>
-        {tour.description && (
+      <button
+        type="button"
+        onClick={onSelect}
+        className="w-full text-left px-4 pt-3"
+        style={{ background: 'transparent', color: 'inherit' }}
+      >
+        <div className="min-w-0">
           <div
-            className="mt-1 break-words"
+            className="break-words"
+            style={{
+              fontSize: theme.fontSizes[2],
+              fontWeight: theme.fontWeights.semibold,
+            }}
+          >
+            {tour.title}
+          </div>
+          <div
+            className="mt-1.5 flex items-center gap-3"
             style={{
               color: theme.colors.textMuted,
               fontSize: theme.fontSizes[0],
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
             }}
           >
-            {tour.description}
+            <span className="inline-flex items-center gap-1">
+              <Compass size={12} />
+              {stepCount} {stepCount === 1 ? 'step' : 'steps'}
+            </span>
+            {audience && <span className="truncate">{audience}</span>}
           </div>
-        )}
+          {tour.description && (
+            <div
+              className="mt-1 break-words"
+              style={{
+                color: theme.colors.textMuted,
+                fontSize: theme.fontSizes[0],
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+              }}
+            >
+              {tour.description}
+            </div>
+          )}
+        </div>
+      </button>
+      <TourAudioControl
+        status={audioStatus}
+        progress={progress}
+        onGenerate={onGenerate}
+      />
+    </div>
+  );
+};
+
+/**
+ * Audio status badge + Generate/Regenerate button for one tour row. Shows live
+ * per-step progress while generating, and disables the button while the tour is
+ * inside its once-per-hour cooldown.
+ */
+const TourAudioControl: React.FC<{
+  status: TourAudioStatus;
+  progress: TourGenProgress | undefined;
+  onGenerate: () => void;
+}> = ({ status, progress, onGenerate }) => {
+  const { theme } = useTheme();
+  const muted = theme.colors.textMuted;
+  const accent = theme.colors.primary ?? '#3b82f6';
+
+  const cooldownMinutes = useMemo(() => {
+    if (!status.canGenerateAt) return 0;
+    const ms = new Date(status.canGenerateAt).getTime() - Date.now();
+    return ms > 0 ? Math.ceil(ms / 60000) : 0;
+  }, [status.canGenerateAt]);
+
+  const rowStyle = 'px-4 pb-3 pt-2 flex items-center gap-2';
+  const labelStyle = { fontSize: theme.fontSizes[0] };
+
+  // Active generation — show per-step progress, no button.
+  if (progress?.phase === 'running') {
+    return (
+      <div className={rowStyle} style={{ color: muted, ...labelStyle }}>
+        <Loader2 size={12} className="animate-spin" />
+        <span>
+          Generating audio… {progress.done}/{progress.total}
+        </span>
       </div>
-    </button>
+    );
+  }
+
+  const generateButton = (label: string) => {
+    const disabled = cooldownMinutes > 0;
+    return (
+      <button
+        type="button"
+        disabled={disabled}
+        title={
+          disabled
+            ? `Audio was generated recently — available again in ~${cooldownMinutes}m`
+            : undefined
+        }
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!disabled) onGenerate();
+        }}
+        className="inline-flex items-center gap-1 rounded px-2 py-1 border transition-colors"
+        style={{
+          fontSize: theme.fontSizes[0],
+          borderColor: theme.colors.border,
+          color: disabled ? muted : accent,
+          opacity: disabled ? 0.6 : 1,
+          cursor: disabled ? 'not-allowed' : 'pointer',
+        }}
+      >
+        <Mic size={12} />
+        {disabled ? `Available in ${cooldownMinutes}m` : label}
+      </button>
+    );
+  };
+
+  if (progress?.phase === 'error') {
+    return (
+      <div className={rowStyle}>
+        <span
+          className="inline-flex items-center gap-1"
+          style={{ color: '#dc2626', ...labelStyle }}
+        >
+          <AlertTriangle size={12} />
+          {progress.error ?? 'Generation failed'}
+        </span>
+        {generateButton('Retry')}
+      </div>
+    );
+  }
+
+  if (status.state === 'ready') {
+    return (
+      <div className={rowStyle} style={{ color: muted, ...labelStyle }}>
+        <Volume2 size={12} style={{ color: accent }} />
+        <span>Audio ready</span>
+      </div>
+    );
+  }
+
+  if (status.state === 'outdated') {
+    return (
+      <div className={rowStyle}>
+        <span
+          className="inline-flex items-center gap-1"
+          style={{ color: muted, ...labelStyle }}
+        >
+          <AlertTriangle size={12} />
+          Audio outdated
+        </span>
+        {generateButton('Regenerate')}
+      </div>
+    );
+  }
+
+  // 'none' or 'partial' — no complete audio yet.
+  return (
+    <div className={rowStyle}>
+      <span style={{ color: muted, ...labelStyle }}>
+        {status.state === 'partial'
+          ? `Partial audio (${status.readySteps}/${status.totalSteps})`
+          : 'No audio'}
+      </span>
+      {generateButton('Generate')}
+    </div>
   );
 };
 
@@ -2213,7 +2478,7 @@ const RightPane: React.FC<{
     }),
     [],
   );
-  // Coordinates the TTS backend needs to re-fetch the tour and generate audio.
+  // Coordinates the TTS backend needs to look up this tour's cached audio.
   // Points at the source the tour was discovered in (repo or fork).
   const tourAudioContext = useMemo(
     () =>
@@ -2222,11 +2487,11 @@ const RightPane: React.FC<{
             owner: selectedTour.audio.owner,
             repo: selectedTour.audio.repo,
             path: selectedTour.audio.path,
-            // No SHA → ask the backend for cached audio only (it resolves
-            // HEAD itself and skips generation), so a missing SHA degrades
-            // gracefully instead of failing TTS validation.
             commitSha: selectedTour.audio.commitSha ?? undefined,
-            cacheOnly: !selectedTour.audio.commitSha,
+            // Always cache-only: selecting a tour plays whatever audio already
+            // exists and never triggers generation. Generation is a deliberate,
+            // rate-limited action from the tours list (the Generate button).
+            cacheOnly: true,
           }
         : undefined,
     [selectedTour],
