@@ -17,7 +17,7 @@ import { FolderGit2, Search, X, ArrowLeft, Globe, Building2, MapPin } from 'luci
 import { GitHubSearchingAnimation } from '@/components/home/GitHubSearchingAnimation';
 import { Logo } from '@principal-ai/logo-component';
 import { useGitHubActivityFeed, type RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
-import { usePersonalizedFeed } from '@/hooks/usePersonalizedFeed';
+import { FEATURED_REPOS } from '@/lib/featured-repos';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { RepoActivityCard } from './RepoActivityCard';
 import { MobileActivityFeed } from '@/components/home/MobileActivityFeed';
@@ -186,14 +186,11 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
 }) => {
   const { theme } = useTheme();
 
-  // Get personalized repos (falls back to featured if not authenticated)
-  const { repos: feedRepos, isLoading: feedLoading } = usePersonalizedFeed();
-
-  // Fetch activity for those repos
-  const { repoSummaries, loading, error, addRepo, refresh } = useGitHubActivityFeed(feedRepos, 10);
+  // Fetch activity for the featured repos
+  const { repoSummaries, loading, error, addRepo, refresh } = useGitHubActivityFeed(FEATURED_REPOS, 10);
 
   // Combined loading state
-  const isLoading = feedLoading || loading;
+  const isLoading = loading;
 
   // Detect mobile to avoid rendering heavy desktop components
   const [isMobile, setIsMobile] = useState(false);
