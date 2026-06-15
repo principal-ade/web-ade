@@ -55,7 +55,7 @@
     "@pierre/trees": "^1.0.0-beta.3",
     "@principal-ade/code-quality-panels": "^0.2.0",
     "@principal-ade/dynamic-file-tree": "^0.2.45",
-    "@principal-ade/industry-theme": "^0.1.21",
+    "@principal-ade/industry-theme": "^0.1.23",
     "@principal-ade/industry-themed-ai-sdk-panel": "^0.1.4",
     "@principal-ade/industry-themed-monaco-editor": "^0.1.10",
     "@principal-ade/panel-framework-core": "^0.5.1",
