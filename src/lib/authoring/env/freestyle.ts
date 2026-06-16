@@ -187,21 +187,66 @@ function readVmBundle(): string {
   }
 }
 
-export async function runInFreestyle(
-  opts: FreestyleRunOpts
-): Promise<FreestyleRunResult> {
+/**
+ * The live Freestyle resources backing a prepared authoring session. These ids
+ * are all that's needed to (a) reconnect to the VM for the ask phase
+ * (`vms.ref({vmId})`) and (b) tear everything down afterwards — so they can be
+ * persisted in the session store and survive across separate HTTP requests.
+ */
+export interface PreparedSession {
+  vmId: string;
+  repoId: string;
+  identityId: string;
+  /** The host-resolved HEAD sha (gate + display); the authoritative sha is
+   *  re-stamped in-VM from the real `.git` during the ask phase. */
+  sha: string;
+}
+
+export interface PrepareOpts {
+  owner: string;
+  repo: string;
+  ref?: string;
+  /** User's GitHub token — host-only (resolve + import). Never reaches the VM. */
+  userToken: string;
+  onProgress?: (label: string, detail?: string) => void;
+}
+
+export interface AskOpts {
+  /** The VM booted by {@link prepareFreestyleSession}. */
+  vmId: string;
+  owner: string;
+  repo: string;
+  question: string;
+  /** Host-resolved sha (display only). */
+  sha?: string;
+  model?: string;
+  /** User's GitHub token — host-only (publish). Never reaches the VM. */
+  userToken: string;
+  publish?: boolean;
+  timeoutSecs?: number;
+  onProgress?: (label: string, detail?: string) => void;
+}
+
+/**
+ * Phase 1 of a session — everything that does NOT need the question, so the UI
+ * can show "Initializing" (Freestyle Git import) then "Preparing" (VM boot +
+ * clone) and only reveal the question field once this resolves. Acquires the
+ * three Freestyle resources (imported repo, scoped identity, booted VM with the
+ * repo cloned into {@link VM_WORKDIR}) and returns their ids; the caller owns
+ * teardown via {@link teardownFreestyleSession}.
+ *
+ * On any failure this tears down whatever it already created (so a failed
+ * prepare never leaks resources) and rethrows the classified `AuthoringError`.
+ */
+export async function prepareFreestyleSession(
+  opts: PrepareOpts
+): Promise<PreparedSession> {
   const onProgress = opts.onProgress ?? (() => {});
-  const model = opts.model ?? DEFAULT_MODEL;
 
   const baseSnapshot = process.env.AUTHORING_BASE_SNAPSHOT;
   if (!baseSnapshot) {
     throw new Error('AUTHORING_BASE_SNAPSHOT is not set (the baked base image id)');
   }
-  const openrouterKey = process.env.OPENROUTER_API_KEY;
-  if (!openrouterKey) {
-    throw new Error('OPENROUTER_API_KEY is not set (opencode provider auth for the VM)');
-  }
-  const webAdeOrigin = process.env.WEB_ADE_ORIGIN ?? 'http://localhost:3000';
 
   // 1. Resolve access + sha on the host (gating only — fail fast before we
   //    allocate any Freestyle resources). The authoritative authoredAt.sha is
@@ -211,8 +256,7 @@ export async function runInFreestyle(
 
   const bundle = readVmBundle();
 
-  // Freestyle resources to tear down in `finally` (each may be undefined if we
-  // failed before creating it).
+  // Resources to tear down if we fail partway (each undefined until created).
   let repoId: string | undefined;
   let identityId: string | undefined;
   let vmId: string | undefined;
@@ -221,7 +265,9 @@ export async function runInFreestyle(
     // 2. Import the GitHub repo into Freestyle Git — server-side, on Freestyle's
     //    own network (NOT from the VM, whose egress to github.com is flaky). The
     //    user's token authenticates the import for private repos and stays on the
-    //    host; it never enters the VM.
+    //    host; it never enters the VM. This is the "Initializing" step and the
+    //    one that fails most often, so the UI gates the whole session on it.
+    onProgress('importing', `${opts.owner}/${opts.repo}`);
     repoId = await importToFreestyleGit(opts.owner, opts.repo, opts.ref, opts.userToken);
     onProgress('repo imported to freestyle git', repoId);
 
@@ -234,6 +280,7 @@ export async function runInFreestyle(
     // 4. Boot a fresh VM off the baked base snapshot. A failure here is the
     //    execution substrate being unreachable/erroring — surface it as
     //    UNAVAILABLE so the client retries rather than rephrasing.
+    onProgress('preparing', 'booting vm');
     let created: { vm: VmHandle; vmId: string };
     try {
       created = (await freestyle.vms.create({
@@ -297,66 +344,137 @@ export async function runInFreestyle(
     }
     onProgress('cloned from freestyle git', sha.slice(0, 8));
 
-    // 7. Run the SAME core inside the VM, egress-less, printing one JSON line.
-    //    OPENROUTER_API_KEY authenticates opencode's provider; no GitHub or
-    //    Freestyle credential is passed here — the agent never sees one.
-    onProgress('driving opencode in VM', model);
-    const timeoutSecs = opts.timeoutSecs ?? 540;
-    // The opencode run can take minutes; the default synchronous-exec timeout
-    // drops the connection ("fetch failed"). Give the exec more wall-clock than
-    // the bundle's own `--timeout` so the bundle aborts cleanly first.
-    const run = await vm.exec({
-      command:
-        `export HOME=/root PATH="/root/.opencode/bin:$PATH" ` +
-        `OPENROUTER_API_KEY=${shq(openrouterKey)}; ` +
-        `cd ${VM_WORKDIR} && node ${VM_BUNDLE_PATH} ` +
-        `--repo-root ${VM_WORKDIR} --question ${shq(opts.question)} ` +
-        `--model ${shq(model)} --timeout ${timeoutSecs} --emit-json`,
-      timeoutMs: (timeoutSecs + 90) * 1000,
+    return { vmId, repoId, identityId, sha };
+  } catch (err) {
+    // A failed prepare must not leak the resources it managed to create.
+    await teardownFreestyleSession({ vmId, identityId, repoId });
+    throw err;
+  }
+}
+
+/**
+ * Phase 2 of a session — drive opencode in the already-prepared VM against the
+ * user's question, then (unless `publish === false`) publish on the host with
+ * the user's token. Reconnects to the VM by id (`vms.ref`), so this can run in a
+ * separate request from {@link prepareFreestyleSession}. Does NOT tear the VM
+ * down — the session lifecycle owns that via {@link teardownFreestyleSession}.
+ */
+export async function askInFreestyleSession(
+  opts: AskOpts
+): Promise<FreestyleRunResult> {
+  const onProgress = opts.onProgress ?? (() => {});
+  const model = opts.model ?? DEFAULT_MODEL;
+
+  const openrouterKey = process.env.OPENROUTER_API_KEY;
+  if (!openrouterKey) {
+    throw new Error('OPENROUTER_API_KEY is not set (opencode provider auth for the VM)');
+  }
+  const webAdeOrigin = process.env.WEB_ADE_ORIGIN ?? 'http://localhost:3000';
+
+  const vm = freestyle.vms.ref({ vmId: opts.vmId }) as VmHandle;
+
+  // Run the SAME core inside the VM, egress-less, printing one JSON line.
+  // OPENROUTER_API_KEY authenticates opencode's provider; no GitHub or
+  // Freestyle credential is passed here — the agent never sees one.
+  onProgress('driving opencode in VM', model);
+  const timeoutSecs = opts.timeoutSecs ?? 540;
+  // The opencode run can take minutes; the default synchronous-exec timeout
+  // drops the connection ("fetch failed"). Give the exec more wall-clock than
+  // the bundle's own `--timeout` so the bundle aborts cleanly first.
+  const run = await vm.exec({
+    command:
+      `export HOME=/root PATH="/root/.opencode/bin:$PATH" ` +
+      `OPENROUTER_API_KEY=${shq(openrouterKey)}; ` +
+      `cd ${VM_WORKDIR} && node ${VM_BUNDLE_PATH} ` +
+      `--repo-root ${VM_WORKDIR} --question ${shq(opts.question)} ` +
+      `--model ${shq(model)} --timeout ${timeoutSecs} --emit-json`,
+    timeoutMs: (timeoutSecs + 90) * 1000,
+  });
+  if (run.statusCode !== 0) {
+    throw new AuthoringError('AGENT_NO_EMIT', run.stderr ?? `exit ${run.statusCode}`);
+  }
+  // Validate-in-VM already happened (the bundle ran validate.ts against the real
+  // clone). Parse the validated payload off stdout.
+  const payload = lastJsonLine(run.stdout ?? '');
+  onProgress('payload captured', String((payload as { title?: string }).title));
+
+  if (opts.publish === false) {
+    return { payload };
+  }
+
+  // Publish on the HOST with the user's token.
+  try {
+    const { id, url } = await publishTrail({
+      host: webAdeOrigin,
+      token: opts.userToken,
+      owner: opts.owner,
+      repo: opts.repo,
+      payload,
     });
-    if (run.statusCode !== 0) {
-      throw new AuthoringError('AGENT_NO_EMIT', run.stderr ?? `exit ${run.statusCode}`);
-    }
-    // 6. Validate-in-VM already happened (the bundle ran validate.ts against the
-    //    real clone). Parse the validated payload off stdout.
-    const payload = lastJsonLine(run.stdout ?? '');
-    onProgress('payload captured', String((payload as { title?: string }).title));
+    onProgress('published', url);
+    return { payload, trailId: id, trailUrl: url };
+  } catch (err) {
+    throw new AuthoringError(
+      'PUBLISH_FAILED',
+      err instanceof Error ? err.message : String(err)
+    );
+  }
+}
 
-    if (opts.publish === false) {
-      return { payload };
-    }
+/**
+ * Tear down every live Freestyle resource a session acquired — the VM, the
+ * scoped identity, and the imported Freestyle repo. Each delete is best-effort
+ * (a missing/already-deleted id is a no-op), so this is safe to call on a
+ * partially-prepared session, after a completed ask, or from the TTL reaper.
+ */
+export async function teardownFreestyleSession(ids: {
+  vmId?: string;
+  identityId?: string;
+  repoId?: string;
+}): Promise<void> {
+  if (ids.vmId) {
+    await freestyle.vms.delete({ vmId: ids.vmId }).catch(() => {});
+  }
+  if (ids.identityId) {
+    await freestyle.identities.delete({ identityId: ids.identityId }).catch(() => {});
+  }
+  if (ids.repoId) {
+    await freestyle.git.repos.delete({ repoId: ids.repoId }).catch(() => {});
+  }
+}
 
-    // 7. Publish on the HOST with the user's token.
-    try {
-      const { id, url } = await publishTrail({
-        host: webAdeOrigin,
-        token: opts.userToken,
-        owner: opts.owner,
-        repo: opts.repo,
-        payload,
-      });
-      onProgress('published', url);
-      return { payload, trailId: id, trailUrl: url };
-    } catch (err) {
-      throw new AuthoringError(
-        'PUBLISH_FAILED',
-        err instanceof Error ? err.message : String(err)
-      );
-    }
+/**
+ * One-shot cold-create flow (the original Stage 3/4 path): prepare → ask →
+ * teardown. Still used by `POST /api/authoring/runs` and the CLI harness. The
+ * session API drives prepare/ask/teardown separately instead, so the VM can wait
+ * for the user's question.
+ */
+export async function runInFreestyle(
+  opts: FreestyleRunOpts
+): Promise<FreestyleRunResult> {
+  const prepared = await prepareFreestyleSession({
+    owner: opts.owner,
+    repo: opts.repo,
+    ref: opts.ref,
+    userToken: opts.userToken,
+    onProgress: opts.onProgress,
+  });
+  try {
+    return await askInFreestyleSession({
+      vmId: prepared.vmId,
+      owner: opts.owner,
+      repo: opts.repo,
+      question: opts.question,
+      sha: prepared.sha,
+      model: opts.model,
+      userToken: opts.userToken,
+      publish: opts.publish,
+      timeoutSecs: opts.timeoutSecs,
+      onProgress: opts.onProgress,
+    });
   } finally {
-    // 8. Full teardown — cold-create-per-question leaves nothing live: the VM,
-    //    the scoped identity, and the imported Freestyle repo are all removed.
-    if (vmId) {
-      await freestyle.vms.delete({ vmId }).catch(() => {});
-      onProgress('vm deleted', vmId);
-    }
-    if (identityId) {
-      await freestyle.identities.delete({ identityId }).catch(() => {});
-    }
-    if (repoId) {
-      await freestyle.git.repos.delete({ repoId }).catch(() => {});
-      onProgress('freestyle repo deleted', repoId);
-    }
+    await teardownFreestyleSession(prepared);
+    opts.onProgress?.('vm deleted', prepared.vmId);
   }
 }
 

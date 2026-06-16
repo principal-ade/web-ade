@@ -33,7 +33,7 @@ import type { AuthoringErrorCode } from './run-types';
  * cause chain. These are infra (retry-later), never "the agent produced no
  * trail".
  */
-function isTransportError(err: unknown): boolean {
+export function isTransportError(err: unknown): boolean {
   const NEEDLES = [
     'fetch failed',
     'econnreset',
@@ -78,7 +78,7 @@ export interface AuthoringJobParams {
 }
 
 /** Self-deliver the freshly published trail into the requester's inbox. */
-async function deliverToInbox(args: {
+export async function deliverToInbox(args: {
   trailId: string;
   owner: string;
   repo: string;
