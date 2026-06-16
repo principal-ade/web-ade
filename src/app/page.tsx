@@ -321,7 +321,7 @@ export default function HomePage() {
         className="sticky top-0 z-30 border-b backdrop-blur-xl"
         style={{
           borderColor: `color-mix(in srgb, ${theme.colors.border} 60%, transparent)`,
-          background: `color-mix(in srgb, ${theme.colors.background} 55%, transparent)`,
+          background: `color-mix(in srgb, ${theme.colors.backgroundSecondary ?? theme.colors.background} 55%, transparent)`,
         }}
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 px-6 py-4">
