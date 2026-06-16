@@ -85,6 +85,21 @@ export function isPublicTopic(topic: Pick<TopicPayload, 'visibility'>): boolean 
   return topic.visibility === 'public';
 }
 
+/**
+ * Coerce a stored topic into its wire-complete form: `visibility` always
+ * present. On disk the field is sparse (absent === `private`; see
+ * {@link TopicVisibility}), but every topic that crosses the wire must carry
+ * it so clients reading the canonical `PublishedTopic` shape never have to
+ * branch on absence. New topics are stamped at create time; this backfills
+ * the field for legacy / pre-visibility records at the response boundary
+ * only — storage stays sparse (no migration), the returned object is a copy.
+ */
+export function toWireTopic(topic: TopicPayload): TopicPayload {
+  return topic.visibility !== undefined
+    ? topic
+    : { ...topic, visibility: 'private' };
+}
+
 export interface CreateTopicRequest {
   title: string;
   description?: string;

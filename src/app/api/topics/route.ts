@@ -79,9 +79,12 @@ export async function POST(request: NextRequest) {
       createdAt: now,
       updatedAt: now,
       ...(status !== undefined ? { status } : {}),
-      // Absent visibility means private (see TopicVisibility). Only persist
-      // the field when the creator explicitly opted into 'public'.
-      ...(visibility !== undefined ? { visibility } : {}),
+      // Enforce visibility at create: new topics always carry an explicit
+      // value (default private), so we stop producing sparse-on-disk records.
+      // The request field stays optional (CreateTopicRequest.visibility) — the
+      // default is applied here, server-side. Legacy / pre-visibility records
+      // are handled by `toWireTopic` normalization on read.
+      visibility: visibility ?? 'private',
     };
 
     await putTopic(topic);

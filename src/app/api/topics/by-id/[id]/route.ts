@@ -27,6 +27,7 @@ import { validateUpdateRequest } from '@/lib/topics/validation';
 import {
   TopicErrorCodes,
   TopicShareError,
+  toWireTopic,
   type TopicPayload,
 } from '@/lib/topics/types';
 import {
@@ -212,7 +213,7 @@ export async function GET(request: NextRequest, { params }: Params) {
       }
     }
 
-    return NextResponse.json({ topic, bookmarked, ...env });
+    return NextResponse.json({ topic: toWireTopic(topic), bookmarked, ...env });
   } catch (error) {
     return errorResponse(error, 'GET');
   }
@@ -239,7 +240,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         : {}),
     }));
     await upsertTopicInUserIndex(updated);
-    return NextResponse.json({ topic: updated });
+    return NextResponse.json({ topic: toWireTopic(updated) });
   } catch (error) {
     return errorResponse(error, 'PATCH');
   }
