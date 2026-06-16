@@ -29,6 +29,7 @@ import {
 } from '@principal-ai/repository-abstraction';
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuthorNames } from '@/hooks/useAuthorNames';
 import { TrailLoadingScreen } from '@/components/trail/TrailLoadingScreen';
 import { TrailErrorView } from '@/components/trail/TrailErrorView';
 import type {
@@ -957,6 +958,27 @@ export function TrailViewer({
 }: TrailViewerProps) {
   const { theme } = useTheme();
 
+  // Resolve every author login on the trail (note authors, sign-off authors,
+  // verified visitors, the trail author) to a GitHub display name. The 'You'
+  // (local optimistic) and 'Anonymous' (anon route) sentinels are not logins,
+  // so they're excluded and render as-is. Display-only — the panel keeps
+  // using the raw login for ownership/identity comparisons.
+  const payload = session.state === 'ok' ? session.livePayload : null;
+  const authorLogins = useMemo(() => {
+    if (!payload) return [];
+    const sentinels = new Set(['You', 'Anonymous']);
+    const set = new Set<string>();
+    const add = (v?: string | null) => {
+      if (v && !sentinels.has(v)) set.add(v);
+    };
+    add(payload.author);
+    for (const n of payload.notes ?? []) add(n.author);
+    for (const s of payload.signOffs ?? []) add(s.author);
+    for (const v of payload.visitors?.named ?? []) add(v);
+    return Array.from(set);
+  }, [payload]);
+  const authorNames = useAuthorNames(authorLogins);
+
   if (session.state === 'error') {
     return <TrailErrorView message={session.message} code={session.code} />;
   }
@@ -993,6 +1015,7 @@ export function TrailViewer({
           actions={session.actions}
           events={session.events}
           currentAuthor={session.currentAuthor}
+          authorNames={authorNames}
           briefLayout="split"
           defaultShowSequenceDrawer={true}
           defaultHideMap
