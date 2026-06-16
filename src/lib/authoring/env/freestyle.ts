@@ -89,12 +89,12 @@ async function importToFreestyleGit(
   ref: string | undefined,
   userToken: string
 ): Promise<string> {
-  const url = `https://x-access-token:${userToken}@github.com/${owner}/${repo}`;
+  const url = `https://x-access-token:${userToken}@github.com/${owner}/${repo}.git`;
   try {
     const res = await freestyle.git.repos.create({
       name: `authoring-${owner}-${repo}`,
-      // Shallow, single-revision import — just the tip we need.
-      source: { url, branch: ref ?? null, depth: 1 },
+      // Import the requested ref; null → the repo's default branch.
+      source: { url, rev: ref ?? null },
     });
     return res.repoId;
   } catch (err) {
