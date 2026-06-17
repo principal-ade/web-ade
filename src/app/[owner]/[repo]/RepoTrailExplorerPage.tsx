@@ -25,7 +25,6 @@ import {
   PanelEventBus,
   type DataSlice,
   type PanelContextValue,
-  type PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
 import {
   GitFileTreeBuilder,
@@ -48,6 +47,7 @@ import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { TrailLoadingScreen } from '@/components/trail/TrailLoadingScreen';
 import { TrailErrorView } from '@/components/trail/TrailErrorView';
 import { TrailShareModal } from '@/components/trail/TrailShareModal';
+import { FileSourcePanel } from './FileSourcePanel';
 import {
   type ShareErrorCode,
   type SharedTrailIndexEntry,
@@ -209,7 +209,9 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   // file tree of every file the trails touch (mirrors the desktop app's
   // Files tab). `selectedFilePath` lights up the picked file on the map.
   const [leftViewMode, setLeftViewMode] = useState<'trails' | 'files' | 'tours'>(
-    'trails',
+    // Lead with tours so a guided tour — or, failing that, the "author a tour"
+    // empty state — is the first thing a visitor lands on.
+    'tours',
   );
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   // Tour selection. Mutually exclusive with trail/file selection — the right
@@ -283,7 +285,13 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         }
         const data = (await res.json()) as { tours: TourListItem[] };
         if (cancelled) return;
-        setTours(Array.isArray(data.tours) ? data.tours : []);
+        const list = Array.isArray(data.tours) ? data.tours : [];
+        setTours(list);
+        // Make the tour the first thing visitors see: open the first one in the
+        // right pane on load. When there's none, the Tours list shows an empty
+        // state pointing at the file-city-tours skill instead.
+        const firstTour = list[0];
+        if (firstTour) setSelectedTourId(firstTour.tour.id);
       } catch {
         // Tours are an optional enhancement — a fetch failure just means the
         // Tours tab shows an empty state, never blocks the trail explorer.
@@ -954,8 +962,17 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             setSelectedFilePath(null);
           }}
           onCloseOverlay={() => setSelectedFilePath(null)}
+          onOpenFile={setSelectedFilePath}
         />
       </div>
+      {/* Right-docked source viewer for the picked file. Independent of the
+          trail overlay — it just renders whatever file is selected. */}
+      <FileSourcePanel
+        owner={owner}
+        repo={repo}
+        filePath={selectedFilePath}
+        onClose={() => setSelectedFilePath(null)}
+      />
     </div>
   );
 }
@@ -1209,6 +1226,8 @@ const TrailListPane: React.FC<{
       ) : leftViewMode === 'files' ? (
         <TrailFilesPane
           fileRows={trailFileRows}
+          allFilePaths={filePaths}
+          hasTrails={entries.length > 0}
           selectedPath={selectedFilePath}
           onSelectFile={onSelectFile}
         />
@@ -1490,24 +1509,31 @@ const FolderConfigPane: React.FC<{
 };
 
 // ---------------------------------------------------------------------------
-// Files pane — Pierre tree of every file the trails touch. Built from the
-// union of all loaded payloads' marker sourcePaths; each file row carries a
-// "×N" badge for how many distinct trails reference it. Selecting a file
-// lights up its building on the map; folder rows are non-selecting.
+// Files pane — Pierre tree of the repo's files. With trails present it lists
+// just the files they touch, each row badged "×N" for how many distinct trails
+// reference it (built from the union of loaded payloads' marker sourcePaths).
+// With no trails to derive a subset from, it falls back to the whole file tree.
+// Selecting a file lights up its building on the map; folder rows don't select.
 // ---------------------------------------------------------------------------
 
 const TrailFilesPane: React.FC<{
   fileRows: { path: string; trailCount: number }[];
+  allFilePaths: string[];
+  hasTrails: boolean;
   selectedPath: string | null;
   onSelectFile: (path: string | null) => void;
-}> = ({ fileRows, selectedPath, onSelectFile }) => {
+}> = ({ fileRows, allFilePaths, hasTrails, selectedPath, onSelectFile }) => {
   const { theme } = useTheme();
 
-  // Deduped, sorted path list fed to Pierre. Payloads stream in after
-  // mount, so this grows over time — kept in sync via `resetPaths` below.
+  // Deduped, sorted path list fed to Pierre. With trails, this is the touched
+  // subset, which grows as payloads stream in (kept in sync via `resetPaths`
+  // below); with none, it's the repo's full file tree.
   const paths = useMemo<string[]>(
-    () => Array.from(new Set(fileRows.map((f) => f.path))).sort(),
-    [fileRows],
+    () =>
+      Array.from(
+        new Set(hasTrails ? fileRows.map((f) => f.path) : allFilePaths),
+      ).sort(),
+    [hasTrails, fileRows, allFilePaths],
   );
 
   // `useFileTree` snapshots its options once, so the decoration renderer
@@ -1575,10 +1601,14 @@ const TrailFilesPane: React.FC<{
     [theme.colors.backgroundSecondary, theme.colors.text],
   );
 
-  if (fileRows.length === 0) {
+  if (paths.length === 0) {
     return (
       <div className="flex-1 min-h-0">
-        <ListMessage>No files have been touched by trails yet.</ListMessage>
+        <ListMessage>
+          {hasTrails
+            ? 'No files have been touched by trails yet.'
+            : 'No files found in this repository.'}
+        </ListMessage>
       </div>
     );
   }
@@ -1604,13 +1634,13 @@ const TrailFilesPane: React.FC<{
 const SHOW_FOLDER_CONFIG = false;
 
 const VIEW_TABS = [
+  { value: 'tours', label: 'Tours', title: 'Guided tours of this repository' },
   { value: 'trails', label: 'Trails', title: 'List of shared trails' },
   {
     value: 'files',
-    label: 'Explored',
-    title: 'File tree of every file the trails touch',
+    label: 'Files',
+    title: 'File tree of the repository',
   },
-  { value: 'tours', label: 'Tours', title: 'Guided tours of this repository' },
 ] as const;
 
 const TrailSummarySection: React.FC<{
@@ -1829,6 +1859,67 @@ const ListMessage: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 // Tours arrive fully-parsed from /api/tours, so there's no lazy payload fetch.
 // ---------------------------------------------------------------------------
 
+const TOUR_SKILL_URL =
+  'https://github.com/principal-ai/file-city/blob/main/skills/file-city-tours/SKILL.md';
+
+// Shown in the Tours list when a repo has no `*.tour.json` yet — points authors
+// at the file-city-tours skill that scaffolds one.
+const TOUR_INIT_COMMAND =
+  'npx @principal-ai/file-city-cli@latest init --template onboarding';
+
+const ToursEmptyState: React.FC = () => {
+  const { theme } = useTheme();
+  const [copied, setCopied] = useState(false);
+  const copyCommand = async () => {
+    try {
+      await navigator.clipboard.writeText(TOUR_INIT_COMMAND);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard can be unavailable (insecure context / denied) — no-op.
+    }
+  };
+  return (
+    <div
+      className="px-4 py-6 flex flex-col items-center gap-3 text-center"
+      style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+    >
+      <p>
+        No tour has been authored for this repository yet. A tour is a guided
+        walkthrough that lives as a <code>.tour.json</code> file in the repo.
+      </p>
+      <a
+        href={TOUR_SKILL_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md font-medium transition-opacity hover:opacity-80"
+        style={{
+          background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
+          color: theme.colors.primary,
+        }}
+      >
+        Create one with the file-city-tours skill →
+      </a>
+      <button
+        type="button"
+        onClick={copyCommand}
+        title="Click to copy"
+        className="font-mono px-2 py-1 rounded transition-opacity hover:opacity-80"
+        style={{
+          background: `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
+          color: theme.colors.textMuted,
+          fontSize: theme.fontSizes[0],
+          wordBreak: 'break-all',
+        }}
+        aria-label={copied ? 'Command copied' : 'Copy command to clipboard'}
+      >
+        {copied ? 'Copied!' : TOUR_INIT_COMMAND}
+      </button>
+    </div>
+  );
+};
+
 const ToursPane: React.FC<{
   tours: TourListItem[];
   loading: boolean;
@@ -1849,9 +1940,7 @@ const ToursPane: React.FC<{
       {loading ? (
         <ListMessage>Loading tours…</ListMessage>
       ) : tours.length === 0 ? (
-        <ListMessage>
-          No tours have been authored for this repository yet.
-        </ListMessage>
+        <ToursEmptyState />
       ) : (
         tours.map((item) => (
           <TourRow
@@ -2309,6 +2398,8 @@ const RightPane: React.FC<{
   overlaySelectedTrailId: string | null;
   onSelectOverlayTrail: (id: string) => void;
   onCloseOverlay: () => void;
+  /** Clicking a building / file on the map opens it in the source drawer. */
+  onOpenFile: (filePath: string) => void;
 }> = ({
   owner,
   repo,
@@ -2326,9 +2417,23 @@ const RightPane: React.FC<{
   overlaySelectedTrailId,
   onSelectOverlayTrail,
   onCloseOverlay,
+  onOpenFile,
 }) => {
   const { theme } = useTheme();
-  const events = useMemo<PanelEventEmitter>(() => new PanelEventBus(), []);
+  const events = useMemo<PanelEventBus>(() => new PanelEventBus(), []);
+
+  // The file-city map reports a building/file click by emitting a `file:open`
+  // event on this bus (see @industry-theme/file-city-panel). Route the clicked
+  // path into the source drawer.
+  useEffect(() => {
+    const unsub = events.onAll((e) => {
+      if (e.type === 'file:open' || e.type === 'file:opened') {
+        const path = (e.payload as { path?: string } | null)?.path;
+        if (typeof path === 'string' && path) onOpenFile(path);
+      }
+    });
+    return unsub;
+  }, [events, onOpenFile]);
 
   const repository = useMemo<FileCityTrailExplorerRepository>(() => {
     // Multi-repo trails filter markers by repo id. Mirror the payload's
@@ -2380,7 +2485,7 @@ const RightPane: React.FC<{
   }, [trailIdForShare]);
   const actions = useMemo<FileCityTrailExplorerPanelActions>(
     () => ({
-      openFile: () => {},
+      openFile: (filePath) => onOpenFile(filePath),
       readFile,
       createTrailNote: async () => null,
       updateTrailNote: async () => null,
@@ -2389,7 +2494,7 @@ const RightPane: React.FC<{
       deleteTrailSignOff: async () => {},
       shareTrail,
     }),
-    [readFile, shareTrail],
+    [readFile, shareTrail, onOpenFile],
   );
 
   const context = useMemo<
@@ -2460,7 +2565,7 @@ const RightPane: React.FC<{
   // `tourAudioContext` we supply below straight back into this action.
   const tourActions = useMemo<FileCityTourExplorerPanelActions>(
     () => ({
-      openFile: () => {},
+      openFile: (filePath) => onOpenFile(filePath),
       fetchAudioUrls: async (ctx) => {
         const data = await trpc.tts.batchGenerate.mutate({
           owner: ctx.owner,
@@ -2476,7 +2581,7 @@ const RightPane: React.FC<{
         return urls;
       },
     }),
-    [],
+    [onOpenFile],
   );
   // Coordinates the TTS backend needs to look up this tour's cached audio.
   // Points at the source the tour was discovered in (repo or fork).
