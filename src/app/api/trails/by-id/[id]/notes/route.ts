@@ -15,6 +15,7 @@ import {
   syncTrailNoteSummary,
   trailErrorResponse,
 } from '@/lib/trails/route-helpers';
+import { notifyParticipantsOfNote } from '@/lib/trails/note-fanout';
 import type { TrailNote } from '@/lib/trails/types';
 
 interface Params {
@@ -76,6 +77,12 @@ export async function POST(request: NextRequest, { params }: Params) {
     // Refresh the index entry's noteCount so recipients' inboxes re-badge.
     // Best-effort — the note is already persisted.
     await syncTrailNoteSummary(owner, repo, id).catch(() => undefined);
+
+    // Notify the trail's participants (sender + recipients) of the new note,
+    // skipping the author. Best-effort — runs after the count is synced.
+    await notifyParticipantsOfNote(owner, repo, id, user.id).catch(
+      () => undefined
+    );
 
     return NextResponse.json({ note }, { status: 201 });
   } catch (error) {

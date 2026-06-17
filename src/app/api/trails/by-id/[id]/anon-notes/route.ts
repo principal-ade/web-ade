@@ -33,6 +33,7 @@ import {
   syncTrailNoteSummary,
   trailErrorResponse,
 } from '@/lib/trails/route-helpers';
+import { notifyParticipantsOfNote } from '@/lib/trails/note-fanout';
 import {
   getClientIp,
   recordAndCheck,
@@ -144,6 +145,12 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     // Anon notes count toward the recipient's badge — refresh the index.
     await syncTrailNoteSummary(owner, repo, id).catch(() => undefined);
+
+    // Notify the trail's participants of the new note. Anonymous notes have no
+    // author to exclude. Best-effort — runs after the count is synced.
+    await notifyParticipantsOfNote(owner, repo, id, null).catch(
+      () => undefined
+    );
 
     return NextResponse.json({ note }, { status: 201 });
   } catch (error) {
