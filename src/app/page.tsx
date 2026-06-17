@@ -179,60 +179,40 @@ export default function HomePage() {
   const STEP_INTERVAL = 110;
   const STEP_START = 200;
 
+  // Each explanation blurb appears as a whole when its step opens — the
+  // section container fades it in. The `...Shown` flags gate that step's
+  // follow-up affordances (next-step button, snippet/trail reveal).
   const FILE_CITY_BLURB_LINE_1 = 'A 2D view of a file tree where each square is a file.';
   const FILE_CITY_BLURB_LINE_2 = 'This is the heart of code trails.';
-  const FILE_CITY_TOTAL_CHARS = FILE_CITY_BLURB_LINE_1.length + FILE_CITY_BLURB_LINE_2.length;
-  const FILE_CITY_TYPE_INTERVAL = 10;
-  const FILE_CITY_TYPE_DELAY = 120;
-  const FILE_CITY_LINE_PAUSE = 180;
-  const [fileCityTyped, setFileCityTyped] = useState(0);
-  const fileCityTypingDone = fileCityTyped >= FILE_CITY_TOTAL_CHARS;
+  const fileCityShown = view === 'fileCity';
 
+  // The snippet drops in a beat after the file-city blurb, rather than all at
+  // once — same reveal cadence the codeTrail step uses for its trail.
+  const [fileCityRevealed, setFileCityRevealed] = useState(false);
   useEffect(() => {
-    if (view !== 'fileCity') {
-      setFileCityTyped(0);
+    if (!fileCityShown) {
+      setFileCityRevealed(false);
       return;
     }
-    if (fileCityTyped >= FILE_CITY_TOTAL_CHARS) return;
-    const firstLineLength = FILE_CITY_BLURB_LINE_1.length;
-    const delay =
-      fileCityTyped === 0
-        ? FILE_CITY_TYPE_DELAY
-        : fileCityTyped === firstLineLength
-          ? FILE_CITY_LINE_PAUSE
-          : FILE_CITY_TYPE_INTERVAL;
-    const timer = setTimeout(() => setFileCityTyped((n) => n + 1), delay);
-    return () => clearTimeout(timer);
-  }, [view, fileCityTyped]);
+    const t = setTimeout(() => setFileCityRevealed(true), 700);
+    return () => clearTimeout(t);
+  }, [fileCityShown]);
 
   const CODE_TRAIL_BLURB =
     'It’s a guided walk through a codebase that focuses on what you need to know in that moment.';
-  const [codeTrailTyped, setCodeTrailTyped] = useState(0);
-  const codeTrailTypingDone = codeTrailTyped >= CODE_TRAIL_BLURB.length;
+  const codeTrailShown = view === 'codeTrail';
 
-  useEffect(() => {
-    if (view !== 'codeTrail') {
-      setCodeTrailTyped(0);
-      return;
-    }
-    if (codeTrailTyped >= CODE_TRAIL_BLURB.length) return;
-    const delay =
-      codeTrailTyped === 0 ? FILE_CITY_TYPE_DELAY : FILE_CITY_TYPE_INTERVAL;
-    const timer = setTimeout(() => setCodeTrailTyped((n) => n + 1), delay);
-    return () => clearTimeout(timer);
-  }, [view, codeTrailTyped]);
-
-  // Holds the trail off-screen on the codeTrail step until 700ms after
-  // typing finishes — same beat the snippet uses on the fileCity step.
+  // Holds the trail off-screen on the codeTrail step until 700ms after the
+  // blurb appears — same beat the snippet uses on the fileCity step.
   const [codeTrailRevealed, setCodeTrailRevealed] = useState(false);
   useEffect(() => {
-    if (view !== 'codeTrail' || !codeTrailTypingDone) {
+    if (!codeTrailShown) {
       setCodeTrailRevealed(false);
       return;
     }
     const t = setTimeout(() => setCodeTrailRevealed(true), 700);
     return () => clearTimeout(t);
-  }, [view, codeTrailTypingDone]);
+  }, [codeTrailShown]);
 
   const WHY_LINE_1 =
     'They’re the quickest way for multiple parties to align on intent.';
@@ -240,27 +220,7 @@ export default function HomePage() {
     'Whether it’s you and your agent, or you and your team.';
   const WHY_LINE_3 =
     'Code trails help visualize comprehension debt. You don’t have to write the code to maintain a mental model, but you do have to ensure the implementation aligns with your intent.';
-  const WHY_LINE_1_END = WHY_LINE_1.length;
-  const WHY_LINE_2_END = WHY_LINE_1_END + WHY_LINE_2.length;
-  const WHY_TOTAL = WHY_LINE_2_END + WHY_LINE_3.length;
-  const [whyTyped, setWhyTyped] = useState(0);
-  const whyTypingDone = whyTyped >= WHY_TOTAL;
-
-  useEffect(() => {
-    if (view !== 'whyTrails') {
-      setWhyTyped(0);
-      return;
-    }
-    if (whyTyped >= WHY_TOTAL) return;
-    const delay =
-      whyTyped === 0
-        ? FILE_CITY_TYPE_DELAY
-        : whyTyped === WHY_LINE_1_END || whyTyped === WHY_LINE_2_END
-          ? FILE_CITY_LINE_PAUSE
-          : FILE_CITY_TYPE_INTERVAL;
-    const timer = setTimeout(() => setWhyTyped((n) => n + 1), delay);
-    return () => clearTimeout(timer);
-  }, [view, whyTyped]);
+  const whyShown = view === 'whyTrails';
 
   const handleStamp = (kind: StampKind) => {
     if (stampAnimating || stamp) return;
@@ -593,15 +553,6 @@ export default function HomePage() {
                     50% { transform: translateX(6px); }
                   }
                   .hint-arrow-bounce { animation: hintArrow 1.1s ease-in-out infinite; }
-                  @keyframes typingCaret {
-                    0%, 49% { opacity: 1; }
-                    50%, 100% { opacity: 0; }
-                  }
-                  .typing-caret {
-                    display: inline-block;
-                    margin-left: 1px;
-                    animation: typingCaret 0.9s steps(1, end) infinite;
-                  }
                 `}</style>
               </div>
 
@@ -620,49 +571,16 @@ export default function HomePage() {
                   className="text-base md:text-lg leading-relaxed mb-6"
                   style={{ color: theme.colors.text }}
                 >
-                  {(() => {
-                    const firstLineLength = FILE_CITY_BLURB_LINE_1.length;
-                    const firstShown = FILE_CITY_BLURB_LINE_1.slice(
-                      0,
-                      Math.min(fileCityTyped, firstLineLength),
-                    );
-                    const secondShown = FILE_CITY_BLURB_LINE_2.slice(
-                      0,
-                      Math.max(0, fileCityTyped - firstLineLength),
-                    );
-                    const onSecondLine = fileCityTyped > firstLineLength;
-                    const caret = (
-                      <span
-                        className="typing-caret"
-                        style={{ color: theme.colors.primary }}
-                        aria-hidden="true"
-                      >
-                        ▍
-                      </span>
-                    );
-                    return (
-                      <>
-                        <p>
-                          {firstShown}
-                          {!fileCityTypingDone && !onSecondLine && caret}
-                        </p>
-                        {onSecondLine && (
-                          <p className="mt-2">
-                            {secondShown}
-                            {!fileCityTypingDone && caret}
-                          </p>
-                        )}
-                      </>
-                    );
-                  })()}
+                  <p>{FILE_CITY_BLURB_LINE_1}</p>
+                  <p className="mt-2">{FILE_CITY_BLURB_LINE_2}</p>
                 </div>
                 <div
                   className="transition-opacity duration-500 delay-[1800ms]"
                   style={{
-                    opacity: fileCityTypingDone ? 1 : 0,
-                    pointerEvents: fileCityTypingDone ? 'auto' : 'none',
+                    opacity: fileCityShown ? 1 : 0,
+                    pointerEvents: fileCityShown ? 'auto' : 'none',
                   }}
-                  aria-hidden={!fileCityTypingDone}
+                  aria-hidden={!fileCityShown}
                 >
                   <button
                     type="button"
@@ -673,7 +591,7 @@ export default function HomePage() {
                       border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
                       color: theme.colors.primary,
                     }}
-                    tabIndex={fileCityTypingDone ? 0 : -1}
+                    tabIndex={fileCityShown ? 0 : -1}
                   >
                     What is a Code Trail?
                   </button>
@@ -695,26 +613,15 @@ export default function HomePage() {
                   className="text-base md:text-lg leading-relaxed mb-6"
                   style={{ color: theme.colors.text }}
                 >
-                  <p>
-                    {CODE_TRAIL_BLURB.slice(0, codeTrailTyped)}
-                    {!codeTrailTypingDone && (
-                      <span
-                        className="typing-caret"
-                        style={{ color: theme.colors.primary }}
-                        aria-hidden="true"
-                      >
-                        ▍
-                      </span>
-                    )}
-                  </p>
+                  <p>{CODE_TRAIL_BLURB}</p>
                 </div>
                 <div
                   className="transition-opacity duration-500 delay-[1800ms]"
                   style={{
-                    opacity: codeTrailTypingDone ? 1 : 0,
-                    pointerEvents: codeTrailTypingDone ? 'auto' : 'none',
+                    opacity: codeTrailShown ? 1 : 0,
+                    pointerEvents: codeTrailShown ? 'auto' : 'none',
                   }}
-                  aria-hidden={!codeTrailTypingDone}
+                  aria-hidden={!codeTrailShown}
                 >
                   <button
                     type="button"
@@ -725,7 +632,7 @@ export default function HomePage() {
                       border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
                       color: theme.colors.primary,
                     }}
-                    tabIndex={codeTrailTypingDone ? 0 : -1}
+                    tabIndex={codeTrailShown ? 0 : -1}
                   >
                     Why do I need Code Trails?
                   </button>
@@ -747,55 +654,9 @@ export default function HomePage() {
                   className="text-base md:text-lg leading-relaxed mb-6"
                   style={{ color: theme.colors.text }}
                 >
-                  <p className="mb-3">
-                    {WHY_LINE_1.slice(0, Math.min(whyTyped, WHY_LINE_1_END))}
-                    {whyTyped <= WHY_LINE_1_END && !whyTypingDone && (
-                      <span
-                        className="typing-caret"
-                        style={{ color: theme.colors.primary }}
-                        aria-hidden="true"
-                      >
-                        ▍
-                      </span>
-                    )}
-                  </p>
-                  {whyTyped > WHY_LINE_1_END && (
-                    <p style={{ color: theme.colors.primary }}>
-                      {WHY_LINE_2.slice(
-                        0,
-                        Math.min(
-                          whyTyped - WHY_LINE_1_END,
-                          WHY_LINE_2.length,
-                        ),
-                      )}
-                      {whyTyped <= WHY_LINE_2_END && !whyTypingDone && (
-                        <span
-                          className="typing-caret"
-                          style={{ color: theme.colors.primary }}
-                          aria-hidden="true"
-                        >
-                          ▍
-                        </span>
-                      )}
-                    </p>
-                  )}
-                  {whyTyped > WHY_LINE_2_END && (
-                    <p className="mt-3">
-                      {WHY_LINE_3.slice(
-                        0,
-                        Math.max(0, whyTyped - WHY_LINE_2_END),
-                      )}
-                      {!whyTypingDone && (
-                        <span
-                          className="typing-caret"
-                          style={{ color: theme.colors.primary }}
-                          aria-hidden="true"
-                        >
-                          ▍
-                        </span>
-                      )}
-                    </p>
-                  )}
+                  <p className="mb-3">{WHY_LINE_1}</p>
+                  <p style={{ color: theme.colors.primary }}>{WHY_LINE_2}</p>
+                  <p className="mt-3">{WHY_LINE_3}</p>
                 </div>
               </div>
 
@@ -813,30 +674,6 @@ export default function HomePage() {
                 <div className="flex flex-col items-center lg:items-start sm:flex-row sm:justify-center lg:justify-start sm:items-center sm:flex-wrap gap-x-3 gap-y-2 text-base">
                   <button
                     type="button"
-                    onClick={() => goToView('trails')}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md font-medium transition-opacity hover:opacity-80"
-                    style={{
-                      background: theme.colors.primary,
-                      color: theme.colors.background,
-                    }}
-                  >
-                    View Trails
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => goToView('topics')}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md font-medium transition-opacity hover:opacity-80"
-                    style={{
-                      background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
-                      border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
-                      color: theme.colors.primary,
-                    }}
-                  >
-                    View Topics
-                  </button>
-                  <span style={{ color: theme.colors.textMuted }}>or</span>
-                  <button
-                    type="button"
                     onClick={() => setShowCreateModal(true)}
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md font-medium transition-colors hover:opacity-80"
                     style={{
@@ -846,6 +683,18 @@ export default function HomePage() {
                     }}
                   >
                     Create your own trail
+                  </button>
+                  <span className="self-center" style={{ color: theme.colors.textMuted }}>or</span>
+                  <button
+                    type="button"
+                    onClick={() => goToView('title')}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md font-medium transition-opacity hover:opacity-80"
+                    style={{
+                      background: theme.colors.primary,
+                      color: theme.colors.background,
+                    }}
+                  >
+                    Finish
                   </button>
                 </div>
               </div>
@@ -882,12 +731,14 @@ export default function HomePage() {
                 >
                   <TrailCityDiagram
                     highlightTrail={codeTrailRevealed}
-                    hideTrail={view === 'title' || view === 'fileCity'}
+                    hideTrail={view === 'fileCity'}
                     trailVisible={view !== 'codeTrail' || codeTrailRevealed}
-                    hideSnippet={view === 'title'}
-                    snippetVisible={view !== 'fileCity' || fileCityTypingDone}
+                    hideSnippet={false}
+                    snippetVisible={view !== 'fileCity' || fileCityRevealed}
                     stampRowVisible={
-                      (view === 'whyTrails' && whyTypingDone) || view === 'stamped'
+                      view === 'title' ||
+                      (view === 'whyTrails' && whyShown) ||
+                      view === 'stamped'
                     }
                     userStamped={stamp !== null}
                   />
@@ -900,25 +751,25 @@ export default function HomePage() {
                     className="text-sm md:text-base mb-3 text-center transition-opacity duration-500"
                     style={{
                       color: theme.colors.textMuted,
-                      opacity: whyTypingDone ? 1 : 0,
+                      opacity: whyShown ? 1 : 0,
                     }}
-                    aria-hidden={!whyTypingDone}
+                    aria-hidden={!whyShown}
                   >
                     Sign off on this trail to continue.
                   </p>
                   <div
                     className="flex flex-col items-center sm:flex-row sm:justify-center sm:items-center gap-3 text-base transition-opacity duration-500"
                     style={{
-                      opacity: whyTypingDone ? 1 : 0,
-                      pointerEvents: whyTypingDone ? 'auto' : 'none',
+                      opacity: whyShown ? 1 : 0,
+                      pointerEvents: whyShown ? 'auto' : 'none',
                     }}
-                    aria-hidden={!whyTypingDone}
+                    aria-hidden={!whyShown}
                   >
                     <button
                       type="button"
                       onClick={() => handleStamp('LGTM')}
-                      disabled={stampAnimating || stamp !== null || !whyTypingDone}
-                      tabIndex={whyTypingDone ? 0 : -1}
+                      disabled={stampAnimating || stamp !== null || !whyShown}
+                      tabIndex={whyShown ? 0 : -1}
                       className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-md font-mono font-semibold tracking-wider transition-opacity hover:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed"
                       style={{
                         background: theme.colors.success,
@@ -928,22 +779,6 @@ export default function HomePage() {
                       aria-label="Sign off with LGTM"
                     >
                       LGTM
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleStamp('ACK')}
-                      disabled={stampAnimating || stamp !== null || !whyTypingDone}
-                      tabIndex={whyTypingDone ? 0 : -1}
-                      className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-md font-mono font-semibold tracking-wider transition-colors hover:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed"
-                      style={{
-                        background: `color-mix(in srgb, ${theme.colors.success} 16%, transparent)`,
-                        border: `1px solid color-mix(in srgb, ${theme.colors.success} 60%, transparent)`,
-                        color: theme.colors.success,
-                        letterSpacing: '0.12em',
-                      }}
-                      aria-label="Acknowledge with ACK"
-                    >
-                      ACK
                     </button>
                   </div>
                 </div>
