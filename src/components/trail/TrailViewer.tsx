@@ -1004,10 +1004,13 @@ export function TrailViewer({
     );
   }
 
+  // colorScheme 'dark' makes Pierre's snippet renderer resolve its dark palette
+  // via CSS light-dark(); otherwise the browser leaves color-scheme unset and the
+  // snippet renders white on the panel's black surface.
   return (
     <div
       className="w-full h-full flex flex-col overflow-hidden"
-      style={{ background: theme.colors.background }}
+      style={{ background: theme.colors.background, colorScheme: 'dark' }}
     >
       <div className="flex-1 min-h-0">
         <FileCityTrailExplorerPanel

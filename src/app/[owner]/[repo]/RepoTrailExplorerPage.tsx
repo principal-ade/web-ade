@@ -2682,10 +2682,13 @@ const RightPane: React.FC<{
     );
   }
 
+  // colorScheme 'dark' makes Pierre's snippet renderer resolve its dark palette
+  // via CSS light-dark(); otherwise the browser leaves color-scheme unset and the
+  // snippet renders white on the panel's black surface.
   return (
     <main
       className="flex-1 min-w-0 min-h-0 relative"
-      style={{ background: theme.colors.background }}
+      style={{ background: theme.colors.background, colorScheme: 'dark' }}
     >
       <FileCityTrailExplorerPanel
         context={context}
