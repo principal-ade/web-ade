@@ -1,15 +1,15 @@
 /**
  * Tour discovery for the repo explorer.
  *
- * Unlike the legacy single-tour path (one fixed `docs/tours/introduction.tour.json`
- * resolved through `checkTourAvailability`), the explorer supports *multiple*
- * tours authored anywhere in the repo: it walks the full git tree and returns
- * every valid `*.tour.json` it finds, regardless of directory.
+ * Tours are authoritative in the S3 store (`./s3-storage.ts`): for a repo we
+ * read its tour index and return the stored payloads. The full git-tree walk
+ * for `*.tour.json` remains as a *temporary* fallback for repos not yet
+ * migrated into the store — it's removed once backfill lands (plan phase A4).
  *
- * Tours may live in the repo itself or in a known fork (the legacy model
- * stashes them under a `TOUR_ORGS` fork and caches the fork location under
- * the parent repo). We try the repo first, then fall back to the cached
- * fork, returning the first source that yields at least one valid tour.
+ * The legacy `TOUR_ORGS` fork fallback (stash tours under a known fork, cache
+ * the fork location under the parent repo) has been retired: discovery no
+ * longer reads the tour-availability cache, and the git fallback probes only
+ * the upstream repo.
  */
 import { parseTour } from '@principal-ai/file-city-builder';
 import {
@@ -17,9 +17,12 @@ import {
   cachedUserGitHubFetch,
   GitHubApiError,
 } from '../github-cache';
-import { getCached, getTourAvailabilityCacheKey } from '../redis-cache';
 import { mergeTTSOptions } from '../tts/elevenlabs-client';
 import { readManifest, computeTourAudioStatus } from '../tts/manifest';
+import {
+  getIndex as getTourIndex,
+  getPayload as getTourPayload,
+} from './s3-storage';
 import type { IntroductionTour } from '@principal-ai/file-city-builder';
 import type { TourAudioStatus, TourListItem } from './types';
 
@@ -210,87 +213,120 @@ async function fetchTourFile(
 }
 
 /**
- * Candidate repos that might hold tours for `owner/repo`, in priority order:
- * the repo itself, then any fork recorded in the tour-availability cache.
+ * Read every tour for a repo from the S3 store. `[]` when the repo has no
+ * stored tours (so the caller can fall back to git) or when the store is
+ * unavailable — a store outage must never break tour listing.
  */
-async function resolveTourSources(
+async function listStoredToursForRepo(
   owner: string,
   repo: string,
-): Promise<TourSource[]> {
-  const sources: TourSource[] = [{ owner, repo }];
-  const cached = await getCached<{
-    forkOwner: string | null;
-    forkRepo: string | null;
-  }>(getTourAvailabilityCacheKey(owner, repo));
-  if (cached?.forkOwner && cached?.forkRepo) {
-    sources.push({ owner: cached.forkOwner, repo: cached.forkRepo });
+): Promise<TourListItem[]> {
+  let index;
+  try {
+    index = await getTourIndex(owner, repo);
+  } catch (error) {
+    console.warn(
+      `[tours] Store index unavailable for ${owner}/${repo}; falling back to git.`,
+      error instanceof Error ? error.message : error,
+    );
+    return [];
   }
-  return sources;
+  if (index.entries.length === 0) return [];
+
+  const items: TourListItem[] = [];
+  for (const entry of index.entries) {
+    const payload = await getTourPayload(owner, repo, entry.id);
+    if (!payload) continue;
+    const audioStatus = await resolveAudioStatus(
+      payload.audio.owner,
+      payload.audio.repo,
+      payload.audio.path,
+      payload.tour,
+    );
+    items.push({
+      tour: payload.tour,
+      audio: payload.audio,
+      audioStatus,
+    });
+  }
+
+  // Stable order so the sidebar list doesn't reshuffle between loads.
+  items.sort((a, b) => a.tour.title.localeCompare(b.tour.title));
+  return items;
 }
 
 /**
- * Resolve and return every valid tour for a repo, each paired with the
- * `{ owner, repo, path, commitSha }` needed to fetch its narration audio.
- * Returns the tours from the first source (repo, then cached fork) that yields
- * at least one; `[]` when none are found. Invalid `*.tour.json` files are
- * skipped (logged), not fatal.
+ * Walk the upstream repo's git tree and return every valid `*.tour.json`, each
+ * paired with the `{ owner, repo, path, commitSha }` needed to fetch its
+ * narration audio. The temporary fallback for repos not yet in the store;
+ * removed at plan phase A4. Invalid tour files are skipped (logged), not fatal.
+ */
+async function listGitToursForRepo(
+  owner: string,
+  repo: string,
+  token: string | null,
+): Promise<TourListItem[]> {
+  const src: TourSource = { owner, repo };
+
+  let branch: string;
+  try {
+    branch = await getDefaultBranch(src, token);
+  } catch (error) {
+    if (isMissing(error)) return [];
+    throw error;
+  }
+
+  const tourPaths = await listRepoTourFiles(src, branch, token);
+  if (tourPaths.length === 0) return [];
+
+  // Resolve the head SHA once — every tour from this source shares the same
+  // commit. Best-effort: null when GitHub is unavailable/rate-limited, in
+  // which case audio degrades to cache-only (tours still list).
+  const commitSha = await resolveCommitSha(src, branch, token);
+
+  const items: TourListItem[] = [];
+  for (const path of tourPaths) {
+    const raw = await fetchTourFile(src, path, token);
+    if (!raw) continue;
+    const result = parseTour(raw);
+    if (result.success && result.tour) {
+      const audioStatus = await resolveAudioStatus(
+        src.owner,
+        src.repo,
+        path,
+        result.tour,
+      );
+      items.push({
+        tour: result.tour,
+        audio: { owner: src.owner, repo: src.repo, path, commitSha },
+        audioStatus,
+      });
+    } else {
+      const detail =
+        result.errors?.map((e) => e.message).join(', ') || 'unknown error';
+      console.warn(
+        `[tours] Skipping invalid tour ${src.owner}/${src.repo}/${path}: ${detail}`,
+      );
+    }
+  }
+
+  // Stable order so the sidebar list doesn't reshuffle between loads.
+  items.sort((a, b) => a.tour.title.localeCompare(b.tour.title));
+  return items;
+}
+
+/**
+ * Resolve every tour for a repo. The S3 store is authoritative; the git-tree
+ * walk is a temporary fallback for repos not yet migrated (plan phase A4
+ * removes it). `[]` when neither source yields a tour.
  */
 export async function listToursForRepo(
   owner: string,
   repo: string,
   token: string | null,
 ): Promise<TourListItem[]> {
-  const sources = await resolveTourSources(owner, repo);
+  const stored = await listStoredToursForRepo(owner, repo);
+  if (stored.length > 0) return stored;
 
-  for (const src of sources) {
-    let branch: string;
-    try {
-      branch = await getDefaultBranch(src, token);
-    } catch (error) {
-      if (isMissing(error)) continue;
-      throw error;
-    }
-
-    const tourPaths = await listRepoTourFiles(src, branch, token);
-    if (tourPaths.length === 0) continue;
-
-    // Resolve the head SHA once for the source — every tour from it shares
-    // the same commit. Best-effort: null when GitHub is unavailable/rate-
-    // limited, in which case audio degrades to cache-only (tours still list).
-    const commitSha = await resolveCommitSha(src, branch, token);
-
-    const items: TourListItem[] = [];
-    for (const path of tourPaths) {
-      const raw = await fetchTourFile(src, path, token);
-      if (!raw) continue;
-      const result = parseTour(raw);
-      if (result.success && result.tour) {
-        const audioStatus = await resolveAudioStatus(
-          src.owner,
-          src.repo,
-          path,
-          result.tour
-        );
-        items.push({
-          tour: result.tour,
-          audio: { owner: src.owner, repo: src.repo, path, commitSha },
-          audioStatus,
-        });
-      } else {
-        const detail =
-          result.errors?.map((e) => e.message).join(', ') || 'unknown error';
-        console.warn(
-          `[tours] Skipping invalid tour ${src.owner}/${src.repo}/${path}: ${detail}`,
-        );
-      }
-    }
-
-    if (items.length > 0) {
-      // Stable order so the sidebar list doesn't reshuffle between loads.
-      items.sort((a, b) => a.tour.title.localeCompare(b.tour.title));
-      return items;
-    }
-  }
-
-  return [];
+  return listGitToursForRepo(owner, repo, token);
 }

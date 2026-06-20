@@ -9,6 +9,7 @@
 import { getGitHubToken } from '@/lib/auth/cookies';
 import { IntroductionTour, TTSErrorCode, TTSError } from './types';
 import removeMd from 'remove-markdown';
+import { getPayload, parseStoreTourPath } from '@/lib/tours/s3-storage';
 
 /**
  * Normalizes text for TTS by removing problematic characters
@@ -55,6 +56,19 @@ export async function fetchTourFromGitHub(
   path: string,
   commitSha: string
 ): Promise<IntroductionTour> {
+  // Store-backed tours have no git file. Their audio ref carries a synthetic
+  // `__store__/<id>.tour.json` path; load the tour from the S3 store instead of
+  // GitHub. This preserves the zero-trust property — the tour text still comes
+  // from the trusted server store, never from the client.
+  const storeId = parseStoreTourPath(path);
+  if (storeId) {
+    const stored = await getPayload(owner, repo, storeId);
+    if (!stored) {
+      throw new Error(TTSErrorCode.TOUR_NOT_FOUND);
+    }
+    return stored.tour as unknown as IntroductionTour;
+  }
+
   // Construct raw GitHub URL
   const url = `https://raw.githubusercontent.com/${owner}/${repo}/${commitSha}/${path}`;
 

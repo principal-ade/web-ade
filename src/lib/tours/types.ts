@@ -55,3 +55,94 @@ export interface TourListItem {
 export interface ListToursResponse {
   tours: TourListItem[];
 }
+
+// ============================================================================
+// Store-backed tours (S3). Parallels the trails store: a per-repo index of
+// lightweight entries, a per-tour payload object, and an id pointer for
+// repo-less share links. The git tree-walk in `discovery.ts` stays as a
+// temporary fallback until backfill lands; these types describe the new
+// authoritative source.
+// ============================================================================
+
+/**
+ * The persisted form of a tour. Wraps the validated `IntroductionTour`
+ * document with the coordinates the TTS backend needs to (re)generate audio.
+ *
+ * For git-authored tours the audio ref points at the source `*.tour.json`;
+ * for store-published tours it records a stable `{ owner, repo, path }` key
+ * (path is synthesized from the store id at publish time) so the TTS manifest
+ * keying — which is `(owner, repo, path)` — keeps working without git.
+ */
+export interface StoredTourPayload {
+  tour: IntroductionTour;
+  audio: TourAudioRef;
+}
+
+/**
+ * Who may create/delete tours for a repo. Reserves the authorization surface
+ * called out in the migration plan: owners can tighten write access beyond the
+ * default "anyone with repo write access". Absent → treat as `repo-write`.
+ */
+export interface TourWritePolicy {
+  mode: 'repo-write' | 'owner-only' | 'allowlist';
+  /** GitHub logins allowed when `mode === 'allowlist'`. */
+  allow?: string[];
+  updatedBy?: { githubId: number; githubLogin: string };
+  /** ISO 8601 — when the policy was last set. */
+  updatedAt?: string;
+}
+
+/**
+ * One row in a repo's tour index. Lightweight — the full `IntroductionTour`
+ * lives in the per-tour payload object, fetched by id. `id` is the
+ * server-minted store id (used in share links); `tourId` is the author-chosen
+ * `IntroductionTour.id`, kept for display/dedup.
+ */
+export interface TourIndexEntry {
+  id: string;
+  tourId: string;
+  title: string;
+  /** First ~200 chars of the tour description, for list rendering. */
+  descriptionPreview: string;
+  stepCount: number;
+  audience?: string;
+  version: string;
+  createdBy: { githubId: number; githubLogin: string };
+  /** GitHub numeric repo id at upload time — rename-stable backstop. */
+  githubRepoId: number;
+  createdAt: string;
+  updatedAt: string;
+  sizeBytes: number;
+}
+
+export interface TourIndex {
+  version: 1;
+  updatedAt: string;
+  entries: TourIndexEntry[];
+  /** Repo visibility at last index write — lets listings filter without GitHub. */
+  repoVisibility?: 'public' | 'private';
+  repoVisibilityCheckedAt?: string;
+  /** Owner-configurable write gating (see {@link TourWritePolicy}). */
+  writePolicy?: TourWritePolicy;
+}
+
+// ============================================================================
+// Request / response shapes
+// ============================================================================
+
+export interface CreateTourRequest {
+  owner: string;
+  repo: string;
+  /** The author-provided `IntroductionTour` document to publish. */
+  tour: IntroductionTour;
+}
+
+export interface CreateTourResponse {
+  id: string;
+  url: string;
+  entry: TourIndexEntry;
+}
+
+export interface ListStoredToursResponse {
+  entries: TourIndexEntry[];
+}
