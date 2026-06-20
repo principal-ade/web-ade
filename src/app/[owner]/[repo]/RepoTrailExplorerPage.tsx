@@ -40,6 +40,7 @@ import type {
   HighlightLayer,
 } from '@industry-theme/file-city-panel';
 import type { IntroductionTour } from '@principal-ai/file-city-builder';
+import { createFileColorHighlightLayers } from '@principal-ai/file-city-react';
 import type { TourAudioStatus, TourListItem } from '@/lib/tours/types';
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -66,6 +67,21 @@ interface TourGenProgress {
   total: number;
   /** Short message shown on the row when `phase === 'error'`. */
   error?: string;
+}
+
+/**
+ * One row of the Files legend shown under the Tours list — mirrors the
+ * file-types color key in the File City panel. `fillColor`/`borderColor` are the
+ * exact building colors the 3D map paints for that extension (we derive them
+ * from the same `createFileColorHighlightLayers` the panel uses, so the legend
+ * never drifts from the map).
+ */
+interface LegendFileType {
+  id: string;
+  name: string;
+  fillColor: string;
+  borderColor?: string;
+  count: number;
 }
 
 const FileCityTrailExplorerPanel = dynamic(
@@ -531,6 +547,44 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     [fileTree],
   );
 
+  // File-types color key for the Tours pane legend. We run the repo's file list
+  // through `createFileColorHighlightLayers` — the exact function the File City
+  // panel uses to color buildings — then group the per-extension primary/
+  // secondary layers (ids `ext-{name}-primary` / `-secondary`) the same way the
+  // panel's own legend does. This guarantees the swatches match the 3D map.
+  const legendFileTypes = useMemo<LegendFileType[]>(() => {
+    if (filePaths.length === 0) return [];
+    const layers = createFileColorHighlightLayers(
+      filePaths.map((path) => ({ path })),
+    );
+    const grouped = new Map<
+      string,
+      { primary?: HighlightLayer; secondary?: HighlightLayer }
+    >();
+    for (const layer of layers) {
+      const match = layer.id.match(/^ext-(\w+)-(primary|secondary)$/);
+      if (!match) continue;
+      const [, ext, type] = match;
+      if (!ext) continue;
+      const group = grouped.get(ext) ?? {};
+      if (type === 'primary') group.primary = layer;
+      else group.secondary = layer;
+      grouped.set(ext, group);
+    }
+    const out: LegendFileType[] = [];
+    grouped.forEach((group, ext) => {
+      if (!group.primary) return;
+      out.push({
+        id: ext,
+        name: group.primary.name,
+        fillColor: group.primary.color,
+        borderColor: group.secondary?.color,
+        count: group.primary.items.length,
+      });
+    });
+    return out.sort((a, b) => b.count - a.count);
+  }, [filePaths]);
+
   // Effective excluded file set — every file that lives under any
   // user-excluded directory. Computed once and reused everywhere the
   // exclusion cascade matters (coverage stats, highlight layers).
@@ -935,6 +989,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           }}
           tourGenProgress={tourGenProgress}
           onGenerateTourAudio={handleGenerateTourAudio}
+          legendFileTypes={legendFileTypes}
           dirPaths={dirPaths}
           filePaths={filePaths}
           excludedDirs={excludedDirs}
@@ -1167,6 +1222,7 @@ const TrailListPane: React.FC<{
   onSelectTour: (id: string | null) => void;
   tourGenProgress: Map<string, TourGenProgress>;
   onGenerateTourAudio: (item: TourListItem) => void;
+  legendFileTypes: LegendFileType[];
   dirPaths: string[];
   filePaths: string[];
   excludedDirs: string[];
@@ -1194,6 +1250,7 @@ const TrailListPane: React.FC<{
   onSelectTour,
   tourGenProgress,
   onGenerateTourAudio,
+  legendFileTypes,
   dirPaths,
   filePaths,
   excludedDirs,
@@ -1239,6 +1296,7 @@ const TrailListPane: React.FC<{
           onSelectTour={onSelectTour}
           genProgress={tourGenProgress}
           onGenerateAudio={onGenerateTourAudio}
+          legendFileTypes={legendFileTypes}
         />
       ) : (
         <>
@@ -1927,6 +1985,7 @@ const ToursPane: React.FC<{
   onSelectTour: (id: string | null) => void;
   genProgress: Map<string, TourGenProgress>;
   onGenerateAudio: (item: TourListItem) => void;
+  legendFileTypes: LegendFileType[];
 }> = ({
   tours,
   loading,
@@ -1934,29 +1993,121 @@ const ToursPane: React.FC<{
   onSelectTour,
   genProgress,
   onGenerateAudio,
+  legendFileTypes,
 }) => {
+  // Tours list takes the top half, the file-types legend the bottom half; both
+  // scroll independently so neither crowds the other.
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto">
-      {loading ? (
-        <ListMessage>Loading tours…</ListMessage>
-      ) : tours.length === 0 ? (
-        <ToursEmptyState />
+    <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {loading ? (
+          <ListMessage>Loading tours…</ListMessage>
+        ) : tours.length === 0 ? (
+          <ToursEmptyState />
+        ) : (
+          tours.map((item) => (
+            <TourRow
+              key={item.tour.id}
+              tour={item.tour}
+              audioStatus={item.audioStatus}
+              progress={genProgress.get(item.tour.id)}
+              selected={item.tour.id === selectedTourId}
+              onSelect={() =>
+                onSelectTour(
+                  item.tour.id === selectedTourId ? null : item.tour.id,
+                )
+              }
+              onGenerate={() => onGenerateAudio(item)}
+            />
+          ))
+        )}
+      </div>
+      <FileTypeLegend fileTypes={legendFileTypes} />
+    </div>
+  );
+};
+
+/**
+ * File-types color key shown in the bottom half of the Tours pane. Each row is a
+ * building-colored swatch + display name + file count, mirroring the File City
+ * panel's own legend so the swatches read as the same buildings on the 3D map.
+ */
+const FileTypeLegend: React.FC<{ fileTypes: LegendFileType[] }> = ({
+  fileTypes,
+}) => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      className="flex flex-col shrink-0 h-1/2 min-h-0 border-t"
+      style={{ borderColor: theme.colors.border }}
+    >
+      <div
+        className="px-4 pt-3 pb-2 shrink-0"
+        style={{
+          fontSize: theme.fontSizes[0],
+          fontWeight: theme.fontWeights.semibold,
+          color: theme.colors.textSecondary,
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px',
+        }}
+      >
+        File Types
+      </div>
+      {fileTypes.length === 0 ? (
+        <ListMessage>No files to map</ListMessage>
       ) : (
-        tours.map((item) => (
-          <TourRow
-            key={item.tour.id}
-            tour={item.tour}
-            audioStatus={item.audioStatus}
-            progress={genProgress.get(item.tour.id)}
-            selected={item.tour.id === selectedTourId}
-            onSelect={() =>
-              onSelectTour(
-                item.tour.id === selectedTourId ? null : item.tour.id,
-              )
-            }
-            onGenerate={() => onGenerateAudio(item)}
-          />
-        ))
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-3">
+          <div className="flex flex-wrap gap-2">
+            {fileTypes.map((ft) => (
+              <div
+                key={ft.id}
+                className="flex items-center gap-2 rounded"
+                style={{
+                  padding: '6px 10px',
+                  backgroundColor: theme.colors.surface,
+                  border: `1px solid ${theme.colors.border}`,
+                  flex: '1 1 140px',
+                  minWidth: 0,
+                  boxSizing: 'border-box',
+                }}
+              >
+                <span
+                  className="shrink-0"
+                  style={{
+                    width: '18px',
+                    height: '14px',
+                    backgroundColor: ft.fillColor,
+                    border: ft.borderColor
+                      ? `2px solid ${ft.borderColor}`
+                      : 'none',
+                    borderRadius: '2px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                  }}
+                />
+                <span
+                  className="truncate flex-1"
+                  style={{
+                    fontSize: theme.fontSizes[0],
+                    color: theme.colors.text,
+                    minWidth: 0,
+                  }}
+                >
+                  {ft.name}
+                </span>
+                <span
+                  className="shrink-0"
+                  style={{
+                    fontSize: theme.fontSizes[0],
+                    color: theme.colors.textMuted,
+                  }}
+                >
+                  {ft.count}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
