@@ -50,6 +50,15 @@ export interface TourListItem {
   audio: TourAudioRef;
   /** Generation status used to render the row's audio badge + button. */
   audioStatus: TourAudioStatus;
+  /**
+   * Present only for store-backed tours — the store id (the DELETE key) plus
+   * the author, used to gate the row's delete control to author-or-repo-admin.
+   * Absent for git-tree tours, which are committed files and not store-deletable.
+   */
+  store?: {
+    id: string;
+    createdBy: { githubId: number; githubLogin: string };
+  };
 }
 
 export interface ListToursResponse {

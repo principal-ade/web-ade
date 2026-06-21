@@ -378,6 +378,44 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     };
   }, [owner, repo]);
 
+  // Tour pending deletion (drives the confirm modal). Mirrors the trail delete
+  // path: gated client-side to author/admin, re-checked server-side. Carries the
+  // store id (the DELETE key) and the tour id (to clear an open selection).
+  const [tourToDelete, setTourToDelete] = useState<{
+    storeId: string;
+    tourId: string;
+    title: string;
+  } | null>(null);
+
+  const confirmDeleteTour = useCallback(async () => {
+    if (!tourToDelete) return;
+    const { storeId, tourId } = tourToDelete;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(
+        `/api/tours/${encodeURIComponent(owner)}/${encodeURIComponent(
+          repo,
+        )}/${encodeURIComponent(storeId)}`,
+        { method: 'DELETE' },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setDeleteError(body?.error ?? `Failed to delete tour (${res.status}).`);
+        return;
+      }
+      setTours((prev) => prev.filter((t) => t.store?.id !== storeId));
+      setSelectedTourId((cur) => (cur === tourId ? null : cur));
+      setTourToDelete(null);
+    } catch (err) {
+      setDeleteError(
+        err instanceof Error ? err.message : 'Failed to delete tour.',
+      );
+    } finally {
+      setDeleting(false);
+    }
+  }, [tourToDelete, owner, repo]);
+
   const filteredEntries = useMemo(() => {
     if (state.kind !== 'ready') return [];
     const q = filterQuery.trim().toLowerCase();
@@ -1055,6 +1093,14 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           }}
           tourGenProgress={tourGenProgress}
           onGenerateTourAudio={handleGenerateTourAudio}
+          onRequestDeleteTour={(item) => {
+            if (!item.store) return;
+            setTourToDelete({
+              storeId: item.store.id,
+              tourId: item.tour.id,
+              title: item.tour.title,
+            });
+          }}
           legendFileTypes={legendFileTypes}
           dirPaths={dirPaths}
           filePaths={filePaths}
@@ -1119,6 +1165,35 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           onCancel={() => {
             if (deleting) return;
             setTrailToDelete(null);
+            setDeleteError(null);
+          }}
+        />
+      )}
+      {tourToDelete && (
+        <ConfirmDialog
+          title="Delete tour"
+          message={
+            <>
+              Delete{' '}
+              <strong style={{ color: 'inherit' }}>
+                “{tourToDelete.title}”
+              </strong>
+              ? This permanently removes the published tour for everyone. This
+              cannot be undone.
+              {deleteError && (
+                <span className="block mt-3" style={{ color: '#dc2626' }}>
+                  {deleteError}
+                </span>
+              )}
+            </>
+          }
+          confirmLabel="Delete tour"
+          destructive
+          busy={deleting}
+          onConfirm={confirmDeleteTour}
+          onCancel={() => {
+            if (deleting) return;
+            setTourToDelete(null);
             setDeleteError(null);
           }}
         />
@@ -1320,6 +1395,7 @@ const TrailListPane: React.FC<{
   onSelectTour: (id: string | null) => void;
   tourGenProgress: Map<string, TourGenProgress>;
   onGenerateTourAudio: (item: TourListItem) => void;
+  onRequestDeleteTour: (item: TourListItem) => void;
   legendFileTypes: LegendFileType[];
   dirPaths: string[];
   filePaths: string[];
@@ -1351,6 +1427,7 @@ const TrailListPane: React.FC<{
   onSelectTour,
   tourGenProgress,
   onGenerateTourAudio,
+  onRequestDeleteTour,
   legendFileTypes,
   dirPaths,
   filePaths,
@@ -1397,6 +1474,9 @@ const TrailListPane: React.FC<{
           onSelectTour={onSelectTour}
           genProgress={tourGenProgress}
           onGenerateAudio={onGenerateTourAudio}
+          viewerUserId={viewerUserId}
+          viewerIsRepoAdmin={viewerIsRepoAdmin}
+          onRequestDelete={onRequestDeleteTour}
           legendFileTypes={legendFileTypes}
         />
       ) : (
@@ -2118,6 +2198,9 @@ const ToursPane: React.FC<{
   onSelectTour: (id: string | null) => void;
   genProgress: Map<string, TourGenProgress>;
   onGenerateAudio: (item: TourListItem) => void;
+  viewerUserId: number | null;
+  viewerIsRepoAdmin: boolean;
+  onRequestDelete: (item: TourListItem) => void;
   legendFileTypes: LegendFileType[];
 }> = ({
   tours,
@@ -2126,6 +2209,9 @@ const ToursPane: React.FC<{
   onSelectTour,
   genProgress,
   onGenerateAudio,
+  viewerUserId,
+  viewerIsRepoAdmin,
+  onRequestDelete,
   legendFileTypes,
 }) => {
   // Tours list takes the top half, the file-types legend the bottom half; both
@@ -2151,6 +2237,16 @@ const ToursPane: React.FC<{
                 )
               }
               onGenerate={() => onGenerateAudio(item)}
+              // Only store-backed tours are deletable; gate on the validated
+              // session, mirroring trails (author-or-repo-admin).
+              canDelete={
+                item.store != null &&
+                viewerUserId !== null &&
+                (viewerIsRepoAdmin ||
+                  String(item.store.createdBy.githubId) ===
+                    String(viewerUserId))
+              }
+              onDelete={() => onRequestDelete(item)}
             />
           ))
         )}
@@ -2253,7 +2349,18 @@ const TourRow: React.FC<{
   selected: boolean;
   onSelect: () => void;
   onGenerate: () => void;
-}> = ({ tour, audioStatus, progress, selected, onSelect, onGenerate }) => {
+  canDelete: boolean;
+  onDelete: () => void;
+}> = ({
+  tour,
+  audioStatus,
+  progress,
+  selected,
+  onSelect,
+  onGenerate,
+  canDelete,
+  onDelete,
+}) => {
   const { theme } = useTheme();
   const stepCount = Array.isArray(tour.steps) ? tour.steps.length : 0;
   // `audience` is an optional, loosely-typed field on the tour schema — read
@@ -2263,7 +2370,7 @@ const TourRow: React.FC<{
 
   return (
     <div
-      className="border-b transition-colors"
+      className="relative border-b transition-colors"
       style={{
         background: selected ? theme.colors.background : 'transparent',
         borderColor: theme.colors.border,
@@ -2282,6 +2389,7 @@ const TourRow: React.FC<{
             style={{
               fontSize: theme.fontSizes[2],
               fontWeight: theme.fontWeights.semibold,
+              paddingRight: canDelete ? 28 : 0,
             }}
           >
             {tour.title}
@@ -2316,6 +2424,24 @@ const TourRow: React.FC<{
           )}
         </div>
       </button>
+      {canDelete && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          aria-label={`Delete tour “${tour.title}”`}
+          title="Delete tour"
+          className="absolute top-2.5 right-2.5 w-7 h-7 rounded-md flex items-center justify-center transition-opacity opacity-60 hover:opacity-100"
+          style={{
+            background: 'transparent',
+            color: theme.colors.error ?? theme.colors.textMuted,
+          }}
+        >
+          <Trash2 size={14} />
+        </button>
+      )}
       <TourAudioControl
         status={audioStatus}
         progress={progress}

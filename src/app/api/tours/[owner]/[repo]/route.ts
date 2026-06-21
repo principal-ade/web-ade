@@ -174,13 +174,23 @@ export async function POST(
       ...summarizeTour(tour),
       createdBy: { githubId: user.id, githubLogin: user.login },
       githubRepoId: access.githubRepoId,
-      createdAt: now,
+      // Preserve the original creation time across republishes; bump updatedAt.
+      createdAt: existingEntry?.createdAt ?? now,
       updatedAt: now,
       sizeBytes,
     };
 
     await updateIndex(owner, repo, (data) => {
-      const next = [...data.entries, entry];
+      // Replace an existing entry with the same author-chosen tourId (keyed off
+      // the fresh `data` read, not the earlier snapshot, so concurrent
+      // publishes stay consistent); otherwise append.
+      const existingIdx = data.entries.findIndex(
+        (e) => e.tourId === entry.tourId,
+      );
+      const next =
+        existingIdx >= 0
+          ? data.entries.map((e, i) => (i === existingIdx ? entry : e))
+          : [...data.entries, entry];
       // Soft cap: prune oldest by updatedAt when over the limit.
       if (next.length > MAX_TOURS_PER_REPO) {
         next.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));

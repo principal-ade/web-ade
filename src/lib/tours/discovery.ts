@@ -260,7 +260,12 @@ async function listStoredToursForRepo(
       audio.path,
       tour,
     );
-    items.push({ tour, audio, audioStatus });
+    items.push({
+      tour,
+      audio,
+      audioStatus,
+      store: { id: entry.id, createdBy: entry.createdBy },
+    });
   }
 
   // Stable order so the sidebar list doesn't reshuffle between loads.
