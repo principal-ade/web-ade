@@ -166,9 +166,9 @@ type LoadState =
   | {
       kind: 'ready';
       entries: SharedTrailIndexEntry[];
-      // Viewer capability, from the list response — drives which trails show a
-      // delete control (author-or-repo-admin, mirroring the DELETE route gate).
-      viewerGithubId: string | null;
+      // Repo-admin capability, from the list response — an admin can delete any
+      // trail. (Author-match is computed client-side against the validated
+      // `useAuth()` session, not this response.) Mirrors the DELETE route gate.
       viewerIsRepoAdmin: boolean;
     }
   | { kind: 'error'; message: string; code: ShareErrorCode | null };
@@ -313,14 +313,12 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         }
         const data = (await res.json()) as {
           entries: SharedTrailIndexEntry[];
-          viewerGithubId?: string | null;
           viewerIsRepoAdmin?: boolean;
         };
         if (cancelled) return;
         setState({
           kind: 'ready',
           entries: data.entries,
-          viewerGithubId: data.viewerGithubId ?? null,
           viewerIsRepoAdmin: data.viewerIsRepoAdmin ?? false,
         });
       } catch (err) {
@@ -990,6 +988,12 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         exploredStats={exploredStats}
       />
       <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
+        {/* The delete control is driven by the app's own validated session:
+            the author-match compares against `useAuth().user.id`, and
+            viewerIsRepoAdmin (server-resolved, needs a real token) only matters
+            once someone is logged in. `viewerUserId` is null when logged out, so
+            no trash can renders even if a stale `github_user_id` cookie lingers.
+            The DELETE route re-checks auth server-side regardless. */}
         <TrailListPane
           loading={false}
           entries={state.entries}
@@ -1005,7 +1009,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             if (id) setSelectedTourId(null);
           }}
           onHover={setHoveredTrailId}
-          viewerGithubId={state.viewerGithubId}
+          viewerUserId={user?.id ?? null}
           viewerIsRepoAdmin={state.viewerIsRepoAdmin}
           onRequestDeleteTrail={setTrailToDelete}
           configMode={configMode}
@@ -1300,7 +1304,7 @@ const TrailListPane: React.FC<{
   selectedTrailId: string | null;
   onSelect: (id: string | null) => void;
   onHover: (id: string | null) => void;
-  viewerGithubId: string | null;
+  viewerUserId: number | null;
   viewerIsRepoAdmin: boolean;
   onRequestDeleteTrail: (entry: SharedTrailIndexEntry) => void;
   configMode: boolean;
@@ -1331,7 +1335,7 @@ const TrailListPane: React.FC<{
   selectedTrailId,
   onSelect,
   onHover,
-  viewerGithubId,
+  viewerUserId,
   viewerIsRepoAdmin,
   onRequestDeleteTrail,
   configMode,
@@ -1453,9 +1457,9 @@ const TrailListPane: React.FC<{
                   }
                   onHover={() => onHover(entry.id)}
                   canDelete={
-                    viewerIsRepoAdmin ||
-                    (viewerGithubId !== null &&
-                      String(entry.createdBy?.githubId) === viewerGithubId)
+                    viewerUserId !== null &&
+                    (viewerIsRepoAdmin ||
+                      String(entry.createdBy?.githubId) === String(viewerUserId))
                   }
                   onDelete={() => onRequestDeleteTrail(entry)}
                 />

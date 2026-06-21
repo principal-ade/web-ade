@@ -133,7 +133,6 @@ export async function POST(
     const existingIndex = await getIndex(owner, repo);
     assertTourWriteAllowed(existingIndex.writePolicy, user.login, owner);
 
-    const id = crypto.randomUUID();
     const commitSha = await resolveHeadSha(owner, repo, githubToken);
 
     // The server is authoritative for the publish target: stamp it as the
@@ -156,6 +155,15 @@ export async function POST(
 
     // Validate the stamped tour (now guaranteed to carry repos) via parseTour.
     const tour = validateTour(stampedTour);
+
+    // Republish-as-replace: if a tour with the same author-chosen `tourId`
+    // already exists for this repo, reuse its server store id so the payload,
+    // id pointer, and index entries all overwrite in place instead of stacking
+    // up a duplicate. Otherwise mint a fresh id for a brand-new tour.
+    const existingEntry = existingIndex.entries.find(
+      (e) => e.tourId === tour.id,
+    );
+    const id = existingEntry?.id ?? crypto.randomUUID();
 
     const { sizeBytes } = await putPayload(owner, repo, id, tour);
     await putIdPointer(owner, repo, id);
