@@ -4,6 +4,16 @@ import { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ThemedMonacoEditor } from '@principal-ade/industry-themed-monaco-editor';
 import { X } from 'lucide-react';
+import { DocumentPreview } from '@/components/document/DocumentPreview';
+
+// Binary document types that render through DocumentPreview instead of Monaco.
+// Starting with DOCX (client-side, high fidelity via docx-preview); PDF/PPTX
+// will follow once the pdf.js worker glue / LibreOffice converter land.
+function inferDocKind(path: string): 'docx' | null {
+  const lower = (path.split('?')[0] ?? path).toLowerCase();
+  if (lower.endsWith('.docx')) return 'docx';
+  return null;
+}
 
 // Strips the leading slash / "GitHub/" / "owner/repo/" prefixes that file
 // paths can arrive with, leaving a clean repo-relative path for the API.
@@ -64,8 +74,18 @@ export const FileSourcePanel: React.FC<{
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Binary documents bypass the text read + Monaco entirely and stream their
+  // raw bytes straight into DocumentPreview.
+  const docKind = shownPath ? inferDocKind(shownPath) : null;
+  const docSrc =
+    shownPath && docKind
+      ? `/api/github/repo/${owner}/${repo}?action=raw&path=${encodeURIComponent(
+          normalizeRepoPath(shownPath, owner, repo),
+        )}`
+      : null;
+
   useEffect(() => {
-    if (!shownPath) return;
+    if (!shownPath || inferDocKind(shownPath)) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -186,7 +206,11 @@ export const FileSourcePanel: React.FC<{
 
       {/* Body — source, with loading / error fallbacks. */}
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-        {error ? (
+        {docKind && docSrc ? (
+          <div style={{ position: 'absolute', inset: 0, overflow: 'auto' }}>
+            <DocumentPreview src={docSrc} kind={docKind} />
+          </div>
+        ) : error ? (
           <div
             style={{
               padding: 16,

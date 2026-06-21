@@ -269,6 +269,57 @@ export async function GET(
         break;
       }
 
+      case "raw": {
+        // Stream the raw file bytes (not the base64 JSON wrapper) so binary
+        // documents — .docx, .pdf, .pptx — can be fetched as an ArrayBuffer by
+        // the client preview. Uses the GitHub "raw" media type, which also
+        // sidesteps the 1MB limit of the contents JSON response. Auth flows
+        // through the same user/server token, so private repos work too.
+        const filePath = searchParams.get("path");
+        if (!filePath) {
+          return NextResponse.json(
+            { error: "File path required" },
+            { status: 400 },
+          );
+        }
+        const ref = searchParams.get("ref");
+        const endpoint = ref
+          ? `/repos/${owner}/${name}/contents/${filePath}?ref=${encodeURIComponent(ref)}`
+          : `/repos/${owner}/${name}/contents/${filePath}`;
+
+        const token = userToken || process.env.GITHUB_TOKEN || null;
+        const headers: Record<string, string> = {
+          Accept: "application/vnd.github.raw",
+          "User-Agent": "CodeCity-App/1.0",
+        };
+        if (token) headers["Authorization"] = `token ${token}`;
+
+        const ghResponse = await fetch(`${GITHUB_API_BASE}${endpoint}`, {
+          headers,
+        });
+        if (!ghResponse.ok) {
+          throw new GitHubApiError(
+            `GitHub API Error: ${ghResponse.status} ${ghResponse.statusText}`,
+            ghResponse.status,
+          );
+        }
+
+        const buffer = await ghResponse.arrayBuffer();
+        const rawResponse = new NextResponse(buffer, { status: 200 });
+        rawResponse.headers.set(
+          "Content-Type",
+          ghResponse.headers.get("content-type") || "application/octet-stream",
+        );
+        // SHA-pinned reads are immutable; even unpinned files change rarely, so
+        // lean on HTTP caching here (binary bodies don't round-trip through
+        // unstable_cache cleanly).
+        rawResponse.headers.set(
+          "Cache-Control",
+          `public, s-maxage=${CACHE_DURATIONS.file}, stale-while-revalidate=${CACHE_DURATIONS.file * 2}`,
+        );
+        return addCorsHeaders(rawResponse);
+      }
+
       case "counts": {
         // Use GraphQL to efficiently fetch PR and issue counts in a single request
         const countsQuery = `
