@@ -158,10 +158,14 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
       );
     }
 
-    if (String(entry.createdBy.githubId) !== String(userId)) {
+    // Author or repo admin may delete. `canAdmin` rides on the per-user
+    // access check above (GitHub `permissions.admin`), so org admins — not
+    // just the literal `{owner}` user — can moderate trails they didn't author.
+    const isAuthor = String(entry.createdBy.githubId) === String(userId);
+    if (!isAuthor && !access.canAdmin) {
       return NextResponse.json(
         {
-          error: 'Only the creator can delete this trail',
+          error: 'Only the creator or a repo admin can delete this trail',
           code: ShareErrorCodes.NOT_OWNER,
         },
         { status: 403 }

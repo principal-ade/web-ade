@@ -145,6 +145,19 @@ export interface CreateSharedTrailResponse {
 
 export interface ListSharedTrailsResponse {
   entries: SharedTrailIndexEntry[];
+  /**
+   * The viewer's GitHub id (as a string, matching the cookie/route gate), or
+   * null when logged out. Lets the client decide which trails the viewer
+   * authored (and may therefore delete) without a second lookup. Compare with
+   * `String(entry.createdBy.githubId)`.
+   */
+  viewerGithubId: string | null;
+  /**
+   * Whether the viewer has admin rights on the repo (GitHub `permissions.admin`).
+   * When true the client shows delete on every trail, matching the route's
+   * "author or repo admin" rule. `false` for logged-out viewers.
+   */
+  viewerIsRepoAdmin: boolean;
 }
 
 /**

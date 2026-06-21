@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getGitHubToken } from '@/lib/auth/request';
+import { getGitHubToken, getGitHubUserId } from '@/lib/auth/request';
 import { getIndex } from '@/lib/trails/s3-storage';
 import { validateOwnerRepo } from '@/lib/trails/validation';
 import { checkRepoAccess } from '@/lib/trails/github-access';
@@ -30,12 +30,19 @@ export async function GET(
       );
     }
 
-    const index = await getIndex(owner, repo);
+    const [index, viewerId] = await Promise.all([
+      getIndex(owner, repo),
+      getGitHubUserId(),
+    ]);
     const entries = [...index.entries].sort((a, b) =>
       b.updatedAt.localeCompare(a.updatedAt)
     );
 
-    const response: ListSharedTrailsResponse = { entries };
+    const response: ListSharedTrailsResponse = {
+      entries,
+      viewerGithubId: viewerId ?? null,
+      viewerIsRepoAdmin: access.canAdmin,
+    };
     return NextResponse.json(response);
   } catch (error) {
     if (error instanceof TrailShareError) {

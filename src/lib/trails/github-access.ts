@@ -40,6 +40,15 @@ export interface RepoAccessInfo {
   htmlUrl: string;
   /** ISO 8601 of the last push, or null. */
   pushedAt: string | null;
+  /**
+   * Whether the *calling* user has admin rights on the repo. Derived from the
+   * `permissions` object GitHub adds to `/repos/{owner}/{repo}` for
+   * authenticated requests — so it reflects the token holder, which is safe
+   * because the access fetch is cached per-user (`cachedUserGitHubFetch`).
+   * `false` for anonymous reads (GitHub omits `permissions`). Used to let repo
+   * admins delete trails they didn't author.
+   */
+  canAdmin: boolean;
 }
 
 /** The subset of `GET /repos/{owner}/{repo}` we read. */
@@ -55,6 +64,8 @@ interface GhRepoResponse {
   homepage: string | null;
   html_url: string;
   pushed_at: string | null;
+  /** Present only on authenticated requests; reflects the token holder. */
+  permissions?: { admin?: boolean; push?: boolean; pull?: boolean };
 }
 
 /**
@@ -206,6 +217,7 @@ export async function checkRepoAccess(
       homepage: data.homepage ? data.homepage : null,
       htmlUrl: data.html_url,
       pushedAt: data.pushed_at ?? null,
+      canAdmin: Boolean(data.permissions?.admin),
     };
   } catch (error) {
     if (error instanceof GitHubApiError) {

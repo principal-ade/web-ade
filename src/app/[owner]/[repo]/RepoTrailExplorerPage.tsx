@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Loader2,
   Mic,
+  Trash2,
 } from 'lucide-react';
 import { FileTree as PierreFileTree, useFileTree } from '@pierre/trees/react';
 import { themeToTreeStyles } from '@pierre/trees';
@@ -48,6 +49,7 @@ import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { TrailLoadingScreen } from '@/components/trail/TrailLoadingScreen';
 import { TrailErrorView } from '@/components/trail/TrailErrorView';
 import { TrailShareModal } from '@/components/trail/TrailShareModal';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { FileSourcePanel } from './FileSourcePanel';
 import {
   type ShareErrorCode,
@@ -161,7 +163,14 @@ interface RepoTrailExplorerPageProps {
 
 type LoadState =
   | { kind: 'loading' }
-  | { kind: 'ready'; entries: SharedTrailIndexEntry[] }
+  | {
+      kind: 'ready';
+      entries: SharedTrailIndexEntry[];
+      // Viewer capability, from the list response — drives which trails show a
+      // delete control (author-or-repo-admin, mirroring the DELETE route gate).
+      viewerGithubId: string | null;
+      viewerIsRepoAdmin: boolean;
+    }
   | { kind: 'error'; message: string; code: ShareErrorCode | null };
 
 export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProps) {
@@ -234,6 +243,47 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   // pane swaps to the tour panel while a tour is active.
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
 
+  // Trail pending deletion (drives the confirm modal) + in-flight guard. The
+  // delete itself is gated server-side; this is the author/admin-only UI path.
+  const [trailToDelete, setTrailToDelete] =
+    useState<SharedTrailIndexEntry | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const confirmDeleteTrail = useCallback(async () => {
+    if (!trailToDelete) return;
+    const id = trailToDelete.id;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(
+        `/api/trails/${encodeURIComponent(owner)}/${encodeURIComponent(
+          repo,
+        )}/${encodeURIComponent(id)}`,
+        { method: 'DELETE' },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setDeleteError(body?.error ?? `Failed to delete trail (${res.status}).`);
+        return;
+      }
+      // Drop it from the list, and clear the selection if it was open.
+      setState((prev) =>
+        prev.kind === 'ready'
+          ? { ...prev, entries: prev.entries.filter((e) => e.id !== id) }
+          : prev,
+      );
+      setSelectedTrailId((cur) => (cur === id ? null : cur));
+      setTrailToDelete(null);
+    } catch (err) {
+      setDeleteError(
+        err instanceof Error ? err.message : 'Failed to delete trail.',
+      );
+    } finally {
+      setDeleting(false);
+    }
+  }, [trailToDelete, owner, repo]);
+
   useEffect(() => {
     document.title = `${owner}/${repo}`;
   }, [owner, repo]);
@@ -261,9 +311,18 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           });
           return;
         }
-        const data = (await res.json()) as { entries: SharedTrailIndexEntry[] };
+        const data = (await res.json()) as {
+          entries: SharedTrailIndexEntry[];
+          viewerGithubId?: string | null;
+          viewerIsRepoAdmin?: boolean;
+        };
         if (cancelled) return;
-        setState({ kind: 'ready', entries: data.entries });
+        setState({
+          kind: 'ready',
+          entries: data.entries,
+          viewerGithubId: data.viewerGithubId ?? null,
+          viewerIsRepoAdmin: data.viewerIsRepoAdmin ?? false,
+        });
       } catch (err) {
         if (cancelled) return;
         setState({
@@ -946,6 +1005,9 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             if (id) setSelectedTourId(null);
           }}
           onHover={setHoveredTrailId}
+          viewerGithubId={state.viewerGithubId}
+          viewerIsRepoAdmin={state.viewerIsRepoAdmin}
+          onRequestDeleteTrail={setTrailToDelete}
           configMode={configMode}
           onToggleConfigMode={() => {
             setConfigMode((m) => !m);
@@ -1028,6 +1090,35 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         filePath={selectedFilePath}
         onClose={() => setSelectedFilePath(null)}
       />
+      {trailToDelete && (
+        <ConfirmDialog
+          title="Delete trail"
+          message={
+            <>
+              Delete{' '}
+              <strong style={{ color: 'inherit' }}>
+                “{trailToDelete.title}”
+              </strong>
+              ? This permanently removes the shared trail for everyone. This
+              cannot be undone.
+              {deleteError && (
+                <span className="block mt-3" style={{ color: '#dc2626' }}>
+                  {deleteError}
+                </span>
+              )}
+            </>
+          }
+          confirmLabel="Delete trail"
+          destructive
+          busy={deleting}
+          onConfirm={confirmDeleteTrail}
+          onCancel={() => {
+            if (deleting) return;
+            setTrailToDelete(null);
+            setDeleteError(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1209,6 +1300,9 @@ const TrailListPane: React.FC<{
   selectedTrailId: string | null;
   onSelect: (id: string | null) => void;
   onHover: (id: string | null) => void;
+  viewerGithubId: string | null;
+  viewerIsRepoAdmin: boolean;
+  onRequestDeleteTrail: (entry: SharedTrailIndexEntry) => void;
   configMode: boolean;
   onToggleConfigMode: () => void;
   leftViewMode: 'trails' | 'files' | 'tours';
@@ -1237,6 +1331,9 @@ const TrailListPane: React.FC<{
   selectedTrailId,
   onSelect,
   onHover,
+  viewerGithubId,
+  viewerIsRepoAdmin,
+  onRequestDeleteTrail,
   configMode,
   onToggleConfigMode,
   leftViewMode,
@@ -1355,6 +1452,12 @@ const TrailListPane: React.FC<{
                     onSelect(entry.id === selectedTrailId ? null : entry.id)
                   }
                   onHover={() => onHover(entry.id)}
+                  canDelete={
+                    viewerIsRepoAdmin ||
+                    (viewerGithubId !== null &&
+                      String(entry.createdBy?.githubId) === viewerGithubId)
+                  }
+                  onDelete={() => onRequestDeleteTrail(entry)}
                 />
               ))
             )}
@@ -1825,7 +1928,9 @@ const TrailRow: React.FC<{
   selected: boolean;
   onSelect: () => void;
   onHover: () => void;
-}> = ({ entry, payload, selected, onSelect, onHover }) => {
+  canDelete: boolean;
+  onDelete: () => void;
+}> = ({ entry, payload, selected, onSelect, onHover, canDelete, onDelete }) => {
   const { theme } = useTheme();
 
   // Unique-file count, derived from the loaded payload's marker
@@ -1847,24 +1952,29 @@ const TrailRow: React.FC<{
     : null;
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
+    <div
+      className="relative border-b"
+      style={{ borderColor: theme.colors.border }}
       onMouseEnter={onHover}
-      onFocus={onHover}
-      className="w-full text-left px-4 py-3 border-b transition-colors"
-      style={{
-        background: selected ? theme.colors.background : 'transparent',
-        borderColor: theme.colors.border,
-        color: theme.colors.text,
-      }}
     >
+      <button
+        type="button"
+        onClick={onSelect}
+        onFocus={onHover}
+        className="w-full text-left px-4 py-3 transition-colors"
+        style={{
+          background: selected ? theme.colors.background : 'transparent',
+          color: theme.colors.text,
+        }}
+      >
       <div className="min-w-0">
         <div
           className="break-words"
+          // Pad the title so a long one doesn't slide under the delete button.
           style={{
             fontSize: theme.fontSizes[2],
             fontWeight: theme.fontWeights.semibold,
+            paddingRight: canDelete ? 28 : 0,
           }}
         >
           {entry.title}
@@ -1895,7 +2005,26 @@ const TrailRow: React.FC<{
           )}
         </div>
       </div>
-    </button>
+      </button>
+      {canDelete && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          aria-label={`Delete trail “${entry.title}”`}
+          title="Delete trail"
+          className="absolute top-2.5 right-2.5 w-7 h-7 rounded-md flex items-center justify-center transition-opacity opacity-60 hover:opacity-100"
+          style={{
+            background: 'transparent',
+            color: theme.colors.error ?? theme.colors.textMuted,
+          }}
+        >
+          <Trash2 size={14} />
+        </button>
+      )}
+    </div>
   );
 };
 
