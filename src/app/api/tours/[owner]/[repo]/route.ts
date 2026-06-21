@@ -187,7 +187,15 @@ export async function POST(
     });
     await upsertTourInUserIndex(owner, repo, entry);
 
-    const response: CreateTourResponse = { id, url: `/tour/${id}`, entry };
+    // Point the share link at the repo page, which is where tours actually
+    // render — there is no standalone `/tour/<id>` page route. (A `?tour=<id>`
+    // query param to open this specific tour is a planned follow-up; for now
+    // the repo page auto-selects the first tour.)
+    const response: CreateTourResponse = {
+      id,
+      url: `/${owner}/${repo}`,
+      entry,
+    };
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
     if (error instanceof TrailShareError) {

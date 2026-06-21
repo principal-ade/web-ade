@@ -145,8 +145,10 @@ export async function GET(request: NextRequest, { params }: Params) {
         stepCount: e.stepCount,
         updatedAt: e.updatedAt,
         author: e.createdBy?.githubLogin,
-        humanView: `${origin}/tour/${encodeURIComponent(e.id)}`,
-        _links: { humanView: `${origin}/tour/${encodeURIComponent(e.id)}` },
+        // Tours render on the repo page (no standalone `/tour/<id>` route);
+        // a `?tour=<id>` deep-link selector is a planned follow-up.
+        humanView: `${origin}/${owner}/${repo}`,
+        _links: { humanView: `${origin}/${owner}/${repo}` },
       }));
 
     const repo_info = {
