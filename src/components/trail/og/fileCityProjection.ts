@@ -149,3 +149,90 @@ export function projectTouchedCity(
 
   return { rects, centers, districts, w: targetW, h: targetH };
 }
+
+/**
+ * Project the WHOLE city — every building, colored by file type — for the repo
+ * OG card. Unlike `projectTouchedCity` (which frames the full city but draws
+ * only a trail's touched files), this draws all buildings so the card shows the
+ * real, fully-colored codebase. No trail, so `centers` is empty and
+ * `FileMapPanel` skips the dashed path + stop dots.
+ *
+ * @param maxBuildings cap on rendered buildings (largest-footprint kept) to
+ *   bound Satori's work on huge repos. Omit for no cap.
+ */
+export function projectFullCity(
+  city: CityData,
+  targetW: number,
+  targetH: number,
+  pad = 34,
+  maxBuildings?: number,
+): FileMapData | null {
+  if (city.buildings.length === 0) return null;
+
+  const districtNodes = flattenDistricts(city.districts);
+
+  // Frame to the WHOLE city (same bounds logic as projectTouchedCity).
+  let { minX, minZ, maxX, maxZ } = city.bounds;
+  if (!(maxX > minX && maxZ > minZ)) {
+    minX = Infinity;
+    minZ = Infinity;
+    maxX = -Infinity;
+    maxZ = -Infinity;
+    for (const { d } of districtNodes) {
+      minX = Math.min(minX, d.worldBounds.minX);
+      minZ = Math.min(minZ, d.worldBounds.minZ);
+      maxX = Math.max(maxX, d.worldBounds.maxX);
+      maxZ = Math.max(maxZ, d.worldBounds.maxZ);
+    }
+    for (const b of city.buildings) {
+      const [dw, , dd] = b.dimensions;
+      minX = Math.min(minX, b.position.x - dw / 2);
+      minZ = Math.min(minZ, b.position.z - dd / 2);
+      maxX = Math.max(maxX, b.position.x + dw / 2);
+      maxZ = Math.max(maxZ, b.position.z + dd / 2);
+    }
+  }
+
+  const bw = maxX - minX || 1;
+  const bh = maxZ - minZ || 1;
+  const availW = targetW - pad * 2;
+  const availH = targetH - pad * 2;
+  const scale = Math.min(availW / bw, availH / bh);
+  const offX = pad + (availW - bw * scale) / 2;
+  const offY = pad + (availH - bh * scale) / 2;
+  const sx = (x: number) => offX + (x - minX) * scale;
+  const sy = (z: number) => offY + (z - minZ) * scale;
+
+  const districts: FileMapDistrict[] = districtNodes
+    .map(({ d, depth }) => ({
+      x: sx(d.worldBounds.minX),
+      y: sy(d.worldBounds.minZ),
+      w: Math.max(2, (d.worldBounds.maxX - d.worldBounds.minX) * scale),
+      h: Math.max(2, (d.worldBounds.maxZ - d.worldBounds.minZ) * scale),
+      depth,
+    }))
+    .sort((a, b) => a.depth - b.depth);
+
+  // All buildings, colored. On huge repos keep the largest-footprint ones so
+  // the city still reads while bounding the div count Satori has to lay out.
+  let buildings = city.buildings;
+  if (maxBuildings && buildings.length > maxBuildings) {
+    buildings = [...buildings]
+      .sort((a, b) => b.dimensions[0] * b.dimensions[2] - a.dimensions[0] * a.dimensions[2])
+      .slice(0, maxBuildings);
+  }
+
+  const rects: FileMapRect[] = buildings.map((b) => {
+    const [dw, , dd] = b.dimensions;
+    return {
+      x: sx(b.position.x - dw / 2),
+      y: sy(b.position.z - dd / 2),
+      w: Math.max(2, dw * scale),
+      h: Math.max(2, dd * scale),
+      color: getFileColor(b.path),
+      path: b.path,
+    };
+  });
+
+  return { rects, centers: [], districts, w: targetW, h: targetH };
+}

@@ -1,47 +1,24 @@
 /**
- * Card Image Generation API (next/og based)
+ * Repo Card Image Generation API (next/og based)
  *
- * GET /api/card/[owner]/[repo] - Generate a Twitter card PNG for a repository
+ * GET /api/card/[owner]/[repo] - Generate a 1200×628 Open Graph / Twitter card
+ * PNG for a repository: owner avatar + repo name + stats beside a fully-colored
+ * File City map of the whole codebase.
  *
- * Uses Next.js ImageResponse (Satori-based) for OG image generation.
- * Uses CardLayoutOG from the repository-composition-panels package.
+ * Uses Next.js ImageResponse (Satori-based) with the presentational
+ * `RepoCardOG` component (shared with Storybook). The city map is built from
+ * the live GitHub tree via `buildRepoFileMap`.
  */
 
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
-import { CardLayoutOG } from '@industry-theme/repository-composition-panels/og';
+import { RepoCardOG } from '@/components/repo/og/RepoCardOG';
+import { buildRepoFileMap } from '@/lib/repo/repo-file-map';
 
-// Twitter card dimensions
 const WIDTH = 1200;
 const HEIGHT = 628;
-
-// Card dimensions (maintain aspect ratio)
-const CARD_HEIGHT = HEIGHT - 40;
-const CARD_WIDTH = Math.round(CARD_HEIGHT * 0.6);
-
-// Language to color mapping
-const languageColors: Record<string, number> = {
-  TypeScript: 0x3178c6,
-  JavaScript: 0xf7df1e,
-  Python: 0xffd43b,
-  Rust: 0xdea584,
-  Go: 0x00add8,
-  Java: 0xb07219,
-  'C++': 0xf34b7d,
-  C: 0x555555,
-  'C#': 0x178600,
-  Ruby: 0xcc342d,
-  PHP: 0x4f5d95,
-  Swift: 0xf05138,
-  Kotlin: 0xa97bff,
-  Shell: 0x89e051,
-  HTML: 0xe34c26,
-  CSS: 0x563d7c,
-  Vue: 0x41b883,
-  Svelte: 0xff3e00,
-};
-
-const DEFAULT_COLOR = 0x6b7280;
+// Square map panel on the right of the card (matches FileMapPanel placement).
+const MAP_SIZE = 548;
 
 interface GitHubRepo {
   name: string;
@@ -53,16 +30,6 @@ interface GitHubRepo {
   };
   stargazers_count: number;
   language: string | null;
-  license?: {
-    spdx_id: string;
-  } | null;
-  created_at?: string;
-}
-
-interface GitHubUser {
-  login: string;
-  name: string | null;
-  avatar_url: string;
 }
 
 interface GitHubTree {
@@ -85,8 +52,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     console.log('[Card API] Generating card:', { owner, repo });
 
-    // Fetch repo data and owner profile in parallel
-    const [repoResponse, ownerResponse] = await Promise.all([
+    // Base URL for our own file-city-data endpoint (Lambda/Amplify-aware).
+    const baseUrl =
+      process.env.APP_URL ||
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('x-forwarded-host') || request.headers.get('host') || request.nextUrl.host}`;
+
+    // Fetch repo metadata, file count, and the projected city map in parallel.
+    const [repoResponse, treeResponse, fileMap] = await Promise.all([
       fetch(`https://api.github.com/repos/${owner}/${repo}`, {
         headers: {
           Accept: 'application/vnd.github.v3+json',
@@ -94,13 +67,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         },
         next: { revalidate: 3600 },
       }),
-      fetch(`https://api.github.com/users/${owner}`, {
-        headers: {
-          Accept: 'application/vnd.github.v3+json',
-          'User-Agent': 'web-ade-card-generator',
-        },
-        next: { revalidate: 3600 },
-      }),
+      fetch(
+        `https://api.github.com/repos/${owner}/${repo}/git/trees/HEAD?recursive=1`,
+        {
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+            'User-Agent': 'web-ade-card-generator',
+          },
+          next: { revalidate: 3600 },
+        }
+      ),
+      buildRepoFileMap(baseUrl, owner, repo, MAP_SIZE),
     ]);
 
     if (!repoResponse.ok) {
@@ -111,97 +88,34 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     const repoData: GitHubRepo = await repoResponse.json();
-    const ownerData: GitHubUser | null = ownerResponse.ok
-      ? await ownerResponse.json()
-      : null;
-    const ownerDisplayName = ownerData?.name ?? owner;
 
-    // Fetch file count
     let fileCount = 0;
-    try {
-      const treeResponse = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/git/trees/HEAD?recursive=1`,
-        {
-          headers: {
-            Accept: 'application/vnd.github.v3+json',
-            'User-Agent': 'web-ade-card-generator',
-          },
-          next: { revalidate: 3600 },
-        }
-      );
-      if (treeResponse.ok) {
-        const treeData: GitHubTree = await treeResponse.json();
-        fileCount =
-          treeData.tree?.filter((item) => item.type === 'blob').length || 0;
-      }
-    } catch {
-      // Ignore
+    if (treeResponse.ok) {
+      const treeData: GitHubTree = await treeResponse.json();
+      fileCount = treeData.tree?.filter((item) => item.type === 'blob').length || 0;
     }
-
-    // Get color for the card
-    const color = repoData.language
-      ? languageColors[repoData.language] || DEFAULT_COLOR
-      : DEFAULT_COLOR;
-
-    // Build File City URL - use APP_URL env var or forwarded host header for Lambda/Amplify
-    const baseUrl =
-      process.env.APP_URL ||
-      process.env.NEXT_PUBLIC_BASE_URL ||
-      `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('x-forwarded-host') || request.headers.get('host') || request.nextUrl.host}`;
-    const fileCityUrl = `${baseUrl}/api/file-city/${owner}/${repo}?width=400&height=300&nocache=1`;
 
     const duration = Date.now() - startTime;
     console.log('[Card API] Generated card:', {
       owner,
       repo,
+      buildings: fileMap?.rects.length ?? 0,
       duration: `${duration}ms`,
       baseUrl,
     });
 
     return new ImageResponse(
       (
-        <div
-          style={{
-            width: WIDTH,
-            height: HEIGHT,
-            backgroundColor: '#0a0a0f',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <div
-            style={{
-              width: CARD_WIDTH,
-              height: CARD_HEIGHT,
-              display: 'flex',
-            }}
-          >
-            <CardLayoutOG
-              color={color}
-              owner={owner}
-              ownerDisplayName={ownerDisplayName}
-              stars={repoData.stargazers_count}
-              label={repoData.name}
-              description={repoData.description ?? undefined}
-              files={fileCount}
-              language={repoData.language ?? undefined}
-              license={repoData.license?.spdx_id}
-              createdAt={repoData.created_at}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={fileCityUrl}
-                alt="File City"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
-                }}
-              />
-            </CardLayoutOG>
-          </div>
-        </div>
+        <RepoCardOG
+          owner={owner}
+          repo={repoData.name}
+          ownerAvatarUrl={repoData.owner.avatar_url}
+          description={repoData.description ?? undefined}
+          stars={repoData.stargazers_count}
+          language={repoData.language ?? undefined}
+          files={fileCount}
+          fileMap={fileMap}
+        />
       ),
       {
         width: WIDTH,
