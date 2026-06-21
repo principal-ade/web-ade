@@ -66,7 +66,9 @@ export async function fetchTourFromGitHub(
     if (!stored) {
       throw new Error(TTSErrorCode.TOUR_NOT_FOUND);
     }
-    return stored.tour as unknown as IntroductionTour;
+    // The stored payload IS the tour (the envelope was collapsed once
+    // IntroductionTour gained repos[]).
+    return stored as unknown as IntroductionTour;
   }
 
   // Construct raw GitHub URL

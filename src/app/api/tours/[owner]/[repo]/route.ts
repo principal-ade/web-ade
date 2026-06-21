@@ -12,24 +12,17 @@ import {
 import { TrailShareError, ShareErrorCodes } from '@/lib/trails/types';
 import { listToursForRepo } from '@/lib/tours/discovery';
 import {
-  buildStoreTourPath,
   getIndex,
   putIdPointer,
   putPayload,
   updateIndex,
   upsertTourInUserIndex,
 } from '@/lib/tours/s3-storage';
-import {
-  summarizeTour,
-  validateCreateTourRequest,
-} from '@/lib/tours/validation';
+import { summarizeTour, validateTour } from '@/lib/tours/validation';
 import { assertTourWriteAllowed } from '@/lib/tours/authorization';
 import { MAX_TOURS_PER_REPO } from '@/lib/tours/constants';
-import type {
-  CreateTourResponse,
-  StoredTourPayload,
-  TourIndexEntry,
-} from '@/lib/tours/types';
+import type { CreateTourResponse, TourIndexEntry } from '@/lib/tours/types';
+import type { TourRepoRef } from '@principal-ai/file-city-builder';
 
 /**
  * List the tours available for a repo. Walks the git tree for every
@@ -80,8 +73,8 @@ export async function GET(
 /**
  * Publish a tour into the store for `owner/repo`. Gated by GitHub read access
  * (plus any owner-configured `writePolicy`). The server mints the store id,
- * stamps audio coordinates so TTS keying survives off-git, and writes the
- * payload, id pointer, repo index, and the creator's by-user manifest.
+ * stamps the publish target as the tour's primary `repos[0]` (authoritative),
+ * and writes the tour payload, id pointer, repo index, and by-user manifest.
  */
 export async function POST(
   request: NextRequest,
@@ -99,14 +92,23 @@ export async function POST(
       );
     }
 
-    // The {owner}/{repo} the tour is published *under* comes from the URL; the
-    // body carries the tour document (and, defensively, may echo owner/repo).
+    // owner/repo come from the URL (authoritative for the publish target); the
+    // body carries the tour document under `tour`.
+    validateOwnerRepo(ownerParam, repoParam);
+    const owner = ownerParam;
+    const repo = repoParam;
     const body = await request.json().catch(() => null);
-    const merged =
+    const rawTour =
       body && typeof body === 'object'
-        ? { owner: ownerParam, repo: repoParam, ...body }
-        : { owner: ownerParam, repo: repoParam };
-    const { owner, repo, tour } = validateCreateTourRequest(merged);
+        ? (body as { tour?: unknown }).tour
+        : undefined;
+    if (!rawTour || typeof rawTour !== 'object') {
+      throw new TrailShareError(
+        'Request body must include a tour object',
+        400,
+        ShareErrorCodes.INVALID_PAYLOAD,
+      );
+    }
 
     const access = await checkRepoAccess(owner, repo, githubToken);
     if (!access) {
@@ -132,23 +134,30 @@ export async function POST(
     assertTourWriteAllowed(existingIndex.writePolicy, user.login, owner);
 
     const id = crypto.randomUUID();
-
-    // Audio (TTS) keys off (owner, repo, path). A store-published tour has no
-    // git file, so synthesize a stable path from the store id — this is the
-    // off-git replacement for the discovered `*.tour.json` path. SHA is pinned
-    // best-effort, exactly like trail provenance.
     const commitSha = await resolveHeadSha(owner, repo, githubToken);
-    const storedPayload: StoredTourPayload = {
-      tour,
-      audio: {
-        owner,
-        repo,
-        path: buildStoreTourPath(id),
-        commitSha,
-      },
+
+    // The server is authoritative for the publish target: stamp it as the
+    // primary repo (`repos[0]`), preserving any additional repos the client
+    // declared for a multi-repo tour. `repos[0]` is what discovery derives the
+    // audio coords + working-tree resolution from, so it must match the URL.
+    const primaryRepo: TourRepoRef = {
+      id: `pkg:github/${owner.toLowerCase()}/${repo}`,
+      name: repo,
+      remote: { host: 'github', owner, name: repo },
+      ...(commitSha ? { authoredAtSha: commitSha } : {}),
+    };
+    const clientRepos = Array.isArray((rawTour as { repos?: unknown }).repos)
+      ? ((rawTour as { repos: TourRepoRef[] }).repos.slice(1))
+      : [];
+    const stampedTour = {
+      ...(rawTour as Record<string, unknown>),
+      repos: [primaryRepo, ...clientRepos],
     };
 
-    const { sizeBytes } = await putPayload(owner, repo, id, storedPayload);
+    // Validate the stamped tour (now guaranteed to carry repos) via parseTour.
+    const tour = validateTour(stampedTour);
+
+    const { sizeBytes } = await putPayload(owner, repo, id, tour);
     await putIdPointer(owner, repo, id);
 
     const now = new Date().toISOString();

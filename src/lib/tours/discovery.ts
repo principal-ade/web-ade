@@ -20,11 +20,12 @@ import {
 import { mergeTTSOptions } from '../tts/elevenlabs-client';
 import { readManifest, computeTourAudioStatus } from '../tts/manifest';
 import {
+  buildStoreTourPath,
   getIndex as getTourIndex,
   getPayload as getTourPayload,
 } from './s3-storage';
 import type { IntroductionTour } from '@principal-ai/file-city-builder';
-import type { TourAudioStatus, TourListItem } from './types';
+import type { TourAudioRef, TourAudioStatus, TourListItem } from './types';
 
 /** Status used when audio state can't be read (S3 down, etc.). */
 const UNKNOWN_AUDIO_STATUS: TourAudioStatus = {
@@ -235,19 +236,31 @@ async function listStoredToursForRepo(
 
   const items: TourListItem[] = [];
   for (const entry of index.entries) {
-    const payload = await getTourPayload(owner, repo, entry.id);
-    if (!payload) continue;
+    const tour = await getTourPayload(owner, repo, entry.id);
+    // Skip anything that isn't a valid stored tour — e.g. a pre-`repos`
+    // object left over from before the envelope collapse.
+    const primary = tour?.repos?.[0];
+    if (!tour || !primary) {
+      continue;
+    }
+
+    // Derive the audio coords the TTS pipeline needs from the tour's primary
+    // repo + the synthetic store path (keyed off the store id). This replaces
+    // the old stored `audio` envelope field.
+    const audio: TourAudioRef = {
+      owner: primary.remote?.owner ?? owner,
+      repo: primary.remote?.name ?? repo,
+      path: buildStoreTourPath(entry.id),
+      commitSha: primary.authoredAtSha ?? null,
+    };
+
     const audioStatus = await resolveAudioStatus(
-      payload.audio.owner,
-      payload.audio.repo,
-      payload.audio.path,
-      payload.tour,
+      audio.owner,
+      audio.repo,
+      audio.path,
+      tour,
     );
-    items.push({
-      tour: payload.tour,
-      audio: payload.audio,
-      audioStatus,
-    });
+    items.push({ tour, audio, audioStatus });
   }
 
   // Stable order so the sidebar list doesn't reshuffle between loads.

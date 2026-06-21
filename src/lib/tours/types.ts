@@ -65,18 +65,17 @@ export interface ListToursResponse {
 // ============================================================================
 
 /**
- * The persisted form of a tour. Wraps the validated `IntroductionTour`
- * document with the coordinates the TTS backend needs to (re)generate audio.
+ * The persisted form of a tour: just the validated `IntroductionTour`.
  *
- * For git-authored tours the audio ref points at the source `*.tour.json`;
- * for store-published tours it records a stable `{ owner, repo, path }` key
- * (path is synthesized from the store id at publish time) so the TTS manifest
- * keying — which is `(owner, repo, path)` — keeps working without git.
+ * Since `IntroductionTour` now carries `repos[]` (owner/repo + authored SHA),
+ * there's nothing left to wrap — the audio coordinates the TTS backend needs
+ * (`owner/repo/path/commitSha`) are derived from `repos[0]` plus the synthetic
+ * store path at read time (see `discovery.ts`), instead of being stored
+ * alongside the tour. Kept as a named alias so the storage layer reads clearly
+ * and we have a home for any future host-private extension (mirrors how trails
+ * extend `TrailPayload`).
  */
-export interface StoredTourPayload {
-  tour: IntroductionTour;
-  audio: TourAudioRef;
-}
+export type StoredTourPayload = IntroductionTour;
 
 /**
  * Who may create/delete tours for a repo. Reserves the authorization surface
