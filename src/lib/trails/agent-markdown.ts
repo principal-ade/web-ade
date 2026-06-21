@@ -289,3 +289,146 @@ export function topicMarkdown(opts: {
   );
   return out.join('\n');
 }
+
+// ============================================================================
+// Repo catalog. The `/{owner}/{repo}` page is a client-hydrated SPA, so a
+// programmatic caller handed the bare repo URL only sees the shell. The
+// middleware rewrites those non-browser navigations here, to a manifest that
+// describes what the repo *is* (GitHub metadata) and what Principal *knows*
+// about it (published trails + tours, each with a drill-in link). Topics are
+// intentionally absent: they aren't repo-scoped, so there's no per-repo list.
+// ============================================================================
+
+/** GitHub-side facts about the repo, mirrored from {@link RepoAccessInfo}. */
+export interface RepoCatalogInfo {
+  description: string | null;
+  primaryLanguage: string | null;
+  defaultBranch: string;
+  visibility: 'public' | 'private';
+  topics: string[];
+  stars: number;
+  homepage: string | null;
+  htmlUrl: string;
+  pushedAt: string | null;
+}
+
+/** The subset of the repo catalog envelope's `_links` Markdown rendering needs. */
+export interface RepoCatalogLinks {
+  self: string;
+  trails: string;
+  tours: string;
+  humanView: string;
+}
+
+/** One trail row in the catalog, with the fields Markdown rendering reads. */
+export interface RepoCatalogTrailItem {
+  title: string;
+  summaryPreview?: string;
+  markerCount: number;
+  author?: string;
+  humanView: string;
+}
+
+/** One tour row in the catalog, with the fields Markdown rendering reads. */
+export interface RepoCatalogTourItem {
+  title: string;
+  stepCount: number;
+  humanView: string;
+}
+
+/**
+ * Repo-flavored variant of {@link cliHint} for a catalog `403`. Same mechanism
+ * (a GitHub token resolved by the CLI), but worded for the repo, not a trail.
+ */
+export function repoCliHint() {
+  return {
+    cli: `npx ${CLI_PACKAGE}`,
+    cliHint:
+      `This repository is private or you lack read access. Principal gates ` +
+      `repo catalogs by GitHub repository read access. \`npx ${CLI_PACKAGE}\` ` +
+      `resolves your GitHub token (via the gh CLI or a git credential helper) ` +
+      `and calls this same API with a Bearer token, so it returns the catalog ` +
+      `whenever your GitHub account can read the repository.`,
+  };
+}
+
+/** Markdown shown to a non-browser caller for a private / no-access repo. */
+export function privateRepoMarkdown(humanView: string): string {
+  return [
+    '# Private repository',
+    '',
+    "This repository is private — or you don't have read access — so Principal's",
+    'catalog of trails and tours for it is not available to anonymous callers.',
+    '',
+    'To view it as yourself:',
+    '',
+    `- **Browser** — open ${humanView} while signed in to Principal.`,
+    `- **CLI** — \`npx ${CLI_PACKAGE}\` resolves your GitHub token (via the \`gh\``,
+    '  CLI or a git credential helper) and reads anything your GitHub account can.',
+    '',
+  ].join('\n');
+}
+
+/** Render a repo catalog (GitHub facts + published trails/tours) as Markdown. */
+export function repoCatalogMarkdown(opts: {
+  owner: string;
+  repo: string;
+  info: RepoCatalogInfo;
+  trails: RepoCatalogTrailItem[];
+  tours: RepoCatalogTourItem[];
+  links: RepoCatalogLinks;
+}): string {
+  const { owner, repo, info, trails, tours, links } = opts;
+  const out: string[] = [];
+
+  out.push(`# ${owner}/${repo}`);
+  const sub: string[] = [info.visibility];
+  if (info.primaryLanguage) sub.push(info.primaryLanguage);
+  sub.push(`★ ${info.stars}`);
+  sub.push(`${trails.length} trail${trails.length === 1 ? '' : 's'}`);
+  sub.push(`${tours.length} tour${tours.length === 1 ? '' : 's'}`);
+  out.push(`*${sub.join(' · ')}*`);
+
+  if (info.description?.trim()) out.push('', info.description.trim());
+  if (info.topics.length) out.push('', `**Topics:** ${info.topics.join(', ')}`);
+
+  out.push('', '## Trails');
+  if (trails.length === 0) {
+    out.push('_No trails published for this repo yet._');
+  } else {
+    trails.forEach((t, i) => {
+      const who = t.author ? ` · ${t.author}` : '';
+      out.push(
+        `${i + 1}. **${t.title}** — ${t.markerCount} marker${
+          t.markerCount === 1 ? '' : 's'
+        }${who}`,
+      );
+      if (t.summaryPreview?.trim()) out.push(indent(t.summaryPreview));
+      out.push(`   ${t.humanView}`);
+    });
+  }
+
+  out.push('', '## Tours');
+  if (tours.length === 0) {
+    out.push('_No tours published for this repo yet._');
+  } else {
+    tours.forEach((t, i) => {
+      out.push(
+        `${i + 1}. **${t.title}** — ${t.stepCount} step${
+          t.stepCount === 1 ? '' : 's'
+        }`,
+      );
+      out.push(`   ${t.humanView}`);
+    });
+  }
+
+  out.push(
+    '',
+    '---',
+    `Repository: ${info.htmlUrl}`,
+    `Interactive view: ${links.humanView}`,
+    `JSON: ${links.self}`,
+    '',
+  );
+  return out.join('\n');
+}

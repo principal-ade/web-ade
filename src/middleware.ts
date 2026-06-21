@@ -28,19 +28,46 @@ const SHARE_ROUTES: Array<{ re: RegExp; api: (id: string) => string }> = [
   { re: /^\/topic\/([^/]+)\/?$/, api: (id) => `/api/topics/by-id/${id}` },
 ];
 
-export function middleware(request: NextRequest): NextResponse {
-  const pathname = request.nextUrl.pathname;
-  let id: string | undefined;
-  let apiPath: string | undefined;
+// Top-level path segments that are real app routes (pages, API, assets), not
+// repo owners. A two-segment path whose first segment is one of these is NOT
+// an `/{owner}/{repo}` repo page, so the catalog rewrite must skip it.
+const RESERVED_OWNERS = new Set([
+  'api',
+  '_next',
+  'trail',
+  'topic',
+  'topics',
+  'tour',
+  'card',
+  'cards',
+  'explore',
+  'feed',
+  'legacy',
+]);
+
+// `/{owner}/{repo}` repo page → its agent catalog API. Like the trail/topic
+// share links, the page is a client-hydrated SPA, so non-browser callers get
+// the structured manifest instead of the loading shell.
+const REPO_RE = /^\/([^/]+)\/([^/]+)\/?$/;
+
+/** Resolve the structured API path for a rewritable page URL, or undefined. */
+function resolveApiPath(pathname: string): string | undefined {
   for (const r of SHARE_ROUTES) {
     const captured = r.re.exec(pathname)?.[1];
-    if (captured) {
-      id = captured;
-      apiPath = r.api(captured);
-      break;
-    }
+    if (captured) return r.api(captured);
   }
-  if (!id || !apiPath) return NextResponse.next();
+  const repo = REPO_RE.exec(pathname);
+  const owner = repo?.[1];
+  const name = repo?.[2];
+  if (owner && name && !RESERVED_OWNERS.has(owner.toLowerCase())) {
+    return `/api/repos/${owner}/${name}`;
+  }
+  return undefined;
+}
+
+export function middleware(request: NextRequest): NextResponse {
+  const apiPath = resolveApiPath(request.nextUrl.pathname);
+  if (!apiPath) return NextResponse.next();
 
   const accept = request.headers.get('accept') ?? '';
   const ua = request.headers.get('user-agent') ?? '';
@@ -65,8 +92,8 @@ export function middleware(request: NextRequest): NextResponse {
   // Everything else is a programmatic caller. Rewrite to the structured API at
   // the same URL — Markdown by default, JSON when the caller explicitly asks
   // for it and not Markdown. The API enforces the same access gate, so a
-  // private trail comes back as a CLI-aware 403 and a private topic as a
-  // CLI-aware 404.
+  // private trail comes back as a CLI-aware 403, a private topic as a CLI-aware
+  // 404, and a private repo as a CLI-aware 403 catalog notice.
   //
   // The format is passed as a request header rather than a query param: query
   // params added during a rewrite don't reliably survive into the destination
@@ -81,6 +108,9 @@ export function middleware(request: NextRequest): NextResponse {
 }
 
 export const config = {
-  // Single-segment trail and topic share links. Nested paths are excluded.
-  matcher: ['/trail/:id', '/topic/:id'],
+  // Single-segment trail/topic share links, plus two-segment `/{owner}/{repo}`
+  // repo pages. `/:owner/:repo` matches any two-segment path, so the handler
+  // filters out reserved first segments (api, _next, app routes) before
+  // treating it as a repo. Deeper paths are excluded.
+  matcher: ['/trail/:id', '/topic/:id', '/:owner/:repo'],
 };

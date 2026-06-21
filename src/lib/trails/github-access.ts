@@ -22,6 +22,39 @@ export interface RepoAccessInfo {
   /** GitHub `private` flag at access-check time. Stamped onto the per-repo
    *  index so `/explore` can filter without re-asking GitHub. */
   private: boolean;
+  /**
+   * Repo metadata that rides along on the very same `/repos/{owner}/{repo}`
+   * response we already fetch for the access check — surfaced (for free, no
+   * extra call) so the agent repo-catalog can describe what the repo *is*,
+   * not just what trails it has. All best-effort: GitHub omits some fields.
+   */
+  description: string | null;
+  /** GitHub's detected primary language (the `language` field), or null. */
+  primaryLanguage: string | null;
+  defaultBranch: string;
+  /** Repo topics/tags; `[]` when none are set. */
+  topics: string[];
+  stars: number;
+  /** Author-set homepage URL, or null when unset/empty. */
+  homepage: string | null;
+  htmlUrl: string;
+  /** ISO 8601 of the last push, or null. */
+  pushedAt: string | null;
+}
+
+/** The subset of `GET /repos/{owner}/{repo}` we read. */
+interface GhRepoResponse {
+  id: number;
+  full_name: string;
+  private: boolean;
+  description: string | null;
+  language: string | null;
+  default_branch: string;
+  topics?: string[];
+  stargazers_count: number;
+  homepage: string | null;
+  html_url: string;
+  pushed_at: string | null;
 }
 
 /**
@@ -147,22 +180,14 @@ export async function checkRepoAccess(
   const baseKey = `repo-access:${owner.toLowerCase()}/${repo.toLowerCase()}`;
   try {
     const data = token
-      ? await cachedUserGitHubFetch<{
-          id: number;
-          full_name: string;
-          private: boolean;
-        }>(
+      ? await cachedUserGitHubFetch<GhRepoResponse>(
           `/repos/${owner}/${repo}`,
           baseKey,
           REPO_ACCESS_CACHE_TTL,
           token,
           [CACHE_TAGS.REPOS]
         )
-      : await cachedGitHubFetch<{
-          id: number;
-          full_name: string;
-          private: boolean;
-        }>(
+      : await cachedGitHubFetch<GhRepoResponse>(
           `/repos/${owner}/${repo}`,
           `anon:${baseKey}`,
           REPO_ACCESS_CACHE_TTL,
@@ -173,6 +198,14 @@ export async function checkRepoAccess(
       githubRepoId: data.id,
       fullName: data.full_name,
       private: Boolean(data.private),
+      description: data.description ?? null,
+      primaryLanguage: data.language ?? null,
+      defaultBranch: data.default_branch,
+      topics: data.topics ?? [],
+      stars: data.stargazers_count ?? 0,
+      homepage: data.homepage ? data.homepage : null,
+      htmlUrl: data.html_url,
+      pushedAt: data.pushed_at ?? null,
     };
   } catch (error) {
     if (error instanceof GitHubApiError) {
