@@ -21,7 +21,10 @@ const config: StorybookConfig = {
     "options": {}
   },
   "staticDirs": [
-    "../public"
+    "../public",
+    // Story-only fixtures (sample documents). Served by Storybook at /fixtures
+    // but NOT shipped by the Next app, so internal docs never deploy publicly.
+    { "from": "./fixtures", "to": "/fixtures" }
   ],
   async viteFinal(config) {
     config.resolve = config.resolve || {};
