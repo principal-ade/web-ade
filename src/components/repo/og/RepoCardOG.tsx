@@ -98,6 +98,18 @@ export function RepoCardOG({
   const clampedDescription = description ? ogTruncate(description, 120) : null;
   const langDot = language ? (LANGUAGE_DOT[language] ?? OG_COLORS.textMuted) : null;
 
+  // Hero repo name. Shrink the font to keep a moderately-long name on one line
+  // before it wraps: Satori can't measure text, so approximate the rendered
+  // width as `len × 0.55em` and pick the largest size (≤72) that fits the
+  // column's content width (472px when the map is present). Names that still
+  // overflow at the 44px floor wrap inside the column via `maxWidth` below.
+  const heroName = ogTruncate(repo, 24);
+  const heroMaxWidth = fileMap ? 472 : 1072;
+  const heroFontSize = Math.max(
+    44,
+    Math.min(72, Math.floor(heroMaxWidth / (heroName.length * 0.55))),
+  );
+
   return (
     <div
       style={{
@@ -150,19 +162,22 @@ export function RepoCardOG({
           </span>
         </div>
 
-        {/* Repo name — the hero. */}
+        {/* Repo name — the hero. Auto-shrinks to fit the column on one line,
+            then wraps (constrained by `maxWidth`) once it hits the font floor;
+            `overflow: hidden` clips the rare unbreakable token. */}
         <div
           style={{
             display: 'flex',
-            fontSize: 72,
+            maxWidth: heroMaxWidth,
+            fontSize: heroFontSize,
             fontWeight: 700,
-            lineHeight: 1.0,
+            lineHeight: 1.05,
             letterSpacing: -2,
             color: OG_COLORS.primary,
-            whiteSpace: 'nowrap',
+            overflow: 'hidden',
           }}
         >
-          {ogTruncate(repo, 24)}
+          {heroName}
         </div>
 
         {/* Description. */}
