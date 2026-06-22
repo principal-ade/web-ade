@@ -19,6 +19,10 @@ import {
   Loader2,
   Mic,
   Trash2,
+  Star,
+  GitFork,
+  ExternalLink,
+  Play,
 } from 'lucide-react';
 import { FileTree as PierreFileTree, useFileTree } from '@pierre/trees/react';
 import { themeToTreeStyles } from '@pierre/trees';
@@ -41,7 +45,6 @@ import type {
   HighlightLayer,
 } from '@industry-theme/file-city-panel';
 import type { IntroductionTour } from '@principal-ai/file-city-builder';
-import { createFileColorHighlightLayers } from '@principal-ai/file-city-react';
 import type { TourAudioStatus, TourListItem } from '@/lib/tours/types';
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -69,21 +72,6 @@ interface TourGenProgress {
   total: number;
   /** Short message shown on the row when `phase === 'error'`. */
   error?: string;
-}
-
-/**
- * One row of the Files legend shown under the Tours list — mirrors the
- * file-types color key in the File City panel. `fillColor`/`borderColor` are the
- * exact building colors the 3D map paints for that extension (we derive them
- * from the same `createFileColorHighlightLayers` the panel uses, so the legend
- * never drifts from the map).
- */
-interface LegendFileType {
-  id: string;
-  name: string;
-  fillColor: string;
-  borderColor?: string;
-  count: number;
 }
 
 const FileCityTrailExplorerPanel = dynamic(
@@ -360,11 +348,12 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         if (cancelled) return;
         const list = Array.isArray(data.tours) ? data.tours : [];
         setTours(list);
-        // Make the tour the first thing visitors see: open the first one in the
-        // right pane on load. When there's none, the Tours list shows an empty
-        // state pointing at the file-city-tours skill instead.
+        // With several tours, lead by opening the first one in the right pane on
+        // load. With exactly one tour we render a "Start tour" button instead
+        // (see ToursPane), so leave it unselected until the visitor clicks. With
+        // none, the Tours list shows an empty state pointing at the skill.
         const firstTour = list[0];
-        if (firstTour) setSelectedTourId(firstTour.tour.id);
+        if (firstTour && list.length > 1) setSelectedTourId(firstTour.tour.id);
       } catch {
         // Tours are an optional enhancement — a fetch failure just means the
         // Tours tab shows an empty state, never blocks the trail explorer.
@@ -641,44 +630,6 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     () => (fileTree ? fileTree.allFiles.map((f) => f.path) : []),
     [fileTree],
   );
-
-  // File-types color key for the Tours pane legend. We run the repo's file list
-  // through `createFileColorHighlightLayers` — the exact function the File City
-  // panel uses to color buildings — then group the per-extension primary/
-  // secondary layers (ids `ext-{name}-primary` / `-secondary`) the same way the
-  // panel's own legend does. This guarantees the swatches match the 3D map.
-  const legendFileTypes = useMemo<LegendFileType[]>(() => {
-    if (filePaths.length === 0) return [];
-    const layers = createFileColorHighlightLayers(
-      filePaths.map((path) => ({ path })),
-    );
-    const grouped = new Map<
-      string,
-      { primary?: HighlightLayer; secondary?: HighlightLayer }
-    >();
-    for (const layer of layers) {
-      const match = layer.id.match(/^ext-(\w+)-(primary|secondary)$/);
-      if (!match) continue;
-      const [, ext, type] = match;
-      if (!ext) continue;
-      const group = grouped.get(ext) ?? {};
-      if (type === 'primary') group.primary = layer;
-      else group.secondary = layer;
-      grouped.set(ext, group);
-    }
-    const out: LegendFileType[] = [];
-    grouped.forEach((group, ext) => {
-      if (!group.primary) return;
-      out.push({
-        id: ext,
-        name: group.primary.name,
-        fillColor: group.primary.color,
-        borderColor: group.secondary?.color,
-        count: group.primary.items.length,
-      });
-    });
-    return out.sort((a, b) => b.count - a.count);
-  }, [filePaths]);
 
   // Effective excluded file set — every file that lives under any
   // user-excluded directory. Computed once and reused everywhere the
@@ -1009,7 +960,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           />
         </div>
         <div style={{ position: 'fixed', inset: 0, zIndex: 50 }}>
-          <TrailLoadingScreen />
+          <TrailLoadingScreen message={`Loading ${repo}`} />
         </div>
       </>
     );
@@ -1033,6 +984,8 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             no trash can renders even if a stale `github_user_id` cookie lingers.
             The DELETE route re-checks auth server-side regardless. */}
         <TrailListPane
+          owner={owner}
+          repo={repo}
           loading={false}
           entries={state.entries}
           filteredEntries={filteredEntries}
@@ -1101,7 +1054,6 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
               title: item.tour.title,
             });
           }}
-          legendFileTypes={legendFileTypes}
           dirPaths={dirPaths}
           filePaths={filePaths}
           excludedDirs={excludedDirs}
@@ -1370,6 +1322,8 @@ const Header: React.FC<{
 // ---------------------------------------------------------------------------
 
 const TrailListPane: React.FC<{
+  owner: string;
+  repo: string;
   loading: boolean;
   entries: SharedTrailIndexEntry[];
   filteredEntries: SharedTrailIndexEntry[];
@@ -1396,12 +1350,13 @@ const TrailListPane: React.FC<{
   tourGenProgress: Map<string, TourGenProgress>;
   onGenerateTourAudio: (item: TourListItem) => void;
   onRequestDeleteTour: (item: TourListItem) => void;
-  legendFileTypes: LegendFileType[];
   dirPaths: string[];
   filePaths: string[];
   excludedDirs: string[];
   onExcludedDirsChange: (dirs: string[]) => void;
 }> = ({
+  owner,
+  repo,
   loading,
   entries,
   filteredEntries,
@@ -1428,7 +1383,6 @@ const TrailListPane: React.FC<{
   tourGenProgress,
   onGenerateTourAudio,
   onRequestDeleteTour,
-  legendFileTypes,
   dirPaths,
   filePaths,
   excludedDirs,
@@ -1440,16 +1394,21 @@ const TrailListPane: React.FC<{
     <aside
       className="flex flex-col shrink-0 w-full md:w-[400px] h-[45%] md:h-auto border-t md:border-t-0 md:border-r"
       style={{
-        background: theme.colors.backgroundSecondary,
+        background: theme.colors.background,
         borderColor: theme.colors.border,
       }}
     >
-      <TrailSummarySection
-        configMode={configMode}
-        onToggleConfigMode={onToggleConfigMode}
-        leftViewMode={leftViewMode}
-        onSetViewMode={onSetViewMode}
-      />
+      {/* Trails/Files views are hidden for now (SHOW_ALL_VIEW_TABS); with only
+          Tours active the segmented switcher is redundant, so the pane leads
+          straight with the repo overview + tours list. */}
+      {SHOW_ALL_VIEW_TABS && (
+        <TrailSummarySection
+          configMode={configMode}
+          onToggleConfigMode={onToggleConfigMode}
+          leftViewMode={leftViewMode}
+          onSetViewMode={onSetViewMode}
+        />
+      )}
 
       {configMode ? (
         <FolderConfigPane
@@ -1468,6 +1427,8 @@ const TrailListPane: React.FC<{
         />
       ) : leftViewMode === 'tours' ? (
         <ToursPane
+          owner={owner}
+          repo={repo}
           tours={tours}
           loading={toursLoading}
           selectedTourId={selectedTourId}
@@ -1477,7 +1438,6 @@ const TrailListPane: React.FC<{
           viewerUserId={viewerUserId}
           viewerIsRepoAdmin={viewerIsRepoAdmin}
           onRequestDelete={onRequestDeleteTour}
-          legendFileTypes={legendFileTypes}
         />
       ) : (
         <>
@@ -1833,17 +1793,17 @@ const TrailFilesPane: React.FC<{
   }, [model, paths]);
 
   // Match the trail list: it has no background of its own and shows the
-  // aside's `backgroundSecondary` through transparent rows. Build the tree
-  // on the same token and override Pierre's own bg to transparent so the
-  // two views read as one surface.
+  // aside's `background` through transparent rows. Build the tree on the same
+  // token and override Pierre's own bg to transparent so the two views read as
+  // one surface.
   const treeStyles = useMemo(
     () =>
       themeToTreeStyles({
         type: 'dark',
-        bg: theme.colors.backgroundSecondary,
+        bg: theme.colors.background,
         fg: theme.colors.text,
       }),
-    [theme.colors.backgroundSecondary, theme.colors.text],
+    [theme.colors.background, theme.colors.text],
   );
 
   if (paths.length === 0) {
@@ -1877,6 +1837,12 @@ const TrailFilesPane: React.FC<{
 // (config mode, folder include/exclude) is kept intact — flip this to
 // true to re-enable the settings button, which we may do in the future.
 const SHOW_FOLDER_CONFIG = false;
+
+// Trails and Files views are hidden while we rebuild the repo learning
+// experience around Tours + the repo overview. All the plumbing (the view
+// switcher, trail list, files tree, folder config) is kept intact — flip this
+// back to true to restore the Tours / Trails / Files segmented control.
+const SHOW_ALL_VIEW_TABS = false;
 
 const VIEW_TABS = [
   { value: 'tours', label: 'Tours', title: 'Guided tours of this repository' },
@@ -2047,7 +2013,9 @@ const TrailRow: React.FC<{
         onFocus={onHover}
         className="w-full text-left px-4 py-3 transition-colors"
         style={{
-          background: selected ? theme.colors.background : 'transparent',
+          background: selected
+            ? `color-mix(in srgb, ${theme.colors.surface} 50%, ${theme.colors.background})`
+            : 'transparent',
           color: theme.colors.text,
         }}
       >
@@ -2191,7 +2159,225 @@ const ToursEmptyState: React.FC = () => {
   );
 };
 
+// Compact "x ago" for the repo's last-push timestamp. App code (Date.now is
+// fine here — the workflow-script restriction doesn't apply).
+function relativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '';
+  const secs = Math.max(0, (Date.now() - then) / 1000);
+  const DAY = 86400;
+  if (secs < DAY) return 'today';
+  const days = Math.floor(secs / DAY);
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+  return `${Math.floor(days / 365)}y ago`;
+}
+
+// The license badge's corner radius encodes how restrictive the license is: the
+// stricter the license, the sharper the corners. Permissive licenses (MIT,
+// Apache, BSD…) get a full pill; copyleft squares off progressively, with AGPL
+// — the strongest copyleft — fully square.
+function licenseBadgeRadius(spdxId: string): number {
+  const id = spdxId.toUpperCase();
+  if (id.startsWith('AGPL')) return 0; // strongest (network) copyleft → square
+  if (id.startsWith('GPL')) return 3; // strong copyleft
+  if (
+    id.startsWith('LGPL') ||
+    id.startsWith('MPL') ||
+    id.startsWith('EPL') ||
+    id.startsWith('CDDL') ||
+    id.startsWith('OSL')
+  ) {
+    return 7; // weak copyleft
+  }
+  return 9999; // permissive → full pill
+}
+
+// ---------------------------------------------------------------------------
+// Repo overview — a compact, no-AI dossier shown atop the Tours pane. Composes
+// the repo's own GitHub metadata (description, language, license, stars,
+// topics, fork-of, last push) with a package-derived project-shape line
+// (monorepo / deps / scripts). Everything here is best-effort: each fetch is
+// independent, and a failure just drops its row rather than blocking the tours
+// list. Both procedures are heavily cached server-side.
+// ---------------------------------------------------------------------------
+
+const RepoOverview: React.FC<{ owner: string; repo: string }> = ({
+  owner,
+  repo,
+}) => {
+  const { theme } = useTheme();
+  const [info, setInfo] = useState<Awaited<
+    ReturnType<typeof trpc.github.getRepoInfo.query>
+  > | null>(null);
+  const [pkg, setPkg] = useState<
+    Awaited<ReturnType<typeof trpc.github.getRepoPackages.query>>['summary'] | null
+  >(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setInfo(null);
+    setPkg(null);
+    // Core dossier — the repo's own metadata.
+    trpc.github.getRepoInfo
+      .query({ owner, repo })
+      .then((data) => {
+        if (!cancelled) setInfo(data);
+      })
+      .catch(() => {
+        // Overview is optional — a failure just leaves it unrendered.
+      });
+    // Project shape — secondary; renders its own line once it lands.
+    trpc.github.getRepoPackages
+      .query({ owner, repo })
+      .then((data) => {
+        if (!cancelled) setPkg(data.summary);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [owner, repo]);
+
+  // Nothing until the core metadata lands — keeps the pane from flashing a
+  // half-built header. The tours list renders regardless (below this).
+  if (!info) return null;
+
+  // "Monorepo · N packages · M deps · K scripts" — assembled from whatever the
+  // package scan found; empty when the repo has no package.json.
+  const projectShape: string[] = [];
+  if (pkg) {
+    // `rootPackageName` is absent on the truncated-tree branch of the summary
+    // union, so read it through a presence check rather than directly.
+    const rootName =
+      'rootPackageName' in pkg ? pkg.rootPackageName : undefined;
+    if (pkg.isMonorepo) {
+      projectShape.push(`Monorepo · ${pkg.totalPackages} packages`);
+    } else if (rootName) {
+      projectShape.push(rootName);
+    }
+  }
+
+  const license =
+    info.license?.spdx_id && info.license.spdx_id !== 'NOASSERTION'
+      ? info.license.spdx_id
+      : null;
+
+  return (
+    <div
+      className="px-4 py-3 border-b flex flex-col gap-2"
+      style={{ borderColor: theme.colors.border }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span
+          style={{
+            fontSize: theme.fontSizes[0],
+            fontWeight: theme.fontWeights.semibold,
+            color: theme.colors.textSecondary,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+          }}
+        >
+          About
+        </span>
+        {license && (
+          <span
+            className="shrink-0"
+            style={{
+              padding: '2px 8px',
+              borderRadius: licenseBadgeRadius(license),
+              fontSize: theme.fontSizes[0],
+              fontWeight: theme.fontWeights.medium,
+              color: theme.colors.textSecondary,
+              background: `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
+              border: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            {license}
+          </span>
+        )}
+      </div>
+      {info.description && (
+        <p
+          style={{
+            margin: 0,
+            color: theme.colors.text,
+            fontSize: theme.fontSizes[2],
+            lineHeight: 1.4,
+          }}
+        >
+          {info.description}
+        </p>
+      )}
+
+      {/* Vital signs: stars · last push. */}
+      <div
+        className="flex flex-wrap items-center gap-x-3 gap-y-1"
+        style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+      >
+        {info.pushed_at && (
+          <span title={new Date(info.pushed_at).toLocaleString()}>
+            Updated {relativeTime(info.pushed_at)}
+          </span>
+        )}
+        {info.stargazers_count > 0 && (
+          <span className="inline-flex items-center gap-1">
+            <Star size={14} />
+            {info.stargazers_count.toLocaleString()}
+          </span>
+        )}
+      </div>
+
+      {info.fork && info.parent && (
+        <div
+          className="inline-flex items-center gap-1 min-w-0"
+          style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+        >
+          <GitFork size={14} className="shrink-0" />
+          <span className="shrink-0">forked from</span>
+          <a
+            href={`https://github.com/${info.parent.full_name}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="truncate"
+            style={{ color: theme.colors.primary }}
+          >
+            {info.parent.full_name}
+          </a>
+        </div>
+      )}
+
+      {projectShape.length > 0 && (
+        <div
+          style={{
+            color: theme.colors.textSecondary,
+            fontSize: theme.fontSizes[1],
+          }}
+        >
+          {projectShape.join(' · ')}
+        </div>
+      )}
+
+      {info.homepage && (
+        <a
+          href={info.homepage}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 truncate"
+          style={{ color: theme.colors.primary, fontSize: theme.fontSizes[1] }}
+        >
+          <ExternalLink size={14} className="shrink-0" />
+          {info.homepage.replace(/^https?:\/\//, '')}
+        </a>
+      )}
+    </div>
+  );
+};
+
 const ToursPane: React.FC<{
+  owner: string;
+  repo: string;
   tours: TourListItem[];
   loading: boolean;
   selectedTourId: string | null;
@@ -2201,8 +2387,9 @@ const ToursPane: React.FC<{
   viewerUserId: number | null;
   viewerIsRepoAdmin: boolean;
   onRequestDelete: (item: TourListItem) => void;
-  legendFileTypes: LegendFileType[];
 }> = ({
+  owner,
+  repo,
   tours,
   loading,
   selectedTourId,
@@ -2212,131 +2399,67 @@ const ToursPane: React.FC<{
   viewerUserId,
   viewerIsRepoAdmin,
   onRequestDelete,
-  legendFileTypes,
 }) => {
-  // Tours list takes the top half, the file-types legend the bottom half; both
-  // scroll independently so neither crowds the other.
+  // With exactly one tour we collapse the list into a single "Start tour" CTA
+  // (SingleTourCta) rather than a one-row list.
+  const single = tours.length === 1 ? tours[0] : null;
+  const singleCanDelete =
+    single != null &&
+    single.store != null &&
+    viewerUserId !== null &&
+    (viewerIsRepoAdmin ||
+      String(single.store.createdBy.githubId) === String(viewerUserId));
+  // The whole pane scrolls as one column: a repo-overview dossier on top, then
+  // the tours list. (The file-types legend that used to sit here moved into the
+  // tour explorer.)
   return (
-    <div className="flex-1 min-h-0 flex flex-col">
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        {loading ? (
-          <ListMessage>Loading tours…</ListMessage>
-        ) : tours.length === 0 ? (
-          <ToursEmptyState />
-        ) : (
-          tours.map((item) => (
-            <TourRow
-              key={item.tour.id}
-              tour={item.tour}
-              audioStatus={item.audioStatus}
-              progress={genProgress.get(item.tour.id)}
-              selected={item.tour.id === selectedTourId}
-              onSelect={() =>
-                onSelectTour(
-                  item.tour.id === selectedTourId ? null : item.tour.id,
-                )
-              }
-              onGenerate={() => onGenerateAudio(item)}
-              // Only store-backed tours are deletable; gate on the validated
-              // session, mirroring trails (author-or-repo-admin).
-              canDelete={
-                item.store != null &&
-                viewerUserId !== null &&
-                (viewerIsRepoAdmin ||
-                  String(item.store.createdBy.githubId) ===
-                    String(viewerUserId))
-              }
-              onDelete={() => onRequestDelete(item)}
-            />
-          ))
-        )}
-      </div>
-      <FileTypeLegend fileTypes={legendFileTypes} />
-    </div>
-  );
-};
+    <div className="flex-1 min-h-0 overflow-y-auto">
+      <RepoOverview owner={owner} repo={repo} />
 
-/**
- * File-types color key shown in the bottom half of the Tours pane. Each row is a
- * building-colored swatch + display name + file count, mirroring the File City
- * panel's own legend so the swatches read as the same buildings on the 3D map.
- */
-const FileTypeLegend: React.FC<{ fileTypes: LegendFileType[] }> = ({
-  fileTypes,
-}) => {
-  const { theme } = useTheme();
-
-  return (
-    <div
-      className="flex flex-col shrink-0 h-1/2 min-h-0 border-t"
-      style={{ borderColor: theme.colors.border }}
-    >
-      <div
-        className="px-4 pt-3 pb-2 shrink-0"
-        style={{
-          fontSize: theme.fontSizes[0],
-          fontWeight: theme.fontWeights.semibold,
-          color: theme.colors.textSecondary,
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px',
-        }}
-      >
-        File Types
-      </div>
-      {fileTypes.length === 0 ? (
-        <ListMessage>No files to map</ListMessage>
+      {loading ? (
+        <ListMessage>Loading tours…</ListMessage>
+      ) : tours.length === 0 ? (
+        <ToursEmptyState />
+      ) : single ? (
+        <SingleTourCta
+          item={single}
+          active={single.tour.id === selectedTourId}
+          onToggle={() =>
+            onSelectTour(
+              single.tour.id === selectedTourId ? null : single.tour.id,
+            )
+          }
+          progress={genProgress.get(single.tour.id)}
+          onGenerate={() => onGenerateAudio(single)}
+          canDelete={singleCanDelete}
+          onDelete={() => onRequestDelete(single)}
+        />
       ) : (
-        <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-3">
-          <div className="flex flex-wrap gap-2">
-            {fileTypes.map((ft) => (
-              <div
-                key={ft.id}
-                className="flex items-center gap-2 rounded"
-                style={{
-                  padding: '6px 10px',
-                  backgroundColor: theme.colors.surface,
-                  border: `1px solid ${theme.colors.border}`,
-                  flex: '1 1 140px',
-                  minWidth: 0,
-                  boxSizing: 'border-box',
-                }}
-              >
-                <span
-                  className="shrink-0"
-                  style={{
-                    width: '18px',
-                    height: '14px',
-                    backgroundColor: ft.fillColor,
-                    border: ft.borderColor
-                      ? `2px solid ${ft.borderColor}`
-                      : 'none',
-                    borderRadius: '2px',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                  }}
-                />
-                <span
-                  className="truncate flex-1"
-                  style={{
-                    fontSize: theme.fontSizes[0],
-                    color: theme.colors.text,
-                    minWidth: 0,
-                  }}
-                >
-                  {ft.name}
-                </span>
-                <span
-                  className="shrink-0"
-                  style={{
-                    fontSize: theme.fontSizes[0],
-                    color: theme.colors.textMuted,
-                  }}
-                >
-                  {ft.count}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+        tours.map((item) => (
+          <TourRow
+            key={item.tour.id}
+            tour={item.tour}
+            audioStatus={item.audioStatus}
+            progress={genProgress.get(item.tour.id)}
+            selected={item.tour.id === selectedTourId}
+            onSelect={() =>
+              onSelectTour(
+                item.tour.id === selectedTourId ? null : item.tour.id,
+              )
+            }
+            onGenerate={() => onGenerateAudio(item)}
+            // Only store-backed tours are deletable; gate on the validated
+            // session, mirroring trails (author-or-repo-admin).
+            canDelete={
+              item.store != null &&
+              viewerUserId !== null &&
+              (viewerIsRepoAdmin ||
+                String(item.store.createdBy.githubId) ===
+                  String(viewerUserId))
+            }
+            onDelete={() => onRequestDelete(item)}
+          />
+        ))
       )}
     </div>
   );
@@ -2372,7 +2495,9 @@ const TourRow: React.FC<{
     <div
       className="relative border-b transition-colors"
       style={{
-        background: selected ? theme.colors.background : 'transparent',
+        background: selected
+          ? `color-mix(in srgb, ${theme.colors.surface} 50%, ${theme.colors.background})`
+          : 'transparent',
         borderColor: theme.colors.border,
         color: theme.colors.text,
       }}
@@ -2564,6 +2689,92 @@ const TourAudioControl: React.FC<{
           : 'No audio'}
       </span>
       {generateButton('Generate')}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Single-tour CTA. When a repo has exactly one tour, the Tours pane shows this
+// in place of a one-row list: the tour's title/description + a prominent
+// Start/Stop button that toggles the tour in the right pane, with the audio
+// control (and the author delete) kept beneath it.
+// ---------------------------------------------------------------------------
+
+const SingleTourCta: React.FC<{
+  item: TourListItem;
+  active: boolean;
+  onToggle: () => void;
+  progress: TourGenProgress | undefined;
+  onGenerate: () => void;
+  canDelete: boolean;
+  onDelete: () => void;
+}> = ({ item, active, onToggle, progress, onGenerate, canDelete, onDelete }) => {
+  const { theme } = useTheme();
+
+  return (
+    <div className="flex flex-col">
+      <div className="px-4 py-3">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="w-full inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90"
+          style={{
+            padding: '10px 14px',
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[1],
+            fontWeight: theme.fontWeights.semibold,
+            cursor: 'pointer',
+            ...(active
+              ? {
+                  background: 'transparent',
+                  color: theme.colors.text,
+                  border: `1px solid ${theme.colors.border}`,
+                }
+              : {
+                  background: theme.colors.primary,
+                  color: '#ffffff',
+                  border: `1px solid ${theme.colors.primary}`,
+                }),
+          }}
+        >
+          {active ? (
+            <>
+              <X size={16} />
+              Stop tour
+            </>
+          ) : (
+            <>
+              <Play size={16} />
+              Start tour
+            </>
+          )}
+        </button>
+      </div>
+
+      <TourAudioControl
+        status={item.audioStatus}
+        progress={progress}
+        onGenerate={onGenerate}
+      />
+
+      {canDelete && (
+        <div className="px-4 pb-3">
+          <button
+            type="button"
+            onClick={onDelete}
+            className="inline-flex items-center gap-1 transition-opacity opacity-70 hover:opacity-100"
+            style={{
+              background: 'transparent',
+              color: theme.colors.error ?? theme.colors.textMuted,
+              fontSize: theme.fontSizes[0],
+              cursor: 'pointer',
+            }}
+          >
+            <Trash2 size={12} />
+            Delete tour
+          </button>
+        </div>
+      )}
     </div>
   );
 };

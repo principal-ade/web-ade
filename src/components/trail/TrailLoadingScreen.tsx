@@ -3,7 +3,7 @@
 import { useTheme } from '@principal-ade/industry-theme';
 import { TrailLoadingAnimation } from './TrailLoadingAnimation';
 
-export function TrailLoadingScreen() {
+export function TrailLoadingScreen({ message }: { message?: string }) {
   const { theme } = useTheme();
   return (
     <div
@@ -11,7 +11,7 @@ export function TrailLoadingScreen() {
       style={{ background: theme.colors.background }}
     >
       <div style={{ width: 'min(80vmin, 600px)', height: 'min(80vmin, 600px)' }}>
-        <TrailLoadingAnimation />
+        <TrailLoadingAnimation message={message} />
       </div>
     </div>
   );
