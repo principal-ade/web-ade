@@ -1460,9 +1460,14 @@ const TrailListPane: React.FC<{
           trailsSection={
             entries.length > 0 ? (
               <div onMouseLeave={() => onHover(null)}>
+                {/* Sticky so the section label stays pinned at the top of the
+                    scroll area while only the trail rows scroll under it. */}
                 <div
-                  className="px-4 py-2 border-b"
-                  style={{ borderColor: theme.colors.border }}
+                  className="px-4 py-2 border-b sticky top-0 z-10"
+                  style={{
+                    borderColor: theme.colors.border,
+                    background: theme.colors.background,
+                  }}
                 >
                   <span
                     style={{
@@ -2608,26 +2613,28 @@ const RepoOverview: React.FC<{
           {info.description}
         </p>
       ) : (
-        <p
-          style={{
-            margin: 0,
-            color: theme.colors.textMuted,
-            fontSize: theme.fontSizes[1],
-            lineHeight: 1.4,
-            fontStyle: 'italic',
-          }}
-        >
-          No description for {owner}/{repo}.{' '}
+        <>
+          <p
+            style={{
+              margin: 0,
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSizes[1],
+              lineHeight: 1.4,
+              fontStyle: 'italic',
+            }}
+          >
+            No description for {owner}/{repo}.
+          </p>
           <a
             href={`https://github.com/${owner}/${repo}`}
             target="_blank"
             rel="noopener noreferrer"
             className="transition-opacity hover:opacity-80"
-            style={{ color: theme.colors.primary, fontStyle: 'normal' }}
+            style={{ color: theme.colors.primary, fontSize: theme.fontSizes[1] }}
           >
-            Update on GitHub →
+            Update on GitHub
           </a>
-        </p>
+        </>
       )}
 
       {/* Vital signs: stars · last push. */}
@@ -2730,18 +2737,17 @@ const ToursPane: React.FC<{
     viewerUserId !== null &&
     (viewerIsRepoAdmin ||
       String(single.store.createdBy.githubId) === String(viewerUserId));
-  // The whole pane scrolls as one column: a repo-overview dossier on top, then
-  // the tours list. (The file-types legend that used to sit here moved into the
-  // tour explorer.)
+  // The overview (and the single/empty "tour" CTA folded into it) is a pinned
+  // header; only the list below — the multi-tour rows plus the trails — scrolls.
+  // When the CTA is folded in, the overview drops its own divider and the CTA
+  // carries it, so the button reads as part of the overview card.
+  const showFoldedCta = single != null || (!loading && tours.length === 0);
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto">
-      {single ? (
-        // Single tour: fold the "Start tour" CTA into the overview card. The
-        // overview drops its own divider (showBorder=false) and the CTA carries
-        // it instead, so the button sits above the dividing line — part of the
-        // overview — rather than detached beneath it.
-        <>
-          <RepoOverview owner={owner} repo={repo} showBorder={false} />
+    <div className="flex-1 min-h-0 flex flex-col">
+      {/* Pinned header. */}
+      <div className="shrink-0">
+        <RepoOverview owner={owner} repo={repo} showBorder={!showFoldedCta} />
+        {single ? (
           <SingleTourCta
             active={single.tour.id === selectedTourId}
             onToggle={() =>
@@ -2752,21 +2758,17 @@ const ToursPane: React.FC<{
             canDelete={singleCanDelete}
             onDelete={() => onRequestDelete(single)}
           />
-        </>
-      ) : !loading && tours.length === 0 ? (
-        // No tours yet: fold the "Create a tour" CTA into the overview card,
-        // same as the single-tour case — overview borderless, the CTA carries
-        // the divider — so the button reads as part of the overview.
-        <>
-          <RepoOverview owner={owner} repo={repo} showBorder={false} />
+        ) : !loading && tours.length === 0 ? (
           <ToursEmptyState />
-        </>
-      ) : (
-        // Loading or multiple tours: the overview keeps its divider and the
-        // tour list — the way to reach each tour — renders below it.
-        <>
-          <RepoOverview owner={owner} repo={repo} />
-          {loading ? (
+        ) : null}
+      </div>
+
+      {/* Scrollable body: the multi-tour list (or a loading line) + the trails.
+          overscroll-none kills the elastic rubber-band at the scroll ends, which
+          otherwise bounces the sticky "Trails" header. */}
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-none">
+        {!single &&
+          (loading ? (
             <ListMessage>Loading tours…</ListMessage>
           ) : (
             tours.map((item) => (
@@ -2791,10 +2793,9 @@ const ToursPane: React.FC<{
                 onDelete={() => onRequestDelete(item)}
               />
             ))
-          )}
-        </>
-      )}
-      {trailsSection}
+          ))}
+        {trailsSection}
+      </div>
     </div>
   );
 };
