@@ -6,6 +6,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { BookmarkButton } from '@/components/BookmarkButton';
+import { AgentViewButton } from '@/components/AgentViewButton';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { RepoInfoModal } from '@/components/trail/RepoInfoModal';
 import { SignOffStampAnimation } from '@/components/trail/LgtmStamp';
@@ -79,6 +80,8 @@ interface TrailHeaderProps {
   showStamp?: boolean;
   /** "Share With Agent" copy-to-clipboard button (desktop). Defaults to true. */
   showAgentCopy?: boolean;
+  /** "Agent View" preview button (desktop) — opens what an agent sees. Defaults to true. */
+  showAgentView?: boolean;
   /** GitHub repo link icon (desktop). Defaults to true. */
   showGithubLink?: boolean;
   /**
@@ -115,6 +118,7 @@ export function TrailHeader({
   showBookmark = true,
   showStamp = true,
   showAgentCopy = true,
+  showAgentView = true,
   showGithubLink = true,
   showUserMenu = true,
   ownerDisplay = 'name',
@@ -495,6 +499,12 @@ export function TrailHeader({
             )}
             <span>{copied ? 'Copied' : 'Share With Agent'}</span>
           </button>
+        )}
+
+        {showAgentView && (
+          <div className="hidden md:flex">
+            <AgentViewButton path={`/trail/${trailId}`} />
+          </div>
         )}
 
         {showGithubLink && (

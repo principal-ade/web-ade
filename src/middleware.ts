@@ -52,6 +52,9 @@ const REPO_RE = /^\/([^/]+)\/([^/]+)\/?$/;
 
 /** Resolve the structured API path for a rewritable page URL, or undefined. */
 function resolveApiPath(pathname: string): string | undefined {
+  // The home page (`/`) has no params; a non-browser caller gets the site
+  // index — an orientation manifest + the public repos that have trails.
+  if (pathname === '/') return '/api/home';
   for (const r of SHARE_ROUTES) {
     const captured = r.re.exec(pathname)?.[1];
     if (captured) return r.api(captured);
@@ -108,9 +111,9 @@ export function middleware(request: NextRequest): NextResponse {
 }
 
 export const config = {
-  // Single-segment trail/topic share links, plus two-segment `/{owner}/{repo}`
-  // repo pages. `/:owner/:repo` matches any two-segment path, so the handler
-  // filters out reserved first segments (api, _next, app routes) before
-  // treating it as a repo. Deeper paths are excluded.
-  matcher: ['/trail/:id', '/topic/:id', '/:owner/:repo'],
+  // The home page, single-segment trail/topic share links, plus two-segment
+  // `/{owner}/{repo}` repo pages. `/:owner/:repo` matches any two-segment path,
+  // so the handler filters out reserved first segments (api, _next, app routes)
+  // before treating it as a repo. Deeper paths are excluded.
+  matcher: ['/', '/trail/:id', '/topic/:id', '/:owner/:repo'],
 };

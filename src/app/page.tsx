@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from 'react';
 import { TrailCityDiagram } from '@/components/trail/TrailCityDiagram';
 import { LgtmStamp, SignOffStampAnimation } from '@/components/trail/LgtmStamp';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
+import { AgentViewButton } from '@/components/AgentViewButton';
 import { SignedInDashboard } from '@/components/home/SignedInDashboard';
 import { TrailBackdrop } from '@/components/home/TrailBackdrop';
 import { TrailsFeed } from '@/components/home/TrailsFeed';
@@ -401,6 +402,9 @@ export default function HomePage() {
             />
           </div>
           )}
+            <div className="hidden sm:flex">
+              <AgentViewButton path="/" />
+            </div>
             <UserAvatarMenu
               hideLoginButton={
                 view !== 'title' && view !== 'trails' && view !== 'topics'

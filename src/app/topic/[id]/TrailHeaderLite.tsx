@@ -38,6 +38,7 @@ interface TrailHeaderLiteProps {
 }
 
 export function TrailHeaderLite({
+  topicId,
   shareCopied,
   onShare,
   onBriefAgent,
@@ -121,6 +122,7 @@ export function TrailHeaderLite({
         */}
         <div className="hidden md:flex items-center gap-2">
           <TopicActions
+            topicId={topicId}
             shareCopied={shareCopied}
             onShare={onShare}
             onBriefAgent={onBriefAgent}

@@ -369,6 +369,86 @@ export function privateRepoMarkdown(humanView: string): string {
   ].join('\n');
 }
 
+// ============================================================================
+// Site index. The home page (`/`) is a client-hydrated SPA with no agent
+// representation of its own. The middleware rewrites a non-browser navigation
+// of `/` here, to an orientation manifest: what Principal is, how to fetch any
+// page programmatically (the Accept-header convention + the negotiable route
+// shapes), and the list of public repos that have trails — the discovery entry
+// points an agent landing on the root needs.
+// ============================================================================
+
+/** One repo row in the site index. */
+export interface HomeRepoItem {
+  owner: string;
+  repo: string;
+  trailCount: number;
+  humanView: string;
+}
+
+/** The subset of the site index envelope's `_links` Markdown rendering needs. */
+export interface HomeLinks {
+  self: string;
+  explore: string;
+  humanView: string;
+}
+
+/** Render the site index (orientation + public repo list) as Markdown. */
+export function homeIndexMarkdown(opts: {
+  origin: string;
+  repos: HomeRepoItem[];
+  links: HomeLinks;
+}): string {
+  const { origin, repos, links } = opts;
+  const out: string[] = [];
+
+  out.push('# Principal AI');
+  out.push('*Guided, human-authored trails through codebases.*');
+  out.push(
+    '',
+    'A **trail** is a walkthrough pinned to specific files and line ranges; a',
+    '**topic** bundles related trails; a **repo catalog** lists everything',
+    'Principal knows about one repository.',
+  );
+
+  out.push('', '## Fetch any page as an agent');
+  out.push(
+    'Every shareable page content-negotiates on the `Accept` header: a browser',
+    'gets the interactive app; a programmatic caller gets Markdown (default) or',
+    'JSON (`Accept: application/json`) at the same URL.',
+    '',
+    `- \`${origin}/{owner}/{repo}\` — repo catalog (published trails + tours)`,
+    `- \`${origin}/trail/{id}\` — a single trail (markers pinned to files/lines)`,
+    `- \`${origin}/topic/{id}\` — a topic (a curated bundle of trails)`,
+    '',
+    `Private or gated repos: \`npx ${CLI_PACKAGE}\` resolves your GitHub token ` +
+      `(via the gh CLI or a git credential helper) and calls the same API with a ` +
+      `Bearer token, so it returns anything your GitHub account can read.`,
+  );
+
+  out.push('', `## Repos with trails (${repos.length})`);
+  if (repos.length === 0) {
+    out.push('_No public repos with trails yet._');
+  } else {
+    repos.forEach((r) => {
+      out.push(
+        `- **${r.owner}/${r.repo}** — ${r.trailCount} trail${
+          r.trailCount === 1 ? '' : 's'
+        } · ${r.humanView}`,
+      );
+    });
+  }
+
+  out.push(
+    '',
+    '---',
+    `Explore (interactive): ${links.humanView}`,
+    `JSON: ${links.self}`,
+    '',
+  );
+  return out.join('\n');
+}
+
 /** Render a repo catalog (GitHub facts + published trails/tours) as Markdown. */
 export function repoCatalogMarkdown(opts: {
   owner: string;

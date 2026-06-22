@@ -748,6 +748,7 @@ export default function TopicPageClient() {
             */}
             <div className="mt-3 flex md:hidden items-center gap-2 flex-wrap">
               <TopicActions
+                topicId={topicId}
                 shareCopied={shareCopied}
                 onShare={handleShare}
                 onBriefAgent={() => setContributeMode('brief')}

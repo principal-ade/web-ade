@@ -10,7 +10,11 @@
 
 import { listRepoPrefixes, getIndex, updateIndex } from '@/lib/trails/s3-storage';
 import { checkRepoAccess } from '@/lib/trails/github-access';
-import type { PublicTrailEntry, SharedTrailIndex } from '@/lib/trails/types';
+import type {
+  PublicRepoWithTrails,
+  PublicTrailEntry,
+  SharedTrailIndex,
+} from '@/lib/trails/types';
 
 // Cap concurrent per-repo index reads. Matches the staleness budget of the
 // per-repo access check (REPO_ACCESS_CACHE_TTL).
@@ -82,6 +86,48 @@ export async function resolveVisibility(
     });
     return { visibility, index };
   }
+}
+
+/**
+ * Repo-level list of every publicly-readable repo that has at least one trail,
+ * sorted owner-then-repo. Backs `/api/trails/repos` (the `/explore` page) and
+ * the site index (`/api/home`). Same enumeration + lazy visibility backfill as
+ * {@link listPublicTrails}, but collapsed to one row per repo with a count.
+ */
+export async function listPublicReposWithTrails(): Promise<
+  PublicRepoWithTrails[]
+> {
+  const pairs = await listRepoPrefixes();
+
+  const rows = await mapWithConcurrency(
+    pairs,
+    INDEX_FETCH_CONCURRENCY,
+    async ({ owner, repo }): Promise<PublicRepoWithTrails | null> => {
+      const index = await getIndex(owner, repo);
+      // Skip repos whose index exists but is empty (every trail was deleted).
+      if (index.entries.length === 0) return null;
+
+      const resolved = await resolveVisibility(owner, repo, index);
+      if (!resolved || resolved.visibility !== 'public') return null;
+
+      return {
+        owner,
+        repo,
+        trailCount: resolved.index.entries.length,
+        lastUpdated: resolved.index.updatedAt,
+      };
+    },
+  );
+
+  return rows
+    .filter((r): r is PublicRepoWithTrails => r !== null)
+    .sort((a, b) => {
+      const byOwner = a.owner.localeCompare(b.owner, undefined, {
+        sensitivity: 'base',
+      });
+      if (byOwner !== 0) return byOwner;
+      return a.repo.localeCompare(b.repo, undefined, { sensitivity: 'base' });
+    });
 }
 
 /**

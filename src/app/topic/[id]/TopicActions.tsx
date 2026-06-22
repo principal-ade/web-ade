@@ -3,8 +3,11 @@
 import { Bot, Check, MessageSquare, Share2, Trash2 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { BookmarkButton } from '@/components/BookmarkButton';
+import { AgentViewButton } from '@/components/AgentViewButton';
 
 interface TopicActionsProps {
+  /** Topic id, used to build the `/topic/{id}` path for the agent-view preview. */
+  topicId: string;
   shareCopied: boolean;
   onShare: () => void;
   onBriefAgent: () => void;
@@ -18,6 +21,7 @@ interface TopicActionsProps {
 }
 
 export function TopicActions({
+  topicId,
   shareCopied,
   onShare,
   onBriefAgent,
@@ -93,6 +97,8 @@ export function TopicActions({
         <Bot className="w-4 h-4" />
         <span>Share With Agent</span>
       </button>
+
+      <AgentViewButton path={`/topic/${topicId}`} />
 
       {isOwner && (
         <button

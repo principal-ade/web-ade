@@ -49,6 +49,7 @@ import type { TourAudioStatus, TourListItem } from '@/lib/tours/types';
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
+import { AgentViewButton } from '@/components/AgentViewButton';
 import { TrailLoadingScreen } from '@/components/trail/TrailLoadingScreen';
 import { TrailErrorView } from '@/components/trail/TrailErrorView';
 import { TrailShareModal } from '@/components/trail/TrailShareModal';
@@ -1324,6 +1325,9 @@ const Header: React.FC<{
         >
           <History className="w-5 h-5" />
         </Link>
+        <div className="hidden md:flex">
+          <AgentViewButton path={`/${owner}/${repo}`} iconOnly />
+        </div>
         <a
           href={`https://github.com/${owner}/${repo}`}
           target="_blank"
