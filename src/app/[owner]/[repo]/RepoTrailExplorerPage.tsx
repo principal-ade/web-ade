@@ -276,6 +276,13 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     document.title = `${owner}/${repo}`;
   }, [owner, repo]);
 
+  // Warm the About-card metadata the moment the page mounts — behind the
+  // loading screen — so RepoOverview has it ready the instant it renders,
+  // instead of the two GitHub calls only starting once the card appears.
+  useEffect(() => {
+    void warmRepoOverview(owner, repo);
+  }, [owner, repo]);
+
   useEffect(() => {
     let cancelled = false;
     setState({ kind: 'loading' });
@@ -975,6 +982,11 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         owner={owner}
         repo={repo}
         exploredStats={exploredStats}
+        selectedTour={selectedTour}
+        tourProgress={
+          selectedTour ? tourGenProgress.get(selectedTour.tour.id) : undefined
+        }
+        onGenerateTourAudio={handleGenerateTourAudio}
       />
       <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
         {/* The delete control is driven by the app's own validated session:
@@ -1044,8 +1056,6 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
               setSelectedFilePath(null);
             }
           }}
-          tourGenProgress={tourGenProgress}
-          onGenerateTourAudio={handleGenerateTourAudio}
           onRequestDeleteTour={(item) => {
             if (!item.store) return;
             setTourToDelete({
@@ -1162,10 +1172,18 @@ const Header: React.FC<{
   owner: string;
   repo: string;
   exploredStats: { documented: number; total: number } | null;
+  // Audio controls for the active tour, surfaced here (not in the tours pane)
+  // and only while a tour is selected. Null when no tour is open.
+  selectedTour: TourListItem | null;
+  tourProgress: TourGenProgress | undefined;
+  onGenerateTourAudio: (item: TourListItem) => void;
 }> = ({
   owner,
   repo,
   exploredStats,
+  selectedTour,
+  tourProgress,
+  onGenerateTourAudio,
 }) => {
   const { theme } = useTheme();
   return (
@@ -1219,7 +1237,7 @@ const Header: React.FC<{
           />
         </Link>
         <Link
-          href={`/${owner}/${repo}`}
+          href={`/${owner}`}
           className="transition-opacity hover:opacity-80 truncate"
           style={{
             fontFamily: theme.fonts.body,
@@ -1229,12 +1247,12 @@ const Header: React.FC<{
             textDecoration: 'none',
           }}
         >
-          {repo}
+          {owner}
         </Link>
       </div>
 
       <Link
-        href={`/${owner}/${repo}`}
+        href={`/${owner}`}
         className="flex md:hidden items-center gap-2 min-w-0 flex-1 transition-opacity hover:opacity-80"
         style={{ textDecoration: 'none' }}
       >
@@ -1256,7 +1274,7 @@ const Header: React.FC<{
             color: theme.colors.text,
           }}
         >
-          {repo}
+          {owner}
         </span>
       </Link>
 
@@ -1290,6 +1308,13 @@ const Header: React.FC<{
       )}
 
       <div className="flex items-center gap-2 flex-shrink-0">
+        {selectedTour && (
+          <TourAudioControl
+            status={selectedTour.audioStatus}
+            progress={tourProgress}
+            onGenerate={() => onGenerateTourAudio(selectedTour)}
+          />
+        )}
         <Link
           href={`/legacy/${owner}/${repo}`}
           className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
@@ -1347,8 +1372,6 @@ const TrailListPane: React.FC<{
   toursLoading: boolean;
   selectedTourId: string | null;
   onSelectTour: (id: string | null) => void;
-  tourGenProgress: Map<string, TourGenProgress>;
-  onGenerateTourAudio: (item: TourListItem) => void;
   onRequestDeleteTour: (item: TourListItem) => void;
   dirPaths: string[];
   filePaths: string[];
@@ -1380,8 +1403,6 @@ const TrailListPane: React.FC<{
   toursLoading,
   selectedTourId,
   onSelectTour,
-  tourGenProgress,
-  onGenerateTourAudio,
   onRequestDeleteTour,
   dirPaths,
   filePaths,
@@ -1433,11 +1454,50 @@ const TrailListPane: React.FC<{
           loading={toursLoading}
           selectedTourId={selectedTourId}
           onSelectTour={onSelectTour}
-          genProgress={tourGenProgress}
-          onGenerateAudio={onGenerateTourAudio}
           viewerUserId={viewerUserId}
           viewerIsRepoAdmin={viewerIsRepoAdmin}
           onRequestDelete={onRequestDeleteTour}
+          trailsSection={
+            entries.length > 0 ? (
+              <div onMouseLeave={() => onHover(null)}>
+                <div
+                  className="px-4 py-2 border-b"
+                  style={{ borderColor: theme.colors.border }}
+                >
+                  <span
+                    style={{
+                      fontSize: theme.fontSizes[0],
+                      fontWeight: theme.fontWeights.semibold,
+                      color: theme.colors.textSecondary,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                    }}
+                  >
+                    Trails
+                  </span>
+                </div>
+                {filteredEntries.map((entry) => (
+                  <TrailRow
+                    key={entry.id}
+                    entry={entry}
+                    payload={payloads.get(entry.id) ?? null}
+                    selected={entry.id === selectedTrailId}
+                    onSelect={() =>
+                      onSelect(entry.id === selectedTrailId ? null : entry.id)
+                    }
+                    onHover={() => onHover(entry.id)}
+                    canDelete={
+                      viewerUserId !== null &&
+                      (viewerIsRepoAdmin ||
+                        String(entry.createdBy?.githubId) ===
+                          String(viewerUserId))
+                    }
+                    onDelete={() => onRequestDeleteTrail(entry)}
+                  />
+                ))}
+              </div>
+            ) : null
+          }
         />
       ) : (
         <>
@@ -2106,7 +2166,49 @@ const TOUR_SKILL_URL =
 const TOUR_INIT_COMMAND =
   'npx @principal-ai/file-city-cli@latest init --template onboarding';
 
+// No tours yet: instead of inline instructions, lead with a single CTA that
+// mirrors the "Start tour" button and opens a modal explaining how to author
+// and publish one. Keeps the empty pane clean while the how-to is a click away.
 const ToursEmptyState: React.FC = () => {
+  const { theme } = useTheme();
+  const [showAuthorModal, setShowAuthorModal] = useState(false);
+  return (
+    <>
+      {/* border-b mirrors SingleTourCta: the overview above renders borderless,
+          so the CTA carries the card's dividing line at its bottom edge. */}
+      <div
+        className="px-4 py-3 border-b"
+        style={{ borderColor: theme.colors.border }}
+      >
+        <button
+          type="button"
+          onClick={() => setShowAuthorModal(true)}
+          className="w-full inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90"
+          style={{
+            padding: '10px 14px',
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[1],
+            fontWeight: theme.fontWeights.semibold,
+            cursor: 'pointer',
+            background: theme.colors.primary,
+            color: '#ffffff',
+            border: `1px solid ${theme.colors.primary}`,
+          }}
+        >
+          <Compass size={16} />
+          Create a tour
+        </button>
+      </div>
+      {showAuthorModal && (
+        <TourAuthorModal onClose={() => setShowAuthorModal(false)} />
+      )}
+    </>
+  );
+};
+
+// Modal walking an author through creating + publishing a tour. Rendered to a
+// portal so it floats above the panel. Dismissed by the backdrop, the ×, or Esc.
+const TourAuthorModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { theme } = useTheme();
   const [copied, setCopied] = useState(false);
   const copyCommand = async () => {
@@ -2118,44 +2220,149 @@ const ToursEmptyState: React.FC = () => {
       // Clipboard can be unavailable (insecure context / denied) — no-op.
     }
   };
-  return (
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  if (typeof document === 'undefined') return null;
+
+  const eyebrow: React.CSSProperties = {
+    fontSize: theme.fontSizes[0],
+    fontWeight: theme.fontWeights.semibold,
+    color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+  };
+  const bodyText: React.CSSProperties = {
+    margin: 0,
+    color: theme.colors.text,
+    fontSize: theme.fontSizes[1],
+    lineHeight: 1.5,
+  };
+
+  return createPortal(
     <div
-      className="px-4 py-6 flex flex-col items-center gap-3 text-center"
-      style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        background: 'rgba(0,0,0,0.45)',
+      }}
     >
-      <p>
-        No tour has been authored for this repository yet. A tour is a guided
-        walkthrough that lives as a <code>.tour.json</code> file in the repo.
-      </p>
-      <a
-        href={TOUR_SKILL_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md font-medium transition-opacity hover:opacity-80"
+      <div
+        onClick={(e) => e.stopPropagation()}
         style={{
-          background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
-          border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
-          color: theme.colors.primary,
+          width: '100%',
+          maxWidth: 460,
+          borderRadius: 12,
+          border: `1px solid ${theme.colors.border}`,
+          background: theme.colors.surface ?? theme.colors.background,
+          boxShadow: '0 16px 48px rgba(0,0,0,0.45)',
+          overflow: 'hidden',
         }}
       >
-        Create one with the file-city-tours skill →
-      </a>
-      <button
-        type="button"
-        onClick={copyCommand}
-        title="Click to copy"
-        className="font-mono px-2 py-1 rounded transition-opacity hover:opacity-80"
-        style={{
-          background: `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
-          color: theme.colors.textMuted,
-          fontSize: theme.fontSizes[0],
-          wordBreak: 'break-all',
-        }}
-        aria-label={copied ? 'Command copied' : 'Copy command to clipboard'}
-      >
-        {copied ? 'Copied!' : TOUR_INIT_COMMAND}
-      </button>
-    </div>
+        {/* Header */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            padding: '14px 16px',
+            borderBottom: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[2],
+              fontWeight: theme.fontWeights.bold,
+              color: theme.colors.text,
+            }}
+          >
+            Author a tour
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="transition-opacity hover:opacity-80"
+            style={{
+              background: 'transparent',
+              color: theme.colors.textMuted,
+              cursor: 'pointer',
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex flex-col gap-4" style={{ padding: 16 }}>
+          <p style={bodyText}>
+            No tour has been authored for this repository yet. A tour is a guided
+            walkthrough that lives as a <code>.tour.json</code> file in the repo
+            — a sequence of steps pinned to files and lines that visitors can
+            play through.
+          </p>
+
+          <div className="flex flex-col gap-2">
+            <span style={eyebrow}>1 · Scaffold</span>
+            <p style={bodyText}>
+              Use the file-city-tours skill, or scaffold a starter from the CLI:
+            </p>
+            <button
+              type="button"
+              onClick={copyCommand}
+              title="Click to copy"
+              className="font-mono px-2 py-1.5 rounded text-left transition-opacity hover:opacity-80"
+              style={{
+                background: `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
+                color: theme.colors.textMuted,
+                fontSize: theme.fontSizes[0],
+                wordBreak: 'break-all',
+              }}
+              aria-label={copied ? 'Command copied' : 'Copy command to clipboard'}
+            >
+              {copied ? 'Copied!' : TOUR_INIT_COMMAND}
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <span style={eyebrow}>2 · Publish</span>
+            <p style={bodyText}>
+              Once it&apos;s authored and validated, publish it with the same
+              skill — published tours show up here on the repo page for everyone.
+            </p>
+          </div>
+
+          <a
+            href={TOUR_SKILL_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-md font-medium transition-opacity hover:opacity-80"
+            style={{
+              background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
+              color: theme.colors.primary,
+            }}
+          >
+            Open the file-city-tours skill →
+          </a>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 };
 
@@ -2195,6 +2402,116 @@ function licenseBadgeRadius(spdxId: string): number {
 }
 
 // ---------------------------------------------------------------------------
+// Repo overview data — the GitHub metadata behind the About card. The two
+// calls are cached and warmed separately (warmRepoOverview, fired the moment
+// the page mounts, behind the loading screen) so the data is ready by the time
+// RepoOverview renders — instead of only starting once the card appears.
+//
+// Crucially the two are kept INDEPENDENT: getRepoInfo is a single fast call,
+// while getRepoPackages walks the git tree and reads every manifest, so it can
+// be much slower. They resolve into separate caches and update the card on
+// their own, so the description shows the instant it lands rather than waiting
+// on the package scan. Both best-effort; a failure is left uncached so a later
+// visit retries. Keyed by `${owner}/${repo}`.
+// ---------------------------------------------------------------------------
+
+type RepoOverviewInfo = Awaited<
+  ReturnType<typeof trpc.github.getRepoInfo.query>
+>;
+type RepoOverviewPkg = Awaited<
+  ReturnType<typeof trpc.github.getRepoPackages.query>
+>['summary'];
+
+const repoInfoCache = new Map<string, RepoOverviewInfo>();
+const repoInfoInflight = new Map<string, Promise<RepoOverviewInfo | null>>();
+const repoPkgCache = new Map<string, RepoOverviewPkg>();
+const repoPkgInflight = new Map<string, Promise<RepoOverviewPkg | null>>();
+
+function fetchRepoInfo(
+  owner: string,
+  repo: string,
+): Promise<RepoOverviewInfo | null> {
+  const key = `${owner}/${repo}`;
+  const cached = repoInfoCache.get(key);
+  if (cached) return Promise.resolve(cached);
+  const inflight = repoInfoInflight.get(key);
+  if (inflight) return inflight;
+  const run = trpc.github.getRepoInfo
+    .query({ owner, repo })
+    .then((d) => {
+      repoInfoCache.set(key, d);
+      repoInfoInflight.delete(key);
+      return d;
+    })
+    .catch(() => {
+      // Best-effort — leave uncached so a later visit retries.
+      repoInfoInflight.delete(key);
+      return null;
+    });
+  repoInfoInflight.set(key, run);
+  return run;
+}
+
+function fetchRepoPkg(
+  owner: string,
+  repo: string,
+): Promise<RepoOverviewPkg | null> {
+  const key = `${owner}/${repo}`;
+  const cached = repoPkgCache.get(key);
+  if (cached) return Promise.resolve(cached);
+  const inflight = repoPkgInflight.get(key);
+  if (inflight) return inflight;
+  const run = trpc.github.getRepoPackages
+    .query({ owner, repo })
+    .then((d) => {
+      repoPkgCache.set(key, d.summary);
+      repoPkgInflight.delete(key);
+      return d.summary;
+    })
+    .catch(() => {
+      repoPkgInflight.delete(key);
+      return null;
+    });
+  repoPkgInflight.set(key, run);
+  return run;
+}
+
+function warmRepoOverview(owner: string, repo: string): void {
+  void fetchRepoInfo(owner, repo);
+  void fetchRepoPkg(owner, repo);
+}
+
+function useRepoOverviewData(
+  owner: string,
+  repo: string,
+): { info: RepoOverviewInfo | null; pkg: RepoOverviewPkg | null } {
+  const key = `${owner}/${repo}`;
+  const [info, setInfo] = useState<RepoOverviewInfo | null>(
+    () => repoInfoCache.get(key) ?? null,
+  );
+  const [pkg, setPkg] = useState<RepoOverviewPkg | null>(
+    () => repoPkgCache.get(key) ?? null,
+  );
+  useEffect(() => {
+    let cancelled = false;
+    setInfo(repoInfoCache.get(key) ?? null);
+    setPkg(repoPkgCache.get(key) ?? null);
+    // Each updates the card the moment its own call resolves — the fast
+    // description never waits on the slow package scan.
+    void fetchRepoInfo(owner, repo).then((d) => {
+      if (!cancelled && d) setInfo(d);
+    });
+    void fetchRepoPkg(owner, repo).then((d) => {
+      if (!cancelled && d) setPkg(d);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [owner, repo, key]);
+  return { info, pkg };
+}
+
+// ---------------------------------------------------------------------------
 // Repo overview — a compact, no-AI dossier shown atop the Tours pane. Composes
 // the repo's own GitHub metadata (description, language, license, stars,
 // topics, fork-of, last push) with a package-derived project-shape line
@@ -2203,42 +2520,18 @@ function licenseBadgeRadius(spdxId: string): number {
 // list. Both procedures are heavily cached server-side.
 // ---------------------------------------------------------------------------
 
-const RepoOverview: React.FC<{ owner: string; repo: string }> = ({
-  owner,
-  repo,
-}) => {
+const RepoOverview: React.FC<{
+  owner: string;
+  repo: string;
+  // When false, drop the bottom divider so a caller can group the overview with
+  // a control rendered directly beneath it (e.g. the single-tour "Start tour"
+  // CTA) inside one card, with the dividing line carried below that control.
+  showBorder?: boolean;
+}> = ({ owner, repo, showBorder = true }) => {
   const { theme } = useTheme();
-  const [info, setInfo] = useState<Awaited<
-    ReturnType<typeof trpc.github.getRepoInfo.query>
-  > | null>(null);
-  const [pkg, setPkg] = useState<
-    Awaited<ReturnType<typeof trpc.github.getRepoPackages.query>>['summary'] | null
-  >(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setInfo(null);
-    setPkg(null);
-    // Core dossier — the repo's own metadata.
-    trpc.github.getRepoInfo
-      .query({ owner, repo })
-      .then((data) => {
-        if (!cancelled) setInfo(data);
-      })
-      .catch(() => {
-        // Overview is optional — a failure just leaves it unrendered.
-      });
-    // Project shape — secondary; renders its own line once it lands.
-    trpc.github.getRepoPackages
-      .query({ owner, repo })
-      .then((data) => {
-        if (!cancelled) setPkg(data.summary);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [owner, repo]);
+  // Read from the shared cache, warmed at page mount (see warmRepoOverview), so
+  // the metadata is typically ready the instant this card first renders.
+  const { info, pkg } = useRepoOverviewData(owner, repo);
 
   // Nothing until the core metadata lands — keeps the pane from flashing a
   // half-built header. The tours list renders regardless (below this).
@@ -2266,21 +2559,26 @@ const RepoOverview: React.FC<{ owner: string; repo: string }> = ({
 
   return (
     <div
-      className="px-4 py-3 border-b flex flex-col gap-2"
+      className={`px-4 py-3 flex flex-col gap-2${showBorder ? ' border-b' : ''}`}
       style={{ borderColor: theme.colors.border }}
     >
+      {/* Repo name leads the card (with the license badge); the header carries
+          the owner. */}
       <div className="flex items-center justify-between gap-2">
-        <span
+        <h1
+          className="min-w-0"
           style={{
-            fontSize: theme.fontSizes[0],
-            fontWeight: theme.fontWeights.semibold,
-            color: theme.colors.textSecondary,
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
+            margin: 0,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[4],
+            fontWeight: theme.fontWeights.bold,
+            color: theme.colors.text,
+            lineHeight: 1.2,
+            wordBreak: 'break-word',
           }}
         >
-          About
-        </span>
+          {repo}
+        </h1>
         {license && (
           <span
             className="shrink-0"
@@ -2298,7 +2596,7 @@ const RepoOverview: React.FC<{ owner: string; repo: string }> = ({
           </span>
         )}
       </div>
-      {info.description && (
+      {info.description ? (
         <p
           style={{
             margin: 0,
@@ -2308,6 +2606,27 @@ const RepoOverview: React.FC<{ owner: string; repo: string }> = ({
           }}
         >
           {info.description}
+        </p>
+      ) : (
+        <p
+          style={{
+            margin: 0,
+            color: theme.colors.textMuted,
+            fontSize: theme.fontSizes[1],
+            lineHeight: 1.4,
+            fontStyle: 'italic',
+          }}
+        >
+          No description for {owner}/{repo}.{' '}
+          <a
+            href={`https://github.com/${owner}/${repo}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-opacity hover:opacity-80"
+            style={{ color: theme.colors.primary, fontStyle: 'normal' }}
+          >
+            Update on GitHub →
+          </a>
         </p>
       )}
 
@@ -2382,11 +2701,14 @@ const ToursPane: React.FC<{
   loading: boolean;
   selectedTourId: string | null;
   onSelectTour: (id: string | null) => void;
-  genProgress: Map<string, TourGenProgress>;
-  onGenerateAudio: (item: TourListItem) => void;
   viewerUserId: number | null;
   viewerIsRepoAdmin: boolean;
   onRequestDelete: (item: TourListItem) => void;
+  // Trails list rendered beneath the tours in the same scroll column, so a
+  // visitor landing on the default view sees the repo's trails under About.
+  // Null when the repo has no trails. Built by the caller (which holds the
+  // trail data + handlers).
+  trailsSection: React.ReactNode;
 }> = ({
   owner,
   repo,
@@ -2394,11 +2716,10 @@ const ToursPane: React.FC<{
   loading,
   selectedTourId,
   onSelectTour,
-  genProgress,
-  onGenerateAudio,
   viewerUserId,
   viewerIsRepoAdmin,
   onRequestDelete,
+  trailsSection,
 }) => {
   // With exactly one tour we collapse the list into a single "Start tour" CTA
   // (SingleTourCta) rather than a one-row list.
@@ -2414,73 +2735,80 @@ const ToursPane: React.FC<{
   // tour explorer.)
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
-      <RepoOverview owner={owner} repo={repo} />
-
-      {loading ? (
-        <ListMessage>Loading tours…</ListMessage>
-      ) : tours.length === 0 ? (
-        <ToursEmptyState />
-      ) : single ? (
-        <SingleTourCta
-          item={single}
-          active={single.tour.id === selectedTourId}
-          onToggle={() =>
-            onSelectTour(
-              single.tour.id === selectedTourId ? null : single.tour.id,
-            )
-          }
-          progress={genProgress.get(single.tour.id)}
-          onGenerate={() => onGenerateAudio(single)}
-          canDelete={singleCanDelete}
-          onDelete={() => onRequestDelete(single)}
-        />
-      ) : (
-        tours.map((item) => (
-          <TourRow
-            key={item.tour.id}
-            tour={item.tour}
-            audioStatus={item.audioStatus}
-            progress={genProgress.get(item.tour.id)}
-            selected={item.tour.id === selectedTourId}
-            onSelect={() =>
+      {single ? (
+        // Single tour: fold the "Start tour" CTA into the overview card. The
+        // overview drops its own divider (showBorder=false) and the CTA carries
+        // it instead, so the button sits above the dividing line — part of the
+        // overview — rather than detached beneath it.
+        <>
+          <RepoOverview owner={owner} repo={repo} showBorder={false} />
+          <SingleTourCta
+            active={single.tour.id === selectedTourId}
+            onToggle={() =>
               onSelectTour(
-                item.tour.id === selectedTourId ? null : item.tour.id,
+                single.tour.id === selectedTourId ? null : single.tour.id,
               )
             }
-            onGenerate={() => onGenerateAudio(item)}
-            // Only store-backed tours are deletable; gate on the validated
-            // session, mirroring trails (author-or-repo-admin).
-            canDelete={
-              item.store != null &&
-              viewerUserId !== null &&
-              (viewerIsRepoAdmin ||
-                String(item.store.createdBy.githubId) ===
-                  String(viewerUserId))
-            }
-            onDelete={() => onRequestDelete(item)}
+            canDelete={singleCanDelete}
+            onDelete={() => onRequestDelete(single)}
           />
-        ))
+        </>
+      ) : !loading && tours.length === 0 ? (
+        // No tours yet: fold the "Create a tour" CTA into the overview card,
+        // same as the single-tour case — overview borderless, the CTA carries
+        // the divider — so the button reads as part of the overview.
+        <>
+          <RepoOverview owner={owner} repo={repo} showBorder={false} />
+          <ToursEmptyState />
+        </>
+      ) : (
+        // Loading or multiple tours: the overview keeps its divider and the
+        // tour list — the way to reach each tour — renders below it.
+        <>
+          <RepoOverview owner={owner} repo={repo} />
+          {loading ? (
+            <ListMessage>Loading tours…</ListMessage>
+          ) : (
+            tours.map((item) => (
+              <TourRow
+                key={item.tour.id}
+                tour={item.tour}
+                selected={item.tour.id === selectedTourId}
+                onSelect={() =>
+                  onSelectTour(
+                    item.tour.id === selectedTourId ? null : item.tour.id,
+                  )
+                }
+                // Only store-backed tours are deletable; gate on the validated
+                // session, mirroring trails (author-or-repo-admin).
+                canDelete={
+                  item.store != null &&
+                  viewerUserId !== null &&
+                  (viewerIsRepoAdmin ||
+                    String(item.store.createdBy.githubId) ===
+                      String(viewerUserId))
+                }
+                onDelete={() => onRequestDelete(item)}
+              />
+            ))
+          )}
+        </>
       )}
+      {trailsSection}
     </div>
   );
 };
 
 const TourRow: React.FC<{
   tour: IntroductionTour;
-  audioStatus: TourAudioStatus;
-  progress: TourGenProgress | undefined;
   selected: boolean;
   onSelect: () => void;
-  onGenerate: () => void;
   canDelete: boolean;
   onDelete: () => void;
 }> = ({
   tour,
-  audioStatus,
-  progress,
   selected,
   onSelect,
-  onGenerate,
   canDelete,
   onDelete,
 }) => {
@@ -2567,19 +2895,15 @@ const TourRow: React.FC<{
           <Trash2 size={14} />
         </button>
       )}
-      <TourAudioControl
-        status={audioStatus}
-        progress={progress}
-        onGenerate={onGenerate}
-      />
     </div>
   );
 };
 
 /**
- * Audio status badge + Generate/Regenerate button for one tour row. Shows live
- * per-step progress while generating, and disables the button while the tour is
- * inside its once-per-hour cooldown.
+ * Audio status badge + Generate/Regenerate button for the active tour, rendered
+ * inline in the header while a tour is selected. Shows live per-step progress
+ * while generating, and disables the button while the tour is inside its
+ * once-per-hour cooldown.
  */
 const TourAudioControl: React.FC<{
   status: TourAudioStatus;
@@ -2596,7 +2920,7 @@ const TourAudioControl: React.FC<{
     return ms > 0 ? Math.ceil(ms / 60000) : 0;
   }, [status.canGenerateAt]);
 
-  const rowStyle = 'px-4 pb-3 pt-2 flex items-center gap-2';
+  const rowStyle = 'flex items-center gap-2';
   const labelStyle = { fontSize: theme.fontSizes[0] };
 
   // Active generation — show per-step progress, no button.
@@ -2695,24 +3019,27 @@ const TourAudioControl: React.FC<{
 
 // ---------------------------------------------------------------------------
 // Single-tour CTA. When a repo has exactly one tour, the Tours pane shows this
-// in place of a one-row list: the tour's title/description + a prominent
-// Start/Stop button that toggles the tour in the right pane, with the audio
-// control (and the author delete) kept beneath it.
+// in place of a one-row list: a prominent Start/Stop button that toggles the
+// tour in the right pane, with the author delete kept beneath it. Audio
+// controls live in the header (TourAudioControl), shown only while a tour is
+// selected.
 // ---------------------------------------------------------------------------
 
 const SingleTourCta: React.FC<{
-  item: TourListItem;
   active: boolean;
   onToggle: () => void;
-  progress: TourGenProgress | undefined;
-  onGenerate: () => void;
   canDelete: boolean;
   onDelete: () => void;
-}> = ({ item, active, onToggle, progress, onGenerate, canDelete, onDelete }) => {
+}> = ({ active, onToggle, canDelete, onDelete }) => {
   const { theme } = useTheme();
 
   return (
-    <div className="flex flex-col">
+    // The CTA carries the overview card's dividing line at its bottom edge — the
+    // overview itself renders borderless above it, so the two read as one card.
+    <div
+      className="flex flex-col border-b"
+      style={{ borderColor: theme.colors.border }}
+    >
       <div className="px-4 py-3">
         <button
           type="button"
@@ -2750,12 +3077,6 @@ const SingleTourCta: React.FC<{
           )}
         </button>
       </div>
-
-      <TourAudioControl
-        status={item.audioStatus}
-        progress={progress}
-        onGenerate={onGenerate}
-      />
 
       {canDelete && (
         <div className="px-4 pb-3">
