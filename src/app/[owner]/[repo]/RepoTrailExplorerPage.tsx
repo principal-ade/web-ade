@@ -240,6 +240,22 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   // pane swaps to the tour panel while a tour is active.
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
 
+  // Architecture-panel → file-city wiring. Hovering / selecting a package in
+  // the left-rail composition panel lights up that package's directory subtree
+  // on the idle Tour city. Repo-relative dir, normalized (no leading/trailing
+  // slash); null for the monorepo root (we don't paint the whole repo).
+  const [hoveredPackagePath, setHoveredPackagePath] = useState<string | null>(
+    null,
+  );
+  const [selectedPackagePath, setSelectedPackagePath] = useState<string | null>(
+    null,
+  );
+  const packageDirFromLayer = useCallback((pkg: PackageLayer | null) => {
+    if (!pkg || pkg.packageData.isMonorepoRoot) return null;
+    const dir = pkg.packageData.path.replace(/^\/+|\/+$/g, '');
+    return dir.length > 0 ? dir : null;
+  }, []);
+
   // File-type color legend on the tour panel. On by default; a header button
   // (shown whenever the tour panel is the right pane — i.e. trails collapsed)
   // toggles it.
@@ -954,6 +970,59 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     selectedFileLayer,
   ]);
 
+  // Architecture-panel highlight layers, kept independent of the trail-derived
+  // `idleHighlightLayers` so they only ever paint the package subtree (not the
+  // coverage/debt layers). A single `type: 'directory'` item paints the whole
+  // subtree — the renderer honors directory items in the idle path, so there's
+  // no need to enumerate `fileTree.allFiles`. Select → persistent fill (wins on
+  // overlap via priority); hover → transient border, suppressed when it would
+  // just re-trace the selected package.
+  const packageHighlightLayers = useMemo<HighlightLayer[] | null>(() => {
+    const layers: HighlightLayer[] = [];
+    if (selectedPackagePath) {
+      layers.push({
+        id: `pkg-select-${selectedPackagePath}`,
+        name: 'Selected package',
+        enabled: true,
+        color: theme.colors.accent,
+        opacity: 0.4,
+        priority: 115,
+        items: [
+          {
+            path: selectedPackagePath,
+            type: 'directory' as const,
+            renderStrategy: 'fill' as const,
+          },
+        ],
+        dynamic: true,
+      });
+    }
+    if (hoveredPackagePath && hoveredPackagePath !== selectedPackagePath) {
+      layers.push({
+        id: `pkg-hover-${hoveredPackagePath}`,
+        name: 'Hovered package',
+        enabled: true,
+        color: theme.colors.primary,
+        borderWidth: 2,
+        priority: 100,
+        items: [
+          {
+            path: hoveredPackagePath,
+            type: 'directory' as const,
+            renderStrategy: 'border' as const,
+          },
+        ],
+        dynamic: true,
+      });
+    }
+    return layers.length > 0 ? layers : null;
+  }, [
+    hoveredPackagePath,
+    selectedPackagePath,
+    theme.colors.accent,
+    theme.colors.primary,
+  ]);
+
   // The highlight-layers slice is "loading" until we have enough data
   // to compute a final value. Without this the panel can't tell
   // "no host layers" from "layers haven't streamed in yet" and paints
@@ -1071,6 +1140,12 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           packages={packages}
           packagesLoading={packagesLoading}
           onReadFile={handleReadFile}
+          onPackageHover={(pkg) =>
+            setHoveredPackagePath(packageDirFromLayer(pkg))
+          }
+          onPackageSelect={(pkg) =>
+            setSelectedPackagePath(packageDirFromLayer(pkg))
+          }
           configMode={configMode}
           onToggleConfigMode={() => {
             setConfigMode((m) => !m);
@@ -1136,6 +1211,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           selectedPayload={selectedPayload}
           selectedTour={selectedTour}
           idleHighlightLayers={idleHighlightLayers}
+          packageHighlightLayers={packageHighlightLayers}
           highlightLayersLoading={highlightLayersLoading}
           excludedFolders={excludedDirs.map((d) =>
             d.endsWith('/') ? d.slice(0, -1) : d,
@@ -1511,6 +1587,9 @@ const TrailListPane: React.FC<{
   packages: PackageLayer[];
   packagesLoading: boolean;
   onReadFile: (filePath: string) => Promise<string>;
+  /** Composition-panel hover/select → file-city directory highlight. */
+  onPackageHover: (pkg: PackageLayer | null) => void;
+  onPackageSelect: (pkg: PackageLayer | null) => void;
   configMode: boolean;
   onToggleConfigMode: () => void;
   leftViewMode: 'trails' | 'files' | 'tours';
@@ -1547,6 +1626,8 @@ const TrailListPane: React.FC<{
   packages,
   packagesLoading,
   onReadFile,
+  onPackageHover,
+  onPackageSelect,
   configMode,
   onToggleConfigMode,
   leftViewMode,
@@ -1723,6 +1804,8 @@ const TrailListPane: React.FC<{
                       packages={packages}
                       isLoading={packagesLoading}
                       readFile={onReadFile}
+                      onPackageHover={onPackageHover}
+                      onPackageSelect={onPackageSelect}
                     />
                   </div>
                 )}
@@ -3612,6 +3695,8 @@ const RightPane: React.FC<{
   selectedPayload: TrailPayload | null;
   selectedTour: TourListItem | null;
   idleHighlightLayers: HighlightLayer[] | null;
+  /** Architecture-panel directory highlights — fed to the idle Tour city. */
+  packageHighlightLayers: HighlightLayer[] | null;
   highlightLayersLoading: boolean;
   excludedFolders: string[];
   showSpatialContext: boolean;
@@ -3636,6 +3721,7 @@ const RightPane: React.FC<{
   selectedPayload,
   selectedTour,
   idleHighlightLayers,
+  packageHighlightLayers,
   highlightLayersLoading,
   excludedFolders,
   showSpatialContext,
@@ -3856,13 +3942,21 @@ const RightPane: React.FC<{
       fileTree: fileTreeSlice,
       lineCounts: nullSlice('lineCounts'),
       tour: tourSlice,
-      // The panel sources highlights from the active tour's steps; the
-      // host highlightLayers slice only matters in the idle/no-tour state,
-      // which this branch never renders.
-      highlightLayers: nullSlice('highlightLayers'),
+      // While a tour is open the panel sources highlights from the active
+      // step and ignores this slice. In the idle/no-tour state (the default
+      // right pane) it honors host layers — that's where the Architecture
+      // panel's package directory highlight lands.
+      highlightLayers: {
+        scope: 'repository' as const,
+        name: 'highlightLayers',
+        data: packageHighlightLayers,
+        loading: false,
+        error: null,
+        refresh: async () => {},
+      },
       repository: tourRepository,
     };
-  }, [fileTree, selectedTour, tourRepository]);
+  }, [fileTree, selectedTour, tourRepository, packageHighlightLayers]);
 
   if (treeError) {
     return (
