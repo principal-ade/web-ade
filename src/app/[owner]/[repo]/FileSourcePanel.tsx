@@ -1,10 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ThemedMonacoEditor } from '@principal-ade/industry-themed-monaco-editor';
+import { DocumentView } from 'themed-markdown';
+import {
+  parseFrontmatter,
+  stripRedundantTitleHeading,
+  fmString,
+} from '@principal-ade/markdown-utils';
 import { X } from 'lucide-react';
 import { DocumentPreview } from '@/components/document/DocumentPreview';
+import { MarkdownFrontmatterHeader } from './MarkdownFrontmatterHeader';
+
+// Markdown files render through themed-markdown (mirroring the electron-app's
+// MarkdownPanel) instead of the raw Monaco source view.
+function isMarkdownPath(path: string): boolean {
+  const lower = (path.split('?')[0] ?? path).toLowerCase();
+  return lower.endsWith('.md') || lower.endsWith('.markdown');
+}
 
 // Binary document types that render through DocumentPreview instead of Monaco.
 // Starting with DOCX (client-side, high fidelity via docx-preview); PDF/PPTX
@@ -119,6 +133,19 @@ export const FileSourcePanel: React.FC<{
 
   const basename = shownPath ? shownPath.split('/').pop() || shownPath : '';
 
+  // Markdown files render rich (front matter header + DocumentView); everything
+  // else stays in the read-only Monaco source view. Splitting the front matter
+  // out keeps themed-markdown from treating the leading `---` block as a slide.
+  const isMarkdown = shownPath ? isMarkdownPath(shownPath) : false;
+  const parsedMarkdown = useMemo(() => {
+    if (!isMarkdown || content === null) return null;
+    const { data, body } = parseFrontmatter(content);
+    return {
+      data,
+      body: stripRedundantTitleHeading(body, fmString(data.title)),
+    };
+  }, [isMarkdown, content]);
+
   return (
     <div
       aria-hidden={!open}
@@ -229,6 +256,35 @@ export const FileSourcePanel: React.FC<{
             }}
           >
             Loading file…
+          </div>
+        ) : isMarkdown && parsedMarkdown ? (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              background: theme.colors.background,
+            }}
+          >
+            <MarkdownFrontmatterHeader data={parsedMarkdown.data} />
+            {/* DocumentView keeps its own internal scroll. */}
+            <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+              <DocumentView
+                content={parsedMarkdown.body}
+                theme={theme}
+                slideIdPrefix="repo-file-source"
+                maxWidth="100%"
+                onCheckboxChange={() => {}}
+                onLinkClick={(href: string) => {
+                  // External links open in a new tab; in-page anchors are left
+                  // to the renderer's own scroll handling.
+                  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(href) || href.startsWith('mailto:')) {
+                    window.open(href, '_blank', 'noopener,noreferrer');
+                  }
+                }}
+              />
+            </div>
           </div>
         ) : (
           <ThemedMonacoEditor
