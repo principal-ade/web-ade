@@ -26,6 +26,7 @@ import {
   Palette,
   ChevronRight,
   ChevronDown,
+  Boxes,
 } from 'lucide-react';
 import { FileTree as PierreFileTree, useFileTree } from '@pierre/trees/react';
 import { themeToTreeStyles } from '@pierre/trees';
@@ -47,6 +48,10 @@ import type {
   FileCityTourExplorerRepository,
   HighlightLayer,
 } from '@industry-theme/file-city-panel';
+import {
+  PackageCompositionPanelContent,
+  type PackageLayer,
+} from '@industry-theme/repository-composition-panels';
 import type { IntroductionTour } from '@principal-ai/file-city-builder';
 import type { TourAudioStatus, TourListItem } from '@/lib/tours/types';
 import { trpc } from '@/lib/trpc/client';
@@ -259,6 +264,23 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
       return next;
     });
   }, []);
+
+  // Package composition ("Architecture" view). Reuses the warmed package cache,
+  // so this adds no extra fetch. When packages exist, the left rail's "Trails"
+  // collapsible becomes an Architecture / Trails switch.
+  const { packages, loading: packagesLoading } = useRepoPackagesData(
+    owner,
+    repo,
+  );
+  // Read file contents for the composition panel's manifest drill-down. Wired
+  // to the existing readFile procedure — no new endpoint needed.
+  const handleReadFile = useCallback(
+    (filePath: string) =>
+      trpc.github.readFile
+        .query({ owner, repo, path: filePath })
+        .then((r) => r.content),
+    [owner, repo],
+  );
 
   // Trail pending deletion (drives the confirm modal) + in-flight guard. The
   // delete itself is gated server-side; this is the author/admin-only UI path.
@@ -1046,6 +1068,9 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           onRequestDeleteTrail={setTrailToDelete}
           trailsExpanded={trailsExpanded}
           onToggleTrails={handleToggleTrails}
+          packages={packages}
+          packagesLoading={packagesLoading}
+          onReadFile={handleReadFile}
           configMode={configMode}
           onToggleConfigMode={() => {
             setConfigMode((m) => !m);
@@ -1420,6 +1445,48 @@ const Header: React.FC<{
 // Trail list pane (left)
 // ---------------------------------------------------------------------------
 
+// One tab of the Architecture / Trails segmented switch that replaces the plain
+// "Trails" collapsible when a repo has package composition data.
+const CompositionSwitchTab: React.FC<{
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  icon?: React.ReactNode;
+  count?: number;
+}> = ({ active, onClick, label, icon, count }) => {
+  const { theme } = useTheme();
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className="flex-1 px-4 py-2 flex items-center justify-center gap-1.5 transition-opacity hover:opacity-80"
+      style={{
+        background: 'transparent',
+        color: active ? theme.colors.primary : theme.colors.textSecondary,
+        fontSize: theme.fontSizes[0],
+        fontWeight: theme.fontWeights.semibold,
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+        borderBottom: `2px solid ${active ? theme.colors.primary : 'transparent'}`,
+      }}
+    >
+      {icon}
+      <span>{label}</span>
+      {typeof count === 'number' && (
+        <span
+          style={{
+            color: theme.colors.textMuted,
+            fontWeight: theme.fontWeights.medium,
+          }}
+        >
+          {count}
+        </span>
+      )}
+    </button>
+  );
+};
+
 const TrailListPane: React.FC<{
   owner: string;
   repo: string;
@@ -1439,6 +1506,11 @@ const TrailListPane: React.FC<{
    *  the right pane to the Trail explorer. */
   trailsExpanded: boolean;
   onToggleTrails: () => void;
+  /** Detected packages — when non-empty, the Trails section header becomes an
+   *  Architecture / Trails switch and the composition panel is available. */
+  packages: PackageLayer[];
+  packagesLoading: boolean;
+  onReadFile: (filePath: string) => Promise<string>;
   configMode: boolean;
   onToggleConfigMode: () => void;
   leftViewMode: 'trails' | 'files' | 'tours';
@@ -1472,6 +1544,9 @@ const TrailListPane: React.FC<{
   onRequestDeleteTrail,
   trailsExpanded,
   onToggleTrails,
+  packages,
+  packagesLoading,
+  onReadFile,
   configMode,
   onToggleConfigMode,
   leftViewMode,
@@ -1490,6 +1565,33 @@ const TrailListPane: React.FC<{
   onExcludedDirsChange,
 }) => {
   const { theme } = useTheme();
+  const hasPackages = packages.length > 0;
+  // Architecture tab open-state. Kept mutually exclusive with `trailsExpanded`
+  // (which is parent-owned and also drives the right pane) so only one of the
+  // two sections is open at a time.
+  const [archExpanded, setArchExpanded] = useState(false);
+  // Open Architecture by default the first time packages land (so the rail
+  // isn't sitting on nothing). One-shot: once applied we never re-open it, so
+  // closing it or switching to Trails sticks.
+  const archDefaultApplied = useRef(false);
+  useEffect(() => {
+    if (hasPackages && !archDefaultApplied.current && !trailsExpanded) {
+      archDefaultApplied.current = true;
+      setArchExpanded(true);
+    }
+  }, [hasPackages, trailsExpanded]);
+  const handleSelectArchitecture = useCallback(() => {
+    setArchExpanded((open) => {
+      // Opening Architecture collapses the Trails list (parent state).
+      if (!open && trailsExpanded) onToggleTrails();
+      return !open;
+    });
+  }, [trailsExpanded, onToggleTrails]);
+  const handleSelectTrails = useCallback(() => {
+    // Opening Trails collapses Architecture.
+    if (!trailsExpanded) setArchExpanded(false);
+    onToggleTrails();
+  }, [trailsExpanded, onToggleTrails]);
 
   return (
     <aside
@@ -1538,53 +1640,92 @@ const TrailListPane: React.FC<{
           viewerIsRepoAdmin={viewerIsRepoAdmin}
           onRequestDelete={onRequestDeleteTour}
           trailsSection={
-            entries.length > 0 ? (
+            entries.length > 0 || hasPackages ? (
               <div onMouseLeave={() => onHover(null)}>
-                {/* Collapsible header: click to expand the trail list, which
-                    also switches the right pane to the Trail explorer (the
-                    parent's onToggleTrails drives `trailsExpanded`). Sticky so
-                    it stays pinned while the rows scroll under it. */}
-                <button
-                  type="button"
-                  onClick={onToggleTrails}
-                  aria-expanded={trailsExpanded}
-                  className="w-full px-4 py-2 border-b sticky top-0 z-10 flex items-center gap-2 transition-opacity hover:opacity-80"
-                  style={{
-                    borderColor: theme.colors.border,
-                    background: theme.colors.background,
-                  }}
-                >
-                  {trailsExpanded ? (
-                    <ChevronDown
-                      size={14}
-                      style={{ color: theme.colors.textSecondary }}
-                    />
-                  ) : (
-                    <ChevronRight
-                      size={14}
-                      style={{ color: theme.colors.textSecondary }}
-                    />
-                  )}
-                  <span
+                {hasPackages ? (
+                  /* With package data, the single "Trails" collapsible becomes a
+                     two-tab Architecture / Trails switch. Opening one collapses
+                     the other (Trails still drives the right-pane explorer via
+                     the parent's onToggleTrails). Sticky so it stays pinned. */
+                  <div
+                    className="flex items-stretch border-b sticky top-0 z-10"
                     style={{
-                      fontSize: theme.fontSizes[0],
-                      fontWeight: theme.fontWeights.semibold,
-                      color: theme.colors.textSecondary,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
+                      borderColor: theme.colors.border,
+                      background: theme.colors.background,
                     }}
                   >
-                    Trails
-                  </span>
-                  <span
+                    <CompositionSwitchTab
+                      active={archExpanded}
+                      onClick={handleSelectArchitecture}
+                      icon={<Boxes size={14} />}
+                      label="Architecture"
+                    />
+                    <CompositionSwitchTab
+                      active={trailsExpanded}
+                      onClick={handleSelectTrails}
+                      label="Trails"
+                      count={entries.length}
+                    />
+                  </div>
+                ) : (
+                  /* Collapsible header: click to expand the trail list, which
+                     also switches the right pane to the Trail explorer (the
+                     parent's onToggleTrails drives `trailsExpanded`). Sticky so
+                     it stays pinned while the rows scroll under it. */
+                  <button
+                    type="button"
+                    onClick={onToggleTrails}
+                    aria-expanded={trailsExpanded}
+                    className="w-full px-4 py-2 border-b sticky top-0 z-10 flex items-center gap-2 transition-opacity hover:opacity-80"
                     style={{
-                      fontSize: theme.fontSizes[0],
-                      color: theme.colors.textMuted,
+                      borderColor: theme.colors.border,
+                      background: theme.colors.background,
                     }}
                   >
-                    {entries.length}
-                  </span>
-                </button>
+                    {trailsExpanded ? (
+                      <ChevronDown
+                        size={14}
+                        style={{ color: theme.colors.textSecondary }}
+                      />
+                    ) : (
+                      <ChevronRight
+                        size={14}
+                        style={{ color: theme.colors.textSecondary }}
+                      />
+                    )}
+                    <span
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        fontWeight: theme.fontWeights.semibold,
+                        color: theme.colors.textSecondary,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                      }}
+                    >
+                      Trails
+                    </span>
+                    <span
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        color: theme.colors.textMuted,
+                      }}
+                    >
+                      {entries.length}
+                    </span>
+                  </button>
+                )}
+                {archExpanded && hasPackages && (
+                  <div
+                    className="border-b"
+                    style={{ borderColor: theme.colors.border }}
+                  >
+                    <PackageCompositionPanelContent
+                      packages={packages}
+                      isLoading={packagesLoading}
+                      readFile={onReadFile}
+                    />
+                  </div>
+                )}
                 {trailsExpanded &&
                   filteredEntries.map((entry) => (
                     <TrailRow
@@ -2528,14 +2669,18 @@ function licenseBadgeRadius(spdxId: string): number {
 type RepoOverviewInfo = Awaited<
   ReturnType<typeof trpc.github.getRepoInfo.query>
 >;
-type RepoOverviewPkg = Awaited<
+type RepoOverviewPkgFull = Awaited<
   ReturnType<typeof trpc.github.getRepoPackages.query>
->['summary'];
+>;
+type RepoOverviewPkg = RepoOverviewPkgFull['summary'];
 
 const repoInfoCache = new Map<string, RepoOverviewInfo>();
 const repoInfoInflight = new Map<string, Promise<RepoOverviewInfo | null>>();
-const repoPkgCache = new Map<string, RepoOverviewPkg>();
-const repoPkgInflight = new Map<string, Promise<RepoOverviewPkg | null>>();
+// Cache the FULL package result (packages + summary), not just the summary —
+// the overview only reads `.summary`, but the Architecture view needs the full
+// `packages` array. Sharing one cache means the slow git-tree walk runs once.
+const repoPkgCache = new Map<string, RepoOverviewPkgFull>();
+const repoPkgInflight = new Map<string, Promise<RepoOverviewPkgFull | null>>();
 
 function fetchRepoInfo(
   owner: string,
@@ -2565,7 +2710,7 @@ function fetchRepoInfo(
 function fetchRepoPkg(
   owner: string,
   repo: string,
-): Promise<RepoOverviewPkg | null> {
+): Promise<RepoOverviewPkgFull | null> {
   const key = `${owner}/${repo}`;
   const cached = repoPkgCache.get(key);
   if (cached) return Promise.resolve(cached);
@@ -2574,11 +2719,12 @@ function fetchRepoPkg(
   const run = trpc.github.getRepoPackages
     .query({ owner, repo })
     .then((d) => {
-      repoPkgCache.set(key, d.summary);
+      repoPkgCache.set(key, d);
       repoPkgInflight.delete(key);
-      return d.summary;
+      return d;
     })
     .catch(() => {
+      // Best-effort — leave uncached so a later visit retries.
       repoPkgInflight.delete(key);
       return null;
     });
@@ -2600,25 +2746,55 @@ function useRepoOverviewData(
     () => repoInfoCache.get(key) ?? null,
   );
   const [pkg, setPkg] = useState<RepoOverviewPkg | null>(
-    () => repoPkgCache.get(key) ?? null,
+    () => repoPkgCache.get(key)?.summary ?? null,
   );
   useEffect(() => {
     let cancelled = false;
     setInfo(repoInfoCache.get(key) ?? null);
-    setPkg(repoPkgCache.get(key) ?? null);
+    setPkg(repoPkgCache.get(key)?.summary ?? null);
     // Each updates the card the moment its own call resolves — the fast
     // description never waits on the slow package scan.
     void fetchRepoInfo(owner, repo).then((d) => {
       if (!cancelled && d) setInfo(d);
     });
     void fetchRepoPkg(owner, repo).then((d) => {
-      if (!cancelled && d) setPkg(d);
+      if (!cancelled && d) setPkg(d.summary);
     });
     return () => {
       cancelled = true;
     };
   }, [owner, repo, key]);
   return { info, pkg };
+}
+
+// Full package layers for the Architecture (composition) view. Reuses the same
+// warmed cache as the overview above, so reading the full `packages` here does
+// not trigger a second git-tree walk. `loading` is true only until the first
+// result lands (or is already cached).
+function useRepoPackagesData(
+  owner: string,
+  repo: string,
+): { packages: PackageLayer[]; loading: boolean } {
+  const key = `${owner}/${repo}`;
+  const [full, setFull] = useState<RepoOverviewPkgFull | null>(
+    () => repoPkgCache.get(key) ?? null,
+  );
+  const [loading, setLoading] = useState<boolean>(() => !repoPkgCache.get(key));
+  useEffect(() => {
+    let cancelled = false;
+    const cached = repoPkgCache.get(key) ?? null;
+    setFull(cached);
+    setLoading(!cached);
+    void fetchRepoPkg(owner, repo).then((d) => {
+      if (cancelled) return;
+      if (d) setFull(d);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [owner, repo, key]);
+  return { packages: full?.packages ?? [], loading };
 }
 
 // ---------------------------------------------------------------------------
