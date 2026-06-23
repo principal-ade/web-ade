@@ -2755,7 +2755,6 @@ type RepoOverviewInfo = Awaited<
 type RepoOverviewPkgFull = Awaited<
   ReturnType<typeof trpc.github.getRepoPackages.query>
 >;
-type RepoOverviewPkg = RepoOverviewPkgFull['summary'];
 
 const repoInfoCache = new Map<string, RepoOverviewInfo>();
 const repoInfoInflight = new Map<string, Promise<RepoOverviewInfo | null>>();
@@ -2823,31 +2822,22 @@ function warmRepoOverview(owner: string, repo: string): void {
 function useRepoOverviewData(
   owner: string,
   repo: string,
-): { info: RepoOverviewInfo | null; pkg: RepoOverviewPkg | null } {
+): { info: RepoOverviewInfo | null } {
   const key = `${owner}/${repo}`;
   const [info, setInfo] = useState<RepoOverviewInfo | null>(
     () => repoInfoCache.get(key) ?? null,
   );
-  const [pkg, setPkg] = useState<RepoOverviewPkg | null>(
-    () => repoPkgCache.get(key)?.summary ?? null,
-  );
   useEffect(() => {
     let cancelled = false;
     setInfo(repoInfoCache.get(key) ?? null);
-    setPkg(repoPkgCache.get(key)?.summary ?? null);
-    // Each updates the card the moment its own call resolves — the fast
-    // description never waits on the slow package scan.
     void fetchRepoInfo(owner, repo).then((d) => {
       if (!cancelled && d) setInfo(d);
-    });
-    void fetchRepoPkg(owner, repo).then((d) => {
-      if (!cancelled && d) setPkg(d.summary);
     });
     return () => {
       cancelled = true;
     };
   }, [owner, repo, key]);
-  return { info, pkg };
+  return { info };
 }
 
 // Full package layers for the Architecture (composition) view. Reuses the same
@@ -2883,10 +2873,9 @@ function useRepoPackagesData(
 // ---------------------------------------------------------------------------
 // Repo overview — a compact, no-AI dossier shown atop the Tours pane. Composes
 // the repo's own GitHub metadata (description, language, license, stars,
-// topics, fork-of, last push) with a package-derived project-shape line
-// (monorepo / deps / scripts). Everything here is best-effort: each fetch is
+// topics, fork-of, last push). Everything here is best-effort: each fetch is
 // independent, and a failure just drops its row rather than blocking the tours
-// list. Both procedures are heavily cached server-side.
+// list. The procedure is heavily cached server-side.
 // ---------------------------------------------------------------------------
 
 const RepoOverview: React.FC<{
@@ -2900,26 +2889,11 @@ const RepoOverview: React.FC<{
   const { theme } = useTheme();
   // Read from the shared cache, warmed at page mount (see warmRepoOverview), so
   // the metadata is typically ready the instant this card first renders.
-  const { info, pkg } = useRepoOverviewData(owner, repo);
+  const { info } = useRepoOverviewData(owner, repo);
 
   // Nothing until the core metadata lands — keeps the pane from flashing a
   // half-built header. The tours list renders regardless (below this).
   if (!info) return null;
-
-  // "Monorepo · N packages · M deps · K scripts" — assembled from whatever the
-  // package scan found; empty when the repo has no package.json.
-  const projectShape: string[] = [];
-  if (pkg) {
-    // `rootPackageName` is absent on the truncated-tree branch of the summary
-    // union, so read it through a presence check rather than directly.
-    const rootName =
-      'rootPackageName' in pkg ? pkg.rootPackageName : undefined;
-    if (pkg.isMonorepo) {
-      projectShape.push(`Monorepo · ${pkg.totalPackages} packages`);
-    } else if (rootName) {
-      projectShape.push(rootName);
-    }
-  }
 
   const license =
     info.license?.spdx_id && info.license.spdx_id !== 'NOASSERTION'
@@ -3035,17 +3009,6 @@ const RepoOverview: React.FC<{
           >
             {info.parent.full_name}
           </a>
-        </div>
-      )}
-
-      {projectShape.length > 0 && (
-        <div
-          style={{
-            color: theme.colors.textSecondary,
-            fontSize: theme.fontSizes[1],
-          }}
-        >
-          {projectShape.join(' · ')}
         </div>
       )}
 
