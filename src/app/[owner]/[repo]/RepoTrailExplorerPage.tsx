@@ -27,6 +27,11 @@ import {
   ChevronRight,
   ChevronDown,
   Boxes,
+  MapPin,
+  Globe,
+  Users,
+  Building2,
+  Twitter,
 } from 'lucide-react';
 import { FileTree as PierreFileTree, useFileTree } from '@pierre/trees/react';
 import { themeToTreeStyles } from '@pierre/trees';
@@ -62,6 +67,8 @@ import { TrailLoadingScreen } from '@/components/trail/TrailLoadingScreen';
 import { TrailErrorView } from '@/components/trail/TrailErrorView';
 import { TrailShareModal } from '@/components/trail/TrailShareModal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ActivityHeatmap } from '@/components/ActivityHeatmap';
+import type { UserActivityResponse } from '@/app/api/github/user/[username]/activity/route';
 import { FileSourcePanel } from './FileSourcePanel';
 import {
   type ShareErrorCode,
@@ -2755,6 +2762,10 @@ type RepoOverviewInfo = Awaited<
 type RepoOverviewPkgFull = Awaited<
   ReturnType<typeof trpc.github.getRepoPackages.query>
 >;
+type RepoContributors = Awaited<
+  ReturnType<typeof trpc.github.getRepoContributors.query>
+>;
+type RepoContributor = RepoContributors['contributors'][number];
 
 const repoInfoCache = new Map<string, RepoOverviewInfo>();
 const repoInfoInflight = new Map<string, Promise<RepoOverviewInfo | null>>();
@@ -2763,6 +2774,11 @@ const repoInfoInflight = new Map<string, Promise<RepoOverviewInfo | null>>();
 // `packages` array. Sharing one cache means the slow git-tree walk runs once.
 const repoPkgCache = new Map<string, RepoOverviewPkgFull>();
 const repoPkgInflight = new Map<string, Promise<RepoOverviewPkgFull | null>>();
+const repoContributorsCache = new Map<string, RepoContributors>();
+const repoContributorsInflight = new Map<
+  string,
+  Promise<RepoContributors | null>
+>();
 
 function fetchRepoInfo(
   owner: string,
@@ -2814,9 +2830,99 @@ function fetchRepoPkg(
   return run;
 }
 
+function fetchRepoContributors(
+  owner: string,
+  repo: string,
+): Promise<RepoContributors | null> {
+  const key = `${owner}/${repo}`;
+  const cached = repoContributorsCache.get(key);
+  if (cached) return Promise.resolve(cached);
+  const inflight = repoContributorsInflight.get(key);
+  if (inflight) return inflight;
+  const run = trpc.github.getRepoContributors
+    .query({ owner, repo })
+    .then((d) => {
+      repoContributorsCache.set(key, d);
+      repoContributorsInflight.delete(key);
+      return d;
+    })
+    .catch(() => {
+      // Best-effort — leave uncached so a later visit retries.
+      repoContributorsInflight.delete(key);
+      return null;
+    });
+  repoContributorsInflight.set(key, run);
+  return run;
+}
+
 function warmRepoOverview(owner: string, repo: string): void {
   void fetchRepoInfo(owner, repo);
   void fetchRepoPkg(owner, repo);
+  void fetchRepoContributors(owner, repo);
+}
+
+// Per-user activity + extended profile for the contributor modal's detail pane,
+// served by the existing GraphQL-backed /activity route. Keyed by login and
+// lazy — only fetched when a contributor is actually selected, then cached for
+// the rest of the session.
+const userActivityCache = new Map<string, UserActivityResponse>();
+const userActivityInflight = new Map<
+  string,
+  Promise<UserActivityResponse | null>
+>();
+
+function fetchUserActivity(login: string): Promise<UserActivityResponse | null> {
+  const cached = userActivityCache.get(login);
+  if (cached) return Promise.resolve(cached);
+  const inflight = userActivityInflight.get(login);
+  if (inflight) return inflight;
+  const run = fetch(
+    // 365 days of calendar for the heatmap; activityDays=1 keeps the recent-
+    // events half of the query cheap since the detail pane doesn't use it.
+    `/api/github/user/${encodeURIComponent(login)}/activity?contributionDays=365&activityDays=1`,
+  )
+    .then((r) => (r.ok ? (r.json() as Promise<UserActivityResponse>) : null))
+    .then((d) => {
+      if (d) userActivityCache.set(login, d);
+      userActivityInflight.delete(login);
+      return d;
+    })
+    .catch(() => {
+      userActivityInflight.delete(login);
+      return null;
+    });
+  userActivityInflight.set(login, run);
+  return run;
+}
+
+function useUserActivity(login: string | null): {
+  data: UserActivityResponse | null;
+  loading: boolean;
+} {
+  const [data, setData] = useState<UserActivityResponse | null>(() =>
+    login ? userActivityCache.get(login) ?? null : null,
+  );
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!login) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
+    const cached = userActivityCache.get(login) ?? null;
+    setData(cached);
+    setLoading(!cached);
+    let cancelled = false;
+    void fetchUserActivity(login).then((d) => {
+      if (cancelled) return;
+      setData(d);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [login]);
+  return { data, loading };
 }
 
 function useRepoOverviewData(
@@ -2838,6 +2944,30 @@ function useRepoOverviewData(
     };
   }, [owner, repo, key]);
   return { info };
+}
+
+// Contributors for the overview's avatar row + "all contributors" modal. Reads
+// the same cache warmed at page mount; resolves independently of the core
+// metadata so a slow contributors call never holds back the rest of the card.
+function useRepoContributorsData(
+  owner: string,
+  repo: string,
+): RepoContributors | null {
+  const key = `${owner}/${repo}`;
+  const [data, setData] = useState<RepoContributors | null>(
+    () => repoContributorsCache.get(key) ?? null,
+  );
+  useEffect(() => {
+    let cancelled = false;
+    setData(repoContributorsCache.get(key) ?? null);
+    void fetchRepoContributors(owner, repo).then((d) => {
+      if (!cancelled && d) setData(d);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [owner, repo, key]);
+  return data;
 }
 
 // Full package layers for the Architecture (composition) view. Reuses the same
@@ -2890,10 +3020,24 @@ const RepoOverview: React.FC<{
   // Read from the shared cache, warmed at page mount (see warmRepoOverview), so
   // the metadata is typically ready the instant this card first renders.
   const { info } = useRepoOverviewData(owner, repo);
+  const contributors = useRepoContributorsData(owner, repo);
+  // Whether the "all contributors" modal (opened from the +N overflow chip) is
+  // showing.
+  const [showAllContributors, setShowAllContributors] = useState(false);
 
   // Nothing until the core metadata lands — keeps the pane from flashing a
   // half-built header. The tours list renders regardless (below this).
   if (!info) return null;
+
+  // Avatar row: the 4 top contributors get a face; everyone else collapses into
+  // a "+N" chip that opens the modal.
+  const people = contributors?.contributors ?? [];
+  const AVATAR_LIMIT = 4;
+  const shownPeople = people.slice(0, AVATAR_LIMIT);
+  const overflowPeople = people.slice(AVATAR_LIMIT);
+  const overflowLabel = `+${overflowPeople.length}${
+    contributors?.truncated ? '+' : ''
+  }`;
 
   const license =
     info.license?.spdx_id && info.license.spdx_id !== 'NOASSERTION'
@@ -3024,6 +3168,378 @@ const RepoOverview: React.FC<{
           {info.homepage.replace(/^https?:\/\//, '')}
         </a>
       )}
+
+      {/* Contributor faces: top few link straight to GitHub, the rest collapse
+          into a chip that opens the full list. */}
+      {shownPeople.length > 0 && (
+        <div className="flex items-center gap-1.5 mt-0.5">
+          {shownPeople.map((c) => (
+            <a
+              key={c.id}
+              href={c.html_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`${c.login} · ${c.contributions.toLocaleString()} commits`}
+              className="rounded-full transition-transform hover:scale-110"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`${c.avatar_url}${c.avatar_url.includes('?') ? '&' : '?'}s=64`}
+                alt={c.login}
+                width={32}
+                height={32}
+                className="rounded-full block"
+                style={{ background: theme.colors.backgroundSecondary }}
+              />
+            </a>
+          ))}
+          {overflowPeople.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowAllContributors(true)}
+              className="rounded-full transition-colors"
+              style={{
+                height: 32,
+                padding: '0 10px',
+                fontSize: theme.fontSizes[0],
+                fontWeight: theme.fontWeights.medium,
+                color: theme.colors.textSecondary,
+                background: `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
+                border: `1px solid ${theme.colors.border}`,
+              }}
+              title="See all contributors"
+            >
+              {overflowLabel}
+            </button>
+          )}
+        </div>
+      )}
+
+      {showAllContributors && (
+        <ContributorsModal
+          owner={owner}
+          repo={repo}
+          contributors={people}
+          truncated={contributors?.truncated ?? false}
+          onClose={() => setShowAllContributors(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+// Master/detail modal opened from the overview's "+N" chip: the full
+// contributor list on the left, and a mini profile (contact + a year's activity
+// heatmap) for the selected contributor on the right.
+const ContributorsModal: React.FC<{
+  owner: string;
+  repo: string;
+  contributors: RepoContributor[];
+  truncated: boolean;
+  onClose: () => void;
+}> = ({ owner, repo, contributors, truncated, onClose }) => {
+  const { theme } = useTheme();
+  const [selectedLogin, setSelectedLogin] = useState<string | null>(
+    () => contributors[0]?.login ?? null,
+  );
+  const selected =
+    contributors.find((c) => c.login === selectedLogin) ?? contributors[0] ?? null;
+
+  // Close on Escape, mirroring the page's other portal dialogs.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.5)' }}
+      onClick={onClose}
+    >
+      <div
+        className="flex flex-col w-full max-w-3xl rounded-lg overflow-hidden"
+        style={{
+          maxHeight: '80vh',
+          background: theme.colors.surface,
+          border: `1px solid ${theme.colors.border}`,
+          boxShadow: '0 12px 40px rgba(0,0,0,0.35)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          className="flex items-center justify-between px-4 py-3 border-b shrink-0"
+          style={{ borderColor: theme.colors.border }}
+        >
+          <div
+            style={{
+              fontSize: theme.fontSizes[2],
+              fontWeight: theme.fontWeights.semibold,
+              color: theme.colors.text,
+            }}
+          >
+            Contributors{truncated ? ' (top 100)' : ` (${contributors.length})`}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded p-1 transition-colors hover:opacity-80"
+            style={{ color: theme.colors.textMuted }}
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="flex min-h-0 flex-1">
+          {/* Left: selectable contributor list. */}
+          <div
+            className="w-56 shrink-0 overflow-y-auto border-r"
+            style={{ borderColor: theme.colors.border }}
+          >
+            {contributors.map((c) => {
+              const active = c.login === selected?.login;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setSelectedLogin(c.login)}
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors"
+                  style={{
+                    background: active
+                      ? `color-mix(in srgb, ${theme.colors.primary} 12%, transparent)`
+                      : 'transparent',
+                    color: theme.colors.text,
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`${c.avatar_url}${c.avatar_url.includes('?') ? '&' : '?'}s=56`}
+                    alt={c.login}
+                    width={28}
+                    height={28}
+                    className="rounded-full shrink-0"
+                    style={{ background: theme.colors.backgroundSecondary }}
+                  />
+                  <span
+                    className="truncate"
+                    style={{ fontSize: theme.fontSizes[1] }}
+                  >
+                    {c.login}
+                  </span>
+                  <span
+                    className="ml-auto shrink-0"
+                    style={{
+                      color: theme.colors.textMuted,
+                      fontSize: theme.fontSizes[0],
+                    }}
+                  >
+                    {c.contributions.toLocaleString()}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Right: mini profile for the selected contributor. */}
+          <div className="min-w-0 flex-1 overflow-y-auto">
+            {selected && (
+              <ContributorProfile
+                key={selected.login}
+                contributor={selected}
+                repo={repo}
+              />
+            )}
+          </div>
+        </div>
+
+        <a
+          href={`https://github.com/${owner}/${repo}/graphs/contributors`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-4 py-2.5 border-t text-center transition-colors hover:opacity-80 shrink-0"
+          style={{
+            borderColor: theme.colors.border,
+            color: theme.colors.primary,
+            fontSize: theme.fontSizes[1],
+          }}
+        >
+          View all on GitHub
+        </a>
+      </div>
+    </div>,
+    document.body,
+  );
+};
+
+// Detail pane: the selected contributor's extended profile (contact info) plus
+// a year's contribution heatmap, lazy-loaded from the /activity route.
+const ContributorProfile: React.FC<{
+  contributor: RepoContributor;
+  repo: string;
+}> = ({ contributor, repo }) => {
+  const { theme } = useTheme();
+  const { data, loading } = useUserActivity(contributor.login);
+
+  const activityData = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const d of data?.contributions ?? []) m.set(d.date, d.count);
+    return m;
+  }, [data]);
+
+  const profile = data?.user;
+  const displayName = profile?.name || contributor.login;
+  const muted = theme.colors.textMuted;
+
+  // One contact row — icon + value (optionally a link) — rendered only when the
+  // field is present, so the pane stays tight on sparse profiles.
+  const metaRow = (
+    icon: React.ReactNode,
+    value: React.ReactNode,
+    href?: string,
+  ) => (
+    <div
+      className="flex items-center gap-2 min-w-0"
+      style={{ color: muted, fontSize: theme.fontSizes[1] }}
+    >
+      <span className="shrink-0">{icon}</span>
+      {href ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="truncate transition-opacity hover:opacity-80"
+          style={{ color: theme.colors.primary }}
+        >
+          {value}
+        </a>
+      ) : (
+        <span className="truncate">{value}</span>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-3 p-4">
+      {/* Identity header. */}
+      <div className="flex items-center gap-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`${contributor.avatar_url}${contributor.avatar_url.includes('?') ? '&' : '?'}s=128`}
+          alt={contributor.login}
+          width={56}
+          height={56}
+          className="rounded-full shrink-0"
+          style={{ background: theme.colors.backgroundSecondary }}
+        />
+        <div className="min-w-0">
+          <div
+            className="truncate"
+            style={{
+              fontSize: theme.fontSizes[3],
+              fontWeight: theme.fontWeights.bold,
+              color: theme.colors.text,
+            }}
+          >
+            {displayName}
+          </div>
+          <a
+            href={contributor.html_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="truncate block transition-opacity hover:opacity-80"
+            style={{ color: theme.colors.primary, fontSize: theme.fontSizes[1] }}
+          >
+            @{contributor.login}
+          </a>
+        </div>
+      </div>
+
+      {/* Their contribution to THIS repo — the one stat unique to this view. */}
+      <div
+        style={{
+          color: theme.colors.text,
+          fontSize: theme.fontSizes[1],
+        }}
+      >
+        <span style={{ fontWeight: theme.fontWeights.semibold }}>
+          {contributor.contributions.toLocaleString()}
+        </span>{' '}
+        {contributor.contributions === 1 ? 'commit' : 'commits'} to {repo}
+      </div>
+
+      {profile?.bio && (
+        <p
+          style={{
+            margin: 0,
+            color: theme.colors.text,
+            fontSize: theme.fontSizes[1],
+            lineHeight: 1.4,
+          }}
+        >
+          {profile.bio}
+        </p>
+      )}
+
+      {/* Contact / social. */}
+      {profile && (
+        <div className="flex flex-col gap-1.5">
+          {profile.company &&
+            metaRow(<Building2 size={14} />, profile.company)}
+          {profile.location &&
+            metaRow(<MapPin size={14} />, profile.location)}
+          {profile.websiteUrl &&
+            metaRow(
+              <Globe size={14} />,
+              profile.websiteUrl.replace(/^https?:\/\//, ''),
+              profile.websiteUrl.startsWith('http')
+                ? profile.websiteUrl
+                : `https://${profile.websiteUrl}`,
+            )}
+          {profile.twitterUsername &&
+            metaRow(
+              <Twitter size={14} />,
+              `@${profile.twitterUsername}`,
+              `https://x.com/${profile.twitterUsername}`,
+            )}
+          {metaRow(
+            <Users size={14} />,
+            `${profile.followersCount.toLocaleString()} followers · ${profile.followingCount.toLocaleString()} following`,
+          )}
+        </div>
+      )}
+
+      {/* A year of contributions. */}
+      <div className="mt-1">
+        <div
+          className="mb-1.5"
+          style={{ color: muted, fontSize: theme.fontSizes[0] }}
+        >
+          Contributions in the last year
+        </div>
+        {loading && !data ? (
+          <div
+            className="flex items-center justify-center"
+            style={{ height: 120, color: muted }}
+          >
+            <Loader2 size={18} className="animate-spin" />
+          </div>
+        ) : data ? (
+          <div
+            className="rounded-md overflow-hidden"
+            style={{ border: `1px solid ${theme.colors.border}` }}
+          >
+            <ActivityHeatmap activityData={activityData} bannerHeight={132} />
+          </div>
+        ) : (
+          <div style={{ color: muted, fontSize: theme.fontSizes[1] }}>
+            Activity unavailable.
+          </div>
+        )}
+      </div>
     </div>
   );
 };

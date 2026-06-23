@@ -143,6 +143,22 @@ const repoInfoOutputSchema = z.object({
   }).nullable().optional(),
 });
 
+const repoContributorsOutputSchema = z.object({
+  // Pre-sorted by commit count (GitHub's default order), bots filtered out.
+  contributors: z.array(
+    z.object({
+      login: z.string(),
+      id: z.number(),
+      avatar_url: z.string(),
+      html_url: z.string(),
+      contributions: z.number(),
+    }),
+  ),
+  // True when GitHub reported more contributors than we fetched (capped at 100),
+  // so the UI can show a "+ many" affordance honestly.
+  truncated: z.boolean(),
+});
+
 // ============================================================================
 // Helpers
 // ============================================================================
@@ -885,6 +901,47 @@ export const githubRouter = router({
         `/repos/${owner}/${repo}`,
         userToken
       );
+    }),
+
+  /**
+   * Get a repository's contributors, pre-sorted by commit count. Capped at the
+   * first page (100) — enough for the avatar row + "all contributors" modal,
+   * and avoids paginating through thousands on large repos.
+   */
+  getRepoContributors: publicProcedure
+    .input(getRepoInfoInputSchema) // Same owner/repo input as getRepoInfo
+    .output(repoContributorsOutputSchema)
+    .query(async ({ input }) => {
+      const { owner, repo } = input;
+      const userToken = await getGitHubToken();
+
+      interface GitHubContributorResponse {
+        login: string;
+        id: number;
+        avatar_url: string;
+        html_url: string;
+        type: string;
+        contributions: number;
+      }
+
+      const PER_PAGE = 100;
+      const raw = await makeGitHubRequest<GitHubContributorResponse[]>(
+        `/repos/${owner}/${repo}/contributors?per_page=${PER_PAGE}`,
+        userToken
+      );
+
+      // Drop bot accounts (e.g. dependabot[bot]) so the row reflects people.
+      const contributors = raw
+        .filter((c) => c.type !== 'Bot' && !c.login.endsWith('[bot]'))
+        .map((c) => ({
+          login: c.login,
+          id: c.id,
+          avatar_url: c.avatar_url,
+          html_url: c.html_url,
+          contributions: c.contributions,
+        }));
+
+      return { contributors, truncated: raw.length >= PER_PAGE };
     }),
 
   /**

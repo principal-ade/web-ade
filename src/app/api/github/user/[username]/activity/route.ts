@@ -71,7 +71,16 @@ const CONTRIBUTIONS_QUERY = `
       login
       name
       avatarUrl
+      bio
+      company
+      location
+      websiteUrl
+      twitterUsername
+      url
       followers {
+        totalCount
+      }
+      following {
         totalCount
       }
 
@@ -278,7 +287,14 @@ export interface UserActivityResponse {
     login: string;
     name: string | null;
     avatarUrl: string;
+    bio: string | null;
+    company: string | null;
+    location: string | null;
+    websiteUrl: string | null;
+    twitterUsername: string | null;
+    htmlUrl: string;
     followersCount: number;
+    followingCount: number;
   };
   activity: ActivityEvent[];
   contributions: DailyContribution[];
@@ -298,7 +314,16 @@ interface GraphQLUser {
   login: string;
   name: string | null;
   avatarUrl: string;
+  bio: string | null;
+  company: string | null;
+  location: string | null;
+  websiteUrl: string | null;
+  twitterUsername: string | null;
+  url: string;
   followers: {
+    totalCount: number;
+  };
+  following: {
     totalCount: number;
   };
   contributionsCollection: {
@@ -619,7 +644,14 @@ export async function GET(
         login: contributionsUser.login,
         name: contributionsUser.name,
         avatarUrl: contributionsUser.avatarUrl,
+        bio: contributionsUser.bio ?? null,
+        company: contributionsUser.company ?? null,
+        location: contributionsUser.location ?? null,
+        websiteUrl: contributionsUser.websiteUrl ?? null,
+        twitterUsername: contributionsUser.twitterUsername ?? null,
+        htmlUrl: contributionsUser.url,
         followersCount: contributionsUser.followers?.totalCount ?? 0,
+        followingCount: contributionsUser.following?.totalCount ?? 0,
       },
       activity,
       contributions,
