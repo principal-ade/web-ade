@@ -978,34 +978,19 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   ]);
 
   // Architecture-panel highlight layers, kept independent of the trail-derived
-  // `idleHighlightLayers` so they only ever paint the package subtree (not the
-  // coverage/debt layers). A single `type: 'directory'` item paints the whole
-  // subtree — the renderer honors directory items in the idle path, so there's
-  // no need to enumerate `fileTree.allFiles`. Select → persistent fill (wins on
-  // overlap via priority); hover → transient border, suppressed when it would
-  // just re-trace the selected package.
+  // `idleHighlightLayers`. Only the hover *preview* paints now — a transient
+  // border around the hovered package's directory subtree. Selection no longer
+  // paints a fill: it drives the panel's `idleFocusDirectory` instead (see
+  // below), which collapses the idle city onto the subtree with no color over
+  // the buildings' normal file-type colors. A single `type: 'directory'` item
+  // covers the whole subtree — the renderer honors directory items in the idle
+  // path, so there's no need to enumerate `fileTree.allFiles`.
   const packageHighlightLayers = useMemo<HighlightLayer[] | null>(() => {
-    const layers: HighlightLayer[] = [];
-    if (selectedPackagePath) {
-      layers.push({
-        id: `pkg-select-${selectedPackagePath}`,
-        name: 'Selected package',
-        enabled: true,
-        color: theme.colors.accent,
-        opacity: 0.4,
-        priority: 115,
-        items: [
-          {
-            path: selectedPackagePath,
-            type: 'directory' as const,
-            renderStrategy: 'fill' as const,
-          },
-        ],
-        dynamic: true,
-      });
+    if (!hoveredPackagePath || hoveredPackagePath === selectedPackagePath) {
+      return null;
     }
-    if (hoveredPackagePath && hoveredPackagePath !== selectedPackagePath) {
-      layers.push({
+    return [
+      {
         id: `pkg-hover-${hoveredPackagePath}`,
         name: 'Hovered package',
         enabled: true,
@@ -1020,15 +1005,9 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           },
         ],
         dynamic: true,
-      });
-    }
-    return layers.length > 0 ? layers : null;
-  }, [
-    hoveredPackagePath,
-    selectedPackagePath,
-    theme.colors.accent,
-    theme.colors.primary,
-  ]);
+      },
+    ];
+  }, [hoveredPackagePath, selectedPackagePath, theme.colors.primary]);
 
   // The highlight-layers slice is "loading" until we have enough data
   // to compute a final value. Without this the panel can't tell
@@ -1219,6 +1198,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           selectedTour={selectedTour}
           idleHighlightLayers={idleHighlightLayers}
           packageHighlightLayers={packageHighlightLayers}
+          idleFocusDirectory={selectedPackagePath}
           highlightLayersLoading={highlightLayersLoading}
           excludedFolders={excludedDirs.map((d) =>
             d.endsWith('/') ? d.slice(0, -1) : d,
@@ -4176,6 +4156,8 @@ const RightPane: React.FC<{
   idleHighlightLayers: HighlightLayer[] | null;
   /** Architecture-panel directory highlights — fed to the idle Tour city. */
   packageHighlightLayers: HighlightLayer[] | null;
+  /** Selected package's dir — focuses/collapses the idle Tour city onto it. */
+  idleFocusDirectory: string | null;
   highlightLayersLoading: boolean;
   excludedFolders: string[];
   showSpatialContext: boolean;
@@ -4201,6 +4183,7 @@ const RightPane: React.FC<{
   selectedTour,
   idleHighlightLayers,
   packageHighlightLayers,
+  idleFocusDirectory,
   highlightLayersLoading,
   excludedFolders,
   showSpatialContext,
@@ -4484,12 +4467,12 @@ const RightPane: React.FC<{
           excludedFolders={excludedFolders}
           showColorLegend={showColorLegend}
           // Top-left "Files" button to browse the idle city as a normal file
-          // tree; tracks the selected package's subtree under hide-mode.
+          // tree; tracks the focused package subtree.
           showFileTreeToggle
-          // Reframe the idle city onto the selected package's subtree (reads
-          // the fill directory layer). Composes with hide above — hide strips
-          // the surrounding buildings, this frames the camera on what remains.
-          focusSelectedSubtree
+          // Selecting a package collapses the idle city onto its subtree and
+          // frames the camera on it — no color over the buildings. Null when
+          // nothing is selected (full city).
+          idleFocusDirectory={idleFocusDirectory}
           // Skip the tour brief — picking a tour drops straight into step 1
           // rather than the description + Start gate.
           defaultSkipWelcome
