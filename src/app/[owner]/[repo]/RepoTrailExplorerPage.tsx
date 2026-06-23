@@ -4483,6 +4483,13 @@ const RightPane: React.FC<{
           defaultIsolationMode="hide"
           excludedFolders={excludedFolders}
           showColorLegend={showColorLegend}
+          // Top-left "Files" button to browse the idle city as a normal file
+          // tree; tracks the selected package's subtree under hide-mode.
+          showFileTreeToggle
+          // Reframe the idle city onto the selected package's subtree (reads
+          // the fill directory layer). Composes with hide above — hide strips
+          // the surrounding buildings, this frames the camera on what remains.
+          focusSelectedSubtree
           // Skip the tour brief — picking a tour drops straight into step 1
           // rather than the description + Start gate.
           defaultSkipWelcome
