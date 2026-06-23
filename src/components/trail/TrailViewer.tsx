@@ -168,6 +168,13 @@ export interface TrailSessionOk {
   // Transient header status (e.g. "Saved in this browser only…") -------
   headerStatus: string | null;
 
+  /**
+   * True when the trail's authored commit wasn't on GitHub and the file tree
+   * was served from the repo's default branch instead. The viewer shows a
+   * "markers may have drifted" notice when set.
+   */
+  authoredCommitMissing: boolean;
+
   // Panel wiring ------------------------------------------------------
   context: PanelContextValue<FileCityTrailExplorerPanelContext>;
   actions: FileCityTrailExplorerPanelActions;
@@ -200,6 +207,12 @@ interface TrailContextResolved {
    * in which case resolution falls back to HEAD.
    */
   authoredSha?: string;
+  /**
+   * True when the authored commit couldn't be found on GitHub (typically an
+   * author published against a commit they never pushed) and the file tree was
+   * served from the repo's default branch instead. Markers may have drifted.
+   */
+  authoredCommitMissing?: boolean;
 }
 
 /**
@@ -294,6 +307,7 @@ export function useTrailSession(trailId: string): TrailSession {
           initialAllowAnonNotes: trail.allowAnonNotes ?? false,
           ownerGithubId: trail.entry.createdBy.githubId,
           authoredSha,
+          authoredCommitMissing: treeData.fellBackToDefaultBranch ?? false,
         });
       } catch (err) {
         if (cancelled) return;
@@ -914,6 +928,7 @@ export function useTrailSession(trailId: string): TrailSession {
     showSignIn: !user,
     onSignIn,
     headerStatus,
+    authoredCommitMissing: resolved.authoredCommitMissing ?? false,
     context,
     actions,
     events,
@@ -1012,6 +1027,33 @@ export function TrailViewer({
       className="w-full h-full flex flex-col overflow-hidden"
       style={{ background: theme.colors.background, colorScheme: 'dark' }}
     >
+      {session.authoredCommitMissing && (
+        <div
+          className="flex items-center gap-2 px-4 py-2"
+          style={{
+            background: theme.colors.surface,
+            color: theme.colors.warning,
+            borderBottom: `1px solid ${theme.colors.border}`,
+            fontSize: theme.fontSizes[1],
+          }}
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+            style={{ flexShrink: 0 }}
+            aria-hidden
+          >
+            <path d="M8 1.5 0.5 14.5h15L8 1.5Zm0 4a.85.85 0 0 1 .85.85v3.3a.85.85 0 0 1-1.7 0v-3.3A.85.85 0 0 1 8 5.5Zm0 6.2a.95.95 0 1 1 0-1.9.95.95 0 0 1 0 1.9Z" />
+          </svg>
+          <span>
+            The commit this trail was authored against isn’t on GitHub (it may
+            never have been pushed). Showing the default branch instead — line
+            markers may have drifted.
+          </span>
+        </div>
+      )}
       <div className="flex-1 min-h-0">
         <FileCityTrailExplorerPanel
           context={session.context}

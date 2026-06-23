@@ -19,6 +19,10 @@ export interface GitHubTreeResponse {
   url: string;
   tree: GitHubTreeEntry[];
   truncated: boolean;
+  // Set when the requested ref (e.g. a trail's authored commit) couldn't be
+  // found on GitHub and we served the repo's default branch instead. Signals
+  // the client that line markers may have drifted from the authored code.
+  fellBackToDefaultBranch?: boolean;
 }
 
 // Response from /repos/{owner}/{repo}

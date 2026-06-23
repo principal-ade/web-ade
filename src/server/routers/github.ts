@@ -94,6 +94,9 @@ const getTreeOutputSchema = z.object({
   url: z.string(),
   tree: z.array(treeEntrySchema),
   truncated: z.boolean(),
+  // True when the requested ref was missing on GitHub (e.g. an unpushed trail
+  // commit) and we fell back to the repo's default branch.
+  fellBackToDefaultBranch: z.boolean().optional(),
 });
 
 const repoInfoOutputSchema = z.object({
@@ -737,16 +740,51 @@ export const githubRouter = router({
           }
 
           // 6. Fetch from GitHub API (slowest)
-          const treeData = await makeGitHubRequest<GitHubTreeResponse>(
-            `/repos/${owner}/${repo}/git/trees/${resolvedSha}?recursive=1`,
-            userToken
-          );
+          let treeData: GitHubTreeResponse;
+          let fellBackToDefaultBranch = false;
+          try {
+            treeData = await makeGitHubRequest<GitHubTreeResponse>(
+              `/repos/${owner}/${repo}/git/trees/${resolvedSha}?recursive=1`,
+              userToken
+            );
+          } catch (err) {
+            // The requested ref can point at a commit that never reached
+            // GitHub — an author published a trail against a local commit they
+            // hadn't pushed (or it was later rebased/GC'd away). GitHub answers
+            // git/trees for such a SHA with 422 ("SHA must identify a commit or
+            // a tree"). Rather than fail the whole trail, fall back to the
+            // repo's default branch so it still renders; markers may have
+            // drifted a few lines, which the client surfaces to the viewer.
+            if (ref === 'HEAD') throw err;
 
-          // Store in all caches
+            span.addEvent('repo.file-tree.ref.fallback', {
+              'requested.ref': ref,
+              'error.message': err instanceof Error ? err.message : String(err),
+            });
+
+            interface GitHubCommitResponse {
+              sha: string;
+            }
+            const headData = await makeGitHubRequest<GitHubCommitResponse>(
+              `/repos/${owner}/${repo}/commits/HEAD`,
+              userToken
+            );
+            resolvedSha = headData.sha;
+            treeData = await makeGitHubRequest<GitHubTreeResponse>(
+              `/repos/${owner}/${repo}/git/trees/${resolvedSha}?recursive=1`,
+              userToken
+            );
+            fellBackToDefaultBranch = true;
+          }
+
+          // Store in all caches. The fellBackToDefaultBranch flag is scoped to
+          // the requested ref, so it only rides along on the ref-keyed entry —
+          // the SHA-keyed / Redis / S3 entries are keyed by the real default
+          // SHA and shared with legitimate HEAD requests, which must not see
+          // the drift warning.
           if (treeData && treeData.sha) {
             // In-memory (sync)
             gitTreeCache.set(shaCacheKey, treeData);
-            gitTreeCache.set(memCacheKey, treeData);
             gitTreeCache.set(treeData.sha, treeData);
 
             // Redis (async - faster cross-Lambda access)
@@ -754,6 +792,17 @@ export const githubRouter = router({
 
             // S3 (async - long-term persistence)
             storeTreeInS3CacheAsync(owner, repo, resolvedSha, treeData);
+
+            gitTreeCache.set(
+              memCacheKey,
+              fellBackToDefaultBranch
+                ? { ...treeData, fellBackToDefaultBranch: true }
+                : treeData
+            );
+          }
+
+          if (fellBackToDefaultBranch && treeData) {
+            treeData = { ...treeData, fellBackToDefaultBranch: true };
           }
 
           const durationMs = Date.now() - startTime;

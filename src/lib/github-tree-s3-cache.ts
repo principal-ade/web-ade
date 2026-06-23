@@ -36,6 +36,10 @@ export interface GitHubTreeResponse {
     url?: string;
   }>;
   truncated: boolean;
+  // Set by github.getTree (not persisted to S3/Redis) when the requested ref
+  // was missing on GitHub and the default branch was served instead. See the
+  // fallback in src/server/routers/github.ts.
+  fellBackToDefaultBranch?: boolean;
 }
 
 /**
