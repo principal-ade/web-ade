@@ -1709,14 +1709,17 @@ const TrailListPane: React.FC<{
           onRequestDelete={onRequestDeleteTour}
           trailsSection={
             entries.length > 0 || hasPackages ? (
-              <div onMouseLeave={() => onHover(null)}>
+              <div
+                className="flex-1 min-h-0 flex flex-col"
+                onMouseLeave={() => onHover(null)}
+              >
                 {hasPackages ? (
                   /* With package data, the single "Trails" collapsible becomes a
                      two-tab Architecture / Trails switch. Opening one collapses
                      the other (Trails still drives the right-pane explorer via
                      the parent's onToggleTrails). Sticky so it stays pinned. */
                   <div
-                    className="flex items-stretch border-b sticky top-0 z-10"
+                    className="flex items-stretch border-b sticky top-0 z-10 shrink-0"
                     style={{
                       borderColor: theme.colors.border,
                       background: theme.colors.background,
@@ -1744,7 +1747,7 @@ const TrailListPane: React.FC<{
                     type="button"
                     onClick={onToggleTrails}
                     aria-expanded={trailsExpanded}
-                    className="w-full px-4 py-2 border-b sticky top-0 z-10 flex items-center gap-2 transition-opacity hover:opacity-80"
+                    className="w-full px-4 py-2 border-b sticky top-0 z-10 shrink-0 flex items-center gap-2 transition-opacity hover:opacity-80"
                     style={{
                       borderColor: theme.colors.border,
                       background: theme.colors.background,
@@ -1784,7 +1787,7 @@ const TrailListPane: React.FC<{
                 )}
                 {archExpanded && hasPackages && (
                   <div
-                    className="border-b"
+                    className="border-b flex-1 min-h-0 overflow-hidden"
                     style={{ borderColor: theme.colors.border }}
                   >
                     <PackageCompositionPanelContent
@@ -1796,8 +1799,9 @@ const TrailListPane: React.FC<{
                     />
                   </div>
                 )}
-                {trailsExpanded &&
-                  filteredEntries.map((entry) => (
+                {trailsExpanded && (
+                  <div className="flex-1 min-h-0 overflow-y-auto">
+                    {filteredEntries.map((entry) => (
                     <TrailRow
                       key={entry.id}
                       entry={entry}
@@ -1815,7 +1819,9 @@ const TrailListPane: React.FC<{
                       }
                       onDelete={() => onRequestDeleteTrail(entry)}
                     />
-                  ))}
+                    ))}
+                  </div>
+                )}
               </div>
             ) : null
           }
@@ -3589,7 +3595,8 @@ const ToursPane: React.FC<{
       {/* Scrollable body: the multi-tour list (or a loading line) + the trails.
           overscroll-none kills the elastic rubber-band at the scroll ends, which
           otherwise bounces the sticky "Trails" header. */}
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-none">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-none flex flex-col">
+        <div className="shrink-0">
         {!single &&
           (loading ? (
             <ListMessage>Loading tours…</ListMessage>
@@ -3617,6 +3624,7 @@ const ToursPane: React.FC<{
               />
             ))
           ))}
+        </div>
         {trailsSection}
       </div>
     </div>
