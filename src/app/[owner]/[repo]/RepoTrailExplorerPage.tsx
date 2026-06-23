@@ -23,6 +23,9 @@ import {
   GitFork,
   ExternalLink,
   Play,
+  Palette,
+  ChevronRight,
+  ChevronDown,
 } from 'lucide-react';
 import { FileTree as PierreFileTree, useFileTree } from '@pierre/trees/react';
 import { themeToTreeStyles } from '@pierre/trees';
@@ -232,6 +235,31 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   // pane swaps to the tour panel while a tour is active.
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
 
+  // File-type color legend on the tour panel. On by default; a header button
+  // (shown whenever the tour panel is the right pane — i.e. trails collapsed)
+  // toggles it.
+  const [showColorLegend, setShowColorLegend] = useState(true);
+
+  // Trails live in a collapsed left-rail section beneath the tours list.
+  // Collapsed (default) → the right pane shows the Tour panel (idle city +
+  // legend, or an open tour). Expanded → the right pane switches to the Trail
+  // explorer and the rail reveals the trail list.
+  const [trailsExpanded, setTrailsExpanded] = useState(false);
+  const handleToggleTrails = useCallback(() => {
+    setTrailsExpanded((open) => {
+      const next = !open;
+      // Preserve the one-thing-at-a-time invariant: entering trails clears any
+      // open tour/file; leaving it clears the selected trail.
+      if (next) {
+        setSelectedTourId(null);
+        setSelectedFilePath(null);
+      } else {
+        setSelectedTrailId(null);
+      }
+      return next;
+    });
+  }, []);
+
   // Trail pending deletion (drives the confirm modal) + in-flight guard. The
   // delete itself is gated server-side; this is the author/admin-only UI path.
   const [trailToDelete, setTrailToDelete] =
@@ -356,12 +384,9 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         if (cancelled) return;
         const list = Array.isArray(data.tours) ? data.tours : [];
         setTours(list);
-        // With several tours, lead by opening the first one in the right pane on
-        // load. With exactly one tour we render a "Start tour" button instead
-        // (see ToursPane), so leave it unselected until the visitor clicks. With
-        // none, the Tours list shows an empty state pointing at the skill.
-        const firstTour = list[0];
-        if (firstTour && list.length > 1) setSelectedTourId(firstTour.tour.id);
+        // Always land on the idle Tour panel (colored city + file-type legend)
+        // and let the visitor open a tour from the list — no auto-open, so the
+        // default view is the map rather than a guided tour.
       } catch {
         // Tours are an optional enhancement — a fetch failure just means the
         // Tours tab shows an empty state, never blocks the trail explorer.
@@ -988,6 +1013,9 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           selectedTour ? tourGenProgress.get(selectedTour.tour.id) : undefined
         }
         onGenerateTourAudio={handleGenerateTourAudio}
+        showColorLegend={showColorLegend}
+        onToggleColorLegend={() => setShowColorLegend((s) => !s)}
+        trailsExpanded={trailsExpanded}
       />
       <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
         {/* The delete control is driven by the app's own validated session:
@@ -1016,6 +1044,8 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           viewerUserId={user?.id ?? null}
           viewerIsRepoAdmin={state.viewerIsRepoAdmin}
           onRequestDeleteTrail={setTrailToDelete}
+          trailsExpanded={trailsExpanded}
+          onToggleTrails={handleToggleTrails}
           configMode={configMode}
           onToggleConfigMode={() => {
             setConfigMode((m) => !m);
@@ -1053,6 +1083,9 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           onSelectTour={(id) => {
             setSelectedTourId(id);
             if (id) {
+              // Opening a tour returns to the tour view — collapse the trails
+              // section so the right pane shows the tour, not the explorer.
+              setTrailsExpanded(false);
               setSelectedTrailId(null);
               setSelectedFilePath(null);
             }
@@ -1083,6 +1116,8 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             d.endsWith('/') ? d.slice(0, -1) : d,
           )}
           showSpatialContext={configMode}
+          showColorLegend={showColorLegend}
+          trailsExpanded={trailsExpanded}
           currentAuthor={user?.login}
           overlayFilePath={leftViewMode === 'files' ? selectedFilePath : null}
           overlayTrails={selectedFileTrails}
@@ -1178,6 +1213,13 @@ const Header: React.FC<{
   selectedTour: TourListItem | null;
   tourProgress: TourGenProgress | undefined;
   onGenerateTourAudio: (item: TourListItem) => void;
+  // File-type legend toggle for the tour panel; the button renders whenever
+  // the tour panel is the right pane (i.e. the trails section is collapsed),
+  // since the legend lives on that panel.
+  showColorLegend: boolean;
+  onToggleColorLegend: () => void;
+  /** Trails section expanded → the Trail explorer (no legend) is showing. */
+  trailsExpanded: boolean;
 }> = ({
   owner,
   repo,
@@ -1185,6 +1227,9 @@ const Header: React.FC<{
   selectedTour,
   tourProgress,
   onGenerateTourAudio,
+  showColorLegend,
+  onToggleColorLegend,
+  trailsExpanded,
 }) => {
   const { theme } = useTheme();
   return (
@@ -1316,6 +1361,31 @@ const Header: React.FC<{
             onGenerate={() => onGenerateTourAudio(selectedTour)}
           />
         )}
+        {!trailsExpanded && (
+          <button
+            type="button"
+            onClick={onToggleColorLegend}
+            aria-pressed={showColorLegend}
+            className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+            style={{
+              color: showColorLegend
+                ? theme.colors.primary
+                : theme.colors.textMuted,
+            }}
+            title={
+              showColorLegend
+                ? 'Hide file-type legend'
+                : 'Show file-type legend'
+            }
+            aria-label={
+              showColorLegend
+                ? 'Hide file-type legend'
+                : 'Show file-type legend'
+            }
+          >
+            <Palette className="w-5 h-5" />
+          </button>
+        )}
         <Link
           href={`/legacy/${owner}/${repo}`}
           className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
@@ -1365,6 +1435,10 @@ const TrailListPane: React.FC<{
   viewerUserId: number | null;
   viewerIsRepoAdmin: boolean;
   onRequestDeleteTrail: (entry: SharedTrailIndexEntry) => void;
+  /** Collapsed trails section: expanded reveals the trail list and switches
+   *  the right pane to the Trail explorer. */
+  trailsExpanded: boolean;
+  onToggleTrails: () => void;
   configMode: boolean;
   onToggleConfigMode: () => void;
   leftViewMode: 'trails' | 'files' | 'tours';
@@ -1396,6 +1470,8 @@ const TrailListPane: React.FC<{
   viewerUserId,
   viewerIsRepoAdmin,
   onRequestDeleteTrail,
+  trailsExpanded,
+  onToggleTrails,
   configMode,
   onToggleConfigMode,
   leftViewMode,
@@ -1464,15 +1540,31 @@ const TrailListPane: React.FC<{
           trailsSection={
             entries.length > 0 ? (
               <div onMouseLeave={() => onHover(null)}>
-                {/* Sticky so the section label stays pinned at the top of the
-                    scroll area while only the trail rows scroll under it. */}
-                <div
-                  className="px-4 py-2 border-b sticky top-0 z-10"
+                {/* Collapsible header: click to expand the trail list, which
+                    also switches the right pane to the Trail explorer (the
+                    parent's onToggleTrails drives `trailsExpanded`). Sticky so
+                    it stays pinned while the rows scroll under it. */}
+                <button
+                  type="button"
+                  onClick={onToggleTrails}
+                  aria-expanded={trailsExpanded}
+                  className="w-full px-4 py-2 border-b sticky top-0 z-10 flex items-center gap-2 transition-opacity hover:opacity-80"
                   style={{
                     borderColor: theme.colors.border,
                     background: theme.colors.background,
                   }}
                 >
+                  {trailsExpanded ? (
+                    <ChevronDown
+                      size={14}
+                      style={{ color: theme.colors.textSecondary }}
+                    />
+                  ) : (
+                    <ChevronRight
+                      size={14}
+                      style={{ color: theme.colors.textSecondary }}
+                    />
+                  )}
                   <span
                     style={{
                       fontSize: theme.fontSizes[0],
@@ -1484,26 +1576,35 @@ const TrailListPane: React.FC<{
                   >
                     Trails
                   </span>
-                </div>
-                {filteredEntries.map((entry) => (
-                  <TrailRow
-                    key={entry.id}
-                    entry={entry}
-                    payload={payloads.get(entry.id) ?? null}
-                    selected={entry.id === selectedTrailId}
-                    onSelect={() =>
-                      onSelect(entry.id === selectedTrailId ? null : entry.id)
-                    }
-                    onHover={() => onHover(entry.id)}
-                    canDelete={
-                      viewerUserId !== null &&
-                      (viewerIsRepoAdmin ||
-                        String(entry.createdBy?.githubId) ===
-                          String(viewerUserId))
-                    }
-                    onDelete={() => onRequestDeleteTrail(entry)}
-                  />
-                ))}
+                  <span
+                    style={{
+                      fontSize: theme.fontSizes[0],
+                      color: theme.colors.textMuted,
+                    }}
+                  >
+                    {entries.length}
+                  </span>
+                </button>
+                {trailsExpanded &&
+                  filteredEntries.map((entry) => (
+                    <TrailRow
+                      key={entry.id}
+                      entry={entry}
+                      payload={payloads.get(entry.id) ?? null}
+                      selected={entry.id === selectedTrailId}
+                      onSelect={() =>
+                        onSelect(entry.id === selectedTrailId ? null : entry.id)
+                      }
+                      onHover={() => onHover(entry.id)}
+                      canDelete={
+                        viewerUserId !== null &&
+                        (viewerIsRepoAdmin ||
+                          String(entry.createdBy?.githubId) ===
+                            String(viewerUserId))
+                      }
+                      onDelete={() => onRequestDeleteTrail(entry)}
+                    />
+                  ))}
               </div>
             ) : null
           }
@@ -3338,6 +3439,10 @@ const RightPane: React.FC<{
   highlightLayersLoading: boolean;
   excludedFolders: string[];
   showSpatialContext: boolean;
+  /** File-type color legend on the tour panel (header-toggled, default on). */
+  showColorLegend: boolean;
+  /** Trails section expanded → render the Trail explorer; else the Tour panel. */
+  trailsExpanded: boolean;
   /** Undefined for anonymous viewers — gates the panel's note Edit/Delete. */
   currentAuthor?: string;
   overlayFilePath: string | null;
@@ -3358,6 +3463,8 @@ const RightPane: React.FC<{
   highlightLayersLoading,
   excludedFolders,
   showSpatialContext,
+  showColorLegend,
+  trailsExpanded,
   currentAuthor,
   overlayFilePath,
   overlayTrails,
@@ -3608,9 +3715,11 @@ const RightPane: React.FC<{
     );
   }
 
-  // A selected tour swaps the right pane to the tour panel. Trail-only
-  // chrome (file overlay, share modal) belongs to the trail branch.
-  if (selectedTour) {
+  // The tour panel is the default right pane: idle colored city + file-type
+  // legend when no tour is open, tour chrome once one is picked. The Trail
+  // explorer (with its file overlay + share modal) only takes over when the
+  // left-rail Trails section is expanded.
+  if (!trailsExpanded) {
     return (
       <main
         className="flex-1 min-w-0 min-h-0 relative"
@@ -3624,6 +3733,7 @@ const RightPane: React.FC<{
           autoAdvanceOnAudioEnd
           defaultIsolationMode="hide"
           excludedFolders={excludedFolders}
+          showColorLegend={showColorLegend}
         />
       </main>
     );
