@@ -1324,7 +1324,7 @@ const Header: React.FC<{
         </span>
       </Link>
 
-      {exploredStats && (
+      {trailsExpanded && exploredStats && (
         <div
           className="hidden md:flex items-center gap-2 absolute left-1/2 -translate-x-1/2 pointer-events-none"
           aria-label={`${exploredStats.documented} of ${exploredStats.total} files explored`}
