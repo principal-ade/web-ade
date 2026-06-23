@@ -3734,6 +3734,9 @@ const RightPane: React.FC<{
           defaultIsolationMode="hide"
           excludedFolders={excludedFolders}
           showColorLegend={showColorLegend}
+          // Skip the tour brief — picking a tour drops straight into step 1
+          // rather than the description + Start gate.
+          defaultSkipWelcome
         />
       </main>
     );
