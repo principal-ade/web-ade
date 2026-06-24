@@ -2405,6 +2405,58 @@ const TrailSummarySection: React.FC<{
   );
 };
 
+// Resolve a GitHub login to its display name on demand. Trail index entries
+// only carry the login (the handle); the display name comes from the public
+// user-profile endpoint. Results are cached at module scope (and in-flight
+// requests deduped) so a list of trails by the same author makes one request.
+const displayNameCache = new Map<string, string | null>();
+const displayNameInflight = new Map<string, Promise<string | null>>();
+
+function useGithubDisplayName(login: string | null | undefined): string | null {
+  const [name, setName] = useState<string | null>(() =>
+    login ? displayNameCache.get(login) ?? null : null,
+  );
+
+  useEffect(() => {
+    if (!login) {
+      setName(null);
+      return;
+    }
+    if (displayNameCache.has(login)) {
+      setName(displayNameCache.get(login) ?? null);
+      return;
+    }
+
+    let cancelled = false;
+    let request = displayNameInflight.get(login);
+    if (!request) {
+      request = fetch(`/api/github/user-profile/${encodeURIComponent(login)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data: { name?: string | null } | null) => {
+          const resolved = data?.name?.trim() || null;
+          displayNameCache.set(login, resolved);
+          displayNameInflight.delete(login);
+          return resolved;
+        })
+        .catch(() => {
+          displayNameCache.set(login, null);
+          displayNameInflight.delete(login);
+          return null;
+        });
+      displayNameInflight.set(login, request);
+    }
+    request.then((resolved) => {
+      if (!cancelled) setName(resolved);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [login]);
+
+  return name;
+}
+
 const TrailRow: React.FC<{
   entry: SharedTrailIndexEntry;
   payload: TrailPayload | null;
@@ -2433,6 +2485,7 @@ const TrailRow: React.FC<{
   const avatarUrl = author
     ? `https://avatars.githubusercontent.com/u/${author.githubId}?v=4&s=40`
     : null;
+  const displayName = useGithubDisplayName(author?.githubLogin);
 
   return (
     <div
@@ -2485,7 +2538,7 @@ const TrailRow: React.FC<{
                   style={{ background: theme.colors.backgroundSecondary }}
                 />
               )}
-              <span className="truncate">{author.githubLogin}</span>
+              <span className="truncate">{displayName || author.githubLogin}</span>
             </span>
           )}
         </div>
@@ -4038,6 +4091,52 @@ const SingleTourCta: React.FC<{
 // Mirrors the desktop app's TrailFileTrailsOverlay.
 // ---------------------------------------------------------------------------
 
+// Author chip for the file-trails overlay rows. Split out so it can resolve
+// the GitHub display name via the useGithubDisplayName hook (rows are rendered
+// in an inline .map, where a hook can't be called directly).
+const TrailFileTrailsAuthor: React.FC<{
+  author: SharedTrailIndexEntry['createdBy'];
+  avatarUrl: string | null;
+}> = ({ author, avatarUrl }) => {
+  const { theme } = useTheme();
+  const displayName = useGithubDisplayName(author?.githubLogin);
+  if (!author?.githubLogin) return null;
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        paddingLeft: 16,
+        fontFamily: theme.fonts.body,
+        fontSize: theme.fontSizes[0],
+        color: theme.colors.textSecondary,
+      }}
+    >
+      {avatarUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={avatarUrl}
+          alt=""
+          className="rounded-full shrink-0"
+          width={14}
+          height={14}
+          style={{ background: theme.colors.background }}
+        />
+      )}
+      <span
+        style={{
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {displayName || author.githubLogin}
+      </span>
+    </div>
+  );
+};
+
 const TrailFileTrailsOverlay: React.FC<{
   filePath: string;
   trails: SharedTrailIndexEntry[];
@@ -4206,40 +4305,7 @@ const TrailFileTrailsOverlay: React.FC<{
                     {trail.title || 'Untitled trail'}
                   </span>
                 </div>
-                {author?.githubLogin && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      paddingLeft: 16,
-                      fontFamily: theme.fonts.body,
-                      fontSize: theme.fontSizes[0],
-                      color: theme.colors.textSecondary,
-                    }}
-                  >
-                    {avatarUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={avatarUrl}
-                        alt=""
-                        className="rounded-full shrink-0"
-                        width={14}
-                        height={14}
-                        style={{ background: theme.colors.background }}
-                      />
-                    )}
-                    <span
-                      style={{
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {author.githubLogin}
-                    </span>
-                  </div>
-                )}
+                <TrailFileTrailsAuthor author={author} avatarUrl={avatarUrl} />
               </button>
             );
           })}
