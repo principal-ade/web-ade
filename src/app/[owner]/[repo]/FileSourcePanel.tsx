@@ -65,6 +65,12 @@ async function fetchFileContent(
   return typeof data.content === 'string' ? data.content : '';
 }
 
+// Drawer sizing. Default is comfortably wide for code/markdown; the user can
+// drag the left edge to resize, and we remember the choice across sessions.
+const MIN_PANEL_WIDTH = 360;
+const DEFAULT_PANEL_WIDTH = 720;
+const PANEL_WIDTH_KEY = 'fileSourcePanel:width';
+
 // A right-docked drawer that shows the source of a single file, read-only.
 // Driven purely by `filePath`; intentionally independent of the trail overlay
 // and trail selection — it just renders whatever file is handed to it.
@@ -72,8 +78,15 @@ export const FileSourcePanel: React.FC<{
   owner: string;
   repo: string;
   filePath: string | null;
+  // Distance from the top of the viewport to dock below — typically the page
+  // header height, so the drawer starts under the header rather than over it.
+  topOffset?: number;
+  // Which edge the drawer docks to. Defaults to the right; the README opens it
+  // on the left.
+  side?: 'left' | 'right';
   onClose: () => void;
-}> = ({ owner, repo, filePath, onClose }) => {
+}> = ({ owner, repo, filePath, topOffset = 0, side = 'right', onClose }) => {
+  const dockLeft = side === 'left';
   const { theme } = useTheme();
   const open = filePath !== null;
 
@@ -83,6 +96,20 @@ export const FileSourcePanel: React.FC<{
   useEffect(() => {
     if (filePath) setShownPath(filePath);
   }, [filePath]);
+
+  // Drive the slide via an `entered` flag rather than `open` directly: on mount
+  // (and on open) we paint one frame off-screen on the docked edge, then flip to
+  // translateX(0) so the panel always slides in from its own side — even when
+  // the side just switched (which remounts this component via a `key`).
+  const [entered, setEntered] = useState(false);
+  useEffect(() => {
+    if (!open) {
+      setEntered(false);
+      return;
+    }
+    const id = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(id);
+  }, [open]);
 
   const [content, setContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -131,6 +158,35 @@ export const FileSourcePanel: React.FC<{
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
+  // Drag-to-resize: width in px, hydrated from localStorage after mount (kept
+  // out of the initial state to avoid an SSR/client hydration mismatch).
+  const [width, setWidth] = useState<number>(DEFAULT_PANEL_WIDTH);
+  const [dragging, setDragging] = useState(false);
+  useEffect(() => {
+    const saved = Number(window.localStorage.getItem(PANEL_WIDTH_KEY));
+    if (Number.isFinite(saved) && saved >= MIN_PANEL_WIDTH) setWidth(saved);
+  }, []);
+  useEffect(() => {
+    if (!dragging) return;
+    // Width is the distance from the pointer to the drawer's docked edge: the
+    // pointer's x for a left dock, or the gap to the right viewport edge.
+    const onMove = (e: PointerEvent) => {
+      const next = dockLeft ? e.clientX : window.innerWidth - e.clientX;
+      const max = window.innerWidth * 0.95;
+      setWidth(Math.max(MIN_PANEL_WIDTH, Math.min(next, max)));
+    };
+    const onUp = () => setDragging(false);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, [dragging, dockLeft]);
+  useEffect(() => {
+    if (!dragging) window.localStorage.setItem(PANEL_WIDTH_KEY, String(width));
+  }, [width, dragging]);
+
   const basename = shownPath ? shownPath.split('/').pop() || shownPath : '';
 
   // Markdown files render rich (front matter header + DocumentView); everything
@@ -151,21 +207,54 @@ export const FileSourcePanel: React.FC<{
       aria-hidden={!open}
       style={{
         position: 'fixed',
-        top: 0,
-        right: 0,
+        top: topOffset,
+        [dockLeft ? 'left' : 'right']: 0,
         bottom: 0,
         zIndex: 40,
-        width: 'min(560px, 92vw)',
+        width: `min(${width}px, 95vw)`,
         display: 'flex',
         flexDirection: 'column',
         background: theme.colors.backgroundSecondary,
-        borderLeft: `1px solid ${theme.colors.border}`,
-        boxShadow: open ? '-12px 0 32px rgba(0,0,0,0.35)' : 'none',
-        transform: open ? 'translateX(0)' : 'translateX(100%)',
-        transition: 'transform 220ms ease',
+        [dockLeft ? 'borderRight' : 'borderLeft']: `1px solid ${theme.colors.border}`,
+        boxShadow: entered
+          ? `${dockLeft ? '12px' : '-12px'} 0 32px rgba(0,0,0,0.35)`
+          : 'none',
+        transform: entered
+          ? 'translateX(0)'
+          : `translateX(${dockLeft ? '-100%' : '100%'})`,
+        // Don't animate width while dragging — only the open/close slide.
+        transition: dragging
+          ? 'none'
+          : 'transform 360ms cubic-bezier(0.22, 1, 0.36, 1)',
         pointerEvents: open ? 'auto' : 'none',
       }}
     >
+      {/* Drag handle on the drawer's inner edge (the side facing the viewport
+          center) to resize it. The full-screen overlay below it captures
+          pointer events during the drag so the move doesn't get swallowed by
+          Monaco / the markdown view. */}
+      <div
+        onPointerDown={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        title="Drag to resize"
+        style={{
+          position: 'absolute',
+          [dockLeft ? 'right' : 'left']: -3,
+          top: 0,
+          bottom: 0,
+          width: 8,
+          cursor: 'ew-resize',
+          touchAction: 'none',
+          zIndex: 1,
+        }}
+      />
+      {dragging && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 50, cursor: 'ew-resize' }}
+        />
+      )}
       {/* Header — file identity + close. */}
       <div
         style={{

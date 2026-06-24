@@ -243,9 +243,28 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     'tours',
   );
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
+  // Which edge the file source drawer docks to. Files open on the right; the
+  // README opens on the left.
+  const [fileSide, setFileSide] = useState<'left' | 'right'>('right');
   // Tour selection. Mutually exclusive with trail/file selection — the right
   // pane swaps to the tour panel while a tour is active.
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
+
+  // Measured page-header height, so the right-docked file panel can start just
+  // below the header instead of overlapping it at the top of the screen. A
+  // callback ref (not a ref + mount effect) is required: this component returns
+  // a loading screen first, so the header mounts *after* the initial commit —
+  // the callback fires when the node actually attaches.
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const headerObserver = useRef<ResizeObserver | null>(null);
+  const headerRef = useCallback((el: HTMLElement | null) => {
+    headerObserver.current?.disconnect();
+    if (!el) return;
+    const measure = () => setHeaderHeight(el.getBoundingClientRect().height);
+    measure();
+    headerObserver.current = new ResizeObserver(measure);
+    headerObserver.current.observe(el);
+  }, []);
 
   // Architecture-panel → file-city wiring. Hovering / selecting a package in
   // the left-rail composition panel lights up that package's directory subtree
@@ -1082,6 +1101,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
       style={{ background: theme.colors.background, height: '100vh' }}
     >
       <Header
+        rootRef={headerRef}
         owner={owner}
         repo={repo}
         exploredStats={exploredStats}
@@ -1160,6 +1180,14 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             // associated-trails overlay — clear any open trail/tour so it's
             // the file (not a stale selection) showing behind the overlay.
             setSelectedFilePath(path);
+            setFileSide('right');
+            setSelectedTrailId(null);
+            setSelectedTourId(null);
+          }}
+          // The README opens the same drawer, but docked on the left.
+          onOpenReadmeFile={(path) => {
+            setSelectedFilePath(path);
+            setFileSide('left');
             setSelectedTrailId(null);
             setSelectedTourId(null);
           }}
@@ -1215,15 +1243,21 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             setSelectedFilePath(null);
           }}
           onCloseOverlay={() => setSelectedFilePath(null)}
-          onOpenFile={setSelectedFilePath}
+          onOpenFile={(path) => {
+            setSelectedFilePath(path);
+            setFileSide('right');
+          }}
         />
       </div>
       {/* Right-docked source viewer for the picked file. Independent of the
           trail overlay — it just renders whatever file is selected. */}
       <FileSourcePanel
+        key={fileSide}
         owner={owner}
         repo={repo}
         filePath={selectedFilePath}
+        topOffset={headerHeight}
+        side={fileSide}
         onClose={() => setSelectedFilePath(null)}
       />
       {trailToDelete && (
@@ -1293,6 +1327,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
 // ---------------------------------------------------------------------------
 
 const Header: React.FC<{
+  rootRef?: React.Ref<HTMLElement>;
   owner: string;
   repo: string;
   exploredStats: { documented: number; total: number } | null;
@@ -1309,6 +1344,7 @@ const Header: React.FC<{
   /** Trails section expanded → the Trail explorer (no legend) is showing. */
   trailsExpanded: boolean;
 }> = ({
+  rootRef,
   owner,
   repo,
   exploredStats,
@@ -1322,6 +1358,7 @@ const Header: React.FC<{
   const { theme } = useTheme();
   return (
     <header
+      ref={rootRef}
       className="border-b px-4 flex items-center gap-2 flex-shrink-0 relative"
       style={{
         background: theme.colors.surface,
@@ -1584,6 +1621,8 @@ const TrailListPane: React.FC<{
   trailFileRows: { path: string; trailCount: number }[];
   selectedFilePath: string | null;
   onSelectFile: (path: string | null) => void;
+  // Opens the repo-root README in the source drawer (docked on the left).
+  onOpenReadmeFile: (path: string) => void;
   tours: TourListItem[];
   toursLoading: boolean;
   selectedTourId: string | null;
@@ -1622,6 +1661,7 @@ const TrailListPane: React.FC<{
   trailFileRows,
   selectedFilePath,
   onSelectFile,
+  onOpenReadmeFile,
   tours,
   toursLoading,
   selectedTourId,
@@ -1634,6 +1674,8 @@ const TrailListPane: React.FC<{
 }) => {
   const { theme } = useTheme();
   const hasPackages = packages.length > 0;
+  // Repo-root README (if any), surfaced as a button in the About overview.
+  const readmePath = useMemo(() => findReadmePath(filePaths), [filePaths]);
   // Architecture tab open-state. Kept mutually exclusive with `trailsExpanded`
   // (which is parent-owned and also drives the right pane) so only one of the
   // two sections is open at a time.
@@ -1707,6 +1749,10 @@ const TrailListPane: React.FC<{
           viewerUserId={viewerUserId}
           viewerIsRepoAdmin={viewerIsRepoAdmin}
           onRequestDelete={onRequestDeleteTour}
+          readmePath={readmePath}
+          onOpenReadme={() => {
+            if (readmePath) onOpenReadmeFile(readmePath);
+          }}
           trailsSection={
             entries.length > 0 || hasPackages ? (
               <div
@@ -2994,6 +3040,20 @@ function useRepoPackagesData(
 // list. The procedure is heavily cached server-side.
 // ---------------------------------------------------------------------------
 
+// Pick the repo-root README so the About card can offer to open it. GitHub
+// treats the root README as the canonical one, so we only look at top-level
+// files (no slash in the path) and prefer markdown variants.
+function findReadmePath(filePaths: string[]): string | null {
+  const roots = filePaths.filter((p) => !p.includes('/') && /^readme(\.|$)/i.test(p));
+  if (roots.length === 0) return null;
+  return (
+    roots.find((p) => /\.md$/i.test(p)) ??
+    roots.find((p) => /\.markdown$/i.test(p)) ??
+    roots[0] ??
+    null
+  );
+}
+
 const RepoOverview: React.FC<{
   owner: string;
   repo: string;
@@ -3001,7 +3061,12 @@ const RepoOverview: React.FC<{
   // a control rendered directly beneath it (e.g. the single-tour "Start tour"
   // CTA) inside one card, with the dividing line carried below that control.
   showBorder?: boolean;
-}> = ({ owner, repo, showBorder = true }) => {
+  // Repo-root README path (e.g. "README.md"), or null when the repo has none.
+  // When set (with onOpenReadme), the card shows a button that opens it as a
+  // file in the right-docked source panel.
+  readmePath?: string | null;
+  onOpenReadme?: () => void;
+}> = ({ owner, repo, showBorder = true, readmePath = null, onOpenReadme }) => {
   const { theme } = useTheme();
   // Read from the shared cache, warmed at page mount (see warmRepoOverview), so
   // the metadata is typically ready the instant this card first renders.
@@ -3103,6 +3168,28 @@ const RepoOverview: React.FC<{
             Update on GitHub
           </a>
         </>
+      )}
+
+      {/* README shortcut: opens the repo-root README as a file in the source
+          panel. Only shown when the repo actually has one. */}
+      {readmePath && onOpenReadme && (
+        <button
+          type="button"
+          onClick={onOpenReadme}
+          className="inline-flex items-center gap-1.5 self-start rounded transition-colors hover:opacity-80"
+          style={{
+            padding: '4px 10px',
+            fontSize: theme.fontSizes[1],
+            fontWeight: theme.fontWeights.medium,
+            color: theme.colors.textSecondary,
+            background: `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
+            border: `1px solid ${theme.colors.border}`,
+          }}
+          title={`Open ${readmePath}`}
+        >
+          <FileText size={14} className="shrink-0" />
+          README
+        </button>
       )}
 
       {/* Vital signs: stars · last push. */}
@@ -3540,6 +3627,10 @@ const ToursPane: React.FC<{
   viewerUserId: number | null;
   viewerIsRepoAdmin: boolean;
   onRequestDelete: (item: TourListItem) => void;
+  // Repo-root README path (or null) + handler, forwarded to RepoOverview so the
+  // About card can offer a "README" button.
+  readmePath: string | null;
+  onOpenReadme: () => void;
   // Trails list rendered beneath the tours in the same scroll column, so a
   // visitor landing on the default view sees the repo's trails under About.
   // Null when the repo has no trails. Built by the caller (which holds the
@@ -3555,6 +3646,8 @@ const ToursPane: React.FC<{
   viewerUserId,
   viewerIsRepoAdmin,
   onRequestDelete,
+  readmePath,
+  onOpenReadme,
   trailsSection,
 }) => {
   // With exactly one tour we collapse the list into a single "Start tour" CTA
@@ -3575,7 +3668,13 @@ const ToursPane: React.FC<{
     <div className="flex-1 min-h-0 flex flex-col">
       {/* Pinned header. */}
       <div className="shrink-0">
-        <RepoOverview owner={owner} repo={repo} showBorder={!showFoldedCta} />
+        <RepoOverview
+          owner={owner}
+          repo={repo}
+          showBorder={!showFoldedCta}
+          readmePath={readmePath}
+          onOpenReadme={onOpenReadme}
+        />
         {single ? (
           <SingleTourCta
             active={single.tour.id === selectedTourId}
