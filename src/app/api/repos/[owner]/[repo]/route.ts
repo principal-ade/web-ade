@@ -26,6 +26,7 @@ import { validateOwnerRepo } from '@/lib/trails/validation';
 import { checkRepoAccess } from '@/lib/trails/github-access';
 import { TrailShareError, ShareErrorCodes } from '@/lib/trails/types';
 import {
+  agentGuidePointer,
   markdownResponse,
   negotiateFormat,
   privateRepoMarkdown,
@@ -165,7 +166,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     if (format === 'md') {
       return markdownResponse(
-        repoCatalogMarkdown({ owner, repo, info: repo_info, trails, tours, links }),
+        repoCatalogMarkdown({ origin, owner, repo, info: repo_info, trails, tours, links }),
       );
     }
 
@@ -176,7 +177,7 @@ export async function GET(request: NextRequest, { params }: Params) {
       trails,
       tours,
       _links: links,
-      _hints: HINTS,
+      _hints: `${HINTS} ${agentGuidePointer(origin)}`,
     });
   } catch (error) {
     if (error instanceof TrailShareError) {

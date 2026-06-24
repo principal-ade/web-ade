@@ -25,6 +25,19 @@ import type { TopicPayload } from '@/lib/topics/types';
  */
 export const CLI_PACKAGE = '@principal-ai/principal-view-cli';
 
+/**
+ * One-line pointer at the home index (`origin/`), where the agent-facing CLI
+ * quickstart lives. Repo catalogs, trail Markdown, and the JSON `_hints`
+ * reference this instead of repeating the install/usage block, so the home page
+ * stays the single source of truth for "how do I open this locally?".
+ */
+export function agentGuidePointer(origin: string): string {
+  return (
+    `To open a trail or tour locally in the interactive viewer, see ${origin} ` +
+    `for the Principal CLI quickstart.`
+  );
+}
+
 /** How a non-browser caller wants a resource represented. */
 export type AgentFormat = 'json' | 'md';
 
@@ -137,12 +150,13 @@ function indent(s: string): string {
 
 /** Render a public trail payload as human-readable Markdown. */
 export function trailMarkdown(opts: {
+  origin: string;
   owner: string;
   repo: string;
   payload: TrailPayload;
   links: TrailLinks;
 }): string {
-  const { owner, repo, payload, links } = opts;
+  const { origin, owner, repo, payload, links } = opts;
   const out: string[] = [];
   const ref = payload.authoredAt?.ref;
   const purpose = payload.purpose ?? 'investigation';
@@ -181,6 +195,7 @@ export function trailMarkdown(opts: {
       `Authored at \`${payload.authoredAt.sha}\`${ref ? ` (${ref})` : ''}.`,
     );
   }
+  out.push(agentGuidePointer(origin));
   out.push('');
   return out.join('\n');
 }
@@ -374,17 +389,10 @@ export function privateRepoMarkdown(humanView: string): string {
 // representation of its own. The middleware rewrites a non-browser navigation
 // of `/` here, to an orientation manifest: what Principal is, how to fetch any
 // page programmatically (the Accept-header convention + the negotiable route
-// shapes), and the list of public repos that have trails — the discovery entry
-// points an agent landing on the root needs.
+// shapes), and how to open a trail/tour locally via the CLI. This page is the
+// canonical "for agents" doc; every other page points back here for the CLI
+// quickstart rather than repeating it.
 // ============================================================================
-
-/** One repo row in the site index. */
-export interface HomeRepoItem {
-  owner: string;
-  repo: string;
-  trailCount: number;
-  humanView: string;
-}
 
 /** The subset of the site index envelope's `_links` Markdown rendering needs. */
 export interface HomeLinks {
@@ -393,13 +401,12 @@ export interface HomeLinks {
   humanView: string;
 }
 
-/** Render the site index (orientation + public repo list) as Markdown. */
+/** Render the site index (orientation + CLI quickstart) as Markdown. */
 export function homeIndexMarkdown(opts: {
   origin: string;
-  repos: HomeRepoItem[];
   links: HomeLinks;
 }): string {
-  const { origin, repos, links } = opts;
+  const { origin, links } = opts;
   const out: string[] = [];
 
   out.push('# Principal AI');
@@ -420,24 +427,31 @@ export function homeIndexMarkdown(opts: {
     `- \`${origin}/{owner}/{repo}\` — repo catalog (published trails + tours)`,
     `- \`${origin}/trail/{id}\` — a single trail (markers pinned to files/lines)`,
     `- \`${origin}/topic/{id}\` — a topic (a curated bundle of trails)`,
-    '',
-    `Private or gated repos: \`npx ${CLI_PACKAGE}\` resolves your GitHub token ` +
-      `(via the gh CLI or a git credential helper) and calls the same API with a ` +
-      `Bearer token, so it returns anything your GitHub account can read.`,
   );
 
-  out.push('', `## Repos with trails (${repos.length})`);
-  if (repos.length === 0) {
-    out.push('_No public repos with trails yet._');
-  } else {
-    repos.forEach((r) => {
-      out.push(
-        `- **${r.owner}/${r.repo}** — ${r.trailCount} trail${
-          r.trailCount === 1 ? '' : 's'
-        } · ${r.humanView}`,
-      );
-    });
-  }
+  out.push('', '## Open a trail or tour locally');
+  out.push(
+    'Fetching the Markdown above tells you what a trail *says*. To open one in',
+    'the interactive viewer — 3D File City, source side-by-side — use the',
+    'Principal CLI. The argument is the bare id or the full `/trail/<id>` (or',
+    '`/tour/<id>`) URL from any page above:',
+    '',
+    '```bash',
+    `npx -y ${CLI_PACKAGE} trail view <trail-id-or-url>`,
+    `npx -y ${CLI_PACKAGE} tour view <tour-id-or-url>`,
+    '```',
+    '',
+    'The viewer GUI ships macOS arm64 prebuilds only. On other platforms — or a',
+    'headless/CI agent — fetch the trail JSON instead of opening the viewer:',
+    '',
+    '```bash',
+    `npx -y ${CLI_PACKAGE} trail fetch <trail-id-or-url>`,
+    '```',
+    '',
+    `Private or gated repos: the same CLI resolves your GitHub token (via the`,
+    '`gh` CLI or a git credential helper) and calls these APIs with a `Bearer`',
+    'token, so it returns anything your GitHub account can read.',
+  );
 
   out.push(
     '',
@@ -451,6 +465,7 @@ export function homeIndexMarkdown(opts: {
 
 /** Render a repo catalog (GitHub facts + published trails/tours) as Markdown. */
 export function repoCatalogMarkdown(opts: {
+  origin: string;
   owner: string;
   repo: string;
   info: RepoCatalogInfo;
@@ -458,7 +473,7 @@ export function repoCatalogMarkdown(opts: {
   tours: RepoCatalogTourItem[];
   links: RepoCatalogLinks;
 }): string {
-  const { owner, repo, info, trails, tours, links } = opts;
+  const { origin, owner, repo, info, trails, tours, links } = opts;
   const out: string[] = [];
 
   out.push(`# ${owner}/${repo}`);
@@ -508,6 +523,7 @@ export function repoCatalogMarkdown(opts: {
     `Repository: ${info.htmlUrl}`,
     `Interactive view: ${links.humanView}`,
     `JSON: ${links.self}`,
+    agentGuidePointer(origin),
     '',
   );
   return out.join('\n');

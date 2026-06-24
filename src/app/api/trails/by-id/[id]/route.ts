@@ -31,6 +31,7 @@ import {
   refreshBookmarkedTrailSnapshot,
 } from '@/lib/bookmarks/s3-storage';
 import {
+  agentGuidePointer,
   cliHint,
   markdownResponse,
   negotiateFormat,
@@ -88,17 +89,20 @@ function agentEnvelope(request: NextRequest, id: string) {
     h.get('x-forwarded-host') || h.get('host') || request.nextUrl.host;
   const proto =
     h.get('x-forwarded-proto') || request.nextUrl.protocol.replace(':', '');
+  const origin = `${proto}://${host}`;
   const safeId = encodeURIComponent(id);
-  const base = `${proto}://${host}/api/trails/by-id/${safeId}`;
+  const base = `${origin}/api/trails/by-id/${safeId}`;
   return {
+    origin,
     _links: {
       self: base,
       notes: `${base}/notes`,
       signOffs: `${base}/sign-offs`,
-      humanView: `${proto}://${host}/trail/${safeId}`,
+      humanView: `${origin}/trail/${safeId}`,
     },
     _hints:
-      'Principal code trail, returned as JSON. `payload.markers` is an ordered list of steps, each pinned to a file and line range with an optional code slice or diff (`marker.snippet`). `payload.summary` and `payload.request` state intent; `payload.repos` lists the source repositories; `payload.views` holds the visualization layouts. Follow `_links` for notes, sign-offs, and the human-viewable page. Access is gated by GitHub repo read-access, so only public trails resolve for anonymous callers.',
+      'Principal code trail, returned as JSON. `payload.markers` is an ordered list of steps, each pinned to a file and line range with an optional code slice or diff (`marker.snippet`). `payload.summary` and `payload.request` state intent; `payload.repos` lists the source repositories; `payload.views` holds the visualization layouts. Follow `_links` for notes, sign-offs, and the human-viewable page. Access is gated by GitHub repo read-access, so only public trails resolve for anonymous callers. ' +
+      agentGuidePointer(origin),
   };
 }
 
@@ -170,6 +174,7 @@ export async function GET(request: NextRequest, { params }: Params) {
       if (format === 'md') {
         return markdownResponse(
           trailMarkdown({
+            origin: env.origin,
             owner: experimental.owner,
             repo: experimental.repo,
             payload: experimental.payload,
@@ -187,7 +192,8 @@ export async function GET(request: NextRequest, { params }: Params) {
         payload: experimental.payload,
         bookmarked: false,
         allowAnonNotes: false,
-        ...env,
+        _links: env._links,
+        _hints: env._hints,
       });
     }
 
@@ -254,7 +260,13 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     if (format === 'md') {
       return markdownResponse(
-        trailMarkdown({ owner, repo, payload: publicPayload, links: env._links }),
+        trailMarkdown({
+          origin: env.origin,
+          owner,
+          repo,
+          payload: publicPayload,
+          links: env._links,
+        }),
       );
     }
 
@@ -265,7 +277,8 @@ export async function GET(request: NextRequest, { params }: Params) {
       payload: publicPayload,
       bookmarked,
       allowAnonNotes: stored.allowAnonNotes ?? false,
-      ...env,
+      _links: env._links,
+      _hints: env._hints,
     });
   } catch (error) {
     if (error instanceof TrailShareError) {
