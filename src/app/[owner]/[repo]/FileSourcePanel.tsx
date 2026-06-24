@@ -45,10 +45,13 @@ async function fetchFileContent(
   owner: string,
   repo: string,
   path: string,
+  gitRef?: string,
 ): Promise<string> {
   const clean = normalizeRepoPath(path, owner, repo);
   const response = await fetch(
-    `/api/github/repo/${owner}/${repo}?action=file&path=${encodeURIComponent(clean)}`,
+    `/api/github/repo/${owner}/${repo}?action=file&path=${encodeURIComponent(clean)}${
+      gitRef ? `&ref=${encodeURIComponent(gitRef)}` : ''
+    }`,
   );
   if (!response.ok) {
     throw new Error(`Failed to read file: ${response.statusText}`);
@@ -78,6 +81,10 @@ export const FileSourcePanel: React.FC<{
   owner: string;
   repo: string;
   filePath: string | null;
+  // Optional commit/branch/tag to read the file at. When a trail marker opens
+  // the drawer, this is the trail's authored sha so the source matches the
+  // marker's line ranges instead of drifting with HEAD. Omitted ⇒ reads HEAD.
+  gitRef?: string;
   // Distance from the top of the viewport to dock below — typically the page
   // header height, so the drawer starts under the header rather than over it.
   topOffset?: number;
@@ -85,7 +92,15 @@ export const FileSourcePanel: React.FC<{
   // on the left.
   side?: 'left' | 'right';
   onClose: () => void;
-}> = ({ owner, repo, filePath, topOffset = 0, side = 'right', onClose }) => {
+}> = ({
+  owner,
+  repo,
+  filePath,
+  gitRef,
+  topOffset = 0,
+  side = 'right',
+  onClose,
+}) => {
   const dockLeft = side === 'left';
   const { theme } = useTheme();
   const open = filePath !== null;
@@ -122,7 +137,7 @@ export const FileSourcePanel: React.FC<{
     shownPath && docKind
       ? `/api/github/repo/${owner}/${repo}?action=raw&path=${encodeURIComponent(
           normalizeRepoPath(shownPath, owner, repo),
-        )}`
+        )}${gitRef ? `&ref=${encodeURIComponent(gitRef)}` : ''}`
       : null;
 
   useEffect(() => {
@@ -131,7 +146,7 @@ export const FileSourcePanel: React.FC<{
     setLoading(true);
     setError(null);
     setContent(null);
-    fetchFileContent(owner, repo, shownPath)
+    fetchFileContent(owner, repo, shownPath, gitRef)
       .then((text) => {
         if (!cancelled) setContent(text);
       })
@@ -146,7 +161,7 @@ export const FileSourcePanel: React.FC<{
     return () => {
       cancelled = true;
     };
-  }, [owner, repo, shownPath]);
+  }, [owner, repo, shownPath, gitRef]);
 
   // Escape closes the drawer while it's open.
   useEffect(() => {

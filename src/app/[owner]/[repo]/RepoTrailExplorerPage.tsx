@@ -27,6 +27,7 @@ import {
   ChevronRight,
   ChevronDown,
   Boxes,
+  Footprints,
   MapPin,
   Globe,
   Users,
@@ -505,8 +506,10 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   const filteredEntries = useMemo(() => {
     if (state.kind !== 'ready') return [];
     const q = filterQuery.trim().toLowerCase();
-    if (!q) return state.entries;
-    return state.entries.filter(
+    // Invert the index order (slice first so we don't mutate state.entries).
+    const ordered = state.entries.slice().reverse();
+    if (!q) return ordered;
+    return ordered.filter(
       (e) =>
         e.title.toLowerCase().includes(q) ||
         e.createdBy?.githubLogin?.toLowerCase().includes(q),
@@ -604,6 +607,13 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   const selectedPayload = selectedTrailId
     ? (payloads.get(selectedTrailId) ?? null)
     : null;
+
+  // Commit a selected trail was authored against, so the source drawer reads
+  // marker files at that point instead of HEAD. Null when no trail is selected
+  // (plain file browsing) ⇒ the drawer reads HEAD.
+  const selectedAuthoredSha =
+    selectedPayload?.repos?.[0]?.authoredAtSha ??
+    selectedPayload?.authoredAt?.sha;
 
   const selectedTour = selectedTourId
     ? (tours.find((t) => t.tour.id === selectedTourId) ?? null)
@@ -1256,6 +1266,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         owner={owner}
         repo={repo}
         filePath={selectedFilePath}
+        gitRef={selectedAuthoredSha}
         topOffset={headerHeight}
         side={fileSide}
         onClose={() => setSelectedFilePath(null)}
@@ -1780,6 +1791,7 @@ const TrailListPane: React.FC<{
                     <CompositionSwitchTab
                       active={trailsExpanded}
                       onClick={handleSelectTrails}
+                      icon={<Footprints size={14} />}
                       label="Trails"
                       count={entries.length}
                     />
@@ -1810,6 +1822,10 @@ const TrailListPane: React.FC<{
                         style={{ color: theme.colors.textSecondary }}
                       />
                     )}
+                    <Footprints
+                      size={14}
+                      style={{ color: theme.colors.textSecondary }}
+                    />
                     <span
                       style={{
                         fontSize: theme.fontSizes[0],
@@ -4393,6 +4409,14 @@ const RightPane: React.FC<{
     return { id, owner, name: repo };
   }, [owner, repo, selectedPayload]);
 
+  // Pin marker reads to the commit the trail was authored against, so line
+  // ranges line up with the file as it existed then instead of drifting with
+  // HEAD. Falls back to the multi-repo registry sha, then the single-repo
+  // shorthand; undefined when neither is present (reads HEAD).
+  const authoredSha =
+    selectedPayload?.repos?.[0]?.authoredAtSha ??
+    selectedPayload?.authoredAt?.sha;
+
   const readFile = useCallback(
     async (path: string): Promise<string> => {
       let cleanPath = path;
@@ -4406,7 +4430,9 @@ const RightPane: React.FC<{
       }
 
       const response = await fetch(
-        `/api/github/repo/${owner}/${repo}?action=file&path=${encodeURIComponent(cleanPath)}`,
+        `/api/github/repo/${owner}/${repo}?action=file&path=${encodeURIComponent(cleanPath)}${
+          authoredSha ? `&ref=${encodeURIComponent(authoredSha)}` : ''
+        }`,
       );
       if (!response.ok) {
         throw new Error(`Failed to read file: ${response.statusText}`);
@@ -4422,7 +4448,7 @@ const RightPane: React.FC<{
       }
       return typeof data.content === 'string' ? data.content : '';
     },
-    [owner, repo],
+    [owner, repo, authoredSha],
   );
 
   // Notes / sign-offs editing is owned by /trail/[id]. Stub the
