@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
@@ -58,6 +59,7 @@ import {
   PackageCompositionPanelContent,
   type PackageLayer,
 } from '@industry-theme/repository-composition-panels';
+import { addRecentRepository } from '@industry-theme/github-panels';
 import type { IntroductionTour } from '@principal-ai/file-city-builder';
 import type { TourAudioStatus, TourListItem } from '@/lib/tours/types';
 import { trpc } from '@/lib/trpc/client';
@@ -1337,6 +1339,80 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
 // Header
 // ---------------------------------------------------------------------------
 
+// Pull `owner/repo` out of whatever the user pastes into the header opener — a
+// full GitHub URL, a `github.com/owner/repo` fragment, or just `owner/repo`.
+function parseGithubRepoPath(
+  input: string,
+): { owner: string; repo: string } | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  const stripped = trimmed
+    .replace(/^https?:\/\//i, '')
+    .replace(/^github\.com\//i, '')
+    .replace(/^\/+/, '');
+  const [owner, repoRaw] = stripped.split('/');
+  if (!owner || !repoRaw) return null;
+  const repo = repoRaw.replace(/\.git$/i, '');
+  if (!repo) return null;
+  return { owner, repo };
+}
+
+// Minimal shape of a repo for the header opener's typeahead — satisfied by both
+// `/api/github/search` results and the persisted `recent-repositories` entries.
+interface HeaderRepoSearchItem {
+  full_name: string;
+  name: string;
+  owner: { login: string; avatar_url: string };
+  description?: string | null;
+  stargazers_count?: number;
+}
+
+// localStorage key shared with the legacy repo page / RecentRepositoriesPanel
+// (written via `addRecentRepository`). Each entry is a full GitHub repo object.
+const RECENT_REPOS_KEY = 'recent-repositories';
+
+// Read the persisted recently-visited repos, narrowed to the fields the opener
+// needs and tolerant of older/partial entries.
+function readRecentRepos(): HeaderRepoSearchItem[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const parsed: unknown = JSON.parse(
+      localStorage.getItem(RECENT_REPOS_KEY) ?? '[]',
+    );
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((it): HeaderRepoSearchItem[] => {
+      if (it == null || typeof it !== 'object') return [];
+      const o = it as Record<string, unknown>;
+      const owner = o.owner as Record<string, unknown> | undefined;
+      if (
+        typeof o.full_name !== 'string' ||
+        !owner ||
+        typeof owner.login !== 'string' ||
+        typeof owner.avatar_url !== 'string'
+      ) {
+        return [];
+      }
+      return [
+        {
+          full_name: o.full_name,
+          name:
+            typeof o.name === 'string'
+              ? o.name
+              : o.full_name.split('/')[1] ?? o.full_name,
+          owner: { login: owner.login, avatar_url: owner.avatar_url },
+          description: typeof o.description === 'string' ? o.description : null,
+          stargazers_count:
+            typeof o.stargazers_count === 'number'
+              ? o.stargazers_count
+              : undefined,
+        },
+      ];
+    });
+  } catch {
+    return [];
+  }
+}
+
 const Header: React.FC<{
   rootRef?: React.Ref<HTMLElement>;
   owner: string;
@@ -1367,6 +1443,181 @@ const Header: React.FC<{
   trailsExpanded,
 }) => {
   const { theme } = useTheme();
+  const router = useRouter();
+
+  // The header "open a repo" control: hitting it collapses the left-hand
+  // controls and reveals an inline opener. The opener doubles as a repo search
+  // bar — pasting a GitHub link opens it directly, while typing a term shows a
+  // GitHub repo-search typeahead. Either way, choosing a repo opens it in-app.
+  const [openRepoActive, setOpenRepoActive] = useState(false);
+  const [openRepoUrl, setOpenRepoUrl] = useState('');
+  const [openRepoError, setOpenRepoError] = useState(false);
+  const [openRepoResults, setOpenRepoResults] = useState<HeaderRepoSearchItem[]>(
+    [],
+  );
+  const [openRepoSearching, setOpenRepoSearching] = useState(false);
+  const [recentRepos, setRecentRepos] = useState<HeaderRepoSearchItem[]>([]);
+  const openRepoInputRef = useRef<HTMLInputElement>(null);
+
+  // A pasted link / `owner/repo` path is opened directly; anything else is a
+  // free-text search. Computed each render so the input and submit agree.
+  const openRepoDirect = parseGithubRepoPath(openRepoUrl);
+
+  const closeOpenRepo = useCallback(() => {
+    setOpenRepoActive(false);
+    setOpenRepoUrl('');
+    setOpenRepoError(false);
+    setOpenRepoResults([]);
+    setOpenRepoSearching(false);
+  }, []);
+
+  const goToRepo = useCallback(
+    (path: string) => {
+      closeOpenRepo();
+      router.push(`/${path}`);
+    },
+    [router, closeOpenRepo],
+  );
+
+  const submitOpenRepo = useCallback(() => {
+    const parsed = parseGithubRepoPath(openRepoUrl);
+    if (parsed) {
+      goToRepo(`${parsed.owner}/${parsed.repo}`);
+      return;
+    }
+    // No direct path — fall back to the top search result, if any.
+    if (openRepoResults[0]) {
+      goToRepo(openRepoResults[0].full_name);
+      return;
+    }
+    setOpenRepoError(true);
+  }, [openRepoUrl, openRepoResults, goToRepo]);
+
+  // Focus the input as it reveals, and load recent repos (minus the one we're
+  // already on) to show before the user types.
+  useEffect(() => {
+    if (!openRepoActive) return;
+    openRepoInputRef.current?.focus();
+    const current = `${owner}/${repo}`.toLowerCase();
+    setRecentRepos(
+      readRecentRepos()
+        .filter((r) => r.full_name.toLowerCase() !== current)
+        .slice(0, 6),
+    );
+  }, [openRepoActive, owner, repo]);
+
+  // Debounced GitHub repo search, skipped when the text is already a direct
+  // link/path. Aborts in-flight requests so stale responses can't land.
+  useEffect(() => {
+    if (!openRepoActive) return;
+    const q = openRepoUrl.trim();
+    if (!q || parseGithubRepoPath(q)) {
+      setOpenRepoResults([]);
+      setOpenRepoSearching(false);
+      return;
+    }
+    setOpenRepoSearching(true);
+    const ctrl = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/github/search?q=${encodeURIComponent(q)}&per_page=8`,
+          { signal: ctrl.signal },
+        );
+        if (!res.ok) throw new Error('search failed');
+        const data = await res.json();
+        setOpenRepoResults(
+          Array.isArray(data.items)
+            ? (data.items as HeaderRepoSearchItem[]).slice(0, 8)
+            : [],
+        );
+      } catch {
+        if (!ctrl.signal.aborted) setOpenRepoResults([]);
+      } finally {
+        if (!ctrl.signal.aborted) setOpenRepoSearching(false);
+      }
+    }, 300);
+    return () => {
+      ctrl.abort();
+      clearTimeout(timer);
+    };
+  }, [openRepoUrl, openRepoActive]);
+
+  // One result row, shared by the search results and the recent-repos list.
+  const renderRepoRow = (r: HeaderRepoSearchItem) => (
+    <button
+      key={r.full_name}
+      type="button"
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={() => goToRepo(r.full_name)}
+      className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:opacity-90"
+      style={{ color: theme.colors.text }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`${r.owner.avatar_url}${
+          r.owner.avatar_url.includes('?') ? '&' : '?'
+        }s=56`}
+        alt=""
+        width={28}
+        height={28}
+        className="rounded-md shrink-0"
+        style={{ background: theme.colors.backgroundSecondary }}
+      />
+      <div className="min-w-0 flex-1">
+        <div
+          className="truncate"
+          style={{
+            fontSize: theme.fontSizes[2],
+            fontWeight: theme.fontWeights.semibold,
+          }}
+        >
+          {r.name}
+        </div>
+        <div
+          className="truncate"
+          style={{
+            fontSize: theme.fontSizes[1],
+            color: theme.colors.textMuted,
+          }}
+        >
+          {r.owner.login}
+        </div>
+      </div>
+      {typeof r.stargazers_count === 'number' && (
+        <span
+          className="flex items-center gap-1 shrink-0"
+          style={{
+            color: theme.colors.textMuted,
+            fontSize: theme.fontSizes[1],
+          }}
+        >
+          <Star className="w-3.5 h-3.5" />
+          {r.stargazers_count.toLocaleString()}
+        </span>
+      )}
+    </button>
+  );
+
+  // Small uppercase section label inside the dropdown.
+  const dropdownLabel = (text: string) => (
+    <div
+      className="px-3.5 pt-2.5 pb-1"
+      style={{
+        fontSize: theme.fontSizes[0],
+        fontWeight: theme.fontWeights.semibold,
+        color: theme.colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+      }}
+    >
+      {text}
+    </div>
+  );
+
+  const showOpener = openRepoUrl.trim().length > 0;
+  const showRecents = !showOpener && recentRepos.length > 0;
+
   return (
     <header
       ref={rootRef}
@@ -1490,61 +1741,212 @@ const Header: React.FC<{
       )}
 
       <div className="flex items-center gap-2 flex-shrink-0">
-        {selectedTour && (
-          <TourAudioControl
-            status={selectedTour.audioStatus}
-            progress={tourProgress}
-            onGenerate={() => onGenerateTourAudio(selectedTour)}
-          />
-        )}
-        {!trailsExpanded && (
-          <button
-            type="button"
-            onClick={onToggleColorLegend}
-            aria-pressed={showColorLegend}
-            className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
-            style={{
-              color: showColorLegend
-                ? theme.colors.primary
-                : theme.colors.textMuted,
-            }}
-            title={
-              showColorLegend
-                ? 'Hide file-type legend'
-                : 'Show file-type legend'
-            }
-            aria-label={
-              showColorLegend
-                ? 'Hide file-type legend'
-                : 'Show file-type legend'
-            }
+        {/* Swap region: the left-hand controls collapse out and the GitHub-link
+            opener input fades in over their space when the opener is active. The
+            GitHub button itself (below) stays put and shows as selected. */}
+        <div className="relative flex items-center gap-2">
+          <div
+            className={`flex items-center gap-2 transition-opacity duration-200 ${
+              openRepoActive ? 'opacity-0 pointer-events-none' : 'opacity-100'
+            }`}
           >
-            <Palette className="w-5 h-5" />
-          </button>
-        )}
-        <Link
-          href={`/legacy/${owner}/${repo}`}
-          className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
-          style={{ color: theme.colors.text }}
-          title="Open legacy view"
-          aria-label="Open legacy view"
-        >
-          <History className="w-5 h-5" />
-        </Link>
-        <div className="hidden md:flex">
-          <AgentViewButton path={`/${owner}/${repo}`} iconOnly />
+            {selectedTour && (
+              <TourAudioControl
+                status={selectedTour.audioStatus}
+                progress={tourProgress}
+                onGenerate={() => onGenerateTourAudio(selectedTour)}
+              />
+            )}
+            {!trailsExpanded && (
+              <button
+                type="button"
+                onClick={onToggleColorLegend}
+                aria-pressed={showColorLegend}
+                className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+                style={{
+                  color: showColorLegend
+                    ? theme.colors.primary
+                    : theme.colors.textMuted,
+                }}
+                title={
+                  showColorLegend
+                    ? 'Hide file-type legend'
+                    : 'Show file-type legend'
+                }
+                aria-label={
+                  showColorLegend
+                    ? 'Hide file-type legend'
+                    : 'Show file-type legend'
+                }
+              >
+                <Palette className="w-5 h-5" />
+              </button>
+            )}
+            <Link
+              href={`/legacy/${owner}/${repo}`}
+              className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+              style={{ color: theme.colors.text }}
+              title="Open legacy view"
+              aria-label="Open legacy view"
+            >
+              <History className="w-5 h-5" />
+            </Link>
+            <div className="hidden md:flex">
+              <AgentViewButton path={`/${owner}/${repo}`} iconOnly />
+            </div>
+          </div>
+
+          {/* Opener input — anchored to the right of the swap region (just left
+              of the GitHub button) and fading in over the collapsed controls. */}
+          <div
+            className={`absolute inset-y-0 right-0 hidden md:flex items-center justify-end transition-opacity duration-200 ${
+              openRepoActive ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+          >
+            <div className="relative">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  submitOpenRepo();
+                }}
+                className="flex items-center gap-2 h-8 pl-2.5 pr-1 rounded-md"
+                style={{
+                  background: theme.colors.background,
+                  border: `1px solid ${
+                    openRepoError
+                      ? theme.colors.error ?? theme.colors.border
+                      : theme.colors.border
+                  }`,
+                }}
+              >
+                <Search
+                  className="w-4 h-4 shrink-0"
+                  style={{ color: theme.colors.textMuted }}
+                />
+                <input
+                  ref={openRepoInputRef}
+                  value={openRepoUrl}
+                  onChange={(e) => {
+                    setOpenRepoUrl(e.target.value);
+                    if (openRepoError) setOpenRepoError(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') closeOpenRepo();
+                  }}
+                  placeholder="Search repos or paste a link…"
+                  aria-label="Search repositories or paste a GitHub link"
+                  className="bg-transparent outline-none w-56"
+                  style={{
+                    color: theme.colors.text,
+                    fontSize: theme.fontSizes[1],
+                  }}
+                />
+                <button
+                  type="submit"
+                  className="flex items-center justify-center w-6 h-6 rounded transition-all hover:opacity-80"
+                  style={{ color: theme.colors.primary }}
+                  title="Open repo"
+                  aria-label="Open repo"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </form>
+
+              {/* Dropdown: recent repos before the user types, then a
+                  direct-open hint for links / GitHub repo-search results. */}
+              {openRepoActive && (showOpener || showRecents) && (
+                <div
+                  className="absolute top-full right-0 mt-1.5 w-96 max-w-[80vw] rounded-lg overflow-hidden z-[1000]"
+                  style={{
+                    background: theme.colors.surface,
+                    border: `1px solid ${theme.colors.border}`,
+                    boxShadow: '0 12px 40px rgba(0,0,0,0.35)',
+                  }}
+                >
+                  {!showOpener ? (
+                    <div className="max-h-96 overflow-y-auto pb-1">
+                      {dropdownLabel('Recent')}
+                      {recentRepos.map(renderRepoRow)}
+                    </div>
+                  ) : openRepoDirect ? (
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() =>
+                        goToRepo(
+                          `${openRepoDirect.owner}/${openRepoDirect.repo}`,
+                        )
+                      }
+                      className="flex w-full items-center gap-2.5 px-3.5 py-3 text-left transition-colors hover:opacity-80"
+                      style={{ color: theme.colors.text }}
+                    >
+                      <Github
+                        className="w-5 h-5 shrink-0"
+                        style={{ color: theme.colors.textMuted }}
+                      />
+                      <span
+                        className="truncate"
+                        style={{ fontSize: theme.fontSizes[2] }}
+                      >
+                        Open {openRepoDirect.owner}/{openRepoDirect.repo}
+                      </span>
+                      <ChevronRight
+                        className="w-5 h-5 ml-auto shrink-0"
+                        style={{ color: theme.colors.textMuted }}
+                      />
+                    </button>
+                  ) : openRepoSearching ? (
+                    <div
+                      className="flex items-center gap-2.5 px-3.5 py-3.5"
+                      style={{
+                        color: theme.colors.textMuted,
+                        fontSize: theme.fontSizes[2],
+                      }}
+                    >
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Searching…
+                    </div>
+                  ) : openRepoResults.length > 0 ? (
+                    <div className="max-h-96 overflow-y-auto">
+                      {openRepoResults.map(renderRepoRow)}
+                    </div>
+                  ) : (
+                    <div
+                      className="px-3.5 py-3.5"
+                      style={{
+                        color: theme.colors.textMuted,
+                        fontSize: theme.fontSizes[2],
+                      }}
+                    >
+                      No repositories found
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-        <a
-          href={`https://github.com/${owner}/${repo}`}
-          target="_blank"
-          rel="noopener noreferrer"
+
+        {/* GitHub opener trigger — stays in place and toggles the opener,
+            showing as selected while it is open. */}
+        <button
+          type="button"
+          onClick={() =>
+            openRepoActive ? closeOpenRepo() : setOpenRepoActive(true)
+          }
+          aria-pressed={openRepoActive}
           className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
-          style={{ color: theme.colors.text }}
-          title={`Open ${owner}/${repo} on GitHub`}
-          aria-label={`Open ${owner}/${repo} on GitHub`}
+          style={{
+            color: openRepoActive ? theme.colors.primary : theme.colors.text,
+            background: openRepoActive
+              ? `color-mix(in srgb, ${theme.colors.primary} 15%, transparent)`
+              : 'transparent',
+          }}
+          title="Open a repo from a GitHub link"
+          aria-label="Open a repo from a GitHub link"
         >
           <Github className="w-5 h-5" />
-        </a>
+        </button>
 
         <UserAvatarMenu />
       </div>
@@ -1786,7 +2188,7 @@ const TrailListPane: React.FC<{
                       active={archExpanded}
                       onClick={handleSelectArchitecture}
                       icon={<Boxes size={14} />}
-                      label="Architecture"
+                      label="Structure"
                     />
                     <CompositionSwitchTab
                       active={trailsExpanded}
@@ -2895,6 +3297,13 @@ function fetchRepoInfo(
     .then((d) => {
       repoInfoCache.set(key, d);
       repoInfoInflight.delete(key);
+      // Record the visit so the header opener (and the recent-repos panel) can
+      // surface it later. Best-effort: never let a storage error break the page.
+      try {
+        addRecentRepository(d as unknown as Parameters<typeof addRecentRepository>[0]);
+      } catch {
+        // ignore
+      }
       return d;
     })
     .catch(() => {
@@ -3186,22 +3595,34 @@ const RepoOverview: React.FC<{
         >
           {repo}
         </h1>
-        {license && (
-          <span
-            className="shrink-0"
-            style={{
-              padding: '2px 8px',
-              borderRadius: licenseBadgeRadius(license),
-              fontSize: theme.fontSizes[0],
-              fontWeight: theme.fontWeights.medium,
-              color: theme.colors.textSecondary,
-              background: `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
-              border: `1px solid ${theme.colors.border}`,
-            }}
+        <div className="flex items-center gap-2 shrink-0">
+          {license && (
+            <span
+              style={{
+                padding: '2px 8px',
+                borderRadius: licenseBadgeRadius(license),
+                fontSize: theme.fontSizes[0],
+                fontWeight: theme.fontWeights.medium,
+                color: theme.colors.textSecondary,
+                background: `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
+                border: `1px solid ${theme.colors.border}`,
+              }}
+            >
+              {license}
+            </span>
+          )}
+          <a
+            href={`https://github.com/${owner}/${repo}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center w-7 h-7 rounded-md transition-all hover:opacity-80"
+            style={{ color: theme.colors.textSecondary }}
+            title={`Open ${owner}/${repo} on GitHub`}
+            aria-label={`Open ${owner}/${repo} on GitHub`}
           >
-            {license}
-          </span>
-        )}
+            <Github className="w-4 h-4" />
+          </a>
+        </div>
       </div>
       {info.description ? (
         <p
