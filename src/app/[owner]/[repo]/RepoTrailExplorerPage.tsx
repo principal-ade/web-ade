@@ -1550,8 +1550,14 @@ const Header: React.FC<{
       type="button"
       onMouseDown={(e) => e.preventDefault()}
       onClick={() => goToRepo(r.full_name)}
-      className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:opacity-90"
-      style={{ color: theme.colors.text }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = `color-mix(in srgb, ${theme.colors.primary} 12%, transparent)`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'transparent';
+      }}
+      className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors"
+      style={{ color: theme.colors.text, background: 'transparent' }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -1864,10 +1870,12 @@ const Header: React.FC<{
                   }}
                 >
                   {!showOpener ? (
-                    <div className="max-h-96 overflow-y-auto pb-1">
+                    <>
                       {dropdownLabel('Recent')}
-                      {recentRepos.map(renderRepoRow)}
-                    </div>
+                      <div className="max-h-96 overflow-y-auto pb-1">
+                        {recentRepos.map(renderRepoRow)}
+                      </div>
+                    </>
                   ) : openRepoDirect ? (
                     <button
                       type="button"
@@ -1877,8 +1885,14 @@ const Header: React.FC<{
                           `${openRepoDirect.owner}/${openRepoDirect.repo}`,
                         )
                       }
-                      className="flex w-full items-center gap-2.5 px-3.5 py-3 text-left transition-colors hover:opacity-80"
-                      style={{ color: theme.colors.text }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = `color-mix(in srgb, ${theme.colors.primary} 12%, transparent)`;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
+                      className="flex w-full items-center gap-2.5 px-3.5 py-3 text-left transition-colors"
+                      style={{ color: theme.colors.text, background: 'transparent' }}
                     >
                       <Github
                         className="w-5 h-5 shrink-0"
@@ -3596,6 +3610,30 @@ const RepoOverview: React.FC<{
           {repo}
         </h1>
         <div className="flex items-center gap-2 shrink-0">
+          {info.homepage && (
+            <a
+              href={info.homepage}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center w-7 h-7 rounded-md transition-all hover:opacity-80"
+              style={{ color: theme.colors.textSecondary }}
+              title={`Open homepage — ${info.homepage.replace(/^https?:\/\//, '')}`}
+              aria-label="Open homepage"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          )}
+          <a
+            href={`https://github.com/${owner}/${repo}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center w-7 h-7 rounded-md transition-all hover:opacity-80"
+            style={{ color: theme.colors.textSecondary }}
+            title={`Open ${owner}/${repo} on GitHub`}
+            aria-label={`Open ${owner}/${repo} on GitHub`}
+          >
+            <Github className="w-4 h-4" />
+          </a>
           {license && (
             <span
               style={{
@@ -3611,17 +3649,6 @@ const RepoOverview: React.FC<{
               {license}
             </span>
           )}
-          <a
-            href={`https://github.com/${owner}/${repo}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center w-7 h-7 rounded-md transition-all hover:opacity-80"
-            style={{ color: theme.colors.textSecondary }}
-            title={`Open ${owner}/${repo} on GitHub`}
-            aria-label={`Open ${owner}/${repo} on GitHub`}
-          >
-            <Github className="w-4 h-4" />
-          </a>
         </div>
       </div>
       {info.description ? (
@@ -3660,26 +3687,75 @@ const RepoOverview: React.FC<{
         </>
       )}
 
-      {/* README shortcut: opens the repo-root README as a file in the source
-          panel. Only shown when the repo actually has one. */}
-      {readmePath && onOpenReadme && (
-        <button
-          type="button"
-          onClick={onOpenReadme}
-          className="inline-flex items-center gap-1.5 self-start rounded transition-colors hover:opacity-80"
-          style={{
-            padding: '4px 10px',
-            fontSize: theme.fontSizes[1],
-            fontWeight: theme.fontWeights.medium,
-            color: theme.colors.textSecondary,
-            background: `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
-            border: `1px solid ${theme.colors.border}`,
-          }}
-          title={`Open ${readmePath}`}
-        >
-          <FileText size={14} className="shrink-0" />
-          README
-        </button>
+      {/* Contributor faces + README shortcut on one row: the top few
+          contributors link straight to GitHub, the rest collapse into a chip
+          that opens the full list; the README opens the repo-root README in the
+          source panel. */}
+      {((readmePath && onOpenReadme) || shownPeople.length > 0) && (
+        <div className="flex flex-wrap items-center gap-2 mt-0.5">
+          {shownPeople.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              {shownPeople.map((c) => (
+                <a
+                  key={c.id}
+                  href={c.html_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={`${c.login} · ${c.contributions.toLocaleString()} commits`}
+                  className="rounded-full transition-transform hover:scale-110"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`${c.avatar_url}${c.avatar_url.includes('?') ? '&' : '?'}s=64`}
+                    alt={c.login}
+                    width={32}
+                    height={32}
+                    className="rounded-full block"
+                    style={{ background: theme.colors.backgroundSecondary }}
+                  />
+                </a>
+              ))}
+              {overflowPeople.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllContributors(true)}
+                  className="rounded-full transition-colors"
+                  style={{
+                    height: 32,
+                    padding: '0 10px',
+                    fontSize: theme.fontSizes[0],
+                    fontWeight: theme.fontWeights.medium,
+                    color: theme.colors.textSecondary,
+                    background: `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
+                    border: `1px solid ${theme.colors.border}`,
+                  }}
+                  title="See all contributors"
+                >
+                  {overflowLabel}
+                </button>
+              )}
+            </div>
+          )}
+          {readmePath && onOpenReadme && (
+            <button
+              type="button"
+              onClick={onOpenReadme}
+              className="inline-flex items-center gap-1.5 rounded transition-colors hover:opacity-80"
+              style={{
+                padding: '4px 10px',
+                fontSize: theme.fontSizes[1],
+                fontWeight: theme.fontWeights.medium,
+                color: theme.colors.textSecondary,
+                background: `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
+                border: `1px solid ${theme.colors.border}`,
+              }}
+              title={`Open ${readmePath}`}
+            >
+              <FileText size={14} className="shrink-0" />
+              README
+            </button>
+          )}
+        </div>
       )}
 
       {/* Vital signs: stars · last push. */}
@@ -3719,64 +3795,6 @@ const RepoOverview: React.FC<{
         </div>
       )}
 
-      {info.homepage && (
-        <a
-          href={info.homepage}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 truncate"
-          style={{ color: theme.colors.primary, fontSize: theme.fontSizes[1] }}
-        >
-          <ExternalLink size={14} className="shrink-0" />
-          {info.homepage.replace(/^https?:\/\//, '')}
-        </a>
-      )}
-
-      {/* Contributor faces: top few link straight to GitHub, the rest collapse
-          into a chip that opens the full list. */}
-      {shownPeople.length > 0 && (
-        <div className="flex items-center gap-1.5 mt-0.5">
-          {shownPeople.map((c) => (
-            <a
-              key={c.id}
-              href={c.html_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={`${c.login} · ${c.contributions.toLocaleString()} commits`}
-              className="rounded-full transition-transform hover:scale-110"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`${c.avatar_url}${c.avatar_url.includes('?') ? '&' : '?'}s=64`}
-                alt={c.login}
-                width={32}
-                height={32}
-                className="rounded-full block"
-                style={{ background: theme.colors.backgroundSecondary }}
-              />
-            </a>
-          ))}
-          {overflowPeople.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowAllContributors(true)}
-              className="rounded-full transition-colors"
-              style={{
-                height: 32,
-                padding: '0 10px',
-                fontSize: theme.fontSizes[0],
-                fontWeight: theme.fontWeights.medium,
-                color: theme.colors.textSecondary,
-                background: `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
-                border: `1px solid ${theme.colors.border}`,
-              }}
-              title="See all contributors"
-            >
-              {overflowLabel}
-            </button>
-          )}
-        </div>
-      )}
 
       {showAllContributors && (
         <ContributorsModal
