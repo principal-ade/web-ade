@@ -26,7 +26,7 @@ import {
   Palette,
   Activity,
   ChevronRight,
-  ChevronDown,
+  ChevronLeft,
   Boxes,
   Footprints,
   MapPin,
@@ -133,6 +133,17 @@ if (typeof window !== 'undefined') {
   ).preload?.();
   void (FileCity3D as { preload?: () => Promise<unknown> }).preload?.();
 }
+
+// Which surface the left rail is showing. 'tours' is the default landing view
+// (About card + nav cards + tours list); the rest are full-rail panes the nav
+// cards swap in, each with a close button that returns to 'tours'.
+type LeftViewMode =
+  | 'trails'
+  | 'files'
+  | 'tours'
+  | 'activity'
+  | 'structure'
+  | 'contributors';
 
 // Sample CityData used to warm FC3D's WebGL / shader caches during the
 // loading screen — same fixture the trail page uses.
@@ -250,9 +261,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   // The "Trails" header doubles as a switch between the trail list and a
   // file tree of every file the trails touch (mirrors the desktop app's
   // Files tab). `selectedFilePath` lights up the picked file on the map.
-  const [leftViewMode, setLeftViewMode] = useState<
-    'trails' | 'files' | 'tours' | 'activity'
-  >(
+  const [leftViewMode, setLeftViewMode] = useState<LeftViewMode>(
     // Lead with tours so a guided tour — or, failing that, the "author a tour"
     // empty state — is the first thing a visitor lands on.
     'tours',
@@ -319,26 +328,11 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   // toggles it.
   const [showColorLegend, setShowColorLegend] = useState(true);
 
-  // Trails live in a collapsed left-rail section beneath the tours list.
-  // Collapsed (default) → the right pane shows the Tour panel (idle city +
-  // legend, or an open tour). Expanded → the right pane switches to the Trail
-  // explorer and the rail reveals the trail list.
+  // The Trails nav card swaps the rail to the full-rail trail list; while it's
+  // open this flag drives the right pane to the Trail explorer (set from
+  // onSetViewMode based on `leftViewMode === 'trails'`). Collapsed → the right
+  // pane shows the Tour panel (idle city + legend, or an open tour).
   const [trailsExpanded, setTrailsExpanded] = useState(false);
-  const handleToggleTrails = useCallback(() => {
-    setTrailsExpanded((open) => {
-      const next = !open;
-      // Preserve the one-thing-at-a-time invariant: entering trails clears any
-      // open tour/file/commit; leaving it clears the selected trail.
-      if (next) {
-        setSelectedTourId(null);
-        setSelectedFilePath(null);
-        setSelectedCommitSha(null);
-      } else {
-        setSelectedTrailId(null);
-      }
-      return next;
-    });
-  }, []);
 
   // Toggle the left rail between the commit-activity view and the default tours
   // view. Either direction clears the other surfaces' selections so a single
@@ -1265,8 +1259,6 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           viewerUserId={user?.id ?? null}
           viewerIsRepoAdmin={state.viewerIsRepoAdmin}
           onRequestDeleteTrail={setTrailToDelete}
-          trailsExpanded={trailsExpanded}
-          onToggleTrails={handleToggleTrails}
           packages={packages}
           packagesLoading={packagesLoading}
           onReadFile={handleReadFile}
@@ -1288,6 +1280,9 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             // returns to the idle coverage layer between them. Leaving the
             // activity view also clears any open commit.
             if (mode !== 'activity') setSelectedCommitSha(null);
+            // The Trails view drives the right pane to the Trail explorer (via
+            // trailsExpanded); every other view collapses it back.
+            setTrailsExpanded(mode === 'trails');
             if (mode === 'files') {
               setSelectedTrailId(null);
               setSelectedTourId(null);
@@ -1298,12 +1293,20 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
               setSelectedTrailId(null);
               setSelectedTourId(null);
               setSelectedFilePath(null);
+              // Opening Activity from a nav card lands on the contributor
+              // list, not a stale drill-down.
+              setActivityFocusContributor(null);
+            } else if (mode === 'trails') {
+              // Keep any selected trail so it stays open in the explorer.
+              setSelectedFilePath(null);
+              setSelectedTourId(null);
             } else {
+              // Structure / Contributors: a clean idle right pane.
+              setSelectedTrailId(null);
               setSelectedFilePath(null);
               setSelectedTourId(null);
             }
           }}
-          activityActive={leftViewMode === 'activity'}
           onToggleActivity={handleToggleActivity}
           onSelectContributor={handleSelectContributor}
           activityFocusContributor={activityFocusContributor}
@@ -2106,48 +2109,6 @@ const Header: React.FC<{
 // Trail list pane (left)
 // ---------------------------------------------------------------------------
 
-// One tab of the Architecture / Trails segmented switch that replaces the plain
-// "Trails" collapsible when a repo has package composition data.
-const CompositionSwitchTab: React.FC<{
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  icon?: React.ReactNode;
-  count?: number;
-}> = ({ active, onClick, label, icon, count }) => {
-  const { theme } = useTheme();
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className="flex-1 px-4 py-2 flex items-center justify-center gap-1.5 transition-opacity hover:opacity-80"
-      style={{
-        background: 'transparent',
-        color: active ? theme.colors.primary : theme.colors.textSecondary,
-        fontSize: theme.fontSizes[0],
-        fontWeight: theme.fontWeights.semibold,
-        textTransform: 'uppercase',
-        letterSpacing: '0.5px',
-        borderBottom: `2px solid ${active ? theme.colors.primary : 'transparent'}`,
-      }}
-    >
-      {icon}
-      <span>{label}</span>
-      {typeof count === 'number' && (
-        <span
-          style={{
-            color: theme.colors.textMuted,
-            fontWeight: theme.fontWeights.medium,
-          }}
-        >
-          {count}
-        </span>
-      )}
-    </button>
-  );
-};
-
 const TrailListPane: React.FC<{
   owner: string;
   repo: string;
@@ -2163,12 +2124,8 @@ const TrailListPane: React.FC<{
   viewerUserId: number | null;
   viewerIsRepoAdmin: boolean;
   onRequestDeleteTrail: (entry: SharedTrailIndexEntry) => void;
-  /** Collapsed trails section: expanded reveals the trail list and switches
-   *  the right pane to the Trail explorer. */
-  trailsExpanded: boolean;
-  onToggleTrails: () => void;
-  /** Detected packages — when non-empty, the Trails section header becomes an
-   *  Architecture / Trails switch and the composition panel is available. */
+  /** Detected packages — surfaced as the "Structure" nav card / full-rail
+   *  composition pane. */
   packages: PackageLayer[];
   packagesLoading: boolean;
   onReadFile: (filePath: string) => Promise<string>;
@@ -2177,10 +2134,9 @@ const TrailListPane: React.FC<{
   onPackageSelect: (pkg: PackageLayer | null) => void;
   configMode: boolean;
   onToggleConfigMode: () => void;
-  leftViewMode: 'trails' | 'files' | 'tours' | 'activity';
-  onSetViewMode: (mode: 'trails' | 'files' | 'tours' | 'activity') => void;
-  /** Activity view active + its toggle, surfaced from the About card. */
-  activityActive: boolean;
+  leftViewMode: LeftViewMode;
+  onSetViewMode: (mode: LeftViewMode) => void;
+  /** Close handler for the full-rail Activity pane (returns to the tours view). */
   onToggleActivity: () => void;
   /** Click a contributor in the About card → open their activity drill-down. */
   onSelectContributor: (c: { login: string; avatar_url: string }) => void;
@@ -2229,8 +2185,6 @@ const TrailListPane: React.FC<{
   viewerUserId,
   viewerIsRepoAdmin,
   onRequestDeleteTrail,
-  trailsExpanded,
-  onToggleTrails,
   packages,
   packagesLoading,
   onReadFile,
@@ -2240,7 +2194,6 @@ const TrailListPane: React.FC<{
   onToggleConfigMode,
   leftViewMode,
   onSetViewMode,
-  activityActive,
   onToggleActivity,
   onSelectContributor,
   activityFocusContributor,
@@ -2265,35 +2218,8 @@ const TrailListPane: React.FC<{
   onExcludedDirsChange,
 }) => {
   const { theme } = useTheme();
-  const hasPackages = packages.length > 0;
   // Repo-root README (if any), surfaced as a button in the About overview.
   const readmePath = useMemo(() => findReadmePath(filePaths), [filePaths]);
-  // Architecture tab open-state. Kept mutually exclusive with `trailsExpanded`
-  // (which is parent-owned and also drives the right pane) so only one of the
-  // two sections is open at a time.
-  const [archExpanded, setArchExpanded] = useState(false);
-  // Open Architecture by default the first time packages land (so the rail
-  // isn't sitting on nothing). One-shot: once applied we never re-open it, so
-  // closing it or switching to Trails sticks.
-  const archDefaultApplied = useRef(false);
-  useEffect(() => {
-    if (hasPackages && !archDefaultApplied.current && !trailsExpanded) {
-      archDefaultApplied.current = true;
-      setArchExpanded(true);
-    }
-  }, [hasPackages, trailsExpanded]);
-  const handleSelectArchitecture = useCallback(() => {
-    setArchExpanded((open) => {
-      // Opening Architecture collapses the Trails list (parent state).
-      if (!open && trailsExpanded) onToggleTrails();
-      return !open;
-    });
-  }, [trailsExpanded, onToggleTrails]);
-  const handleSelectTrails = useCallback(() => {
-    // Opening Trails collapses Architecture.
-    if (!trailsExpanded) setArchExpanded(false);
-    onToggleTrails();
-  }, [trailsExpanded, onToggleTrails]);
 
   return (
     <aside
@@ -2335,6 +2261,21 @@ const TrailListPane: React.FC<{
           onClose={onToggleActivity}
           focusContributor={activityFocusContributor}
         />
+      ) : leftViewMode === 'structure' ? (
+        <StructurePane
+          packages={packages}
+          packagesLoading={packagesLoading}
+          onReadFile={onReadFile}
+          onPackageHover={onPackageHover}
+          onPackageSelect={onPackageSelect}
+          onClose={() => onSetViewMode('tours')}
+        />
+      ) : leftViewMode === 'contributors' ? (
+        <ContributorsPane
+          owner={owner}
+          repo={repo}
+          onClose={() => onSetViewMode('tours')}
+        />
       ) : leftViewMode === 'files' ? (
         <TrailFilesPane
           fileRows={trailFileRows}
@@ -2354,143 +2295,24 @@ const TrailListPane: React.FC<{
           viewerUserId={viewerUserId}
           viewerIsRepoAdmin={viewerIsRepoAdmin}
           onRequestDelete={onRequestDeleteTour}
-          activityActive={activityActive}
-          onToggleActivity={onToggleActivity}
           onSelectContributor={onSelectContributor}
+          onOpenContributors={() => onSetViewMode('contributors')}
           readmePath={readmePath}
           onOpenReadme={() => {
             if (readmePath) onOpenReadmeFile(readmePath);
           }}
-          trailsSection={
-            entries.length > 0 || hasPackages ? (
-              <div
-                className="flex-1 min-h-0 flex flex-col"
-                onMouseLeave={() => onHover(null)}
-              >
-                {hasPackages ? (
-                  /* With package data, the single "Trails" collapsible becomes a
-                     two-tab Architecture / Trails switch. Opening one collapses
-                     the other (Trails still drives the right-pane explorer via
-                     the parent's onToggleTrails). Sticky so it stays pinned. */
-                  <div
-                    className="flex items-stretch border-b sticky top-0 z-10 shrink-0"
-                    style={{
-                      borderColor: theme.colors.border,
-                      background: theme.colors.background,
-                    }}
-                  >
-                    <CompositionSwitchTab
-                      active={archExpanded}
-                      onClick={handleSelectArchitecture}
-                      icon={<Boxes size={14} />}
-                      label="Structure"
-                    />
-                    <CompositionSwitchTab
-                      active={trailsExpanded}
-                      onClick={handleSelectTrails}
-                      icon={<Footprints size={14} />}
-                      label="Trails"
-                      count={entries.length}
-                    />
-                  </div>
-                ) : (
-                  /* Collapsible header: click to expand the trail list, which
-                     also switches the right pane to the Trail explorer (the
-                     parent's onToggleTrails drives `trailsExpanded`). Sticky so
-                     it stays pinned while the rows scroll under it. */
-                  <button
-                    type="button"
-                    onClick={onToggleTrails}
-                    aria-expanded={trailsExpanded}
-                    className="w-full px-4 py-2 border-b sticky top-0 z-10 shrink-0 flex items-center gap-2 transition-opacity hover:opacity-80"
-                    style={{
-                      borderColor: theme.colors.border,
-                      background: theme.colors.background,
-                    }}
-                  >
-                    {trailsExpanded ? (
-                      <ChevronDown
-                        size={14}
-                        style={{ color: theme.colors.textSecondary }}
-                      />
-                    ) : (
-                      <ChevronRight
-                        size={14}
-                        style={{ color: theme.colors.textSecondary }}
-                      />
-                    )}
-                    <Footprints
-                      size={14}
-                      style={{ color: theme.colors.textSecondary }}
-                    />
-                    <span
-                      style={{
-                        fontSize: theme.fontSizes[0],
-                        fontWeight: theme.fontWeights.semibold,
-                        color: theme.colors.textSecondary,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
-                      }}
-                    >
-                      Trails
-                    </span>
-                    <span
-                      style={{
-                        fontSize: theme.fontSizes[0],
-                        color: theme.colors.textMuted,
-                      }}
-                    >
-                      {entries.length}
-                    </span>
-                  </button>
-                )}
-                {archExpanded && hasPackages && (
-                  <div
-                    className="border-b flex-1 min-h-0 overflow-hidden"
-                    style={{ borderColor: theme.colors.border }}
-                  >
-                    <PackageCompositionPanelContent
-                      packages={packages}
-                      isLoading={packagesLoading}
-                      readFile={onReadFile}
-                      onPackageHover={onPackageHover}
-                      onPackageSelect={onPackageSelect}
-                    />
-                  </div>
-                )}
-                {trailsExpanded && (
-                  <div className="flex-1 min-h-0 overflow-y-auto">
-                    {entries.length === 0 ? (
-                      <TrailsEmptyState />
-                    ) : (
-                    filteredEntries.map((entry) => (
-                    <TrailRow
-                      key={entry.id}
-                      entry={entry}
-                      payload={payloads.get(entry.id) ?? null}
-                      selected={entry.id === selectedTrailId}
-                      onSelect={() =>
-                        onSelect(entry.id === selectedTrailId ? null : entry.id)
-                      }
-                      onHover={() => onHover(entry.id)}
-                      canDelete={
-                        viewerUserId !== null &&
-                        (viewerIsRepoAdmin ||
-                          String(entry.createdBy?.githubId) ===
-                            String(viewerUserId))
-                      }
-                      onDelete={() => onRequestDeleteTrail(entry)}
-                    />
-                    ))
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : null
-          }
+          trailCount={entries.length}
+          packageCount={packages.length}
+          onOpenView={onSetViewMode}
         />
       ) : (
         <>
+          <RailPaneHeader
+            icon={<Footprints size={14} />}
+            label="Trails"
+            count={entries.length || undefined}
+            onClose={() => onSetViewMode('tours')}
+          />
           {entries.length >= 10 && (
             <div
               className="px-3 py-2 border-b flex items-center gap-2"
@@ -2905,8 +2727,8 @@ const VIEW_TABS = [
 const TrailSummarySection: React.FC<{
   configMode: boolean;
   onToggleConfigMode: () => void;
-  leftViewMode: 'trails' | 'files' | 'tours' | 'activity';
-  onSetViewMode: (mode: 'trails' | 'files' | 'tours' | 'activity') => void;
+  leftViewMode: LeftViewMode;
+  onSetViewMode: (mode: LeftViewMode) => void;
 }> = ({ configMode, onToggleConfigMode, leftViewMode, onSetViewMode }) => {
   const { theme } = useTheme();
   const activeIndex = Math.max(
@@ -3843,13 +3665,12 @@ const RepoOverview: React.FC<{
   // a control rendered directly beneath it (e.g. the single-tour "Start tour"
   // CTA) inside one card, with the dividing line carried below that control.
   showBorder?: boolean;
-  // Commit-activity toggle: the card carries the control that flips the left
-  // rail to the contributor/commit-activity view (and back).
-  activityActive?: boolean;
-  onToggleActivity?: () => void;
   // Click a contributor face → open their commit drill-down in the activity
   // view. When omitted, the faces fall back to linking out to GitHub.
   onSelectContributor?: (c: { login: string; avatar_url: string }) => void;
+  // The "+N" overflow chip opens the full-rail Contributors pane. When omitted,
+  // the chip is hidden.
+  onOpenContributors?: () => void;
   // Action buttons (README + tour CTA) rendered inside the card, right after the
   // description.
   ctaSlot?: React.ReactNode;
@@ -3857,9 +3678,8 @@ const RepoOverview: React.FC<{
   owner,
   repo,
   showBorder = true,
-  activityActive = false,
-  onToggleActivity,
   onSelectContributor,
+  onOpenContributors,
   ctaSlot,
 }) => {
   const { theme } = useTheme();
@@ -3867,16 +3687,13 @@ const RepoOverview: React.FC<{
   // the metadata is typically ready the instant this card first renders.
   const { info } = useRepoOverviewData(owner, repo);
   const contributors = useRepoContributorsData(owner, repo);
-  // Whether the "all contributors" modal (opened from the +N overflow chip) is
-  // showing.
-  const [showAllContributors, setShowAllContributors] = useState(false);
 
   // Nothing until the core metadata lands — keeps the pane from flashing a
   // half-built header. The tours list renders regardless (below this).
   if (!info) return null;
 
   // Avatar row: the 4 top contributors get a face; everyone else collapses into
-  // a "+N" chip that opens the modal.
+  // a "+N" chip that opens the Contributors pane.
   const people = contributors?.contributors ?? [];
   const AVATAR_LIMIT = 4;
   const shownPeople = people.slice(0, AVATAR_LIMIT);
@@ -3992,14 +3809,12 @@ const RepoOverview: React.FC<{
 
       {ctaSlot && <div className="mt-1">{ctaSlot}</div>}
 
-      {/* Contributor faces + README shortcut on one row: the top few
-          contributors link straight to GitHub, the rest collapse into a chip
-          that opens the full list; the README opens the repo-root README in the
-          source panel. */}
-      {(shownPeople.length > 0 || onToggleActivity) && (
+      {/* Contributor faces: the top few contributors open their activity
+          drill-down; the rest collapse into a "+N" chip that opens the
+          full-rail Contributors pane. */}
+      {shownPeople.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 mt-0.5">
-          {shownPeople.length > 0 && (
-            <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5">
               {shownPeople.map((c) => {
                 const avatar = (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -4047,7 +3862,7 @@ const RepoOverview: React.FC<{
               {overflowPeople.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setShowAllContributors(true)}
+                  onClick={() => onOpenContributors?.()}
                   className="rounded-full transition-colors"
                   style={{
                     height: 32,
@@ -4063,36 +3878,7 @@ const RepoOverview: React.FC<{
                   {overflowLabel}
                 </button>
               )}
-            </div>
-          )}
-          {onToggleActivity && (
-            <button
-              type="button"
-              onClick={onToggleActivity}
-              aria-pressed={activityActive}
-              className="inline-flex items-center gap-1.5 rounded transition-colors hover:opacity-80"
-              style={{
-                padding: '4px 10px',
-                fontSize: theme.fontSizes[1],
-                fontWeight: theme.fontWeights.medium,
-                color: activityActive
-                  ? theme.colors.primary
-                  : theme.colors.textSecondary,
-                background: activityActive
-                  ? `color-mix(in srgb, ${theme.colors.primary} 14%, transparent)`
-                  : `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
-                border: `1px solid ${
-                  activityActive ? theme.colors.primary : theme.colors.border
-                }`,
-              }}
-              title={
-                activityActive ? 'Hide commit activity' : 'Show commit activity'
-              }
-            >
-              <Activity size={14} className="shrink-0" />
-              Activity
-            </button>
-          )}
+          </div>
         </div>
       )}
 
@@ -4132,105 +3918,217 @@ const RepoOverview: React.FC<{
           </a>
         </div>
       )}
+    </div>
+  );
+};
 
-      {showAllContributors && (
-        <ContributorsModal
-          owner={owner}
-          repo={repo}
-          contributors={people}
-          truncated={contributors?.truncated ?? false}
-          onClose={() => setShowAllContributors(false)}
-        />
+// ---------------------------------------------------------------------------
+// Shared full-rail header for the nav-card panes (Structure / Contributors),
+// mirroring RepoActivityPane's sticky header: an eyebrow title (icon + label +
+// optional count) on the left and a close button on the right. When `onBack` is
+// given, the eyebrow is replaced by a back chevron + the supplied node (used for
+// the contributor drill-down).
+const RailPaneHeader: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  count?: number;
+  onClose: () => void;
+  onBack?: () => void;
+  backContent?: React.ReactNode;
+}> = ({ icon, label, count, onClose, onBack, backContent }) => {
+  const { theme } = useTheme();
+  return (
+    <div
+      className={`px-4 border-b sticky top-0 z-10 shrink-0 flex items-center gap-2 ${
+        onBack ? 'py-3' : 'py-2'
+      }`}
+      style={{
+        borderColor: theme.colors.border,
+        background: theme.colors.background,
+      }}
+    >
+      {onBack ? (
+        <>
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center justify-center w-6 h-6 -ml-1 rounded transition-opacity hover:opacity-70"
+            style={{ color: theme.colors.textSecondary, cursor: 'pointer' }}
+            title={`Back to ${label.toLowerCase()}`}
+            aria-label={`Back to ${label.toLowerCase()}`}
+          >
+            <ChevronLeft size={16} />
+          </button>
+          {backContent}
+        </>
+      ) : (
+        <>
+          <span style={{ color: theme.colors.textSecondary }}>{icon}</span>
+          <span
+            style={{
+              fontSize: theme.fontSizes[0],
+              fontWeight: theme.fontWeights.semibold,
+              color: theme.colors.textSecondary,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
+            {label}
+          </span>
+          {count !== undefined && (
+            <span
+              style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted }}
+            >
+              {count}
+            </span>
+          )}
+        </>
+      )}
+      <button
+        type="button"
+        onClick={onClose}
+        className="ml-auto flex items-center justify-center w-6 h-6 rounded transition-opacity hover:opacity-70"
+        style={{ color: theme.colors.textMuted, cursor: 'pointer' }}
+        title="Close"
+        aria-label="Close"
+      >
+        <X size={14} />
+      </button>
+    </div>
+  );
+};
+
+// Full-rail Structure pane (opened from the "Structure" nav card): the package
+// composition panel under a header with a close button that returns to the
+// tours view. Mirrors the Activity pane's full-rail shape.
+const StructurePane: React.FC<{
+  packages: PackageLayer[];
+  packagesLoading: boolean;
+  onReadFile: (filePath: string) => Promise<string>;
+  onPackageHover: (pkg: PackageLayer | null) => void;
+  onPackageSelect: (pkg: PackageLayer | null) => void;
+  onClose: () => void;
+}> = ({
+  packages,
+  packagesLoading,
+  onReadFile,
+  onPackageHover,
+  onPackageSelect,
+  onClose,
+}) => {
+  const { theme } = useTheme();
+  return (
+    <div className="flex-1 min-h-0 flex flex-col">
+      <RailPaneHeader
+        icon={<Boxes size={14} />}
+        label="Structure"
+        count={packages.length || undefined}
+        onClose={onClose}
+      />
+      {packages.length === 0 && !packagesLoading ? (
+        <div
+          className="flex-1 min-h-0 flex items-center justify-center px-6 text-center"
+          style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+        >
+          No package structure detected for this repository.
+        </div>
+      ) : (
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <PackageCompositionPanelContent
+            packages={packages}
+            isLoading={packagesLoading}
+            readFile={onReadFile}
+            onPackageHover={onPackageHover}
+            onPackageSelect={onPackageSelect}
+          />
+        </div>
       )}
     </div>
   );
 };
 
-// Master/detail modal opened from the overview's "+N" chip: the full
-// contributor list on the left, and a mini profile (contact + a year's activity
-// heatmap) for the selected contributor on the right.
-const ContributorsModal: React.FC<{
+// Full-rail Contributors pane (opened from the "Contributors" nav card / the
+// "+N" chip): a scrolling list of contributors that drills into a single
+// contributor's profile (the same ContributorProfile the modal used), with a
+// back button. Replaces the old centered ContributorsModal.
+const ContributorsPane: React.FC<{
   owner: string;
   repo: string;
-  contributors: RepoContributor[];
-  truncated: boolean;
   onClose: () => void;
-}> = ({ owner, repo, contributors, truncated, onClose }) => {
+}> = ({ owner, repo, onClose }) => {
   const { theme } = useTheme();
-  const [selectedLogin, setSelectedLogin] = useState<string | null>(
-    () => contributors[0]?.login ?? null,
-  );
-  const selected =
-    contributors.find((c) => c.login === selectedLogin) ?? contributors[0] ?? null;
+  const contributors = useRepoContributorsData(owner, repo);
+  const people = contributors?.contributors ?? [];
+  const truncated = contributors?.truncated ?? false;
+  const [selectedLogin, setSelectedLogin] = useState<string | null>(null);
+  const selected = selectedLogin
+    ? people.find((c) => c.login === selectedLogin) ?? null
+    : null;
 
-  // Close on Escape, mirroring the page's other portal dialogs.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  return (
+    <div className="flex-1 min-h-0 flex flex-col">
+      <RailPaneHeader
+        icon={<Users size={14} />}
+        label="Contributors"
+        count={
+          selected
+            ? undefined
+            : truncated
+              ? people.length
+              : people.length || undefined
+        }
+        onClose={onClose}
+        onBack={selected ? () => setSelectedLogin(null) : undefined}
+        backContent={
+          selected ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`${selected.avatar_url}${selected.avatar_url.includes('?') ? '&' : '?'}s=72`}
+                alt={selected.login}
+                width={36}
+                height={36}
+                style={{ borderRadius: '50%', flexShrink: 0 }}
+              />
+              <span
+                className="truncate"
+                style={{
+                  fontSize: theme.fontSizes[2],
+                  fontWeight: theme.fontWeights.semibold,
+                  color: theme.colors.text,
+                }}
+              >
+                {selected.login}
+              </span>
+            </>
+          ) : undefined
+        }
+      />
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.5)' }}
-      onClick={onClose}
-    >
-      <div
-        className="flex flex-col w-full max-w-3xl rounded-lg overflow-hidden"
-        style={{
-          maxHeight: '80vh',
-          background: theme.colors.surface,
-          border: `1px solid ${theme.colors.border}`,
-          boxShadow: '0 12px 40px rgba(0,0,0,0.35)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div
-          className="flex items-center justify-between px-4 py-3 border-b shrink-0"
-          style={{ borderColor: theme.colors.border }}
-        >
-          <div
-            style={{
-              fontSize: theme.fontSizes[2],
-              fontWeight: theme.fontWeights.semibold,
-              color: theme.colors.text,
-            }}
-          >
-            Contributors{truncated ? ' (top 100)' : ` (${contributors.length})`}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded p-1 transition-colors hover:opacity-80"
-            style={{ color: theme.colors.textMuted }}
-            aria-label="Close"
-          >
-            <X size={16} />
-          </button>
+      {selected ? (
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <ContributorProfile
+            key={selected.login}
+            contributor={selected}
+            repo={repo}
+          />
         </div>
-
-        <div className="flex min-h-0 flex-1">
-          {/* Left: selectable contributor list. */}
-          <div
-            className="w-56 shrink-0 overflow-y-auto border-r"
-            style={{ borderColor: theme.colors.border }}
-          >
-            {contributors.map((c) => {
-              const active = c.login === selected?.login;
-              return (
+      ) : (
+        <>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {people.length === 0 ? (
+              <ListMessage>Loading contributors…</ListMessage>
+            ) : (
+              people.map((c) => (
                 <button
                   key={c.id}
                   type="button"
                   onClick={() => setSelectedLogin(c.login)}
-                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors"
+                  className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left border-b transition-colors hover:opacity-90"
                   style={{
-                    background: active
-                      ? `color-mix(in srgb, ${theme.colors.primary} 12%, transparent)`
-                      : 'transparent',
+                    borderColor: theme.colors.border,
                     color: theme.colors.text,
+                    background: 'transparent',
                   }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -4258,38 +4156,25 @@ const ContributorsModal: React.FC<{
                     {c.contributions.toLocaleString()}
                   </span>
                 </button>
-              );
-            })}
-          </div>
-
-          {/* Right: mini profile for the selected contributor. */}
-          <div className="min-w-0 flex-1 overflow-y-auto">
-            {selected && (
-              <ContributorProfile
-                key={selected.login}
-                contributor={selected}
-                repo={repo}
-              />
+              ))
             )}
           </div>
-        </div>
-
-        <a
-          href={`https://github.com/${owner}/${repo}/graphs/contributors`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-4 py-2.5 border-t text-center transition-colors hover:opacity-80 shrink-0"
-          style={{
-            borderColor: theme.colors.border,
-            color: theme.colors.primary,
-            fontSize: theme.fontSizes[1],
-          }}
-        >
-          View all on GitHub
-        </a>
-      </div>
-    </div>,
-    document.body,
+          <a
+            href={`https://github.com/${owner}/${repo}/graphs/contributors`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2.5 border-t text-center transition-colors hover:opacity-80 shrink-0"
+            style={{
+              borderColor: theme.colors.border,
+              color: theme.colors.primary,
+              fontSize: theme.fontSizes[1],
+            }}
+          >
+            View all on GitHub
+          </a>
+        </>
+      )}
+    </div>
   );
 };
 
@@ -4462,6 +4347,125 @@ const ContributorProfile: React.FC<{
   );
 };
 
+// Nav cards rendered under the About card in the tours view: a compact grid of
+// icon + label + count tiles, each swapping the rail to a full-rail view
+// (Trails / Structure / Contributors / Activity) the same way Recent Activity
+// does. Structure is hidden when no packages were detected.
+const RepoNavCards: React.FC<{
+  owner: string;
+  repo: string;
+  trailCount: number;
+  packageCount: number;
+  onOpenView: (mode: LeftViewMode) => void;
+}> = ({ owner, repo, trailCount, packageCount, onOpenView }) => {
+  const { theme } = useTheme();
+  const contributors = useRepoContributorsData(owner, repo);
+  const contributorCount = contributors?.contributors.length ?? 0;
+
+  const cards: {
+    mode: LeftViewMode;
+    icon: React.ReactNode;
+    label: string;
+    description: string;
+    count?: number;
+  }[] = [
+    {
+      mode: 'activity',
+      icon: <Activity size={18} />,
+      label: 'Activity',
+      description: 'Recent commits, by contributor',
+    },
+    {
+      mode: 'contributors',
+      icon: <Users size={18} />,
+      label: 'Contributors',
+      description: 'The people who build this repo',
+      count: contributorCount || undefined,
+    },
+    ...(packageCount > 0
+      ? [
+          {
+            mode: 'structure' as const,
+            icon: <Boxes size={18} />,
+            label: 'Structure',
+            description: 'Packages and how the repo is laid out',
+            count: packageCount,
+          },
+        ]
+      : []),
+    {
+      mode: 'trails',
+      icon: <Footprints size={18} />,
+      label: 'Trails',
+      description: 'Guided walkthroughs of how the code works',
+      count: trailCount || undefined,
+    },
+  ];
+
+  return (
+    <div className="flex flex-col gap-2 px-4 py-3">
+      {cards.map((card) => (
+        <button
+          key={card.mode}
+          type="button"
+          onClick={() => onOpenView(card.mode)}
+          className="flex items-center gap-3 rounded-md px-3 py-2.5 border text-left transition-colors hover:opacity-90"
+          style={{
+            borderColor: theme.colors.border,
+            background: `color-mix(in srgb, ${theme.colors.text} 4%, transparent)`,
+            color: theme.colors.text,
+          }}
+          title={`Open ${card.label.toLowerCase()}`}
+        >
+          <span
+            className="shrink-0"
+            style={{ color: theme.colors.textSecondary }}
+          >
+            {card.icon}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span
+                style={{
+                  fontSize: theme.fontSizes[2],
+                  fontWeight: theme.fontWeights.semibold,
+                }}
+              >
+                {card.label}
+              </span>
+              {card.count !== undefined && (
+                <span
+                  style={{
+                    fontSize: theme.fontSizes[1],
+                    color: theme.colors.textMuted,
+                  }}
+                >
+                  {card.count}
+                </span>
+              )}
+            </div>
+            <div
+              className="truncate"
+              style={{
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.textMuted,
+                lineHeight: 1.3,
+              }}
+            >
+              {card.description}
+            </div>
+          </div>
+          <ChevronRight
+            size={16}
+            className="shrink-0"
+            style={{ color: theme.colors.textMuted }}
+          />
+        </button>
+      ))}
+    </div>
+  );
+};
+
 const ToursPane: React.FC<{
   owner: string;
   repo: string;
@@ -4472,21 +4476,20 @@ const ToursPane: React.FC<{
   viewerUserId: number | null;
   viewerIsRepoAdmin: boolean;
   onRequestDelete: (item: TourListItem) => void;
-  // Commit-activity toggle, forwarded to RepoOverview so the About card can flip
-  // the left rail to the activity view.
-  activityActive: boolean;
-  onToggleActivity: () => void;
   // Click a contributor face in the About card → open their activity drill-down.
   onSelectContributor: (c: { login: string; avatar_url: string }) => void;
+  // The About card's "+N" contributor chip opens the Contributors pane.
+  onOpenContributors: () => void;
   // Repo-root README path (or null) + handler, forwarded to RepoOverview so the
   // About card can offer a "README" button.
   readmePath: string | null;
   onOpenReadme: () => void;
-  // Trails list rendered beneath the tours in the same scroll column, so a
-  // visitor landing on the default view sees the repo's trails under About.
-  // Null when the repo has no trails. Built by the caller (which holds the
-  // trail data + handlers).
-  trailsSection: React.ReactNode;
+  // Counts shown on the nav cards (Trails / Structure); Contributors fetches its
+  // own count.
+  trailCount: number;
+  packageCount: number;
+  // Open one of the full-rail nav-card views.
+  onOpenView: (mode: LeftViewMode) => void;
 }> = ({
   owner,
   repo,
@@ -4497,12 +4500,13 @@ const ToursPane: React.FC<{
   viewerUserId,
   viewerIsRepoAdmin,
   onRequestDelete,
-  activityActive,
-  onToggleActivity,
   onSelectContributor,
+  onOpenContributors,
   readmePath,
   onOpenReadme,
-  trailsSection,
+  trailCount,
+  packageCount,
+  onOpenView,
 }) => {
   // With exactly one tour we collapse the list into a single "Start tour" CTA
   // (SingleTourCta) rather than a one-row list.
@@ -4534,21 +4538,27 @@ const ToursPane: React.FC<{
   ) : null;
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      {/* Pinned header. */}
+      {/* Pinned header: the About card + the nav cards that swap the rail to
+          the full-rail Trails / Structure / Contributors / Activity views. */}
       <div className="shrink-0">
         <RepoOverview
           owner={owner}
           repo={repo}
-          activityActive={activityActive}
-          onToggleActivity={onToggleActivity}
           onSelectContributor={onSelectContributor}
+          onOpenContributors={onOpenContributors}
           ctaSlot={cta}
+        />
+        <RepoNavCards
+          owner={owner}
+          repo={repo}
+          trailCount={trailCount}
+          packageCount={packageCount}
+          onOpenView={onOpenView}
         />
       </div>
 
-      {/* Scrollable body: the multi-tour list (or a loading line) + the trails.
-          overscroll-none kills the elastic rubber-band at the scroll ends, which
-          otherwise bounces the sticky "Trails" header. */}
+      {/* Scrollable body: the multi-tour list (or a loading line).
+          overscroll-none kills the elastic rubber-band at the scroll ends. */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-none flex flex-col">
         <div className="shrink-0">
         {!single &&
@@ -4579,7 +4589,6 @@ const ToursPane: React.FC<{
             ))
           ))}
         </div>
-        {trailsSection}
       </div>
     </div>
   );
