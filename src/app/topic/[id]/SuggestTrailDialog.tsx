@@ -19,7 +19,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Copy, Loader2, X } from 'lucide-react';
+import { Check, Copy, X } from 'lucide-react';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { TopicPayload } from '@/lib/topics/types';
 import type { SharedTrailIndexEntry } from '@/lib/trails/types';
@@ -276,7 +277,7 @@ function TabBody({
           className="mt-2 text-xs inline-flex items-center gap-1.5"
           style={{ color: theme.colors.textMuted }}
         >
-          <Loader2 className="w-3 h-3 animate-spin" />
+          <InlineTrailLoader size={12} />
           Trail titles still loading — URLs are included regardless.
         </p>
       )}

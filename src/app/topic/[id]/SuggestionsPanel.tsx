@@ -15,7 +15,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Github, Loader2, X } from 'lucide-react';
+import { Check, Github, X } from 'lucide-react';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   TopicErrorCodes,
@@ -439,7 +440,7 @@ function SuggestionRow({
         className="inline-flex items-center gap-2 text-sm"
         style={{ color: theme.colors.textMuted }}
       >
-        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        <InlineTrailLoader size={14} />
         Loading trail…
       </span>
     ) : (
@@ -520,7 +521,7 @@ function SuggestionRow({
           title="Accept"
         >
           {busy ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <InlineTrailLoader size={16} />
           ) : (
             <Check className="w-4 h-4" />
           )}
@@ -734,7 +735,7 @@ function ProjectSuggestionRow({
               title="Accept — mark as in progress"
             >
               {busy ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <InlineTrailLoader size={16} />
               ) : (
                 <Check className="w-4 h-4" />
               )}

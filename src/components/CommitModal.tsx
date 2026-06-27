@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { X, GitCommit, Check, AlertCircle } from 'lucide-react';
 import type { PendingFileChange } from '@/contexts/PendingChangesContext';
-import { LoadingSpinner } from './LoadingSpinner';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 
 interface CommitModalProps {
   isOpen: boolean;
@@ -272,7 +272,7 @@ export function CommitModal({
             >
               {isCommitting ? (
                 <>
-                  <LoadingSpinner size={16} />
+                  <InlineTrailLoader size={16} />
                   Committing...
                 </>
               ) : (

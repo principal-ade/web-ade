@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import type { RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
 import { trpc } from '@/lib/trpc/client';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 import {
   ArchitectureMapHighlightLayers,
   MultiVersionCityBuilder,
@@ -1233,7 +1233,7 @@ export const RepoActivityCard: React.FC<RepoActivityCardProps> = ({
                 fontSize: theme.fontSizes[1],
               }}
             >
-              <LoadingSpinner size={14} />
+              <InlineTrailLoader size={14} />
               <span>Generating explanation...</span>
             </div>
           )}

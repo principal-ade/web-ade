@@ -18,7 +18,7 @@ import { GitHubSearchingAnimation } from '@/components/home/GitHubSearchingAnima
 import { Logo } from '@principal-ai/logo-component';
 import { useGitHubActivityFeed, type RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
 import { FEATURED_REPOS } from '@/lib/featured-repos';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 import { RepoActivityCard } from './RepoActivityCard';
 import { MobileActivityFeed } from '@/components/home/MobileActivityFeed';
 import { RepoHeader } from '@/components/RepoHeader';
@@ -1278,7 +1278,7 @@ export const ActivityFeedPanel: React.FC<ActivityFeedPanelProps> = ({
                       padding: spacing.lg,
                     }}
                   >
-                    <LoadingSpinner size={24} />
+                    <InlineTrailLoader size={24} />
                   </div>
                 ) : authorProfile ? (
                   <div

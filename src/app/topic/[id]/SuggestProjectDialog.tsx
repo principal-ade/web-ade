@@ -13,7 +13,8 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { Github, Loader2, X } from 'lucide-react';
+import { Github, X } from 'lucide-react';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { TopicErrorCodes, type ProjectSuggestion } from '@/lib/topics/types';
@@ -297,7 +298,7 @@ export function SuggestProjectDialog({
                 cursor: submitting ? 'wait' : 'pointer',
               }}
             >
-              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {submitting && <InlineTrailLoader size={16} />}
               <span>{submitting ? 'Suggesting…' : 'Suggest'}</span>
             </button>
           </div>

@@ -4,7 +4,7 @@ import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Sparkles } from 'lucide-react';
 import type { CommitTheme } from '@/hooks/useCommitThemes';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 
 interface RepoThemeCardsProps {
   themes: CommitTheme[];
@@ -46,7 +46,7 @@ export const RepoThemeCards: React.FC<RepoThemeCardsProps> = ({
       >
         <Sparkles size={12} />
         <span>Themes</span>
-        {loading && <LoadingSpinner size={12} color={theme.colors.primary} />}
+        {loading && <InlineTrailLoader size={12} />}
         {error && <span style={{ color: theme.colors.error }}>— {error}</span>}
       </div>
 

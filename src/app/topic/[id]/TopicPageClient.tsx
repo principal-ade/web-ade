@@ -15,11 +15,12 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Footprints, Github, Loader2, Plus, Save, Trash2, X } from 'lucide-react';
+import { Footprints, Github, Plus, Save, Trash2, X } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
 import { useAuth } from '@/contexts/AuthContext';
 import { TrailLoadingAnimation } from '@/components/trail/TrailLoadingAnimation';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 import { CommentThread } from './CommentThread';
 import { SuggestionsPanel, type TopicTrailMeta } from './SuggestionsPanel';
 import {
@@ -1175,7 +1176,7 @@ function TrailCard({
             className="flex items-center gap-2 text-sm"
             style={{ color: theme.colors.textMuted }}
           >
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <InlineTrailLoader size={14} />
             Loading trail…
           </div>
         )}

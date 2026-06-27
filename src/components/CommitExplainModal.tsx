@@ -5,7 +5,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { X, ArrowLeft, Sparkles, Code, Users } from 'lucide-react';
 import { IndustryMarkdownSlide } from 'themed-markdown';
 import type { ActivityCommit } from '@/hooks/useGitHubActivityFeed';
-import { LoadingSpinner } from './LoadingSpinner';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 
 interface CommitExplainModalProps {
   isOpen: boolean;
@@ -216,7 +216,7 @@ export function CommitExplainModal({
 
           {state === 'loading' && (
             <div className="flex flex-col items-center gap-4 py-8">
-              <LoadingSpinner size={32} />
+              <InlineTrailLoader size={32} />
               <p className="text-sm" style={{ color: theme.colors.textMuted }}>
                 Generating {audienceLevel === 'maintainer' ? 'technical' : 'friendly'} explanation...
               </p>

@@ -14,7 +14,7 @@ import { Calendar, RefreshCw } from 'lucide-react';
 import type { PanelEventEmitter } from '@principal-ade/panel-framework-core';
 import { useGitHubActivityFeed, type RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
 import { useCommitThemes } from '@/hooks/useCommitThemes';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 import { RepoActivityCard } from './RepoActivityCard';
 import { RepoThemeCards } from './RepoThemeCards';
 import { useRouter } from 'next/navigation';
@@ -363,7 +363,7 @@ export const RepositoryActivityFeedPanel: React.FC<RepositoryActivityFeedPanelPr
           color: theme.colors.text,
         }}
       >
-        <LoadingSpinner size={32} color={theme.colors.primary} />
+        <InlineTrailLoader size={32} />
         <p style={{ marginTop: spacing.md, color: theme.colors.textMuted }}>
           Loading activity...
         </p>
@@ -561,7 +561,7 @@ export const RepositoryActivityFeedPanel: React.FC<RepositoryActivityFeedPanelPr
           </button>
           {fetchingCommitFiles && (
             <>
-              <LoadingSpinner size={14} color={theme.colors.primary} />
+              <InlineTrailLoader size={14} />
               <span style={{ fontSize: theme.fontSizes[1], color: theme.colors.textMuted }}>
                 Analyzing commits...
               </span>

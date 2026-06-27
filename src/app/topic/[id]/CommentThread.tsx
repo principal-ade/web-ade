@@ -18,7 +18,8 @@
  * visual.
  */
 
-import { Loader2, MessageSquare, Send } from 'lucide-react';
+import { MessageSquare, Send } from 'lucide-react';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 import {
   useCallback,
   useEffect,
@@ -235,7 +236,7 @@ export function CommentThread({
           className="flex items-center gap-2 text-sm py-4"
           style={{ color: theme.colors.textMuted }}
         >
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          <InlineTrailLoader size={14} />
           Loading comments…
         </div>
       )}
@@ -365,7 +366,7 @@ function Composer({
           }}
         >
           {posting ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <InlineTrailLoader size={14} />
           ) : (
             <Send className="w-3.5 h-3.5" />
           )}

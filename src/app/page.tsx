@@ -9,12 +9,12 @@ import {
   ExternalLink,
   Search,
   Star,
-  Loader2,
   ChevronRight,
   Github,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TrailCityDiagram } from '@/components/trail/TrailCityDiagram';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 import { LgtmStamp, SignOffStampAnimation } from '@/components/trail/LgtmStamp';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { AgentViewButton } from '@/components/AgentViewButton';
@@ -675,7 +675,7 @@ export default function HomePage() {
                     fontSize: theme.fontSizes[2],
                   }}
                 >
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <InlineTrailLoader size={16} />
                   Searching…
                 </div>
               ) : openRepoResults.length > 0 ? (

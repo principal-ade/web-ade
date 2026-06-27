@@ -11,7 +11,8 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
-import { Loader2, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { TrailLoadingAnimation } from '@/components/trail/TrailLoadingAnimation';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { extractTrailId } from '@/lib/topics/validation';
@@ -73,11 +74,9 @@ export default function NewTopicPage() {
         className="w-screen flex items-center justify-center"
         style={{ background: theme.colors.background, height: '100vh' }}
       >
-        <Loader2
-          className="animate-spin"
-          size={24}
-          style={{ color: theme.colors.textMuted }}
-        />
+        <div style={{ width: 'min(80vmin, 600px)', height: 'min(80vmin, 600px)' }}>
+          <TrailLoadingAnimation message="Loading" />
+        </div>
       </div>
     );
   }

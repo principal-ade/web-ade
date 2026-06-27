@@ -12,7 +12,7 @@ import { groupSessionsByDevice, getDeviceTypeLabel, getRelativeTime } from '@/li
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Monitor, Globe, RefreshCw } from 'lucide-react';
-import { LoadingSpinner } from './LoadingSpinner';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 
 export function SessionsPanel() {
   const { theme } = useTheme();
@@ -41,7 +41,7 @@ export function SessionsPanel() {
         style={{ color: theme.colors.textMuted }}
       >
         <div className="text-center">
-          <LoadingSpinner size={24} />
+          <InlineTrailLoader size={24} />
           <p className="text-sm mt-2">Loading sessions...</p>
         </div>
       </div>

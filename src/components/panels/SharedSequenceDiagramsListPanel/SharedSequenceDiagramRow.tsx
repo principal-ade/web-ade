@@ -7,7 +7,8 @@
 
 import React, { useCallback, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Check, GitCompare, Link2, Loader2, Share2 } from 'lucide-react';
+import { Check, GitCompare, Link2, Share2 } from 'lucide-react';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 import type { SharedSequenceDiagramIndexEntry } from '@/lib/sequence-diagrams/types';
 
 const relativeTime = (iso: string): string => {
@@ -260,10 +261,7 @@ export const SharedSequenceDiagramRow: React.FC<SharedSequenceDiagramRowProps> =
             justifyContent: 'center',
           }}
         >
-          <Loader2
-            size={14}
-            style={{ animation: 'spin 1s linear infinite' }}
-          />
+          <InlineTrailLoader size={14} />
         </div>
       )}
     </div>

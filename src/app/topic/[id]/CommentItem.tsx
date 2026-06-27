@@ -9,7 +9,8 @@
  * parent thread keeps the optimistic list state in one place.
  */
 
-import { Loader2, Pencil, Save, Trash2, X } from 'lucide-react';
+import { Pencil, Save, Trash2, X } from 'lucide-react';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 import { useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
@@ -165,7 +166,7 @@ export function CommentItem({
                 title="Delete"
               >
                 {busy === 'deleting' ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <InlineTrailLoader size={14} />
                 ) : (
                   <Trash2 className="w-3.5 h-3.5" />
                 )}
@@ -202,7 +203,7 @@ export function CommentItem({
               }}
             >
               {busy === 'saving' ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <InlineTrailLoader size={14} />
               ) : (
                 <Save className="w-3.5 h-3.5" />
               )}

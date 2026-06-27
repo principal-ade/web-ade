@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Github, Check, ExternalLink, RefreshCw, Zap } from 'lucide-react';
-import { LoadingSpinner } from './LoadingSpinner';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 
 interface GitHubAppStatusProps {
   repoId: string;
@@ -123,7 +123,7 @@ export function GitHubAppStatus({
             color: theme.colors.textSecondary,
           }}
         >
-          <LoadingSpinner size={12} />
+          <InlineTrailLoader size={12} />
         </span>
       );
     }
@@ -238,7 +238,7 @@ export function GitHubAppStatus({
             fontSize: `${theme.fontSizes[1]}px`,
           }}
         >
-          <LoadingSpinner size={14} />
+          <InlineTrailLoader size={14} />
           Checking status...
         </div>
       ) : error ? (

@@ -14,7 +14,7 @@ import { FolderGit2 } from 'lucide-react';
 import type { RepoActivitySummary } from '@/hooks/useGitHubActivityFeed';
 import { MobileRepoCard } from './MobileRepoCard';
 import { groupSummariesByHour } from '@/utils/activityGrouping';
-import { LoadingSpinner } from '../LoadingSpinner';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 
 interface MobileActivityFeedProps {
   summaries: RepoActivitySummary[];
@@ -50,7 +50,7 @@ export const MobileActivityFeed: React.FC<MobileActivityFeedProps> = ({
           gap: spacing.md,
         }}
       >
-        <LoadingSpinner size={32} />
+        <InlineTrailLoader size={32} />
         <span style={{ fontSize: theme.fontSizes[1] }}>Loading activity...</span>
       </div>
     );

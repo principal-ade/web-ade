@@ -15,7 +15,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Bot, Check, Copy, Loader2, X } from 'lucide-react';
+import { Bot, Check, Copy, X } from 'lucide-react';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
 
@@ -237,7 +238,7 @@ export function AgentViewModal({ path, onClose }: AgentViewModalProps) {
               className="flex items-center justify-center gap-2 h-full text-sm"
               style={{ color: theme.colors.textMuted }}
             >
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <InlineTrailLoader size={16} />
               Loading agent view…
             </div>
           ) : error ? (
