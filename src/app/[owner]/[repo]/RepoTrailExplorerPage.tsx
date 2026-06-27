@@ -276,8 +276,8 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   );
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   // Which edge the file source drawer docks to. Files open on the right; the
-  // README opens on the left.
-  const [fileSide, setFileSide] = useState<'left' | 'right'>('right');
+  // README opens as a centered sheet rising from the bottom.
+  const [fileSide, setFileSide] = useState<'left' | 'right' | 'bottom'>('right');
   // Tour selection. Mutually exclusive with trail/file selection — the right
   // pane swaps to the tour panel while a tour is active.
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
@@ -1324,10 +1324,11 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             setSelectedTrailId(null);
             setSelectedTourId(null);
           }}
-          // The README opens the same drawer, but docked on the left.
+          // The README opens the same drawer, but as a centered sheet that
+          // rises from the bottom.
           onOpenReadmeFile={(path) => {
             setSelectedFilePath(path);
-            setFileSide('left');
+            setFileSide('bottom');
             setSelectedTrailId(null);
             setSelectedTourId(null);
           }}

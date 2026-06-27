@@ -73,6 +73,10 @@ async function fetchFileContent(
 const MIN_PANEL_WIDTH = 360;
 const DEFAULT_PANEL_WIDTH = 720;
 const PANEL_WIDTH_KEY = 'fileSourcePanel:width';
+// The centered bottom sheet reads better a bit wider, and keeps its own
+// remembered width so resizing it doesn't move the side drawer.
+const DEFAULT_BOTTOM_WIDTH = 1040;
+const BOTTOM_WIDTH_KEY = 'fileSourcePanel:bottomWidth';
 
 // A right-docked drawer that shows the source of a single file, read-only.
 // Driven purely by `filePath`; intentionally independent of the trail overlay
@@ -89,8 +93,8 @@ export const FileSourcePanel: React.FC<{
   // header height, so the drawer starts under the header rather than over it.
   topOffset?: number;
   // Which edge the drawer docks to. Defaults to the right; the README opens it
-  // on the left.
-  side?: 'left' | 'right';
+  // as a centered sheet that rises from the bottom ('bottom').
+  side?: 'left' | 'right' | 'bottom';
   onClose: () => void;
 }> = ({
   owner,
@@ -102,6 +106,7 @@ export const FileSourcePanel: React.FC<{
   onClose,
 }) => {
   const dockLeft = side === 'left';
+  const dockBottom = side === 'bottom';
   const { theme } = useTheme();
   const open = filePath !== null;
 
@@ -175,18 +180,27 @@ export const FileSourcePanel: React.FC<{
 
   // Drag-to-resize: width in px, hydrated from localStorage after mount (kept
   // out of the initial state to avoid an SSR/client hydration mismatch).
-  const [width, setWidth] = useState<number>(DEFAULT_PANEL_WIDTH);
+  const widthKey = dockBottom ? BOTTOM_WIDTH_KEY : PANEL_WIDTH_KEY;
+  const [width, setWidth] = useState<number>(
+    dockBottom ? DEFAULT_BOTTOM_WIDTH : DEFAULT_PANEL_WIDTH,
+  );
   const [dragging, setDragging] = useState(false);
   useEffect(() => {
-    const saved = Number(window.localStorage.getItem(PANEL_WIDTH_KEY));
+    const saved = Number(window.localStorage.getItem(widthKey));
     if (Number.isFinite(saved) && saved >= MIN_PANEL_WIDTH) setWidth(saved);
-  }, []);
+  }, [widthKey]);
   useEffect(() => {
     if (!dragging) return;
     // Width is the distance from the pointer to the drawer's docked edge: the
-    // pointer's x for a left dock, or the gap to the right viewport edge.
+    // pointer's x for a left dock, or the gap to the right viewport edge. For
+    // the centered bottom sheet it's twice the gap from the viewport center, so
+    // dragging either side edge widens it symmetrically.
     const onMove = (e: PointerEvent) => {
-      const next = dockLeft ? e.clientX : window.innerWidth - e.clientX;
+      const next = dockBottom
+        ? 2 * Math.abs(e.clientX - window.innerWidth / 2)
+        : dockLeft
+          ? e.clientX
+          : window.innerWidth - e.clientX;
       const max = window.innerWidth * 0.95;
       setWidth(Math.max(MIN_PANEL_WIDTH, Math.min(next, max)));
     };
@@ -197,10 +211,10 @@ export const FileSourcePanel: React.FC<{
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
     };
-  }, [dragging, dockLeft]);
+  }, [dragging, dockLeft, dockBottom]);
   useEffect(() => {
-    if (!dragging) window.localStorage.setItem(PANEL_WIDTH_KEY, String(width));
-  }, [width, dragging]);
+    if (!dragging) window.localStorage.setItem(widthKey, String(width));
+  }, [width, dragging, widthKey]);
 
   const basename = shownPath ? shownPath.split('/').pop() || shownPath : '';
 
@@ -236,26 +250,47 @@ export const FileSourcePanel: React.FC<{
       aria-hidden={!open}
       style={{
         position: 'fixed',
-        top: topOffset,
-        [dockLeft ? 'left' : 'right']: 0,
-        bottom: 0,
         zIndex: 40,
-        width: `min(${width}px, 95vw)`,
         display: 'flex',
         flexDirection: 'column',
         background: theme.colors.backgroundSecondary,
-        [dockLeft ? 'borderRight' : 'borderLeft']: `1px solid ${theme.colors.border}`,
-        boxShadow: entered
-          ? `${dockLeft ? '12px' : '-12px'} 0 32px rgba(0,0,0,0.35)`
-          : 'none',
-        transform: entered
-          ? 'translateX(0)'
-          : `translateX(${dockLeft ? '-100%' : '100%'})`,
-        // Don't animate width while dragging — only the open/close slide.
+        // Don't animate size while dragging — only the open/close slide.
         transition: dragging
           ? 'none'
           : 'transform 360ms cubic-bezier(0.22, 1, 0.36, 1)',
         pointerEvents: open ? 'auto' : 'none',
+        ...(dockBottom
+          ? {
+              // Centered sheet anchored to the bottom, with a gap above so it
+              // reads as rising from the middle. Width is the resizable column;
+              // it slides up via translateY and stays centered via translateX.
+              left: '50%',
+              bottom: 0,
+              height: `calc(100vh - ${topOffset}px - 48px)`,
+              width: `min(${width}px, 95vw)`,
+              borderTop: `1px solid ${theme.colors.border}`,
+              borderLeft: `1px solid ${theme.colors.border}`,
+              borderRight: `1px solid ${theme.colors.border}`,
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
+              boxShadow: entered ? '0 -12px 40px rgba(0,0,0,0.4)' : 'none',
+              transform: entered
+                ? 'translate(-50%, 0)'
+                : 'translate(-50%, 100%)',
+            }
+          : {
+              top: topOffset,
+              [dockLeft ? 'left' : 'right']: 0,
+              bottom: 0,
+              width: `min(${width}px, 95vw)`,
+              [dockLeft ? 'borderRight' : 'borderLeft']: `1px solid ${theme.colors.border}`,
+              boxShadow: entered
+                ? `${dockLeft ? '12px' : '-12px'} 0 32px rgba(0,0,0,0.35)`
+                : 'none',
+              transform: entered
+                ? 'translateX(0)'
+                : `translateX(${dockLeft ? '-100%' : '100%'})`,
+            }),
       }}
     >
       {/* Drag handle on the drawer's inner edge (the side facing the viewport
@@ -270,7 +305,9 @@ export const FileSourcePanel: React.FC<{
         title="Drag to resize"
         style={{
           position: 'absolute',
-          [dockLeft ? 'right' : 'left']: -3,
+          // Bottom sheet resizes from its right edge; side drawers from the
+          // inner edge facing the viewport center.
+          [dockBottom || dockLeft ? 'right' : 'left']: -3,
           top: 0,
           bottom: 0,
           width: 8,
