@@ -783,7 +783,7 @@ export default function HomePage() {
                   }`}
                   style={{ color: theme.colors.text }}
                 >
-                  A new way to collaborate on software
+                  A new way to understand software
                 </p>
 
                 <div

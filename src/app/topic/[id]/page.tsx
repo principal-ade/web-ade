@@ -23,7 +23,7 @@ import { ogStripMarkdown, ogTruncate } from '@/components/trail/og/ogTheme';
 export const dynamic = 'force-dynamic';
 
 const MARKETING_TITLE = 'Topics';
-const MARKETING_DESCRIPTION = 'A new way to collaborate on software';
+const MARKETING_DESCRIPTION = 'A new way to understand software';
 
 async function resolveBaseUrl(): Promise<string> {
   const h = await headers();
