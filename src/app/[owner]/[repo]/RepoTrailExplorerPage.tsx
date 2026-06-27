@@ -17,7 +17,6 @@ import {
   Compass,
   Volume2,
   AlertTriangle,
-  Loader2,
   Mic,
   Trash2,
   Star,
@@ -25,6 +24,7 @@ import {
   ExternalLink,
   Play,
   Palette,
+  Activity,
   ChevronRight,
   ChevronDown,
   Boxes,
@@ -67,6 +67,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { AgentViewButton } from '@/components/AgentViewButton';
 import { TrailLoadingScreen } from '@/components/trail/TrailLoadingScreen';
+import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 import { TrailErrorView } from '@/components/trail/TrailErrorView';
 import { TrailShareModal } from '@/components/trail/TrailShareModal';
 import { CreateTrailModal } from '@/components/home/CreateTrailModal';
@@ -74,6 +75,13 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ActivityHeatmap } from '@/components/ActivityHeatmap';
 import type { UserActivityResponse } from '@/app/api/github/user/[username]/activity/route';
 import { FileSourcePanel } from './FileSourcePanel';
+import { RepoActivityPane } from './RepoActivityPane';
+import { useCommitsChangedFiles } from '@/hooks/useCommitsChangedFiles';
+import { useCommitChangelogTrail } from '@/hooks/useCommitChangelogTrail';
+import {
+  buildAggregateChurnLayers,
+  buildCommitFilesLayer,
+} from '@/lib/activity/commitLayers';
 import {
   type ShareErrorCode,
   type SharedTrailIndexEntry,
@@ -241,11 +249,25 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   // The "Trails" header doubles as a switch between the trail list and a
   // file tree of every file the trails touch (mirrors the desktop app's
   // Files tab). `selectedFilePath` lights up the picked file on the map.
-  const [leftViewMode, setLeftViewMode] = useState<'trails' | 'files' | 'tours'>(
+  const [leftViewMode, setLeftViewMode] = useState<
+    'trails' | 'files' | 'tours' | 'activity'
+  >(
     // Lead with tours so a guided tour — or, failing that, the "author a tour"
     // empty state — is the first thing a visitor lands on.
     'tours',
   );
+  // Commit picked from the Activity list — when set, the right pane shows the
+  // commit as a synthesized changelog trail in the File City panel. Mutually
+  // exclusive with trail/tour/file selection.
+  const [selectedCommitSha, setSelectedCommitSha] = useState<string | null>(
+    null,
+  );
+  // Commit row currently hovered in the Activity list — paints that commit's
+  // files on the idle city in a distinct color over the aggregate heatmap.
+  const [hoveredCommitSha, setHoveredCommitSha] = useState<string | null>(null);
+  // SHAs of the commits currently loaded in the Activity list, reported up from
+  // RepoActivityPane so we can build the aggregate churn heatmap.
+  const [activityShas, setActivityShas] = useState<string[]>([]);
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   // Which edge the file source drawer docks to. Files open on the right; the
   // README opens on the left.
@@ -300,10 +322,11 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     setTrailsExpanded((open) => {
       const next = !open;
       // Preserve the one-thing-at-a-time invariant: entering trails clears any
-      // open tour/file; leaving it clears the selected trail.
+      // open tour/file/commit; leaving it clears the selected trail.
       if (next) {
         setSelectedTourId(null);
         setSelectedFilePath(null);
+        setSelectedCommitSha(null);
       } else {
         setSelectedTrailId(null);
       }
@@ -1049,6 +1072,35 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     state.kind !== 'ready' ||
     (state.entries.length > 0 && payloads.size === 0);
 
+  // --- Commit activity → File City ----------------------------------------
+  // Changed-file lists for the commits loaded in the Activity list, used to
+  // paint an aggregate churn heatmap on the idle city (only while browsing).
+  const isActivityView = leftViewMode === 'activity';
+  const commitFiles = useCommitsChangedFiles(owner, repo, activityShas, {
+    enabled: isActivityView,
+  });
+  // Aggregate churn heatmap + a distinct-colored layer for the hovered commit.
+  const activityHeatmapLayers = useMemo<HighlightLayer[] | null>(() => {
+    if (!isActivityView) return null;
+    const layers = buildAggregateChurnLayers(commitFiles, theme.colors.primary);
+    if (hoveredCommitSha) {
+      const hoverFiles = commitFiles.get(hoveredCommitSha);
+      if (hoverFiles) {
+        const hoverLayer = buildCommitFilesLayer(hoverFiles, {
+          id: 'commit-hover',
+          color: theme.colors.accent,
+          priority: 90,
+        });
+        if (hoverLayer) layers.push(hoverLayer);
+      }
+    }
+    return layers.length > 0 ? layers : null;
+  }, [isActivityView, commitFiles, hoveredCommitSha, theme.colors.primary, theme.colors.accent]);
+  // Selected commit rendered as a synthesized changelog trail (native diffs +
+  // city highlight). Only while the Activity view is active.
+  const { payload: commitTrailPayload, loading: commitTrailLoading } =
+    useCommitChangelogTrail(owner, repo, isActivityView ? selectedCommitSha : null);
+
   // Debug: log layers + a few real file-tree paths so we can confirm
   // the LayerItem path format matches the building paths.
   useEffect(() => {
@@ -1126,6 +1178,18 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         showColorLegend={showColorLegend}
         onToggleColorLegend={() => setShowColorLegend((s) => !s)}
         trailsExpanded={trailsExpanded}
+        activityActive={leftViewMode === 'activity'}
+        onToggleActivity={() => {
+          // Toggle the left rail between the commit-activity list and the
+          // default tours view. Either direction clears the other surfaces'
+          // selections so a single thing shows in the right pane.
+          setLeftViewMode((m) => (m === 'activity' ? 'tours' : 'activity'));
+          setSelectedTrailId(null);
+          setSelectedTourId(null);
+          setSelectedFilePath(null);
+          setSelectedCommitSha(null);
+          setTrailsExpanded(false);
+        }}
       />
       <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
         {/* The delete control is driven by the app's own validated session:
@@ -1174,18 +1238,28 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           onSetViewMode={(mode) => {
             setLeftViewMode(mode);
             // Switching views clears the other views' selections so the map
-            // returns to the idle coverage layer between them.
+            // returns to the idle coverage layer between them. Leaving the
+            // activity view also clears any open commit.
+            if (mode !== 'activity') setSelectedCommitSha(null);
             if (mode === 'files') {
               setSelectedTrailId(null);
               setSelectedTourId(null);
             } else if (mode === 'tours') {
               setSelectedTrailId(null);
               setSelectedFilePath(null);
+            } else if (mode === 'activity') {
+              setSelectedTrailId(null);
+              setSelectedTourId(null);
+              setSelectedFilePath(null);
             } else {
               setSelectedFilePath(null);
               setSelectedTourId(null);
             }
           }}
+          selectedCommitSha={selectedCommitSha}
+          onSelectCommit={setSelectedCommitSha}
+          onCommitShasChange={setActivityShas}
+          onHoverCommit={setHoveredCommitSha}
           trailFileRows={trailFileRows}
           selectedFilePath={selectedFilePath}
           onSelectFile={(path) => {
@@ -1247,6 +1321,11 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           showSpatialContext={configMode}
           showColorLegend={showColorLegend}
           trailsExpanded={trailsExpanded}
+          selectedCommitSha={selectedCommitSha}
+          onCloseCommit={() => setSelectedCommitSha(null)}
+          activityHeatmapLayers={activityHeatmapLayers}
+          commitTrailPayload={commitTrailPayload}
+          commitTrailLoading={commitTrailLoading}
           currentAuthor={user?.login}
           overlayFilePath={leftViewMode === 'files' ? selectedFilePath : null}
           overlayTrails={selectedFileTrails}
@@ -1431,6 +1510,9 @@ const Header: React.FC<{
   onToggleColorLegend: () => void;
   /** Trails section expanded → the Trail explorer (no legend) is showing. */
   trailsExpanded: boolean;
+  /** Activity view active → the left rail shows the commit list. */
+  activityActive: boolean;
+  onToggleActivity: () => void;
 }> = ({
   rootRef,
   owner,
@@ -1442,6 +1524,8 @@ const Header: React.FC<{
   showColorLegend,
   onToggleColorLegend,
   trailsExpanded,
+  activityActive,
+  onToggleActivity,
 }) => {
   const { theme } = useTheme();
   const router = useRouter();
@@ -1789,6 +1873,21 @@ const Header: React.FC<{
                 <Palette className="w-5 h-5" />
               </button>
             )}
+            <button
+              type="button"
+              onClick={onToggleActivity}
+              aria-pressed={activityActive}
+              className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+              style={{
+                color: activityActive
+                  ? theme.colors.primary
+                  : theme.colors.textMuted,
+              }}
+              title={activityActive ? 'Hide commit activity' : 'Show commit activity'}
+              aria-label={activityActive ? 'Hide commit activity' : 'Show commit activity'}
+            >
+              <Activity className="w-5 h-5" />
+            </button>
             <Link
               href={`/legacy/${owner}/${repo}`}
               className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
@@ -1918,7 +2017,7 @@ const Header: React.FC<{
                         fontSize: theme.fontSizes[2],
                       }}
                     >
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <InlineTrailLoader size={16} />
                       Searching…
                     </div>
                   ) : openRepoResults.length > 0 ? (
@@ -2044,8 +2143,14 @@ const TrailListPane: React.FC<{
   onPackageSelect: (pkg: PackageLayer | null) => void;
   configMode: boolean;
   onToggleConfigMode: () => void;
-  leftViewMode: 'trails' | 'files' | 'tours';
-  onSetViewMode: (mode: 'trails' | 'files' | 'tours') => void;
+  leftViewMode: 'trails' | 'files' | 'tours' | 'activity';
+  onSetViewMode: (mode: 'trails' | 'files' | 'tours' | 'activity') => void;
+  /** Commit picked from the Activity list (highlights the row). */
+  selectedCommitSha: string | null;
+  onSelectCommit: (sha: string | null) => void;
+  /** Activity list reports its loaded SHAs + hovered commit up for the heatmap. */
+  onCommitShasChange: (shas: string[]) => void;
+  onHoverCommit: (sha: string | null) => void;
   trailFileRows: { path: string; trailCount: number }[];
   selectedFilePath: string | null;
   onSelectFile: (path: string | null) => void;
@@ -2086,6 +2191,10 @@ const TrailListPane: React.FC<{
   onToggleConfigMode,
   leftViewMode,
   onSetViewMode,
+  selectedCommitSha,
+  onSelectCommit,
+  onCommitShasChange,
+  onHoverCommit,
   trailFileRows,
   selectedFilePath,
   onSelectFile,
@@ -2157,6 +2266,15 @@ const TrailListPane: React.FC<{
           filePaths={filePaths}
           excludedDirs={excludedDirs}
           onExcludedDirsChange={onExcludedDirsChange}
+        />
+      ) : leftViewMode === 'activity' ? (
+        <RepoActivityPane
+          owner={owner}
+          repo={repo}
+          selectedCommitSha={selectedCommitSha}
+          onSelectCommit={onSelectCommit}
+          onCommitShasChange={onCommitShasChange}
+          onHoverCommit={onHoverCommit}
         />
       ) : leftViewMode === 'files' ? (
         <TrailFilesPane
@@ -2725,8 +2843,8 @@ const VIEW_TABS = [
 const TrailSummarySection: React.FC<{
   configMode: boolean;
   onToggleConfigMode: () => void;
-  leftViewMode: 'trails' | 'files' | 'tours';
-  onSetViewMode: (mode: 'trails' | 'files' | 'tours') => void;
+  leftViewMode: 'trails' | 'files' | 'tours' | 'activity';
+  onSetViewMode: (mode: 'trails' | 'files' | 'tours' | 'activity') => void;
 }> = ({ configMode, onToggleConfigMode, leftViewMode, onSetViewMode }) => {
   const { theme } = useTheme();
   const activeIndex = Math.max(
@@ -4176,7 +4294,7 @@ const ContributorProfile: React.FC<{
             className="flex items-center justify-center"
             style={{ height: 120, color: muted }}
           >
-            <Loader2 size={18} className="animate-spin" />
+            <InlineTrailLoader size={18} />
           </div>
         ) : data ? (
           <div
@@ -4436,7 +4554,7 @@ const TourAudioControl: React.FC<{
   if (progress?.phase === 'running') {
     return (
       <div className={rowStyle} style={{ color: muted, ...labelStyle }}>
-        <Loader2 size={12} className="animate-spin" />
+        <InlineTrailLoader size={12} />
         <span>
           Generating audio… {progress.done}/{progress.total}
         </span>
@@ -4863,6 +4981,16 @@ const RightPane: React.FC<{
   showColorLegend: boolean;
   /** Trails section expanded → render the Trail explorer; else the Tour panel. */
   trailsExpanded: boolean;
+  /** Commit picked from the Activity list → render it as a changelog trail in
+   *  the File City panel. Takes precedence over the tour/trail panels. */
+  selectedCommitSha: string | null;
+  onCloseCommit: () => void;
+  /** Aggregate churn + hovered-commit heatmap, painted on the idle tour city
+   *  while browsing the Activity list. */
+  activityHeatmapLayers: HighlightLayer[] | null;
+  /** Synthesized changelog trail for the selected commit (null while loading). */
+  commitTrailPayload: TrailPayload | null;
+  commitTrailLoading: boolean;
   /** Undefined for anonymous viewers — gates the panel's note Edit/Delete. */
   currentAuthor?: string;
   overlayFilePath: string | null;
@@ -4887,6 +5015,11 @@ const RightPane: React.FC<{
   showSpatialContext,
   showColorLegend,
   trailsExpanded,
+  selectedCommitSha,
+  onCloseCommit,
+  activityHeatmapLayers,
+  commitTrailPayload,
+  commitTrailLoading,
   currentAuthor,
   overlayFilePath,
   overlayTrails,
@@ -4911,20 +5044,27 @@ const RightPane: React.FC<{
     return unsub;
   }, [events, onOpenFile]);
 
+  // When a commit is picked the right pane renders the synthesized changelog
+  // trail (or its loading state) instead of any selected trail; both flow
+  // through the same Trail explorer plumbing below.
+  const inCommitView = selectedCommitSha != null;
+  const activePayload = inCommitView ? commitTrailPayload : selectedPayload;
+
   const repository = useMemo<FileCityTrailExplorerRepository>(() => {
     // Multi-repo trails filter markers by repo id. Mirror the payload's
     // first registered repo when present and fall back to "owner/repo".
-    const id = selectedPayload?.repos?.[0]?.id ?? `${owner}/${repo}`;
+    const id = activePayload?.repos?.[0]?.id ?? `${owner}/${repo}`;
     return { id, owner, name: repo };
-  }, [owner, repo, selectedPayload]);
+  }, [owner, repo, activePayload]);
 
   // Pin marker reads to the commit the trail was authored against, so line
   // ranges line up with the file as it existed then instead of drifting with
   // HEAD. Falls back to the multi-repo registry sha, then the single-repo
-  // shorthand; undefined when neither is present (reads HEAD).
+  // shorthand; undefined when neither is present (reads HEAD). For the commit
+  // view this is the commit sha, so post-change file contents resolve there.
   const authoredSha =
-    selectedPayload?.repos?.[0]?.authoredAtSha ??
-    selectedPayload?.authoredAt?.sha;
+    activePayload?.repos?.[0]?.authoredAtSha ??
+    activePayload?.authoredAt?.sha;
 
   const readFile = useCallback(
     async (path: string): Promise<string> => {
@@ -4963,7 +5103,8 @@ const RightPane: React.FC<{
   // Notes / sign-offs editing is owned by /trail/[id]. Stub the
   // mutators here so the panel still mounts when a trail is selected;
   // clicking through to the full trail page is the path for editing.
-  const trailIdForShare = selectedPayload?.id ?? null;
+  // The synthesized commit trail isn't a stored trail, so it can't be shared.
+  const trailIdForShare = inCommitView ? null : selectedPayload?.id ?? null;
   const [shareTrailId, setShareTrailId] = useState<string | null>(null);
   const shareTrail = useCallback(() => {
     if (!trailIdForShare) return;
@@ -4979,8 +5120,10 @@ const RightPane: React.FC<{
       createTrailSignOff: async () => null,
       deleteTrailSignOff: async () => {},
       shareTrail,
+      // In the commit view, the panel's close affordance returns to the city.
+      ...(inCommitView ? { closeTrail: onCloseCommit } : {}),
     }),
-    [readFile, shareTrail, onOpenFile],
+    [readFile, shareTrail, onOpenFile, inCommitView, onCloseCommit],
   );
 
   const context = useMemo<
@@ -5001,8 +5144,10 @@ const RightPane: React.FC<{
     const trailSlice: DataSlice<TrailPayload | null> = {
       scope: 'repository',
       name: 'trail',
-      data: selectedPayload,
-      loading: false,
+      data: activePayload,
+      // The commit's changelog trail is built asynchronously; report loading so
+      // the panel shows its idle city until the markers/diffs are ready.
+      loading: inCommitView && commitTrailPayload === null && commitTrailLoading,
       error: null,
       refresh: async () => {},
     };
@@ -5034,7 +5179,10 @@ const RightPane: React.FC<{
     };
   }, [
     fileTree,
-    selectedPayload,
+    activePayload,
+    inCommitView,
+    commitTrailPayload,
+    commitTrailLoading,
     idleHighlightLayers,
     highlightLayersLoading,
     repository,
@@ -5115,18 +5263,30 @@ const RightPane: React.FC<{
       // While a tour is open the panel sources highlights from the active
       // step and ignores this slice. In the idle/no-tour state (the default
       // right pane) it honors host layers — that's where the Architecture
-      // panel's package directory highlight lands.
+      // panel's package directory highlight and the Activity churn heatmap land.
       highlightLayers: {
         scope: 'repository' as const,
         name: 'highlightLayers',
-        data: packageHighlightLayers,
+        data:
+          packageHighlightLayers || activityHeatmapLayers
+            ? [
+                ...(packageHighlightLayers ?? []),
+                ...(activityHeatmapLayers ?? []),
+              ]
+            : null,
         loading: false,
         error: null,
         refresh: async () => {},
       },
       repository: tourRepository,
     };
-  }, [fileTree, selectedTour, tourRepository, packageHighlightLayers]);
+  }, [
+    fileTree,
+    selectedTour,
+    tourRepository,
+    packageHighlightLayers,
+    activityHeatmapLayers,
+  ]);
 
   if (treeError) {
     return (
@@ -5157,9 +5317,10 @@ const RightPane: React.FC<{
 
   // The tour panel is the default right pane: idle colored city + file-type
   // legend when no tour is open, tour chrome once one is picked. The Trail
-  // explorer (with its file overlay + share modal) only takes over when the
-  // left-rail Trails section is expanded.
-  if (!trailsExpanded) {
+  // explorer (with its file overlay + share modal) takes over when the
+  // left-rail Trails section is expanded OR a commit is selected (rendered as a
+  // synthesized changelog trail).
+  if (!trailsExpanded && !inCommitView) {
     return (
       <main
         className="flex-1 min-w-0 min-h-0 relative"
