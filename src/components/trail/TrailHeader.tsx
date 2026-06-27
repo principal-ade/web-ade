@@ -10,6 +10,7 @@ import { AgentViewButton } from '@/components/AgentViewButton';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { RepoInfoModal } from '@/components/trail/RepoInfoModal';
 import { SignOffStampAnimation } from '@/components/trail/LgtmStamp';
+import { useAuth } from '@/contexts/AuthContext';
 
 const COPY_FEEDBACK_MS = 1500;
 const LGTM_ANIMATION_MS = 1100;
@@ -127,6 +128,7 @@ export function TrailHeader({
   const closeOnRight = !!onClose && closeButtonPosition === 'right';
   const stampLabel = hasNotes ? 'Reviewed' : 'LGTM';
   const { theme } = useTheme();
+  const { isAuthenticated } = useAuth();
   const [copied, setCopied] = useState(false);
   const [repoInfoOpen, setRepoInfoOpen] = useState(false);
   const [lgtmSigned, setLgtmSigned] = useState(false);
@@ -366,7 +368,7 @@ export function TrailHeader({
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
-        {showStamp && (lgtmSigned ? (
+        {showStamp && isAuthenticated && (lgtmSigned ? (
           <button
             type="button"
             onClick={handleLgtm}
