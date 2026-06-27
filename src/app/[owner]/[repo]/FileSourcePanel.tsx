@@ -217,6 +217,20 @@ export const FileSourcePanel: React.FC<{
     };
   }, [isMarkdown, content]);
 
+  // Repository context so DocumentView can rewrite relative image URLs (e.g.
+  // `./docs/logo.png`) to GitHub raw URLs — without it, relative images in a
+  // README render broken. `basePath` is the markdown file's own directory so
+  // relative paths resolve against the file's location, and `branch` follows
+  // the ref we read the file at (HEAD/`main` when omitted).
+  const repositoryInfo = useMemo(() => {
+    if (!shownPath) return undefined;
+    const clean = normalizeRepoPath(shownPath, owner, repo);
+    const basePath = clean.includes('/')
+      ? clean.slice(0, clean.lastIndexOf('/'))
+      : '';
+    return { owner, repo, branch: gitRef, basePath };
+  }, [shownPath, owner, repo, gitRef]);
+
   return (
     <div
       aria-hidden={!open}
@@ -379,6 +393,7 @@ export const FileSourcePanel: React.FC<{
                 theme={theme}
                 slideIdPrefix="repo-file-source"
                 maxWidth="100%"
+                repositoryInfo={repositoryInfo}
                 onCheckboxChange={() => {}}
                 onLinkClick={(href: string) => {
                   // External links open in a new tab; in-page anchors are left
