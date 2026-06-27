@@ -19,6 +19,7 @@ import { LgtmStamp, SignOffStampAnimation } from '@/components/trail/LgtmStamp';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { AgentViewButton } from '@/components/AgentViewButton';
 import { SignedInDashboard } from '@/components/home/SignedInDashboard';
+import { RecentProjectsStrip } from '@/components/home/RecentProjectsStrip';
 import { TrailBackdrop } from '@/components/home/TrailBackdrop';
 import { TrailsFeed } from '@/components/home/TrailsFeed';
 import { TopicsFeed } from '@/components/home/TopicsFeed';
@@ -119,6 +120,13 @@ export default function HomePage() {
   );
   const [openRepoSearching, setOpenRepoSearching] = useState(false);
   const [recentRepos, setRecentRepos] = useState<HeaderRepoSearchItem[]>([]);
+  // Recently-opened repos for the "pick up where you left off" strip at the
+  // bottom of the page. Loaded once on mount (unlike `recentRepos`, which only
+  // populates the search dropdown on focus) and refreshed when a repo is
+  // visited elsewhere via the shared `recent-items-updated` event.
+  const [recentProjects, setRecentProjects] = useState<HeaderRepoSearchItem[]>(
+    [],
+  );
 
   // A pasted link / `owner/repo` path is opened directly; anything else is a
   // free-text search. Computed each render so the input and dropdown agree.
@@ -178,6 +186,15 @@ export default function HomePage() {
     if (!repoFocused) return;
     setRecentRepos(readRecentRepos().slice(0, 6));
   }, [repoFocused]);
+
+  // Load the bottom recent-projects strip on mount, and keep it in sync when a
+  // repo is opened from elsewhere on the page.
+  useEffect(() => {
+    const load = () => setRecentProjects(readRecentRepos().slice(0, 10));
+    load();
+    window.addEventListener('recent-items-updated', load);
+    return () => window.removeEventListener('recent-items-updated', load);
+  }, []);
 
   // Debounced GitHub repo search, skipped when the text is already a direct
   // link/path. Aborts in-flight requests so stale responses can't land.
@@ -1142,6 +1159,12 @@ export default function HomePage() {
         </section>
         )}
 
+        {view !== 'trails' && view !== 'topics' && (
+          <RecentProjectsStrip
+            projects={recentProjects}
+            onOpen={goToRepoFullName}
+          />
+        )}
       </main>
 
       <footer
