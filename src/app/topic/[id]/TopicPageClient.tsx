@@ -15,7 +15,7 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Footprints, Github, Plus, Save, Trash2, X } from 'lucide-react';
+import { Footprints, Github, Globe, Lock, Plus, Save, Trash2, X } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { IndustryMarkdownSlide } from 'themed-markdown';
 import { useAuth } from '@/contexts/AuthContext';
@@ -109,6 +109,7 @@ export default function TopicPageClient() {
   const [draftTitle, setDraftTitle] = useState('');
   const [draftDescription, setDraftDescription] = useState('');
   const [savingHeader, setSavingHeader] = useState(false);
+  const [visibilityInFlight, setVisibilityInFlight] = useState(false);
 
   const [addTrailInput, setAddTrailInput] = useState('');
   const [addingTrail, setAddingTrail] = useState(false);
@@ -376,6 +377,44 @@ export default function TopicPageClient() {
       setSavingHeader(false);
     }
   }, [topic, draftTitle, draftDescription]);
+
+  // Flip the topic between `private` and `public`. Going public is
+  // outward-facing — it surfaces the topic in the global `/topics` feed and
+  // makes it readable by anyone with the link — so we confirm that direction.
+  // Going back to private is a quieter action and skips the prompt.
+  const handleToggleVisibility = useCallback(async () => {
+    if (!topic) return;
+    const next = topic.visibility === 'public' ? 'private' : 'public';
+    if (next === 'public') {
+      const ok = window.confirm(
+        `Make "${topic.title}" public? It will appear in the global topics ` +
+          `feed and be readable by anyone with the link.`,
+      );
+      if (!ok) return;
+    }
+    setVisibilityInFlight(true);
+    try {
+      const res = await fetch(`/api/topics/by-id/${topic.id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ visibility: next }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setHeaderStatus(
+          body?.error || `Failed to update visibility (${res.status})`,
+        );
+        return;
+      }
+      setTopic(body.topic as TopicPayload);
+    } catch (err) {
+      setHeaderStatus(
+        err instanceof Error ? err.message : 'Failed to update visibility',
+      );
+    } finally {
+      setVisibilityInFlight(false);
+    }
+  }, [topic]);
 
   const handleAddTrail = useCallback(async () => {
     if (!topic) return;
@@ -702,14 +741,58 @@ export default function TopicPageClient() {
                 {topic.title}
               </h1>
               {isOwner && (
-                <button
-                  type="button"
-                  onClick={() => setOwnerEditingHeader(true)}
-                  className="text-sm underline-offset-2 hover:underline"
-                  style={{ color: theme.colors.textMuted }}
-                >
-                  Edit
-                </button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {(() => {
+                    const isPublic = topic.visibility === 'public';
+                    return (
+                      <button
+                        type="button"
+                        onClick={handleToggleVisibility}
+                        disabled={visibilityInFlight}
+                        className="inline-flex items-center gap-1.5 px-2.5 h-7 rounded-md text-xs font-medium transition-all hover:opacity-80 disabled:opacity-50"
+                        style={{
+                          background: isPublic
+                            ? theme.colors.primary
+                            : 'transparent',
+                          color: isPublic
+                            ? theme.colors.background
+                            : theme.colors.textMuted,
+                          border: `1px solid ${isPublic ? theme.colors.primary : theme.colors.border}`,
+                          cursor: visibilityInFlight ? 'default' : 'pointer',
+                        }}
+                        aria-label={
+                          isPublic ? 'Make topic private' : 'Make topic public'
+                        }
+                        title={
+                          isPublic
+                            ? 'Public — anyone can view. Click to make private.'
+                            : 'Private — only you and recipients. Click to make public.'
+                        }
+                      >
+                        {isPublic ? (
+                          <Globe className="w-3.5 h-3.5" />
+                        ) : (
+                          <Lock className="w-3.5 h-3.5" />
+                        )}
+                        <span>
+                          {visibilityInFlight
+                            ? '…'
+                            : isPublic
+                              ? 'Public'
+                              : 'Private'}
+                        </span>
+                      </button>
+                    );
+                  })()}
+                  <button
+                    type="button"
+                    onClick={() => setOwnerEditingHeader(true)}
+                    className="text-sm underline-offset-2 hover:underline"
+                    style={{ color: theme.colors.textMuted }}
+                  >
+                    Edit
+                  </button>
+                </div>
               )}
             </div>
             <div
