@@ -81,6 +81,7 @@ import { useCommitChangelogTrail } from '@/hooks/useCommitChangelogTrail';
 import {
   buildAggregateChurnLayers,
   buildCommitFilesLayer,
+  type ChangedFile,
 } from '@/lib/activity/commitLayers';
 import {
   type ShareErrorCode,
@@ -268,6 +269,11 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   // SHAs of the commits currently loaded in the Activity list, reported up from
   // RepoActivityPane so we can build the aggregate churn heatmap.
   const [activityShas, setActivityShas] = useState<string[]>([]);
+  // SHAs to focus the churn heatmap on — the selected contributor's commits, or
+  // null when browsing the contributor list (then we paint everyone's churn).
+  const [activityFocusShas, setActivityFocusShas] = useState<string[] | null>(
+    null,
+  );
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   // Which edge the file source drawer docks to. Files open on the right; the
   // README opens on the left.
@@ -333,6 +339,50 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
       return next;
     });
   }, []);
+
+  // Toggle the left rail between the commit-activity view and the default tours
+  // view. Either direction clears the other surfaces' selections so a single
+  // thing shows in the right pane. Driven from the About card (to enter) and the
+  // activity pane's close button (to leave).
+  const handleToggleActivity = useCallback(() => {
+    setLeftViewMode((m) => (m === 'activity' ? 'tours' : 'activity'));
+    setSelectedTrailId(null);
+    setSelectedTourId(null);
+    setSelectedFilePath(null);
+    setSelectedCommitSha(null);
+    setTrailsExpanded(false);
+    // Plain toggle lands on the contributor cards, not a stale drill-down.
+    setActivityFocusContributor(null);
+  }, []);
+
+  // Clicking a contributor in the About card opens the Recent Activity view
+  // straight into that person's commit drill-down. The counter bumps each click
+  // so re-selecting the same contributor re-triggers the drill-in downstream.
+  const contributorFocusCounter = useRef(0);
+  const [activityFocusContributor, setActivityFocusContributor] = useState<{
+    token: number;
+    login: string;
+    name: string;
+    avatarUrl?: string;
+  } | null>(null);
+  const handleSelectContributor = useCallback(
+    (c: { login: string; avatar_url: string }) => {
+      contributorFocusCounter.current += 1;
+      setActivityFocusContributor({
+        token: contributorFocusCounter.current,
+        login: c.login,
+        name: c.login,
+        avatarUrl: c.avatar_url,
+      });
+      setLeftViewMode('activity');
+      setSelectedTrailId(null);
+      setSelectedTourId(null);
+      setSelectedFilePath(null);
+      setSelectedCommitSha(null);
+      setTrailsExpanded(false);
+    },
+    [],
+  );
 
   // Package composition ("Architecture" view). Reuses the warmed package cache,
   // so this adds no extra fetch. When packages exist, the left rail's "Trails"
@@ -1082,7 +1132,16 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   // Aggregate churn heatmap + a distinct-colored layer for the hovered commit.
   const activityHeatmapLayers = useMemo<HighlightLayer[] | null>(() => {
     if (!isActivityView) return null;
-    const layers = buildAggregateChurnLayers(commitFiles, theme.colors.primary);
+    // Scope the churn to the focused contributor's commits when one is open,
+    // otherwise paint the aggregate across every loaded commit.
+    const churnSource = activityFocusShas
+      ? new Map(
+          activityFocusShas
+            .filter((sha) => commitFiles.has(sha))
+            .map((sha) => [sha, commitFiles.get(sha)!] as const),
+        )
+      : commitFiles;
+    const layers = buildAggregateChurnLayers(churnSource, theme.colors.primary);
     if (hoveredCommitSha) {
       const hoverFiles = commitFiles.get(hoveredCommitSha);
       if (hoverFiles) {
@@ -1095,7 +1154,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
       }
     }
     return layers.length > 0 ? layers : null;
-  }, [isActivityView, commitFiles, hoveredCommitSha, theme.colors.primary, theme.colors.accent]);
+  }, [isActivityView, commitFiles, activityFocusShas, hoveredCommitSha, theme.colors.primary, theme.colors.accent]);
   // Selected commit rendered as a synthesized changelog trail (native diffs +
   // city highlight). Only while the Activity view is active.
   const { payload: commitTrailPayload, loading: commitTrailLoading } =
@@ -1178,18 +1237,6 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         showColorLegend={showColorLegend}
         onToggleColorLegend={() => setShowColorLegend((s) => !s)}
         trailsExpanded={trailsExpanded}
-        activityActive={leftViewMode === 'activity'}
-        onToggleActivity={() => {
-          // Toggle the left rail between the commit-activity list and the
-          // default tours view. Either direction clears the other surfaces'
-          // selections so a single thing shows in the right pane.
-          setLeftViewMode((m) => (m === 'activity' ? 'tours' : 'activity'));
-          setSelectedTrailId(null);
-          setSelectedTourId(null);
-          setSelectedFilePath(null);
-          setSelectedCommitSha(null);
-          setTrailsExpanded(false);
-        }}
       />
       <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
         {/* The delete control is driven by the app's own validated session:
@@ -1256,9 +1303,15 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
               setSelectedTourId(null);
             }
           }}
+          activityActive={leftViewMode === 'activity'}
+          onToggleActivity={handleToggleActivity}
+          onSelectContributor={handleSelectContributor}
+          activityFocusContributor={activityFocusContributor}
           selectedCommitSha={selectedCommitSha}
           onSelectCommit={setSelectedCommitSha}
+          commitFiles={commitFiles}
           onCommitShasChange={setActivityShas}
+          onFocusShasChange={setActivityFocusShas}
           onHoverCommit={setHoveredCommitSha}
           trailFileRows={trailFileRows}
           selectedFilePath={selectedFilePath}
@@ -1510,9 +1563,6 @@ const Header: React.FC<{
   onToggleColorLegend: () => void;
   /** Trails section expanded → the Trail explorer (no legend) is showing. */
   trailsExpanded: boolean;
-  /** Activity view active → the left rail shows the commit list. */
-  activityActive: boolean;
-  onToggleActivity: () => void;
 }> = ({
   rootRef,
   owner,
@@ -1524,8 +1574,6 @@ const Header: React.FC<{
   showColorLegend,
   onToggleColorLegend,
   trailsExpanded,
-  activityActive,
-  onToggleActivity,
 }) => {
   const { theme } = useTheme();
   const router = useRouter();
@@ -1873,21 +1921,6 @@ const Header: React.FC<{
                 <Palette className="w-5 h-5" />
               </button>
             )}
-            <button
-              type="button"
-              onClick={onToggleActivity}
-              aria-pressed={activityActive}
-              className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
-              style={{
-                color: activityActive
-                  ? theme.colors.primary
-                  : theme.colors.textMuted,
-              }}
-              title={activityActive ? 'Hide commit activity' : 'Show commit activity'}
-              aria-label={activityActive ? 'Hide commit activity' : 'Show commit activity'}
-            >
-              <Activity className="w-5 h-5" />
-            </button>
             <Link
               href={`/legacy/${owner}/${repo}`}
               className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
@@ -2145,11 +2178,26 @@ const TrailListPane: React.FC<{
   onToggleConfigMode: () => void;
   leftViewMode: 'trails' | 'files' | 'tours' | 'activity';
   onSetViewMode: (mode: 'trails' | 'files' | 'tours' | 'activity') => void;
+  /** Activity view active + its toggle, surfaced from the About card. */
+  activityActive: boolean;
+  onToggleActivity: () => void;
+  /** Click a contributor in the About card → open their activity drill-down. */
+  onSelectContributor: (c: { login: string; avatar_url: string }) => void;
+  activityFocusContributor: {
+    token: number;
+    login: string;
+    name: string;
+    avatarUrl?: string;
+  } | null;
   /** Commit picked from the Activity list (highlights the row). */
   selectedCommitSha: string | null;
   onSelectCommit: (sha: string | null) => void;
+  /** Changed-file lists for the loaded commits — per-contributor file counts. */
+  commitFiles: Map<string, ChangedFile[]>;
   /** Activity list reports its loaded SHAs + hovered commit up for the heatmap. */
   onCommitShasChange: (shas: string[]) => void;
+  /** Activity reports the focused contributor's SHAs (or null) for the heatmap. */
+  onFocusShasChange: (shas: string[] | null) => void;
   onHoverCommit: (sha: string | null) => void;
   trailFileRows: { path: string; trailCount: number }[];
   selectedFilePath: string | null;
@@ -2191,9 +2239,15 @@ const TrailListPane: React.FC<{
   onToggleConfigMode,
   leftViewMode,
   onSetViewMode,
+  activityActive,
+  onToggleActivity,
+  onSelectContributor,
+  activityFocusContributor,
   selectedCommitSha,
   onSelectCommit,
+  commitFiles,
   onCommitShasChange,
+  onFocusShasChange,
   onHoverCommit,
   trailFileRows,
   selectedFilePath,
@@ -2273,8 +2327,12 @@ const TrailListPane: React.FC<{
           repo={repo}
           selectedCommitSha={selectedCommitSha}
           onSelectCommit={onSelectCommit}
+          commitFiles={commitFiles}
           onCommitShasChange={onCommitShasChange}
+          onFocusShasChange={onFocusShasChange}
           onHoverCommit={onHoverCommit}
+          onClose={onToggleActivity}
+          focusContributor={activityFocusContributor}
         />
       ) : leftViewMode === 'files' ? (
         <TrailFilesPane
@@ -2295,6 +2353,9 @@ const TrailListPane: React.FC<{
           viewerUserId={viewerUserId}
           viewerIsRepoAdmin={viewerIsRepoAdmin}
           onRequestDelete={onRequestDeleteTour}
+          activityActive={activityActive}
+          onToggleActivity={onToggleActivity}
+          onSelectContributor={onSelectContributor}
           readmePath={readmePath}
           onOpenReadme={() => {
             if (readmePath) onOpenReadmeFile(readmePath);
@@ -3215,21 +3276,61 @@ const TOUR_INIT_COMMAND =
 // No tours yet: instead of inline instructions, lead with a single CTA that
 // mirrors the "Start tour" button and opens a modal explaining how to author
 // and publish one. Keeps the empty pane clean while the how-to is a click away.
-const ToursEmptyState: React.FC = () => {
+// Secondary, full-width "open the repo README" button. Shares the tour CTA's
+// shape (rounded-md, same padding/typography) so it can sit beside a tour
+// button and split the row evenly, or stand alone full-width.
+const ReadmeButton: React.FC<{
+  readmePath: string;
+  onOpenReadme?: () => void;
+  className?: string;
+}> = ({ readmePath, onOpenReadme, className }) => {
+  const { theme } = useTheme();
+  return (
+    <button
+      type="button"
+      onClick={onOpenReadme}
+      className={`inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90 ${
+        className ?? 'w-full'
+      }`}
+      style={{
+        padding: '10px 14px',
+        fontFamily: theme.fonts.body,
+        fontSize: theme.fontSizes[1],
+        fontWeight: theme.fontWeights.semibold,
+        background: 'transparent',
+        color: theme.colors.text,
+        border: `1px solid ${theme.colors.border}`,
+        cursor: 'pointer',
+      }}
+      title={`Open ${readmePath}`}
+    >
+      <FileText size={16} />
+      README
+    </button>
+  );
+};
+
+const ToursEmptyState: React.FC<{
+  readmePath?: string | null;
+  onOpenReadme?: () => void;
+}> = ({ readmePath = null, onOpenReadme }) => {
   const { theme } = useTheme();
   const [showAuthorModal, setShowAuthorModal] = useState(false);
   return (
     <>
-      {/* border-b mirrors SingleTourCta: the overview above renders borderless,
-          so the CTA carries the card's dividing line at its bottom edge. */}
-      <div
-        className="px-4 py-3 border-b"
-        style={{ borderColor: theme.colors.border }}
-      >
+      {/* When a README exists, the two buttons split the row evenly. */}
+      <div className="flex items-stretch gap-2">
+        {readmePath && (
+          <ReadmeButton
+            readmePath={readmePath}
+            onOpenReadme={onOpenReadme}
+            className="flex-1"
+          />
+        )}
         <button
           type="button"
           onClick={() => setShowAuthorModal(true)}
-          className="w-full inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90"
+          className="flex-1 inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90"
           style={{
             padding: '10px 14px',
             fontFamily: theme.fonts.body,
@@ -3741,12 +3842,25 @@ const RepoOverview: React.FC<{
   // a control rendered directly beneath it (e.g. the single-tour "Start tour"
   // CTA) inside one card, with the dividing line carried below that control.
   showBorder?: boolean;
-  // Repo-root README path (e.g. "README.md"), or null when the repo has none.
-  // When set (with onOpenReadme), the card shows a button that opens it as a
-  // file in the right-docked source panel.
-  readmePath?: string | null;
-  onOpenReadme?: () => void;
-}> = ({ owner, repo, showBorder = true, readmePath = null, onOpenReadme }) => {
+  // Commit-activity toggle: the card carries the control that flips the left
+  // rail to the contributor/commit-activity view (and back).
+  activityActive?: boolean;
+  onToggleActivity?: () => void;
+  // Click a contributor face → open their commit drill-down in the activity
+  // view. When omitted, the faces fall back to linking out to GitHub.
+  onSelectContributor?: (c: { login: string; avatar_url: string }) => void;
+  // Action buttons (README + tour CTA) rendered inside the card, right after the
+  // description.
+  ctaSlot?: React.ReactNode;
+}> = ({
+  owner,
+  repo,
+  showBorder = true,
+  activityActive = false,
+  onToggleActivity,
+  onSelectContributor,
+  ctaSlot,
+}) => {
   const { theme } = useTheme();
   // Read from the shared cache, warmed at page mount (see warmRepoOverview), so
   // the metadata is typically ready the instant this card first renders.
@@ -3875,24 +3989,19 @@ const RepoOverview: React.FC<{
         </>
       )}
 
+      {ctaSlot && <div className="mt-1">{ctaSlot}</div>}
+
       {/* Contributor faces + README shortcut on one row: the top few
           contributors link straight to GitHub, the rest collapse into a chip
           that opens the full list; the README opens the repo-root README in the
           source panel. */}
-      {((readmePath && onOpenReadme) || shownPeople.length > 0) && (
+      {(shownPeople.length > 0 || onToggleActivity) && (
         <div className="flex flex-wrap items-center gap-2 mt-0.5">
           {shownPeople.length > 0 && (
             <div className="flex items-center gap-1.5">
-              {shownPeople.map((c) => (
-                <a
-                  key={c.id}
-                  href={c.html_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={`${c.login} · ${c.contributions.toLocaleString()} commits`}
-                  className="rounded-full transition-transform hover:scale-110"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+              {shownPeople.map((c) => {
+                const avatar = (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={`${c.avatar_url}${c.avatar_url.includes('?') ? '&' : '?'}s=64`}
                     alt={c.login}
@@ -3901,8 +4010,39 @@ const RepoOverview: React.FC<{
                     className="rounded-full block"
                     style={{ background: theme.colors.backgroundSecondary }}
                   />
-                </a>
-              ))}
+                );
+                const tip = `${c.login} · ${c.contributions.toLocaleString()} commits`;
+                // With a handler, the face opens the contributor's activity
+                // drill-down; otherwise it links out to their GitHub profile.
+                return onSelectContributor ? (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() =>
+                      onSelectContributor({
+                        login: c.login,
+                        avatar_url: c.avatar_url,
+                      })
+                    }
+                    title={`${tip} — view recent activity`}
+                    className="rounded-full transition-transform hover:scale-110"
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {avatar}
+                  </button>
+                ) : (
+                  <a
+                    key={c.id}
+                    href={c.html_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={tip}
+                    className="rounded-full transition-transform hover:scale-110"
+                  >
+                    {avatar}
+                  </a>
+                );
+              })}
               {overflowPeople.length > 0 && (
                 <button
                   type="button"
@@ -3924,23 +4064,32 @@ const RepoOverview: React.FC<{
               )}
             </div>
           )}
-          {readmePath && onOpenReadme && (
+          {onToggleActivity && (
             <button
               type="button"
-              onClick={onOpenReadme}
+              onClick={onToggleActivity}
+              aria-pressed={activityActive}
               className="inline-flex items-center gap-1.5 rounded transition-colors hover:opacity-80"
               style={{
                 padding: '4px 10px',
                 fontSize: theme.fontSizes[1],
                 fontWeight: theme.fontWeights.medium,
-                color: theme.colors.textSecondary,
-                background: `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
-                border: `1px solid ${theme.colors.border}`,
+                color: activityActive
+                  ? theme.colors.primary
+                  : theme.colors.textSecondary,
+                background: activityActive
+                  ? `color-mix(in srgb, ${theme.colors.primary} 14%, transparent)`
+                  : `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
+                border: `1px solid ${
+                  activityActive ? theme.colors.primary : theme.colors.border
+                }`,
               }}
-              title={`Open ${readmePath}`}
+              title={
+                activityActive ? 'Hide commit activity' : 'Show commit activity'
+              }
             >
-              <FileText size={14} className="shrink-0" />
-              README
+              <Activity size={14} className="shrink-0" />
+              Activity
             </button>
           )}
         </div>
@@ -3982,7 +4131,6 @@ const RepoOverview: React.FC<{
           </a>
         </div>
       )}
-
 
       {showAllContributors && (
         <ContributorsModal
@@ -4323,6 +4471,12 @@ const ToursPane: React.FC<{
   viewerUserId: number | null;
   viewerIsRepoAdmin: boolean;
   onRequestDelete: (item: TourListItem) => void;
+  // Commit-activity toggle, forwarded to RepoOverview so the About card can flip
+  // the left rail to the activity view.
+  activityActive: boolean;
+  onToggleActivity: () => void;
+  // Click a contributor face in the About card → open their activity drill-down.
+  onSelectContributor: (c: { login: string; avatar_url: string }) => void;
   // Repo-root README path (or null) + handler, forwarded to RepoOverview so the
   // About card can offer a "README" button.
   readmePath: string | null;
@@ -4342,6 +4496,9 @@ const ToursPane: React.FC<{
   viewerUserId,
   viewerIsRepoAdmin,
   onRequestDelete,
+  activityActive,
+  onToggleActivity,
+  onSelectContributor,
   readmePath,
   onOpenReadme,
   trailsSection,
@@ -4355,11 +4512,25 @@ const ToursPane: React.FC<{
     viewerUserId !== null &&
     (viewerIsRepoAdmin ||
       String(single.store.createdBy.githubId) === String(viewerUserId));
-  // The overview (and the single/empty "tour" CTA folded into it) is a pinned
-  // header; only the list below — the multi-tour rows plus the trails — scrolls.
-  // When the CTA is folded in, the overview drops its own divider and the CTA
-  // carries it, so the button reads as part of the overview card.
-  const showFoldedCta = single != null || (!loading && tours.length === 0);
+  // Action buttons rendered inside the overview card, right after the
+  // description: the single-tour "Start tour" CTA (or the empty-state "Create a
+  // tour" CTA) split with the README button, or just README for multi-tour.
+  const cta = single ? (
+    <SingleTourCta
+      active={single.tour.id === selectedTourId}
+      onToggle={() =>
+        onSelectTour(single.tour.id === selectedTourId ? null : single.tour.id)
+      }
+      canDelete={singleCanDelete}
+      onDelete={() => onRequestDelete(single)}
+      readmePath={readmePath}
+      onOpenReadme={onOpenReadme}
+    />
+  ) : !loading && tours.length === 0 ? (
+    <ToursEmptyState readmePath={readmePath} onOpenReadme={onOpenReadme} />
+  ) : readmePath ? (
+    <ReadmeButton readmePath={readmePath} onOpenReadme={onOpenReadme} />
+  ) : null;
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       {/* Pinned header. */}
@@ -4367,24 +4538,11 @@ const ToursPane: React.FC<{
         <RepoOverview
           owner={owner}
           repo={repo}
-          showBorder={!showFoldedCta}
-          readmePath={readmePath}
-          onOpenReadme={onOpenReadme}
+          activityActive={activityActive}
+          onToggleActivity={onToggleActivity}
+          onSelectContributor={onSelectContributor}
+          ctaSlot={cta}
         />
-        {single ? (
-          <SingleTourCta
-            active={single.tour.id === selectedTourId}
-            onToggle={() =>
-              onSelectTour(
-                single.tour.id === selectedTourId ? null : single.tour.id,
-              )
-            }
-            canDelete={singleCanDelete}
-            onDelete={() => onRequestDelete(single)}
-          />
-        ) : !loading && tours.length === 0 ? (
-          <ToursEmptyState />
-        ) : null}
       </div>
 
       {/* Scrollable body: the multi-tour list (or a loading line) + the trails.
@@ -4657,21 +4815,33 @@ const SingleTourCta: React.FC<{
   onToggle: () => void;
   canDelete: boolean;
   onDelete: () => void;
-}> = ({ active, onToggle, canDelete, onDelete }) => {
+  readmePath?: string | null;
+  onOpenReadme?: () => void;
+}> = ({
+  active,
+  onToggle,
+  canDelete,
+  onDelete,
+  readmePath = null,
+  onOpenReadme,
+}) => {
   const { theme } = useTheme();
 
   return (
-    // The CTA carries the overview card's dividing line at its bottom edge — the
-    // overview itself renders borderless above it, so the two read as one card.
-    <div
-      className="flex flex-col border-b"
-      style={{ borderColor: theme.colors.border }}
-    >
-      <div className="px-4 py-3">
+    <div className="flex flex-col gap-2">
+      {/* README (when present) splits the row evenly with the tour button. */}
+      <div className="flex items-stretch gap-2">
+        {readmePath && (
+          <ReadmeButton
+            readmePath={readmePath}
+            onOpenReadme={onOpenReadme}
+            className="flex-1"
+          />
+        )}
         <button
           type="button"
           onClick={onToggle}
-          className="w-full inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90"
+          className="flex-1 inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90"
           style={{
             padding: '10px 14px',
             fontFamily: theme.fonts.body,
@@ -4706,22 +4876,20 @@ const SingleTourCta: React.FC<{
       </div>
 
       {canDelete && (
-        <div className="px-4 pb-3">
-          <button
-            type="button"
-            onClick={onDelete}
-            className="inline-flex items-center gap-1 transition-opacity opacity-70 hover:opacity-100"
-            style={{
-              background: 'transparent',
-              color: theme.colors.error ?? theme.colors.textMuted,
-              fontSize: theme.fontSizes[0],
-              cursor: 'pointer',
-            }}
-          >
-            <Trash2 size={12} />
-            Delete tour
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onDelete}
+          className="self-start inline-flex items-center gap-1 transition-opacity opacity-70 hover:opacity-100"
+          style={{
+            background: 'transparent',
+            color: theme.colors.error ?? theme.colors.textMuted,
+            fontSize: theme.fontSizes[0],
+            cursor: 'pointer',
+          }}
+        >
+          <Trash2 size={12} />
+          Delete tour
+        </button>
       )}
     </div>
   );
