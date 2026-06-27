@@ -8,6 +8,10 @@ import {
   MoveRight,
   ExternalLink,
   Search,
+  Star,
+  Loader2,
+  ChevronRight,
+  Github,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TrailCityDiagram } from '@/components/trail/TrailCityDiagram';
@@ -41,6 +45,62 @@ function parseGithubRepoPath(input: string): { owner: string; repo: string } | n
   return { owner, repo };
 }
 
+// Minimal shape of a repo for the opener's typeahead — satisfied by both
+// `/api/github/search` results and the persisted `recent-repositories` entries.
+interface HeaderRepoSearchItem {
+  full_name: string;
+  name: string;
+  owner: { login: string; avatar_url: string };
+  description?: string | null;
+  stargazers_count?: number;
+}
+
+// localStorage key shared with the repo page / RecentRepositoriesPanel
+// (written via `addRecentRepository`). Each entry is a full GitHub repo object.
+const RECENT_REPOS_KEY = 'recent-repositories';
+
+// Read the persisted recently-visited repos, narrowed to the fields the opener
+// needs and tolerant of older/partial entries.
+function readRecentRepos(): HeaderRepoSearchItem[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const parsed: unknown = JSON.parse(
+      localStorage.getItem(RECENT_REPOS_KEY) ?? '[]',
+    );
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((it): HeaderRepoSearchItem[] => {
+      if (it == null || typeof it !== 'object') return [];
+      const o = it as Record<string, unknown>;
+      const owner = o.owner as Record<string, unknown> | undefined;
+      if (
+        typeof o.full_name !== 'string' ||
+        !owner ||
+        typeof owner.login !== 'string' ||
+        typeof owner.avatar_url !== 'string'
+      ) {
+        return [];
+      }
+      return [
+        {
+          full_name: o.full_name,
+          name:
+            typeof o.name === 'string'
+              ? o.name
+              : o.full_name.split('/')[1] ?? o.full_name,
+          owner: { login: owner.login, avatar_url: owner.avatar_url },
+          description: typeof o.description === 'string' ? o.description : null,
+          stargazers_count:
+            typeof o.stargazers_count === 'number'
+              ? o.stargazers_count
+              : undefined,
+        },
+      ];
+    });
+  } catch {
+    return [];
+  }
+}
+
 export default function HomePage() {
   const { theme } = useTheme();
   const router = useRouter();
@@ -50,6 +110,19 @@ export default function HomePage() {
   const [repoFocused, setRepoFocused] = useState(false);
   const [flashLabel, setFlashLabel] = useState<string | null>(null);
   const [flashTyped, setFlashTyped] = useState('');
+
+  // The header input doubles as a repo search bar — pasting a GitHub link opens
+  // it directly, while typing a term shows a GitHub repo-search typeahead. The
+  // dropdown also surfaces recently-visited repos before the user types.
+  const [openRepoResults, setOpenRepoResults] = useState<HeaderRepoSearchItem[]>(
+    [],
+  );
+  const [openRepoSearching, setOpenRepoSearching] = useState(false);
+  const [recentRepos, setRecentRepos] = useState<HeaderRepoSearchItem[]>([]);
+
+  // A pasted link / `owner/repo` path is opened directly; anything else is a
+  // free-text search. Computed each render so the input and dropdown agree.
+  const openRepoDirect = parseGithubRepoPath(repoUrl);
 
   // Type out the flash label one character at a time, then navigate when done.
   useEffect(() => {
@@ -87,9 +160,60 @@ export default function HomePage() {
     if (e.key !== 'Enter') return;
     e.preventDefault();
     const parsed = parseGithubRepoPath(repoUrl);
-    if (!parsed) return;
-    navigateToRepo(parsed.owner, parsed.repo);
+    if (parsed) {
+      navigateToRepo(parsed.owner, parsed.repo);
+      return;
+    }
+    // No direct path — fall back to the top search result, if any.
+    const top = openRepoResults[0];
+    if (top) {
+      const [tOwner, tRepo] = top.full_name.split('/');
+      if (tOwner && tRepo) navigateToRepo(tOwner, tRepo);
+    }
   };
+
+  // Load recently-visited repos when the input gains focus, so the dropdown has
+  // something to show before the user types.
+  useEffect(() => {
+    if (!repoFocused) return;
+    setRecentRepos(readRecentRepos().slice(0, 6));
+  }, [repoFocused]);
+
+  // Debounced GitHub repo search, skipped when the text is already a direct
+  // link/path. Aborts in-flight requests so stale responses can't land.
+  useEffect(() => {
+    const q = repoUrl.trim();
+    if (!q || parseGithubRepoPath(q)) {
+      setOpenRepoResults([]);
+      setOpenRepoSearching(false);
+      return;
+    }
+    setOpenRepoSearching(true);
+    const ctrl = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/github/search?q=${encodeURIComponent(q)}&per_page=8`,
+          { signal: ctrl.signal },
+        );
+        if (!res.ok) throw new Error('search failed');
+        const data = await res.json();
+        setOpenRepoResults(
+          Array.isArray(data.items)
+            ? (data.items as HeaderRepoSearchItem[]).slice(0, 8)
+            : [],
+        );
+      } catch {
+        if (!ctrl.signal.aborted) setOpenRepoResults([]);
+      } finally {
+        if (!ctrl.signal.aborted) setOpenRepoSearching(false);
+      }
+    }, 300);
+    return () => {
+      ctrl.abort();
+      clearTimeout(timer);
+    };
+  }, [repoUrl]);
   type View =
     | 'title'
     | 'fileCity'
@@ -270,6 +394,97 @@ export default function HomePage() {
     };
   }, []);
 
+  // Open a repo from its `owner/repo` full name (search result or recent).
+  const goToRepoFullName = (fullName: string) => {
+    const [o, r] = fullName.split('/');
+    if (o && r) navigateToRepo(o, r);
+  };
+
+  // One result row, shared by the search results and the recent-repos list.
+  const renderRepoRow = (r: HeaderRepoSearchItem) => (
+    <button
+      key={r.full_name}
+      type="button"
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={() => goToRepoFullName(r.full_name)}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = `color-mix(in srgb, ${theme.colors.primary} 12%, transparent)`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'transparent';
+      }}
+      className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors"
+      style={{ color: theme.colors.text, background: 'transparent' }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`${r.owner.avatar_url}${
+          r.owner.avatar_url.includes('?') ? '&' : '?'
+        }s=56`}
+        alt=""
+        width={28}
+        height={28}
+        className="rounded-md shrink-0"
+        style={{ background: theme.colors.backgroundSecondary }}
+      />
+      <div className="min-w-0 flex-1">
+        <div
+          className="truncate"
+          style={{
+            fontSize: theme.fontSizes[2],
+            fontWeight: theme.fontWeights.semibold,
+          }}
+        >
+          {r.name}
+        </div>
+        <div
+          className="truncate"
+          style={{
+            fontSize: theme.fontSizes[1],
+            color: theme.colors.textMuted,
+          }}
+        >
+          {r.owner.login}
+        </div>
+      </div>
+      {typeof r.stargazers_count === 'number' && (
+        <span
+          className="flex items-center gap-1 shrink-0"
+          style={{
+            color: theme.colors.textMuted,
+            fontSize: theme.fontSizes[1],
+          }}
+        >
+          <Star className="w-3.5 h-3.5" />
+          {r.stargazers_count.toLocaleString()}
+        </span>
+      )}
+    </button>
+  );
+
+  // Small uppercase section label inside the dropdown.
+  const dropdownLabel = (text: string) => (
+    <div
+      className="px-3.5 pt-2.5 pb-1"
+      style={{
+        fontSize: theme.fontSizes[0],
+        fontWeight: theme.fontWeights.semibold,
+        color: theme.colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+      }}
+    >
+      {text}
+    </div>
+  );
+
+  // Dropdown only while focused and not mid-flash; before typing it shows
+  // recent repos, after typing a direct-open hint or the search results.
+  const showOpener = repoUrl.trim().length > 0;
+  const showRecents = !showOpener && recentRepos.length > 0;
+  const showDropdown =
+    repoFocused && flashLabel === null && (showOpener || showRecents);
+
   return (
     <div
       className="h-viewport-fixed flex flex-col overflow-auto relative"
@@ -345,10 +560,11 @@ export default function HomePage() {
             </button>
           )}
           {view !== 'topics' && (
+          <div className="relative hidden sm:block">
           <div
             role="search"
             aria-label="Open a GitHub repository"
-            className={`hidden sm:flex items-center gap-2 rounded-md px-3 py-1.5 transition-colors ${
+            className={`flex items-center gap-2 rounded-md px-3 py-1.5 transition-colors ${
               flashLabel ? 'repo-url-flash' : ''
             }`}
             style={{
@@ -392,14 +608,93 @@ export default function HomePage() {
               onKeyDown={handleRepoUrlKeyDown}
               onFocus={() => setRepoFocused(true)}
               onBlur={() => setRepoFocused(false)}
-              placeholder="Paste GitHub URL"
-              aria-label="GitHub repository URL"
+              placeholder="Search repos or paste a link…"
+              aria-label="Search repositories or paste a GitHub link"
               className="w-56 sm:w-72 bg-transparent border-0 outline-none text-sm"
               style={{
                 color: flashLabel ? '#22c55e' : theme.colors.text,
                 transition: 'color 0.2s',
               }}
             />
+          </div>
+
+          {/* Dropdown: recent repos before the user types, then a direct-open
+              hint for links / GitHub repo-search results. */}
+          {showDropdown && (
+            <div
+              className="absolute top-full right-0 mt-1.5 w-96 max-w-[80vw] rounded-lg overflow-hidden z-[1000]"
+              style={{
+                background: theme.colors.surface,
+                border: `1px solid ${theme.colors.border}`,
+                boxShadow: '0 12px 40px rgba(0,0,0,0.35)',
+              }}
+            >
+              {!showOpener ? (
+                <>
+                  {dropdownLabel('Recent')}
+                  <div className="max-h-96 overflow-y-auto pb-1">
+                    {recentRepos.map(renderRepoRow)}
+                  </div>
+                </>
+              ) : openRepoDirect ? (
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() =>
+                    navigateToRepo(openRepoDirect.owner, openRepoDirect.repo)
+                  }
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = `color-mix(in srgb, ${theme.colors.primary} 12%, transparent)`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                  className="flex w-full items-center gap-2.5 px-3.5 py-3 text-left transition-colors"
+                  style={{ color: theme.colors.text, background: 'transparent' }}
+                >
+                  <Github
+                    className="w-5 h-5 shrink-0"
+                    style={{ color: theme.colors.textMuted }}
+                  />
+                  <span
+                    className="truncate"
+                    style={{ fontSize: theme.fontSizes[2] }}
+                  >
+                    Open {openRepoDirect.owner}/{openRepoDirect.repo}
+                  </span>
+                  <ChevronRight
+                    className="w-5 h-5 ml-auto shrink-0"
+                    style={{ color: theme.colors.textMuted }}
+                  />
+                </button>
+              ) : openRepoSearching ? (
+                <div
+                  className="flex items-center gap-2.5 px-3.5 py-3.5"
+                  style={{
+                    color: theme.colors.textMuted,
+                    fontSize: theme.fontSizes[2],
+                  }}
+                >
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Searching…
+                </div>
+              ) : openRepoResults.length > 0 ? (
+                <div className="max-h-96 overflow-y-auto">
+                  {openRepoResults.map(renderRepoRow)}
+                </div>
+              ) : (
+                <div
+                  className="px-3.5 py-3.5"
+                  style={{
+                    color: theme.colors.textMuted,
+                    fontSize: theme.fontSizes[2],
+                  }}
+                >
+                  No repositories found
+                </div>
+              )}
+            </div>
+          )}
           </div>
           )}
             <div className="hidden sm:flex">
