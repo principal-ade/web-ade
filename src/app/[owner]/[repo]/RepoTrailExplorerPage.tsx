@@ -69,6 +69,7 @@ import { AgentViewButton } from '@/components/AgentViewButton';
 import { TrailLoadingScreen } from '@/components/trail/TrailLoadingScreen';
 import { TrailErrorView } from '@/components/trail/TrailErrorView';
 import { TrailShareModal } from '@/components/trail/TrailShareModal';
+import { CreateTrailModal } from '@/components/home/CreateTrailModal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ActivityHeatmap } from '@/components/ActivityHeatmap';
 import type { UserActivityResponse } from '@/app/api/github/user/[username]/activity/route';
@@ -2279,7 +2280,10 @@ const TrailListPane: React.FC<{
                 )}
                 {trailsExpanded && (
                   <div className="flex-1 min-h-0 overflow-y-auto">
-                    {filteredEntries.map((entry) => (
+                    {entries.length === 0 ? (
+                      <TrailsEmptyState />
+                    ) : (
+                    filteredEntries.map((entry) => (
                     <TrailRow
                       key={entry.id}
                       entry={entry}
@@ -2297,7 +2301,8 @@ const TrailListPane: React.FC<{
                       }
                       onDelete={() => onRequestDeleteTrail(entry)}
                     />
-                    ))}
+                    ))
+                    )}
                   </div>
                 )}
               </div>
@@ -2345,9 +2350,7 @@ const TrailListPane: React.FC<{
             {loading ? (
               <ListMessage>Loading trails…</ListMessage>
             ) : entries.length === 0 ? (
-              <ListMessage>
-                No trails have been shared for this repository yet.
-              </ListMessage>
+              <TrailsEmptyState />
             ) : filteredEntries.length === 0 ? (
               <ListMessage>No trails match “{filterQuery}”.</ListMessage>
             ) : (
@@ -3006,6 +3009,73 @@ const ListMessage: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
     >
       {children}
+    </div>
+  );
+};
+
+// Shown in the trails list when a repo has no shared trails yet. Mirrors
+// ToursEmptyState — a short explanation plus a single CTA that opens the shared
+// "Create your own trail" modal (the same one the landing page uses).
+const TrailsEmptyState: React.FC = () => {
+  const { theme } = useTheme();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  return (
+    <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+      <div
+        className="flex items-center justify-center rounded-full"
+        style={{
+          width: 48,
+          height: 48,
+          background: `color-mix(in srgb, ${theme.colors.primary} 12%, transparent)`,
+          color: theme.colors.primary,
+        }}
+      >
+        <Footprints size={24} />
+      </div>
+      <div>
+        <div
+          style={{
+            fontSize: theme.fontSizes[2],
+            fontWeight: theme.fontWeights.semibold,
+            color: theme.colors.text,
+          }}
+        >
+          No trails yet
+        </div>
+        <p
+          style={{
+            margin: '4px 0 0',
+            fontSize: theme.fontSizes[1],
+            color: theme.colors.textMuted,
+            lineHeight: 1.5,
+          }}
+        >
+          Code trails are guided walkthroughs of this repository. Be the first to
+          share one.
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={() => setShowCreateModal(true)}
+        className="inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90"
+        style={{
+          padding: '10px 14px',
+          fontFamily: theme.fonts.body,
+          fontSize: theme.fontSizes[1],
+          fontWeight: theme.fontWeights.semibold,
+          cursor: 'pointer',
+          background: theme.colors.primary,
+          color: '#ffffff',
+          border: `1px solid ${theme.colors.primary}`,
+        }}
+      >
+        <Footprints size={16} />
+        Create a trail
+      </button>
+      <CreateTrailModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+      />
     </div>
   );
 };
