@@ -28,6 +28,7 @@ import {
   type ContributeMode,
 } from './SuggestTrailDialog';
 import { SuggestProjectDialog } from './SuggestProjectDialog';
+import { AddTrailDialog } from './AddTrailDialog';
 import { TopicActions } from './TopicActions';
 import { TrailHeaderLite } from './TrailHeaderLite';
 import dynamic from 'next/dynamic';
@@ -38,7 +39,6 @@ import {
   type TopicErrorCode,
   type TopicPayload,
 } from '@/lib/topics/types';
-import { extractTrailId } from '@/lib/topics/validation';
 import {
   ShareErrorCodes,
   type ShareErrorCode,
@@ -111,9 +111,7 @@ export default function TopicPageClient() {
   const [savingHeader, setSavingHeader] = useState(false);
   const [visibilityInFlight, setVisibilityInFlight] = useState(false);
 
-  const [addTrailInput, setAddTrailInput] = useState('');
-  const [addingTrail, setAddingTrail] = useState(false);
-  const [addError, setAddError] = useState<string | null>(null);
+  const [addTrailOpen, setAddTrailOpen] = useState(false);
 
   const [shareCopied, setShareCopied] = useState(false);
   const [discussionOpen, setDiscussionOpen] = useState(false);
@@ -368,7 +366,7 @@ export default function TopicPageClient() {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setAddError(body?.error || `Failed to save (${res.status})`);
+        setHeaderStatus(body?.error || `Failed to save (${res.status})`);
         return;
       }
       setTopic(body.topic as TopicPayload);
@@ -416,33 +414,6 @@ export default function TopicPageClient() {
     }
   }, [topic]);
 
-  const handleAddTrail = useCallback(async () => {
-    if (!topic) return;
-    const trailId = extractTrailId(addTrailInput);
-    if (!trailId) {
-      setAddError('Paste a trail URL or id (e.g. /trail/<uuid>)');
-      return;
-    }
-    setAddingTrail(true);
-    setAddError(null);
-    try {
-      const res = await fetch(`/api/topics/by-id/${topic.id}/trails`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ trailId }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setAddError(body?.error || `Failed to add trail (${res.status})`);
-        return;
-      }
-      setTopic(body.topic as TopicPayload);
-      setAddTrailInput('');
-    } finally {
-      setAddingTrail(false);
-    }
-  }, [topic, addTrailInput]);
-
   const handleRemoveTrail = useCallback(
     async (trailId: string) => {
       if (!topic) return;
@@ -452,7 +423,9 @@ export default function TopicPageClient() {
       );
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setAddError(body?.error || `Failed to remove trail (${res.status})`);
+        setHeaderStatus(
+          body?.error || `Failed to remove trail (${res.status})`,
+        );
         return;
       }
       setTopic(body.topic as TopicPayload);
@@ -612,6 +585,13 @@ export default function TopicPageClient() {
         open={suggestProjectOpen}
         onClose={() => setSuggestProjectOpen(false)}
         onSubmitted={() => setSuggestionsReloadKey((k) => k + 1)}
+      />
+
+      <AddTrailDialog
+        topicId={topic.id}
+        open={addTrailOpen}
+        onClose={() => setAddTrailOpen(false)}
+        onAdded={(t) => setTopic(t)}
       />
 
       <div className="flex-1 min-h-0 relative">
@@ -994,6 +974,24 @@ export default function TopicPageClient() {
 
               {selectedRepoKey === ADD_CARD_KEY ? (
                 <div className="mt-4 flex items-center gap-2 flex-wrap">
+                  {isOwner && (
+                    <button
+                      type="button"
+                      onClick={() => setAddTrailOpen(true)}
+                      className="flex items-center gap-1.5 px-3 h-9 rounded-md text-sm font-medium transition-all hover:opacity-80"
+                      style={{
+                        background: theme.colors.primary,
+                        color: theme.colors.background,
+                        border: `1px solid ${theme.colors.primary}`,
+                        fontFamily: theme.fonts.body,
+                        cursor: 'pointer',
+                      }}
+                      aria-label="Add a trail to this topic directly"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Trail</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setContributeMode('suggest')}
@@ -1084,69 +1082,6 @@ export default function TopicPageClient() {
           reloadKey={suggestionsReloadKey}
           onTrailAccepted={() => setTopicReloadKey((k) => k + 1)}
         />
-
-        {isOwner && (
-          <div
-            className="mt-6 rounded-lg border p-4"
-            style={{
-              background:
-                theme.colors.backgroundSecondary ?? theme.colors.background,
-              borderColor: theme.colors.border,
-            }}
-          >
-            <label
-              className="block text-xs uppercase tracking-wide mb-1"
-              style={{ color: theme.colors.textMuted }}
-            >
-              Add a trail
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={addTrailInput}
-                placeholder="Paste a /trail/<id> URL or id"
-                onChange={(e) => {
-                  setAddTrailInput(e.target.value);
-                  if (addError) setAddError(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    void handleAddTrail();
-                  }
-                }}
-                className="flex-1 px-3 py-2 rounded-md outline-none text-sm"
-                style={{
-                  background: theme.colors.background,
-                  color: theme.colors.text,
-                  border: `1px solid ${theme.colors.border}`,
-                }}
-              />
-              <button
-                type="button"
-                onClick={handleAddTrail}
-                disabled={addingTrail || !addTrailInput.trim()}
-                className="inline-flex items-center gap-1.5 px-3 h-9 rounded-md text-sm font-medium disabled:opacity-50"
-                style={{
-                  background: theme.colors.primary,
-                  color: theme.colors.background,
-                  border: `1px solid ${theme.colors.primary}`,
-                }}
-              >
-                <Plus className="w-4 h-4" />
-                Add
-              </button>
-            </div>
-            {addError && (
-              <p
-                className="mt-2 text-xs"
-                style={{ color: theme.colors.error }}
-              >
-                {addError}
-              </p>
-            )}
-          </div>
-        )}
 
         {discussionOpen && (
           <CommentThread
