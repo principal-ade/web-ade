@@ -1069,6 +1069,10 @@ export function TrailViewer({
           hideGraphToggle
           hideVisitorsRoster
           hideNotesByRoster
+          // This surface only ever renders published/shared trails, so the
+          // Published/Draft badge is redundant — drop it and float the header
+          // controls inline with the heading.
+          publishedImplied
         />
       </div>
       {session.toast && (
