@@ -106,6 +106,12 @@ export async function POST(request: NextRequest) {
       id,
       share: { id },
       purpose,
+      // `author` is server-owned: a GitHub login the read path resolves to
+      // a display name (see `useAuthorNames`). Stamp it from the
+      // authenticated identity — same source as `createdBy` and the
+      // publisher sign-off — rather than trusting the client (validation
+      // already strips any client-supplied value).
+      author: user.login,
       ...(publisherSignOff ? { signOffs: [publisherSignOff] } : {}),
     };
 

@@ -509,8 +509,11 @@ export function validatePayload(
   // Build a clean payload — explicitly omit notes, signOffs, and
   // visitors (all host-mutated only, written through dedicated routes
   // after publish). `id` and `share` are also omitted: the server mints
-  // `id` and stamps `share` at publish time. The allowlist construction
-  // below drops any other unknown fields.
+  // `id` and stamps `share` at publish time. `author` is likewise
+  // server-owned — it's a GitHub login (the read path resolves it to a
+  // display name via `useAuthorNames`), so we never trust a client value
+  // and stamp it from the authenticated identity at publish. The
+  // allowlist construction below drops any other unknown fields.
   const clean: Omit<TrailPayload, 'id' | 'share'> = {
     title: p.title,
     createdAt: p.createdAt,
@@ -522,7 +525,6 @@ export function validatePayload(
 
   if (typeof p.summary === 'string') clean.summary = p.summary;
   if (typeof p.request === 'string') clean.request = p.request;
-  if (typeof p.author === 'string') clean.author = p.author;
   if (repos.length > 0) clean.repos = repos;
   if (
     isPlainObject(p.authoredAt) &&
