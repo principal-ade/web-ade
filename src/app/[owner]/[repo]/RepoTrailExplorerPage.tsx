@@ -50,9 +50,9 @@ import type {
   FileCityTrailExplorerPanelActions,
   FileCityTrailExplorerPanelContext,
   FileCityTrailExplorerRepository,
-  FileCityTourExplorerPanelActions,
-  FileCityTourExplorerPanelContext,
-  FileCityTourExplorerRepository,
+  FileCityGuidePanelActions,
+  FileCityGuidePanelContext,
+  FileCityGuideRepository,
   HighlightLayer,
 } from '@industry-theme/file-city-panel';
 import {
@@ -111,10 +111,10 @@ const FileCityTrailExplorerPanel = dynamic(
   { ssr: false },
 );
 
-const FileCityTourExplorerPanel = dynamic(
+const FileCityGuidePanel = dynamic(
   () =>
     import('@industry-theme/file-city-panel').then(
-      (m) => m.FileCityTourExplorerPanel,
+      (m) => m.FileCityGuidePanel,
     ),
   { ssr: false },
 );
@@ -5368,14 +5368,14 @@ const RightPane: React.FC<{
 
   // Tour panel wiring. The tour panel takes one IntroductionTour at a time
   // and draws its own step UI.
-  const tourRepository = useMemo<FileCityTourExplorerRepository>(
+  const tourRepository = useMemo<FileCityGuideRepository>(
     () => ({ id: `${owner}/${repo}`, owner, name: repo }),
     [owner, repo],
   );
   // Audio narration: fetch all step URLs upfront via the TTS backend, keyed by
   // step id (the panel looks up `audioUrls.get(step.id)`). The panel passes the
   // `tourAudioContext` we supply below straight back into this action.
-  const tourActions = useMemo<FileCityTourExplorerPanelActions>(
+  const tourActions = useMemo<FileCityGuidePanelActions>(
     () => ({
       openFile: (filePath) => onOpenFile(filePath),
       fetchAudioUrls: async (ctx) => {
@@ -5414,7 +5414,7 @@ const RightPane: React.FC<{
     [selectedTour],
   );
   const tourContext = useMemo<
-    PanelContextValue<FileCityTourExplorerPanelContext>
+    PanelContextValue<FileCityGuidePanelContext>
   >(() => {
     const fileTreeSlice: DataSlice<FileTree> = {
       scope: 'repository',
@@ -5504,7 +5504,7 @@ const RightPane: React.FC<{
         className="flex-1 min-w-0 min-h-0 relative"
         style={{ background: theme.colors.background }}
       >
-        <FileCityTourExplorerPanel
+        <FileCityGuidePanel
           context={tourContext}
           actions={tourActions}
           events={events}
