@@ -30,7 +30,7 @@
     "@industry-theme/agent-panels": "^0.3.3",
     "@industry-theme/alexandria-docs-panel": "^0.5.3",
     "@industry-theme/alexandria-panels": "^0.3.4",
-    "@industry-theme/file-city-panel": "^0.8.0",
+    "@industry-theme/file-city-panel": "^0.8.5",
     "@industry-theme/file-editing-panels": "^0.4.4",
     "@industry-theme/git-panels": "^0.2.0",
     "@industry-theme/github-panels": "^0.4.5",
@@ -111,7 +111,7 @@
     "react-resizable-panels": "^4.7.4",
     "remove-markdown": "^0.6.3",
     "tailwindcss": "^4",
-    "themed-markdown": "^0.1.101",
+    "themed-markdown": "^0.1.106",
     "three": "^0.175.0",
     "typescript": "^5",
     "zod": "^3.25.76"

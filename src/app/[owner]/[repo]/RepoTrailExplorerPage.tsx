@@ -53,6 +53,7 @@ import type {
   FileCityGuideRepository,
   HighlightLayer,
   CommitView,
+  ReadmeView,
   LineCountsSliceData,
 } from '@industry-theme/file-city-panel';
 import {
@@ -90,6 +91,7 @@ import {
 } from '@/lib/repo-analysis/contributionLayers';
 import { useCommitsChangedFiles } from '@/hooks/useCommitsChangedFiles';
 import { useCommitView } from '@/hooks/useCommitView';
+import { useReadme } from '@/hooks/useReadme';
 import {
   buildAggregateChurnLayers,
   buildCommitFilesLayer,
@@ -305,12 +307,18 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     null,
   );
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
-  // Which edge the file source drawer docks to. Files open on the right; the
-  // README opens as a centered sheet rising from the bottom.
+  // Which edge the file source drawer docks to. Files open on the right. (The
+  // README no longer uses this drawer — it opens in the File City panel's
+  // native readme mode; see `activeReadmePath`.)
   const [fileSide, setFileSide] = useState<'left' | 'right' | 'bottom'>('right');
   // Tour selection. Mutually exclusive with trail/file selection — the right
   // pane swaps to the tour panel while a tour is active.
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
+  // README open in the File City panel's native readme mode (markdown left +
+  // city + file-type legend). Holds the repo-relative README path; null when
+  // closed. Mutually exclusive with trail/tour/commit/file selection — like
+  // those, opening it clears the others so a single thing drives the right pane.
+  const [activeReadmePath, setActiveReadmePath] = useState<string | null>(null);
 
   // Measured page-header height, so the right-docked file panel can start just
   // below the header instead of overlapping it at the top of the screen. A
@@ -360,6 +368,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     setSelectedTourId(null);
     setSelectedFilePath(null);
     setSelectedCommitSha(null);
+    setActiveReadmePath(null);
     setTrailsExpanded(false);
     // Plain toggle lands on the contributor cards, not a stale drill-down.
     setActivityFocusContributor(null);
@@ -389,6 +398,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
       setSelectedTourId(null);
       setSelectedFilePath(null);
       setSelectedCommitSha(null);
+      setActiveReadmePath(null);
       setTrailsExpanded(false);
     },
     [],
@@ -824,6 +834,10 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     [fileTree],
   );
 
+  // Repo-root README path (if any) — also computed in the left rail, but we
+  // need it here to auto-open the readme view and to toggle it from the button.
+  const readmePath = useMemo(() => findReadmePath(filePaths), [filePaths]);
+
   // Effective excluded file set — every file that lives under any
   // user-excluded directory. Computed once and reused everywhere the
   // exclusion cascade matters (coverage stats, highlight layers).
@@ -1171,6 +1185,38 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   const { commit: selectedCommitView, loading: commitViewLoading } =
     useCommitView(owner, repo, isActivityView ? selectedCommitSha : null);
 
+  // README rendered natively by FileCityGuidePanel's readme mode (markdown left
+  // + city + file-type legend). Driven by `activeReadmePath`; idle when null.
+  const { readme: selectedReadmeView, loading: readmeViewLoading } = useReadme(
+    owner,
+    repo,
+    activeReadmePath,
+  );
+
+  // Open the readme by default on first visit, unless the user previously
+  // closed it (persisted per-repo). Runs once, after the file list (hence the
+  // README path) is known, and only when no other surface is already selected
+  // so a deep-linked tour/commit/trail still wins.
+  const didAutoOpenReadme = useRef(false);
+  useEffect(() => {
+    if (didAutoOpenReadme.current) return;
+    if (!readmePath) return; // wait for the file list to load
+    didAutoOpenReadme.current = true;
+    if (readReadmeOpenPref(owner, repo) === false) return; // user dismissed it
+    if (selectedTourId || selectedCommitSha || selectedTrailId || selectedFilePath) {
+      return; // something else is already showing
+    }
+    setActiveReadmePath(readmePath);
+  }, [
+    readmePath,
+    owner,
+    repo,
+    selectedTourId,
+    selectedCommitSha,
+    selectedTrailId,
+    selectedFilePath,
+  ]);
+
   // Debug: log layers + a few real file-tree paths so we can confirm
   // the LayerItem path format matches the building paths.
   useEffect(() => {
@@ -1281,9 +1327,10 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           onPackageHover={(pkg) =>
             setHoveredPackagePath(packageDirFromLayer(pkg))
           }
-          onPackageSelect={(pkg) =>
-            setSelectedPackagePath(packageDirFromLayer(pkg))
-          }
+          onPackageSelect={(pkg) => {
+            setSelectedPackagePath(packageDirFromLayer(pkg));
+            setActiveReadmePath(null);
+          }}
           configMode={configMode}
           onToggleConfigMode={() => {
             setConfigMode((m) => !m);
@@ -1292,6 +1339,10 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           leftViewMode={leftViewMode}
           onSetViewMode={(mode) => {
             setLeftViewMode(mode);
+            // Picking any other view dismisses the readme (it's the tours-view
+            // default overlay). Doesn't touch the persisted preference, so the
+            // README button can reopen it.
+            setActiveReadmePath(null);
             // Switching views clears the other views' selections so the map
             // returns to the idle coverage layer between them. Leaving the
             // activity view also clears any open commit.
@@ -1327,7 +1378,10 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           onSelectContributor={handleSelectContributor}
           activityFocusContributor={activityFocusContributor}
           selectedCommitSha={selectedCommitSha}
-          onSelectCommit={setSelectedCommitSha}
+          onSelectCommit={(sha) => {
+            setSelectedCommitSha(sha);
+            if (sha) setActiveReadmePath(null);
+          }}
           commitFiles={commitFiles}
           onCommitShasChange={setActivityShas}
           onFocusShasChange={setActivityFocusShas}
@@ -1342,14 +1396,26 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             setFileSide('right');
             setSelectedTrailId(null);
             setSelectedTourId(null);
+            setActiveReadmePath(null);
           }}
-          // The README opens the same drawer, but as a centered sheet that
-          // rises from the bottom.
+          // The README button toggles the File City panel's native readme mode
+          // (markdown left + city + file-type legend), persisting the choice
+          // per-repo so it survives reloads. Opening collapses the trails
+          // section and clears competing selections so readme is the single
+          // active mode; closing returns to the idle city.
           onOpenReadmeFile={(path) => {
-            setSelectedFilePath(path);
-            setFileSide('bottom');
+            if (activeReadmePath) {
+              setActiveReadmePath(null);
+              writeReadmeOpenPref(owner, repo, false);
+              return;
+            }
+            setActiveReadmePath(path);
+            writeReadmeOpenPref(owner, repo, true);
+            setTrailsExpanded(false);
+            setSelectedFilePath(null);
             setSelectedTrailId(null);
             setSelectedTourId(null);
+            setSelectedCommitSha(null);
           }}
           tours={tours}
           toursLoading={toursLoading}
@@ -1362,6 +1428,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
               setTrailsExpanded(false);
               setSelectedTrailId(null);
               setSelectedFilePath(null);
+              setActiveReadmePath(null);
             }
           }}
           onRequestDeleteTour={(item) => {
@@ -1399,6 +1466,8 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           activityHeatmapLayers={activityHeatmapLayers}
           commitView={selectedCommitView}
           commitViewLoading={commitViewLoading}
+          readmeView={selectedReadmeView}
+          readmeViewLoading={readmeViewLoading}
           currentAuthor={user?.login}
           overlayFilePath={leftViewMode === 'files' ? selectedFilePath : null}
           overlayTrails={selectedFileTrails}
@@ -3117,15 +3186,9 @@ const ToursEmptyState: React.FC<{
   const [showAuthorModal, setShowAuthorModal] = useState(false);
   return (
     <>
-      {/* When a README exists, the two buttons split the row evenly. */}
+      {/* When a README exists, the two buttons split the row evenly — README
+          sits after the tour CTA. */}
       <div className="flex items-stretch gap-2">
-        {readmePath && (
-          <ReadmeButton
-            readmePath={readmePath}
-            onOpenReadme={onOpenReadme}
-            className="flex-1"
-          />
-        )}
         <button
           type="button"
           onClick={() => setShowAuthorModal(true)}
@@ -3144,6 +3207,13 @@ const ToursEmptyState: React.FC<{
           <Compass size={16} />
           Create a tour
         </button>
+        {readmePath && (
+          <ReadmeButton
+            readmePath={readmePath}
+            onOpenReadme={onOpenReadme}
+            className="flex-1"
+          />
+        )}
       </div>
       {showAuthorModal && (
         <TourAuthorModal onClose={() => setShowAuthorModal(false)} />
@@ -3729,6 +3799,32 @@ function findReadmePath(filePaths: string[]): string | null {
     roots[0] ??
     null
   );
+}
+
+// Per-repo persistence of whether the readme view auto-opens. The readme is
+// shown by default; closing it writes `false` so it stays closed on return,
+// and re-opening writes `true`. `null` (unset) means "never decided" → default
+// open. Wrapped in try/catch so SSR / disabled storage degrades gracefully.
+function readmeOpenStorageKey(owner: string, repo: string): string {
+  return `webade:readmeOpen:${owner}/${repo}`;
+}
+function readReadmeOpenPref(owner: string, repo: string): boolean | null {
+  try {
+    const v = window.localStorage.getItem(readmeOpenStorageKey(owner, repo));
+    return v === null ? null : v === 'true';
+  } catch {
+    return null;
+  }
+}
+function writeReadmeOpenPref(owner: string, repo: string, open: boolean): void {
+  try {
+    window.localStorage.setItem(
+      readmeOpenStorageKey(owner, repo),
+      open ? 'true' : 'false',
+    );
+  } catch {
+    // ignore (storage unavailable / quota)
+  }
 }
 
 const RepoOverview: React.FC<{
@@ -5187,15 +5283,9 @@ const SingleTourCta: React.FC<{
 
   return (
     <div className="flex flex-col gap-2">
-      {/* README (when present) splits the row evenly with the tour button. */}
+      {/* README (when present) splits the row evenly with the tour button,
+          sitting after it. */}
       <div className="flex items-stretch gap-2">
-        {readmePath && (
-          <ReadmeButton
-            readmePath={readmePath}
-            onOpenReadme={onOpenReadme}
-            className="flex-1"
-          />
-        )}
         <button
           type="button"
           onClick={onToggle}
@@ -5231,6 +5321,13 @@ const SingleTourCta: React.FC<{
             </>
           )}
         </button>
+        {readmePath && (
+          <ReadmeButton
+            readmePath={readmePath}
+            onOpenReadme={onOpenReadme}
+            className="flex-1"
+          />
+        )}
       </div>
 
       {canDelete && (
@@ -5521,6 +5618,11 @@ const RightPane: React.FC<{
    *  loading or when no commit is picked). */
   commitView: CommitView | null;
   commitViewLoading: boolean;
+  /** README mapped to the panel's native ReadmeView → fed to FileCityGuidePanel's
+   *  readme mode via the `readme` slice (markdown left + city + file-type
+   *  legend). Null while loading or when the README isn't open. */
+  readmeView: ReadmeView | null;
+  readmeViewLoading: boolean;
   /** Undefined for anonymous viewers — gates the panel's note Edit/Delete. */
   currentAuthor?: string;
   overlayFilePath: string | null;
@@ -5550,6 +5652,8 @@ const RightPane: React.FC<{
   activityHeatmapLayers,
   commitView,
   commitViewLoading,
+  readmeView,
+  readmeViewLoading,
   currentAuthor,
   overlayFilePath,
   overlayTrails,
@@ -5796,6 +5900,18 @@ const RightPane: React.FC<{
         error: null,
         refresh: async () => {},
       },
+      // Opening the repo README flips the panel into its native readme mode
+      // (markdown left + city framed top-right + file-type legend bottom-right).
+      // Gated on no tour being open: the panel ranks readme above tour, so the
+      // tour slice winning requires this to be null while a tour is active.
+      readme: {
+        scope: 'repository' as const,
+        name: 'readme',
+        data: selectedTour?.tour ? null : readmeView,
+        loading: readmeViewLoading,
+        error: null,
+        refresh: async () => {},
+      },
       // While a tour is open the panel sources highlights from the active
       // step and ignores this slice. In the idle/no-tour state (the default
       // right pane) it honors host layers — that's where the Architecture
@@ -5826,6 +5942,8 @@ const RightPane: React.FC<{
     contributionLayers,
     commitView,
     commitViewLoading,
+    readmeView,
+    readmeViewLoading,
     analysis,
   ]);
 
@@ -5886,6 +6004,9 @@ const RightPane: React.FC<{
           // frames the camera on it — no color over the buildings. Null when
           // nothing is selected (full city).
           idleFocusDirectory={idleFocusDirectory}
+          // Readme mode: markdown column takes 60% of the canvas; the city +
+          // file-type legend share the right 40%.
+          readmeMarkdownWidth={0.6}
           // Skip the tour brief — picking a tour drops straight into step 1
           // rather than the description + Start gate.
           defaultSkipWelcome
