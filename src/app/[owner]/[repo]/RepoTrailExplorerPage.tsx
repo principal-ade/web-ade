@@ -8,7 +8,6 @@ import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
   Github,
-  History,
   Search,
   FileText,
   Settings,
@@ -54,6 +53,7 @@ import type {
   FileCityGuideRepository,
   HighlightLayer,
   CommitView,
+  LineCountsSliceData,
 } from '@industry-theme/file-city-panel';
 import {
   PackageCompositionPanelContent,
@@ -76,14 +76,17 @@ import { ActivityHeatmap } from '@/components/ActivityHeatmap';
 import type { UserActivityResponse } from '@/app/api/github/user/[username]/activity/route';
 import { FileSourcePanel } from './FileSourcePanel';
 import { RepoActivityPane } from './RepoActivityPane';
-import { RepoAnalysisButton } from './RepoAnalysisButton';
+import { RepoAnalysisStatus } from './RepoAnalysisStatus';
 import {
   RepoAnalysisProvider,
   useRepoAnalysis,
+  type RepoAnalysisPayload,
 } from './RepoAnalysisContext';
 import {
   analysisContributors,
+  mergeContributors,
   type ContributionStats,
+  type EmailIdentity,
 } from '@/lib/repo-analysis/contributionLayers';
 import { useCommitsChangedFiles } from '@/hooks/useCommitsChangedFiles';
 import { useCommitView } from '@/hooks/useCommitView';
@@ -182,11 +185,20 @@ const WARMING_CITY_DATA: import('@principal-ai/file-city-react').CityData = {
   metadata: { totalFiles: 10, totalDirectories: 1, rootPath: '/warming', analyzedAt: new Date() },
 };
 
-function nullSlice<T>(name: string): DataSlice<T | null> {
+// Building heights come from the Freestyle VM repo analysis, which already
+// returns per-file line counts (path → count). When an analysis exists, wrap it
+// as the panel's lineCounts slice; otherwise null (flat city until the user
+// runs the analysis). The VM is the sole source — no fallback to the old
+// /api/line-counts route; a failed VM run is handled separately.
+function lineCountsSlice(
+  analysis: RepoAnalysisPayload | null,
+): DataSlice<LineCountsSliceData | null> {
   return {
     scope: 'repository',
-    name,
-    data: null,
+    name: 'lineCounts',
+    data: analysis
+      ? { lineCounts: analysis.lineCounts, status: 'available' }
+      : null,
     loading: false,
     error: null,
     refresh: async () => {},
@@ -1236,7 +1248,6 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         onGenerateTourAudio={handleGenerateTourAudio}
         trailsExpanded={trailsExpanded}
       />
-      <RepoAnalysisButton />
       <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
         {/* The delete control is driven by the app's own validated session:
             the author-match compares against `useAuth().user.id`, and
@@ -1899,15 +1910,6 @@ const Header: React.FC<{
                 onGenerate={() => onGenerateTourAudio(selectedTour)}
               />
             )}
-            <Link
-              href={`/legacy/${owner}/${repo}`}
-              className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
-              style={{ color: theme.colors.text }}
-              title="Open legacy view"
-              aria-label="Open legacy view"
-            >
-              <History className="w-5 h-5" />
-            </Link>
             <div className="hidden md:flex">
               <AgentViewButton path={`/${owner}/${repo}`} iconOnly />
             </div>
@@ -3500,35 +3502,57 @@ function useCommitAuthorsByEmail(
 ): Record<string, CommitAuthorIdentity | null> {
   const [tick, setTick] = useState(0);
 
-  // Stable, deduped, lowercased request set — the effect refires only on change.
+  // Deduped, lowercased request set — KEEPS the caller's order (highest
+  // contribution first) so the most important identities resolve in the first
+  // batches. Set preserves first-insertion order.
   const wanted = useMemo(
-    () => Array.from(new Set(emails.map((e) => e.toLowerCase()))).sort(),
+    () => Array.from(new Set(emails.map((e) => e.toLowerCase()))),
     [emails],
   );
-  const wantedKey = wanted.join(',');
+  // Order-independent key so a pure reorder of the same set doesn't refire.
+  const wantedKey = useMemo(() => [...wanted].sort().join(','), [wanted]);
 
   useEffect(() => {
     if (wanted.length === 0) return;
-    const need = wanted.filter(
-      (e) => !emailAuthorCache.has(emailAuthorKey(owner, repo, e)),
-    );
-    if (need.length === 0) return;
-    const batchKey = `${owner}/${repo}/${need.join(',')}`;
-    if (emailAuthorInflight.has(batchKey)) return;
     let cancelled = false;
-    const run = trpc.github.getCommitAuthorsByEmail
-      .query({ owner, repo, emails: need })
-      .then((res) => {
-        for (const [email, identity] of Object.entries(res)) {
-          emailAuthorCache.set(emailAuthorKey(owner, repo, email), identity);
+    // The route caps `emails` at 80 (z.array().max(80)); a big repo's blame map
+    // easily has more non-noreply emails than that, and a single over-cap query
+    // is rejected wholesale — silently dropping every overlay. So chunk under
+    // the cap, and walk the chunks SEQUENTIALLY in contribution order: the top
+    // contributors resolve (and their rows light up) first, and we never fan a
+    // dozen batches out at once into GitHub's secondary rate limit.
+    const BATCH = 50;
+    void (async () => {
+      for (let i = 0; i < wanted.length && !cancelled; i += BATCH) {
+        const chunk = wanted
+          .slice(i, i + BATCH)
+          .filter((e) => !emailAuthorCache.has(emailAuthorKey(owner, repo, e)));
+        if (chunk.length === 0) continue;
+        const batchKey = `${owner}/${repo}/${chunk.join(',')}`;
+        const inflight = emailAuthorInflight.get(batchKey);
+        if (inflight) {
+          await inflight;
+          continue;
         }
-        emailAuthorInflight.delete(batchKey);
+        const run = trpc.github.getCommitAuthorsByEmail
+          .query({ owner, repo, emails: chunk })
+          .then((res) => {
+            for (const [email, identity] of Object.entries(res)) {
+              emailAuthorCache.set(emailAuthorKey(owner, repo, email), identity);
+            }
+          })
+          .catch(() => {
+            /* rate-limited / private — leave these a miss, retried next mount */
+          })
+          .finally(() => {
+            emailAuthorInflight.delete(batchKey);
+          });
+        emailAuthorInflight.set(batchKey, run);
+        await run;
+        // Re-render after each batch so resolved avatars appear top-down.
         if (!cancelled) setTick((t) => t + 1);
-      })
-      .catch(() => {
-        emailAuthorInflight.delete(batchKey);
-      });
-    emailAuthorInflight.set(batchKey, run);
+      }
+    })();
     return () => {
       cancelled = true;
     };
@@ -4108,8 +4132,10 @@ interface ContributorRow {
   avatarUrl?: string;
   login?: string;
   htmlUrl?: string;
-  /** Present in analysis mode — drives the city highlight + coverage. */
+  /** Representative blame email (analysis mode) — shown in the profile detail. */
   email?: string;
+  /** Every blame email folded into this person; the highlight unions them. */
+  emails?: string[];
   stats?: ContributionStats;
   /** Commits (shortlog in analysis mode, GitHub contributions in fallback). */
   commits?: number;
@@ -4169,7 +4195,7 @@ const ContributorsPane: React.FC<{
   onClose: () => void;
 }> = ({ owner, repo, onClose }) => {
   const { theme } = useTheme();
-  const { analysis, selectedEmail, setSelectedEmail } = useRepoAnalysis();
+  const { analysis, setSelectedEmails } = useRepoAnalysis();
 
   // Fallback source: GitHub contributor graph (used only before analysis).
   const githubData = useRepoContributorsData(owner, repo);
@@ -4194,29 +4220,33 @@ const ContributorsPane: React.FC<{
 
   const rows = useMemo<ContributorRow[]>(() => {
     if (analysis) {
-      return blamePeople.map((p) => {
-        const overlay = p.noreplyLogin
-          ? undefined
-          : emailAuthors[p.email.toLowerCase()] ?? undefined;
-        const login = overlay?.login ?? p.noreplyLogin;
-        const id = overlay?.id ?? p.noreplyUserId;
-        const avatarUrl =
-          overlay?.avatarUrl ??
-          (id != null
-            ? `https://avatars.githubusercontent.com/u/${id}`
-            : login
-              ? `https://github.com/${login}.png`
-              : undefined);
+      // Collapse one human's several blame emails into a single person, keyed on
+      // resolved GitHub id (with a name fallback for emails GitHub can't
+      // attribute). The API overlay is the resolver; noreply emails carry their
+      // own id and are resolved inside mergeContributors.
+      const identityOf = (email: string): EmailIdentity | undefined => {
+        const o = emailAuthors[email.toLowerCase()];
+        return o ? { login: o.login, id: o.id, avatarUrl: o.avatarUrl, htmlUrl: o.htmlUrl } : undefined;
+      };
+      return mergeContributors(analysis, blamePeople, identityOf).map((p) => {
+        const extra = p.emails.length - 1;
         return {
-          key: p.email,
-          email: p.email,
-          // Prefer a resolved GitHub login as the headline, else the git name.
-          name: login ?? p.name,
-          secondary: login ? p.email : undefined,
-          avatarUrl,
-          login,
-          htmlUrl:
-            overlay?.htmlUrl ?? (login ? `https://github.com/${login}` : undefined),
+          key: p.key,
+          email: p.emails[0],
+          emails: p.emails,
+          name: p.name,
+          // When resolved, subtitle is the primary email (+N when merged);
+          // otherwise the name already headlines, so no subtitle.
+          secondary: p.login
+            ? extra > 0
+              ? `${p.emails[0]} +${extra}`
+              : p.emails[0]
+            : extra > 0
+              ? `${p.emails[0]} +${extra}`
+              : undefined,
+          avatarUrl: p.avatarUrl,
+          login: p.login,
+          htmlUrl: p.htmlUrl,
           stats: p.stats,
           commits: p.commits,
         };
@@ -4239,18 +4269,18 @@ const ContributorsPane: React.FC<{
 
   const clearSelection = useCallback(() => {
     setSelectedKey(null);
-    setSelectedEmail(null);
-  }, [setSelectedEmail]);
+    setSelectedEmails(null);
+  }, [setSelectedEmails]);
 
   const handleRowClick = useCallback(
     (row: ContributorRow) => {
-      setSelectedKey(row.key);
-      // Toggle the city highlight when the row maps to a blame email.
-      setSelectedEmail(
-        row.email && row.email !== selectedEmail ? row.email : null,
-      );
+      // Toggle: clicking the active row clears; otherwise highlight the union
+      // of every blame email this person owns.
+      const active = row.key === selectedKey;
+      setSelectedKey(active ? null : row.key);
+      setSelectedEmails(active ? null : row.emails ?? (row.email ? [row.email] : null));
     },
-    [selectedEmail, setSelectedEmail],
+    [selectedKey, setSelectedEmails],
   );
 
   return (
@@ -4309,7 +4339,7 @@ const ContributorsPane: React.FC<{
               </ListMessage>
             ) : (
               rows.map((row) => {
-                const active = !!row.email && row.email === selectedEmail;
+                const active = row.key === selectedKey;
                 const share = row.stats?.lineShare ?? 0;
                 return (
                   <button
@@ -4872,6 +4902,7 @@ const ToursPane: React.FC<{
           packageCount={packageCount}
           onOpenView={onOpenView}
         />
+        <RepoAnalysisStatus />
       </div>
 
       {/* Scrollable body: the multi-tour list (or a loading line).
@@ -5530,7 +5561,7 @@ const RightPane: React.FC<{
   const { theme } = useTheme();
   // Contribution-coverage highlight for the contributor picked in the
   // RepoAnalysisButton — blended into whichever panel is showing below.
-  const { contributionLayers } = useRepoAnalysis();
+  const { analysis, contributionLayers } = useRepoAnalysis();
   const events = useMemo<PanelEventBus>(() => new PanelEventBus(), []);
 
   // The file-city map reports a building/file click by emitting a `file:open`
@@ -5666,7 +5697,7 @@ const RightPane: React.FC<{
       currentScope: { type: 'repository' },
       refresh: async () => {},
       fileTree: fileTreeSlice,
-      lineCounts: nullSlice('lineCounts'),
+      lineCounts: lineCountsSlice(analysis),
       trail: trailSlice,
       highlightLayers: highlightSlice,
       repository,
@@ -5678,6 +5709,7 @@ const RightPane: React.FC<{
     contributionLayers,
     highlightLayersLoading,
     repository,
+    analysis,
   ]);
 
   // Tour panel wiring. The tour panel takes one IntroductionTour at a time
@@ -5752,7 +5784,7 @@ const RightPane: React.FC<{
       currentScope: { type: 'repository' },
       refresh: async () => {},
       fileTree: fileTreeSlice,
-      lineCounts: nullSlice('lineCounts'),
+      lineCounts: lineCountsSlice(analysis),
       tour: tourSlice,
       // Picking a commit in the Activity list flips the panel into its native
       // commit mode (city framed top-right + header/message/file-list chrome).
@@ -5794,6 +5826,7 @@ const RightPane: React.FC<{
     contributionLayers,
     commitView,
     commitViewLoading,
+    analysis,
   ]);
 
   if (treeError) {
