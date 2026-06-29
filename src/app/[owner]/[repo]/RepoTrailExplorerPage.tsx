@@ -23,7 +23,6 @@ import {
   GitFork,
   ExternalLink,
   Play,
-  Palette,
   Activity,
   ChevronRight,
   ChevronLeft,
@@ -324,11 +323,6 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     const dir = pkg.packageData.path.replace(/^\/+|\/+$/g, '');
     return dir.length > 0 ? dir : null;
   }, []);
-
-  // File-type color legend on the tour panel. On by default; a header button
-  // (shown whenever the tour panel is the right pane — i.e. trails collapsed)
-  // toggles it.
-  const [showColorLegend, setShowColorLegend] = useState(true);
 
   // The Trails nav card swaps the rail to the full-rail trail list; while it's
   // open this flag drives the right pane to the Trail explorer (set from
@@ -1231,8 +1225,6 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           selectedTour ? tourGenProgress.get(selectedTour.tour.id) : undefined
         }
         onGenerateTourAudio={handleGenerateTourAudio}
-        showColorLegend={showColorLegend}
-        onToggleColorLegend={() => setShowColorLegend((s) => !s)}
         trailsExpanded={trailsExpanded}
       />
       <RepoAnalysisButton owner={owner} repo={repo} />
@@ -1380,7 +1372,8 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             d.endsWith('/') ? d.slice(0, -1) : d,
           )}
           showSpatialContext={configMode}
-          showColorLegend={showColorLegend}
+          showColorLegend
+          showColorLegendToggle
           trailsExpanded={trailsExpanded}
           onCloseCommit={() => setSelectedCommitSha(null)}
           activityHeatmapLayers={activityHeatmapLayers}
@@ -1563,11 +1556,6 @@ const Header: React.FC<{
   selectedTour: TourListItem | null;
   tourProgress: TourGenProgress | undefined;
   onGenerateTourAudio: (item: TourListItem) => void;
-  // File-type legend toggle for the tour panel; the button renders whenever
-  // the tour panel is the right pane (i.e. the trails section is collapsed),
-  // since the legend lives on that panel.
-  showColorLegend: boolean;
-  onToggleColorLegend: () => void;
   /** Trails section expanded → the Trail explorer (no legend) is showing. */
   trailsExpanded: boolean;
 }> = ({
@@ -1578,8 +1566,6 @@ const Header: React.FC<{
   selectedTour,
   tourProgress,
   onGenerateTourAudio,
-  showColorLegend,
-  onToggleColorLegend,
   trailsExpanded,
 }) => {
   const { theme } = useTheme();
@@ -1902,31 +1888,6 @@ const Header: React.FC<{
                 progress={tourProgress}
                 onGenerate={() => onGenerateTourAudio(selectedTour)}
               />
-            )}
-            {!trailsExpanded && (
-              <button
-                type="button"
-                onClick={onToggleColorLegend}
-                aria-pressed={showColorLegend}
-                className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
-                style={{
-                  color: showColorLegend
-                    ? theme.colors.primary
-                    : theme.colors.textMuted,
-                }}
-                title={
-                  showColorLegend
-                    ? 'Hide file-type legend'
-                    : 'Show file-type legend'
-                }
-                aria-label={
-                  showColorLegend
-                    ? 'Hide file-type legend'
-                    : 'Show file-type legend'
-                }
-              >
-                <Palette className="w-5 h-5" />
-              </button>
             )}
             <Link
               href={`/legacy/${owner}/${repo}`}
@@ -5158,8 +5119,11 @@ const RightPane: React.FC<{
   highlightLayersLoading: boolean;
   excludedFolders: string[];
   showSpatialContext: boolean;
-  /** File-type color legend on the tour panel (header-toggled, default on). */
+  /** Always on — the panel auto-builds the file-type legend; the reader toggles
+   *  its visibility in-panel via `showColorLegendToggle`. */
   showColorLegend: boolean;
+  /** Pin the in-panel top-right button that collapses/reopens the legend. */
+  showColorLegendToggle: boolean;
   /** Trails section expanded → render the Trail explorer; else the Tour panel. */
   trailsExpanded: boolean;
   /** Commit picked from the Activity list → fed to FileCityGuidePanel's commit
@@ -5196,6 +5160,7 @@ const RightPane: React.FC<{
   excludedFolders,
   showSpatialContext,
   showColorLegend,
+  showColorLegendToggle,
   trailsExpanded,
   onCloseCommit,
   activityHeatmapLayers,
@@ -5517,6 +5482,9 @@ const RightPane: React.FC<{
           defaultIsolationMode="hide"
           excludedFolders={excludedFolders}
           showColorLegend={showColorLegend}
+          // Top-right "Legend" button to collapse/reopen the file-type legend
+          // (replaces the old header button).
+          showColorLegendToggle={showColorLegendToggle}
           // Top-left "Files" button to browse the idle city as a normal file
           // tree; tracks the focused package subtree.
           showFileTreeToggle
