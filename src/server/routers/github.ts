@@ -945,6 +945,81 @@ export const githubRouter = router({
     }),
 
   /**
+   * Resolve commit emails → the GitHub account that authored them.
+   *
+   * The contributor list is built from the blame map (emails), and we overlay a
+   * GitHub avatar/login where one exists. GitHub already links a commit email to
+   * whatever account has it verified, so we read that link back: `GET /commits?
+   * author={email}` returns commits by that email, each with a top-level `author`
+   * (the linked account, or null when unattributed). One request per email.
+   *
+   * Only called for emails we can't decode locally (noreply emails embed the
+   * login/id already), so the call set is small. Cached per email — including
+   * negative results, so an unattributed email isn't re-queried each visit.
+   */
+  getCommitAuthorsByEmail: publicProcedure
+    .input(
+      z.object({
+        owner: z.string().min(1),
+        repo: z.string().min(1),
+        emails: z.array(z.string().min(1)).max(80),
+      })
+    )
+    .query(async ({ input }) => {
+      const { owner, repo, emails } = input;
+      const userToken = await getGitHubToken();
+
+      interface CommitAuthorRow {
+        author: {
+          login: string;
+          id: number;
+          avatar_url: string;
+          html_url: string;
+        } | null;
+      }
+      type Identity = {
+        login: string;
+        id: number;
+        avatarUrl: string;
+        htmlUrl: string;
+      };
+
+      const lookup = async (email: string): Promise<Identity | null> => {
+        const cacheKey = `gh:email-author:${owner}/${repo}:${email.toLowerCase()}`;
+        const cached = await getCached<Identity | { none: true }>(cacheKey);
+        if (cached) return 'none' in cached ? null : cached;
+        try {
+          const rows = await makeGitHubRequest<CommitAuthorRow[]>(
+            `/repos/${owner}/${repo}/commits?author=${encodeURIComponent(email)}&per_page=1`,
+            userToken
+          );
+          const a = rows[0]?.author ?? null;
+          const identity: Identity | null = a
+            ? { login: a.login, id: a.id, avatarUrl: a.avatar_url, htmlUrl: a.html_url }
+            : null;
+          // Cache negatives too (1h) so unattributed emails aren't re-queried.
+          setCachedAsync(cacheKey, identity ?? { none: true }, 3600);
+          return identity;
+        } catch {
+          // Rate-limited / private — leave it a miss, don't cache.
+          return null;
+        }
+      };
+
+      // Bounded concurrency — a wide Promise.all trips GitHub's secondary limit.
+      const out: Record<string, Identity | null> = {};
+      const CONCURRENCY = 6;
+      for (let i = 0; i < emails.length; i += CONCURRENCY) {
+        const chunk = emails.slice(i, i + CONCURRENCY);
+        const results = await Promise.all(chunk.map(lookup));
+        chunk.forEach((email, j) => {
+          out[email.toLowerCase()] = results[j] ?? null;
+        });
+      }
+      return out;
+    }),
+
+  /**
    * Get packages for a repository (detects monorepos, dependencies, etc.)
    */
   getRepoPackages: publicProcedure

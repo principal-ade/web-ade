@@ -77,6 +77,14 @@ import type { UserActivityResponse } from '@/app/api/github/user/[username]/acti
 import { FileSourcePanel } from './FileSourcePanel';
 import { RepoActivityPane } from './RepoActivityPane';
 import { RepoAnalysisButton } from './RepoAnalysisButton';
+import {
+  RepoAnalysisProvider,
+  useRepoAnalysis,
+} from './RepoAnalysisContext';
+import {
+  analysisContributors,
+  type ContributionStats,
+} from '@/lib/repo-analysis/contributionLayers';
 import { useCommitsChangedFiles } from '@/hooks/useCommitsChangedFiles';
 import { useCommitView } from '@/hooks/useCommitView';
 import {
@@ -1211,6 +1219,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   }
 
   return (
+    <RepoAnalysisProvider owner={owner} repo={repo}>
     <div
       className="w-screen flex flex-col overflow-hidden"
       style={{ background: theme.colors.background, height: '100vh' }}
@@ -1227,7 +1236,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         onGenerateTourAudio={handleGenerateTourAudio}
         trailsExpanded={trailsExpanded}
       />
-      <RepoAnalysisButton owner={owner} repo={repo} />
+      <RepoAnalysisButton />
       <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
         {/* The delete control is driven by the app's own validated session:
             the author-match compares against `useAuth().user.id`, and
@@ -1465,6 +1474,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         />
       )}
     </div>
+    </RepoAnalysisProvider>
   );
 }
 
@@ -3358,7 +3368,6 @@ type RepoOverviewPkgFull = Awaited<
 type RepoContributors = Awaited<
   ReturnType<typeof trpc.github.getRepoContributors.query>
 >;
-type RepoContributor = RepoContributors['contributors'][number];
 
 const repoInfoCache = new Map<string, RepoOverviewInfo>();
 const repoInfoInflight = new Map<string, Promise<RepoOverviewInfo | null>>();
@@ -3459,6 +3468,82 @@ function warmRepoOverview(owner: string, repo: string): void {
   void fetchRepoInfo(owner, repo);
   void fetchRepoPkg(owner, repo);
   void fetchRepoContributors(owner, repo);
+}
+
+// A blame email → the GitHub account that authored it (avatar/login overlay for
+// the contributor list). Read from GitHub's own email↔account links. Module-
+// cached per email — including negatives — since the link changes rarely.
+interface CommitAuthorIdentity {
+  login: string;
+  id: number;
+  avatarUrl: string;
+  htmlUrl: string;
+}
+const emailAuthorCache = new Map<string, CommitAuthorIdentity | null>();
+const emailAuthorInflight = new Map<string, Promise<void>>();
+
+function emailAuthorKey(owner: string, repo: string, email: string): string {
+  return `${owner}/${repo}/${email.toLowerCase()}`;
+}
+
+/**
+ * Overlay GitHub identity onto a set of blame emails, via the server (GitHub's
+ * commits API). Only fetches emails not already cached; returns a lowercased-
+ * email → identity|null map for those resolved so far, re-rendering as batches
+ * land. Pass only emails that aren't already decodable as noreply, so the call
+ * set stays small.
+ */
+function useCommitAuthorsByEmail(
+  owner: string,
+  repo: string,
+  emails: string[],
+): Record<string, CommitAuthorIdentity | null> {
+  const [tick, setTick] = useState(0);
+
+  // Stable, deduped, lowercased request set — the effect refires only on change.
+  const wanted = useMemo(
+    () => Array.from(new Set(emails.map((e) => e.toLowerCase()))).sort(),
+    [emails],
+  );
+  const wantedKey = wanted.join(',');
+
+  useEffect(() => {
+    if (wanted.length === 0) return;
+    const need = wanted.filter(
+      (e) => !emailAuthorCache.has(emailAuthorKey(owner, repo, e)),
+    );
+    if (need.length === 0) return;
+    const batchKey = `${owner}/${repo}/${need.join(',')}`;
+    if (emailAuthorInflight.has(batchKey)) return;
+    let cancelled = false;
+    const run = trpc.github.getCommitAuthorsByEmail
+      .query({ owner, repo, emails: need })
+      .then((res) => {
+        for (const [email, identity] of Object.entries(res)) {
+          emailAuthorCache.set(emailAuthorKey(owner, repo, email), identity);
+        }
+        emailAuthorInflight.delete(batchKey);
+        if (!cancelled) setTick((t) => t + 1);
+      })
+      .catch(() => {
+        emailAuthorInflight.delete(batchKey);
+      });
+    emailAuthorInflight.set(batchKey, run);
+    return () => {
+      cancelled = true;
+    };
+  }, [owner, repo, wanted, wantedKey]);
+
+  return useMemo(() => {
+    const out: Record<string, CommitAuthorIdentity | null> = {};
+    for (const e of wanted) {
+      const key = emailAuthorKey(owner, repo, e);
+      if (emailAuthorCache.has(key)) out[e] = emailAuthorCache.get(key) ?? null;
+    }
+    return out;
+    // `tick` forces re-read after a batch resolves into the module cache.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [owner, repo, wantedKey, tick]);
 }
 
 // Per-user activity + extended profile for the contributor modal's detail pane,
@@ -4011,48 +4096,178 @@ const StructurePane: React.FC<{
   );
 };
 
+// A unified contributor row, whatever the source. When analysis exists rows
+// come from the blame map (every row has `stats` + `email`); otherwise from the
+// GitHub contributor graph (commit counts, no coverage).
+interface ContributorRow {
+  /** Stable key: blame email (analysis) or GitHub login (fallback). */
+  key: string;
+  name: string;
+  /** Small subtitle under the name (the email, or @login when overlaid). */
+  secondary?: string;
+  avatarUrl?: string;
+  login?: string;
+  htmlUrl?: string;
+  /** Present in analysis mode — drives the city highlight + coverage. */
+  email?: string;
+  stats?: ContributionStats;
+  /** Commits (shortlog in analysis mode, GitHub contributions in fallback). */
+  commits?: number;
+}
+
+// Round avatar with a letter fallback when no GitHub image is known (a blame
+// email that didn't resolve to an account).
+const ContributorAvatar: React.FC<{
+  avatarUrl?: string;
+  name: string;
+  size: number;
+}> = ({ avatarUrl, name, size }) => {
+  const { theme } = useTheme();
+  if (avatarUrl) {
+    const sep = avatarUrl.includes('?') ? '&' : '?';
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={`${avatarUrl}${sep}s=${size * 2}`}
+        alt={name}
+        width={size}
+        height={size}
+        className="rounded-full shrink-0"
+        style={{ background: theme.colors.backgroundSecondary }}
+      />
+    );
+  }
+  return (
+    <div
+      className="rounded-full shrink-0 flex items-center justify-center"
+      style={{
+        width: size,
+        height: size,
+        background: theme.colors.backgroundSecondary,
+        color: theme.colors.textMuted,
+        fontSize: size * 0.45,
+        fontWeight: 600,
+      }}
+    >
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
+};
+
 // Full-rail Contributors pane (opened from the "Contributors" nav card / the
-// "+N" chip): a scrolling list of contributors that drills into a single
-// contributor's profile (the same ContributorProfile the modal used), with a
-// back button. Replaces the old centered ContributorsModal.
+// "+N" chip): a scrolling list that drills into one contributor's profile, with
+// a back button.
+//
+// Source of truth: once a repo analysis has been pulled, the list is built from
+// the BLAME MAP (every email that owns code at HEAD), so each row always has
+// coverage and clicking it always highlights — GitHub avatar/login is overlaid
+// best-effort on top. Before any analysis, it falls back to GitHub's contributor
+// graph (commit counts, no coverage).
 const ContributorsPane: React.FC<{
   owner: string;
   repo: string;
   onClose: () => void;
 }> = ({ owner, repo, onClose }) => {
   const { theme } = useTheme();
-  const contributors = useRepoContributorsData(owner, repo);
-  const people = contributors?.contributors ?? [];
-  const truncated = contributors?.truncated ?? false;
-  const [selectedLogin, setSelectedLogin] = useState<string | null>(null);
-  const selected = selectedLogin
-    ? people.find((c) => c.login === selectedLogin) ?? null
+  const { analysis, selectedEmail, setSelectedEmail } = useRepoAnalysis();
+
+  // Fallback source: GitHub contributor graph (used only before analysis).
+  const githubData = useRepoContributorsData(owner, repo);
+  const githubPeople = useMemo(
+    () => githubData?.contributors ?? [],
+    [githubData],
+  );
+
+  // Primary source: contributors derived straight from the blame map.
+  const blamePeople = useMemo(
+    () => (analysis ? analysisContributors(analysis) : []),
+    [analysis],
+  );
+
+  // Overlay GitHub identity onto the non-noreply blame emails (noreply emails
+  // already embed the login/id, so they need no lookup).
+  const unresolvedEmails = useMemo(
+    () => blamePeople.filter((p) => !p.noreplyLogin).map((p) => p.email),
+    [blamePeople],
+  );
+  const emailAuthors = useCommitAuthorsByEmail(owner, repo, unresolvedEmails);
+
+  const rows = useMemo<ContributorRow[]>(() => {
+    if (analysis) {
+      return blamePeople.map((p) => {
+        const overlay = p.noreplyLogin
+          ? undefined
+          : emailAuthors[p.email.toLowerCase()] ?? undefined;
+        const login = overlay?.login ?? p.noreplyLogin;
+        const id = overlay?.id ?? p.noreplyUserId;
+        const avatarUrl =
+          overlay?.avatarUrl ??
+          (id != null
+            ? `https://avatars.githubusercontent.com/u/${id}`
+            : login
+              ? `https://github.com/${login}.png`
+              : undefined);
+        return {
+          key: p.email,
+          email: p.email,
+          // Prefer a resolved GitHub login as the headline, else the git name.
+          name: login ?? p.name,
+          secondary: login ? p.email : undefined,
+          avatarUrl,
+          login,
+          htmlUrl:
+            overlay?.htmlUrl ?? (login ? `https://github.com/${login}` : undefined),
+          stats: p.stats,
+          commits: p.commits,
+        };
+      });
+    }
+    return githubPeople.map((c) => ({
+      key: c.login,
+      login: c.login,
+      name: c.login,
+      avatarUrl: c.avatar_url,
+      htmlUrl: c.html_url,
+      commits: c.contributions,
+    }));
+  }, [analysis, blamePeople, emailAuthors, githubPeople]);
+
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const selected = selectedKey
+    ? rows.find((r) => r.key === selectedKey) ?? null
     : null;
+
+  const clearSelection = useCallback(() => {
+    setSelectedKey(null);
+    setSelectedEmail(null);
+  }, [setSelectedEmail]);
+
+  const handleRowClick = useCallback(
+    (row: ContributorRow) => {
+      setSelectedKey(row.key);
+      // Toggle the city highlight when the row maps to a blame email.
+      setSelectedEmail(
+        row.email && row.email !== selectedEmail ? row.email : null,
+      );
+    },
+    [selectedEmail, setSelectedEmail],
+  );
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       <RailPaneHeader
         icon={<Users size={14} />}
         label="Contributors"
-        count={
-          selected
-            ? undefined
-            : truncated
-              ? people.length
-              : people.length || undefined
-        }
+        count={selected ? undefined : rows.length || undefined}
         onClose={onClose}
-        onBack={selected ? () => setSelectedLogin(null) : undefined}
+        onBack={selected ? clearSelection : undefined}
         backContent={
           selected ? (
             <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`${selected.avatar_url}${selected.avatar_url.includes('?') ? '&' : '?'}s=72`}
-                alt={selected.login}
-                width={36}
-                height={36}
-                style={{ borderRadius: '50%', flexShrink: 0 }}
+              <ContributorAvatar
+                avatarUrl={selected.avatarUrl}
+                name={selected.name}
+                size={36}
               />
               <span
                 className="truncate"
@@ -4062,7 +4277,7 @@ const ContributorsPane: React.FC<{
                   color: theme.colors.text,
                 }}
               >
-                {selected.login}
+                {selected.name}
               </span>
             </>
           ) : undefined
@@ -4072,72 +4287,169 @@ const ContributorsPane: React.FC<{
       {selected ? (
         <div className="flex-1 min-h-0 overflow-y-auto">
           <ContributorProfile
-            key={selected.login}
-            contributor={selected}
+            key={selected.key}
+            identity={{
+              login: selected.login,
+              name: selected.name,
+              avatarUrl: selected.avatarUrl,
+              htmlUrl: selected.htmlUrl,
+              email: selected.email,
+              commits: selected.commits,
+            }}
             repo={repo}
+            coverage={selected.stats ?? null}
           />
         </div>
       ) : (
         <>
           <div className="flex-1 min-h-0 overflow-y-auto">
-            {people.length === 0 ? (
-              <ListMessage>Loading contributors…</ListMessage>
+            {rows.length === 0 ? (
+              <ListMessage>
+                {analysis ? 'No attributed contributors.' : 'Loading contributors…'}
+              </ListMessage>
             ) : (
-              people.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setSelectedLogin(c.login)}
-                  className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left border-b transition-colors hover:opacity-90"
-                  style={{
-                    borderColor: theme.colors.border,
-                    color: theme.colors.text,
-                    background: 'transparent',
-                  }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={`${c.avatar_url}${c.avatar_url.includes('?') ? '&' : '?'}s=56`}
-                    alt={c.login}
-                    width={28}
-                    height={28}
-                    className="rounded-full shrink-0"
-                    style={{ background: theme.colors.backgroundSecondary }}
-                  />
-                  <span
-                    className="truncate"
-                    style={{ fontSize: theme.fontSizes[1] }}
-                  >
-                    {c.login}
-                  </span>
-                  <span
-                    className="ml-auto shrink-0"
+              rows.map((row) => {
+                const active = !!row.email && row.email === selectedEmail;
+                const share = row.stats?.lineShare ?? 0;
+                return (
+                  <button
+                    key={row.key}
+                    type="button"
+                    onClick={() => handleRowClick(row)}
+                    className="flex w-full flex-col gap-1.5 px-4 py-2.5 text-left border-b transition-colors hover:opacity-90"
                     style={{
-                      color: theme.colors.textMuted,
-                      fontSize: theme.fontSizes[0],
+                      borderColor: theme.colors.border,
+                      color: theme.colors.text,
+                      background: active
+                        ? theme.colors.backgroundSecondary
+                        : 'transparent',
+                      boxShadow: active
+                        ? `inset 3px 0 0 ${theme.colors.primary}`
+                        : undefined,
                     }}
                   >
-                    {c.contributions.toLocaleString()}
-                  </span>
-                </button>
-              ))
+                    <div className="flex w-full items-center gap-2.5">
+                      <ContributorAvatar
+                        avatarUrl={row.avatarUrl}
+                        name={row.name}
+                        size={28}
+                      />
+                      <div className="min-w-0 flex flex-col">
+                        <span
+                          className="truncate"
+                          style={{ fontSize: theme.fontSizes[1] }}
+                        >
+                          {row.name}
+                        </span>
+                        {row.secondary && (
+                          <span
+                            className="truncate"
+                            style={{
+                              fontSize: theme.fontSizes[0],
+                              color: theme.colors.textMuted,
+                            }}
+                          >
+                            {row.secondary}
+                          </span>
+                        )}
+                      </div>
+                      <span
+                        className="ml-auto shrink-0 text-right tabular-nums"
+                        style={{
+                          color: theme.colors.textMuted,
+                          fontSize: theme.fontSizes[0],
+                        }}
+                        title={
+                          row.stats
+                            ? `${row.stats.lines.toLocaleString()} lines · ${row.stats.files.toLocaleString()} files`
+                            : undefined
+                        }
+                      >
+                        {row.stats
+                          ? `${(share * 100).toFixed(1)}%`
+                          : (row.commits ?? 0).toLocaleString()}
+                      </span>
+                    </div>
+                    {/* Line-share bar — present whenever the row has coverage. */}
+                    {row.stats && (
+                      <div
+                        className="h-1 w-full rounded-full overflow-hidden"
+                        style={{ background: theme.colors.border }}
+                      >
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${Math.max(2, share * 100)}%`,
+                            background: theme.colors.primary,
+                          }}
+                        />
+                      </div>
+                    )}
+                  </button>
+                );
+              })
             )}
           </div>
-          <a
-            href={`https://github.com/${owner}/${repo}/graphs/contributors`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2.5 border-t text-center transition-colors hover:opacity-80 shrink-0"
-            style={{
-              borderColor: theme.colors.border,
-              color: theme.colors.primary,
-              fontSize: theme.fontSizes[1],
-            }}
-          >
-            View all on GitHub
-          </a>
+          {!analysis && (
+            <a
+              href={`https://github.com/${owner}/${repo}/graphs/contributors`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2.5 border-t text-center transition-colors hover:opacity-80 shrink-0"
+              style={{
+                borderColor: theme.colors.border,
+                color: theme.colors.primary,
+                fontSize: theme.fontSizes[1],
+              }}
+            >
+              View all on GitHub
+            </a>
+          )}
         </>
       )}
+    </div>
+  );
+};
+
+// A labeled progress bar for one coverage metric in the contributor overview
+// (lines attributed / files covered). `fraction` is in [0,1].
+const CoverageMetric: React.FC<{
+  label: string;
+  fraction: number;
+  detail: string;
+  color: string;
+}> = ({ label, fraction, detail, color }) => {
+  const { theme } = useTheme();
+  const pct = Math.max(0, Math.min(1, fraction)) * 100;
+  return (
+    <div className="flex flex-col gap-1">
+      <div
+        className="flex items-baseline justify-between"
+        style={{ color: theme.colors.text, fontSize: theme.fontSizes[1] }}
+      >
+        <span>{label}</span>
+        <span
+          className="tabular-nums"
+          style={{ fontWeight: theme.fontWeights.semibold }}
+        >
+          {pct.toFixed(1)}%
+        </span>
+      </div>
+      <div
+        className="h-1.5 w-full rounded-full overflow-hidden"
+        style={{ background: theme.colors.border }}
+      >
+        <div
+          className="h-full rounded-full"
+          style={{ width: `${Math.max(2, pct)}%`, background: color }}
+        />
+      </div>
+      <div
+        className="tabular-nums"
+        style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[0] }}
+      >
+        {detail}
+      </div>
     </div>
   );
 };
@@ -4145,11 +4457,22 @@ const ContributorsPane: React.FC<{
 // Detail pane: the selected contributor's extended profile (contact info) plus
 // a year's contribution heatmap, lazy-loaded from the /activity route.
 const ContributorProfile: React.FC<{
-  contributor: RepoContributor;
+  /** Resolved identity for the selected row. `login` is present only when the
+   *  blame email mapped to a GitHub account (drives the activity heatmap). */
+  identity: {
+    login?: string;
+    name: string;
+    avatarUrl?: string;
+    htmlUrl?: string;
+    email?: string;
+    commits?: number;
+  };
   repo: string;
-}> = ({ contributor, repo }) => {
+  /** Blame coverage for this contributor; null when no analysis ran. */
+  coverage: ContributionStats | null;
+}> = ({ identity, repo, coverage }) => {
   const { theme } = useTheme();
-  const { data, loading } = useUserActivity(contributor.login);
+  const { data, loading } = useUserActivity(identity.login ?? null);
 
   const activityData = useMemo(() => {
     const m = new Map<string, number>();
@@ -4158,7 +4481,7 @@ const ContributorProfile: React.FC<{
   }, [data]);
 
   const profile = data?.user;
-  const displayName = profile?.name || contributor.login;
+  const displayName = profile?.name || identity.name;
   const muted = theme.colors.textMuted;
 
   // One contact row — icon + value (optionally a link) — rendered only when the
@@ -4193,14 +4516,10 @@ const ContributorProfile: React.FC<{
     <div className="flex flex-col gap-3 p-4">
       {/* Identity header. */}
       <div className="flex items-center gap-3">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`${contributor.avatar_url}${contributor.avatar_url.includes('?') ? '&' : '?'}s=128`}
-          alt={contributor.login}
-          width={56}
-          height={56}
-          className="rounded-full shrink-0"
-          style={{ background: theme.colors.backgroundSecondary }}
+        <ContributorAvatar
+          avatarUrl={identity.avatarUrl}
+          name={identity.name}
+          size={56}
         />
         <div className="min-w-0">
           <div
@@ -4213,30 +4532,61 @@ const ContributorProfile: React.FC<{
           >
             {displayName}
           </div>
-          <a
-            href={contributor.html_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="truncate block transition-opacity hover:opacity-80"
-            style={{ color: theme.colors.primary, fontSize: theme.fontSizes[1] }}
-          >
-            @{contributor.login}
-          </a>
+          {identity.login ? (
+            <a
+              href={identity.htmlUrl ?? `https://github.com/${identity.login}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="truncate block transition-opacity hover:opacity-80"
+              style={{ color: theme.colors.primary, fontSize: theme.fontSizes[1] }}
+            >
+              @{identity.login}
+            </a>
+          ) : (
+            identity.email && (
+              <div
+                className="truncate"
+                style={{ color: muted, fontSize: theme.fontSizes[1] }}
+              >
+                {identity.email}
+              </div>
+            )
+          )}
         </div>
       </div>
 
-      {/* Their contribution to THIS repo — the one stat unique to this view. */}
-      <div
-        style={{
-          color: theme.colors.text,
-          fontSize: theme.fontSizes[1],
-        }}
-      >
-        <span style={{ fontWeight: theme.fontWeights.semibold }}>
-          {contributor.contributions.toLocaleString()}
-        </span>{' '}
-        {contributor.contributions === 1 ? 'commit' : 'commits'} to {repo}
-      </div>
+      {/* Their commit count to THIS repo (shortlog / GitHub graph). */}
+      {identity.commits != null && identity.commits > 0 && (
+        <div
+          style={{
+            color: theme.colors.text,
+            fontSize: theme.fontSizes[1],
+          }}
+        >
+          <span style={{ fontWeight: theme.fontWeights.semibold }}>
+            {identity.commits.toLocaleString()}
+          </span>{' '}
+          {identity.commits === 1 ? 'commit' : 'commits'} to {repo}
+        </div>
+      )}
+
+      {/* Blame-derived coverage of the current HEAD — only when analysis ran. */}
+      {coverage && (
+        <div className="flex flex-col gap-2.5">
+          <CoverageMetric
+            label="Lines attributed"
+            fraction={coverage.lineShare}
+            detail={`${coverage.lines.toLocaleString()} / ${coverage.totalLines.toLocaleString()} lines`}
+            color={theme.colors.primary}
+          />
+          <CoverageMetric
+            label="Files covered"
+            fraction={coverage.fileCoverage}
+            detail={`${coverage.files.toLocaleString()} / ${coverage.totalFiles.toLocaleString()} files`}
+            color={theme.colors.accent}
+          />
+        </div>
+      )}
 
       {profile?.bio && (
         <p
@@ -4279,7 +4629,9 @@ const ContributorProfile: React.FC<{
         </div>
       )}
 
-      {/* A year of contributions. */}
+      {/* A year of contributions — GitHub-account-scoped, so only when the
+          blame email resolved to a login. */}
+      {identity.login && (
       <div className="mt-1">
         <div
           className="mb-1.5"
@@ -4307,6 +4659,7 @@ const ContributorProfile: React.FC<{
           </div>
         )}
       </div>
+      )}
     </div>
   );
 };
@@ -5175,6 +5528,9 @@ const RightPane: React.FC<{
   onOpenFile,
 }) => {
   const { theme } = useTheme();
+  // Contribution-coverage highlight for the contributor picked in the
+  // RepoAnalysisButton — blended into whichever panel is showing below.
+  const { contributionLayers } = useRepoAnalysis();
   const events = useMemo<PanelEventBus>(() => new PanelEventBus(), []);
 
   // The file-city map reports a building/file click by emitting a `file:open`
@@ -5291,7 +5647,9 @@ const RightPane: React.FC<{
     const highlightSlice: DataSlice<HighlightLayer[] | null> = {
       scope: 'repository',
       name: 'highlightLayers',
-      data: idleHighlightLayers,
+      data: contributionLayers
+        ? [...(idleHighlightLayers ?? []), ...contributionLayers]
+        : idleHighlightLayers,
       // `idleHighlightLayers` is derived asynchronously from payloads
       // that stream in after the trails index lands. Reporting
       // `loading: false` while the data is still null-because-of-pending-fetch
@@ -5317,6 +5675,7 @@ const RightPane: React.FC<{
     fileTree,
     selectedPayload,
     idleHighlightLayers,
+    contributionLayers,
     highlightLayersLoading,
     repository,
   ]);
@@ -5413,10 +5772,11 @@ const RightPane: React.FC<{
         scope: 'repository' as const,
         name: 'highlightLayers',
         data:
-          packageHighlightLayers || activityHeatmapLayers
+          packageHighlightLayers || activityHeatmapLayers || contributionLayers
             ? [
                 ...(packageHighlightLayers ?? []),
                 ...(activityHeatmapLayers ?? []),
+                ...(contributionLayers ?? []),
               ]
             : null,
         loading: false,
@@ -5431,6 +5791,7 @@ const RightPane: React.FC<{
     tourRepository,
     packageHighlightLayers,
     activityHeatmapLayers,
+    contributionLayers,
     commitView,
     commitViewLoading,
   ]);
