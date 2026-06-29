@@ -2,13 +2,19 @@
 
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Star, X, GripVertical } from 'lucide-react';
+import { Star, X, GripVertical, StickyNote } from 'lucide-react';
 import type { BookmarkRepo } from './types';
 import { REPO_DND_MIME } from './types';
 
 interface PassportStampProps {
   repo: BookmarkRepo;
   onRemove?: () => void;
+  // Click the stamp body to open the repo (the remove button is exempt).
+  onOpen?: () => void;
+  // An optional user note shown on the stamp; the pencil/note button opens the
+  // editor (handled by the parent) when onEditNote is provided.
+  note?: string;
+  onEditNote?: () => void;
   // When set, the stamp itself is draggable so placed repos can be moved
   // between slots. Carries the originating slot index.
   draggableFromSlot?: number;
@@ -16,7 +22,14 @@ interface PassportStampProps {
 
 // A placed repo, styled as an inked passport stamp: a squarish card sitting
 // square in its slot, with the double "ink" border that reads as a stamp.
-export function PassportStamp({ repo, onRemove, draggableFromSlot }: PassportStampProps) {
+export function PassportStamp({
+  repo,
+  onRemove,
+  onOpen,
+  note,
+  onEditNote,
+  draggableFromSlot,
+}: PassportStampProps) {
   const { theme } = useTheme();
   const ink = theme.colors.primary;
 
@@ -29,6 +42,9 @@ export function PassportStamp({ repo, onRemove, draggableFromSlot }: PassportSta
         e.dataTransfer.setData('text/x-from-slot', String(draggableFromSlot));
         e.dataTransfer.effectAllowed = 'move';
       }}
+      onClick={onOpen}
+      role={onOpen ? 'button' : undefined}
+      title={onOpen ? `Open ${repo.full_name}` : undefined}
       className="group relative flex h-full w-full flex-col"
       style={{
         padding: '12px',
@@ -39,14 +55,22 @@ export function PassportStamp({ repo, onRemove, draggableFromSlot }: PassportSta
         outlineOffset: '3px',
         boxShadow: theme.shadows[1] ?? '0 4px 10px rgba(0,0,0,0.18)',
         color: theme.colors.text,
-        cursor: draggableFromSlot !== undefined ? 'grab' : 'default',
+        cursor:
+          draggableFromSlot !== undefined
+            ? 'grab'
+            : onOpen
+              ? 'pointer'
+              : 'default',
       }}
     >
       {onRemove && (
         <button
           type="button"
           aria-label={`Remove ${repo.name}`}
-          onClick={onRemove}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove?.();
+          }}
           className="absolute opacity-0 transition-opacity group-hover:opacity-100"
           style={{
             top: '4px',
@@ -64,6 +88,37 @@ export function PassportStamp({ repo, onRemove, draggableFromSlot }: PassportSta
           }}
         >
           <X size={12} />
+        </button>
+      )}
+
+      {onEditNote && (
+        <button
+          type="button"
+          aria-label={note ? `Edit note for ${repo.name}` : `Add a note to ${repo.name}`}
+          title={note ? 'Edit note' : 'Add a note'}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEditNote();
+          }}
+          className={`absolute transition-opacity ${
+            note ? 'opacity-90' : 'opacity-0 group-hover:opacity-100'
+          }`}
+          style={{
+            top: '4px',
+            right: onRemove ? '30px' : '4px',
+            width: '20px',
+            height: '20px',
+            display: 'grid',
+            placeItems: 'center',
+            borderRadius: '50%',
+            border: `1px solid ${ink}`,
+            background: note ? ink : theme.colors.surface,
+            color: note ? theme.colors.textOnPrimary : ink,
+            cursor: 'pointer',
+            zIndex: 2,
+          }}
+        >
+          <StickyNote size={11} />
         </button>
       )}
 
@@ -99,6 +154,25 @@ export function PassportStamp({ repo, onRemove, draggableFromSlot }: PassportSta
           </div>
         </div>
       </div>
+
+      {note && (
+        <div
+          style={{
+            marginTop: '8px',
+            fontSize: theme.fontSizes[1],
+            fontStyle: 'italic',
+            color: theme.colors.textSecondary,
+            lineHeight: 1.3,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+          title={note}
+        >
+          “{note}”
+        </div>
+      )}
 
       <div
         className="mt-auto flex items-center justify-between"

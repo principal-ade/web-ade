@@ -32,6 +32,7 @@ import {
   Users,
   Building2,
   Twitter,
+  Bookmark,
 } from 'lucide-react';
 import { FileTree as PierreFileTree, useFileTree } from '@pierre/trees/react';
 import { themeToTreeStyles } from '@pierre/trees';
@@ -67,6 +68,8 @@ import { trpc } from '@/lib/trpc/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { AgentViewButton } from '@/components/AgentViewButton';
+import { BookmarksDrawer } from '@/components/bookmarks/BookmarksDrawer';
+import type { BookmarkRepo } from '@/components/bookmarks/types';
 import { TrailLoadingScreen } from '@/components/trail/TrailLoadingScreen';
 import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 import { TrailErrorView } from '@/components/trail/TrailErrorView';
@@ -247,6 +250,36 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   // *undocumented* files (inverse of coverage) so the user can see what
   // the trails haven't reached yet. Toggled from the header counter.
   const [debtMode] = useState(false);
+
+  const router = useRouter();
+
+  // Bookmarks passport side panel.
+  const [bookmarksOpen, setBookmarksOpen] = useState(false);
+  // The repo currently being viewed, as a BookmarkRepo. Only owner/repo are
+  // known here, so synthesize the rest and enrich stars/description from the
+  // persisted recent-repos entry when one exists.
+  const currentBookmarkRepo = useMemo<BookmarkRepo>(() => {
+    const fullName = `${owner}/${repo}`;
+    const base: BookmarkRepo = {
+      full_name: fullName,
+      name: repo,
+      owner: {
+        login: owner,
+        avatar_url: `https://github.com/${owner}.png?size=64`,
+      },
+    };
+    const match = readRecentRepos().find(
+      (r) => r.full_name.toLowerCase() === fullName.toLowerCase(),
+    );
+    return match ? { ...base, ...match } : base;
+  }, [owner, repo]);
+  const handleNavigateBookmark = useCallback(
+    (fullName: string) => {
+      setBookmarksOpen(false);
+      router.push(`/${fullName}`);
+    },
+    [router],
+  );
 
   // Folder include/exclude config — directory paths the user has gated
   // out of the coverage / debt calculation. Persisted to localStorage
@@ -1293,6 +1326,8 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         }
         onGenerateTourAudio={handleGenerateTourAudio}
         trailsExpanded={trailsExpanded}
+        onToggleBookmarks={() => setBookmarksOpen((v) => !v)}
+        bookmarksOpen={bookmarksOpen}
       />
       <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
         {/* The delete control is driven by the app's own validated session:
@@ -1495,6 +1530,12 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         side={fileSide}
         onClose={() => setSelectedFilePath(null)}
       />
+      <BookmarksDrawer
+        open={bookmarksOpen}
+        onClose={() => setBookmarksOpen(false)}
+        currentRepo={currentBookmarkRepo}
+        onNavigate={handleNavigateBookmark}
+      />
       {trailToDelete && (
         <ConfirmDialog
           title="Delete trail"
@@ -1648,6 +1689,9 @@ const Header: React.FC<{
   onGenerateTourAudio: (item: TourListItem) => void;
   /** Trails section expanded → the Trail explorer (no legend) is showing. */
   trailsExpanded: boolean;
+  /** Toggle the bookmarks passport side panel. */
+  onToggleBookmarks: () => void;
+  bookmarksOpen: boolean;
 }> = ({
   rootRef,
   owner,
@@ -1657,6 +1701,8 @@ const Header: React.FC<{
   tourProgress,
   onGenerateTourAudio,
   trailsExpanded,
+  onToggleBookmarks,
+  bookmarksOpen,
 }) => {
   const { theme } = useTheme();
   const router = useRouter();
@@ -1963,41 +2009,24 @@ const Header: React.FC<{
       )}
 
       <div className="flex items-center gap-2 flex-shrink-0">
-        {/* Swap region: the left-hand controls collapse out and the GitHub-link
-            opener input fades in over their space when the opener is active. The
-            GitHub button itself (below) stays put and shows as selected. */}
-        <div className="relative flex items-center gap-2">
-          <div
-            className={`flex items-center gap-2 transition-opacity duration-200 ${
-              openRepoActive ? 'opacity-0 pointer-events-none' : 'opacity-100'
-            }`}
-          >
-            {selectedTour && (
-              <TourAudioControl
-                status={selectedTour.audioStatus}
-                progress={tourProgress}
-                onGenerate={() => onGenerateTourAudio(selectedTour)}
-              />
-            )}
-            <div className="hidden md:flex">
-              <AgentViewButton path={`/${owner}/${repo}`} iconOnly />
-            </div>
-          </div>
+        {selectedTour && (
+          <TourAudioControl
+            status={selectedTour.audioStatus}
+            progress={tourProgress}
+            onGenerate={() => onGenerateTourAudio(selectedTour)}
+          />
+        )}
 
-          {/* Opener input — anchored to the right of the swap region (just left
-              of the GitHub button) and fading in over the collapsed controls. */}
-          <div
-            className={`absolute inset-y-0 right-0 hidden md:flex items-center justify-end transition-opacity duration-200 ${
-              openRepoActive ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`}
-          >
-            <div className="relative">
-              <form
+        {/* Always-visible repo opener. The dropdown (recent repos / search
+            results) appears when the input is focused. */}
+        <div className="relative hidden md:block">
+          <div className="relative">
+            <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   submitOpenRepo();
                 }}
-                className="flex items-center gap-2 h-8 pl-2.5 pr-1 rounded-md"
+                className="flex items-center gap-2 h-8 px-2.5 rounded-md"
                 style={{
                   background: theme.colors.background,
                   border: `1px solid ${
@@ -2007,7 +2036,7 @@ const Header: React.FC<{
                   }`,
                 }}
               >
-                <Search
+                <Github
                   className="w-4 h-4 shrink-0"
                   style={{ color: theme.colors.textMuted }}
                 />
@@ -2018,8 +2047,13 @@ const Header: React.FC<{
                     setOpenRepoUrl(e.target.value);
                     if (openRepoError) setOpenRepoError(false);
                   }}
+                  onFocus={() => setOpenRepoActive(true)}
+                  onBlur={() => setOpenRepoActive(false)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Escape') closeOpenRepo();
+                    if (e.key === 'Escape') {
+                      closeOpenRepo();
+                      e.currentTarget.blur();
+                    }
                   }}
                   placeholder="Search repos or paste a link…"
                   aria-label="Search repositories or paste a GitHub link"
@@ -2029,15 +2063,6 @@ const Header: React.FC<{
                     fontSize: theme.fontSizes[1],
                   }}
                 />
-                <button
-                  type="submit"
-                  className="flex items-center justify-center w-6 h-6 rounded transition-all hover:opacity-80"
-                  style={{ color: theme.colors.primary }}
-                  title="Open repo"
-                  aria-label="Open repo"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
               </form>
 
               {/* Dropdown: recent repos before the user types, then a
@@ -2121,27 +2146,28 @@ const Header: React.FC<{
               )}
             </div>
           </div>
+
+        {/* Agent view — sits to the right of the opener input. */}
+        <div className="hidden md:flex">
+          <AgentViewButton path={`/${owner}/${repo}`} iconOnly />
         </div>
 
-        {/* GitHub opener trigger — stays in place and toggles the opener,
-            showing as selected while it is open. */}
+        {/* Bookmarks passport — slides in the side panel. */}
         <button
           type="button"
-          onClick={() =>
-            openRepoActive ? closeOpenRepo() : setOpenRepoActive(true)
-          }
-          aria-pressed={openRepoActive}
-          className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+          onClick={onToggleBookmarks}
+          aria-pressed={bookmarksOpen}
+          className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
           style={{
-            color: openRepoActive ? theme.colors.primary : theme.colors.text,
-            background: openRepoActive
+            color: bookmarksOpen ? theme.colors.primary : theme.colors.text,
+            background: bookmarksOpen
               ? `color-mix(in srgb, ${theme.colors.primary} 15%, transparent)`
               : 'transparent',
           }}
-          title="Open a repo from a GitHub link"
-          aria-label="Open a repo from a GitHub link"
+          title="Bookmarks"
+          aria-label="Bookmarks"
         >
-          <Github className="w-5 h-5" />
+          <Bookmark className="w-5 h-5" />
         </button>
 
         <UserAvatarMenu />
@@ -2268,7 +2294,7 @@ const TrailListPane: React.FC<{
 
   return (
     <aside
-      className="flex flex-col shrink-0 w-full md:w-[400px] h-[45%] md:h-auto border-t md:border-t-0 md:border-r"
+      className="flex flex-col shrink-0 w-full md:w-[25%] h-[45%] md:h-auto border-t md:border-t-0 md:border-r"
       style={{
         background: theme.colors.background,
         borderColor: theme.colors.border,
