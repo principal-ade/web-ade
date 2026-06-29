@@ -44,6 +44,36 @@ export interface ContributionLayerOptions {
 export function buildContributionLayers(
   analysis: ContributionAnalysis,
   email: string,
+  options: ContributionLayerOptions = {},
+): HighlightLayer[] {
+  return buildOwnershipLayers(
+    analysis.byEmail[email.toLowerCase()],
+    analysis.totalLines,
+    options,
+  );
+}
+
+/**
+ * Layers for a *merged* person — the union of files owned across all their blame
+ * emails. Identity merging (id-then-name) collapses one human's several emails
+ * into one row, so the highlight has to span every email they commit under.
+ */
+export function buildMergedContributionLayers(
+  analysis: ContributionAnalysis,
+  emails: string[],
+  options: ContributionLayerOptions = {},
+): HighlightLayer[] {
+  return buildOwnershipLayers(
+    mergeOwnership(analysis, emails),
+    analysis.totalLines,
+    options,
+  );
+}
+
+/** Core layer builder over a raw `path → lines` ownership map. */
+function buildOwnershipLayers(
+  owned: Record<string, number> | undefined,
+  totalLines: Record<string, number>,
   {
     color = '#3b82f6',
     buckets = 5,
@@ -51,7 +81,6 @@ export function buildContributionLayers(
     intensity = 'share',
   }: ContributionLayerOptions = {},
 ): HighlightLayer[] {
-  const owned = analysis.byEmail[email.toLowerCase()];
   if (!owned) return [];
 
   const entries = Object.entries(owned);
@@ -66,7 +95,7 @@ export function buildContributionLayers(
     if (intensity === 'absolute') {
       frac = maxOwned > 0 ? lines / maxOwned : 0;
     } else {
-      const total = analysis.totalLines[path] ?? lines;
+      const total = totalLines[path] ?? lines;
       frac = total > 0 ? lines / total : 0;
     }
     const tier = Math.min(buckets - 1, Math.max(0, Math.ceil(frac * buckets) - 1));
@@ -201,7 +230,22 @@ export function contributionStats(
   email: string,
   totals: { totalLines: number; totalFiles: number } = repoBlameTotals(analysis),
 ): ContributionStats {
-  const owned = analysis.byEmail[email.toLowerCase()] ?? {};
+  return statsFromOwnership(analysis.byEmail[email.toLowerCase()] ?? {}, totals);
+}
+
+/** Coverage stats for a *merged* person across all their blame emails. */
+export function mergedContributionStats(
+  analysis: ContributionAnalysis,
+  emails: string[],
+  totals: { totalLines: number; totalFiles: number } = repoBlameTotals(analysis),
+): ContributionStats {
+  return statsFromOwnership(mergeOwnership(analysis, emails), totals);
+}
+
+function statsFromOwnership(
+  owned: Record<string, number>,
+  totals: { totalLines: number; totalFiles: number },
+): ContributionStats {
   const files = Object.keys(owned).length;
   let lines = 0;
   for (const v of Object.values(owned)) lines += v;
@@ -213,4 +257,203 @@ export function contributionStats(
     lineShare: totals.totalLines > 0 ? lines / totals.totalLines : 0,
     fileCoverage: totals.totalFiles > 0 ? files / totals.totalFiles : 0,
   };
+}
+
+/**
+ * Union the ownership maps of several emails into one `path → lines` map. Blame
+ * attributes each line to exactly one email, so when one person owns lines in
+ * the same file under two emails the per-path sum is their true ownership (it
+ * can't exceed `totalLines[path]`). The key building block for person-merge:
+ * one human's coverage is the union over every email they commit under.
+ */
+export function mergeOwnership(
+  analysis: ContributionAnalysis,
+  emails: string[],
+): Record<string, number> {
+  const merged: Record<string, number> = {};
+  for (const email of emails) {
+    const owned = analysis.byEmail[email.toLowerCase()];
+    if (!owned) continue;
+    for (const [path, lines] of Object.entries(owned)) {
+      merged[path] = (merged[path] ?? 0) + lines;
+    }
+  }
+  return merged;
+}
+
+/** GitHub account resolved for a blame email via the API overlay
+ *  (`getCommitAuthorsByEmail`). Noreply emails already carry this on the
+ *  AnalysisContributor, so the resolver is only consulted for the rest. */
+export interface EmailIdentity {
+  login: string;
+  id: number;
+  avatarUrl?: string;
+  htmlUrl?: string;
+}
+
+/** One human, after collapsing every blame email that is the same person. */
+export interface MergedContributor {
+  /** Stable key: `gh:{id}` when GitHub-resolved, else `name:{n}` / `email:{e}`. */
+  key: string;
+  /** Every blame email folded into this person (lowercased) — drives the
+   *  highlight: the union of files across all of them. */
+  emails: string[];
+  /** Display name (a resolved login wins, else the git author name). */
+  name: string;
+  /** GitHub login when resolved (noreply-decoded or API overlay). */
+  login?: string;
+  /** Resolved GitHub numeric id — the merge key when present. */
+  githubId?: number;
+  avatarUrl?: string;
+  htmlUrl?: string;
+  /** Commits summed across the person's emails. */
+  commits: number;
+  stats: ContributionStats;
+}
+
+/** Normalize a display name for the orphan name-fallback merge: lowercase,
+ *  trim, collapse internal whitespace. Empty → null (never a merge key). */
+function normalizePersonName(name: string): string | null {
+  const n = name.trim().toLowerCase().replace(/\s+/g, ' ');
+  return n.length > 0 ? n : null;
+}
+
+/**
+ * Collapse blame-email rows into people. Two-tier, per the t3code use case:
+ *
+ *  1. **By resolved GitHub id** (authoritative). The id comes from a noreply
+ *     email (decoded locally) or the API overlay. This unifies a person's
+ *     noreply + verified emails — and correctly merges two *different* display
+ *     names that share one id (e.g. `justsomelegs`/`legs`), which a name-based
+ *     merge would wrongly split.
+ *
+ *  2. **By display name** (fallback) for the residual orphans GitHub can't
+ *     attribute — local-machine emails like `julius@mac.lan`. An orphan folds
+ *     into an id-group when exactly one id-group carries its name; ambiguous
+ *     matches (the name spans >1 id-group) are left standalone to avoid merging
+ *     two real people. Orphans with no id-group match cluster with other
+ *     same-name orphans. Names are unreliable, so this tier is best-effort.
+ *
+ * `identityOf` resolves an email's API overlay (undefined for unresolved).
+ */
+export function mergeContributors(
+  analysis: ContributionAnalysis,
+  people: AnalysisContributor[],
+  identityOf: (email: string) => EmailIdentity | undefined,
+  totals: { totalLines: number; totalFiles: number } = repoBlameTotals(analysis),
+): MergedContributor[] {
+  type Group = {
+    key: string;
+    githubId?: number;
+    login?: string;
+    avatarUrl?: string;
+    htmlUrl?: string;
+    /** Members, kept in input order (which is lines-desc) so the first is the
+     *  dominant contributor — used to pick the display name. */
+    members: AnalysisContributor[];
+    /** Normalized names seen in this id-group, for the orphan fallback. */
+    names: Set<string>;
+  };
+
+  const byId = new Map<number, Group>();
+  const orphans: AnalysisContributor[] = [];
+
+  // Tier 1 — group everything with a resolved GitHub id.
+  for (const p of people) {
+    const overlay = p.noreplyLogin ? undefined : identityOf(p.email);
+    const id = p.noreplyUserId ?? overlay?.id;
+    const login = p.noreplyLogin ?? overlay?.login;
+    if (id == null) {
+      orphans.push(p);
+      continue;
+    }
+    let g = byId.get(id);
+    if (!g) {
+      g = {
+        key: `gh:${id}`,
+        githubId: id,
+        login,
+        avatarUrl: overlay?.avatarUrl,
+        htmlUrl: overlay?.htmlUrl,
+        members: [],
+        names: new Set(),
+      };
+      byId.set(id, g);
+    }
+    g.login ??= login;
+    g.avatarUrl ??= overlay?.avatarUrl;
+    g.htmlUrl ??= overlay?.htmlUrl;
+    g.members.push(p);
+    const nn = normalizePersonName(p.name);
+    if (nn) g.names.add(nn);
+  }
+
+  // Index normalized-name → the id-group(s) carrying it (Tier 2 lookup).
+  const nameToGroups = new Map<string, Group[]>();
+  for (const g of byId.values()) {
+    for (const nn of g.names) {
+      const arr = nameToGroups.get(nn);
+      if (arr) arr.push(g);
+      else nameToGroups.set(nn, [g]);
+    }
+  }
+
+  // Tier 2 — fold orphans by display name; cluster leftover orphans by name.
+  const orphanGroups = new Map<string, Group>();
+  for (const p of orphans) {
+    const nn = normalizePersonName(p.name);
+    const matches = nn ? nameToGroups.get(nn) : undefined;
+    if (nn && matches && matches.length === 1) {
+      // Unambiguous: fold into the single id-group with this name.
+      matches[0]!.members.push(p);
+      continue;
+    }
+    if (nn && matches && matches.length > 1) {
+      // Ambiguous across people — keep standalone rather than guess.
+      orphanGroups.set(`email:${p.email}`, {
+        key: `email:${p.email}`,
+        members: [p],
+        names: new Set(),
+      });
+      continue;
+    }
+    // No id-group with this name: cluster same-name orphans together.
+    const okey = nn ? `name:${nn}` : `email:${p.email}`;
+    let g = orphanGroups.get(okey);
+    if (!g) {
+      g = { key: okey, members: [], names: new Set() };
+      orphanGroups.set(okey, g);
+    }
+    g.members.push(p);
+  }
+
+  const finalize = (g: Group): MergedContributor => {
+    const emails = g.members.map((m) => m.email.toLowerCase());
+    const commits = g.members.reduce((s, m) => s + m.commits, 0);
+    // Dominant member (first, since input is lines-desc) names the row when no
+    // GitHub login resolved.
+    const name = g.login ?? g.members[0]?.name ?? emails[0] ?? g.key;
+    const avatarUrl =
+      g.avatarUrl ??
+      (g.githubId != null
+        ? `https://avatars.githubusercontent.com/u/${g.githubId}`
+        : g.login
+          ? `https://github.com/${g.login}.png`
+          : undefined);
+    return {
+      key: g.key,
+      emails,
+      name,
+      login: g.login,
+      githubId: g.githubId,
+      avatarUrl,
+      htmlUrl: g.htmlUrl ?? (g.login ? `https://github.com/${g.login}` : undefined),
+      commits,
+      stats: mergedContributionStats(analysis, emails, totals),
+    };
+  };
+
+  return [...byId.values(), ...orphanGroups.values()]
+    .map(finalize)
+    .sort((a, b) => b.stats.lines - a.stats.lines);
 }
