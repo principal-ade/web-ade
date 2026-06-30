@@ -3958,34 +3958,22 @@ const RepoOverview: React.FC<{
           )}
         </div>
       </div>
-      {/* Repo name leads the card; the last-push line sits right-aligned on the
-          title row. */}
-      <div className="flex items-center justify-between gap-2">
-        <h1
-          className="min-w-0"
-          style={{
-            margin: 0,
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[4],
-            fontWeight: theme.fontWeights.bold,
-            color: theme.colors.text,
-            lineHeight: 1.2,
-            wordBreak: 'break-word',
-          }}
-        >
-          {repo}
-        </h1>
-        <div
-          className="flex items-center gap-2 shrink-0"
-          style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
-        >
-          {info.pushed_at && (
-            <span title={new Date(info.pushed_at).toLocaleString()}>
-              Updated {relativeTime(info.pushed_at)}
-            </span>
-          )}
-        </div>
-      </div>
+      {/* Repo name leads the card. The last-push line now lives in the Activity
+          nav card's subtitle. */}
+      <h1
+        className="min-w-0"
+        style={{
+          margin: 0,
+          fontFamily: theme.fonts.body,
+          fontSize: theme.fontSizes[4],
+          fontWeight: theme.fontWeights.bold,
+          color: theme.colors.text,
+          lineHeight: 1.2,
+          wordBreak: 'break-word',
+        }}
+      >
+        {repo}
+      </h1>
       {info.description ? (
         <p
           style={{
@@ -4852,6 +4840,8 @@ const RepoNavCards: React.FC<{
   const { theme } = useTheme();
   const contributors = useRepoContributorsData(owner, repo);
   const contributorCount = contributors?.contributors.length ?? 0;
+  // The Activity card's subtitle carries the repo's last-push time.
+  const { info } = useRepoOverviewData(owner, repo);
 
   const cards: {
     mode: LeftViewMode;
@@ -4864,7 +4854,9 @@ const RepoNavCards: React.FC<{
       mode: 'activity',
       icon: <Activity size={18} />,
       label: 'Activity',
-      description: 'Recent commits, by contributor',
+      description: info?.pushed_at
+        ? `Updated ${relativeTime(info.pushed_at)}`
+        : 'Recent commits, by contributor',
     },
     {
       mode: 'contributors',
