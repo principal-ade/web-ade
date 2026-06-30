@@ -18,6 +18,7 @@ import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 import { LgtmStamp, SignOffStampAnimation } from '@/components/trail/LgtmStamp';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { AgentViewButton } from '@/components/AgentViewButton';
+import { HomeThemeToggle } from '@/components/HomeThemeToggle';
 import { SignedInDashboard } from '@/components/home/SignedInDashboard';
 import { RecentProjectsStrip } from '@/components/home/RecentProjectsStrip';
 import { TrailBackdrop } from '@/components/home/TrailBackdrop';
@@ -714,6 +715,7 @@ export default function HomePage() {
           )}
           </div>
           )}
+            <HomeThemeToggle />
             <div className="hidden sm:flex">
               <AgentViewButton path="/" />
             </div>

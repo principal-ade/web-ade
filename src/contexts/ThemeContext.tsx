@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useCallback, ReactNode, useEffect,
 import {
   iceTangerineTheme,
   iceTangerineDarkTheme,
+  slateNeonTheme,
   overrideColors,
   type Theme,
 } from '@principal-ade/industry-theme';
@@ -11,6 +12,7 @@ import {
 export const availableThemes = [
   { name: 'Dark', theme: iceTangerineDarkTheme },
   { name: 'Light', theme: iceTangerineTheme },
+  { name: 'Dev', theme: slateNeonTheme },
 ] as const;
 
 // Themes to skip when cycling
