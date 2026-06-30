@@ -52,6 +52,30 @@ function isNoSuchKey(error: unknown): boolean {
   return e?.name === 'NoSuchKey' || e?.$metadata?.httpStatusCode === 404;
 }
 
+/**
+ * Read-error policy. A genuine miss (`NoSuchKey`/404) is normal — the caller
+ * gets `null`. ANY other error (AccessDenied/403, a credential or region
+ * misconfig, throttling) is NOT an empty cache: log it loudly and RETHROW, so a
+ * permissions gap can never masquerade as "nothing cached". A missing IAM grant
+ * on the `repo-analysis*` prefixes hid behind a swallowed error exactly this way.
+ */
+function rethrowUnlessMiss(error: unknown, key: string, op: string): void {
+  if (isNoSuchKey(error)) return;
+  const e = error as {
+    name?: string;
+    message?: string;
+    $metadata?: { httpStatusCode?: number };
+  };
+  const status = e?.$metadata?.httpStatusCode;
+  const denied = e?.name === 'AccessDenied' || status === 403;
+  console.error(
+    `[Repo Analysis S3] ${op} FAILED for "${key}" — real S3 error, NOT an empty cache` +
+      (denied ? ' (AccessDenied — check the IAM policy grants this prefix)' : '') +
+      `: name=${e?.name ?? 'unknown'} status=${status ?? '?'}: ${e?.message ?? String(error)}`
+  );
+  throw error;
+}
+
 export function repoAnalysisS3Key(owner: string, repo: string): string {
   return `${CACHE_PREFIX}/${owner.toLowerCase()}/${repo.toLowerCase()}.json`;
 }
@@ -70,12 +94,7 @@ export async function getRepoAnalysisFromS3(
     const bodyString = await response.Body.transformToString();
     return JSON.parse(bodyString) as RepoAnalysisCache;
   } catch (error) {
-    if (!isNoSuchKey(error)) {
-      console.warn('[Repo Analysis S3] Get error:', {
-        key,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    rethrowUnlessMiss(error, key, 'getRepoAnalysisFromS3');
     return null;
   }
 }
@@ -102,11 +121,20 @@ export async function storeRepoAnalysisInS3(
       })
     );
   } catch (error) {
-    console.error('[Repo Analysis S3] Store error:', {
-      key,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw new Error('S3_STORE_ERROR');
+    const e = error as {
+      name?: string;
+      message?: string;
+      $metadata?: { httpStatusCode?: number };
+    };
+    const denied = e?.name === 'AccessDenied' || e?.$metadata?.httpStatusCode === 403;
+    console.error(
+      `[Repo Analysis S3] storeRepoAnalysisInS3 FAILED for "${key}"` +
+        (denied ? ' (AccessDenied — check the IAM policy grants this prefix)' : '') +
+        `: name=${e?.name ?? 'unknown'}: ${e?.message ?? String(error)}`
+    );
+    // Rethrow the ORIGINAL error so the real cause (e.g. AccessDenied) survives
+    // instead of being flattened into an opaque 'S3_STORE_ERROR'.
+    throw error instanceof Error ? error : new Error(String(error));
   }
 }
 
@@ -135,12 +163,7 @@ export async function getRepoVmId(
     const data = JSON.parse(await response.Body.transformToString()) as VmPointer;
     return data.vmId ?? null;
   } catch (error) {
-    if (!isNoSuchKey(error)) {
-      console.warn('[Repo Analysis S3] VM get error:', {
-        key,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    rethrowUnlessMiss(error, key, 'getRepoVmId');
     return null;
   }
 }
