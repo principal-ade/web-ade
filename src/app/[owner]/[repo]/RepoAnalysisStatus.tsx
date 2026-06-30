@@ -14,6 +14,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import {
   Boxes,
   Check,
+  ChevronDown,
   ExternalLink,
   GitCommitHorizontal,
   Play,
@@ -21,13 +22,51 @@ import {
   Server,
   Users,
 } from 'lucide-react';
+import { useState } from 'react';
 import { useRepoAnalysis } from './RepoAnalysisContext';
 
 const FRESH_GREEN = '#3fb950';
 
+/**
+ * On-theme progress loader: a little bar-chart "equalizer" whose bars rise and
+ * fall in a staggered wave, evoking the line-count / 3D-city building heights
+ * being (re)built. Reads better here than a generic spinner.
+ */
+function BarsLoader({ color, height = 14 }: { color: string; height?: number }) {
+  return (
+    <span
+      aria-hidden
+      className="inline-flex items-end"
+      style={{ gap: 2, height }}
+    >
+      {[0, 1, 2, 3].map((i) => (
+        <span
+          key={i}
+          style={{
+            width: 2.5,
+            borderRadius: 1,
+            background: color,
+            animation: 'lc-bars 1000ms ease-in-out infinite',
+            // Negative offsets start each bar mid-wave so the set is desynced
+            // from the first frame (no flat "all bars equal" pop-in).
+            animationDelay: `${i * -150}ms`,
+          }}
+        />
+      ))}
+      <style>{
+        '@keyframes lc-bars { 0%, 100% { height: 25%; opacity: 0.55 } 50% { height: 100%; opacity: 1 } }'
+      }</style>
+    </span>
+  );
+}
+
 export function RepoAnalysisStatus() {
   const { meta, state, analysis, run } = useRepoAnalysis();
   const { theme } = useTheme();
+  // Collapsed by default: only the header row shows ("Line Counts · powered by
+  // Freestyle.sh"); the detail card slides open below it on click. The header is
+  // identical in both states so toggling animates rather than swapping layouts.
+  const [expanded, setExpanded] = useState(false);
 
   const running = state.kind === 'running';
   const analyzed = Boolean(meta?.sha) || Boolean(analysis);
@@ -57,23 +96,69 @@ export function RepoAnalysisStatus() {
       : 'Get Line Count Data';
 
   return (
-    <div className="flex flex-col gap-2 px-4 py-3">
-      <div className="flex items-center justify-between gap-2">
-        <span
-          style={{
-            fontSize: theme.fontSizes[0],
-            fontWeight: theme.fontWeights.semibold,
-            color: theme.colors.textSecondary,
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-          }}
-        >
-          Repo Data
+    <div className="flex flex-col px-4 py-3">
+      {/* Persistent header — the WHOLE bar toggles the panel (role=button so the
+          Freestyle.sh link can still nest inside). The chevron rotates and the
+          detail below slides, so nothing snaps. */}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        onClick={() => setExpanded((e) => !e)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setExpanded((x) => !x);
+          }
+        }}
+        className="flex items-center justify-between gap-2 rounded-md -mx-1 px-1 py-0.5 transition-opacity hover:opacity-70"
+        style={{ cursor: 'pointer' }}
+      >
+        <span className="inline-flex items-center gap-1.5">
+          <Boxes size={14} style={{ color: theme.colors.primary }} />
+          <span
+            style={{
+              fontSize: theme.fontSizes[0],
+              fontWeight: theme.fontWeights.semibold,
+              color: theme.colors.textSecondary,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
+            Line Counts
+          </span>
+          {running ? (
+            <BarsLoader color={theme.colors.primary} height={12} />
+          ) : (
+            analyzed && (
+              <span
+                title={stale ? 'Update available' : 'Up to date'}
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: 9999,
+                  background: stale ? theme.colors.accent : FRESH_GREEN,
+                  boxShadow: stale
+                    ? 'none'
+                    : `0 0 0 3px color-mix(in srgb, ${FRESH_GREEN} 22%, transparent)`,
+                }}
+              />
+            )
+          )}
+          <ChevronDown
+            size={14}
+            style={{
+              color: theme.colors.textMuted,
+              transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 220ms ease',
+            }}
+          />
         </span>
         <a
           href="https://www.freestyle.sh"
           target="_blank"
           rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
           className="group inline-flex shrink-0 items-center gap-1"
           style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted }}
         >
@@ -88,8 +173,18 @@ export function RepoAnalysisStatus() {
         </a>
       </div>
 
+      {/* Collapsible detail — the grid 0fr→1fr trick animates real content height
+          without measuring; the inner wrapper clips while it slides. */}
       <div
-        className="flex flex-col gap-3 rounded-lg border p-3"
+        style={{
+          display: 'grid',
+          gridTemplateRows: expanded ? '1fr' : '0fr',
+          transition: 'grid-template-rows 240ms ease',
+        }}
+      >
+        <div style={{ overflow: 'hidden', minHeight: 0 }}>
+      <div
+        className="mt-2 flex flex-col gap-3 rounded-lg border p-3"
         style={{
           borderColor: theme.colors.border,
           background: `color-mix(in srgb, ${theme.colors.text} 4%, transparent)`,
@@ -216,7 +311,7 @@ export function RepoAnalysisStatus() {
           }}
         >
           {running ? (
-            <RefreshCw size={14} className="animate-spin" />
+            <BarsLoader color="#ffffff" height={14} />
           ) : analyzed ? (
             <RefreshCw size={14} />
           ) : (
@@ -224,6 +319,8 @@ export function RepoAnalysisStatus() {
           )}
           {actionLabel}
         </button>
+      </div>
+        </div>
       </div>
     </div>
   );

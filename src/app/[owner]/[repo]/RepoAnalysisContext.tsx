@@ -288,12 +288,19 @@ export function RepoAnalysisProvider({
             data.cached ? (data.generatedAt ?? null) : null,
             data.lastError?.failedAt ?? null
           );
-        } else if (data.cached && data.stale) {
-          // Up-to-date result missing and nothing running — refresh behind the
-          // scenes.
+        } else if (!data.lastError && (!data.cached || data.stale)) {
+          // Auto-build on load: either this repo has never been analyzed, or its
+          // cached result is behind HEAD. Kick off a run in the background so the
+          // page populates without a manual button press; any cached data we just
+          // painted stays on screen meanwhile.
+          //
+          // We skip this when the last run for this repo is on record as FAILED —
+          // a repo whose clone/blame errors (e.g. a Freestyle import failure) must
+          // not re-trigger an expensive VM run on every single visit. The panel's
+          // button is still there for a manual retry.
           void run();
         }
-        // No cache and nothing running — the first analysis stays opt-in (idle).
+        // Cached + up to date (or a recorded failure) — nothing to launch.
       } catch {
         /* offline / transient — stay idle, the user can trigger a run */
       }

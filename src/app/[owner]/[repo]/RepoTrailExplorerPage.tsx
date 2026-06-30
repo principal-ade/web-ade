@@ -5298,6 +5298,7 @@ const ToursPane: React.FC<{
   packageCount,
   onOpenView,
 }) => {
+  const { theme } = useTheme();
   // With exactly one tour we collapse the list into a single "Start tour" CTA
   // (SingleTourCta) rather than a one-row list.
   const single = tours.length === 1 ? tours[0] : null;
@@ -5353,7 +5354,6 @@ const ToursPane: React.FC<{
           packageCount={packageCount}
           onOpenView={onOpenView}
         />
-        <RepoAnalysisStatus />
       </div>
 
       {/* Scrollable body: the multi-tour list (or a loading line).
@@ -5388,6 +5388,12 @@ const ToursPane: React.FC<{
             ))
           ))}
         </div>
+      </div>
+
+      {/* Pinned footer: the Freestyle line-count panel, collapsed by default,
+          held at the bottom of the rail below the scrollable tour list. */}
+      <div className="shrink-0 border-t" style={{ borderColor: theme.colors.border }}>
+        <RepoAnalysisStatus />
       </div>
     </div>
   );
