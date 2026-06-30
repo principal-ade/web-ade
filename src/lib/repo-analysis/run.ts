@@ -48,7 +48,7 @@ export interface RepoAnalysis {
   contributors: Array<{ name: string; commits: number; email: string }>;
 }
 
-export interface RunRepoAnalysisOpts {
+export interface LaunchRepoAnalysisOpts {
   owner: string;
   repo: string;
   /**
@@ -57,21 +57,23 @@ export interface RunRepoAnalysisOpts {
    * repos (anonymous clone, nothing sensitive ever enters the VM).
    */
   userToken?: string;
-  /** Total seconds budget for the in-VM clone + sweep. Default 240. */
-  timeoutSecs?: number;
   /**
    * Id of a warm VM from a previous run that still holds this repo's clone.
-   * When set, the run tries `git fetch` + re-sweep on it instead of cloning;
-   * falls back to a fresh clone/VM if the VM is gone or the fetch fails.
+   * When set, the job runs `git fetch` + reset on it instead of cloning; falls
+   * back to a fresh VM if the VM is gone or won't accept the job.
    */
   existingVmId?: string;
+  /** Pre-signed PUT URL the VM uploads the success envelope to. */
+  analysisUrl: string;
+  /** Pre-signed PUT URL the VM uploads a failure record to. */
+  errorUrl: string;
 }
 
-/** A run's result plus the VM that produced it — the caller records `vmId` so
- *  the next run can reuse the warm clone. `reused` is true when an existing VM
- *  was successfully refreshed (no fresh clone). */
-export interface RunRepoAnalysisResult {
-  analysis: RepoAnalysis;
+/** The VM the job was fired on — the caller records `vmId` so the next run can
+ *  reuse the warm clone. `reused` is true when an existing VM accepted the job
+ *  (no fresh boot). Note this returns as soon as the job is LAUNCHED; the result
+ *  itself is published to S3 by the VM, not returned here. */
+export interface LaunchRepoAnalysisResult {
   vmId: string;
   reused: boolean;
 }
@@ -210,35 +212,9 @@ function repoUrls(owner: string, repo: string, userToken?: string) {
   };
 }
 
-/** Build the github.com clone command. Token (when present) is embedded
- *  host-side and scrubbed from the remote right after the clone. Full history —
- *  blame needs it. */
-function cloneCommand(owner: string, repo: string, userToken?: string): string {
-  const { authed, tokenless } = repoUrls(owner, repo, userToken);
-  return (
-    `rm -rf /repo && git clone ${authed} /repo && ` +
-    `cd /repo && git remote set-url origin ${tokenless}`
-  );
-}
-
-/** Refresh an existing warm clone to the remote's current HEAD. Fetches via the
- *  authed URL inline (so the token never lands in the remote config) and resets
- *  the working tree to the freshly-fetched tip. Full history is already on disk
- *  from the original clone; fetch only pulls new objects. */
-function refreshCommand(owner: string, repo: string, userToken?: string): string {
-  const { authed } = repoUrls(owner, repo, userToken);
-  return `cd /repo && git fetch ${authed} && git reset --hard FETCH_HEAD`;
-}
-
-/** Write the sweep into the VM (base64 to dodge all quoting) and run it. */
-function sweepCommand(): string {
-  const b64 = Buffer.from(SWEEP_PY, 'utf8').toString('base64');
-  return `printf %s '${b64}' | base64 -d > /tmp/sweep.py && python3 /tmp/sweep.py /repo`;
-}
-
 export class RepoAnalysisError extends Error {
   constructor(
-    public stage: 'create' | 'clone' | 'sweep' | 'parse',
+    public stage: 'create' | 'launch',
     message: string
   ) {
     super(message);
@@ -246,79 +222,205 @@ export class RepoAnalysisError extends Error {
   }
 }
 
-/** Run the sweep on a VM whose `/repo` is already checked out, and parse it. */
-async function sweepAndParse(
-  vm: VmHandle,
-  timeoutMs: number
-): Promise<RepoAnalysis> {
-  const sweep = await vm.exec({ command: sweepCommand(), timeoutMs });
-  if ((sweep.statusCode ?? 1) !== 0) {
-    throw new RepoAnalysisError(
-      'sweep',
-      `sweep exited ${sweep.statusCode}: ${(sweep.stderr ?? '').trim().slice(0, 200)}`
-    );
-  }
-  try {
-    return JSON.parse(sweep.stdout ?? '') as RepoAnalysis;
-  } catch {
-    throw new RepoAnalysisError(
-      'parse',
-      `unparseable sweep output: ${(sweep.stdout ?? '').trim().slice(0, 200)}`
-    );
-  }
+/** Keep-alive loop run during the sweep (see `analysisJobScript`). A tiny HTTPS
+ *  ping every 30s so the VM isn't seen as network-idle while blame runs. */
+const HEARTBEAT_SH = String.raw`#!/bin/bash
+while :; do
+  python3 -c 'import urllib.request; urllib.request.urlopen("https://api.github.com/zen", timeout=5)' >/dev/null 2>&1 || true
+  sleep 30
+done
+`;
+
+/**
+ * In-VM publisher (pure stdlib Python). Reads the sweep's `RepoAnalysis` JSON,
+ * wraps it in the `RepoAnalysisCache` envelope the cache reader expects, and
+ * PUTs it to the pre-signed analysis URL — or PUTs a `RepoAnalysisErrorRecord`
+ * to the error URL on failure. `owner`/`repo` are injected as JSON string
+ * literals (valid, safe Python literals).
+ */
+function publisherPy(owner: string, repo: string): string {
+  return String.raw`
+import sys, json, urllib.request, datetime
+
+def now():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+def put(url, body):
+    data = json.dumps(body).encode("utf-8")
+    req = urllib.request.Request(url, data=data, method="PUT")
+    urllib.request.urlopen(req)
+
+OWNER = ${JSON.stringify(owner)}
+REPO = ${JSON.stringify(repo)}
+mode = sys.argv[1]
+url = sys.argv[2]
+
+if mode == "success":
+    analysis = json.load(open(sys.argv[3]))
+    put(url, {
+        "owner": OWNER,
+        "repo": REPO,
+        "sha": analysis.get("sha") or None,
+        "generatedAt": now(),
+        "generatedBy": "web-ade",
+        "analysis": analysis,
+    })
+else:
+    put(url, {
+        "owner": OWNER,
+        "repo": REPO,
+        "stage": sys.argv[3],
+        "message": sys.argv[4][:500],
+        "failedAt": now(),
+    })
+`;
 }
 
 /**
- * Try to reuse a warm VM: `git fetch` + reset to the new HEAD, then re-sweep.
- * Returns the analysis on success, or null if anything goes wrong (VM evicted,
- * fetch failed, sweep flaked) — the caller then falls back to a fresh clone.
- * A failed `fetch` is recovered in-place with a fresh clone on the SAME warm VM
- * before giving up, so a force-push doesn't cost a new boot.
+ * The detached job the VM runs to completion on its own. Clones (or, on a warm
+ * VM, fetch + resets) `/repo`, runs the sweep, and publishes the result envelope
+ * to S3 via the pre-signed URL — or an error record on any failure. A clone
+ * failure's stderr is NOT surfaced (it can echo the token-bearing remote); other
+ * stages report a generic per-stage message.
  */
-async function tryReuseWarmVm(
-  opts: RunRepoAnalysisOpts,
-  timeoutMs: number
-): Promise<RepoAnalysis | null> {
-  try {
-    const vm = freestyle.vms.ref({ vmId: opts.existingVmId! }) as VmHandle;
-    const refresh = await vm.exec({
-      command: refreshCommand(opts.owner, opts.repo, opts.userToken),
-      timeoutMs,
-    });
-    if ((refresh.statusCode ?? 1) !== 0) {
-      // Fetch failed (force-push, GC'd base, etc.) — re-clone on this same VM.
-      const clone = await vm.exec({
-        command: cloneCommand(opts.owner, opts.repo, opts.userToken),
-        timeoutMs,
-      });
-      if ((clone.statusCode ?? 1) !== 0) return null;
-    }
-    return await sweepAndParse(vm, timeoutMs);
-  } catch {
-    return null;
-  }
+function analysisJobScript(
+  owner: string,
+  repo: string,
+  userToken?: string
+): string {
+  const { authed, tokenless } = repoUrls(owner, repo, userToken);
+  return String.raw`#!/bin/bash
+ANALYSIS_URL="$1"
+ERROR_URL="$2"
+STAGE="setup"
+fail() {
+  python3 /tmp/publish.py error "$ERROR_URL" "$STAGE" "$1" || true
+  exit 1
 }
 
-export async function runRepoAnalysis(
-  opts: RunRepoAnalysisOpts
-): Promise<RunRepoAnalysisResult> {
-  const timeoutMs = (opts.timeoutSecs ?? 240) * 1000;
+# Single-flight: a re-trigger on this WARM VM must not start a second concurrent
+# sweep (two sweeps compete for CPU and each runs slower). mkdir is atomic; a
+# lock left by a hard-killed prior run (>30m old) is stolen. If a sweep is
+# already running, exit 0 — it will publish the result this caller is waiting on.
+if ! mkdir /tmp/sweep.lock 2>/dev/null; then
+  if [ -n "$(find /tmp/sweep.lock -maxdepth 0 -mmin +30 2>/dev/null)" ]; then
+    rmdir /tmp/sweep.lock 2>/dev/null
+    mkdir /tmp/sweep.lock 2>/dev/null || { echo "sweep already running"; exit 0; }
+  else
+    echo "sweep already running; exiting"
+    exit 0
+  fi
+fi
 
-  // 1) Warm path: reuse the VM that already holds this repo's clone.
+# The blame phase is CPU-bound but NETWORK-SILENT for minutes, and Freestyle
+# measures idle by network activity — so without traffic the VM would idle-
+# suspend mid-sweep. A tiny-ping loop keeps it awake. Run it in its own process
+# group (setsid) so the WHOLE group can be killed on exit — killing just the
+# loop's pid would orphan its in-flight sleep/python and delay the post-job
+# suspend.
+if command -v setsid >/dev/null 2>&1; then
+  setsid bash /tmp/heartbeat.sh </dev/null >/dev/null 2>&1 &
+else
+  bash /tmp/heartbeat.sh </dev/null >/dev/null 2>&1 &
+fi
+HEARTBEAT_PID=$!
+trap 'kill -- -"$HEARTBEAT_PID" 2>/dev/null; kill "$HEARTBEAT_PID" 2>/dev/null; rmdir /tmp/sweep.lock 2>/dev/null' EXIT
+
+STAGE="clone"
+if [ -d /repo/.git ]; then
+  if ! ( cd /repo && git fetch ${authed} && git reset --hard FETCH_HEAD ); then
+    rm -rf /repo
+    git clone ${authed} /repo || fail "git clone failed"
+    ( cd /repo && git remote set-url origin ${tokenless} ) || true
+  fi
+else
+  git clone ${authed} /repo || fail "git clone failed"
+  ( cd /repo && git remote set-url origin ${tokenless} ) || true
+fi
+
+STAGE="sweep"
+python3 /tmp/sweep.py /repo > /tmp/analysis.json || fail "sweep failed"
+
+STAGE="publish"
+python3 /tmp/publish.py success "$ANALYSIS_URL" /tmp/analysis.json || fail "publish failed"
+`;
+}
+
+/** Write the three scripts into the VM (base64 to dodge all quoting) and launch
+ *  the job DETACHED (`nohup … &`), so this exec returns in ~seconds while the
+ *  multi-minute clone+sweep keeps running and publishes to S3 on its own. */
+function launchCommand(
+  owner: string,
+  repo: string,
+  userToken: string | undefined,
+  analysisUrl: string,
+  errorUrl: string
+): string {
+  const sweepB64 = Buffer.from(SWEEP_PY, 'utf8').toString('base64');
+  const pubB64 = Buffer.from(publisherPy(owner, repo), 'utf8').toString('base64');
+  const hbB64 = Buffer.from(HEARTBEAT_SH, 'utf8').toString('base64');
+  const jobB64 = Buffer.from(
+    analysisJobScript(owner, repo, userToken),
+    'utf8'
+  ).toString('base64');
+  // Presigned URLs are single-quoted; they never contain single quotes.
+  return [
+    'set -e',
+    `printf %s '${sweepB64}' | base64 -d > /tmp/sweep.py`,
+    `printf %s '${pubB64}' | base64 -d > /tmp/publish.py`,
+    `printf %s '${hbB64}' | base64 -d > /tmp/heartbeat.sh`,
+    `printf %s '${jobB64}' | base64 -d > /tmp/job.sh`,
+    `nohup bash /tmp/job.sh '${analysisUrl}' '${errorUrl}' >/tmp/job.out 2>&1 </dev/null &`,
+    'echo launched',
+  ].join('\n');
+}
+
+/** Generous cap for the LAUNCH exec only — it just writes the scripts and spawns
+ *  the background job, so it returns in seconds; the long work is detached. */
+const LAUNCH_TIMEOUT_MS = 30_000;
+
+/**
+ * Fire the analysis job on a VM and return as soon as it's LAUNCHED. The VM runs
+ * the clone+sweep to completion on its own and publishes straight to S3 via the
+ * pre-signed URLs — so nothing here is held open for the multi-minute sweep, and
+ * the platform request timeout never applies. The caller records the returned
+ * `vmId` so the next run reuses the warm clone.
+ */
+export async function launchRepoAnalysis(
+  opts: LaunchRepoAnalysisOpts
+): Promise<LaunchRepoAnalysisResult> {
+  const command = launchCommand(
+    opts.owner,
+    opts.repo,
+    opts.userToken,
+    opts.analysisUrl,
+    opts.errorUrl
+  );
+
+  // 1) Warm path: fire the job on the VM that already holds this repo's clone.
   if (opts.existingVmId) {
-    const analysis = await tryReuseWarmVm(opts, timeoutMs);
-    if (analysis) return { analysis, vmId: opts.existingVmId, reused: true };
-    // Reuse failed — fall through to a fresh VM.
+    try {
+      const vm = freestyle.vms.ref({ vmId: opts.existingVmId }) as VmHandle;
+      const r = await vm.exec({ command, timeoutMs: LAUNCH_TIMEOUT_MS });
+      if ((r.statusCode ?? 1) === 0) {
+        return { vmId: opts.existingVmId, reused: true };
+      }
+      // Reachable but rejected the job — fall through to a fresh VM.
+    } catch {
+      // VM evicted / unreachable — fall through to a fresh VM.
+    }
   }
 
-  // 2) Cold path: boot a new sticky (cache-persistence) VM and clone into it.
-  //    Sticky + no teardown is what keeps the clone warm for the next run.
+  // 2) Cold path: boot a sticky (cache-persistence) VM, kept warm for next run.
   let created: { vm: VmHandle; vmId: string };
   try {
     created = (await freestyle.vms.create({
       name: `repo-analysis-${opts.owner}-${opts.repo}`,
       persistence: { type: 'sticky', priority: 5 },
-      idleTimeoutSeconds: 120,
+      // Suspends ~10m after the job goes idle (the in-job heartbeat keeps it
+      // awake DURING the sweep; this only governs post-completion suspend, and
+      // backstops a heartbeat outage). Sticky persistence keeps the warm clone.
+      idleTimeoutSeconds: 600,
     })) as { vm: VmHandle; vmId: string };
   } catch (err) {
     throw new RepoAnalysisError(
@@ -328,21 +430,16 @@ export async function runRepoAnalysis(
   }
 
   try {
-    const clone = await created.vm.exec({
-      command: cloneCommand(opts.owner, opts.repo, opts.userToken),
-      timeoutMs,
-    });
-    if ((clone.statusCode ?? 1) !== 0) {
+    const r = await created.vm.exec({ command, timeoutMs: LAUNCH_TIMEOUT_MS });
+    if ((r.statusCode ?? 1) !== 0) {
       throw new RepoAnalysisError(
-        'clone',
-        `git clone exited ${clone.statusCode}: ${(clone.stderr ?? '').trim().slice(0, 200)}`
+        'launch',
+        `job launch exited ${r.statusCode}: ${(r.stderr ?? '').trim().slice(0, 200)}`
       );
     }
-    const analysis = await sweepAndParse(created.vm, timeoutMs);
-    return { analysis, vmId: created.vmId, reused: false };
+    return { vmId: created.vmId, reused: false };
   } catch (err) {
-    // The clone never succeeded, so this VM holds nothing worth keeping warm —
-    // tear it down rather than leave a broken VM in the registry.
+    // Couldn't even launch — this VM holds nothing worth keeping warm.
     await freestyle.vms.delete({ vmId: created.vmId }).catch(() => {});
     throw err;
   }

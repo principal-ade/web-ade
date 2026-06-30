@@ -24,6 +24,7 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { RepoAnalysis } from './run';
 
 const s3Client = new S3Client({
@@ -141,7 +142,10 @@ export async function storeRepoAnalysisInS3(
 
 // --- Warm-VM registry: repo → the id of the VM holding its clone. ---
 
-interface VmPointer {
+/** repo → its warm VM. `updatedAt` is stamped each time a run is LAUNCHED (it's
+ *  the launch time, not a completion time), so it doubles as the freshest
+ *  "a run started at" marker for the in-progress check. */
+export interface VmPointer {
   vmId: string;
   updatedAt: string;
 }
@@ -150,11 +154,11 @@ function repoVmS3Key(owner: string, repo: string): string {
   return `${VM_PREFIX}/${owner.toLowerCase()}/${repo.toLowerCase()}.json`;
 }
 
-/** The warm VM id for a repo, or null if none is recorded. */
-export async function getRepoVmId(
+/** The warm-VM pointer for a repo (vmId + last-launch time), or null if none. */
+export async function getRepoVmPointer(
   owner: string,
   repo: string
-): Promise<string | null> {
+): Promise<VmPointer | null> {
   const key = repoVmS3Key(owner, repo);
   try {
     const response = await s3Client.send(
@@ -162,11 +166,19 @@ export async function getRepoVmId(
     );
     if (!response.Body) return null;
     const data = JSON.parse(await response.Body.transformToString()) as VmPointer;
-    return data.vmId ?? null;
+    return data.vmId ? data : null;
   } catch (error) {
-    rethrowUnlessMiss(error, key, 'getRepoVmId');
+    rethrowUnlessMiss(error, key, 'getRepoVmPointer');
     return null;
   }
+}
+
+/** The warm VM id for a repo, or null if none is recorded. */
+export async function getRepoVmId(
+  owner: string,
+  repo: string
+): Promise<string | null> {
+  return (await getRepoVmPointer(owner, repo))?.vmId ?? null;
 }
 
 /** Point a repo at the VM that now holds its clone. */
@@ -208,13 +220,14 @@ export async function clearRepoVmId(owner: string, repo: string): Promise<void> 
 // analyze leaves a retrievable breadcrumb (shown on the next GET). Latest only:
 // overwritten on each new failure, cleared on the next success.
 
-/** A persisted analysis failure. `stage` is the step that broke; 'unknown' for a
- *  non-`RepoAnalysisError`. `message` is already truncated upstream for VM
- *  stderr. */
+/** A persisted analysis failure. `stage` names the step that broke — either a
+ *  host-side `RepoAnalysisError` stage ('create'/'launch'), a stage reported by
+ *  the in-VM job ('clone'/'sweep'/'publish'), or 'unknown'. `message` is already
+ *  truncated upstream. */
 export interface RepoAnalysisErrorRecord {
   owner: string;
   repo: string;
-  stage: 'create' | 'clone' | 'sweep' | 'parse' | 'unknown';
+  stage: string;
   message: string;
   failedAt: string;
 }
@@ -273,4 +286,41 @@ export async function clearRepoAnalysisErrorInS3(
   } catch {
     /* best-effort */
   }
+}
+
+/** TTL for the upload URLs handed to the VM (seconds). Generous enough to cover
+ *  a cold clone + full blame sweep of a large repo. */
+const UPLOAD_URL_TTL_SECONDS = 900;
+
+/**
+ * Pre-signed PUT URLs the analysis VM uploads its result to DIRECTLY — the
+ * success envelope to the analysis key, or a failure record to the error key.
+ * Each URL is scoped to exactly one key and expires, so it carries no ambient
+ * S3 credentials and can't write anywhere else. This is what lets the long
+ * clone+sweep run detached on the VM (and publish straight to the shared cache)
+ * instead of being held open by the request that started it.
+ */
+export async function presignAnalysisUploadUrls(
+  owner: string,
+  repo: string
+): Promise<{ analysisUrl: string; errorUrl: string }> {
+  const [analysisUrl, errorUrl] = await Promise.all([
+    getSignedUrl(
+      s3Client,
+      new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: repoAnalysisS3Key(owner, repo),
+      }),
+      { expiresIn: UPLOAD_URL_TTL_SECONDS }
+    ),
+    getSignedUrl(
+      s3Client,
+      new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: repoErrorS3Key(owner, repo),
+      }),
+      { expiresIn: UPLOAD_URL_TTL_SECONDS }
+    ),
+  ]);
+  return { analysisUrl, errorUrl };
 }
