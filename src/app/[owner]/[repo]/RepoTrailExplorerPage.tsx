@@ -3915,7 +3915,7 @@ const RepoOverviewSkeleton: React.FC<{ showBorder?: boolean }> = ({
   });
   return (
     <div
-      className={`px-4 pt-4 pb-3 flex flex-col gap-2${showBorder ? ' border-b' : ''}`}
+      className={`px-5 pt-5 pb-4 flex flex-col gap-3${showBorder ? ' border-b' : ''}`}
       style={{ borderColor: theme.colors.border }}
       aria-busy="true"
     >
@@ -4005,7 +4005,7 @@ const RepoOverview: React.FC<{
 
   return (
     <div
-      className={`px-4 pt-4 pb-3 flex flex-col gap-2${showBorder ? ' border-b' : ''}`}
+      className={`px-5 pt-5 pb-4 flex flex-col gap-3${showBorder ? ' border-b' : ''}`}
       style={{ borderColor: theme.colors.border }}
     >
       {/* Repo name (links out to GitHub) leads the card, with the star count and
@@ -4027,7 +4027,7 @@ const RepoOverview: React.FC<{
               fontFamily: theme.fonts.body,
               fontSize: theme.fontSizes[4],
               fontWeight: theme.fontWeights.bold,
-              color: theme.colors.text,
+              color: theme.colors.primary,
               lineHeight: 1.2,
               wordBreak: 'break-word',
             }}
@@ -4039,19 +4039,6 @@ const RepoOverview: React.FC<{
           className="flex items-center gap-2 shrink-0"
           style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
         >
-          {info.stargazers_count > 0 && (
-            <span
-              className="inline-flex items-center gap-1"
-              style={{ fontSize: theme.fontSizes[2] }}
-            >
-              {info.stargazers_count.toLocaleString()}
-              <Star
-                size={16}
-                style={{ color: theme.colors.warning }}
-                fill={theme.colors.warning}
-              />
-            </span>
-          )}
           {license &&
             (() => {
               // MIT gets a green treatment; everything else stays neutral.
@@ -4081,6 +4068,19 @@ const RepoOverview: React.FC<{
                 </span>
               );
             })()}
+          {info.stargazers_count > 0 && (
+            <span
+              className="inline-flex items-center gap-1"
+              style={{ fontSize: theme.fontSizes[2] }}
+            >
+              {info.stargazers_count.toLocaleString()}
+              <Star
+                size={16}
+                style={{ color: theme.colors.warning }}
+                fill={theme.colors.warning}
+              />
+            </span>
+          )}
         </div>
       </div>
       {info.description ? (
@@ -4122,7 +4122,7 @@ const RepoOverview: React.FC<{
       {/* Contributor faces: the top 5 contributors, each opening their activity
           drill-down. Everyone else lives behind the "Contributors" nav card. */}
       {shownPeople.length > 0 && (
-        <div className="flex flex-col gap-1.5 mt-1">
+        <div className="flex flex-col gap-1.5 mt-3">
           <span
             style={{
               fontSize: theme.fontSizes[0],
@@ -4212,7 +4212,7 @@ const RepoOverview: React.FC<{
         </div>
       )}
 
-      {ctaSlot && <div className="mt-1">{ctaSlot}</div>}
+      {ctaSlot && <div className="mt-3">{ctaSlot}</div>}
 
       {info.fork && info.parent && (
         <div
