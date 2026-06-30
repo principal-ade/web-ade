@@ -22,6 +22,8 @@ import {
   type ReactNode,
 } from 'react';
 import type { HighlightLayer } from '@industry-theme/file-city-panel';
+// Type-only: erased at build, so the AWS SDK in s3-cache never enters this bundle.
+import type { RepoAnalysisErrorRecord } from '@/lib/repo-analysis/s3-cache';
 import {
   buildMergedContributionLayers,
   totalLinesOwned,
@@ -60,6 +62,9 @@ export interface RepoAnalysisMeta {
   currentSha: string | null;
   /** `sha !== currentSha` — a refresh is due. */
   stale: boolean;
+  /** The last persisted analysis failure for this repo, or null if the most
+   *  recent run succeeded (failures are cleared on success). */
+  lastError: RepoAnalysisErrorRecord | null;
 }
 
 interface RepoAnalysisContextValue {
@@ -124,6 +129,7 @@ export function RepoAnalysisProvider({
         sha: payload.sha ?? null,
         currentSha: payload.sha ?? null,
         stale: false,
+        lastError: null,
       });
       setState({ kind: 'done' });
     } catch (err) {
@@ -155,6 +161,7 @@ export function RepoAnalysisProvider({
           sha: data.cached ? (data.sha ?? null) : null,
           currentSha: data.currentSha ?? null,
           stale: Boolean(data.stale),
+          lastError: data.lastError ?? null,
         });
         if (data.cached) {
           setAnalysis(data as RepoAnalysisPayload);

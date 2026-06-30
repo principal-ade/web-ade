@@ -28,6 +28,9 @@ import {
   storeRepoAnalysisInS3,
   getRepoVmId,
   setRepoVmId,
+  getRepoAnalysisErrorFromS3,
+  storeRepoAnalysisErrorInS3,
+  clearRepoAnalysisErrorInS3,
 } from '@/lib/repo-analysis/s3-cache';
 import { resolveHeadSha } from '@/lib/trails/github-access';
 
@@ -64,15 +67,21 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   }
 
   const token = (await getGitHubToken()) ?? process.env.GITHUB_TOKEN ?? '';
-  const [cached, currentSha, warmVmId] = await Promise.all([
+  const [cached, currentSha, warmVmId, lastError] = await Promise.all([
     getRepoAnalysisFromS3(owner, repo),
     token ? resolveHeadSha(owner, repo, token) : Promise.resolve(null),
     getRepoVmId(owner, repo),
+    // Auxiliary observability read — a sidecar failure must never blank the page,
+    // so unlike the reads above this one degrades to null instead of throwing.
+    getRepoAnalysisErrorFromS3(owner, repo).catch((err) => {
+      console.error('[Repo Analysis] getRepoAnalysisErrorFromS3 failed:', err);
+      return null;
+    }),
   ]);
   const hasWarmVm = warmVmId != null;
 
   if (!cached) {
-    return NextResponse.json({ cached: false, owner, repo, currentSha, hasWarmVm });
+    return NextResponse.json({ cached: false, owner, repo, currentSha, hasWarmVm, lastError });
   }
 
   const stale = currentSha != null && currentSha !== cached.sha;
@@ -85,6 +94,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     currentSha,
     stale,
     hasWarmVm,
+    lastError,
     generatedAt: cached.generatedAt,
     authorCount: Object.keys(cached.analysis.byEmail).length,
   });
@@ -124,6 +134,10 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
     }).catch((err) =>
       console.error('[Repo Analysis] storeRepoAnalysisInS3 failed:', err)
     );
+    // This run succeeded — drop any stale failure breadcrumb for the repo.
+    await clearRepoAnalysisErrorInS3(owner, repo).catch((err) =>
+      console.error('[Repo Analysis] clearRepoAnalysisErrorInS3 failed:', err)
+    );
 
     return NextResponse.json({
       ...analysis,
@@ -135,8 +149,24 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
       authorCount: Object.keys(analysis.byEmail).length,
     });
   } catch (err) {
+    // `clone` failing on a private repo without a token is a benign auth case
+    // (a different caller with a token would succeed) — don't record it as a
+    // repo failure. Persist every genuine failure so it's retrievable later.
+    const isAuthMiss =
+      err instanceof RepoAnalysisError && err.stage === 'clone' && !userToken;
+    if (!isAuthMiss) {
+      await storeRepoAnalysisErrorInS3({
+        owner,
+        repo,
+        stage: err instanceof RepoAnalysisError ? err.stage : 'unknown',
+        message: err instanceof Error ? err.message : String(err),
+        failedAt: new Date().toISOString(),
+      }).catch((e) =>
+        console.error('[Repo Analysis] storeRepoAnalysisErrorInS3 failed:', e)
+      );
+    }
+
     if (err instanceof RepoAnalysisError) {
-      // `clone` failing on a private repo without a token is the common 4xx case.
       const status = err.stage === 'clone' && !userToken ? 401 : 502;
       return NextResponse.json(
         { error: err.message, stage: err.stage, owner, repo },

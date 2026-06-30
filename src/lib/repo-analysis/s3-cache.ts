@@ -33,6 +33,7 @@ const s3Client = new S3Client({
 const BUCKET_NAME = process.env.TTS_S3_BUCKET || 'repo-tour-audio';
 const CACHE_PREFIX = 'repo-analysis';
 const VM_PREFIX = 'repo-analysis-vms';
+const ERROR_PREFIX = 'repo-analysis-errors';
 
 /** The cached analysis record. `sha` is the commit the sweep ran against
  *  (`git rev-parse HEAD` inside the VM) — null only if the VM couldn't report
@@ -191,6 +192,80 @@ export async function setRepoVmId(
 /** Forget a repo's warm VM (e.g. after it's been deleted). Best-effort. */
 export async function clearRepoVmId(owner: string, repo: string): Promise<void> {
   const key = repoVmS3Key(owner, repo);
+  try {
+    await s3Client.send(
+      new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: key })
+    );
+  } catch {
+    /* best-effort */
+  }
+}
+
+// --- Failure registry: repo → its last analysis failure, for retrieval. ---
+//
+// A failed analysis used to vanish into request logs — the VM is deleted and
+// nothing durable is written. This records the last failure so a repo that won't
+// analyze leaves a retrievable breadcrumb (shown on the next GET). Latest only:
+// overwritten on each new failure, cleared on the next success.
+
+/** A persisted analysis failure. `stage` is the step that broke; 'unknown' for a
+ *  non-`RepoAnalysisError`. `message` is already truncated upstream for VM
+ *  stderr. */
+export interface RepoAnalysisErrorRecord {
+  owner: string;
+  repo: string;
+  stage: 'create' | 'clone' | 'sweep' | 'parse' | 'unknown';
+  message: string;
+  failedAt: string;
+}
+
+function repoErrorS3Key(owner: string, repo: string): string {
+  return `${ERROR_PREFIX}/${owner.toLowerCase()}/${repo.toLowerCase()}.json`;
+}
+
+/** The last recorded failure for a repo, or null if none (or it's been cleared
+ *  by a later success). Throws on a real S3 error (see `rethrowUnlessMiss`). */
+export async function getRepoAnalysisErrorFromS3(
+  owner: string,
+  repo: string
+): Promise<RepoAnalysisErrorRecord | null> {
+  const key = repoErrorS3Key(owner, repo);
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key })
+    );
+    if (!response.Body) return null;
+    return JSON.parse(
+      await response.Body.transformToString()
+    ) as RepoAnalysisErrorRecord;
+  } catch (error) {
+    rethrowUnlessMiss(error, key, 'getRepoAnalysisErrorFromS3');
+    return null;
+  }
+}
+
+/** Record a repo's latest analysis failure (overwrites the previous one). */
+export async function storeRepoAnalysisErrorInS3(
+  record: RepoAnalysisErrorRecord
+): Promise<void> {
+  const key = repoErrorS3Key(record.owner, record.repo);
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key,
+      Body: JSON.stringify(record),
+      ContentType: 'application/json',
+      CacheControl: 'no-cache',
+    })
+  );
+}
+
+/** Clear a repo's recorded failure (call after a successful run). Best-effort. */
+export async function clearRepoAnalysisErrorInS3(
+  owner: string,
+  repo: string
+): Promise<void> {
+  const key = repoErrorS3Key(owner, repo);
   try {
     await s3Client.send(
       new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: key })
