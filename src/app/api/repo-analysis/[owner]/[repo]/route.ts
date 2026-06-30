@@ -35,6 +35,7 @@ import {
   storeRepoAnalysisErrorInS3,
   clearRepoAnalysisErrorInS3,
   presignAnalysisUploadUrls,
+  getRepoIdentityMapFromS3,
 } from '@/lib/repo-analysis/s3-cache';
 import { resolveHeadSha } from '@/lib/trails/github-access';
 
@@ -82,7 +83,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   }
 
   const token = (await getGitHubToken()) ?? process.env.GITHUB_TOKEN ?? '';
-  const [cached, currentSha, vmPointer, lastError] = await Promise.all([
+  const [cached, currentSha, vmPointer, lastError, identityMap] = await Promise.all([
     getRepoAnalysisFromS3(owner, repo),
     token ? resolveHeadSha(owner, repo, token) : Promise.resolve(null),
     getRepoVmPointer(owner, repo),
@@ -90,6 +91,13 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     // so unlike the reads above this one degrades to null instead of throwing.
     getRepoAnalysisErrorFromS3(owner, repo).catch((err) => {
       console.error('[Repo Analysis] getRepoAnalysisErrorFromS3 failed:', err);
+      return null;
+    }),
+    // Pre-resolved blame-email → GitHub-account overlay, embedded below so the
+    // page draws avatars/logins with no client round-trip. Best-effort: a missing
+    // or unreadable map just means the client resolves lazily (and warms it).
+    getRepoIdentityMapFromS3(owner, repo).catch((err) => {
+      console.error('[Repo Analysis] getRepoIdentityMapFromS3 failed:', err);
       return null;
     }),
   ]);
@@ -139,6 +147,10 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     lastError,
     generatedAt: cached.generatedAt,
     authorCount: Object.keys(cached.analysis.byEmail).length,
+    // Lowercased-email → GitHub account (or null). Empty until the first visit
+    // warms it; the client seeds its overlay cache from this and only resolves
+    // emails still missing, which write back into the map for the next visitor.
+    identityByEmail: identityMap?.identityByEmail ?? {},
   });
 }
 

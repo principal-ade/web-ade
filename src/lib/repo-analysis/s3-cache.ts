@@ -26,6 +26,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { RepoAnalysis } from './run';
+import type { IdentityByEmail } from './identity-cache';
 
 const s3Client = new S3Client({
   region: process.env.TTS_AWS_REGION || 'us-east-1',
@@ -35,6 +36,7 @@ const BUCKET_NAME = process.env.TTS_S3_BUCKET || 'repo-tour-audio';
 const CACHE_PREFIX = 'repo-analysis';
 const VM_PREFIX = 'repo-analysis-vms';
 const ERROR_PREFIX = 'repo-analysis-errors';
+const IDENTITY_PREFIX = 'repo-analysis-identities';
 
 /** The cached analysis record. `sha` is the commit the sweep ran against
  *  (`git rev-parse HEAD` inside the VM) — null only if the VM couldn't report
@@ -285,6 +287,93 @@ export async function clearRepoAnalysisErrorInS3(
     );
   } catch {
     /* best-effort */
+  }
+}
+
+// --- Identity map: repo → its blame-email → GitHub-account overlay. ---
+//
+// Kept in its OWN object (not folded into the analysis blob) on purpose: the VM
+// sweep overwrites `repo-analysis/{owner}/{repo}.json` wholesale on every run and
+// knows nothing about identities, so embedding the map there would wipe it each
+// sweep. Here it survives sweeps. The hot per-email source of truth is the
+// account-global Redis cache (identity-cache.ts); this per-repo blob is the
+// pre-resolved map the GET route embeds so the page needs zero client round-trips
+// to draw avatars/logins on first paint. Latest only — merged, never historied.
+
+/** A repo's persisted blame-email → GitHub-account overlay. */
+export interface RepoIdentityMapCache {
+  owner: string;
+  repo: string;
+  updatedAt: string;
+  identityByEmail: IdentityByEmail;
+}
+
+function repoIdentityS3Key(owner: string, repo: string): string {
+  return `${IDENTITY_PREFIX}/${owner.toLowerCase()}/${repo.toLowerCase()}.json`;
+}
+
+/** The persisted identity map for a repo, or null on a miss. Throws on a real S3
+ *  error (see `rethrowUnlessMiss`) so a permissions gap can't read as "empty". */
+export async function getRepoIdentityMapFromS3(
+  owner: string,
+  repo: string
+): Promise<RepoIdentityMapCache | null> {
+  const key = repoIdentityS3Key(owner, repo);
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key })
+    );
+    if (!response.Body) return null;
+    return JSON.parse(
+      await response.Body.transformToString()
+    ) as RepoIdentityMapCache;
+  } catch (error) {
+    rethrowUnlessMiss(error, key, 'getRepoIdentityMapFromS3');
+    return null;
+  }
+}
+
+/**
+ * Merge newly-resolved entries into a repo's identity map (read-modify-write).
+ * New emails are added and existing ones overwritten with the fresher value;
+ * nothing is dropped. No-ops when `additions` is empty. Best-effort — a failed
+ * persist just means the next visit re-resolves and re-writes, so it logs and
+ * swallows rather than throwing into the resolve path.
+ */
+export async function mergeRepoIdentityMapInS3(
+  owner: string,
+  repo: string,
+  additions: IdentityByEmail,
+  now: string = new Date().toISOString()
+): Promise<void> {
+  if (Object.keys(additions).length === 0) return;
+  const key = repoIdentityS3Key(owner, repo);
+  try {
+    const existing = await getRepoIdentityMapFromS3(owner, repo);
+    const merged: IdentityByEmail = {
+      ...(existing?.identityByEmail ?? {}),
+      ...additions,
+    };
+    const record: RepoIdentityMapCache = {
+      owner,
+      repo,
+      updatedAt: now,
+      identityByEmail: merged,
+    };
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: key,
+        Body: JSON.stringify(record),
+        ContentType: 'application/json',
+        CacheControl: 'no-cache',
+      })
+    );
+  } catch (error) {
+    console.error(
+      `[Repo Analysis S3] mergeRepoIdentityMapInS3 failed for "${key}" — ` +
+        `identities will be re-resolved next visit: ${String(error)}`
+    );
   }
 }
 

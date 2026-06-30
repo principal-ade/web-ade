@@ -3613,6 +3613,7 @@ function useCommitAuthorsByEmail(
   owner: string,
   repo: string,
   emails: string[],
+  seed?: Record<string, CommitAuthorIdentity | null>,
 ): Record<string, CommitAuthorIdentity | null> {
   const [tick, setTick] = useState(0);
 
@@ -3625,6 +3626,23 @@ function useCommitAuthorsByEmail(
   );
   // Order-independent key so a pure reorder of the same set doesn't refire.
   const wantedKey = useMemo(() => [...wanted].sort().join(','), [wanted]);
+
+  // Prime the module cache from the server-embedded map (GET payload) BEFORE the
+  // resolve effect runs, so already-known emails never trigger a GitHub fan-out.
+  // Effects fire in source order, so this lands first on mount.
+  useEffect(() => {
+    if (!seed) return;
+    let changed = false;
+    for (const [email, identity] of Object.entries(seed)) {
+      const key = emailAuthorKey(owner, repo, email);
+      if (!emailAuthorCache.has(key)) {
+        emailAuthorCache.set(key, identity);
+        changed = true;
+      }
+    }
+    // Re-read so seeded identities show immediately, without waiting on a batch.
+    if (changed) setTick((t) => t + 1);
+  }, [owner, repo, seed]);
 
   useEffect(() => {
     if (wanted.length === 0) return;
@@ -3751,22 +3769,31 @@ function useUserActivity(login: string | null): {
 function useRepoOverviewData(
   owner: string,
   repo: string,
-): { info: RepoOverviewInfo | null } {
+): { info: RepoOverviewInfo | null; loading: boolean } {
   const key = `${owner}/${repo}`;
   const [info, setInfo] = useState<RepoOverviewInfo | null>(
     () => repoInfoCache.get(key) ?? null,
   );
+  // True only while the first fetch is genuinely in flight. Settles to false
+  // once the request resolves — success OR failure — so a failed fetch (which
+  // leaves info null) falls through to the empty render instead of pulsing a
+  // skeleton forever.
+  const [loading, setLoading] = useState<boolean>(() => !repoInfoCache.get(key));
   useEffect(() => {
     let cancelled = false;
-    setInfo(repoInfoCache.get(key) ?? null);
+    const cached = repoInfoCache.get(key) ?? null;
+    setInfo(cached);
+    setLoading(!cached);
     void fetchRepoInfo(owner, repo).then((d) => {
-      if (!cancelled && d) setInfo(d);
+      if (cancelled) return;
+      if (d) setInfo(d);
+      setLoading(false);
     });
     return () => {
       cancelled = true;
     };
   }, [owner, repo, key]);
-  return { info };
+  return { info, loading };
 }
 
 // Contributors for the overview's avatar row + "all contributors" modal. Reads
@@ -3871,6 +3898,65 @@ function writeReadmeOpenPref(owner: string, repo: string, open: boolean): void {
   }
 }
 
+// Placeholder shown while the overview metadata is still loading on a cold
+// cache. Mirrors the real card's container + rough block layout (title row,
+// description lines, contributor faces) so the swap to real content doesn't
+// shift the pane. Pulses via the shared `pulse` keyframe.
+const RepoOverviewSkeleton: React.FC<{ showBorder?: boolean }> = ({
+  showBorder = true,
+}) => {
+  const { theme } = useTheme();
+  const bar = (w: string | number, h: number, radius = 4): React.CSSProperties => ({
+    width: w,
+    height: h,
+    borderRadius: radius,
+    backgroundColor: theme.colors.border,
+    animation: 'pulse 1.5s ease-in-out infinite',
+  });
+  return (
+    <div
+      className={`px-4 pt-4 pb-3 flex flex-col gap-2${showBorder ? ' border-b' : ''}`}
+      style={{ borderColor: theme.colors.border }}
+      aria-busy="true"
+    >
+      {/* Title row: repo name (left) + star/license (right). */}
+      <div className="flex items-center justify-between gap-2">
+        <div style={bar('45%', 22, 6)} />
+        <div style={bar(56, 18, 6)} />
+      </div>
+      {/* Description: two lines. */}
+      <div style={bar('100%', 14)} />
+      <div style={bar('70%', 14)} />
+      {/* Contributor faces row. */}
+      <div className="flex flex-col gap-1.5 mt-1">
+        <div style={bar(96, 10)} />
+        <div className="flex items-stretch gap-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex flex-col items-center gap-1">
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '9999px',
+                  backgroundColor: theme.colors.border,
+                  animation: 'pulse 1.5s ease-in-out infinite',
+                }}
+              />
+              <div style={bar(40, 8)} />
+            </div>
+          ))}
+        </div>
+      </div>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+      `}</style>
+    </div>
+  );
+};
+
 const RepoOverview: React.FC<{
   owner: string;
   repo: string;
@@ -3894,12 +3980,17 @@ const RepoOverview: React.FC<{
   const { theme } = useTheme();
   // Read from the shared cache, warmed at page mount (see warmRepoOverview), so
   // the metadata is typically ready the instant this card first renders.
-  const { info } = useRepoOverviewData(owner, repo);
+  const { info, loading } = useRepoOverviewData(owner, repo);
   const contributors = useRepoContributorsData(owner, repo);
 
-  // Nothing until the core metadata lands — keeps the pane from flashing a
-  // half-built header. The tours list renders regardless (below this).
-  if (!info) return null;
+  // While the first fetch is in flight (cold cache), show a skeleton sized to
+  // the real card so the pane doesn't flash blank-then-pop. Once the fetch
+  // settles with no info (e.g. a failed request), fall through to null rather
+  // than pulsing forever. The tours list renders regardless (below this).
+  if (!info)
+    return loading ? (
+      <RepoOverviewSkeleton showBorder={showBorder} />
+    ) : null;
 
   // Avatar row: show the top 5 contributors as faces. Everyone else lives behind
   // the dedicated "Contributors" nav card, so no inline "+N" overflow chip here.
@@ -4366,7 +4457,12 @@ const ContributorsPane: React.FC<{
     () => blamePeople.filter((p) => !p.noreplyLogin).map((p) => p.email),
     [blamePeople],
   );
-  const emailAuthors = useCommitAuthorsByEmail(owner, repo, unresolvedEmails);
+  const emailAuthors = useCommitAuthorsByEmail(
+    owner,
+    repo,
+    unresolvedEmails,
+    analysis?.identityByEmail,
+  );
 
   const rows = useMemo<ContributorRow[]>(() => {
     if (analysis) {

@@ -25,6 +25,9 @@ import {
 import type { HighlightLayer } from '@industry-theme/file-city-panel';
 // Type-only: erased at build, so the AWS SDK in s3-cache never enters this bundle.
 import type { RepoAnalysisErrorRecord } from '@/lib/repo-analysis/s3-cache';
+// Type-only: erased at build, so the Redis client in identity-cache never enters
+// this bundle.
+import type { IdentityByEmail } from '@/lib/repo-analysis/identity-cache';
 import {
   buildMergedContributionLayers,
   totalLinesOwned,
@@ -45,6 +48,10 @@ export interface RepoAnalysisPayload extends ContributionAnalysis {
   totalLinesGlobal: number;
   /** Commit the analysis was computed at (cache freshness key). */
   sha?: string | null;
+  /** Pre-resolved blame-email → GitHub account overlay (lowercased keys), embedded
+   *  by the GET route so the contributor list draws avatars/logins with no client
+   *  round-trip. Empty until a repo's first visit warms it. */
+  identityByEmail?: IdentityByEmail;
 }
 
 export type RepoAnalysisState =

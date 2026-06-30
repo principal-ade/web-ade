@@ -23,6 +23,8 @@ import {
   getTreeCacheKey,
   getTourAvailabilityCacheKey,
 } from '@/lib/redis-cache';
+import { resolveIdentitiesByEmail } from '@/lib/repo-analysis/identity-cache';
+import { mergeRepoIdentityMapInS3 } from '@/lib/repo-analysis/s3-cache';
 import { PackageLayerModule } from '@principal-ai/codebase-composition';
 import type { FileTree, FileInfo, DirectoryInfo } from '@principal-ai/repository-abstraction';
 import { parseTour, type IntroductionTour } from '@principal-ai/file-city-builder';
@@ -969,53 +971,17 @@ export const githubRouter = router({
       const { owner, repo, emails } = input;
       const userToken = await getGitHubToken();
 
-      interface CommitAuthorRow {
-        author: {
-          login: string;
-          id: number;
-          avatar_url: string;
-          html_url: string;
-        } | null;
-      }
-      type Identity = {
-        login: string;
-        id: number;
-        avatarUrl: string;
-        htmlUrl: string;
-      };
+      // Resolve against the account-global Redis cache (shared across repos and
+      // reloads), GitHub for true misses. See identity-cache.ts.
+      const out = await resolveIdentitiesByEmail(owner, repo, emails, userToken);
 
-      const lookup = async (email: string): Promise<Identity | null> => {
-        const cacheKey = `gh:email-author:${owner}/${repo}:${email.toLowerCase()}`;
-        const cached = await getCached<Identity | { none: true }>(cacheKey);
-        if (cached) return 'none' in cached ? null : cached;
-        try {
-          const rows = await makeGitHubRequest<CommitAuthorRow[]>(
-            `/repos/${owner}/${repo}/commits?author=${encodeURIComponent(email)}&per_page=1`,
-            userToken
-          );
-          const a = rows[0]?.author ?? null;
-          const identity: Identity | null = a
-            ? { login: a.login, id: a.id, avatarUrl: a.avatar_url, htmlUrl: a.html_url }
-            : null;
-          // Cache negatives too (1h) so unattributed emails aren't re-queried.
-          setCachedAsync(cacheKey, identity ?? { none: true }, 3600);
-          return identity;
-        } catch {
-          // Rate-limited / private — leave it a miss, don't cache.
-          return null;
-        }
-      };
+      // Persist what we just resolved into the repo's S3 identity map so the GET
+      // route can embed it next visit — turning this client fan-out into a
+      // one-time warm. Awaited (not fire-and-forget) so it actually lands before
+      // the serverless handler freezes; ~one S3 read+write on top of a resolve
+      // the client is already awaiting. No-ops when nothing new resolved.
+      await mergeRepoIdentityMapInS3(owner, repo, out);
 
-      // Bounded concurrency — a wide Promise.all trips GitHub's secondary limit.
-      const out: Record<string, Identity | null> = {};
-      const CONCURRENCY = 6;
-      for (let i = 0; i < emails.length; i += CONCURRENCY) {
-        const chunk = emails.slice(i, i + CONCURRENCY);
-        const results = await Promise.all(chunk.map(lookup));
-        chunk.forEach((email, j) => {
-          out[email.toLowerCase()] = results[j] ?? null;
-        });
-      }
       return out;
     }),
 
