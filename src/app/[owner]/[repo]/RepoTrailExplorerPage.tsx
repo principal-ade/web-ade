@@ -3,7 +3,14 @@
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
 import {
@@ -3957,6 +3964,22 @@ const RepoOverviewSkeleton: React.FC<{ showBorder?: boolean }> = ({
   );
 };
 
+// One contributor card in the About card's avatar row, normalized across the two
+// sources: GitHub's contributor graph (commits) and the cached blame analysis
+// (line ownership). `hasLogin` marks a real GitHub identity (clickable); an
+// unresolved blame author renders name-only with no avatar link.
+type ContribCard = {
+  key: string;
+  login: string;
+  name: string;
+  hasLogin: boolean;
+  avatarUrl?: string;
+  htmlUrl?: string;
+  commits: number;
+  lines?: number;
+  lineShare?: number;
+};
+
 const RepoOverview: React.FC<{
   owner: string;
   repo: string;
@@ -3983,6 +4006,95 @@ const RepoOverview: React.FC<{
   const { info, loading } = useRepoOverviewData(owner, repo);
   const contributors = useRepoContributorsData(owner, repo);
 
+  // Which metric the contributor cards show: GitHub commit count vs the share
+  // of repo lines blamed to them. The % option (and its toggle) is only
+  // surfaced when a cached blame analysis exists for this repo.
+  const [metricMode, setMetricMode] = useState<'commits' | 'percent'>('commits');
+
+  const AVATAR_LIMIT = 4;
+
+  // Cached, server-published blame analysis. useRepoAnalysis only sets this once
+  // the S3 artifact exists (`cached: true`), so a non-null value IS our "does
+  // coverage exist" signal — we never run the sweep or resolve identities here.
+  const { analysis } = useRepoAnalysis();
+
+  // "Lines" people: top line-owners straight from the cached analysis. Emails are
+  // merged into people using ONLY the server-baked identityByEmail overlay (no
+  // live GitHub resolution of our own); a person GitHub can't attribute keeps a
+  // name/email key and just renders without an avatar link.
+  const linePeople = useMemo<ContribCard[]>(() => {
+    if (!analysis) return [];
+    const identityOf = (email: string): EmailIdentity | undefined => {
+      const o = analysis.identityByEmail?.[email.toLowerCase()];
+      return o
+        ? { login: o.login, id: o.id, avatarUrl: o.avatarUrl, htmlUrl: o.htmlUrl }
+        : undefined;
+    };
+    return mergeContributors(analysis, analysisContributors(analysis), identityOf)
+      .slice()
+      .sort((a, b) => b.stats.lineShare - a.stats.lineShare)
+      .slice(0, AVATAR_LIMIT)
+      .map((p) => ({
+        // Share the GitHub-id key with the commits list so a person who leads in
+        // both views reuses the same card DOM node and FLIP-slides between slots.
+        key: p.githubId != null ? `gh:${p.githubId}` : p.key,
+        login: p.login ?? p.name,
+        name: p.name,
+        hasLogin: Boolean(p.login),
+        avatarUrl: p.avatarUrl,
+        htmlUrl: p.htmlUrl,
+        commits: p.commits,
+        lines: p.stats.lines,
+        lineShare: p.stats.lineShare,
+      }));
+  }, [analysis]);
+
+  // "Commits" people: the top of GitHub's contributor graph (default avatar row).
+  const commitPeople = useMemo<ContribCard[]>(
+    () =>
+      (contributors?.contributors ?? []).slice(0, AVATAR_LIMIT).map((c) => ({
+        key: `gh:${c.id}`,
+        login: c.login,
+        name: c.login,
+        hasLogin: true,
+        avatarUrl: c.avatar_url,
+        htmlUrl: c.html_url,
+        commits: c.contributions,
+      })),
+    [contributors],
+  );
+
+  // The switch only appears when the cached analysis actually yielded owners.
+  const hasCoverage = linePeople.length > 0;
+  const cards =
+    metricMode === 'percent' && hasCoverage ? linePeople : commitPeople;
+  const orderKey = cards.map((c) => c.key).join(',');
+
+  // FLIP: snapshot each card's box, then slide any card that shares a key across
+  // a mode switch from its old slot to the new one for a smooth rearrange.
+  const cardRefs = useRef(new Map<string, HTMLElement>());
+  const prevRects = useRef(new Map<string, DOMRect>());
+  useLayoutEffect(() => {
+    const refs = cardRefs.current;
+    const snapshot = new Map<string, DOMRect>();
+    refs.forEach((el, key) => {
+      const next = el.getBoundingClientRect();
+      snapshot.set(key, next); // record the true new layout box before transforming
+      const prev = prevRects.current.get(key);
+      const dx = prev ? prev.left - next.left : 0;
+      if (dx) {
+        el.style.transition = 'none';
+        el.style.transform = `translateX(${dx}px)`;
+        void el.offsetWidth; // force reflow so the start offset sticks
+        requestAnimationFrame(() => {
+          el.style.transition = 'transform 280ms cubic-bezier(0.2, 0, 0, 1)';
+          el.style.transform = '';
+        });
+      }
+    });
+    prevRects.current = snapshot;
+  }, [orderKey]);
+
   // While the first fetch is in flight (cold cache), show a skeleton sized to
   // the real card so the pane doesn't flash blank-then-pop. Once the fetch
   // settles with no info (e.g. a failed request), fall through to null rather
@@ -3991,12 +4103,6 @@ const RepoOverview: React.FC<{
     return loading ? (
       <RepoOverviewSkeleton showBorder={showBorder} />
     ) : null;
-
-  // Avatar row: show the top 5 contributors as faces. Everyone else lives behind
-  // the dedicated "Contributors" nav card, so no inline "+N" overflow chip here.
-  const people = contributors?.contributors ?? [];
-  const AVATAR_LIMIT = 4;
-  const shownPeople = people.slice(0, AVATAR_LIMIT);
 
   const license =
     info.license?.spdx_id && info.license.spdx_id !== 'NOASSERTION'
@@ -4073,12 +4179,12 @@ const RepoOverview: React.FC<{
               className="inline-flex items-center gap-1"
               style={{ fontSize: theme.fontSizes[2] }}
             >
-              {info.stargazers_count.toLocaleString()}
               <Star
                 size={16}
                 style={{ color: theme.colors.warning }}
                 fill={theme.colors.warning}
               />
+              {info.stargazers_count.toLocaleString()}
             </span>
           )}
         </div>
@@ -4119,36 +4225,101 @@ const RepoOverview: React.FC<{
         </>
       )}
 
-      {/* Contributor faces: the top 5 contributors, each opening their activity
+      {/* Contributor faces: the top contributors, each opening their activity
           drill-down. Everyone else lives behind the "Contributors" nav card. */}
-      {shownPeople.length > 0 && (
+      {cards.length > 0 && (
         <div className="flex flex-col gap-1.5 mt-3">
-          <span
-            style={{
-              fontSize: theme.fontSizes[0],
-              fontWeight: theme.fontWeights.semibold,
-              color: theme.colors.textSecondary,
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-            }}
-          >
-            Top contributors
-          </span>
+          <div className="flex items-center justify-between gap-2">
+            <span
+              style={{
+                fontSize: theme.fontSizes[0],
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.textSecondary,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}
+            >
+              Top contributors
+            </span>
+            {/* Commits/% switch — only when blame coverage is available for
+                these contributors; otherwise the cards just show commits. */}
+            {hasCoverage && (
+              <div
+                className="inline-flex items-center rounded-md p-0.5 shrink-0"
+                style={{
+                  border: `1px solid ${theme.colors.border}`,
+                  background: theme.colors.background,
+                }}
+              >
+                {(['commits', 'percent'] as const).map((m) => {
+                  const active = metricMode === m;
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setMetricMode(m)}
+                      className="rounded transition-opacity hover:opacity-90"
+                      style={{
+                        padding: '1px 7px',
+                        minWidth: 54,
+                        textAlign: 'center',
+                        fontSize: theme.fontSizes[0],
+                        fontWeight: theme.fontWeights.medium,
+                        lineHeight: 1.5,
+                        border: 'none',
+                        cursor: 'pointer',
+                        ...(active
+                          ? { background: theme.colors.primary, color: '#ffffff' }
+                          : {
+                              background: 'transparent',
+                              color: theme.colors.textSecondary,
+                            }),
+                      }}
+                    >
+                      {m === 'commits' ? 'Commits' : 'Lines'}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           <div className="flex items-stretch gap-2">
-              {shownPeople.map((c) => {
-                // Each contributor is a little card: avatar on top, login and
-                // commit count below.
+              {cards.map((c) => {
+                // Each contributor is a little card: avatar on top, name, and a
+                // metric below — commits by default, line-share % in "Lines" mode.
+                const metricText =
+                  metricMode === 'percent'
+                    ? `${((c.lineShare ?? 0) * 100).toFixed(1)}%`
+                    : c.commits.toLocaleString();
                 const cardInner = (
                   <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={`${c.avatar_url}${c.avatar_url.includes('?') ? '&' : '?'}s=80`}
-                      alt={c.login}
-                      width={40}
-                      height={40}
-                      className="rounded-full block"
-                      style={{ background: theme.colors.backgroundSecondary }}
-                    />
+                    {c.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={`${c.avatarUrl}${c.avatarUrl.includes('?') ? '&' : '?'}s=80`}
+                        alt={c.login}
+                        width={40}
+                        height={40}
+                        className="rounded-full block"
+                        style={{ background: theme.colors.backgroundSecondary }}
+                      />
+                    ) : (
+                      // Unresolved blame author (no GitHub identity) → initial.
+                      <div
+                        className="rounded-full flex items-center justify-center"
+                        style={{
+                          width: 40,
+                          height: 40,
+                          background: theme.colors.backgroundSecondary,
+                          color: theme.colors.textSecondary,
+                          fontSize: theme.fontSizes[1],
+                          fontWeight: theme.fontWeights.semibold,
+                        }}
+                      >
+                        {c.login.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                     <span
                       className="block truncate w-full text-center"
                       style={{
@@ -4165,47 +4336,69 @@ const RepoOverview: React.FC<{
                         color: theme.colors.textMuted,
                       }}
                     >
-                      {c.contributions.toLocaleString()}
+                      {metricText}
                     </span>
                   </>
                 );
-                const tip = `${c.login} · ${c.contributions.toLocaleString()} commits`;
-                const cardClassName =
-                  'flex flex-1 min-w-0 flex-col items-center gap-1.5 rounded-lg px-2 py-2 transition-transform hover:scale-105';
+                const tip =
+                  c.lineShare != null
+                    ? `${c.login} · ${((c.lineShare ?? 0) * 100).toFixed(1)}% of repo (${(c.lines ?? 0).toLocaleString()} lines) · ${c.commits.toLocaleString()} commits`
+                    : `${c.login} · ${c.commits.toLocaleString()} commits`;
+                const cardBase =
+                  'flex flex-1 min-w-0 flex-col items-center gap-1.5 rounded-lg px-2 py-2';
                 const cardStyle: React.CSSProperties = {
                   border: `1px solid ${theme.colors.border}`,
                   background: theme.colors.backgroundSecondary,
                 };
-                // With a handler, the card opens the contributor's activity
-                // drill-down; otherwise it links out to their GitHub profile.
-                return onSelectContributor ? (
+                // Track the card element so the FLIP effect can slide it to its
+                // new slot when the metric (and thus the order) changes.
+                const setRef = (el: HTMLElement | null) => {
+                  if (el) cardRefs.current.set(c.key, el);
+                  else cardRefs.current.delete(c.key);
+                };
+                // Resolved contributor with a handler → opens the activity
+                // drill-down; resolved without a handler → links to GitHub; an
+                // unresolved blame author has no link target, so render it static.
+                return onSelectContributor && c.hasLogin ? (
                   <button
-                    key={c.id}
+                    key={c.key}
+                    ref={setRef}
                     type="button"
                     onClick={() =>
                       onSelectContributor({
                         login: c.login,
-                        avatar_url: c.avatar_url,
+                        avatar_url: c.avatarUrl ?? '',
                       })
                     }
                     title={`${tip} — view recent activity`}
-                    className={cardClassName}
+                    className={`${cardBase} transition-transform hover:scale-105`}
                     style={{ ...cardStyle, cursor: 'pointer' }}
                   >
                     {cardInner}
                   </button>
-                ) : (
+                ) : c.htmlUrl ? (
                   <a
-                    key={c.id}
-                    href={c.html_url}
+                    key={c.key}
+                    ref={setRef}
+                    href={c.htmlUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     title={tip}
-                    className={cardClassName}
+                    className={`${cardBase} transition-transform hover:scale-105`}
                     style={cardStyle}
                   >
                     {cardInner}
                   </a>
+                ) : (
+                  <div
+                    key={c.key}
+                    ref={setRef}
+                    title={tip}
+                    className={cardBase}
+                    style={cardStyle}
+                  >
+                    {cardInner}
+                  </div>
                 );
               })}
           </div>
