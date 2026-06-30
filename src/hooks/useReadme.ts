@@ -66,7 +66,14 @@ export function useReadme(
         // Repo context so the panel's markdown renderer rewrites relative
         // image/link URLs (e.g. `./docs/logo.png`) to GitHub raw URLs.
         // `basePath` is the README's own directory so relative paths resolve
-        // against its location; branch defaults to the repo's default branch.
+        // against its location.
+        //
+        // `branch: 'HEAD'` is deliberate. The renderer defaults a missing branch
+        // to `main`, which 404s on repos whose default branch isn't `main`
+        // (e.g. opencode → `master`). GitHub's raw host resolves the `HEAD` ref
+        // to the repo's default branch for ANY repo, so it's correct without us
+        // having to know the branch name — and it matches the content above,
+        // which the file API also reads from the default branch (HEAD).
         const basePath = path.includes('/')
           ? path.slice(0, path.lastIndexOf('/'))
           : '';
@@ -74,7 +81,7 @@ export function useReadme(
           readme: {
             content,
             path,
-            repositoryInfo: { owner, repo, basePath },
+            repositoryInfo: { owner, repo, branch: 'HEAD', basePath },
           },
           loading: false,
           error: null,
