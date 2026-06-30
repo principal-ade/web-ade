@@ -1,3 +1,4 @@
+import { isValidPurl, parsePurl } from '@principal-ai/alexandria-core-library';
 import {
   MAX_COMMENT_CHARS,
   MAX_DESCRIPTION_CHARS,
@@ -63,6 +64,32 @@ function validateTrailIds(value: unknown): string[] {
     if (!isUuid(id)) invalid(`invalid trail id: ${String(id)}`);
   }
   // Dedup while preserving order — duplicates would yield a misleading list.
+  return Array.from(new Set(value as string[]));
+}
+
+/**
+ * The topic's own repositories, as PURL strings (e.g. `pkg:github/owner/repo`).
+ * Validated with the same `isValidPurl` the trail payloads use, so a topic and
+ * its trails identify repos identically. Deduped, order-preserving.
+ *
+ * Rejects machine-local repo PURLs (`pkg:generic/local/...`): those encode an
+ * absolute path on one machine, so they're meaningless to other readers and
+ * must never land on a shared topic. A topic about a local-only repo publishes
+ * with that repo dropped (the publisher filters before sending); this is the
+ * server-side backstop.
+ */
+function validateRepos(value: unknown): string[] {
+  if (value == null) return [];
+  if (!Array.isArray(value)) invalid('repos must be an array');
+  for (const purl of value) {
+    if (typeof purl !== 'string' || !isValidPurl(purl)) {
+      invalid(`invalid repo purl: ${String(purl)}`);
+    }
+    const parsed = parsePurl(purl);
+    if (parsed?.type === 'generic' && parsed.namespace === 'local') {
+      invalid(`local-only repo purl cannot be published: ${purl}`);
+    }
+  }
   return Array.from(new Set(value as string[]));
 }
 
@@ -193,6 +220,7 @@ export function validateCreateRequest(body: unknown): {
   trailIds: string[];
   status?: TopicStatus;
   visibility?: TopicVisibility;
+  repos?: string[];
 } {
   if (!isPlainObject(body)) invalid('request body must be an object');
   return {
@@ -203,6 +231,7 @@ export function validateCreateRequest(body: unknown): {
     ...(body.visibility != null
       ? { visibility: validateVisibility(body.visibility) }
       : {}),
+    ...(body.repos != null ? { repos: validateRepos(body.repos) } : {}),
   };
 }
 
@@ -213,11 +242,13 @@ export function validateUpdateRequest(body: unknown): UpdateTopicRequest {
   if ('description' in body) out.description = validateDescription(body.description);
   if ('status' in body) out.status = validateStatus(body.status);
   if ('visibility' in body) out.visibility = validateVisibility(body.visibility);
+  if ('repos' in body) out.repos = validateRepos(body.repos);
   if (
     out.title === undefined &&
     out.description === undefined &&
     out.status === undefined &&
-    out.visibility === undefined
+    out.visibility === undefined &&
+    out.repos === undefined
   )
     invalid('no fields to update');
   return out;

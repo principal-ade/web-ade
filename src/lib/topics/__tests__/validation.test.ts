@@ -138,6 +138,54 @@ describe('validateUpdateRequest with status', () => {
   });
 });
 
+describe('validateCreateRequest with repos', () => {
+  it('omits repos when absent', () => {
+    const out = validateCreateRequest({ title: 'T', trailIds: [UUID] });
+    expect(out.repos).toBeUndefined();
+  });
+
+  it('accepts and dedups valid PURL repos', () => {
+    const out = validateCreateRequest({
+      title: 'T',
+      repos: ['pkg:github/acme/web', 'pkg:github/acme/web', 'pkg:github/acme/api'],
+    });
+    expect(out.repos).toEqual(['pkg:github/acme/web', 'pkg:github/acme/api']);
+  });
+
+  it('rejects a non-PURL repo string', () => {
+    expect(() =>
+      validateCreateRequest({ title: 'T', repos: ['acme/web'] }),
+    ).toThrow(/invalid repo purl/);
+  });
+
+  it('rejects a machine-local repo purl', () => {
+    expect(() =>
+      validateCreateRequest({
+        title: 'T',
+        repos: ['pkg:generic/local/Users%2Fme%2Fdev%2Frepo'],
+      }),
+    ).toThrow(/local-only repo purl cannot be published/);
+  });
+
+  it('rejects repos that is not an array', () => {
+    expect(() =>
+      validateCreateRequest({ title: 'T', repos: 'pkg:github/acme/web' }),
+    ).toThrow(/repos must be an array/);
+  });
+});
+
+describe('validateUpdateRequest with repos', () => {
+  it('allows a repos-only update', () => {
+    expect(validateUpdateRequest({ repos: ['pkg:github/acme/web'] })).toEqual({
+      repos: ['pkg:github/acme/web'],
+    });
+  });
+
+  it('allows clearing repos to an empty array', () => {
+    expect(validateUpdateRequest({ repos: [] })).toEqual({ repos: [] });
+  });
+});
+
 describe('validateVisibility', () => {
   it('accepts the two literals', () => {
     expect(validateVisibility('private')).toBe('private');

@@ -78,6 +78,14 @@ export interface TopicPayload {
   status?: TopicStatus;
   /** Read access. Absent means `private`. See {@link TopicVisibility}. */
   visibility?: TopicVisibility;
+  /**
+   * Repositories this topic is about, as PURL strings (e.g.
+   * `pkg:github/owner/repo`). The topic's own source of truth for "which
+   * repos", set by the publisher and preserved verbatim so it round-trips on
+   * fetch. Distinct from {@link TopicFeedEntry.repos}, which is *derived* from
+   * the topic's trails for the feed's avatar row.
+   */
+  repos?: string[];
 }
 
 /** A topic is public only when explicitly marked so; absence is private. */
@@ -107,6 +115,8 @@ export interface CreateTopicRequest {
   status?: TopicStatus;
   /** Read access. Absent on create means `private`. */
   visibility?: TopicVisibility;
+  /** PURL strings (e.g. `pkg:github/owner/repo`). See {@link TopicPayload.repos}. */
+  repos?: string[];
 }
 
 export interface UpdateTopicRequest {
@@ -115,6 +125,8 @@ export interface UpdateTopicRequest {
   status?: TopicStatus;
   /** Flip a topic between `private` and `public`. */
   visibility?: TopicVisibility;
+  /** Replace the topic's PURL repositories. See {@link TopicPayload.repos}. */
+  repos?: string[];
 }
 
 export interface CreateTopicResponse {

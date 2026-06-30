@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => null);
-    const { title, description, trailIds, status, visibility } =
+    const { title, description, trailIds, status, visibility, repos } =
       validateCreateRequest(body);
 
     // Confirm every trail id resolves before we mint the topic. Cheaper than
@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
       createdAt: now,
       updatedAt: now,
       ...(status !== undefined ? { status } : {}),
+      ...(repos !== undefined ? { repos } : {}),
       // Enforce visibility at create: new topics always carry an explicit
       // value (default private), so we stop producing sparse-on-disk records.
       // The request field stays optional (CreateTopicRequest.visibility) — the

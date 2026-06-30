@@ -238,6 +238,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       ...(updates.visibility !== undefined
         ? { visibility: updates.visibility }
         : {}),
+      ...(updates.repos !== undefined ? { repos: updates.repos } : {}),
     }));
     await upsertTopicInUserIndex(updated);
     return NextResponse.json({ topic: toWireTopic(updated) });
