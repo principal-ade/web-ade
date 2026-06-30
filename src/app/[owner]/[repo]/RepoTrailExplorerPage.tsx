@@ -20,7 +20,6 @@ import {
   Trash2,
   Star,
   GitFork,
-  ExternalLink,
   Play,
   Activity,
   ChevronRight,
@@ -1452,6 +1451,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             setSelectedTourId(null);
             setSelectedCommitSha(null);
           }}
+          readmeActive={activeReadmePath != null}
           tours={tours}
           toursLoading={toursLoading}
           selectedTourId={selectedTourId}
@@ -2232,6 +2232,9 @@ const TrailListPane: React.FC<{
   onSelectFile: (path: string | null) => void;
   // Opens the repo-root README in the source drawer (docked on the left).
   onOpenReadmeFile: (path: string) => void;
+  // Whether the native readme mode is currently open (drives the README
+  // button's on/off look).
+  readmeActive: boolean;
   tours: TourListItem[];
   toursLoading: boolean;
   selectedTourId: string | null;
@@ -2278,6 +2281,7 @@ const TrailListPane: React.FC<{
   selectedFilePath,
   onSelectFile,
   onOpenReadmeFile,
+  readmeActive,
   tours,
   toursLoading,
   selectedTourId,
@@ -2368,6 +2372,7 @@ const TrailListPane: React.FC<{
           onRequestDelete={onRequestDeleteTour}
           onSelectContributor={onSelectContributor}
           readmePath={readmePath}
+          readmeActive={readmeActive}
           onOpenReadme={() => {
             if (readmePath) onOpenReadmeFile(readmePath);
           }}
@@ -3176,12 +3181,16 @@ const ReadmeButton: React.FC<{
   readmePath: string;
   onOpenReadme?: () => void;
   className?: string;
-}> = ({ readmePath, onOpenReadme, className }) => {
+  // When the README view is open the button shows a filled "on" state;
+  // otherwise it's the outlined "off" state.
+  active?: boolean;
+}> = ({ readmePath, onOpenReadme, className, active = false }) => {
   const { theme } = useTheme();
   return (
     <button
       type="button"
       onClick={onOpenReadme}
+      aria-pressed={active}
       className={`inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90 ${
         className ?? 'w-full'
       }`}
@@ -3190,12 +3199,20 @@ const ReadmeButton: React.FC<{
         fontFamily: theme.fonts.body,
         fontSize: theme.fontSizes[1],
         fontWeight: theme.fontWeights.semibold,
-        background: 'transparent',
-        color: theme.colors.text,
-        border: `1px solid ${theme.colors.border}`,
         cursor: 'pointer',
+        ...(active
+          ? {
+              background: theme.colors.primary,
+              color: '#ffffff',
+              border: `1px solid ${theme.colors.primary}`,
+            }
+          : {
+              background: 'transparent',
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+            }),
       }}
-      title={`Open ${readmePath}`}
+      title={active ? `Close ${readmePath}` : `Open ${readmePath}`}
     >
       <FileText size={16} />
       README
@@ -3206,7 +3223,8 @@ const ReadmeButton: React.FC<{
 const ToursEmptyState: React.FC<{
   readmePath?: string | null;
   onOpenReadme?: () => void;
-}> = ({ readmePath = null, onOpenReadme }) => {
+  readmeActive?: boolean;
+}> = ({ readmePath = null, onOpenReadme, readmeActive = false }) => {
   const { theme } = useTheme();
   const [showAuthorModal, setShowAuthorModal] = useState(false);
   return (
@@ -3224,8 +3242,8 @@ const ToursEmptyState: React.FC<{
             fontSize: theme.fontSizes[1],
             fontWeight: theme.fontWeights.semibold,
             cursor: 'pointer',
-            background: theme.colors.primary,
-            color: '#ffffff',
+            background: 'transparent',
+            color: theme.colors.primary,
             border: `1px solid ${theme.colors.primary}`,
           }}
         >
@@ -3237,6 +3255,7 @@ const ToursEmptyState: React.FC<{
             readmePath={readmePath}
             onOpenReadme={onOpenReadme}
             className="flex-1"
+            active={readmeActive}
           />
         )}
       </div>
@@ -3895,85 +3914,84 @@ const RepoOverview: React.FC<{
 
   return (
     <div
-      className={`px-4 py-3 flex flex-col gap-2${showBorder ? ' border-b' : ''}`}
+      className={`px-4 pt-4 pb-3 flex flex-col gap-2${showBorder ? ' border-b' : ''}`}
       style={{ borderColor: theme.colors.border }}
     >
-      {/* Top row: star count on the left; the external links + license badge
-          right-aligned. */}
-      <div
-        className="flex items-center justify-between gap-2"
-        style={{
-          color: theme.colors.textMuted,
-          fontSize: theme.fontSizes[1],
-          marginBottom: -4,
-        }}
-      >
-        {info.stargazers_count > 0 ? (
-          <span className="inline-flex items-center gap-1">
-            <Star size={14} />
-            {info.stargazers_count.toLocaleString()}
-          </span>
-        ) : (
-          <span />
-        )}
-        <div className="flex items-center gap-2 shrink-0">
-          {info.homepage && (
-            <a
-              href={info.homepage}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center w-7 h-7 rounded-md transition-all hover:opacity-80"
-              style={{ color: theme.colors.textSecondary }}
-              title={`Open homepage — ${info.homepage.replace(/^https?:\/\//, '')}`}
-              aria-label="Open homepage"
-            >
-              <ExternalLink className="w-4 h-4" />
-            </a>
-          )}
-          <a
-            href={`https://github.com/${owner}/${repo}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center w-7 h-7 rounded-md transition-all hover:opacity-80"
-            style={{ color: theme.colors.textSecondary }}
-            title={`Open ${owner}/${repo} on GitHub`}
-            aria-label={`Open ${owner}/${repo} on GitHub`}
+      {/* Repo name (links out to GitHub) leads the card, with the star count and
+          license badge right-aligned. The last-push line lives in the Activity
+          nav card's subtitle. */}
+      <div className="flex items-center justify-between gap-2">
+        <a
+          href={`https://github.com/${owner}/${repo}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="min-w-0 transition-opacity hover:opacity-80"
+          style={{ textDecoration: 'none' }}
+          title={`Open ${owner}/${repo} on GitHub`}
+        >
+          <h1
+            className="min-w-0"
+            style={{
+              margin: 0,
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[4],
+              fontWeight: theme.fontWeights.bold,
+              color: theme.colors.text,
+              lineHeight: 1.2,
+              wordBreak: 'break-word',
+            }}
           >
-            <Github className="w-4 h-4" />
-          </a>
-          {license && (
+            {repo}
+          </h1>
+        </a>
+        <div
+          className="flex items-center gap-2 shrink-0"
+          style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+        >
+          {info.stargazers_count > 0 && (
             <span
-              style={{
-                padding: '2px 8px',
-                borderRadius: licenseBadgeRadius(license),
-                fontSize: theme.fontSizes[0],
-                fontWeight: theme.fontWeights.medium,
-                color: theme.colors.textSecondary,
-                background: `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
-                border: `1px solid ${theme.colors.border}`,
-              }}
+              className="inline-flex items-center gap-1"
+              style={{ fontSize: theme.fontSizes[2] }}
             >
-              {license}
+              {info.stargazers_count.toLocaleString()}
+              <Star
+                size={16}
+                style={{ color: theme.colors.warning }}
+                fill={theme.colors.warning}
+              />
             </span>
           )}
+          {license &&
+            (() => {
+              // MIT gets a green treatment; everything else stays neutral.
+              const isMit = license === 'MIT';
+              const accent = isMit
+                ? theme.colors.success
+                : theme.colors.textSecondary;
+              return (
+                <span
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: licenseBadgeRadius(license),
+                    fontSize: theme.fontSizes[0],
+                    fontWeight: theme.fontWeights.medium,
+                    color: accent,
+                    background: isMit
+                      ? `color-mix(in srgb, ${theme.colors.success} 14%, transparent)`
+                      : `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
+                    border: `1px solid ${
+                      isMit
+                        ? `color-mix(in srgb, ${theme.colors.success} 40%, transparent)`
+                        : theme.colors.border
+                    }`,
+                  }}
+                >
+                  {license}
+                </span>
+              );
+            })()}
         </div>
       </div>
-      {/* Repo name leads the card. The last-push line now lives in the Activity
-          nav card's subtitle. */}
-      <h1
-        className="min-w-0"
-        style={{
-          margin: 0,
-          fontFamily: theme.fonts.body,
-          fontSize: theme.fontSizes[4],
-          fontWeight: theme.fontWeights.bold,
-          color: theme.colors.text,
-          lineHeight: 1.2,
-          wordBreak: 'break-word',
-        }}
-      >
-        {repo}
-      </h1>
       {info.description ? (
         <p
           style={{
@@ -4965,6 +4983,8 @@ const ToursPane: React.FC<{
   // About card can offer a "README" button.
   readmePath: string | null;
   onOpenReadme: () => void;
+  // Whether the native readme mode is open — drives the README button on/off look.
+  readmeActive: boolean;
   // Counts shown on the nav cards (Trails / Structure); Contributors fetches its
   // own count.
   trailCount: number;
@@ -4984,6 +5004,7 @@ const ToursPane: React.FC<{
   onSelectContributor,
   readmePath,
   onOpenReadme,
+  readmeActive,
   trailCount,
   packageCount,
   onOpenView,
@@ -5010,11 +5031,20 @@ const ToursPane: React.FC<{
       onDelete={() => onRequestDelete(single)}
       readmePath={readmePath}
       onOpenReadme={onOpenReadme}
+      readmeActive={readmeActive}
     />
   ) : !loading && tours.length === 0 ? (
-    <ToursEmptyState readmePath={readmePath} onOpenReadme={onOpenReadme} />
+    <ToursEmptyState
+      readmePath={readmePath}
+      onOpenReadme={onOpenReadme}
+      readmeActive={readmeActive}
+    />
   ) : readmePath ? (
-    <ReadmeButton readmePath={readmePath} onOpenReadme={onOpenReadme} />
+    <ReadmeButton
+      readmePath={readmePath}
+      onOpenReadme={onOpenReadme}
+      active={readmeActive}
+    />
   ) : null;
   return (
     <div className="flex-1 min-h-0 flex flex-col">
@@ -5307,6 +5337,7 @@ const SingleTourCta: React.FC<{
   onDelete: () => void;
   readmePath?: string | null;
   onOpenReadme?: () => void;
+  readmeActive?: boolean;
 }> = ({
   active,
   onToggle,
@@ -5314,6 +5345,7 @@ const SingleTourCta: React.FC<{
   onDelete,
   readmePath = null,
   onOpenReadme,
+  readmeActive = false,
 }) => {
   const { theme } = useTheme();
 
@@ -5362,6 +5394,7 @@ const SingleTourCta: React.FC<{
             readmePath={readmePath}
             onOpenReadme={onOpenReadme}
             className="flex-1"
+            active={readmeActive}
           />
         )}
       </div>
