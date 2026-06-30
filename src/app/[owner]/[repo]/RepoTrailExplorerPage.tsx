@@ -2367,7 +2367,6 @@ const TrailListPane: React.FC<{
           viewerIsRepoAdmin={viewerIsRepoAdmin}
           onRequestDelete={onRequestDeleteTour}
           onSelectContributor={onSelectContributor}
-          onOpenContributors={() => onSetViewMode('contributors')}
           readmePath={readmePath}
           onOpenReadme={() => {
             if (readmePath) onOpenReadmeFile(readmePath);
@@ -3863,9 +3862,6 @@ const RepoOverview: React.FC<{
   // Click a contributor face → open their commit drill-down in the activity
   // view. When omitted, the faces fall back to linking out to GitHub.
   onSelectContributor?: (c: { login: string; avatar_url: string }) => void;
-  // The "+N" overflow chip opens the full-rail Contributors pane. When omitted,
-  // the chip is hidden.
-  onOpenContributors?: () => void;
   // Action buttons (README + tour CTA) rendered inside the card, right after the
   // description.
   ctaSlot?: React.ReactNode;
@@ -3874,7 +3870,6 @@ const RepoOverview: React.FC<{
   repo,
   showBorder = true,
   onSelectContributor,
-  onOpenContributors,
   ctaSlot,
 }) => {
   const { theme } = useTheme();
@@ -3887,15 +3882,11 @@ const RepoOverview: React.FC<{
   // half-built header. The tours list renders regardless (below this).
   if (!info) return null;
 
-  // Avatar row: the 4 top contributors get a face; everyone else collapses into
-  // a "+N" chip that opens the Contributors pane.
+  // Avatar row: show the top 5 contributors as faces. Everyone else lives behind
+  // the dedicated "Contributors" nav card, so no inline "+N" overflow chip here.
   const people = contributors?.contributors ?? [];
   const AVATAR_LIMIT = 4;
   const shownPeople = people.slice(0, AVATAR_LIMIT);
-  const overflowPeople = people.slice(AVATAR_LIMIT);
-  const overflowLabel = `+${overflowPeople.length}${
-    contributors?.truncated ? '+' : ''
-  }`;
 
   const license =
     info.license?.spdx_id && info.license.spdx_id !== 'NOASSERTION'
@@ -3907,23 +3898,24 @@ const RepoOverview: React.FC<{
       className={`px-4 py-3 flex flex-col gap-2${showBorder ? ' border-b' : ''}`}
       style={{ borderColor: theme.colors.border }}
     >
-      {/* Repo name leads the card (with the license badge); the header carries
-          the owner. */}
-      <div className="flex items-center justify-between gap-2">
-        <h1
-          className="min-w-0"
-          style={{
-            margin: 0,
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[4],
-            fontWeight: theme.fontWeights.bold,
-            color: theme.colors.text,
-            lineHeight: 1.2,
-            wordBreak: 'break-word',
-          }}
-        >
-          {repo}
-        </h1>
+      {/* Top row: star count on the left; the external links + license badge
+          right-aligned. */}
+      <div
+        className="flex items-center justify-between gap-2"
+        style={{
+          color: theme.colors.textMuted,
+          fontSize: theme.fontSizes[1],
+          marginBottom: -4,
+        }}
+      >
+        {info.stargazers_count > 0 ? (
+          <span className="inline-flex items-center gap-1">
+            <Star size={14} />
+            {info.stargazers_count.toLocaleString()}
+          </span>
+        ) : (
+          <span />
+        )}
         <div className="flex items-center gap-2 shrink-0">
           {info.homepage && (
             <a
@@ -3966,6 +3958,34 @@ const RepoOverview: React.FC<{
           )}
         </div>
       </div>
+      {/* Repo name leads the card; the last-push line sits right-aligned on the
+          title row. */}
+      <div className="flex items-center justify-between gap-2">
+        <h1
+          className="min-w-0"
+          style={{
+            margin: 0,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[4],
+            fontWeight: theme.fontWeights.bold,
+            color: theme.colors.text,
+            lineHeight: 1.2,
+            wordBreak: 'break-word',
+          }}
+        >
+          {repo}
+        </h1>
+        <div
+          className="flex items-center gap-2 shrink-0"
+          style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+        >
+          {info.pushed_at && (
+            <span title={new Date(info.pushed_at).toLocaleString()}>
+              Updated {relativeTime(info.pushed_at)}
+            </span>
+          )}
+        </div>
+      </div>
       {info.description ? (
         <p
           style={{
@@ -4002,28 +4022,64 @@ const RepoOverview: React.FC<{
         </>
       )}
 
-      {ctaSlot && <div className="mt-1">{ctaSlot}</div>}
-
-      {/* Contributor faces: the top few contributors open their activity
-          drill-down; the rest collapse into a "+N" chip that opens the
-          full-rail Contributors pane. */}
+      {/* Contributor faces: the top 5 contributors, each opening their activity
+          drill-down. Everyone else lives behind the "Contributors" nav card. */}
       {shownPeople.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 mt-0.5">
-          <div className="flex items-center gap-1.5">
+        <div className="flex flex-col gap-1.5 mt-1">
+          <span
+            style={{
+              fontSize: theme.fontSizes[0],
+              fontWeight: theme.fontWeights.semibold,
+              color: theme.colors.textSecondary,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
+            Top contributors
+          </span>
+          <div className="flex items-stretch gap-2">
               {shownPeople.map((c) => {
-                const avatar = (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={`${c.avatar_url}${c.avatar_url.includes('?') ? '&' : '?'}s=64`}
-                    alt={c.login}
-                    width={32}
-                    height={32}
-                    className="rounded-full block"
-                    style={{ background: theme.colors.backgroundSecondary }}
-                  />
+                // Each contributor is a little card: avatar on top, login and
+                // commit count below.
+                const cardInner = (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`${c.avatar_url}${c.avatar_url.includes('?') ? '&' : '?'}s=80`}
+                      alt={c.login}
+                      width={40}
+                      height={40}
+                      className="rounded-full block"
+                      style={{ background: theme.colors.backgroundSecondary }}
+                    />
+                    <span
+                      className="block truncate w-full text-center"
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
+                      {c.login}
+                    </span>
+                    <span
+                      className="block truncate w-full text-center"
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        color: theme.colors.textMuted,
+                      }}
+                    >
+                      {c.contributions.toLocaleString()}
+                    </span>
+                  </>
                 );
                 const tip = `${c.login} · ${c.contributions.toLocaleString()} commits`;
-                // With a handler, the face opens the contributor's activity
+                const cardClassName =
+                  'flex flex-1 min-w-0 flex-col items-center gap-1.5 rounded-lg px-2 py-2 transition-transform hover:scale-105';
+                const cardStyle: React.CSSProperties = {
+                  border: `1px solid ${theme.colors.border}`,
+                  background: theme.colors.backgroundSecondary,
+                };
+                // With a handler, the card opens the contributor's activity
                 // drill-down; otherwise it links out to their GitHub profile.
                 return onSelectContributor ? (
                   <button
@@ -4036,10 +4092,10 @@ const RepoOverview: React.FC<{
                       })
                     }
                     title={`${tip} — view recent activity`}
-                    className="rounded-full transition-transform hover:scale-110"
-                    style={{ cursor: 'pointer' }}
+                    className={cardClassName}
+                    style={{ ...cardStyle, cursor: 'pointer' }}
                   >
-                    {avatar}
+                    {cardInner}
                   </button>
                 ) : (
                   <a
@@ -4048,52 +4104,18 @@ const RepoOverview: React.FC<{
                     target="_blank"
                     rel="noopener noreferrer"
                     title={tip}
-                    className="rounded-full transition-transform hover:scale-110"
+                    className={cardClassName}
+                    style={cardStyle}
                   >
-                    {avatar}
+                    {cardInner}
                   </a>
                 );
               })}
-              {overflowPeople.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => onOpenContributors?.()}
-                  className="rounded-full transition-colors"
-                  style={{
-                    height: 32,
-                    padding: '0 10px',
-                    fontSize: theme.fontSizes[0],
-                    fontWeight: theme.fontWeights.medium,
-                    color: theme.colors.textSecondary,
-                    background: `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
-                    border: `1px solid ${theme.colors.border}`,
-                  }}
-                  title="See all contributors"
-                >
-                  {overflowLabel}
-                </button>
-              )}
           </div>
         </div>
       )}
 
-      {/* Vital signs: stars · last push. */}
-      <div
-        className="flex flex-wrap items-center gap-x-3 gap-y-1"
-        style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
-      >
-        {info.pushed_at && (
-          <span title={new Date(info.pushed_at).toLocaleString()}>
-            Updated {relativeTime(info.pushed_at)}
-          </span>
-        )}
-        {info.stargazers_count > 0 && (
-          <span className="inline-flex items-center gap-1">
-            <Star size={14} />
-            {info.stargazers_count.toLocaleString()}
-          </span>
-        )}
-      </div>
+      {ctaSlot && <div className="mt-1">{ctaSlot}</div>}
 
       {info.fork && info.parent && (
         <div
@@ -4947,8 +4969,6 @@ const ToursPane: React.FC<{
   onRequestDelete: (item: TourListItem) => void;
   // Click a contributor face in the About card → open their activity drill-down.
   onSelectContributor: (c: { login: string; avatar_url: string }) => void;
-  // The About card's "+N" contributor chip opens the Contributors pane.
-  onOpenContributors: () => void;
   // Repo-root README path (or null) + handler, forwarded to RepoOverview so the
   // About card can offer a "README" button.
   readmePath: string | null;
@@ -4970,7 +4990,6 @@ const ToursPane: React.FC<{
   viewerIsRepoAdmin,
   onRequestDelete,
   onSelectContributor,
-  onOpenContributors,
   readmePath,
   onOpenReadme,
   trailCount,
@@ -5014,7 +5033,6 @@ const ToursPane: React.FC<{
           owner={owner}
           repo={repo}
           onSelectContributor={onSelectContributor}
-          onOpenContributors={onOpenContributors}
           ctaSlot={cta}
         />
         <RepoNavCards
@@ -6030,9 +6048,9 @@ const RightPane: React.FC<{
           // frames the camera on it — no color over the buildings. Null when
           // nothing is selected (full city).
           idleFocusDirectory={idleFocusDirectory}
-          // Readme mode: markdown column takes 60% of the canvas; the city +
-          // file-type legend share the right 40%.
-          readmeMarkdownWidth={0.6}
+          // Readme mode: markdown column takes 66% of the canvas; the city +
+          // file-type legend share the right 34%.
+          readmeMarkdownWidth={0.66}
           // Skip the tour brief — picking a tour drops straight into step 1
           // rather than the description + Start gate.
           defaultSkipWelcome
