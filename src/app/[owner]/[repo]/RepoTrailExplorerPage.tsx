@@ -4015,17 +4015,52 @@ const RepoOverview: React.FC<{
 
   // Cached, server-published blame analysis. useRepoAnalysis only sets this once
   // the S3 artifact exists (`cached: true`), so a non-null value IS our "does
-  // coverage exist" signal — we never run the sweep or resolve identities here.
+  // coverage exist" signal — we never run the sweep here.
   const { analysis } = useRepoAnalysis();
 
-  // "Lines" people: top line-owners straight from the cached analysis. Emails are
-  // merged into people using ONLY the server-baked identityByEmail overlay (no
-  // live GitHub resolution of our own); a person GitHub can't attribute keeps a
-  // name/email key and just renders without an avatar link.
+  // Eagerly resolve GitHub identity for the head of the blame map so the "Lines"
+  // avatar row has faces the moment the Commits/Lines switch is visible — instead
+  // of waiting for the Contributors pane to mount. Bounded to a small head (the
+  // row only shows AVATAR_LIMIT people; the ×3 headroom covers humans split
+  // across several emails), so this is one tiny batch, not the pane's full-map
+  // fan-out. Seeded with the baked overlay, so a warmed repo resolves these from
+  // cache and never hits GitHub. analysisContributors is lines-desc, so the first
+  // emails are the biggest owners.
+  const lineEmailsToResolve = useMemo<string[]>(
+    () =>
+      analysis
+        ? analysisContributors(analysis)
+            .filter((p) => !p.noreplyLogin)
+            .slice(0, AVATAR_LIMIT * 3)
+            .map((p) => p.email)
+        : [],
+    [analysis],
+  );
+  const lineIdentities = useCommitAuthorsByEmail(
+    owner,
+    repo,
+    lineEmailsToResolve,
+    analysis?.identityByEmail,
+  );
+
+  // "Lines" people: top line-owners from the cached analysis. Emails are merged
+  // into people using the live overlay above, falling back to the server-baked
+  // identityByEmail map; a person GitHub can't attribute keeps a name/email key
+  // and just renders without an avatar link.
   const linePeople = useMemo<ContribCard[]>(() => {
     if (!analysis) return [];
     const identityOf = (email: string): EmailIdentity | undefined => {
-      const o = analysis.identityByEmail?.[email.toLowerCase()];
+      const key = email.toLowerCase();
+      const live = lineIdentities[key];
+      if (live) {
+        return {
+          login: live.login,
+          id: live.id,
+          avatarUrl: live.avatarUrl,
+          htmlUrl: live.htmlUrl,
+        };
+      }
+      const o = analysis.identityByEmail?.[key];
       return o
         ? { login: o.login, id: o.id, avatarUrl: o.avatarUrl, htmlUrl: o.htmlUrl }
         : undefined;
@@ -4047,7 +4082,7 @@ const RepoOverview: React.FC<{
         lines: p.stats.lines,
         lineShare: p.stats.lineShare,
       }));
-  }, [analysis]);
+  }, [analysis, lineIdentities]);
 
   // "Commits" people: the top of GitHub's contributor graph (default avatar row).
   const commitPeople = useMemo<ContribCard[]>(
