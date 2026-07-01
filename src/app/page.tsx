@@ -19,7 +19,7 @@ import { LgtmStamp, SignOffStampAnimation } from '@/components/trail/LgtmStamp';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { AgentViewButton } from '@/components/AgentViewButton';
 import { HomeThemeToggle } from '@/components/HomeThemeToggle';
-import { SignedInDashboard } from '@/components/home/SignedInDashboard';
+import { SignedInHome } from '@/components/home/SignedInHome';
 import { RecentProjectsStrip } from '@/components/home/RecentProjectsStrip';
 import { TrailBackdrop } from '@/components/home/TrailBackdrop';
 import { TrailsFeed } from '@/components/home/TrailsFeed';
@@ -728,7 +728,7 @@ export default function HomePage() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col relative">
+      <main className="flex-1 flex flex-col relative min-h-0">
         {view === 'trails' || view === 'topics' ? (
           <section
             className={`flex-1 w-full px-6 py-10 transition-opacity duration-700 ${
@@ -738,7 +738,7 @@ export default function HomePage() {
             {view === 'trails' ? <TrailsFeed /> : <TopicsFeed />}
           </section>
         ) : signedIn ? (
-          <SignedInDashboard user={user} />
+          <SignedInHome user={user} />
         ) : (
         <section className="flex-1 w-full max-w-7xl mx-auto px-6 py-16 flex items-start">
           <div className="w-full grid lg:grid-cols-2 gap-12 lg:gap-10 items-start">
@@ -1161,7 +1161,9 @@ export default function HomePage() {
         </section>
         )}
 
-        {view !== 'trails' && view !== 'topics' && (
+        {/* The recent-projects strip is a marketing/landing affordance — hide it
+            on the signed-in two-pane app surface (the rail owns project access). */}
+        {view !== 'trails' && view !== 'topics' && !signedIn && (
           <RecentProjectsStrip
             projects={recentProjects}
             onOpen={goToRepoFullName}
@@ -1169,18 +1171,22 @@ export default function HomePage() {
         )}
       </main>
 
-      <footer
-        className="border-t text-xs backdrop-blur-xl relative z-10"
-        style={{
-          borderColor: `color-mix(in srgb, ${theme.colors.border} 60%, transparent)`,
-          background: `color-mix(in srgb, ${theme.colors.background} 55%, transparent)`,
-          color: theme.colors.textMuted,
-        }}
-      >
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <span>© {new Date().getFullYear()} Principal AI</span>
-        </div>
-      </footer>
+      {/* Footer is part of the marketing/landing chrome — the signed-in two-pane
+          app surface fills the viewport instead. */}
+      {!(signedIn && view !== 'trails' && view !== 'topics') && (
+        <footer
+          className="border-t text-xs backdrop-blur-xl relative z-10"
+          style={{
+            borderColor: `color-mix(in srgb, ${theme.colors.border} 60%, transparent)`,
+            background: `color-mix(in srgb, ${theme.colors.background} 55%, transparent)`,
+            color: theme.colors.textMuted,
+          }}
+        >
+          <div className="max-w-7xl mx-auto px-6 py-6">
+            <span>© {new Date().getFullYear()} Principal AI</span>
+          </div>
+        </footer>
+      )}
 
       <CreateTrailModal
         open={showCreateModal}

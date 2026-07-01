@@ -121,3 +121,5 @@ export const getCameraPosition = (
 ): { x: number; y: number; z: number } => ({ x: 0, y: 0, z: 0 });
 
 export const setCameraFlatView = (..._args: unknown[]): void => {};
+
+export const resetCamera = (..._args: unknown[]): void => {};

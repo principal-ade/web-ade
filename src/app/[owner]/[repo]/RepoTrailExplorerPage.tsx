@@ -34,7 +34,6 @@ import {
   Activity,
   CircleDot,
   ChevronRight,
-  ChevronLeft,
   Boxes,
   Footprints,
   MapPin,
@@ -88,6 +87,8 @@ import { TrailErrorView } from '@/components/trail/TrailErrorView';
 import { TrailShareModal } from '@/components/trail/TrailShareModal';
 import { CreateTrailModal } from '@/components/home/CreateTrailModal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { SlidePane } from '@/components/rail/SlidePane';
+import { RailPaneHeader } from '@/components/rail/RailPaneHeader';
 import { ActivityHeatmap } from '@/components/ActivityHeatmap';
 import type { UserActivityResponse } from '@/app/api/github/user/[username]/activity/route';
 import { FileSourcePanel } from './FileSourcePanel';
@@ -759,7 +760,21 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     setTreeError(null);
     (async () => {
       try {
-        const treeData = await trpc.github.getTree.query({ owner, repo });
+        // Fetch the tree via a presigned S3 URL rather than inline through
+        // tRPC: a monorepo's tree (elastic/kibana ~5.7MB slimmed) can exceed
+        // the ~6MB SSR response cap and truncate. S3 has no such cap, so the
+        // direct fetch below reliably delivers the whole tree.
+        const { url, sha } = await trpc.github.getTreeUrl.query({
+          owner,
+          repo,
+        });
+        if (cancelled) return;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`tree fetch failed (${res.status})`);
+        const treeData = (await res.json()) as {
+          sha?: string;
+          tree: Array<{ path: string; type: string; size?: number }>;
+        };
         if (cancelled) return;
         const files = treeData.tree
           .filter((entry) => entry.type === 'blob')
@@ -767,17 +782,16 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         const tree = new GitFileTreeBuilder().build({
           files,
           rootPath: `/${owner}/${repo}`,
-          commitSha: treeData.sha,
+          commitSha: treeData.sha ?? sha,
           branch: 'main',
         });
         if (cancelled) return;
         setFileTree(tree);
       } catch (err) {
         if (cancelled) return;
-        // A truncated response (a very large repo whose tree exceeds the SSR
-        // response cap) makes tRPC's internal `response.json()` throw a raw
-        // "Unexpected end of JSON input" DOMException. Don't surface that
-        // verbatim — show a clean, retryable message instead.
+        // Retained as a safety net: a truncated/garbled tree body makes
+        // `res.json()` throw a raw "Unexpected end of JSON input" DOMException.
+        // Don't surface that verbatim — show a clean, retryable message instead.
         console.error('[RepoTree] Failed to load repository tree:', err);
         const raw = err instanceof Error ? err.message : '';
         const isParseError = /JSON|Unexpected end of|Unexpected token/i.test(
@@ -2392,102 +2406,11 @@ const SLIDE_ORDER = [
   'files',
 ] as const;
 
-const SLIDE_MS = 320;
-
 function slideDirection(from: string, to: string): 1 | -1 {
   const a = SLIDE_ORDER.indexOf(from as (typeof SLIDE_ORDER)[number]);
   const b = SLIDE_ORDER.indexOf(to as (typeof SLIDE_ORDER)[number]);
   return b >= a ? 1 : -1;
 }
-
-// Wraps the rail's swappable panes so a change in `viewKey` animates as a
-// horizontal carousel: the outgoing pane slides off one edge while the incoming
-// pane slides in from the other. Only one pane is live at rest; during a
-// transition the previous pane is briefly snapshotted into a second layer and
-// dropped once its slide-out finishes.
-const SlidePane: React.FC<{
-  viewKey: string;
-  // Which way a given transition slides. Defaults to the rail's SLIDE_ORDER;
-  // panes with their own key space (e.g. a contributor drilldown) pass a custom
-  // resolver. Returns 1 to enter from the right, -1 from the left.
-  resolveDirection?: (from: string, to: string) => 1 | -1;
-  children: React.ReactNode;
-}> = ({ viewKey, resolveDirection, children }) => {
-  // Latest children for the active view, captured each commit so we can snapshot
-  // the outgoing pane the instant the view changes.
-  const liveChildren = useRef<React.ReactNode>(children);
-  const [shownKey, setShownKey] = useState(viewKey);
-  const [animId, setAnimId] = useState(0);
-  const [enterDir, setEnterDir] = useState<0 | 1 | -1>(0);
-  const [leaving, setLeaving] = useState<{
-    id: number;
-    dir: 1 | -1;
-    node: React.ReactNode;
-  } | null>(null);
-
-  // Detect a view change during render so the entering layer mounts already
-  // animating (no extra paint of the old view in the new slot).
-  if (viewKey !== shownKey) {
-    const dir = (resolveDirection ?? slideDirection)(shownKey, viewKey);
-    setLeaving({ id: animId, dir, node: liveChildren.current });
-    setShownKey(viewKey);
-    setAnimId((n) => n + 1);
-    setEnterDir(dir);
-  }
-
-  useEffect(() => {
-    liveChildren.current = children;
-  });
-
-  // Drop the outgoing layer once its slide-out has finished.
-  useEffect(() => {
-    if (!leaving) return;
-    const id = leaving.id;
-    const t = window.setTimeout(() => {
-      setLeaving((cur) => (cur && cur.id === id ? null : cur));
-    }, SLIDE_MS);
-    return () => window.clearTimeout(t);
-  }, [leaving]);
-
-  return (
-    <div className="relative flex-1 min-h-0 overflow-hidden">
-      {leaving && (
-        <div
-          key={`leave-${leaving.id}`}
-          className="absolute inset-0 flex flex-col"
-          style={{
-            animation: `${
-              leaving.dir === 1 ? 'rpSlideOutLeft' : 'rpSlideOutRight'
-            } ${SLIDE_MS}ms ease forwards`,
-          }}
-        >
-          {leaving.node}
-        </div>
-      )}
-      <div
-        key={`shown-${animId}`}
-        className="absolute inset-0 flex flex-col"
-        style={
-          enterDir === 0
-            ? undefined
-            : {
-                animation: `${
-                  enterDir === 1 ? 'rpSlideInRight' : 'rpSlideInLeft'
-                } ${SLIDE_MS}ms ease forwards`,
-              }
-        }
-      >
-        {children}
-      </div>
-      <style>{`
-        @keyframes rpSlideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
-        @keyframes rpSlideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-        @keyframes rpSlideOutLeft { from { transform: translateX(0); } to { transform: translateX(-100%); } }
-        @keyframes rpSlideOutRight { from { transform: translateX(0); } to { transform: translateX(100%); } }
-      `}</style>
-    </div>
-  );
-};
 
 // ---------------------------------------------------------------------------
 // Trail list pane (left)
@@ -2640,7 +2563,10 @@ const TrailListPane: React.FC<{
         />
       )}
 
-      <SlidePane viewKey={configMode ? 'config' : leftViewMode}>
+      <SlidePane
+        viewKey={configMode ? 'config' : leftViewMode}
+        resolveDirection={slideDirection}
+      >
         {configMode ? (
         <FolderConfigPane
           dirPaths={dirPaths}
@@ -4841,155 +4767,6 @@ const RepoOverview: React.FC<{
           </a>
         </div>
       )}
-    </div>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// Shared full-rail header for the nav-card panes (Structure / Contributors),
-// mirroring RepoActivityPane's sticky header: an eyebrow title (icon + label +
-// optional count) on the left and a close button on the right. When `onBack` is
-// given, the eyebrow is replaced by a back chevron + the supplied node (used for
-// the contributor drill-down).
-const RailPaneHeader: React.FC<{
-  icon: React.ReactNode;
-  label: string;
-  count?: number;
-  onClose: () => void;
-  onBack?: () => void;
-  backContent?: React.ReactNode;
-  // Render the pane's dismiss control as a leading back button (chevron) instead
-  // of a trailing X. Back always goes up one level: a nested `onBack` (e.g. the
-  // selected-contributor drilldown) takes priority, otherwise `onClose` returns
-  // to the overview. Used by the nav-card panes that slide in over the overview.
-  closeAsBack?: boolean;
-  // Breadcrumb tail appended after the label (closeAsBack only): drilling in
-  // extends the header ("‹ CONTRIBUTORS › @handle") instead of replacing it. The
-  // label stays the back target; the crumb marks where you are.
-  crumb?: React.ReactNode;
-}> = ({ icon, label, count, onClose, onBack, backContent, closeAsBack, crumb }) => {
-  const { theme } = useTheme();
-
-  if (closeAsBack) {
-    // Back goes up one level: a nested `onBack` (e.g. the selected contributor)
-    // returns to this pane's list, otherwise `onClose` returns to the overview.
-    const goBack = onBack ?? onClose;
-    const backLabel = onBack ? `Back to ${label.toLowerCase()}` : 'Back to overview';
-    return (
-      <div
-        className="px-3 py-2 border-b sticky top-0 z-10 shrink-0 flex items-center gap-1.5"
-        style={{
-          borderColor: theme.colors.border,
-          background: theme.colors.background,
-        }}
-      >
-        <button
-          type="button"
-          onClick={goBack}
-          className="flex items-center gap-2 -ml-1 px-1.5 py-1 rounded transition-opacity hover:opacity-70 shrink-0"
-          style={{ color: theme.colors.textSecondary, cursor: 'pointer' }}
-          title={backLabel}
-          aria-label={backLabel}
-        >
-          <ChevronLeft size={16} />
-          <span
-            style={{
-              fontSize: theme.fontSizes[0],
-              fontWeight: theme.fontWeights.semibold,
-              color: theme.colors.textSecondary,
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-            }}
-          >
-            {label}
-          </span>
-          {count !== undefined && crumb === undefined && (
-            <span
-              style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted }}
-            >
-              {count}
-            </span>
-          )}
-        </button>
-        {crumb !== undefined && (
-          <>
-            <ChevronRight
-              size={14}
-              style={{ color: theme.colors.textMuted, flexShrink: 0 }}
-            />
-            <span
-              className="truncate"
-              style={{
-                fontSize: theme.fontSizes[1],
-                fontWeight: theme.fontWeights.semibold,
-                color: theme.colors.text,
-              }}
-            >
-              {crumb}
-            </span>
-          </>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={`px-4 border-b sticky top-0 z-10 shrink-0 flex items-center gap-2 ${
-        onBack ? 'py-3' : 'py-2'
-      }`}
-      style={{
-        borderColor: theme.colors.border,
-        background: theme.colors.background,
-      }}
-    >
-      {onBack ? (
-        <>
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex items-center justify-center w-6 h-6 -ml-1 rounded transition-opacity hover:opacity-70"
-            style={{ color: theme.colors.textSecondary, cursor: 'pointer' }}
-            title={`Back to ${label.toLowerCase()}`}
-            aria-label={`Back to ${label.toLowerCase()}`}
-          >
-            <ChevronLeft size={16} />
-          </button>
-          {backContent}
-        </>
-      ) : (
-        <>
-          <span style={{ color: theme.colors.textSecondary }}>{icon}</span>
-          <span
-            style={{
-              fontSize: theme.fontSizes[0],
-              fontWeight: theme.fontWeights.semibold,
-              color: theme.colors.textSecondary,
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-            }}
-          >
-            {label}
-          </span>
-          {count !== undefined && (
-            <span
-              style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted }}
-            >
-              {count}
-            </span>
-          )}
-        </>
-      )}
-      <button
-        type="button"
-        onClick={onClose}
-        className="ml-auto flex items-center justify-center w-6 h-6 rounded transition-opacity hover:opacity-70"
-        style={{ color: theme.colors.textMuted, cursor: 'pointer' }}
-        title="Close"
-        aria-label="Close"
-      >
-        <X size={14} />
-      </button>
     </div>
   );
 };
