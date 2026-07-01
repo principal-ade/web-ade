@@ -10,9 +10,80 @@ import type { UserAboutInfo } from './UserAboutCard';
 import type { HomeNavCardCounts } from './HomeNavCards';
 import type { ProjectRepo, ProjectSection } from './HomeProjectsView';
 import type { RecentTrailItem } from './HomeRecentlyVisitedView';
+import type {
+  TrailListItem,
+  TopicListItem,
+} from './HomeTrailsTopicsView';
 
 // localStorage key shared with the header opener / recent-repos panels.
 const RECENT_REPOS_KEY = 'recent-repositories';
+
+// Minimal shapes of the trail/topic list responses (by-user + bookmarks).
+interface ApiTrailByUser {
+  id: string;
+  title: string;
+  owner: string;
+  repo: string;
+  markerCount: number;
+  updatedAt: string;
+}
+interface ApiTopicByUser {
+  id: string;
+  title: string;
+  trailCount: number;
+  updatedAt: string;
+  descriptionPreview?: string;
+}
+interface ApiBookmarkedTrail {
+  trailId: string;
+  owner: string;
+  repo: string;
+  snapshot: { title: string; markerCount: number; updatedAt: string };
+  gone?: boolean;
+}
+interface ApiBookmarkedTopic {
+  topicId: string;
+  snapshot: {
+    title: string;
+    trailCount: number;
+    updatedAt: string;
+    descriptionPreview?: string;
+  };
+  gone?: boolean;
+}
+
+const toTrailItem = (e: ApiTrailByUser): TrailListItem => ({
+  id: e.id,
+  title: e.title,
+  owner: e.owner,
+  repo: e.repo,
+  markerCount: e.markerCount,
+  updatedAt: e.updatedAt,
+});
+const toTopicItem = (e: ApiTopicByUser): TopicListItem => ({
+  id: e.id,
+  title: e.title,
+  trailCount: e.trailCount,
+  updatedAt: e.updatedAt,
+  descriptionPreview: e.descriptionPreview,
+});
+const bookmarkedTrailToItem = (e: ApiBookmarkedTrail): TrailListItem => ({
+  id: e.trailId,
+  title: e.snapshot.title,
+  owner: e.owner,
+  repo: e.repo,
+  markerCount: e.snapshot.markerCount,
+  updatedAt: e.snapshot.updatedAt,
+  gone: e.gone,
+});
+const bookmarkedTopicToItem = (e: ApiBookmarkedTopic): TopicListItem => ({
+  id: e.topicId,
+  title: e.snapshot.title,
+  trailCount: e.snapshot.trailCount,
+  updatedAt: e.snapshot.updatedAt,
+  descriptionPreview: e.snapshot.descriptionPreview,
+  gone: e.gone,
+});
 
 // ---------------------------------------------------------------------------
 // SignedInHome — the connected signed-in home surface. Fetches the viewer's
@@ -101,6 +172,10 @@ export function SignedInHome({ user }: { user: User }) {
   const [starred, setStarred] = useState<ProjectRepo[] | null>(null);
   const [recentProjects, setRecentProjects] = useState<ProjectRepo[] | null>(null);
   const [recentTrails, setRecentTrails] = useState<RecentTrailItem[] | null>(null);
+  const [libraryTrails, setLibraryTrails] = useState<TrailListItem[] | null>(null);
+  const [libraryTopics, setLibraryTopics] = useState<TopicListItem[] | null>(null);
+  const [bookmarkTrails, setBookmarkTrails] = useState<TrailListItem[] | null>(null);
+  const [bookmarkTopics, setBookmarkTopics] = useState<TopicListItem[] | null>(null);
   const [counts, setCounts] = useState<HomeNavCardCounts>({});
 
   // Enrich the About card from the viewer's full GitHub profile (bio + stats).
@@ -222,10 +297,68 @@ export function SignedInHome({ user }: { user: User }) {
     };
   }, [user.id]);
 
+  // The user's own published trails + topics.
+  useEffect(() => {
+    let cancelled = false;
+    setLibraryTrails(null);
+    setLibraryTopics(null);
+    fetch(`/api/trails/by-user/${user.id}`)
+      .then((r) => (r.ok ? r.json() : { entries: [] }))
+      .then((d: { entries?: ApiTrailByUser[] }) => {
+        if (!cancelled) setLibraryTrails((d.entries ?? []).map(toTrailItem));
+      })
+      .catch(() => {
+        if (!cancelled) setLibraryTrails([]);
+      });
+    fetch(`/api/topics/by-user/${user.id}`)
+      .then((r) => (r.ok ? r.json() : { entries: [] }))
+      .then((d: { entries?: ApiTopicByUser[] }) => {
+        if (!cancelled) setLibraryTopics((d.entries ?? []).map(toTopicItem));
+      })
+      .catch(() => {
+        if (!cancelled) setLibraryTopics([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
+
+  // Bookmarked trails + topics (server-backed, resolved from the auth cookie).
+  useEffect(() => {
+    let cancelled = false;
+    setBookmarkTrails(null);
+    setBookmarkTopics(null);
+    fetch('/api/trails/bookmarks')
+      .then((r) => (r.ok ? r.json() : { entries: [] }))
+      .then((d: { entries?: ApiBookmarkedTrail[] }) => {
+        if (!cancelled)
+          setBookmarkTrails((d.entries ?? []).map(bookmarkedTrailToItem));
+      })
+      .catch(() => {
+        if (!cancelled) setBookmarkTrails([]);
+      });
+    fetch('/api/topics/bookmarks')
+      .then((r) => (r.ok ? r.json() : { entries: [] }))
+      .then((d: { entries?: ApiBookmarkedTopic[] }) => {
+        if (!cancelled)
+          setBookmarkTopics((d.entries ?? []).map(bookmarkedTopicToItem));
+      })
+      .catch(() => {
+        if (!cancelled) setBookmarkTopics([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const navCounts: HomeNavCardCounts = {
     ...counts,
     recent:
       (recentProjects?.length ?? 0) + (recentTrails?.length ?? 0) || undefined,
+    bookmarks:
+      (bookmarkTrails?.length ?? 0) + (bookmarkTopics?.length ?? 0) || undefined,
+    library:
+      (libraryTrails?.length ?? 0) + (libraryTopics?.length ?? 0) || undefined,
   };
 
   return (
@@ -237,6 +370,10 @@ export function SignedInHome({ user }: { user: User }) {
       starred={starred}
       recentProjects={recentProjects}
       recentTrails={recentTrails}
+      bookmarkTrails={bookmarkTrails}
+      bookmarkTopics={bookmarkTopics}
+      libraryTrails={libraryTrails}
+      libraryTopics={libraryTopics}
       renderRightPane={(repo) =>
         repo ? (
           <RepoFileCityPane

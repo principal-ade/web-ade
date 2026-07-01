@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Bookmark, Footprints } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { SlidePane, makeSlideDirection } from '@/components/rail/SlidePane';
 import { RailPaneHeader } from '@/components/rail/RailPaneHeader';
@@ -21,6 +22,11 @@ import {
   HomeRecentlyVisitedView,
   type RecentTrailItem,
 } from './HomeRecentlyVisitedView';
+import {
+  HomeTrailsTopicsView,
+  type TrailListItem,
+  type TopicListItem,
+} from './HomeTrailsTopicsView';
 
 // ---------------------------------------------------------------------------
 // HomeLeftPanel — the signed-in home's left rail, the user-based sibling of the
@@ -64,6 +70,12 @@ export interface HomeLeftPanelProps {
   /** "Recently Visited" view: recent repos (as ProjectRepos) + recent trails. */
   recentProjects?: ProjectRepo[] | null;
   recentTrails?: RecentTrailItem[] | null;
+  /** "Bookmarks" view: the user's bookmarked trails + topics. `null` = loading. */
+  bookmarkTrails?: TrailListItem[] | null;
+  bookmarkTopics?: TopicListItem[] | null;
+  /** "Your Trails & Topics" view: the user's published trails + topics. */
+  libraryTrails?: TrailListItem[] | null;
+  libraryTopics?: TopicListItem[] | null;
   /** full_name of the repo currently shown in the right pane, highlighted in lists. */
   selectedRepoFullName?: string | null;
   /** A repo was picked from a list — the shell routes this to the right-pane city. */
@@ -81,6 +93,10 @@ export function HomeLeftPanel({
   starredError = null,
   recentProjects,
   recentTrails,
+  bookmarkTrails,
+  bookmarkTopics,
+  libraryTrails,
+  libraryTopics,
   selectedRepoFullName = null,
   onSelectRepo,
 }: HomeLeftPanelProps) {
@@ -132,6 +148,24 @@ export function HomeLeftPanel({
             trails={recentTrails ?? null}
             selectedFullName={selectedRepoFullName}
             onSelectRepo={(repo) => onSelectRepo?.(repo)}
+            onBack={() => go('home')}
+          />
+        ) : view === 'bookmarks' ? (
+          <HomeTrailsTopicsView
+            icon={<Bookmark size={14} />}
+            label="Bookmarks"
+            trails={bookmarkTrails ?? null}
+            topics={bookmarkTopics ?? null}
+            emptyMessage="No bookmarks yet. Bookmark a trail or topic to find it here."
+            onBack={() => go('home')}
+          />
+        ) : view === 'library' ? (
+          <HomeTrailsTopicsView
+            icon={<Footprints size={14} />}
+            label="Your Trails & Topics"
+            trails={libraryTrails ?? null}
+            topics={libraryTopics ?? null}
+            emptyMessage="You haven't published any trails or topics yet."
             onBack={() => go('home')}
           />
         ) : (

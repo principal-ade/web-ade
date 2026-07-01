@@ -117,6 +117,16 @@ export const Populated: Story = {
         recentTrails={[
           { id: 't1', title: 'How auth refresh works', owner: 'gaearon', repo: 'web-ade', lastVisitedAt: '2026-06-30T10:00:00Z' },
         ]}
+        libraryTrails={[
+          { id: 't1', title: 'How auth refresh works', owner: 'gaearon', repo: 'web-ade', markerCount: 8, updatedAt: '2026-06-28T10:00:00Z' },
+        ]}
+        libraryTopics={[
+          { id: 'p1', title: 'Cross-CLI change detection', trailCount: 3, updatedAt: '2026-06-27T12:00:00Z', descriptionPreview: 'Three CLIs, three strategies.' },
+        ]}
+        bookmarkTrails={[
+          { id: 't2', title: 'The File City render pipeline', owner: 'principal-ai', repo: 'file-city', markerCount: 14, updatedAt: '2026-06-20T18:30:00Z' },
+        ]}
+        bookmarkTopics={[]}
         onSelectRepo={(r) => console.log('select repo →', r.full_name)}
         onViewChange={(v) => console.log('view →', v)}
       />
