@@ -4,6 +4,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import {
+  Fragment,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -38,6 +39,7 @@ import {
   Users,
   Building2,
   Twitter,
+  Mail,
   Bookmark,
 } from 'lucide-react';
 import { FileTree as PierreFileTree, useFileTree } from '@pierre/trees/react';
@@ -1334,6 +1336,8 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         trailsExpanded={trailsExpanded}
         onToggleBookmarks={() => setBookmarksOpen((v) => !v)}
         bookmarksOpen={bookmarksOpen}
+        repoActive={leftViewMode !== 'tours'}
+        onShowOverview={() => setLeftViewMode('tours')}
       />
       <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
         {/* The delete control is driven by the app's own validated session:
@@ -1699,6 +1703,11 @@ const Header: React.FC<{
   /** Toggle the bookmarks passport side panel. */
   onToggleBookmarks: () => void;
   bookmarksOpen: boolean;
+  /** Extend the breadcrumb to "owner / repo" — set while a nav-card view (not
+   *  the overview) is open, so the header names the repo you've drilled into. */
+  repoActive: boolean;
+  /** Click the repo crumb → return to the repo overview (the About view). */
+  onShowOverview: () => void;
 }> = ({
   rootRef,
   owner,
@@ -1710,6 +1719,8 @@ const Header: React.FC<{
   trailsExpanded,
   onToggleBookmarks,
   bookmarksOpen,
+  repoActive,
+  onShowOverview,
 }) => {
   const { theme } = useTheme();
   const router = useRouter();
@@ -1957,34 +1968,88 @@ const Header: React.FC<{
         >
           {owner}
         </Link>
+        {repoActive && (
+          <>
+            <span
+              className="mx-1 flex-shrink-0"
+              style={{ color: theme.colors.textMuted }}
+              aria-hidden="true"
+            >
+              /
+            </span>
+            <button
+              type="button"
+              onClick={onShowOverview}
+              className="transition-opacity hover:opacity-80 truncate"
+              title={`${repo} overview`}
+              style={{
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[2],
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.primary,
+                cursor: 'pointer',
+              }}
+            >
+              {repo}
+            </button>
+          </>
+        )}
       </div>
 
-      <Link
-        href={`/${owner}`}
-        className="flex md:hidden items-center gap-2 min-w-0 flex-1 transition-opacity hover:opacity-80"
-        style={{ textDecoration: 'none' }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`https://github.com/${owner}.png?size=64`}
-          alt=""
-          width={32}
-          height={32}
-          className="rounded-full flex-shrink-0"
-          style={{ border: `1px solid ${theme.colors.border}` }}
-        />
-        <span
-          className="truncate"
-          style={{
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[2],
-            fontWeight: theme.fontWeights.semibold,
-            color: theme.colors.text,
-          }}
+      <div className="flex md:hidden items-center gap-2 min-w-0 flex-1">
+        <Link
+          href={`/${owner}`}
+          className="flex items-center gap-2 min-w-0 transition-opacity hover:opacity-80"
+          style={{ textDecoration: 'none' }}
         >
-          {owner}
-        </span>
-      </Link>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`https://github.com/${owner}.png?size=64`}
+            alt=""
+            width={32}
+            height={32}
+            className="rounded-full flex-shrink-0"
+            style={{ border: `1px solid ${theme.colors.border}` }}
+          />
+          <span
+            className="truncate"
+            style={{
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[2],
+              fontWeight: theme.fontWeights.semibold,
+              color: theme.colors.text,
+            }}
+          >
+            {owner}
+          </span>
+        </Link>
+        {repoActive && (
+          <>
+            <span
+              className="mx-1 flex-shrink-0"
+              style={{ color: theme.colors.textMuted }}
+              aria-hidden="true"
+            >
+              /
+            </span>
+            <button
+              type="button"
+              onClick={onShowOverview}
+              className="truncate transition-opacity hover:opacity-80"
+              title={`${repo} overview`}
+              style={{
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[2],
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.primary,
+                cursor: 'pointer',
+              }}
+            >
+              {repo}
+            </button>
+          </>
+        )}
+      </div>
 
       {trailsExpanded && exploredStats && (
         <div
@@ -2184,6 +2249,120 @@ const Header: React.FC<{
 };
 
 // ---------------------------------------------------------------------------
+// Sliding pane switcher
+// ---------------------------------------------------------------------------
+
+// Left-to-right ordering of the rail's surfaces. A transition to a later
+// surface slides the new pane in from the right (and the old one out to the
+// left); going back reverses it — the carousel feel for the About nav cards.
+const SLIDE_ORDER = [
+  'config',
+  'tours',
+  'activity',
+  'contributors',
+  'structure',
+  'trails',
+  'files',
+] as const;
+
+const SLIDE_MS = 320;
+
+function slideDirection(from: string, to: string): 1 | -1 {
+  const a = SLIDE_ORDER.indexOf(from as (typeof SLIDE_ORDER)[number]);
+  const b = SLIDE_ORDER.indexOf(to as (typeof SLIDE_ORDER)[number]);
+  return b >= a ? 1 : -1;
+}
+
+// Wraps the rail's swappable panes so a change in `viewKey` animates as a
+// horizontal carousel: the outgoing pane slides off one edge while the incoming
+// pane slides in from the other. Only one pane is live at rest; during a
+// transition the previous pane is briefly snapshotted into a second layer and
+// dropped once its slide-out finishes.
+const SlidePane: React.FC<{
+  viewKey: string;
+  // Which way a given transition slides. Defaults to the rail's SLIDE_ORDER;
+  // panes with their own key space (e.g. a contributor drilldown) pass a custom
+  // resolver. Returns 1 to enter from the right, -1 from the left.
+  resolveDirection?: (from: string, to: string) => 1 | -1;
+  children: React.ReactNode;
+}> = ({ viewKey, resolveDirection, children }) => {
+  // Latest children for the active view, captured each commit so we can snapshot
+  // the outgoing pane the instant the view changes.
+  const liveChildren = useRef<React.ReactNode>(children);
+  const [shownKey, setShownKey] = useState(viewKey);
+  const [animId, setAnimId] = useState(0);
+  const [enterDir, setEnterDir] = useState<0 | 1 | -1>(0);
+  const [leaving, setLeaving] = useState<{
+    id: number;
+    dir: 1 | -1;
+    node: React.ReactNode;
+  } | null>(null);
+
+  // Detect a view change during render so the entering layer mounts already
+  // animating (no extra paint of the old view in the new slot).
+  if (viewKey !== shownKey) {
+    const dir = (resolveDirection ?? slideDirection)(shownKey, viewKey);
+    setLeaving({ id: animId, dir, node: liveChildren.current });
+    setShownKey(viewKey);
+    setAnimId((n) => n + 1);
+    setEnterDir(dir);
+  }
+
+  useEffect(() => {
+    liveChildren.current = children;
+  });
+
+  // Drop the outgoing layer once its slide-out has finished.
+  useEffect(() => {
+    if (!leaving) return;
+    const id = leaving.id;
+    const t = window.setTimeout(() => {
+      setLeaving((cur) => (cur && cur.id === id ? null : cur));
+    }, SLIDE_MS);
+    return () => window.clearTimeout(t);
+  }, [leaving]);
+
+  return (
+    <div className="relative flex-1 min-h-0 overflow-hidden">
+      {leaving && (
+        <div
+          key={`leave-${leaving.id}`}
+          className="absolute inset-0 flex flex-col"
+          style={{
+            animation: `${
+              leaving.dir === 1 ? 'rpSlideOutLeft' : 'rpSlideOutRight'
+            } ${SLIDE_MS}ms ease forwards`,
+          }}
+        >
+          {leaving.node}
+        </div>
+      )}
+      <div
+        key={`shown-${animId}`}
+        className="absolute inset-0 flex flex-col"
+        style={
+          enterDir === 0
+            ? undefined
+            : {
+                animation: `${
+                  enterDir === 1 ? 'rpSlideInRight' : 'rpSlideInLeft'
+                } ${SLIDE_MS}ms ease forwards`,
+              }
+        }
+      >
+        {children}
+      </div>
+      <style>{`
+        @keyframes rpSlideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        @keyframes rpSlideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+        @keyframes rpSlideOutLeft { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+        @keyframes rpSlideOutRight { from { transform: translateX(0); } to { transform: translateX(100%); } }
+      `}</style>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
 // Trail list pane (left)
 // ---------------------------------------------------------------------------
 
@@ -2323,7 +2502,8 @@ const TrailListPane: React.FC<{
         />
       )}
 
-      {configMode ? (
+      <SlidePane viewKey={configMode ? 'config' : leftViewMode}>
+        {configMode ? (
         <FolderConfigPane
           dirPaths={dirPaths}
           filePaths={filePaths}
@@ -2394,6 +2574,7 @@ const TrailListPane: React.FC<{
             label="Trails"
             count={entries.length || undefined}
             onClose={() => onSetViewMode('tours')}
+            closeAsBack
           />
           {entries.length >= 10 && (
             <div
@@ -2460,6 +2641,7 @@ const TrailListPane: React.FC<{
           </div>
         </>
       )}
+      </SlidePane>
     </aside>
   );
 };
@@ -4477,8 +4659,81 @@ const RailPaneHeader: React.FC<{
   onClose: () => void;
   onBack?: () => void;
   backContent?: React.ReactNode;
-}> = ({ icon, label, count, onClose, onBack, backContent }) => {
+  // Render the pane's dismiss control as a leading back button (chevron) instead
+  // of a trailing X. Back always goes up one level: a nested `onBack` (e.g. the
+  // selected-contributor drilldown) takes priority, otherwise `onClose` returns
+  // to the overview. Used by the nav-card panes that slide in over the overview.
+  closeAsBack?: boolean;
+  // Breadcrumb tail appended after the label (closeAsBack only): drilling in
+  // extends the header ("‹ CONTRIBUTORS › @handle") instead of replacing it. The
+  // label stays the back target; the crumb marks where you are.
+  crumb?: React.ReactNode;
+}> = ({ icon, label, count, onClose, onBack, backContent, closeAsBack, crumb }) => {
   const { theme } = useTheme();
+
+  if (closeAsBack) {
+    // Back goes up one level: a nested `onBack` (e.g. the selected contributor)
+    // returns to this pane's list, otherwise `onClose` returns to the overview.
+    const goBack = onBack ?? onClose;
+    const backLabel = onBack ? `Back to ${label.toLowerCase()}` : 'Back to overview';
+    return (
+      <div
+        className="px-3 py-2 border-b sticky top-0 z-10 shrink-0 flex items-center gap-1.5"
+        style={{
+          borderColor: theme.colors.border,
+          background: theme.colors.background,
+        }}
+      >
+        <button
+          type="button"
+          onClick={goBack}
+          className="flex items-center gap-2 -ml-1 px-1.5 py-1 rounded transition-opacity hover:opacity-70 shrink-0"
+          style={{ color: theme.colors.textSecondary, cursor: 'pointer' }}
+          title={backLabel}
+          aria-label={backLabel}
+        >
+          <ChevronLeft size={16} />
+          <span
+            style={{
+              fontSize: theme.fontSizes[0],
+              fontWeight: theme.fontWeights.semibold,
+              color: theme.colors.textSecondary,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
+            {label}
+          </span>
+          {count !== undefined && crumb === undefined && (
+            <span
+              style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted }}
+            >
+              {count}
+            </span>
+          )}
+        </button>
+        {crumb !== undefined && (
+          <>
+            <ChevronRight
+              size={14}
+              style={{ color: theme.colors.textMuted, flexShrink: 0 }}
+            />
+            <span
+              className="truncate"
+              style={{
+                fontSize: theme.fontSizes[1],
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.text,
+              }}
+            >
+              {crumb}
+            </span>
+          </>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       className={`px-4 border-b sticky top-0 z-10 shrink-0 flex items-center gap-2 ${
@@ -4566,6 +4821,7 @@ const StructurePane: React.FC<{
         label="Structure"
         count={packages.length || undefined}
         onClose={onClose}
+        closeAsBack
       />
       {packages.length === 0 && !packagesLoading ? (
         <div
@@ -4765,29 +5021,20 @@ const ContributorsPane: React.FC<{
         count={selected ? undefined : rows.length || undefined}
         onClose={onClose}
         onBack={selected ? clearSelection : undefined}
-        backContent={
-          selected ? (
-            <>
-              <ContributorAvatar
-                avatarUrl={selected.avatarUrl}
-                name={selected.name}
-                size={36}
-              />
-              <span
-                className="truncate"
-                style={{
-                  fontSize: theme.fontSizes[2],
-                  fontWeight: theme.fontWeights.semibold,
-                  color: theme.colors.text,
-                }}
-              >
-                {selected.name}
-              </span>
-            </>
-          ) : undefined
+        closeAsBack
+        crumb={
+          selected
+            ? selected.login
+              ? `@${selected.login}`
+              : selected.name
+            : undefined
         }
       />
 
+      <SlidePane
+        viewKey={selected ? selected.key : 'list'}
+        resolveDirection={(_from, to) => (to === 'list' ? -1 : 1)}
+      >
       {selected ? (
         <div className="flex-1 min-h-0 overflow-y-auto">
           <ContributorProfile
@@ -4797,7 +5044,7 @@ const ContributorsPane: React.FC<{
               name: selected.name,
               avatarUrl: selected.avatarUrl,
               htmlUrl: selected.htmlUrl,
-              email: selected.email,
+              emails: selected.emails,
               commits: selected.commits,
             }}
             repo={repo}
@@ -4820,7 +5067,7 @@ const ContributorsPane: React.FC<{
                     key={row.key}
                     type="button"
                     onClick={() => handleRowClick(row)}
-                    className="flex w-full flex-col gap-1.5 px-4 py-2.5 text-left border-b transition-colors hover:opacity-90"
+                    className="flex w-full flex-col gap-1.5 px-4 py-3 text-left border-b transition-colors hover:opacity-90"
                     style={{
                       borderColor: theme.colors.border,
                       color: theme.colors.text,
@@ -4832,36 +5079,28 @@ const ContributorsPane: React.FC<{
                         : undefined,
                     }}
                   >
-                    <div className="flex w-full items-center gap-2.5">
+                    <div className="flex w-full items-center gap-3">
                       <ContributorAvatar
                         avatarUrl={row.avatarUrl}
                         name={row.name}
-                        size={28}
+                        size={36}
                       />
                       <div className="min-w-0 flex flex-col">
                         <span
                           className="truncate"
-                          style={{ fontSize: theme.fontSizes[1] }}
+                          style={{
+                            fontSize: theme.fontSizes[2],
+                            fontWeight: theme.fontWeights.semibold,
+                          }}
                         >
                           {row.name}
                         </span>
-                        {row.secondary && (
-                          <span
-                            className="truncate"
-                            style={{
-                              fontSize: theme.fontSizes[0],
-                              color: theme.colors.textMuted,
-                            }}
-                          >
-                            {row.secondary}
-                          </span>
-                        )}
                       </div>
                       <span
                         className="ml-auto shrink-0 text-right tabular-nums"
                         style={{
                           color: theme.colors.textMuted,
-                          fontSize: theme.fontSizes[0],
+                          fontSize: theme.fontSizes[1],
                         }}
                         title={
                           row.stats
@@ -4911,6 +5150,7 @@ const ContributorsPane: React.FC<{
           )}
         </>
       )}
+      </SlidePane>
     </div>
   );
 };
@@ -4968,7 +5208,8 @@ const ContributorProfile: React.FC<{
     name: string;
     avatarUrl?: string;
     htmlUrl?: string;
-    email?: string;
+    /** Every blame email folded into this person — listed in the profile body. */
+    emails?: string[];
     commits?: number;
   };
   repo: string;
@@ -5036,7 +5277,7 @@ const ContributorProfile: React.FC<{
           >
             {displayName}
           </div>
-          {identity.login ? (
+          {identity.login && (
             <a
               href={identity.htmlUrl ?? `https://github.com/${identity.login}`}
               target="_blank"
@@ -5046,18 +5287,21 @@ const ContributorProfile: React.FC<{
             >
               @{identity.login}
             </a>
-          ) : (
-            identity.email && (
-              <div
-                className="truncate"
-                style={{ color: muted, fontSize: theme.fontSizes[1] }}
-              >
-                {identity.email}
-              </div>
-            )
           )}
         </div>
       </div>
+
+      {/* Blame emails folded into this person — the addresses that own code
+          here. Hidden from the list; surfaced once you drill into the profile. */}
+      {identity.emails && identity.emails.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          {identity.emails.map((email) => (
+            <Fragment key={email}>
+              {metaRow(<Mail size={14} />, email, `mailto:${email}`)}
+            </Fragment>
+          ))}
+        </div>
+      )}
 
       {/* Their commit count to THIS repo (shortlog / GitHub graph). */}
       {identity.commits != null && identity.commits > 0 && (

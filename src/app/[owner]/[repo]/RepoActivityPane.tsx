@@ -23,7 +23,7 @@ import {
   GitCommitHorizontal,
   RefreshCw,
   ChevronLeft,
-  X,
+  ChevronRight,
   FileDiff,
 } from 'lucide-react';
 import type { GitHubCommit } from '@/types/api';
@@ -74,24 +74,19 @@ const ContributorCard: React.FC<{
   onSelect: () => void;
 }> = ({ contributor, onSelect }) => {
   const { theme } = useTheme();
-  const { login, name, avatarUrl, commitCount, fileCount, lastCommitDate } =
+  const { name, avatarUrl, commitCount, fileCount, lastCommitDate } =
     contributor;
 
   return (
     <button
       type="button"
       onClick={onSelect}
-      className="w-full text-left rounded-lg p-3 flex items-center gap-3 transition-colors"
+      className="w-full text-left px-4 py-3 flex items-center gap-3 border-b transition-colors hover:opacity-90"
       style={{
-        background: theme.colors.backgroundSecondary,
-        border: `1px solid ${theme.colors.border}`,
+        borderColor: theme.colors.border,
+        color: theme.colors.text,
+        background: 'transparent',
         cursor: 'pointer',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = theme.colors.primary;
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = theme.colors.border;
       }}
     >
       {avatarUrl ? (
@@ -102,7 +97,7 @@ const ContributorCard: React.FC<{
           width={36}
           height={36}
           className="rounded-full shrink-0"
-          style={{ background: theme.colors.background }}
+          style={{ background: theme.colors.backgroundSecondary }}
         />
       ) : (
         <div
@@ -110,7 +105,7 @@ const ContributorCard: React.FC<{
           style={{
             width: 36,
             height: 36,
-            background: theme.colors.background,
+            background: theme.colors.backgroundSecondary,
             color: theme.colors.textMuted,
             fontSize: theme.fontSizes[2],
             fontWeight: theme.fontWeights.semibold,
@@ -129,7 +124,7 @@ const ContributorCard: React.FC<{
             fontWeight: theme.fontWeights.semibold,
           }}
         >
-          {login ?? name}
+          {name}
         </div>
         <div
           className="flex items-center gap-2 mt-0.5"
@@ -300,7 +295,7 @@ export const RepoActivityPane: React.FC<{
         agg = {
           key,
           login: c.author?.login ?? null,
-          name: c.author?.login ?? c.commit.author.name,
+          name: c.commit.author.name || c.author?.login || 'Unknown',
           avatarUrl: c.author?.avatar_url,
           shas: [],
           files: new Set<string>(),
@@ -419,46 +414,79 @@ export const RepoActivityPane: React.FC<{
     <div className="flex-1 min-h-0 flex flex-col">
       {/* Sticky header */}
       <div
-        className={`px-4 border-b sticky top-0 z-10 shrink-0 flex items-center gap-2 ${
-          isOpen ? 'py-4' : 'py-2'
-        }`}
+        className="px-4 py-2 border-b sticky top-0 z-10 shrink-0 flex items-center gap-2"
         style={{ borderColor: theme.colors.border, background: theme.colors.background }}
       >
         {isOpen && shownContributor ? (
+          // Drilled into one contributor: keep the section label as the back
+          // target and append the handle as a breadcrumb (matching the
+          // Contributors pane) rather than swapping the whole header.
           <>
             <button
               type="button"
               onClick={backToContributors}
-              className="flex items-center justify-center w-6 h-6 -ml-1 rounded transition-opacity hover:opacity-70"
+              className="flex items-center gap-2 -ml-1 px-1.5 py-1 rounded transition-opacity hover:opacity-70 shrink-0"
               style={{ color: theme.colors.textSecondary, cursor: 'pointer' }}
-              title="Back to contributors"
-              aria-label="Back to contributors"
+              title="Back to recent activity"
+              aria-label="Back to recent activity"
             >
               <ChevronLeft size={16} />
+              <span
+                style={{
+                  fontSize: theme.fontSizes[0],
+                  fontWeight: theme.fontWeights.semibold,
+                  color: theme.colors.textSecondary,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                Recent Activity
+              </span>
             </button>
-            {shownContributor.avatarUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={`${shownContributor.avatarUrl}${
-                  shownContributor.avatarUrl.includes('?') ? '&' : '?'
-                }s=72`}
-                alt={shownContributor.name}
-                width={36}
-                height={36}
-                style={{ borderRadius: '50%', flexShrink: 0 }}
-              />
-            )}
+            <ChevronRight
+              size={14}
+              style={{ color: theme.colors.textMuted, flexShrink: 0 }}
+            />
             <span
               className="truncate"
               style={{
-                fontSize: theme.fontSizes[2],
+                fontSize: theme.fontSizes[1],
                 fontWeight: theme.fontWeights.semibold,
                 color: theme.colors.text,
               }}
             >
-              {shownContributor.login ?? shownContributor.name}
+              {shownContributor.login
+                ? `@${shownContributor.login}`
+                : shownContributor.name}
             </span>
           </>
+        ) : onClose ? (
+          // Top-level: the "‹ Recent Activity main" header reads as one back
+          // button to the overview, matching the other nav-card panes.
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center gap-2 -ml-1 px-1.5 py-1 rounded transition-opacity hover:opacity-70"
+            style={{ color: theme.colors.textSecondary, cursor: 'pointer' }}
+            title="Back to overview"
+            aria-label="Back to overview"
+          >
+            <ChevronLeft size={16} />
+            <span
+              style={{
+                fontSize: theme.fontSizes[0],
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.textSecondary,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}
+            >
+              Recent Activity
+            </span>
+            <span style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted }}>
+              main
+            </span>
+          </button>
         ) : (
           <>
             <GitCommitHorizontal size={14} style={{ color: theme.colors.textSecondary }} />
@@ -490,18 +518,6 @@ export const RepoActivityPane: React.FC<{
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
           </button>
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex items-center justify-center w-6 h-6 rounded transition-opacity hover:opacity-70"
-              style={{ color: theme.colors.textMuted, cursor: 'pointer' }}
-              title="Close activity"
-              aria-label="Close activity"
-            >
-              <X size={14} />
-            </button>
-          )}
         </div>
       </div>
 
@@ -553,7 +569,7 @@ export const RepoActivityPane: React.FC<{
             style={{ transform: isOpen ? 'translateX(-100%)' : 'translateX(0)' }}
             aria-hidden={isOpen}
           >
-            <div className="p-3 flex flex-col gap-2">
+            <div className="flex flex-col">
               {contributors.map((c) => (
                 <ContributorCard
                   key={c.key}

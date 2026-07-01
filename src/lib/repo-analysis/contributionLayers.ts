@@ -298,7 +298,8 @@ export interface MergedContributor {
   /** Every blame email folded into this person (lowercased) — drives the
    *  highlight: the union of files across all of them. */
   emails: string[];
-  /** Display name (a resolved login wins, else the git author name). */
+  /** Display name — the git author name (from shortlog) when known, else a
+   *  resolved login, else an email. */
   name: string;
   /** GitHub login when resolved (noreply-decoded or API overlay). */
   login?: string;
@@ -430,9 +431,9 @@ export function mergeContributors(
   const finalize = (g: Group): MergedContributor => {
     const emails = g.members.map((m) => m.email.toLowerCase());
     const commits = g.members.reduce((s, m) => s + m.commits, 0);
-    // Dominant member (first, since input is lines-desc) names the row when no
-    // GitHub login resolved.
-    const name = g.login ?? g.members[0]?.name ?? emails[0] ?? g.key;
+    // Prefer the git author name (from the dominant member — first, since input
+    // is lines-desc); fall back to the resolved login, then an email.
+    const name = g.members[0]?.name ?? g.login ?? emails[0] ?? g.key;
     const avatarUrl =
       g.avatarUrl ??
       (g.githubId != null
