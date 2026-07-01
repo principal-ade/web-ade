@@ -43,6 +43,7 @@ const RESERVED_OWNERS = new Set([
   'explore',
   'feed',
   'legacy',
+  'home',
 ]);
 
 // `/{owner}/{repo}` repo page → its agent catalog API. Like the trail/topic
@@ -69,6 +70,22 @@ function resolveApiPath(pathname: string): string | undefined {
 }
 
 export function middleware(request: NextRequest): NextResponse {
+  // Signed-in users don't need the marketing landing — send document
+  // navigations to `/` straight to the app home (`/home`). Gated on the auth
+  // cookie and real browser navigations (not RSC/prefetch, not agent callers),
+  // and skips the `?view=` feeds, which live on `/`.
+  const { pathname, searchParams } = request.nextUrl;
+  if (
+    pathname === '/' &&
+    !searchParams.has('view') &&
+    request.cookies.has('github_token') &&
+    (request.headers.get('accept') ?? '').includes('text/html') &&
+    !request.headers.get('rsc') &&
+    !request.headers.get('next-router-prefetch')
+  ) {
+    return NextResponse.redirect(new URL('/home', request.url));
+  }
+
   const apiPath = resolveApiPath(request.nextUrl.pathname);
   if (!apiPath) return NextResponse.next();
 
