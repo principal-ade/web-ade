@@ -277,11 +277,24 @@ export function useTrailSession(trailId: string): TrailSession {
           trail.payload.repos?.[0]?.authoredAtSha ??
           trail.payload.authoredAt?.sha;
 
-        const treeData = await trpc.github.getTree.query({
-          owner: trail.owner,
-          repo: trail.repo,
-          ...(authoredSha ? { ref: authoredSha } : {}),
-        });
+        // Fetch the tree via a presigned S3 URL rather than inline through
+        // tRPC: a monorepo's tree can exceed the ~6MB SSR response cap and
+        // truncate. S3 has no such cap. `getTreeUrl` mirrors getTree's ref
+        // handling, so pinning to `authoredSha` (and its 422 default-branch
+        // fallback) still works.
+        const { url, sha, fellBackToDefaultBranch } =
+          await trpc.github.getTreeUrl.query({
+            owner: trail.owner,
+            repo: trail.repo,
+            ...(authoredSha ? { ref: authoredSha } : {}),
+          });
+        const treeRes = await fetch(url);
+        if (!treeRes.ok)
+          throw new Error(`tree fetch failed (${treeRes.status})`);
+        const treeData = (await treeRes.json()) as {
+          sha?: string;
+          tree: Array<{ path: string; type: string; size?: number }>;
+        };
         const files = treeData.tree
           .filter((entry) => entry.type === 'blob')
           .map((entry) => ({
@@ -291,7 +304,7 @@ export function useTrailSession(trailId: string): TrailSession {
         const tree = new GitFileTreeBuilder().build({
           files,
           rootPath: `/${trail.owner}/${trail.repo}`,
-          commitSha: treeData.sha,
+          commitSha: treeData.sha ?? sha,
           branch: 'main',
         });
 
@@ -307,7 +320,7 @@ export function useTrailSession(trailId: string): TrailSession {
           initialAllowAnonNotes: trail.allowAnonNotes ?? false,
           ownerGithubId: trail.entry.createdBy.githubId,
           authoredSha,
-          authoredCommitMissing: treeData.fellBackToDefaultBranch ?? false,
+          authoredCommitMissing: fellBackToDefaultBranch ?? false,
         });
       } catch (err) {
         if (cancelled) return;
