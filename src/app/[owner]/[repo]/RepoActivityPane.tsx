@@ -44,6 +44,23 @@ function relativeTime(iso: string): string {
   return `${Math.floor(days / 365)}y ago`;
 }
 
+// A calendar-aware label for the activity view (contributors' last-active label
+// and the commit rows): the clock time for today ("2:30 PM"), "yesterday" for
+// the prior day, "Nd ago" within the week, then relativeTime for older.
+function activityTime(iso: string): string {
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return '';
+  const now = new Date();
+  const startOfDay = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const dayDiff = Math.round((startOfDay(now) - startOfDay(then)) / 86_400_000);
+  if (dayDiff <= 0)
+    return then.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (dayDiff === 1) return 'yesterday';
+  if (dayDiff < 7) return `${dayDiff}d ago`;
+  return relativeTime(iso);
+}
+
 /**
  * Stable grouping key for a commit's author: prefer the GitHub login, falling
  * back to the commit-metadata name (prefixed so a login can never collide with
@@ -72,7 +89,9 @@ interface Contributor {
 const ContributorCard: React.FC<{
   contributor: Contributor;
   onSelect: () => void;
-}> = ({ contributor, onSelect }) => {
+  onHover: () => void;
+  onHoverEnd: () => void;
+}> = ({ contributor, onSelect, onHover, onHoverEnd }) => {
   const { theme } = useTheme();
   const { name, avatarUrl, commitCount, fileCount, lastCommitDate } =
     contributor;
@@ -81,12 +100,20 @@ const ContributorCard: React.FC<{
     <button
       type="button"
       onClick={onSelect}
-      className="w-full text-left px-4 py-3 flex items-center gap-3 border-b transition-colors hover:opacity-90"
+      className="w-full text-left px-4 py-3 flex items-center gap-3 border-b transition-colors"
       style={{
         borderColor: theme.colors.border,
         color: theme.colors.text,
         background: 'transparent',
         cursor: 'pointer',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = theme.colors.backgroundSecondary;
+        onHover();
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'transparent';
+        onHoverEnd();
       }}
     >
       {avatarUrl ? (
@@ -152,7 +179,7 @@ const ContributorCard: React.FC<{
           className="shrink-0"
           style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
         >
-          {relativeTime(lastCommitDate)}
+          {activityTime(lastCommitDate)}
         </span>
       )}
     </button>
@@ -210,7 +237,7 @@ const CommitRow: React.FC<{
             flexShrink: 0,
           }}
         >
-          {relativeTime(commit.commit.author.date)}
+          {activityTime(commit.commit.author.date)}
         </span>
         <span
           className="ml-auto"
@@ -243,6 +270,9 @@ export const RepoActivityPane: React.FC<{
   onFocusShasChange?: (shas: string[] | null) => void;
   /** Row hover → highlight that commit's files on the city (null clears). */
   onHoverCommit?: (sha: string | null) => void;
+  /** Contributor-card hover → report that person's commit SHAs so the parent can
+   *  preview their footprint on the city in a distinct color (null clears). */
+  onHoverShasChange?: (shas: string[] | null) => void;
   /** Close the activity view and return to the tours / About rail. */
   onClose?: () => void;
   /** Externally-requested contributor (e.g. clicked from the About card) to open
@@ -263,6 +293,7 @@ export const RepoActivityPane: React.FC<{
   onCommitShasChange,
   onFocusShasChange,
   onHoverCommit,
+  onHoverShasChange,
   onClose,
   focusContributor,
 }) => {
@@ -319,7 +350,11 @@ export const RepoActivityPane: React.FC<{
         fileCount: a.files.size,
         lastCommitDate: a.lastCommitDate,
       }))
-      .sort((x, y) => y.commitCount - x.commitCount);
+      .sort(
+        (x, y) =>
+          new Date(y.lastCommitDate).getTime() -
+          new Date(x.lastCommitDate).getTime(),
+      );
   }, [commits, commitFiles]);
 
   // Open the requested contributor's drill-down when asked from outside (the
@@ -399,6 +434,7 @@ export const RepoActivityPane: React.FC<{
     return () => {
       onHoverCommit?.(null);
       onFocusShasChange?.(null);
+      onHoverShasChange?.(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -408,6 +444,7 @@ export const RepoActivityPane: React.FC<{
     setSelectedAuthor(null);
     onSelectCommit(null);
     onHoverCommit?.(null);
+    onHoverShasChange?.(null);
   };
 
   return (
@@ -575,6 +612,8 @@ export const RepoActivityPane: React.FC<{
                   key={c.key}
                   contributor={c}
                   onSelect={() => setSelectedAuthor(c.key)}
+                  onHover={() => onHoverShasChange?.(c.shas)}
+                  onHoverEnd={() => onHoverShasChange?.(null)}
                 />
               ))}
             </div>

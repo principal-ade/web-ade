@@ -349,6 +349,11 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   const [activityFocusShas, setActivityFocusShas] = useState<string[] | null>(
     null,
   );
+  // SHAs of the contributor currently hovered in the Activity list (or null) —
+  // previews their footprint on the city in a distinct color.
+  const [activityHoverShas, setActivityHoverShas] = useState<string[] | null>(
+    null,
+  );
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   // Which edge the file source drawer docks to. Files open on the right. (The
   // README no longer uses this drawer — it opens in the File City panel's
@@ -1220,8 +1225,24 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         if (hoverLayer) layers.push(hoverLayer);
       }
     }
+    // Hovering a contributor in the list previews their footprint: an accent
+    // layer over the union of files their commits touched.
+    if (activityHoverShas && activityHoverShas.length > 0) {
+      const seen = new Set<string>();
+      const hoverFiles = activityHoverShas
+        .flatMap((sha) => commitFiles.get(sha) ?? [])
+        .filter((f) =>
+          seen.has(f.filename) ? false : (seen.add(f.filename), true),
+        );
+      const hoverLayer = buildCommitFilesLayer(hoverFiles, {
+        id: 'contributor-hover',
+        color: theme.colors.accent,
+        priority: 90,
+      });
+      if (hoverLayer) layers.push(hoverLayer);
+    }
     return layers.length > 0 ? layers : null;
-  }, [isActivityView, commitFiles, activityFocusShas, hoveredCommitSha, theme.colors.primary, theme.colors.accent]);
+  }, [isActivityView, commitFiles, activityFocusShas, hoveredCommitSha, activityHoverShas, theme.colors.primary, theme.colors.accent]);
   // Selected commit rendered natively by FileCityGuidePanel's commit mode
   // (header + message + changed-file list + city highlights). Only while the
   // Activity view is active.
@@ -1433,6 +1454,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           onCommitShasChange={setActivityShas}
           onFocusShasChange={setActivityFocusShas}
           onHoverCommit={setHoveredCommitSha}
+          onActivityHoverShasChange={setActivityHoverShas}
           trailFileRows={trailFileRows}
           selectedFilePath={selectedFilePath}
           onSelectFile={(path) => {
@@ -2415,6 +2437,8 @@ const TrailListPane: React.FC<{
   /** Activity reports the focused contributor's SHAs (or null) for the heatmap. */
   onFocusShasChange: (shas: string[] | null) => void;
   onHoverCommit: (sha: string | null) => void;
+  /** Activity reports the hovered contributor's SHAs (or null) for the city. */
+  onActivityHoverShasChange: (shas: string[] | null) => void;
   trailFileRows: { path: string; trailCount: number }[];
   selectedFilePath: string | null;
   onSelectFile: (path: string | null) => void;
@@ -2465,6 +2489,7 @@ const TrailListPane: React.FC<{
   onCommitShasChange,
   onFocusShasChange,
   onHoverCommit,
+  onActivityHoverShasChange,
   trailFileRows,
   selectedFilePath,
   onSelectFile,
@@ -2522,6 +2547,7 @@ const TrailListPane: React.FC<{
           onCommitShasChange={onCommitShasChange}
           onFocusShasChange={onFocusShasChange}
           onHoverCommit={onHoverCommit}
+          onHoverShasChange={onActivityHoverShasChange}
           onClose={onToggleActivity}
           focusContributor={activityFocusContributor}
         />
@@ -5096,7 +5122,7 @@ const ContributorsPane: React.FC<{
                     key={row.key}
                     type="button"
                     onClick={() => handleRowClick(row)}
-                    className="flex w-full flex-col gap-1.5 px-4 py-3 text-left border-b transition-colors hover:opacity-90"
+                    className="flex w-full flex-col gap-1.5 px-4 py-3 text-left border-b transition-colors"
                     style={{
                       borderColor: theme.colors.border,
                       color: theme.colors.text,
@@ -5106,6 +5132,15 @@ const ContributorsPane: React.FC<{
                       boxShadow: active
                         ? `inset 3px 0 0 ${theme.colors.primary}`
                         : undefined,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!active)
+                        e.currentTarget.style.background =
+                          theme.colors.backgroundSecondary;
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!active)
+                        e.currentTarget.style.background = 'transparent';
                     }}
                   >
                     <div className="flex w-full items-center gap-3">
@@ -5504,11 +5539,17 @@ const RepoNavCards: React.FC<{
           key={card.mode}
           type="button"
           onClick={() => onOpenView(card.mode)}
-          className="flex items-center gap-3 rounded-md px-3 py-2.5 border text-left transition-colors hover:opacity-90"
+          className="flex items-center gap-3 rounded-md px-3 py-2.5 border text-left transition-colors"
           style={{
             borderColor: theme.colors.border,
-            background: `color-mix(in srgb, ${theme.colors.text} 4%, transparent)`,
+            background: theme.colors.backgroundSecondary,
             color: theme.colors.text,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = theme.colors.primary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = theme.colors.border;
           }}
           title={`Open ${card.label.toLowerCase()}`}
         >
