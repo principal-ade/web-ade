@@ -18,6 +18,8 @@ import {
   Github,
   Search,
   FileText,
+  CalendarDays,
+  AlignLeft,
   Settings,
   Check,
   X,
@@ -4200,6 +4202,16 @@ const RepoOverview: React.FC<{
   // coverage exist" signal — we never run the sweep here.
   const { analysis } = useRepoAnalysis();
 
+  // Total blamed lines across the repo — only known once the cached analysis has
+  // loaded, so the "N lines" fact stays hidden until then.
+  const totalLines = useMemo(
+    () =>
+      analysis
+        ? Object.values(analysis.totalLines).reduce((sum, n) => sum + n, 0)
+        : null,
+    [analysis],
+  );
+
   // Eagerly resolve GitHub identity for the head of the blame map so the "Lines"
   // avatar row has faces the moment the Commits/Lines switch is visible — instead
   // of waiting for the Contributors pane to mount. Bounded to a small head (the
@@ -4441,6 +4453,23 @@ const RepoOverview: React.FC<{
           </a>
         </>
       )}
+
+      {/* Repo facts: age (left) + total blamed lines (right, once analysis loads). */}
+      <div
+        className="flex items-center justify-between gap-2"
+        style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+      >
+        <span className="inline-flex items-center gap-1.5">
+          <CalendarDays size={14} />
+          Created {relativeTime(info.created_at)}
+        </span>
+        {totalLines != null && (
+          <span className="inline-flex items-center gap-1.5">
+            <AlignLeft size={14} />
+            {totalLines.toLocaleString()} lines
+          </span>
+        )}
+      </div>
 
       {/* Contributor faces: the top contributors, each opening their activity
           drill-down. Everyone else lives behind the "Contributors" nav card. */}
@@ -5395,10 +5424,7 @@ const ContributorProfile: React.FC<{
             <InlineTrailLoader size={18} />
           </div>
         ) : data ? (
-          <div
-            className="rounded-md overflow-hidden"
-            style={{ border: `1px solid ${theme.colors.border}` }}
-          >
+          <div className="rounded-md overflow-hidden">
             <ActivityHeatmap activityData={activityData} bannerHeight={132} />
           </div>
         ) : (
