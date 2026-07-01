@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { components } from "@octokit/openapi-types";
 import { getGitHubToken } from "@/lib/auth/cookies";
+
+type GitHubIssue = components["schemas"]["issue"];
 
 type RouteParams = { params: Promise<{ owner: string; name: string; number: string }> };
 
@@ -37,31 +40,16 @@ export async function GET(
       );
     }
 
-    const data = await response.json();
+    // Pass the raw GitHub issue through, typed against the official schema
+    // (`@octokit/openapi-types`). Previously this route hand-picked a subset
+    // and dropped `state_reason`, `author_association`, and `assignees` — the
+    // fields the File City issue view needs. Returning the full payload lets
+    // the client map it with `issueViewFromGitHubIssue` and keeps the response
+    // a superset of the old shape (same top-level field names), so any other
+    // consumer keeps working.
+    const data = (await response.json()) as GitHubIssue;
 
-    // Return relevant issue details
-    const issue = {
-      number: data.number,
-      title: data.title,
-      body: data.body,
-      state: data.state,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
-      closed_at: data.closed_at,
-      html_url: data.html_url,
-      user: {
-        login: data.user.login,
-        avatar_url: data.user.avatar_url,
-      },
-      labels: data.labels.map((l: { id: number; name: string; color: string }) => ({
-        id: l.id,
-        name: l.name,
-        color: l.color,
-      })),
-      comments: data.comments,
-    };
-
-    const jsonResponse = NextResponse.json(issue);
+    const jsonResponse = NextResponse.json(data);
 
     // Cache for 2 minutes
     jsonResponse.headers.set(

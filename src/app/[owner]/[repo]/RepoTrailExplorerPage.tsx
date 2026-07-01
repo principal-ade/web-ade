@@ -1415,6 +1415,13 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             // returns to the idle coverage layer between them. Leaving the
             // activity view also clears any open commit.
             if (mode !== 'activity') setSelectedCommitSha(null);
+            // The package focus (idleFocusDirectory) only belongs to the
+            // Structure view; leaving it must release the city back to idle so
+            // About doesn't stay zoomed on the last-clicked package.
+            if (mode !== 'structure') {
+              setSelectedPackagePath(null);
+              setHoveredPackagePath(null);
+            }
             // The Trails view drives the right pane to the Trail explorer (via
             // trailsExpanded); every other view collapses it back.
             setTrailsExpanded(mode === 'trails');
@@ -1939,6 +1946,15 @@ const Header: React.FC<{
         paddingBottom: '0.5rem',
       }}
     >
+      {/* Mount animation for the repo breadcrumb crumb — it unmounts on the
+          overview and remounts when a view is selected, so this fires on
+          appear. */}
+      <style>{`
+        @keyframes rpCrumbIn {
+          from { opacity: 0; transform: translateX(-4px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
       <div className="hidden md:flex items-center gap-2 min-w-0 flex-1">
         <Link
           href="/"
@@ -1993,9 +2009,12 @@ const Header: React.FC<{
           {owner}
         </Link>
         {repoActive && (
-          <>
+          <span
+            className="flex items-center min-w-0"
+            style={{ animation: 'rpCrumbIn 240ms ease-out both' }}
+          >
             <span
-              className="mx-1 flex-shrink-0"
+              className="-ml-0.5 mr-1 flex-shrink-0"
               style={{ color: theme.colors.textMuted }}
               aria-hidden="true"
             >
@@ -2016,7 +2035,7 @@ const Header: React.FC<{
             >
               {repo}
             </button>
-          </>
+          </span>
         )}
       </div>
 
@@ -2048,9 +2067,12 @@ const Header: React.FC<{
           </span>
         </Link>
         {repoActive && (
-          <>
+          <span
+            className="flex items-center min-w-0"
+            style={{ animation: 'rpCrumbIn 240ms ease-out both' }}
+          >
             <span
-              className="mx-1 flex-shrink-0"
+              className="-ml-0.5 mr-1 flex-shrink-0"
               style={{ color: theme.colors.textMuted }}
               aria-hidden="true"
             >
@@ -2071,7 +2093,7 @@ const Header: React.FC<{
             >
               {repo}
             </button>
-          </>
+          </span>
         )}
       </div>
 
