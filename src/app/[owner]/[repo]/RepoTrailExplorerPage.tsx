@@ -32,6 +32,7 @@ import {
   GitFork,
   Play,
   Activity,
+  CircleDot,
   ChevronRight,
   ChevronLeft,
   Boxes,
@@ -65,6 +66,7 @@ import type {
   HighlightLayer,
   CommitView,
   ReadmeView,
+  IssueView,
   LineCountsSliceData,
 } from '@industry-theme/file-city-panel';
 import {
@@ -90,6 +92,7 @@ import { ActivityHeatmap } from '@/components/ActivityHeatmap';
 import type { UserActivityResponse } from '@/app/api/github/user/[username]/activity/route';
 import { FileSourcePanel } from './FileSourcePanel';
 import { RepoActivityPane } from './RepoActivityPane';
+import { RepoIssuesPane } from './RepoIssuesPane';
 import { RepoAnalysisStatus } from './RepoAnalysisStatus';
 import {
   RepoAnalysisProvider,
@@ -104,6 +107,7 @@ import {
 } from '@/lib/repo-analysis/contributionLayers';
 import { useCommitsChangedFiles } from '@/hooks/useCommitsChangedFiles';
 import { useCommitView } from '@/hooks/useCommitView';
+import { useIssueView } from '@/hooks/useIssueView';
 import { useReadme } from '@/hooks/useReadme';
 import {
   buildAggregateChurnLayers,
@@ -169,6 +173,7 @@ type LeftViewMode =
   | 'files'
   | 'tours'
   | 'activity'
+  | 'issues'
   | 'structure'
   | 'contributors';
 
@@ -338,6 +343,12 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   const [selectedCommitSha, setSelectedCommitSha] = useState<string | null>(
     null,
   );
+  // Issue picked from the Issues list — when set, the right pane shows it in the
+  // File City panel's native issue mode. Mutually exclusive with
+  // commit/tour/readme/file selection.
+  const [selectedIssueNumber, setSelectedIssueNumber] = useState<number | null>(
+    null,
+  );
   // Commit row currently hovered in the Activity list — paints that commit's
   // files on the idle city in a distinct color over the aggregate heatmap.
   const [hoveredCommitSha, setHoveredCommitSha] = useState<string | null>(null);
@@ -416,6 +427,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     setSelectedTourId(null);
     setSelectedFilePath(null);
     setSelectedCommitSha(null);
+    setSelectedIssueNumber(null);
     setActiveReadmePath(null);
     setTrailsExpanded(false);
     // Plain toggle lands on the contributor cards, not a stale drill-down.
@@ -446,6 +458,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
       setSelectedTourId(null);
       setSelectedFilePath(null);
       setSelectedCommitSha(null);
+      setSelectedIssueNumber(null);
       setActiveReadmePath(null);
       setTrailsExpanded(false);
     },
@@ -1249,6 +1262,15 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   const { commit: selectedCommitView, loading: commitViewLoading } =
     useCommitView(owner, repo, isActivityView ? selectedCommitSha : null);
 
+  // Selected issue rendered natively by FileCityGuidePanel's issue mode (header
+  // + body + reporter card). Only while the Issues view is active.
+  const isIssuesView = leftViewMode === 'issues';
+  const { issue: selectedIssueView, loading: issueViewLoading } = useIssueView(
+    owner,
+    repo,
+    isIssuesView ? selectedIssueNumber : null,
+  );
+
   // README rendered natively by FileCityGuidePanel's readme mode (markdown left
   // + city + file-type legend). Driven by `activeReadmePath`; idle when null.
   const { readme: selectedReadmeView, loading: readmeViewLoading } = useReadme(
@@ -1415,6 +1437,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             // returns to the idle coverage layer between them. Leaving the
             // activity view also clears any open commit.
             if (mode !== 'activity') setSelectedCommitSha(null);
+            if (mode !== 'issues') setSelectedIssueNumber(null);
             // The package focus (idleFocusDirectory) only belongs to the
             // Structure view; leaving it must release the city back to idle so
             // About doesn't stay zoomed on the last-clicked package.
@@ -1438,6 +1461,10 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
               // Opening Activity from a nav card lands on the contributor
               // list, not a stale drill-down.
               setActivityFocusContributor(null);
+            } else if (mode === 'issues') {
+              setSelectedTrailId(null);
+              setSelectedTourId(null);
+              setSelectedFilePath(null);
             } else if (mode === 'trails') {
               // Keep any selected trail so it stays open in the explorer.
               setSelectedFilePath(null);
@@ -1456,6 +1483,11 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           onSelectCommit={(sha) => {
             setSelectedCommitSha(sha);
             if (sha) setActiveReadmePath(null);
+          }}
+          selectedIssueNumber={selectedIssueNumber}
+          onSelectIssue={(issueNumber) => {
+            setSelectedIssueNumber(issueNumber);
+            if (issueNumber != null) setActiveReadmePath(null);
           }}
           commitFiles={commitFiles}
           onCommitShasChange={setActivityShas}
@@ -1492,6 +1524,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             setSelectedTrailId(null);
             setSelectedTourId(null);
             setSelectedCommitSha(null);
+            setSelectedIssueNumber(null);
           }}
           readmeActive={activeReadmePath != null}
           tours={tours}
@@ -1540,9 +1573,12 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           showColorLegendToggle
           trailsExpanded={trailsExpanded}
           onCloseCommit={() => setSelectedCommitSha(null)}
+          onCloseIssue={() => setSelectedIssueNumber(null)}
           activityHeatmapLayers={activityHeatmapLayers}
           commitView={selectedCommitView}
           commitViewLoading={commitViewLoading}
+          issueView={selectedIssueView}
+          issueViewLoading={issueViewLoading}
           readmeView={selectedReadmeView}
           readmeViewLoading={readmeViewLoading}
           currentAuthor={user?.login}
@@ -2305,6 +2341,7 @@ const SLIDE_ORDER = [
   'config',
   'tours',
   'activity',
+  'issues',
   'contributors',
   'structure',
   'trails',
@@ -2452,6 +2489,9 @@ const TrailListPane: React.FC<{
   /** Commit picked from the Activity list (highlights the row). */
   selectedCommitSha: string | null;
   onSelectCommit: (sha: string | null) => void;
+  /** Issue picked from the Issues list (highlights the row). */
+  selectedIssueNumber: number | null;
+  onSelectIssue: (issueNumber: number | null) => void;
   /** Changed-file lists for the loaded commits — per-contributor file counts. */
   commitFiles: Map<string, ChangedFile[]>;
   /** Activity list reports its loaded SHAs + hovered commit up for the heatmap. */
@@ -2507,6 +2547,8 @@ const TrailListPane: React.FC<{
   activityFocusContributor,
   selectedCommitSha,
   onSelectCommit,
+  selectedIssueNumber,
+  onSelectIssue,
   commitFiles,
   onCommitShasChange,
   onFocusShasChange,
@@ -2572,6 +2614,14 @@ const TrailListPane: React.FC<{
           onHoverShasChange={onActivityHoverShasChange}
           onClose={onToggleActivity}
           focusContributor={activityFocusContributor}
+        />
+      ) : leftViewMode === 'issues' ? (
+        <RepoIssuesPane
+          owner={owner}
+          repo={repo}
+          selectedIssueNumber={selectedIssueNumber}
+          onSelectIssue={onSelectIssue}
+          onClose={() => onSetViewMode('tours')}
         />
       ) : leftViewMode === 'structure' ? (
         <StructurePane
@@ -5528,6 +5578,12 @@ const RepoNavCards: React.FC<{
         : 'Recent commits, by contributor',
     },
     {
+      mode: 'issues',
+      icon: <CircleDot size={18} />,
+      label: 'Issues',
+      description: 'Open issues and recent reports',
+    },
+    {
       mode: 'contributors',
       icon: <Users size={18} />,
       label: 'Contributors',
@@ -6343,6 +6399,8 @@ const RightPane: React.FC<{
    *  mode via the `commit` slice; the panel reframes the city and draws the
    *  header / message / changed-file chrome over it. */
   onCloseCommit: () => void;
+  /** Issue mode's ✕ → clears the selection, returning to the idle city. */
+  onCloseIssue: () => void;
   /** Aggregate churn + hovered-commit heatmap, painted on the idle tour city
    *  while browsing the Activity list. */
   activityHeatmapLayers: HighlightLayer[] | null;
@@ -6350,6 +6408,10 @@ const RightPane: React.FC<{
    *  loading or when no commit is picked). */
   commitView: CommitView | null;
   commitViewLoading: boolean;
+  /** Selected issue mapped to the panel's native IssueView (null while loading
+   *  or when no issue is picked). */
+  issueView: IssueView | null;
+  issueViewLoading: boolean;
   /** README mapped to the panel's native ReadmeView → fed to FileCityGuidePanel's
    *  readme mode via the `readme` slice (markdown left + city + file-type
    *  legend). Null while loading or when the README isn't open. */
@@ -6381,9 +6443,12 @@ const RightPane: React.FC<{
   showColorLegendToggle,
   trailsExpanded,
   onCloseCommit,
+  onCloseIssue,
   activityHeatmapLayers,
   commitView,
   commitViewLoading,
+  issueView,
+  issueViewLoading,
   readmeView,
   readmeViewLoading,
   currentAuthor,
@@ -6576,8 +6641,10 @@ const RightPane: React.FC<{
       },
       // The commit mode's ✕ returns to the idle city by clearing the selection.
       closeCommit: () => onCloseCommit(),
+      // The issue mode's ✕ does the same for a selected issue.
+      closeIssue: () => onCloseIssue(),
     }),
-    [onOpenFile, onCloseCommit],
+    [onOpenFile, onCloseCommit, onCloseIssue],
   );
   // Coordinates the TTS backend needs to look up this tour's cached audio.
   // Points at the source the tour was discovered in (repo or fork).
@@ -6632,6 +6699,16 @@ const RightPane: React.FC<{
         error: null,
         refresh: async () => {},
       },
+      // Picking an issue flips the panel into its native issue mode (header +
+      // body + reporter card, city framed top-right).
+      issue: {
+        scope: 'repository' as const,
+        name: 'issue',
+        data: issueView,
+        loading: issueViewLoading,
+        error: null,
+        refresh: async () => {},
+      },
       // Opening the repo README flips the panel into its native readme mode
       // (markdown left + city framed top-right + file-type legend bottom-right).
       // Gated on no tour being open: the panel ranks readme above tour, so the
@@ -6674,6 +6751,8 @@ const RightPane: React.FC<{
     contributionLayers,
     commitView,
     commitViewLoading,
+    issueView,
+    issueViewLoading,
     readmeView,
     readmeViewLoading,
     analysis,

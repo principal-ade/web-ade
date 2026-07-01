@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { components } from "@octokit/openapi-types";
 import { getGitHubToken } from "@/lib/auth/cookies";
-import type { GitHubIssue } from "@/types/api";
+
+// Official GitHub issue schema (generated from GitHub's OpenAPI spec) rather
+// than a hand-rolled interface — the issues surface (list route, single-issue
+// route, and the `useRepoIssues`/`useIssueView` hooks) now all speak this type.
+type GitHubIssue = components["schemas"]["issue"];
 
 function addCorsHeaders(response: NextResponse) {
   response.headers.set("Access-Control-Allow-Origin", "*");
