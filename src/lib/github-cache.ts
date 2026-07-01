@@ -98,6 +98,22 @@ async function fetchGitHub<T>(
 }
 
 /**
+ * Uncached GitHub API fetch.
+ *
+ * Use when the response can exceed `unstable_cache`'s 2MB ceiling — e.g. a
+ * monorepo's recursive git tree (elastic/kibana is ~16MB). Caching such a
+ * response throws "items over 2MB can not be cached" and 500s the route.
+ * Callers should fetch raw with this and cache a small *derived* value instead.
+ */
+export async function uncachedGitHubFetch<T>(
+  endpoint: string,
+  token?: string | null
+): Promise<T> {
+  const { data } = await fetchGitHub<T>(endpoint, token ? { token } : {});
+  return data;
+}
+
+/**
  * Cached GitHub API fetch - SHARED mode
  * Use for public data that all users can share (featured repos, public repo info)
  */

@@ -11,10 +11,13 @@
  * longer reads the tour-availability cache, and the git fallback probes only
  * the upstream repo.
  */
+import { unstable_cache } from 'next/cache';
 import { parseTour } from '@principal-ai/file-city-builder';
 import {
   cachedGitHubFetch,
   cachedUserGitHubFetch,
+  uncachedGitHubFetch,
+  CACHE_TAGS,
   GitHubApiError,
 } from '../github-cache';
 import { mergeTTSOptions } from '../tts/elevenlabs-client';
@@ -174,19 +177,32 @@ async function listRepoTourFiles(
   // The git-trees API accepts a branch name as the tree-ish; `recursive=1`
   // returns the entire flattened tree in one call.
   const endpoint = `/repos/${src.owner}/${src.repo}/git/trees/${branch}?recursive=1`;
-  const cacheKey = `tours-tree:${src.owner}/${src.repo}/${branch}`;
+  // The recursive tree is tens of MB on a monorepo (elastic/kibana ~16MB) —
+  // past `unstable_cache`'s 2MB ceiling, which throws "items over 2MB can not
+  // be cached" and 500s the route. Fetch the tree UNCACHED and cache only the
+  // derived tour-file paths (a handful of strings), keyed per-user like the
+  // former `cachedUserGitHubFetch` so private-repo listings stay isolated.
+  const userPrefix = token ? `user:${token.substring(0, 8)}:` : '';
+  const cacheKey = `${userPrefix}tours-tree:${src.owner}/${src.repo}/${branch}`;
+  const loadTourPaths = unstable_cache(
+    async () => {
+      const data = await uncachedGitHubFetch<GhTreeResponse>(endpoint, token);
+      if (data.truncated) {
+        // GitHub caps the recursive tree response; very large repos may hide
+        // tours past the limit. Rare, but worth a breadcrumb when it happens.
+        console.warn(
+          `[tours] Git tree truncated for ${src.owner}/${src.repo}; some tours may be missed.`,
+        );
+      }
+      return data.tree
+        .filter((e) => e.type === 'blob' && e.path.endsWith(TOUR_FILE_SUFFIX))
+        .map((e) => e.path);
+    },
+    [cacheKey],
+    { revalidate: TOURS_CACHE_TTL, tags: [CACHE_TAGS.GITHUB_API] },
+  );
   try {
-    const data = await fetchGh<GhTreeResponse>(endpoint, cacheKey, token);
-    if (data.truncated) {
-      // GitHub caps the recursive tree response; very large repos may hide
-      // tours past the limit. Rare, but worth a breadcrumb when it happens.
-      console.warn(
-        `[tours] Git tree truncated for ${src.owner}/${src.repo}; some tours may be missed.`,
-      );
-    }
-    return data.tree
-      .filter((e) => e.type === 'blob' && e.path.endsWith(TOUR_FILE_SUFFIX))
-      .map((e) => e.path);
+    return await loadTourPaths();
   } catch (error) {
     if (isMissing(error)) return [];
     throw error;
