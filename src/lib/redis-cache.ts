@@ -65,6 +65,15 @@ export async function getCached<T>(key: string): Promise<T | null> {
  * Store data in Redis with TTL
  * Non-blocking - errors are logged but don't propagate
  */
+/**
+ * Skip caching values larger than this (bytes). Upstash rejects oversized
+ * requests, so shipping a multi-MB blob (e.g. a monorepo's file tree) just
+ * burns a round-trip and logs an error before failing. Callers that hit this
+ * (the github tree cache) already fall back to S3 / in-memory, so skipping
+ * Redis is harmless. ~900KB stays under Upstash's 1MB request limit.
+ */
+const MAX_CACHE_VALUE_BYTES = 900_000;
+
 export async function setCached<T>(
   key: string,
   data: T,
@@ -72,6 +81,18 @@ export async function setCached<T>(
 ): Promise<void> {
   const client = getRedisClient();
   if (!client) return;
+
+  // Bail before the network call on values Upstash can't accept.
+  const size =
+    typeof data === 'string'
+      ? data.length
+      : Buffer.byteLength(JSON.stringify(data));
+  if (size > MAX_CACHE_VALUE_BYTES) {
+    console.warn(
+      `[Redis] Skipping oversized value (${size} bytes) for key: ${key}`
+    );
+    return;
+  }
 
   try {
     await client.set(key, data, { ex: ttlSeconds });

@@ -3,14 +3,20 @@
  * These types match the GitHub REST API v3 responses.
  */
 
-// Tree entry from GitHub's git/trees endpoint
+// Tree entry from GitHub's git/trees endpoint.
+//
+// `mode`, `sha`, and `url` come back from GitHub but are stripped before the
+// tree is cached / sent to the client (see `slimTreeResponse` in the github
+// router): on huge repos like elastic/kibana they tripled the payload past the
+// SSR response cap, and no consumer reads them — everything works off
+// `path`/`type`/`size`. Kept optional so the raw GitHub shape still type-checks.
 export interface GitHubTreeEntry {
   path: string;
-  mode: string;
+  mode?: string;
   type: 'blob' | 'tree';
-  sha: string;
+  sha?: string;
   size?: number;
-  url: string;
+  url?: string;
 }
 
 // Response from /repos/{owner}/{repo}/git/trees/{sha}?recursive=1

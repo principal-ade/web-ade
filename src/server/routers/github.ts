@@ -35,6 +35,34 @@ const tracer = trace.getTracer('github-router', '1.0.0');
 const GITHUB_API_BASE = 'https://api.github.com';
 
 /**
+ * Strip GitHub tree entries down to the fields the app actually consumes
+ * (`path`, `type`, `size`), dropping the per-entry `mode`, `sha`, and `url`.
+ *
+ * GitHub's recursive tree for a monorepo like elastic/kibana is ~14.8MB
+ * (52k+ entries), most of which is the per-entry `url` and `sha`. That blows
+ * past the ~6MB AWS Amplify/Lambda SSR response cap — the client then receives
+ * a truncated body and `response.json()` throws "Unexpected end of JSON input"
+ * — and past Upstash's max request size, so it never even caches. Slimming
+ * cuts kibana to ~5.7MB and lets every cache layer store it. Every consumer of
+ * `github.getTree` reads only `path`/`type`/`size` plus the top-level `sha`.
+ */
+function slimTreeResponse(data: GitHubTreeResponse): GitHubTreeResponse {
+  return {
+    sha: data.sha,
+    url: data.url,
+    truncated: data.truncated,
+    ...(data.fellBackToDefaultBranch
+      ? { fellBackToDefaultBranch: true }
+      : {}),
+    tree: data.tree.map((e) => ({
+      path: e.path,
+      type: e.type,
+      ...(e.size !== undefined ? { size: e.size } : {}),
+    })),
+  };
+}
+
+/**
  * Get cache key for user profile
  */
 function getUserProfileCacheKey(login: string): string {
@@ -84,9 +112,11 @@ const readFileOutputSchema = z.object({
 
 const treeEntrySchema = z.object({
   path: z.string(),
-  mode: z.string(),
+  // mode/sha/url are stripped by slimTreeResponse before this schema runs — see
+  // its comment. Optional so both the raw GitHub shape and the slimmed one pass.
+  mode: z.string().optional(),
   type: z.enum(['blob', 'tree', 'commit']), // 'commit' = git submodule
-  sha: z.string(),
+  sha: z.string().optional(),
   size: z.number().optional(),
   url: z.string().optional(), // Optional for submodules
 });
@@ -718,8 +748,12 @@ export const githubRouter = router({
 
           // 4. Check Redis cache (faster than S3, shared across Lambdas)
           const treeCacheKey = getTreeCacheKey(owner, repo, resolvedSha);
-          const redisCached = await getCached<GitHubTreeResponse>(treeCacheKey);
-          if (redisCached) {
+          const redisRaw = await getCached<GitHubTreeResponse>(treeCacheKey);
+          if (redisRaw) {
+            // Slim on read: entries written before slimming shipped (or by an
+            // older deploy) may still be the full shape. This also keeps the
+            // in-memory copies we seed below slim.
+            const redisCached = slimTreeResponse(redisRaw);
             gitTreeCache.set(shaCacheKey, redisCached);
             gitTreeCache.set(memCacheKey, redisCached);
 
@@ -737,8 +771,11 @@ export const githubRouter = router({
           }
 
           // 5. Check S3 cache (persists across Lambda invocations)
-          const s3Cached = await getTreeFromS3Cache(owner, repo, resolvedSha);
-          if (s3Cached) {
+          const s3Raw = await getTreeFromS3Cache(owner, repo, resolvedSha);
+          if (s3Raw) {
+            // Slim on read too: entries cached before slimming shipped are still
+            // the full ~14.8MB shape, which would break the response all over.
+            const s3Cached = slimTreeResponse(s3Raw);
             // Store in memory and Redis for subsequent requests
             gitTreeCache.set(shaCacheKey, s3Cached);
             gitTreeCache.set(memCacheKey, s3Cached);
@@ -794,6 +831,10 @@ export const githubRouter = router({
             );
             fellBackToDefaultBranch = true;
           }
+
+          // Slim before caching/returning so every cache layer (memory, Redis,
+          // S3) and the wire payload carry the reduced shape.
+          treeData = slimTreeResponse(treeData);
 
           // Store in all caches. The fellBackToDefaultBranch flag is scoped to
           // the requested ref, so it only rides along on the ref-keyed entry —

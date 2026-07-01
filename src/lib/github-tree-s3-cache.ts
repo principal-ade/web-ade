@@ -27,11 +27,15 @@ const CACHE_TTL_SECONDS = 7 * 24 * 60 * 60;
 export interface GitHubTreeResponse {
   sha: string;
   url: string;
+  // `mode`/`sha`/`url` are stripped from entries before caching and before the
+  // response is sent (see `slimTreeResponse` in src/server/routers/github.ts) —
+  // on huge repos they tripled the payload past the SSR response cap and no
+  // consumer reads them. Optional so the raw GitHub shape still type-checks.
   tree: Array<{
     path: string;
-    mode: string;
+    mode?: string;
     type: 'blob' | 'tree' | 'commit';
-    sha: string;
+    sha?: string;
     size?: number;
     url?: string;
   }>;

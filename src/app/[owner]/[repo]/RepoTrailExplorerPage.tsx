@@ -557,7 +557,24 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           });
           return;
         }
-        const data = (await res.json()) as {
+        // Read the body as text first: a 200 with an empty/blank body isn't a
+        // real "no trails" result — it's an upstream truncation (CloudFront /
+        // SSR gateway timeout, seen on very large repos under load like
+        // elastic/kibana). Surface a retryable message instead of letting
+        // `res.json()` throw a raw "Unexpected end of JSON input" DOMException
+        // that then renders verbatim in the main panel.
+        const text = await res.text();
+        if (cancelled) return;
+        if (!text.trim()) {
+          setState({
+            kind: 'error',
+            message:
+              'Couldn’t load trails for this repository — the request timed out. Refresh to try again.',
+            code: null,
+          });
+          return;
+        }
+        const data = JSON.parse(text) as {
           entries: SharedTrailIndexEntry[];
           viewerIsRepoAdmin?: boolean;
         };
@@ -569,9 +586,13 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         });
       } catch (err) {
         if (cancelled) return;
+        // Network failure or a malformed (non-JSON) body land here. Neither
+        // carries a user-useful message, so keep it generic and retryable
+        // rather than exposing the raw parse/`fetch` error text.
+        console.error('[Trails] Failed to load trail index:', err);
         setState({
           kind: 'error',
-          message: err instanceof Error ? err.message : 'Failed to load trails.',
+          message: 'Failed to load trails. Refresh to try again.',
           code: null,
         });
       }
@@ -751,8 +772,19 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         setFileTree(tree);
       } catch (err) {
         if (cancelled) return;
+        // A truncated response (a very large repo whose tree exceeds the SSR
+        // response cap) makes tRPC's internal `response.json()` throw a raw
+        // "Unexpected end of JSON input" DOMException. Don't surface that
+        // verbatim — show a clean, retryable message instead.
+        console.error('[RepoTree] Failed to load repository tree:', err);
+        const raw = err instanceof Error ? err.message : '';
+        const isParseError = /JSON|Unexpected end of|Unexpected token/i.test(
+          raw,
+        );
         setTreeError(
-          err instanceof Error ? err.message : 'Failed to load repository tree.',
+          isParseError || !raw
+            ? 'This repository is too large to load right now. Refresh to try again.'
+            : raw,
         );
       }
     })();
@@ -4319,7 +4351,8 @@ const RepoOverview: React.FC<{
   const { analysis } = useRepoAnalysis();
 
   // Total blamed lines across the repo — only known once the cached analysis has
-  // loaded, so the "N lines" fact stays hidden until then.
+  // loaded, so the "N lines" fact stays hidden until then. Falsy (null before
+  // load, or 0 when the repo has no blamed lines) means we fall back to file count.
   const totalLines = useMemo(
     () =>
       analysis
@@ -4327,6 +4360,10 @@ const RepoOverview: React.FC<{
         : null,
     [analysis],
   );
+
+  // File count from the same analysis — shown in the About fact row when a line
+  // count isn't available (e.g. blame line totals came back empty).
+  const fileCount = analysis?.fileCount ?? null;
 
   // Eagerly resolve GitHub identity for the head of the blame map so the "Lines"
   // avatar row has faces the moment the Commits/Lines switch is visible — instead
@@ -4570,7 +4607,8 @@ const RepoOverview: React.FC<{
         </>
       )}
 
-      {/* Repo facts: age (left) + total blamed lines (right, once analysis loads). */}
+      {/* Repo facts: age (left) + total blamed lines — or file count when line
+          totals aren't available — on the right, once analysis loads. */}
       <div
         className="flex items-center justify-between gap-2"
         style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
@@ -4579,12 +4617,17 @@ const RepoOverview: React.FC<{
           <CalendarDays size={14} />
           Created {relativeTime(info.created_at)}
         </span>
-        {totalLines != null && (
+        {totalLines ? (
           <span className="inline-flex items-center gap-1.5">
             <AlignLeft size={14} />
             {totalLines.toLocaleString()} lines
           </span>
-        )}
+        ) : fileCount != null ? (
+          <span className="inline-flex items-center gap-1.5">
+            <FileText size={14} />
+            {fileCount.toLocaleString()} files
+          </span>
+        ) : null}
       </div>
 
       {/* Contributor faces: the top contributors, each opening their activity
@@ -5635,18 +5678,15 @@ const RepoNavCards: React.FC<{
           key={card.mode}
           type="button"
           onClick={() => onOpenView(card.mode)}
-          className="flex items-center gap-3 rounded-md px-3 py-2.5 border text-left transition-colors"
-          style={{
-            borderColor: theme.colors.border,
-            background: theme.colors.backgroundSecondary,
-            color: theme.colors.text,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = theme.colors.primary;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = theme.colors.border;
-          }}
+          className="flex items-center gap-3 rounded-md px-3 py-2.5 border text-left transition-colors border-[var(--card-border)] hover:border-[var(--card-border-hover)]"
+          style={
+            {
+              background: theme.colors.backgroundSecondary,
+              color: theme.colors.text,
+              '--card-border': theme.colors.border,
+              '--card-border-hover': theme.colors.primary,
+            } as React.CSSProperties
+          }
           title={`Open ${card.label.toLowerCase()}`}
         >
           <span
