@@ -3,7 +3,6 @@
  *
  * Used by:
  * - WorldsPageProvider
- * - OwnerPageProvider
  * - SharedCollectionsProvider
  *
  * Features:
