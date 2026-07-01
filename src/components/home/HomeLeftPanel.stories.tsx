@@ -112,6 +112,11 @@ export const Populated: Story = {
         user={fullUser}
         counts={{ projects: 42, starred: 128, bookmarks: 9, library: 15, recent: 6 }}
         projects={projects}
+        starred={projects.flatMap((s) => s.repos)}
+        recentProjects={projects.flatMap((s) => s.repos).slice(0, 2)}
+        recentTrails={[
+          { id: 't1', title: 'How auth refresh works', owner: 'gaearon', repo: 'web-ade', lastVisitedAt: '2026-06-30T10:00:00Z' },
+        ]}
         onSelectRepo={(r) => console.log('select repo →', r.full_name)}
         onViewChange={(v) => console.log('view →', v)}
       />

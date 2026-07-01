@@ -16,6 +16,11 @@ import {
   type ProjectRepo,
   type ProjectSection,
 } from './HomeProjectsView';
+import { HomeStarredView } from './HomeStarredView';
+import {
+  HomeRecentlyVisitedView,
+  type RecentTrailItem,
+} from './HomeRecentlyVisitedView';
 
 // ---------------------------------------------------------------------------
 // HomeLeftPanel — the signed-in home's left rail, the user-based sibling of the
@@ -53,6 +58,12 @@ export interface HomeLeftPanelProps {
   /** "Your Projects" view: the user's repos + org repos, grouped. `null` = loading. */
   projects?: ProjectSection[] | null;
   projectsError?: string | null;
+  /** "Starred Projects" view: the user's starred repos, flat. `null` = loading. */
+  starred?: ProjectRepo[] | null;
+  starredError?: string | null;
+  /** "Recently Visited" view: recent repos (as ProjectRepos) + recent trails. */
+  recentProjects?: ProjectRepo[] | null;
+  recentTrails?: RecentTrailItem[] | null;
   /** full_name of the repo currently shown in the right pane, highlighted in lists. */
   selectedRepoFullName?: string | null;
   /** A repo was picked from a list — the shell routes this to the right-pane city. */
@@ -66,6 +77,10 @@ export function HomeLeftPanel({
   onViewChange,
   projects,
   projectsError = null,
+  starred,
+  starredError = null,
+  recentProjects,
+  recentTrails,
   selectedRepoFullName = null,
   onSelectRepo,
 }: HomeLeftPanelProps) {
@@ -99,6 +114,22 @@ export function HomeLeftPanel({
           <HomeProjectsView
             sections={projects ?? null}
             error={projectsError}
+            selectedFullName={selectedRepoFullName}
+            onSelectRepo={(repo) => onSelectRepo?.(repo)}
+            onBack={() => go('home')}
+          />
+        ) : view === 'starred' ? (
+          <HomeStarredView
+            repos={starred ?? null}
+            error={starredError}
+            selectedFullName={selectedRepoFullName}
+            onSelectRepo={(repo) => onSelectRepo?.(repo)}
+            onBack={() => go('home')}
+          />
+        ) : view === 'recent' ? (
+          <HomeRecentlyVisitedView
+            projects={recentProjects ?? null}
+            trails={recentTrails ?? null}
             selectedFullName={selectedRepoFullName}
             onSelectRepo={(repo) => onSelectRepo?.(repo)}
             onBack={() => go('home')}

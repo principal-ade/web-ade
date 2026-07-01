@@ -9,6 +9,10 @@ import { RepoFileCityPane } from './RepoFileCityPane';
 import type { UserAboutInfo } from './UserAboutCard';
 import type { HomeNavCardCounts } from './HomeNavCards';
 import type { ProjectRepo, ProjectSection } from './HomeProjectsView';
+import type { RecentTrailItem } from './HomeRecentlyVisitedView';
+
+// localStorage key shared with the header opener / recent-repos panels.
+const RECENT_REPOS_KEY = 'recent-repositories';
 
 // ---------------------------------------------------------------------------
 // SignedInHome — the connected signed-in home surface. Fetches the viewer's
@@ -42,6 +46,47 @@ function toProjectRepo(r: ApiRepo): ProjectRepo {
   };
 }
 
+// Read the shared `recent-repositories` localStorage into ProjectRepos, tolerant
+// of older/partial entries. Synthesizes a numeric id (list index) for the row key.
+function readRecentProjects(): ProjectRepo[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const parsed: unknown = JSON.parse(
+      localStorage.getItem(RECENT_REPOS_KEY) ?? '[]',
+    );
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((it, i): ProjectRepo[] => {
+      if (it == null || typeof it !== 'object') return [];
+      const o = it as Record<string, unknown>;
+      const owner = o.owner as Record<string, unknown> | undefined;
+      if (typeof o.full_name !== 'string' || !owner) return [];
+      const login = typeof owner.login === 'string' ? owner.login : '';
+      return [
+        {
+          id: i,
+          full_name: o.full_name,
+          name:
+            typeof o.name === 'string'
+              ? o.name
+              : o.full_name.split('/')[1] ?? o.full_name,
+          owner: {
+            login,
+            avatar_url:
+              typeof owner.avatar_url === 'string' ? owner.avatar_url : undefined,
+          },
+          description: typeof o.description === 'string' ? o.description : null,
+          stargazers_count:
+            typeof o.stargazers_count === 'number'
+              ? o.stargazers_count
+              : undefined,
+        },
+      ];
+    });
+  } catch {
+    return [];
+  }
+}
+
 export function SignedInHome({ user }: { user: User }) {
   // About card: seed with the identity we already have, enrich with GitHub bio/
   // stats once the profile lands.
@@ -53,6 +98,9 @@ export function SignedInHome({ user }: { user: User }) {
   });
   const [sections, setSections] = useState<ProjectSection[] | null>(null);
   const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [starred, setStarred] = useState<ProjectRepo[] | null>(null);
+  const [recentProjects, setRecentProjects] = useState<ProjectRepo[] | null>(null);
+  const [recentTrails, setRecentTrails] = useState<RecentTrailItem[] | null>(null);
   const [counts, setCounts] = useState<HomeNavCardCounts>({});
 
   // Enrich the About card from the viewer's full GitHub profile (bio + stats).
@@ -127,6 +175,7 @@ export function SignedInHome({ user }: { user: User }) {
             }
           }
           setSections(secs);
+          setStarred((data.starred ?? []).map(toProjectRepo));
           setCounts((c) => ({
             ...c,
             projects: secs.reduce((n, s) => n + s.repos.length, 0),
@@ -135,19 +184,59 @@ export function SignedInHome({ user }: { user: User }) {
         },
       )
       .catch((e) => {
-        if (!cancelled) setProjectsError(String(e?.message ?? e));
+        if (!cancelled) {
+          setProjectsError(String(e?.message ?? e));
+          setStarred([]);
+        }
       });
     return () => {
       cancelled = true;
     };
   }, []);
 
+  // Recently-visited projects come from the shared `recent-repositories`
+  // localStorage (written by the header opener / repo pages). Mapped to
+  // ProjectRepos so a click selects into the right-pane File City.
+  useEffect(() => {
+    const load = () => setRecentProjects(readRecentProjects());
+    load();
+    window.addEventListener('recent-items-updated', load);
+    return () => window.removeEventListener('recent-items-updated', load);
+  }, []);
+
+  // Recently-visited trails from the by-user API (navigate to the trail page).
+  useEffect(() => {
+    let cancelled = false;
+    setRecentTrails(null);
+    fetch(`/api/trails/recently-visited/by-user/${user.id}`)
+      .then((r) => (r.ok ? r.json() : { entries: [] }))
+      .then((data: { entries?: RecentTrailItem[] }) => {
+        if (cancelled) return;
+        setRecentTrails(data.entries ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setRecentTrails([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
+
+  const navCounts: HomeNavCardCounts = {
+    ...counts,
+    recent:
+      (recentProjects?.length ?? 0) + (recentTrails?.length ?? 0) || undefined,
+  };
+
   return (
     <HomeTwoPane
       user={about}
-      counts={counts}
+      counts={navCounts}
       projects={sections}
       projectsError={projectsError}
+      starred={starred}
+      recentProjects={recentProjects}
+      recentTrails={recentTrails}
       renderRightPane={(repo) =>
         repo ? (
           <RepoFileCityPane

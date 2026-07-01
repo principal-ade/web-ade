@@ -1,97 +1,60 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { FolderGit2, Lock, Search, Star } from 'lucide-react';
+import { Lock, Search, Star } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { RailPaneHeader } from '@/components/rail/RailPaneHeader';
+import type { ProjectRepo } from './HomeProjectsView';
 import { getLanguageColor } from './languageColors';
 
 // ---------------------------------------------------------------------------
-// HomeProjectsView — the "Your Projects" destination of the home rail: the
-// signed-in user's own repos plus their orgs' repos, grouped by owner. A rail-
-// shaped (narrow, vertical) list, the counterpart to the owner/repo Structure
-// pane. Presentational: it takes grouped sections as props and reports the
-// picked repo via `onSelectRepo` (which the two-pane shell will route to the
-// right-pane File City).
+// HomeStarredView — the "Starred Projects" destination: a flat list of the repos
+// the viewer has starred. Unlike Your Projects (grouped by owner), starred repos
+// span many owners, so each row leads with the owner avatar + full name.
+// Presentational; reports the picked repo via `onSelectRepo`.
 // ---------------------------------------------------------------------------
 
-export interface ProjectRepo {
-  id: number;
-  full_name: string;
-  name: string;
-  owner: { login: string; avatar_url?: string };
-  description?: string | null;
-  language?: string | null;
-  stargazers_count?: number;
-  private?: boolean;
-}
-
-export interface ProjectSection {
-  /** Stable key — 'you' for personal repos, or the org login. */
-  key: string;
-  /** Section heading, e.g. "Your repositories" or the org name. */
-  label: string;
-  /** Org avatar, shown beside the heading. */
-  avatar_url?: string;
-  repos: ProjectRepo[];
-}
-
-export interface HomeProjectsViewProps {
-  /** Grouped repos. `null` = loading. */
-  sections: ProjectSection[] | null;
+export interface HomeStarredViewProps {
+  /** Starred repos. `null` = loading. */
+  repos: ProjectRepo[] | null;
   error?: string | null;
-  /** full_name of the currently-open repo, highlighted in the list. */
   selectedFullName?: string | null;
   onSelectRepo: (repo: ProjectRepo) => void;
   onBack: () => void;
 }
 
-export function HomeProjectsView({
-  sections,
+export function HomeStarredView({
+  repos,
   error = null,
   selectedFullName = null,
   onSelectRepo,
   onBack,
-}: HomeProjectsViewProps) {
+}: HomeStarredViewProps) {
   const { theme } = useTheme();
   const [filter, setFilter] = useState('');
 
-  const totalRepos = useMemo(
-    () => (sections ?? []).reduce((n, s) => n + s.repos.length, 0),
-    [sections],
-  );
-
-  // Filter every section by name / full_name / description, dropping any section
-  // left empty.
   const filtered = useMemo(() => {
-    if (!sections) return null;
+    if (!repos) return null;
     const q = filter.trim().toLowerCase();
-    if (!q) return sections;
-    return sections
-      .map((s) => ({
-        ...s,
-        repos: s.repos.filter(
-          (r) =>
-            r.full_name.toLowerCase().includes(q) ||
-            r.name.toLowerCase().includes(q) ||
-            (r.description?.toLowerCase().includes(q) ?? false),
-        ),
-      }))
-      .filter((s) => s.repos.length > 0);
-  }, [sections, filter]);
+    if (!q) return repos;
+    return repos.filter(
+      (r) =>
+        r.full_name.toLowerCase().includes(q) ||
+        (r.description?.toLowerCase().includes(q) ?? false),
+    );
+  }, [repos, filter]);
 
   return (
     <>
       <RailPaneHeader
-        icon={<FolderGit2 size={14} />}
-        label="Your Projects"
-        count={totalRepos || undefined}
+        icon={<Star size={14} />}
+        label="Starred Projects"
+        count={repos?.length || undefined}
         onClose={onBack}
         closeAsBack
       />
 
-      {/* Filter — shown once there are enough repos to warrant it. */}
-      {sections != null && totalRepos >= 8 && (
+      {repos != null && repos.length >= 8 && (
         <div
           className="px-3 py-2 border-b flex items-center gap-2 shrink-0"
           style={{ borderColor: theme.colors.border }}
@@ -101,7 +64,7 @@ export function HomeProjectsView({
             type="text"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="Filter projects"
+            placeholder="Filter starred"
             className="flex-1 bg-transparent outline-none"
             style={{
               color: theme.colors.text,
@@ -114,29 +77,23 @@ export function HomeProjectsView({
 
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-none">
         {error ? (
-          <ListMessage>Couldn&rsquo;t load your projects: {error}</ListMessage>
+          <ListMessage>Couldn&rsquo;t load starred repos: {error}</ListMessage>
         ) : filtered === null ? (
-          <ListMessage>Loading your projects…</ListMessage>
-        ) : totalRepos === 0 ? (
+          <ListMessage>Loading starred repos…</ListMessage>
+        ) : repos!.length === 0 ? (
           <ListMessage>
-            No projects yet. Repos you own and your organizations&rsquo; repos
-            will show up here.
+            No starred repos yet. Repositories you star on GitHub show up here.
           </ListMessage>
         ) : filtered.length === 0 ? (
-          <ListMessage>No projects match “{filter}”.</ListMessage>
+          <ListMessage>No starred repos match “{filter}”.</ListMessage>
         ) : (
-          filtered.map((section) => (
-            <div key={section.key}>
-              <SectionHeader section={section} />
-              {section.repos.map((repo) => (
-                <RepoRow
-                  key={repo.id}
-                  repo={repo}
-                  selected={repo.full_name === selectedFullName}
-                  onSelect={() => onSelectRepo(repo)}
-                />
-              ))}
-            </div>
+          filtered.map((repo) => (
+            <StarredRow
+              key={repo.id}
+              repo={repo}
+              selected={repo.full_name === selectedFullName}
+              onSelect={() => onSelectRepo(repo)}
+            />
           ))
         )}
       </div>
@@ -144,49 +101,7 @@ export function HomeProjectsView({
   );
 }
 
-function SectionHeader({ section }: { section: ProjectSection }) {
-  const { theme } = useTheme();
-  return (
-    <div
-      className="sticky top-0 z-[1] px-4 py-1.5 flex items-center gap-2 border-b"
-      style={{
-        background: theme.colors.backgroundSecondary,
-        borderColor: theme.colors.border,
-      }}
-    >
-      {section.avatar_url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={section.avatar_url}
-          alt=""
-          width={16}
-          height={16}
-          className="rounded"
-          style={{ background: theme.colors.background }}
-        />
-      )}
-      <span
-        className="truncate"
-        style={{
-          fontSize: theme.fontSizes[0],
-          fontWeight: theme.fontWeights.semibold,
-          color: theme.colors.textSecondary,
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px',
-        }}
-      >
-        {section.label}
-      </span>
-      <span
-        style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted }}
-      >
-        {section.repos.length}
-      </span>
-    </div>
-  );
-}
-
-function RepoRow({
+function StarredRow({
   repo,
   selected,
   onSelect,
@@ -210,8 +125,6 @@ function RepoRow({
         color: theme.colors.text,
         cursor: 'pointer',
       }}
-      // Inline `background` wins over a Tailwind hover: class, so tint the
-      // non-selected rows on hover via handlers (mirrors UserReposGrid).
       onMouseEnter={(e) => {
         if (!selected) e.currentTarget.style.background = hoverBg;
       }}
@@ -220,6 +133,17 @@ function RepoRow({
       }}
     >
       <div className="flex items-center gap-2 min-w-0">
+        {repo.owner.avatar_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={repo.owner.avatar_url}
+            alt=""
+            width={18}
+            height={18}
+            className="rounded shrink-0"
+            style={{ background: theme.colors.backgroundSecondary }}
+          />
+        )}
         <span
           className="truncate"
           style={{
@@ -227,7 +151,7 @@ function RepoRow({
             fontWeight: theme.fontWeights.semibold,
           }}
         >
-          {repo.name}
+          {repo.full_name}
         </span>
         {repo.private && (
           <Lock
