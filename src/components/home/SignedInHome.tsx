@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Boxes } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { User } from '@/contexts/AuthContext';
-import { HomeTwoPane } from './HomeTwoPane';
+import { HomeTwoPane, type SelectedRepo } from './HomeTwoPane';
 import { RepoFileCityPane } from './RepoFileCityPane';
 import type { UserAboutInfo } from './UserAboutCard';
 import type { HomeNavCardCounts } from './HomeNavCards';
@@ -158,7 +158,16 @@ function readRecentProjects(): ProjectRepo[] {
   }
 }
 
-export function SignedInHome({ user }: { user: User }) {
+export function SignedInHome({
+  user,
+  selected,
+  onSelectRepo,
+}: {
+  user: User;
+  /** Controlled selected repo (driven by the page header's search bar). */
+  selected?: SelectedRepo | null;
+  onSelectRepo?: (repo: SelectedRepo | null) => void;
+}) {
   // About card: seed with the identity we already have, enrich with GitHub bio/
   // stats once the profile lands.
   const [about, setAbout] = useState<UserAboutInfo | null>({
@@ -364,6 +373,8 @@ export function SignedInHome({ user }: { user: User }) {
   return (
     <HomeTwoPane
       user={about}
+      selected={selected}
+      onSelectRepo={onSelectRepo}
       counts={navCounts}
       projects={sections}
       projectsError={projectsError}
