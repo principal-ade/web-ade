@@ -96,7 +96,7 @@ export function RepoAnalysisStatus() {
       : 'Get Line Count Data';
 
   return (
-    <div className="flex flex-col px-4 py-3">
+    <div className="relative flex flex-col px-4 py-3">
       {/* Persistent header — the WHOLE bar toggles the panel (role=button so the
           Freestyle.sh link can still nest inside). The chevron rotates and the
           detail below slides, so nothing snaps. */}
@@ -173,18 +173,35 @@ export function RepoAnalysisStatus() {
         </a>
       </div>
 
-      {/* Collapsible detail — the grid 0fr→1fr trick animates real content height
-          without measuring; the inner wrapper clips while it slides. */}
+      {/* Collapsible detail — floats UP over the rail content instead of pushing
+          it. Anchored to the panel's top edge (bottom:100%) so growing height
+          extends upward; the grid 0fr→1fr trick animates that height without
+          measuring, and the inner wrapper clips while it slides. */}
       <div
         style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: '100%',
           display: 'grid',
           gridTemplateRows: expanded ? '1fr' : '0fr',
           transition: 'grid-template-rows 240ms ease',
+          pointerEvents: expanded ? 'auto' : 'none',
         }}
       >
         <div style={{ overflow: 'hidden', minHeight: 0 }}>
+      {/* Opaque strip so the floating card fully hides the list scrolling behind
+          it; the upward shadow lifts it off the content. */}
       <div
-        className="mt-2 flex flex-col gap-3 rounded-lg border p-3"
+        className="px-4 pt-3 pb-2"
+        style={{
+          background: theme.colors.background,
+          borderTop: `1px solid ${theme.colors.border}`,
+          boxShadow: '0 -8px 24px rgba(0, 0, 0, 0.28)',
+        }}
+      >
+      <div
+        className="flex flex-col gap-3 rounded-lg border p-3"
         style={{
           borderColor: theme.colors.border,
           background: `color-mix(in srgb, ${theme.colors.text} 4%, transparent)`,
@@ -319,6 +336,7 @@ export function RepoAnalysisStatus() {
           )}
           {actionLabel}
         </button>
+      </div>
       </div>
         </div>
       </div>
