@@ -434,9 +434,9 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     setActivityFocusContributor(null);
   }, []);
 
-  // Clicking a contributor in the About card opens the Recent Activity view
-  // straight into that person's commit drill-down. The counter bumps each click
-  // so re-selecting the same contributor re-triggers the drill-in downstream.
+  // Clicking a contributor in the About card opens the Contributors view
+  // straight into that person's profile. The counter bumps each click so
+  // re-selecting the same contributor re-triggers the drill-in downstream.
   const contributorFocusCounter = useRef(0);
   const [activityFocusContributor, setActivityFocusContributor] = useState<{
     token: number;
@@ -444,16 +444,18 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     name: string;
     avatarUrl?: string;
   } | null>(null);
+  const [contributorsFocus, setContributorsFocus] = useState<{
+    token: number;
+    login: string;
+  } | null>(null);
   const handleSelectContributor = useCallback(
     (c: { login: string; avatar_url: string }) => {
       contributorFocusCounter.current += 1;
-      setActivityFocusContributor({
+      setContributorsFocus({
         token: contributorFocusCounter.current,
         login: c.login,
-        name: c.login,
-        avatarUrl: c.avatar_url,
       });
-      setLeftViewMode('activity');
+      setLeftViewMode('contributors');
       setSelectedTrailId(null);
       setSelectedTourId(null);
       setSelectedFilePath(null);
@@ -1512,11 +1514,15 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
               setSelectedTrailId(null);
               setSelectedFilePath(null);
               setSelectedTourId(null);
+              // Opening Contributors from a nav card lands on the list, not a
+              // stale contributor drill-down.
+              setContributorsFocus(null);
             }
           }}
           onToggleActivity={handleToggleActivity}
           onSelectContributor={handleSelectContributor}
           activityFocusContributor={activityFocusContributor}
+          contributorsFocus={contributorsFocus}
           selectedCommitSha={selectedCommitSha}
           onSelectCommit={(sha) => {
             setSelectedCommitSha(sha);
@@ -2516,7 +2522,7 @@ const TrailListPane: React.FC<{
   onSetViewMode: (mode: LeftViewMode) => void;
   /** Close handler for the full-rail Activity pane (returns to the tours view). */
   onToggleActivity: () => void;
-  /** Click a contributor in the About card → open their activity drill-down. */
+  /** Click a contributor in the About card → open their Contributors profile. */
   onSelectContributor: (c: { login: string; avatar_url: string }) => void;
   activityFocusContributor: {
     token: number;
@@ -2524,6 +2530,8 @@ const TrailListPane: React.FC<{
     name: string;
     avatarUrl?: string;
   } | null;
+  /** Contributor to pre-select in the Contributors pane (from the About card). */
+  contributorsFocus: { token: number; login: string } | null;
   /** Commit picked from the Activity list (highlights the row). */
   selectedCommitSha: string | null;
   onSelectCommit: (sha: string | null) => void;
@@ -2583,6 +2591,7 @@ const TrailListPane: React.FC<{
   onToggleActivity,
   onSelectContributor,
   activityFocusContributor,
+  contributorsFocus,
   selectedCommitSha,
   onSelectCommit,
   selectedIssueNumber,
@@ -2674,6 +2683,7 @@ const TrailListPane: React.FC<{
         <ContributorsPane
           owner={owner}
           repo={repo}
+          focusContributor={contributorsFocus}
           onClose={() => onSetViewMode('tours')}
         />
       ) : leftViewMode === 'files' ? (
@@ -4319,8 +4329,8 @@ const RepoOverview: React.FC<{
   // a control rendered directly beneath it (e.g. the single-tour "Start tour"
   // CTA) inside one card, with the dividing line carried below that control.
   showBorder?: boolean;
-  // Click a contributor face → open their commit drill-down in the activity
-  // view. When omitted, the faces fall back to linking out to GitHub.
+  // Click a contributor face → open their profile in the Contributors view.
+  // When omitted, the faces fall back to linking out to GitHub.
   onSelectContributor?: (c: { login: string; avatar_url: string }) => void;
   // Action buttons (README + tour CTA) rendered inside the card, right after the
   // description.
@@ -4630,8 +4640,9 @@ const RepoOverview: React.FC<{
         ) : null}
       </div>
 
-      {/* Contributor faces: the top contributors, each opening their activity
-          drill-down. Everyone else lives behind the "Contributors" nav card. */}
+      {/* Contributor faces: the top contributors, each opening their profile in
+          the Contributors view. Everyone else lives behind the "Contributors"
+          nav card. */}
       {cards.length > 0 && (
         <div className="flex flex-col gap-1.5 mt-3">
           <div className="flex items-center justify-between gap-2">
@@ -4761,8 +4772,8 @@ const RepoOverview: React.FC<{
                   if (el) cardRefs.current.set(c.key, el);
                   else cardRefs.current.delete(c.key);
                 };
-                // Resolved contributor with a handler → opens the activity
-                // drill-down; resolved without a handler → links to GitHub; an
+                // Resolved contributor with a handler → opens their Contributors
+                // profile; resolved without a handler → links to GitHub; an
                 // unresolved blame author has no link target, so render it static.
                 return onSelectContributor && c.hasLogin ? (
                   <button
@@ -5105,8 +5116,11 @@ const ContributorAvatar: React.FC<{
 const ContributorsPane: React.FC<{
   owner: string;
   repo: string;
+  // When set (from the About card), pre-select this contributor's profile once
+  // their row resolves. The token bumps per click so re-selecting re-drills.
+  focusContributor?: { token: number; login: string } | null;
   onClose: () => void;
-}> = ({ owner, repo, onClose }) => {
+}> = ({ owner, repo, focusContributor, onClose }) => {
   const { theme } = useTheme();
   const { analysis, setSelectedEmails } = useRepoAnalysis();
 
@@ -5200,6 +5214,22 @@ const ContributorsPane: React.FC<{
     },
     [selectedKey, setSelectedEmails],
   );
+
+  // Pre-select the contributor requested from the About card. Rows resolve
+  // async (GitHub identity overlays onto blame emails), so this runs whenever
+  // rows change until the login matches; the applied-token ref makes it fire
+  // once per click while still re-drilling when the token bumps.
+  const appliedFocusToken = useRef<number | null>(null);
+  useEffect(() => {
+    if (!focusContributor) return;
+    if (appliedFocusToken.current === focusContributor.token) return;
+    const target = focusContributor.login.toLowerCase();
+    const match = rows.find((r) => r.login?.toLowerCase() === target);
+    if (!match) return; // login not resolved onto a row yet — wait for rows
+    appliedFocusToken.current = focusContributor.token;
+    setSelectedKey(match.key);
+    setSelectedEmails(match.emails ?? (match.email ? [match.email] : null));
+  }, [focusContributor, rows, setSelectedEmails]);
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
@@ -5748,7 +5778,7 @@ const ToursPane: React.FC<{
   viewerUserId: number | null;
   viewerIsRepoAdmin: boolean;
   onRequestDelete: (item: TourListItem) => void;
-  // Click a contributor face in the About card → open their activity drill-down.
+  // Click a contributor face in the About card → open their Contributors profile.
   onSelectContributor: (c: { login: string; avatar_url: string }) => void;
   // Repo-root README path (or null) + handler, forwarded to RepoOverview so the
   // About card can offer a "README" button.
