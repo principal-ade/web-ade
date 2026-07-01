@@ -12,7 +12,9 @@ import {
   S3Client,
   GetObjectCommand,
   PutObjectCommand,
+  HeadObjectCommand,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const s3Client = new S3Client({
   region: process.env.TTS_AWS_REGION || 'us-east-1',
@@ -129,6 +131,59 @@ export async function storeTreeInS3Cache(
       error: error instanceof Error ? error.message : String(error),
     });
   }
+}
+
+/**
+ * True when the slimmed tree for this SHA already sits in S3.
+ *
+ * The key is SHA-immutable, so existence means the object is current. Lets the
+ * presigned-URL path skip a redundant ~5.7MB refetch+PUT on a warm object.
+ */
+export async function treeExistsInS3(
+  owner: string,
+  repo: string,
+  sha: string
+): Promise<boolean> {
+  const key = generateTreeCacheKey(owner, repo, sha);
+  try {
+    await s3Client.send(
+      new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: key })
+    );
+    return true;
+  } catch (error) {
+    const errorCode = (error as { name?: string }).name;
+    // NotFound (HeadObject) / NoSuchKey — a genuine cache miss.
+    if (errorCode !== 'NotFound' && errorCode !== 'NoSuchKey') {
+      console.warn('[S3 Tree Cache] Head error:', {
+        key,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    return false;
+  }
+}
+
+/**
+ * Presigned GET URL for the cached tree object.
+ *
+ * The client fetches the tree straight from S3 with this, bypassing the ~6MB
+ * Amplify/Lambda SSR response cap that truncates huge monorepo trees
+ * (elastic/kibana is ~14.8MB raw, ~5.7MB slimmed). The URL is scoped to one key
+ * and expires, so it exposes no ambient credentials and no other objects —
+ * safe for private repos as well as public.
+ */
+export async function getTreeS3PresignedUrl(
+  owner: string,
+  repo: string,
+  sha: string,
+  ttlSeconds = 3600
+): Promise<string> {
+  const key = generateTreeCacheKey(owner, repo, sha);
+  return getSignedUrl(
+    s3Client,
+    new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key }),
+    { expiresIn: ttlSeconds }
+  );
 }
 
 /**

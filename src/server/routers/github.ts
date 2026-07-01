@@ -13,7 +13,10 @@ import { trace } from '@opentelemetry/api';
 import { gitTreeCache } from '@/lib/git-tree-cache';
 import {
   getTreeFromS3Cache,
+  storeTreeInS3Cache,
   storeTreeInS3CacheAsync,
+  treeExistsInS3,
+  getTreeS3PresignedUrl,
   type GitHubTreeResponse,
 } from '@/lib/github-tree-s3-cache';
 import {
@@ -60,6 +63,79 @@ function slimTreeResponse(data: GitHubTreeResponse): GitHubTreeResponse {
       ...(e.size !== undefined ? { size: e.size } : {}),
     })),
   };
+}
+
+/**
+ * Resolve `ref` to a commit SHA and guarantee the slimmed tree for that SHA is
+ * in S3, fetching from GitHub only on a miss. Shared by `getTreeUrl`, which then
+ * presigns the object instead of streaming the tree back through the SSR cap.
+ *
+ * Mirrors `getTree`'s ref-resolution and 422-fallback semantics: a `ref` that
+ * points at a commit GitHub never received (an unpushed/GC'd trail SHA) answers
+ * git/trees with 422, so we fall back to the repo's default branch — except for
+ * a plain `HEAD` request, where a 422 is a real error worth surfacing.
+ */
+async function ensureTreeInS3(
+  owner: string,
+  repo: string,
+  ref: string,
+  userToken: string | null
+): Promise<{ sha: string; fellBackToDefaultBranch: boolean }> {
+  // Resolve ref -> commit SHA (Redis-cached), as in github.getTree.
+  let resolvedSha: string;
+  const refCacheKey = getRefShaCacheKey(owner, repo, ref);
+  const cachedSha = await getCached<string>(refCacheKey);
+  if (cachedSha) {
+    resolvedSha = cachedSha;
+  } else {
+    try {
+      const refData = await makeGitHubRequest<{ sha: string }>(
+        `/repos/${owner}/${repo}/commits/${ref}`,
+        userToken
+      );
+      resolvedSha = refData.sha;
+      setCachedAsync(refCacheKey, resolvedSha, 1200);
+    } catch {
+      resolvedSha = ref;
+    }
+  }
+
+  let fellBackToDefaultBranch = false;
+
+  // Warm object: the SHA-keyed tree is already cached — nothing to fetch.
+  if (await treeExistsInS3(owner, repo, resolvedSha)) {
+    return { sha: resolvedSha, fellBackToDefaultBranch };
+  }
+
+  let treeData: GitHubTreeResponse;
+  try {
+    treeData = await makeGitHubRequest<GitHubTreeResponse>(
+      `/repos/${owner}/${repo}/git/trees/${resolvedSha}?recursive=1`,
+      userToken
+    );
+  } catch (err) {
+    if (ref === 'HEAD') throw err;
+    // Fall back to the default branch for a missing/unpushed ref.
+    const headData = await makeGitHubRequest<{ sha: string }>(
+      `/repos/${owner}/${repo}/commits/HEAD`,
+      userToken
+    );
+    resolvedSha = headData.sha;
+    fellBackToDefaultBranch = true;
+    if (await treeExistsInS3(owner, repo, resolvedSha)) {
+      return { sha: resolvedSha, fellBackToDefaultBranch };
+    }
+    treeData = await makeGitHubRequest<GitHubTreeResponse>(
+      `/repos/${owner}/${repo}/git/trees/${resolvedSha}?recursive=1`,
+      userToken
+    );
+  }
+
+  // Slim before storing so the object the client fetches carries the reduced
+  // shape (same as github.getTree). Awaited so the object exists before we
+  // presign it.
+  await storeTreeInS3Cache(owner, repo, resolvedSha, slimTreeResponse(treeData));
+  return { sha: resolvedSha, fellBackToDefaultBranch };
 }
 
 /**
@@ -128,6 +204,15 @@ const getTreeOutputSchema = z.object({
   truncated: z.boolean(),
   // True when the requested ref was missing on GitHub (e.g. an unpushed trail
   // commit) and we fell back to the repo's default branch.
+  fellBackToDefaultBranch: z.boolean().optional(),
+});
+
+// `github.getTreeUrl` hands back a presigned S3 URL instead of the tree itself,
+// so the client fetches the (potentially multi-MB) tree straight from S3 —
+// bypassing the ~6MB SSR response cap. See `getTreeUrl` and `slimTreeResponse`.
+const getTreeUrlOutputSchema = z.object({
+  sha: z.string(),
+  url: z.string(),
   fellBackToDefaultBranch: z.boolean().optional(),
 });
 
@@ -879,6 +964,57 @@ export const githubRouter = router({
         } catch (error) {
           span.addEvent('repo.file-tree.error', {
             'error.message': error instanceof Error ? error.message : String(error),
+          });
+          span.end();
+          throw error;
+        }
+      });
+    }),
+
+  /**
+   * Get a presigned S3 URL for the repository's file tree.
+   *
+   * `getTree` streams the whole tree back through the tRPC/SSR response, which
+   * caps at ~6MB on Amplify/Lambda — a monorepo like elastic/kibana (~14.8MB
+   * raw, ~5.7MB slimmed) truncates and the client's JSON parse throws, surfacing
+   * "This repository is too large to load right now." This procedure instead
+   * ensures the slimmed tree is in S3 and returns a short-lived presigned GET
+   * URL, so the client fetches the tree directly from S3 with no size cap.
+   */
+  getTreeUrl: publicProcedure
+    .input(getTreeInputSchema)
+    .output(getTreeUrlOutputSchema)
+    .query(async ({ input }) => {
+      const { owner, repo, ref } = input;
+
+      return tracer.startActiveSpan('repo.file-tree.url', async (span) => {
+        span.setAttribute('repo.owner', owner);
+        span.setAttribute('repo.name', repo);
+        span.setAttribute('repo.ref', ref);
+        try {
+          const userToken = await getGitHubTokenFromHeadersOrCookies();
+          const { sha, fellBackToDefaultBranch } = await ensureTreeInS3(
+            owner,
+            repo,
+            ref,
+            userToken
+          );
+          const url = await getTreeS3PresignedUrl(owner, repo, sha);
+
+          span.setAttribute('tree.sha', sha);
+          span.setAttribute('tree.fellBackToDefaultBranch', fellBackToDefaultBranch);
+          span.end();
+          return {
+            sha,
+            url,
+            ...(fellBackToDefaultBranch
+              ? { fellBackToDefaultBranch: true }
+              : {}),
+          };
+        } catch (error) {
+          span.addEvent('repo.file-tree.url.error', {
+            'error.message':
+              error instanceof Error ? error.message : String(error),
           });
           span.end();
           throw error;
