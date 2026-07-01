@@ -1418,8 +1418,14 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             setHoveredPackagePath(packageDirFromLayer(pkg))
           }
           onPackageSelect={(pkg) => {
-            setSelectedPackagePath(packageDirFromLayer(pkg));
-            setActiveReadmePath(null);
+            const dir = packageDirFromLayer(pkg);
+            setSelectedPackagePath(dir);
+            // Pair the package focus with its own README: when the selected
+            // package has one, show it beside the city — `idleFocusDirectory`
+            // (below) collapses the city onto the same subtree, so the reader
+            // gets "focus the package + read its README" in one gesture. No
+            // package README → clear, leaving just the focused city.
+            setActiveReadmePath(dir ? findReadmePath(filePaths, dir) : null);
           }}
           configMode={configMode}
           onToggleConfigMode={() => {
@@ -4147,16 +4153,28 @@ function useRepoPackagesData(
 // list. The procedure is heavily cached server-side.
 // ---------------------------------------------------------------------------
 
-// Pick the repo-root README so the About card can offer to open it. GitHub
-// treats the root README as the canonical one, so we only look at top-level
-// files (no slash in the path) and prefer markdown variants.
-function findReadmePath(filePaths: string[]): string | null {
-  const roots = filePaths.filter((p) => !p.includes('/') && /^readme(\.|$)/i.test(p));
-  if (roots.length === 0) return null;
+// Pick a directory's canonical README so a surface can offer to open it.
+// With no `dir` (the default) this resolves the repo-root README: GitHub treats
+// the root README as canonical, so we only look at top-level files (no slash).
+// Pass a repo-relative `dir` to scope the search to that directory's own README
+// — its immediate children only, not nested sub-packages — which is how a
+// selected package surfaces its package-level README. Either way, prefer
+// markdown variants.
+function findReadmePath(
+  filePaths: string[],
+  dir: string | null = null,
+): string | null {
+  const prefix = dir ? `${dir.replace(/\/+$/, '')}/` : '';
+  const matches = filePaths.filter((p) => {
+    if (!p.startsWith(prefix)) return false;
+    const rest = p.slice(prefix.length);
+    return !rest.includes('/') && /^readme(\.|$)/i.test(rest);
+  });
+  if (matches.length === 0) return null;
   return (
-    roots.find((p) => /\.md$/i.test(p)) ??
-    roots.find((p) => /\.markdown$/i.test(p)) ??
-    roots[0] ??
+    matches.find((p) => /\.md$/i.test(p)) ??
+    matches.find((p) => /\.markdown$/i.test(p)) ??
+    matches[0] ??
     null
   );
 }
