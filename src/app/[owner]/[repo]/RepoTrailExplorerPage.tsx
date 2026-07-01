@@ -5204,6 +5204,11 @@ const ContributorsPane: React.FC<{
     setSelectedEmails(null);
   }, [setSelectedEmails]);
 
+  // Drop the contribution highlight layer when this pane unmounts — leaving the
+  // Contributors view (back to About, or any other rail view) must clear it, not
+  // just the explicit back/toggle inside the pane.
+  useEffect(() => () => setSelectedEmails(null), [setSelectedEmails]);
+
   const handleRowClick = useCallback(
     (row: ContributorRow) => {
       // Toggle: clicking the active row clears; otherwise highlight the union
