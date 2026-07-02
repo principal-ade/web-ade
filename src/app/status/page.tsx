@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   Clock,
   ExternalLink,
+  Gauge,
   Loader2,
   RefreshCw,
   XCircle,
@@ -35,13 +36,35 @@ interface Job {
   error: { stage: string; message: string; failedAt: string } | null;
 }
 
+/** A repo's recent GitHub rate-limit pressure (from the trails access path).
+ *  `scope` is whether the throttled call used the shared anonymous budget or a
+ *  user token; `count` accumulates across hits since `firstHitAt`. */
+interface RateLimitRecord {
+  owner: string;
+  repo: string;
+  scope: 'anon' | 'user';
+  count: number;
+  firstHitAt: string;
+  lastHitAt: string;
+}
+
+/** The status tabs — the four job buckets share a shape; rate-limit hits don't. */
+type TabKey = Job['status'] | 'rateLimited';
+
 interface StatusResponse {
   generatedAt: string;
-  counts: { inProgress: number; stalled: number; failed: number; done: number };
+  counts: {
+    inProgress: number;
+    stalled: number;
+    failed: number;
+    done: number;
+    rateLimited: number;
+  };
   inProgress: Job[];
   stalled: Job[];
   failed: Job[];
   done: Job[];
+  rateLimited: RateLimitRecord[];
 }
 
 const POLL_MS = 5000;
@@ -76,7 +99,7 @@ export default function RepoAnalysisStatusPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [rebuilding, setRebuilding] = useState<Record<string, boolean>>({});
-  const [activeTab, setActiveTab] = useState<Job['status']>('inProgress');
+  const [activeTab, setActiveTab] = useState<TabKey>('inProgress');
 
   const load = useCallback(async () => {
     try {
@@ -246,6 +269,84 @@ export default function RepoAnalysisStatusPage() {
     );
   }
 
+  const RATE_LIMIT_COLOR = '#db6d28';
+
+  function RateLimitList({
+    records,
+    emptyLabel,
+  }: {
+    records: RateLimitRecord[];
+    emptyLabel: string;
+  }) {
+    return (
+      <section className="flex flex-col gap-2">
+        {records.length === 0 ? (
+          <p className="m-0 py-6 text-center text-sm" style={{ color: theme.colors.textMuted }}>
+            {emptyLabel}
+          </p>
+        ) : (
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
+            {records.map((r) => {
+              const id = `${r.owner}/${r.repo}`;
+              const scopeLabel = r.scope === 'user' ? 'User token' : 'Anonymous';
+              return (
+                <li key={id} className="flex flex-col gap-2 rounded-lg border p-3" style={card}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Link
+                        href={`/${r.owner}/${r.repo}`}
+                        target="_blank"
+                        className="inline-flex min-w-0 items-center gap-1.5 text-sm font-semibold transition-opacity hover:opacity-80"
+                        style={{ color: theme.colors.text }}
+                      >
+                        <span className="truncate">
+                          {r.owner}/{r.repo}
+                        </span>
+                        <ExternalLink size={12} className="shrink-0" style={{ color: theme.colors.textMuted }} />
+                      </Link>
+                      <span
+                        className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold"
+                        style={{
+                          color: RATE_LIMIT_COLOR,
+                          background: `color-mix(in srgb, ${RATE_LIMIT_COLOR} 15%, transparent)`,
+                        }}
+                      >
+                        {scopeLabel}
+                      </span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span
+                        className="rounded px-1.5 py-0.5 text-xs font-semibold"
+                        style={{
+                          color: theme.colors.textSecondary,
+                          background: `color-mix(in srgb, ${theme.colors.text} 7%, transparent)`,
+                        }}
+                        title={`${r.count} rate-limit hit${r.count === 1 ? '' : 's'} since ${r.firstHitAt}`}
+                      >
+                        ×{r.count}
+                      </span>
+                      <span
+                        className="whitespace-nowrap text-xs"
+                        style={{ color: theme.colors.textMuted }}
+                        title={r.lastHitAt}
+                      >
+                        {ago(r.lastHitAt)}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="m-0 text-xs" style={{ color: theme.colors.textMuted }}>
+                    GitHub throttled the {scopeLabel.toLowerCase()} request budget — visitors saw a
+                    retry page, not a private-repo wall.
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+    );
+  }
+
   return (
     <div
       className="h-viewport-fixed w-full overflow-hidden"
@@ -313,6 +414,7 @@ export default function RepoAnalysisStatusPage() {
                 title: 'In progress',
                 icon: <Loader2 size={15} className="animate-spin" />,
                 color: theme.colors.primary,
+                count: data.inProgress.length,
                 jobs: data.inProgress,
                 empty: 'No runs in progress.',
               },
@@ -321,14 +423,26 @@ export default function RepoAnalysisStatusPage() {
                 title: 'Failed',
                 icon: <XCircle size={15} />,
                 color: '#f85149',
+                count: attention.length,
                 jobs: attention,
                 empty: 'Nothing needs attention.',
+              },
+              {
+                key: 'rateLimited' as const,
+                title: 'Rate limited',
+                icon: <Gauge size={15} />,
+                color: RATE_LIMIT_COLOR,
+                count: data.rateLimited.length,
+                // Rendered by RateLimitList (different row shape), not JobList.
+                jobs: undefined,
+                empty: 'No rate-limit hits in the last 24h.',
               },
               {
                 key: 'done' as const,
                 title: 'Recently done',
                 icon: <CheckCircle2 size={15} />,
                 color: '#3fb950',
+                count: data.done.length,
                 jobs: data.done,
                 empty: 'No completed runs yet.',
               },
@@ -367,7 +481,7 @@ export default function RepoAnalysisStatusPage() {
                             background: `color-mix(in srgb, ${t.color} ${on ? 18 : 12}%, transparent)`,
                           }}
                         >
-                          {t.jobs.length}
+                          {t.count}
                         </span>
                       </button>
                     );
@@ -376,7 +490,11 @@ export default function RepoAnalysisStatusPage() {
 
                 {/* Only this region scrolls — header, tab bar and footer stay put. */}
                 <div className="-mr-2 min-h-0 flex-1 overflow-y-auto pr-2 pt-3">
-                  <JobList jobs={active.jobs} emptyLabel={active.empty} />
+                  {active.key === 'rateLimited' ? (
+                    <RateLimitList records={data.rateLimited} emptyLabel={active.empty} />
+                  ) : (
+                    <JobList jobs={active.jobs ?? []} emptyLabel={active.empty} />
+                  )}
                 </div>
               </>
             );

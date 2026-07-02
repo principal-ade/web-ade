@@ -39,6 +39,7 @@ const CACHE_PREFIX = 'repo-analysis';
 const VM_PREFIX = 'repo-analysis-vms';
 const ERROR_PREFIX = 'repo-analysis-errors';
 const IDENTITY_PREFIX = 'repo-analysis-identities';
+const RATE_LIMIT_PREFIX = 'repo-analysis-ratelimits';
 
 /** The cached analysis record. `sha` is the commit the sweep ran against
  *  (`git rev-parse HEAD` inside the VM) — null only if the VM couldn't report
@@ -290,6 +291,106 @@ export async function clearRepoAnalysisErrorInS3(
   } catch {
     /* best-effort */
   }
+}
+
+// --- Rate-limit registry: repo → recent GitHub rate-limit pressure. ---
+//
+// GitHub throttles the shared anonymous budget (and, less often, a user token)
+// under load. A throttle on a PUBLIC repo used to be indistinguishable from a
+// private-repo 404 downstream — it now surfaces as a retryable RATE_LIMITED
+// error (see github-access.ts), and each hit is recorded here so the ops
+// /status page can show when the app is getting throttled and for which repos.
+// Per-repo, latest-only, with a running hit count kept via read-modify-write.
+// Best-effort telemetry: a lost increment under a burst just undercounts — it
+// must never throw into the access path.
+
+export type RateLimitScope = 'anon' | 'user';
+
+/** A repo's recent rate-limit pressure. `count` accumulates across hits since
+ *  `firstHitAt`; `lastHitAt` is the freshest one. `scope` reflects the most
+ *  recent hit — whether it drained the shared anonymous budget or a user token. */
+export interface RepoRateLimitRecord {
+  owner: string;
+  repo: string;
+  scope: RateLimitScope;
+  count: number;
+  firstHitAt: string;
+  lastHitAt: string;
+}
+
+function repoRateLimitS3Key(owner: string, repo: string): string {
+  return `${RATE_LIMIT_PREFIX}/${owner.toLowerCase()}/${repo.toLowerCase()}.json`;
+}
+
+/** The recorded rate-limit pressure for a repo, or null on a miss. Throws on a
+ *  real S3 error (see `rethrowUnlessMiss`). */
+export async function getRepoRateLimitFromS3(
+  owner: string,
+  repo: string
+): Promise<RepoRateLimitRecord | null> {
+  const key = repoRateLimitS3Key(owner, repo);
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key })
+    );
+    if (!response.Body) return null;
+    return JSON.parse(
+      await response.Body.transformToString()
+    ) as RepoRateLimitRecord;
+  } catch (error) {
+    rethrowUnlessMiss(error, key, 'getRepoRateLimitFromS3');
+    return null;
+  }
+}
+
+/**
+ * Record one rate-limit hit for a repo (read-modify-write to bump the running
+ * count). BEST-EFFORT — logs and swallows every failure, including a genuine S3
+ * error, because rate-limit telemetry must never break or slow-fail the request
+ * that tripped the limit. A racy lost increment during a burst just undercounts.
+ */
+export async function recordRateLimitHit(
+  owner: string,
+  repo: string,
+  scope: RateLimitScope,
+  now: string = new Date().toISOString()
+): Promise<void> {
+  const key = repoRateLimitS3Key(owner, repo);
+  try {
+    const existing = await getRepoRateLimitFromS3(owner, repo).catch(() => null);
+    const record: RepoRateLimitRecord = {
+      owner,
+      repo,
+      scope,
+      count: (existing?.count ?? 0) + 1,
+      firstHitAt: existing?.firstHitAt ?? now,
+      lastHitAt: now,
+    };
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: key,
+        Body: JSON.stringify(record),
+        ContentType: 'application/json',
+        CacheControl: 'no-cache',
+      })
+    );
+  } catch (error) {
+    console.error(
+      `[Repo Analysis S3] recordRateLimitHit dropped for "${key}" — ` +
+        `rate-limit telemetry lost, request path unaffected: ${String(error)}`
+    );
+  }
+}
+
+/** Every repo with a recorded rate-limit hit, merged into one record apiece.
+ *  The caller filters by recency + sorts (mirrors `listRepoAnalysisJobs`). */
+export async function listRepoRateLimitHits(): Promise<RepoRateLimitRecord[]> {
+  const repos = await listPrefixRepos(RATE_LIMIT_PREFIX);
+  const records = await mapPool(repos, 12, ({ owner, repo }) =>
+    getRepoRateLimitFromS3(owner, repo).catch(() => null)
+  );
+  return records.filter((r): r is RepoRateLimitRecord => r !== null);
 }
 
 // --- Identity map: repo → its blame-email → GitHub-account overlay. ---

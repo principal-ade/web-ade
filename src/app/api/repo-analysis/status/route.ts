@@ -22,6 +22,7 @@
 import { NextResponse } from 'next/server';
 import {
   listRepoAnalysisJobs,
+  listRepoRateLimitHits,
   type RepoAnalysisJobRecord,
 } from '@/lib/repo-analysis/s3-cache';
 
@@ -36,6 +37,11 @@ const RUN_IN_PROGRESS_WINDOW_MS = 15 * 60 * 1000;
 /** Tolerance when comparing the VM-stamped result time against the host-stamped
  *  launch time (two clocks), so a just-finished run reads as done, not stalled. */
 const LAUNCH_CLOCK_SKEW_MS = 60 * 1000;
+/** Only rate-limit hits from the last day reflect *current* throttling pressure;
+ *  older records linger in S3 harmlessly (like completed results) but aren't shown. */
+const RATE_LIMIT_RECENT_WINDOW_MS = 24 * 60 * 60 * 1000;
+/** Cap the rate-limit list the page renders. */
+const RATE_LIMIT_MAX_ROWS = 50;
 
 type JobStatus = 'inProgress' | 'stalled' | 'failed' | 'done';
 
@@ -79,7 +85,10 @@ function activityMs(r: RepoAnalysisJobRecord): number {
 export async function GET() {
   try {
     const now = Date.now();
-    const records = await listRepoAnalysisJobs();
+    const [records, rateLimitRecords] = await Promise.all([
+      listRepoAnalysisJobs(),
+      listRepoRateLimitHits(),
+    ]);
     const jobs: RepoAnalysisJob[] = records
       .map((r) => ({ ...r, status: deriveStatus(r, now) }))
       .sort((a, b) => activityMs(b) - activityMs(a));
@@ -90,6 +99,15 @@ export async function GET() {
     // Completed set can be large; the page only needs the recent tail.
     const done = jobs.filter((j) => j.status === 'done').slice(0, 50);
 
+    // Only recent throttling reflects current pressure; freshest first.
+    const rateLimited = rateLimitRecords
+      .filter((r) => {
+        const last = Date.parse(r.lastHitAt);
+        return Number.isFinite(last) && now - last < RATE_LIMIT_RECENT_WINDOW_MS;
+      })
+      .sort((a, b) => Date.parse(b.lastHitAt) - Date.parse(a.lastHitAt))
+      .slice(0, RATE_LIMIT_MAX_ROWS);
+
     return NextResponse.json({
       generatedAt: new Date(now).toISOString(),
       counts: {
@@ -97,11 +115,13 @@ export async function GET() {
         stalled: stalled.length,
         failed: failed.length,
         done: jobs.length - inProgress.length - stalled.length - failed.length,
+        rateLimited: rateLimited.length,
       },
       inProgress,
       stalled,
       failed,
       done,
+      rateLimited,
     });
   } catch (err) {
     console.error('[Repo Analysis Status] failed to list jobs:', err);

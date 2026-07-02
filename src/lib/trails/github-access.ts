@@ -15,6 +15,7 @@ import {
 } from '../github-cache';
 import { REPO_ACCESS_CACHE_TTL } from './constants';
 import { TrailShareError, ShareErrorCodes } from './types';
+import { recordRateLimitHit } from '../repo-analysis/s3-cache';
 
 export interface RepoAccessInfo {
   /** GitHub numeric repo id, used as a rename-stable backstop on index entries. */
@@ -227,6 +228,10 @@ export async function checkRepoAccess(
       // instead of a hard "this repository is private". Conflating the two is
       // what made public repos flash the private page on a cold cache.
       if (error.rateLimited) {
+        // Record the hit for the ops /status page before surfacing. Awaited (not
+        // fire-and-forget) so the write survives the serverless response, but it
+        // never throws — telemetry can't turn a rate limit into a 500.
+        await recordRateLimitHit(owner, repo, token ? 'user' : 'anon');
         throw new TrailShareError(
           'GitHub is rate limiting requests right now. Try again in a moment.',
           429,
