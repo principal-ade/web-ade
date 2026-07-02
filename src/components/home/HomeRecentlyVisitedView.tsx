@@ -153,28 +153,40 @@ function ProjectRow({
       fullName={repo.full_name}
       selected={selected}
       onSelect={onSelect}
-      contentClassName="flex items-center gap-2 min-w-0"
+      contentClassName="flex items-center gap-3 min-w-0"
     >
-      {repo.owner.avatar_url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={repo.owner.avatar_url}
-          alt=""
-          width={18}
-          height={18}
-          className="rounded shrink-0"
-          style={{ background: theme.colors.backgroundSecondary }}
-        />
-      )}
-      <span
-        className="truncate"
-        style={{
-          fontSize: theme.fontSizes[2],
-          fontWeight: theme.fontWeights.semibold,
-        }}
-      >
-        {repo.full_name}
-      </span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={
+          repo.owner.avatar_url ??
+          `https://github.com/${repo.owner.login}.png?size=72`
+        }
+        alt=""
+        width={36}
+        height={36}
+        className="rounded-md shrink-0"
+        style={{ background: theme.colors.backgroundSecondary }}
+      />
+      <div className="min-w-0 flex flex-col">
+        <span
+          className="truncate"
+          style={{
+            fontSize: theme.fontSizes[2],
+            fontWeight: theme.fontWeights.semibold,
+          }}
+        >
+          {repo.name}
+        </span>
+        <span
+          className="truncate"
+          style={{
+            fontSize: theme.fontSizes[0],
+            color: theme.colors.textMuted,
+          }}
+        >
+          {repo.owner.login}
+        </span>
+      </div>
     </RepoRowShell>
   );
 }
