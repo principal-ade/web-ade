@@ -53,9 +53,16 @@ function findRootReadme(filePaths: string[]): string | null {
 export function RepoFileCityPane({
   owner,
   repo,
+  readmePath: readmePathOverride,
 }: {
   owner: string;
   repo: string;
+  /**
+   * Explicit README path to render, bypassing the root-README lookup. Used for
+   * an org's `.github` profile repo, whose README lives at `profile/README.md`
+   * rather than the root. Falls back to the root README when omitted.
+   */
+  readmePath?: string | null;
 }) {
   const { theme } = useTheme();
   const [fileTree, setFileTree] = useState<FileTree | null>(null);
@@ -98,7 +105,10 @@ export function RepoFileCityPane({
     };
   }, [owner, repo]);
 
-  const readmePath = useMemo(() => findRootReadme(filePaths), [filePaths]);
+  const readmePath = useMemo(
+    () => readmePathOverride ?? findRootReadme(filePaths),
+    [readmePathOverride, filePaths],
+  );
   const { readme: readmeView, loading: readmeLoading } = useReadme(
     owner,
     repo,

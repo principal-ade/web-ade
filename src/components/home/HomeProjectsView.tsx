@@ -45,6 +45,16 @@ export interface HomeProjectsViewProps {
   selectedFullName?: string | null;
   onSelectRepo: (repo: ProjectRepo) => void;
   onBack: () => void;
+  /** Pane-header title + icon. Defaults to the signed-in home's "Your Projects". */
+  title?: string;
+  icon?: React.ReactNode;
+  /** Copy shown when there are no repos at all. */
+  emptyMessage?: React.ReactNode;
+  /** Render the per-section sticky headers. Off for a single flat list (e.g. one
+   *  owner's repos), where a section header would just echo the pane title. */
+  showSectionHeaders?: boolean;
+  /** Show skeleton rows while loading instead of the "Loading…" text line. */
+  skeleton?: boolean;
 }
 
 export function HomeProjectsView({
@@ -53,6 +63,11 @@ export function HomeProjectsView({
   selectedFullName = null,
   onSelectRepo,
   onBack,
+  title = 'Your Projects',
+  icon = <FolderGit2 size={14} />,
+  emptyMessage,
+  showSectionHeaders = true,
+  skeleton = false,
 }: HomeProjectsViewProps) {
   const { theme } = useTheme();
   const [filter, setFilter] = useState('');
@@ -84,8 +99,8 @@ export function HomeProjectsView({
   return (
     <>
       <RailPaneHeader
-        icon={<FolderGit2 size={14} />}
-        label="Your Projects"
+        icon={icon}
+        label={title}
         count={totalRepos || undefined}
         onClose={onBack}
         closeAsBack
@@ -117,18 +132,26 @@ export function HomeProjectsView({
         {error ? (
           <ListMessage>Couldn&rsquo;t load your projects: {error}</ListMessage>
         ) : filtered === null ? (
-          <ListMessage>Loading your projects…</ListMessage>
+          skeleton ? (
+            <RepoRowSkeletons />
+          ) : (
+            <ListMessage>Loading your projects…</ListMessage>
+          )
         ) : totalRepos === 0 ? (
           <ListMessage>
-            No projects yet. Repos you own and your organizations&rsquo; repos
-            will show up here.
+            {emptyMessage ?? (
+              <>
+                No projects yet. Repos you own and your organizations&rsquo;
+                repos will show up here.
+              </>
+            )}
           </ListMessage>
         ) : filtered.length === 0 ? (
           <ListMessage>No projects match “{filter}”.</ListMessage>
         ) : (
           filtered.map((section) => (
             <div key={section.key}>
-              <SectionHeader section={section} />
+              {showSectionHeaders && <SectionHeader section={section} />}
               {section.repos.map((repo) => (
                 <RepoRow
                   key={repo.id}
@@ -265,6 +288,32 @@ function RepoRow({
         </div>
       )}
     </RepoRowShell>
+  );
+}
+
+function RepoRowSkeletons() {
+  const { theme } = useTheme();
+  const bar = (w: string | number): React.CSSProperties => ({
+    width: w,
+    height: 10,
+    borderRadius: 4,
+    background: theme.colors.border,
+  });
+  return (
+    <div aria-hidden="true">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div
+          key={i}
+          className="px-4 py-2.5 border-b"
+          style={{ borderColor: theme.colors.border }}
+        >
+          <div className="flex flex-col gap-2 animate-pulse">
+            <div style={bar('55%')} />
+            <div style={bar('80%')} />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
