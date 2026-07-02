@@ -378,12 +378,12 @@ export function OwnerProfilePage({ owner }: { owner: string }) {
 
       {/* Header */}
       <header
-        className="border-b px-4 flex items-center gap-2 flex-shrink-0 relative"
+        className="border-b px-6 flex items-center gap-2 flex-shrink-0 relative"
         style={{
           background: theme.colors.surface,
           borderColor: theme.colors.border,
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
-          paddingBottom: '0.5rem',
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)',
+          paddingBottom: '1rem',
           zIndex: 10,
         }}
       >
