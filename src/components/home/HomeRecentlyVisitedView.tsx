@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { FolderGit2, Footprints, History } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { RailPaneHeader } from '@/components/rail/RailPaneHeader';
+import { RepoRowShell } from './RepoRowShell';
 import type { ProjectRepo } from './HomeProjectsView';
 
 // ---------------------------------------------------------------------------
@@ -147,26 +148,12 @@ function ProjectRow({
   onSelect: () => void;
 }) {
   const { theme } = useTheme();
-  const selectedBg = `color-mix(in srgb, ${theme.colors.primary} 12%, ${theme.colors.background})`;
-  const hoverBg = `color-mix(in srgb, ${theme.colors.primary} 6%, ${theme.colors.background})`;
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={selected}
-      className="w-full text-left px-4 py-2.5 border-b transition-colors flex items-center gap-2 min-w-0"
-      style={{
-        background: selected ? selectedBg : 'transparent',
-        borderColor: theme.colors.border,
-        color: theme.colors.text,
-        cursor: 'pointer',
-      }}
-      onMouseEnter={(e) => {
-        if (!selected) e.currentTarget.style.background = hoverBg;
-      }}
-      onMouseLeave={(e) => {
-        if (!selected) e.currentTarget.style.background = 'transparent';
-      }}
+    <RepoRowShell
+      fullName={repo.full_name}
+      selected={selected}
+      onSelect={onSelect}
+      contentClassName="flex items-center gap-2 min-w-0"
     >
       {repo.owner.avatar_url && (
         // eslint-disable-next-line @next/next/no-img-element
@@ -188,7 +175,7 @@ function ProjectRow({
       >
         {repo.full_name}
       </span>
-    </button>
+    </RepoRowShell>
   );
 }
 
