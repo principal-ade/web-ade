@@ -102,6 +102,45 @@ function readRecentRepos(): HeaderRepoSearchItem[] {
   }
 }
 
+// A small curated set of well-known repositories, offered as one-tap options in
+// the mobile "Explore GitHub projects" sheet before the user starts typing.
+// Star counts are intentionally omitted so the rows don't imply live figures.
+const POPULAR_REPOS: HeaderRepoSearchItem[] = [
+  {
+    full_name: 'facebook/react',
+    name: 'react',
+    owner: { login: 'facebook', avatar_url: 'https://github.com/facebook.png' },
+    description: 'The library for web and native user interfaces',
+  },
+  {
+    full_name: 'vercel/next.js',
+    name: 'next.js',
+    owner: { login: 'vercel', avatar_url: 'https://github.com/vercel.png' },
+    description: 'The React Framework',
+  },
+  {
+    full_name: 'microsoft/vscode',
+    name: 'vscode',
+    owner: { login: 'microsoft', avatar_url: 'https://github.com/microsoft.png' },
+    description: 'Visual Studio Code',
+  },
+  {
+    full_name: 'torvalds/linux',
+    name: 'linux',
+    owner: { login: 'torvalds', avatar_url: 'https://github.com/torvalds.png' },
+    description: 'Linux kernel source tree',
+  },
+  {
+    full_name: 'kubernetes/kubernetes',
+    name: 'kubernetes',
+    owner: {
+      login: 'kubernetes',
+      avatar_url: 'https://github.com/kubernetes.png',
+    },
+    description: 'Production-grade container scheduling and management',
+  },
+];
+
 export default function HomePage() {
   const { theme } = useTheme();
   const router = useRouter();
@@ -109,6 +148,9 @@ export default function HomePage() {
   const signedIn = !!user;
   const [repoUrl, setRepoUrl] = useState('');
   const [repoFocused, setRepoFocused] = useState(false);
+  // Mobile-only "Explore GitHub projects" sheet — replaces the Create/View
+  // Trail CTAs on small screens with a search + one-tap popular projects.
+  const [mobileExploreOpen, setMobileExploreOpen] = useState(false);
   const [flashLabel, setFlashLabel] = useState<string | null>(null);
   const [flashTyped, setFlashTyped] = useState('');
 
@@ -502,6 +544,65 @@ export default function HomePage() {
     </div>
   );
 
+  // The "already typing" half of the opener: a direct-open hint for a pasted
+  // link / `owner/repo` path, otherwise the GitHub repo-search results. Shared
+  // by the header dropdown and the mobile "Explore GitHub projects" sheet.
+  const renderOpenerResults = () =>
+    openRepoDirect ? (
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() =>
+          navigateToRepo(openRepoDirect.owner, openRepoDirect.repo)
+        }
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = `color-mix(in srgb, ${theme.colors.primary} 12%, transparent)`;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'transparent';
+        }}
+        className="flex w-full items-center gap-2.5 px-3.5 py-3 text-left transition-colors"
+        style={{ color: theme.colors.text, background: 'transparent' }}
+      >
+        <Github
+          className="w-5 h-5 shrink-0"
+          style={{ color: theme.colors.textMuted }}
+        />
+        <span className="truncate" style={{ fontSize: theme.fontSizes[2] }}>
+          Open {openRepoDirect.owner}/{openRepoDirect.repo}
+        </span>
+        <ChevronRight
+          className="w-5 h-5 ml-auto shrink-0"
+          style={{ color: theme.colors.textMuted }}
+        />
+      </button>
+    ) : openRepoSearching ? (
+      <div
+        className="flex items-center gap-2.5 px-3.5 py-3.5"
+        style={{
+          color: theme.colors.textMuted,
+          fontSize: theme.fontSizes[2],
+        }}
+      >
+        <InlineTrailLoader size={16} />
+        Searching…
+      </div>
+    ) : openRepoResults.length > 0 ? (
+      <div className="max-h-96 overflow-y-auto">
+        {openRepoResults.map(renderRepoRow)}
+      </div>
+    ) : (
+      <div
+        className="px-3.5 py-3.5"
+        style={{
+          color: theme.colors.textMuted,
+          fontSize: theme.fontSizes[2],
+        }}
+      >
+        No repositories found
+      </div>
+    );
+
   // Dropdown only while focused and not mid-flash; before typing it shows
   // recent repos, after typing a direct-open hint or the search results.
   const showOpener = repoUrl.trim().length > 0;
@@ -660,62 +761,8 @@ export default function HomePage() {
                     {recentRepos.map(renderRepoRow)}
                   </div>
                 </>
-              ) : openRepoDirect ? (
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() =>
-                    navigateToRepo(openRepoDirect.owner, openRepoDirect.repo)
-                  }
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = `color-mix(in srgb, ${theme.colors.primary} 12%, transparent)`;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
-                  className="flex w-full items-center gap-2.5 px-3.5 py-3 text-left transition-colors"
-                  style={{ color: theme.colors.text, background: 'transparent' }}
-                >
-                  <Github
-                    className="w-5 h-5 shrink-0"
-                    style={{ color: theme.colors.textMuted }}
-                  />
-                  <span
-                    className="truncate"
-                    style={{ fontSize: theme.fontSizes[2] }}
-                  >
-                    Open {openRepoDirect.owner}/{openRepoDirect.repo}
-                  </span>
-                  <ChevronRight
-                    className="w-5 h-5 ml-auto shrink-0"
-                    style={{ color: theme.colors.textMuted }}
-                  />
-                </button>
-              ) : openRepoSearching ? (
-                <div
-                  className="flex items-center gap-2.5 px-3.5 py-3.5"
-                  style={{
-                    color: theme.colors.textMuted,
-                    fontSize: theme.fontSizes[2],
-                  }}
-                >
-                  <InlineTrailLoader size={16} />
-                  Searching…
-                </div>
-              ) : openRepoResults.length > 0 ? (
-                <div className="max-h-96 overflow-y-auto">
-                  {openRepoResults.map(renderRepoRow)}
-                </div>
               ) : (
-                <div
-                  className="px-3.5 py-3.5"
-                  style={{
-                    color: theme.colors.textMuted,
-                    fontSize: theme.fontSizes[2],
-                  }}
-                >
-                  No repositories found
-                </div>
+                renderOpenerResults()
               )}
             </div>
           )}
@@ -804,10 +851,25 @@ export default function HomePage() {
                     showHint ? 'opacity-100' : 'opacity-0 pointer-events-none'
                   }`}
                 >
+                  {/* Mobile leads with exploring real repos instead of the
+                      Create/View Trail CTAs, which only show from `sm` up. */}
+                  <button
+                    type="button"
+                    onClick={() => setMobileExploreOpen(true)}
+                    className="sm:hidden inline-flex items-center justify-center gap-2 w-64 px-5 py-2.5 rounded-md text-base font-medium transition-opacity hover:opacity-80"
+                    style={{
+                      background: theme.colors.primary,
+                      color: theme.colors.background,
+                    }}
+                    tabIndex={showHint ? 0 : -1}
+                  >
+                    <Github size={18} />
+                    Explore GitHub projects
+                  </button>
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(true)}
-                    className="inline-flex items-center justify-center gap-1.5 w-64 px-5 py-2.5 rounded-md text-base font-medium transition-opacity hover:opacity-80"
+                    className="hidden sm:inline-flex items-center justify-center gap-1.5 w-64 px-5 py-2.5 rounded-md text-base font-medium transition-opacity hover:opacity-80"
                     style={{
                       background: theme.colors.primary,
                       color: theme.colors.background,
@@ -819,7 +881,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => goToView('trails')}
-                    className="inline-flex items-center justify-center gap-1.5 w-64 px-5 py-2.5 rounded-md text-base font-medium transition-opacity hover:opacity-80"
+                    className="hidden sm:inline-flex items-center justify-center gap-1.5 w-64 px-5 py-2.5 rounded-md text-base font-medium transition-opacity hover:opacity-80"
                     style={{
                       background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
                       border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
@@ -1197,6 +1259,97 @@ export default function HomePage() {
         open={showCreateModal}
         onClose={() => setShowCreateModal(false)}
       />
+
+      {/* Mobile "Explore GitHub projects" sheet — a full-screen search that
+          leads with one-tap popular projects, then GitHub repo-search results
+          as the user types. Only reachable from the mobile hero button. */}
+      {mobileExploreOpen && (
+        <div
+          className="sm:hidden fixed inset-0 z-[2000] flex flex-col"
+          style={{ background: theme.colors.background, color: theme.colors.text }}
+        >
+          <div
+            className="flex items-center justify-between gap-3 px-4 h-14 border-b shrink-0"
+            style={{
+              borderColor: `color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
+            }}
+          >
+            <span
+              className="font-semibold"
+              style={{ fontSize: theme.fontSizes[3], fontFamily: theme.fonts.body }}
+            >
+              Explore GitHub projects
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setMobileExploreOpen(false);
+                setRepoUrl('');
+              }}
+              className="inline-flex items-center justify-center rounded-md p-2 transition-opacity hover:opacity-80"
+              style={{ color: theme.colors.textMuted }}
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="px-4 py-3 shrink-0">
+            <div
+              role="search"
+              aria-label="Search GitHub repositories"
+              className="flex items-center gap-2 rounded-md px-3 py-2.5"
+              style={{
+                background: `color-mix(in srgb, ${theme.colors.surface} 60%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
+              }}
+            >
+              <Search
+                size={16}
+                color={theme.colors.textMuted}
+                style={{ flexShrink: 0 }}
+              />
+              <input
+                type="text"
+                inputMode="url"
+                autoComplete="off"
+                autoFocus
+                spellCheck={false}
+                value={repoUrl}
+                onChange={(e) => setRepoUrl(e.target.value)}
+                onPaste={handleRepoUrlPaste}
+                onKeyDown={handleRepoUrlKeyDown}
+                placeholder="Search repos or paste a link…"
+                aria-label="Search repositories or paste a GitHub link"
+                className="flex-1 min-w-0 bg-transparent border-0 outline-none text-base"
+                style={{ color: theme.colors.text }}
+              />
+              {repoUrl && (
+                <button
+                  type="button"
+                  onClick={() => setRepoUrl('')}
+                  className="shrink-0 transition-opacity hover:opacity-80"
+                  style={{ color: theme.colors.textMuted }}
+                  aria-label="Clear search"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-2 pb-8">
+            {!showOpener ? (
+              <>
+                {dropdownLabel('Popular projects')}
+                {POPULAR_REPOS.map(renderRepoRow)}
+              </>
+            ) : (
+              renderOpenerResults()
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
