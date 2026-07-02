@@ -35,10 +35,6 @@ export interface HomeTwoPaneProps
   > {
   /** Render the right pane for the selected repo (or the idle state when null). */
   renderRightPane?: (repo: SelectedRepo | null) => React.ReactNode;
-  /** Controlled selected repo. When provided, the parent owns the selection
-   *  (e.g. so a header search bar can drive the right pane); otherwise the shell
-   *  tracks it internally. */
-  selected?: SelectedRepo | null;
   /** Notified when the selected project changes. */
   onSelectRepo?: (repo: SelectedRepo | null) => void;
   onViewChange?: (view: HomeView) => void;
@@ -46,23 +42,18 @@ export interface HomeTwoPaneProps
 
 export function HomeTwoPane({
   renderRightPane,
-  selected: controlledSelected,
   onSelectRepo,
   onViewChange,
   ...leftPanelProps
 }: HomeTwoPaneProps) {
   const { theme } = useTheme();
-  const [internalSelected, setInternalSelected] = useState<SelectedRepo | null>(
-    null,
-  );
-  const isControlled = controlledSelected !== undefined;
-  const selected = isControlled ? controlledSelected : internalSelected;
+  const [selected, setSelected] = useState<SelectedRepo | null>(null);
 
   const pickRepo = (repo: ProjectRepo) => {
     const [owner, name] = repo.full_name.split('/');
     const next: SelectedRepo | null =
       owner && name ? { owner, repo: name, full_name: repo.full_name } : null;
-    if (!isControlled) setInternalSelected(next);
+    setSelected(next);
     onSelectRepo?.(next);
   };
 

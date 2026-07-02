@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,7 +8,6 @@ import { AgentViewButton } from '@/components/AgentViewButton';
 import { HomeThemeToggle } from '@/components/HomeThemeToggle';
 import { RepoSearchBar } from '@/components/RepoSearchBar';
 import { SignedInHome } from '@/components/home/SignedInHome';
-import type { SelectedRepo } from '@/components/home/HomeTwoPane';
 
 /**
  * `/home` — the signed-in app surface (the user-based two-pane rail + File City).
@@ -23,10 +21,6 @@ import type { SelectedRepo } from '@/components/home/HomeTwoPane';
 export default function HomeDashboardPage() {
   const { theme } = useTheme();
   const { user, isLoading } = useAuth();
-
-  // The selected repo drives the right-pane File City. It's owned here so the
-  // header search bar and the rail's project lists both feed the same selection.
-  const [selectedRepo, setSelectedRepo] = useState<SelectedRepo | null>(null);
 
   return (
     <div
@@ -56,11 +50,8 @@ export default function HomeDashboardPage() {
           <div className="flex items-center gap-3">
             {user && (
               <div className="hidden md:block">
-                <RepoSearchBar
-                  onOpenRepo={(owner, repo) =>
-                    setSelectedRepo({ owner, repo, full_name: `${owner}/${repo}` })
-                  }
-                />
+                {/* Choosing a repo navigates to its owner/repo page. */}
+                <RepoSearchBar />
               </div>
             )}
             <HomeThemeToggle />
@@ -80,11 +71,7 @@ export default function HomeDashboardPage() {
           <span style={{ fontSize: theme.fontSizes[1] }}>Loading…</span>
         </div>
       ) : user ? (
-        <SignedInHome
-          user={user}
-          selected={selectedRepo}
-          onSelectRepo={setSelectedRepo}
-        />
+        <SignedInHome user={user} />
       ) : (
         <div
           className="flex-1 flex flex-col items-center justify-center gap-3 px-8 text-center"
