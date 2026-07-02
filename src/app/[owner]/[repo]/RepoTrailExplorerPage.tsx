@@ -1326,6 +1326,9 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     owner,
     repo,
     activeReadmePath,
+    // Pin the README read to the same commit the file tree resolved, so it's a
+    // coherent snapshot and hits the immutable SHA-keyed cache.
+    fileTree?.sha ?? null,
   );
 
   // Open the readme by default on first visit, unless the user previously
@@ -1779,7 +1782,7 @@ const Header: React.FC<{
   return (
     <header
       ref={rootRef}
-      className="border-b px-6 flex items-center gap-2 flex-shrink-0 relative"
+      className="border-b px-5 flex items-center gap-2 flex-shrink-0 relative"
       style={{
         background: theme.colors.surface,
         borderColor: theme.colors.border,

@@ -378,7 +378,7 @@ export function OwnerProfilePage({ owner }: { owner: string }) {
 
       {/* Header */}
       <header
-        className="border-b px-6 flex items-center gap-2 flex-shrink-0 relative"
+        className="border-b px-5 flex items-center gap-2 flex-shrink-0 relative"
         style={{
           background: theme.colors.surface,
           borderColor: theme.colors.border,

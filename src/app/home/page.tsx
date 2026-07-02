@@ -34,7 +34,7 @@ export default function HomeDashboardPage() {
           background: `color-mix(in srgb, ${theme.colors.backgroundSecondary ?? theme.colors.background} 55%, transparent)`,
         }}
       >
-        <div className="w-full flex items-center justify-between gap-4 px-6 py-4">
+        <div className="w-full flex items-center justify-between gap-4 px-5 py-4">
           <Link
             href="/"
             className="flex items-center transition-opacity hover:opacity-80"
