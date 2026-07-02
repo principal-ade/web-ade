@@ -751,9 +751,9 @@ export default function HomePage() {
             <span style={{ color: theme.colors.textMuted }}>Loading…</span>
           </section>
         ) : (
-        <section className="flex-1 w-full max-w-7xl mx-auto px-6 py-16 flex items-start">
-          <div className="w-full grid lg:grid-cols-2 gap-12 lg:gap-10 items-start">
-            <div className="relative text-center lg:text-left min-h-[260px] lg:pt-24">
+        <section className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 flex items-center">
+          <div className="w-full grid lg:grid-cols-2 gap-12 lg:gap-10 items-center">
+            <div className="relative text-center lg:text-left min-h-[260px]">
               {/* Title — fades out when the user opens the file-city explanation. */}
               <div
                 className={`transition-opacity duration-700 ${view === 'title' && !fading ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}

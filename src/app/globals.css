@@ -48,6 +48,6 @@ body {
 /* Relative positioning like body - most reliable on Safari iOS */
 .h-viewport-fixed {
   position: relative;
-  height: 100vh;
+  height: 100dvh;
   width: 100%;
 }
