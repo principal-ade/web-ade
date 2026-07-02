@@ -23,6 +23,8 @@ import {
   GetObjectCommand,
   PutObjectCommand,
   DeleteObjectCommand,
+  ListObjectsV2Command,
+  HeadObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { RepoAnalysis } from './run';
@@ -412,4 +414,144 @@ export async function presignAnalysisUploadUrls(
     ),
   ]);
   return { analysisUrl, errorUrl };
+}
+
+// --- Cross-repo enumeration: the raw material for a status/jobs page. ---
+//
+// Every producer above writes per-repo, latest-only, keyed `{owner}/{repo}.json`
+// under a fixed prefix — so the state a status page needs (a launch happened / it
+// failed / it finished) already exists; it's just never read across repos. This
+// section lists those prefixes and merges them into one record per repo. It does
+// NOT derive a status (that needs `Date.now()` + the in-progress window, which
+// live in the route) — it only gathers the timestamps/breadcrumbs a caller
+// classifies. Result BODIES are large (per-file line counts), so results are read
+// via HeadObject metadata (`generated-at`, `sha`) — never downloaded.
+
+/** One repo's merged analysis-job signals. Any field is null when its record is
+ *  absent: no `launchedAt` → no run ever launched; no `generatedAt` → never
+ *  succeeded; no `error` → no failure on record. The caller derives status. */
+export interface RepoAnalysisJobRecord {
+  owner: string;
+  repo: string;
+  /** Warm-VM pointer's `updatedAt` — the last launch time, or null if none. */
+  launchedAt: string | null;
+  vmId: string | null;
+  /** The cached result's `generated-at` metadata (VM publish time), or null. */
+  generatedAt: string | null;
+  /** The cached result's `sha` metadata (commit swept), or null. */
+  sha: string | null;
+  error: RepoAnalysisErrorRecord | null;
+}
+
+/** Run `fn` over `items` at most `concurrency` at a time (keeps the fan-out of
+ *  per-repo reads from opening hundreds of sockets at once). Order-preserving. */
+async function mapPool<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i] as T);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+/** List every `{owner}/{repo}` under `prefix/`, paging through truncated results.
+ *  Returns the parsed owner/repo pairs (keys are `prefix/{owner}/{repo}.json`). */
+async function listPrefixRepos(prefix: string): Promise<Array<{ owner: string; repo: string }>> {
+  const out: Array<{ owner: string; repo: string }> = [];
+  let token: string | undefined;
+  do {
+    const res = await s3Client.send(
+      new ListObjectsV2Command({
+        Bucket: BUCKET_NAME,
+        Prefix: `${prefix}/`,
+        ContinuationToken: token,
+      })
+    );
+    for (const obj of res.Contents ?? []) {
+      const key = obj.Key;
+      if (!key || !key.endsWith('.json')) continue;
+      const rest = key.slice(prefix.length + 1, -'.json'.length); // `{owner}/{repo}`
+      const slash = rest.indexOf('/');
+      if (slash <= 0 || slash === rest.length - 1) continue;
+      out.push({ owner: rest.slice(0, slash), repo: rest.slice(slash + 1) });
+    }
+    token = res.IsTruncated ? res.NextContinuationToken : undefined;
+  } while (token);
+  return out;
+}
+
+/** Read a result's `generated-at`/`sha` from object metadata WITHOUT downloading
+ *  the (large) body. Returns null on a miss. */
+async function headRepoResult(
+  owner: string,
+  repo: string
+): Promise<{ generatedAt: string | null; sha: string | null } | null> {
+  try {
+    const res = await s3Client.send(
+      new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: repoAnalysisS3Key(owner, repo) })
+    );
+    const meta = res.Metadata ?? {};
+    return {
+      generatedAt: meta['generated-at'] ?? res.LastModified?.toISOString() ?? null,
+      sha: meta['sha'] && meta['sha'] !== 'unknown' ? meta['sha'] : null,
+    };
+  } catch (error) {
+    rethrowUnlessMiss(error, repoAnalysisS3Key(owner, repo), 'headRepoResult');
+    return null;
+  }
+}
+
+/**
+ * Enumerate every repo that has *any* analysis-job record (a launch, a result, or
+ * a failure) and merge its signals into one record apiece. This is the read a
+ * status page issues: it fans out `ListObjectsV2` across the three prefixes, then
+ * reads only what each repo actually has. Cost scales with the number of analyzed
+ * repos, not the size of any result. The caller classifies each record into
+ * in-progress / failed / stalled / done.
+ */
+export async function listRepoAnalysisJobs(): Promise<RepoAnalysisJobRecord[]> {
+  const [vmRepos, errorRepos, resultRepos] = await Promise.all([
+    listPrefixRepos(VM_PREFIX),
+    listPrefixRepos(ERROR_PREFIX),
+    listPrefixRepos(CACHE_PREFIX),
+  ]);
+
+  // Union the three key spaces so a repo shows up even if it has only one signal.
+  const byRepo = new Map<string, { owner: string; repo: string }>();
+  for (const r of [...vmRepos, ...errorRepos, ...resultRepos]) {
+    byRepo.set(`${r.owner}/${r.repo}`, r);
+  }
+  const has = (list: Array<{ owner: string; repo: string }>) =>
+    new Set(list.map((r) => `${r.owner}/${r.repo}`));
+  const hasVm = has(vmRepos);
+  const hasError = has(errorRepos);
+  const hasResult = has(resultRepos);
+
+  return mapPool(Array.from(byRepo.values()), 12, async ({ owner, repo }) => {
+    const id = `${owner}/${repo}`;
+    const [vmPointer, error, result] = await Promise.all([
+      hasVm.has(id) ? getRepoVmPointer(owner, repo).catch(() => null) : Promise.resolve(null),
+      hasError.has(id)
+        ? getRepoAnalysisErrorFromS3(owner, repo).catch(() => null)
+        : Promise.resolve(null),
+      hasResult.has(id) ? headRepoResult(owner, repo).catch(() => null) : Promise.resolve(null),
+    ]);
+    return {
+      owner,
+      repo,
+      launchedAt: vmPointer?.updatedAt ?? null,
+      vmId: vmPointer?.vmId ?? null,
+      generatedAt: result?.generatedAt ?? null,
+      sha: result?.sha ?? null,
+      error,
+    };
+  });
 }
