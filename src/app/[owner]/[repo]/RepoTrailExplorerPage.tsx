@@ -82,7 +82,7 @@ import { RepoSearchBar } from '@/components/RepoSearchBar';
 import { readRecentRepos } from '@/lib/recentRepos';
 import { BookmarksDrawer } from '@/components/bookmarks/BookmarksDrawer';
 import type { BookmarkRepo } from '@/components/bookmarks/types';
-import { TrailLoadingScreen } from '@/components/trail/TrailLoadingScreen';
+import { BlockDropLoadingScreen } from '@/components/trail/BlockDropLoadingScreen';
 import { InlineTrailLoader } from '@/components/trail/InlineTrailLoader';
 import { TrailErrorView } from '@/components/trail/TrailErrorView';
 import { TrailShareModal } from '@/components/trail/TrailShareModal';
@@ -1408,7 +1408,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           />
         </div>
         <div style={{ position: 'fixed', inset: 0, zIndex: 50 }}>
-          <TrailLoadingScreen message={`Loading ${repo}`} />
+          <BlockDropLoadingScreen message={`Loading ${repo}`} />
         </div>
       </>
     );
