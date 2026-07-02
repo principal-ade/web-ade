@@ -3100,10 +3100,10 @@ const ReadmeButton: React.FC<{
               border: `1px solid ${theme.colors.border}`,
             }),
       }}
-      title={active ? `Close ${readmePath}` : `Open ${readmePath}`}
+      title={active ? `Close ${readmePath} and show the city` : `Open ${readmePath}`}
     >
-      <FileText size={16} />
-      README
+      {active ? <Building2 size={16} /> : <FileText size={16} />}
+      {active ? 'City' : 'README'}
     </button>
   );
 };
