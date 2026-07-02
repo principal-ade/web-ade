@@ -4717,10 +4717,19 @@ const ContributorsPane: React.FC<{
                       if (!active)
                         e.currentTarget.style.background =
                           theme.colors.backgroundSecondary;
+                      // Preview this contributor's highlight on hover — no
+                      // click needed. Rows in analysis mode carry `emails`;
+                      // fallback (GitHub-graph) rows have none and nothing to
+                      // highlight anyway.
+                      setSelectedEmails(row.emails ?? null);
                     }}
                     onMouseLeave={(e) => {
                       if (!active)
                         e.currentTarget.style.background = 'transparent';
+                      // The list only renders while nothing is pinned (clicking
+                      // a row slides the pane to the profile), so leaving a row
+                      // just clears the hover preview.
+                      setSelectedEmails(null);
                     }}
                   >
                     <div className="flex w-full items-center gap-3">
