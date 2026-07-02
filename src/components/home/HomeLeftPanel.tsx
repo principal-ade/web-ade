@@ -21,6 +21,7 @@ import { HomeStarredView } from './HomeStarredView';
 import {
   HomeRecentlyVisitedView,
   type RecentTrailItem,
+  type CommunityRepoItem,
 } from './HomeRecentlyVisitedView';
 import {
   HomeTrailsTopicsView,
@@ -70,6 +71,8 @@ export interface HomeLeftPanelProps {
   /** "Recently Visited" view: recent repos (as ProjectRepos) + recent trails. */
   recentProjects?: ProjectRepo[] | null;
   recentTrails?: RecentTrailItem[] | null;
+  /** "Recently Visited" view: repos the wider community opened recently. */
+  communityProjects?: CommunityRepoItem[] | null;
   /** "Bookmarks" view: the user's bookmarked trails + topics. `null` = loading. */
   bookmarkTrails?: TrailListItem[] | null;
   bookmarkTopics?: TopicListItem[] | null;
@@ -93,6 +96,7 @@ export function HomeLeftPanel({
   starredError = null,
   recentProjects,
   recentTrails,
+  communityProjects,
   bookmarkTrails,
   bookmarkTopics,
   libraryTrails,
@@ -146,6 +150,7 @@ export function HomeLeftPanel({
           <HomeRecentlyVisitedView
             projects={recentProjects ?? null}
             trails={recentTrails ?? null}
+            community={communityProjects ?? null}
             selectedFullName={selectedRepoFullName}
             onSelectRepo={(repo) => onSelectRepo?.(repo)}
             onBack={() => go('home')}

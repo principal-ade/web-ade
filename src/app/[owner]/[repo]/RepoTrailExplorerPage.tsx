@@ -3407,6 +3407,16 @@ function fetchRepoInfo(
       } catch {
         // ignore
       }
+      // Record the visit in the global community feed too (public repos only;
+      // the server gates on the GitHub `private` flag). Fire-and-forget — this
+      // is telemetry for the home "Visited by others" rail, never load-bearing.
+      void fetch('/api/repos/community-visits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner, repo }),
+      }).catch(() => {
+        // ignore
+      });
       return d;
     })
     .catch(() => {

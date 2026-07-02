@@ -9,7 +9,10 @@ import { RepoFileCityPane } from './RepoFileCityPane';
 import type { UserAboutInfo } from './UserAboutCard';
 import type { HomeNavCardCounts } from './HomeNavCards';
 import type { ProjectRepo, ProjectSection } from './HomeProjectsView';
-import type { RecentTrailItem } from './HomeRecentlyVisitedView';
+import type {
+  RecentTrailItem,
+  CommunityRepoItem,
+} from './HomeRecentlyVisitedView';
 import type {
   TrailListItem,
   TopicListItem,
@@ -172,6 +175,7 @@ export function SignedInHome({ user }: { user: User }) {
   const [starred, setStarred] = useState<ProjectRepo[] | null>(null);
   const [recentProjects, setRecentProjects] = useState<ProjectRepo[] | null>(null);
   const [recentTrails, setRecentTrails] = useState<RecentTrailItem[] | null>(null);
+  const [community, setCommunity] = useState<CommunityRepoItem[] | null>(null);
   const [libraryTrails, setLibraryTrails] = useState<TrailListItem[] | null>(null);
   const [libraryTopics, setLibraryTopics] = useState<TopicListItem[] | null>(null);
   const [bookmarkTrails, setBookmarkTrails] = useState<TrailListItem[] | null>(null);
@@ -297,6 +301,23 @@ export function SignedInHome({ user }: { user: User }) {
     };
   }, [user.id]);
 
+  // Repos the wider community has opened recently — a global, anonymous feed
+  // (no per-user identity, just a rough deduped visit count). Public repos only.
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/repos/community-visits')
+      .then((r) => (r.ok ? r.json() : { entries: [] }))
+      .then((data: { entries?: CommunityRepoItem[] }) => {
+        if (!cancelled) setCommunity(data.entries ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setCommunity([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // The user's own published trails + topics.
   useEffect(() => {
     let cancelled = false;
@@ -370,6 +391,7 @@ export function SignedInHome({ user }: { user: User }) {
       starred={starred}
       recentProjects={recentProjects}
       recentTrails={recentTrails}
+      communityProjects={community}
       bookmarkTrails={bookmarkTrails}
       bookmarkTopics={bookmarkTopics}
       libraryTrails={libraryTrails}
