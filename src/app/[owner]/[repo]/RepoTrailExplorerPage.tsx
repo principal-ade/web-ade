@@ -1384,6 +1384,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         code={state.code}
         noAccessTitle="This repository is private"
         notFoundTitle="Trails unavailable"
+        rateLimitedTitle="Hang tight — GitHub is busy"
         fallbackTitle="Trails unavailable"
       />
     );

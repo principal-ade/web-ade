@@ -14,6 +14,7 @@ import {
   GitHubApiError,
 } from '../github-cache';
 import { REPO_ACCESS_CACHE_TTL } from './constants';
+import { TrailShareError, ShareErrorCodes } from './types';
 
 export interface RepoAccessInfo {
   /** GitHub numeric repo id, used as a rename-stable backstop on index entries. */
@@ -221,6 +222,17 @@ export async function checkRepoAccess(
     };
   } catch (error) {
     if (error instanceof GitHubApiError) {
+      // A rate limit is transient, not a permission failure — surface it as a
+      // distinct retryable error so callers show a "try again shortly" state
+      // instead of a hard "this repository is private". Conflating the two is
+      // what made public repos flash the private page on a cold cache.
+      if (error.rateLimited) {
+        throw new TrailShareError(
+          'GitHub is rate limiting requests right now. Try again in a moment.',
+          429,
+          ShareErrorCodes.RATE_LIMITED
+        );
+      }
       if (error.status === 404 || error.status === 403) {
         return null;
       }

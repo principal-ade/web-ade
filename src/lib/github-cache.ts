@@ -45,6 +45,17 @@ export class GitHubApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    /**
+     * True when GitHub returned this failure because the (shared, anonymous
+     * or per-user) request budget is exhausted — a *transient* condition, not
+     * a permission problem. Primary rate limits surface as a 403 with
+     * `x-ratelimit-remaining: 0`; secondary/abuse limits as a 403/429 with a
+     * `retry-after` header. Callers must not conflate this with a real 403/404
+     * "no access" (e.g. a private repo).
+     */
+    public readonly rateLimited: boolean = false,
+    /** Seconds GitHub asked us to wait, from `retry-after`, when provided. */
+    public readonly retryAfterSeconds: number | null = null,
   ) {
     super(message);
     this.name = 'GitHubApiError';
@@ -85,9 +96,23 @@ async function fetchGitHub<T>(
   }
 
   if (!response.ok) {
+    // A 403/429 with the request budget drained (or a secondary-limit
+    // `retry-after`) is a rate limit, not a permission failure. Flag it so
+    // callers can surface a retryable state instead of a hard "no access".
+    const remaining = response.headers.get('x-ratelimit-remaining');
+    const retryAfter = response.headers.get('retry-after');
+    const rateLimited =
+      (response.status === 403 || response.status === 429) &&
+      (remaining === '0' || retryAfter !== null);
+    const retryAfterSeconds =
+      retryAfter && Number.isFinite(Number(retryAfter))
+        ? Number(retryAfter)
+        : null;
     throw new GitHubApiError(
       `GitHub API error: ${response.status} ${response.statusText}`,
-      response.status
+      response.status,
+      rateLimited,
+      retryAfterSeconds
     );
   }
 
