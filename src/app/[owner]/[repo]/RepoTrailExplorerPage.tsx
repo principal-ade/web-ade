@@ -1786,8 +1786,8 @@ const Header: React.FC<{
       style={{
         background: theme.colors.surface,
         borderColor: theme.colors.border,
-        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)',
-        paddingBottom: '1rem',
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.875rem)',
+        paddingBottom: '0.875rem',
       }}
     >
       {/* Mount animation for the repo breadcrumb crumb — it unmounts on the
