@@ -4721,16 +4721,23 @@ const ContributorsPane: React.FC<{
                       // Preview this contributor's highlight on hover — no
                       // click needed. Rows in analysis mode carry `emails`;
                       // fallback (GitHub-graph) rows have none and nothing to
-                      // highlight anyway.
-                      setSelectedEmails(row.emails ?? null);
+                      // highlight anyway. Hover only previews while nothing is
+                      // pinned; once a row is selected it owns the highlight and
+                      // stray enter/leave events during the slide-to-profile
+                      // handoff must not disturb it.
+                      if (!selected) setSelectedEmails(row.emails ?? null);
                     }}
                     onMouseLeave={(e) => {
                       if (!active)
                         e.currentTarget.style.background = 'transparent';
-                      // The list only renders while nothing is pinned (clicking
-                      // a row slides the pane to the profile), so leaving a row
-                      // just clears the hover preview.
-                      setSelectedEmails(null);
+                      // Clearing the preview only makes sense while nothing is
+                      // pinned. Clicking a row sets `selectedKey` and slides the
+                      // pane to the profile; the trailing mouseleave that fires
+                      // as this button slides out from under the cursor must NOT
+                      // null the highlight, or the just-pinned selection would
+                      // blink off. The selection now owns it (handleRowClick set
+                      // selectedEmails); leave it alone.
+                      if (!selected) setSelectedEmails(null);
                     }}
                   >
                     <div className="flex w-full items-center gap-3">
