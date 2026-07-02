@@ -65,9 +65,11 @@ export function RepoRowShell({
           touch/narrow screens (which can't hover). */}
       <Link
         href={`/${fullName}`}
+        target="_blank"
+        rel="noopener noreferrer"
         title={`Open ${fullName}`}
-        aria-label={`Open ${fullName} page`}
-        className="absolute top-2 right-3 flex items-center gap-1 px-2 py-1 rounded-md opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100"
+        aria-label={`Open ${fullName} in a new tab`}
+        className="absolute top-1/2 right-3 -translate-y-1/2 flex items-center gap-1 px-2 py-1 rounded-md opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100"
         style={{
           background: `color-mix(in srgb, ${theme.colors.primary} 14%, ${theme.colors.background})`,
           color: theme.colors.primary,
