@@ -45,7 +45,24 @@ export function RepoSearchBar({
   );
   const [openRepoSearching, setOpenRepoSearching] = useState(false);
   const [recentRepos, setRecentRepos] = useState<HeaderRepoSearchItem[]>([]);
+  const [shortcutHint, setShortcutHint] = useState('');
   const openRepoInputRef = useRef<HTMLInputElement>(null);
+
+  // ⌘K / Ctrl+K focuses the input from anywhere on the page. The hint label is
+  // resolved after mount to avoid an SSR platform mismatch.
+  useEffect(() => {
+    setShortcutHint(
+      /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K',
+    );
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        openRepoInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // A pasted link / `owner/repo` path is opened directly; anything else is a
   // free-text search. Computed each render so the input and submit agree.
@@ -260,6 +277,22 @@ export function RepoSearchBar({
             fontSize: theme.fontSizes[1],
           }}
         />
+        {/* Keyboard-shortcut hint, hidden once the user starts typing. */}
+        {shortcutHint && !openRepoUrl && (
+          <kbd
+            aria-hidden
+            className="shrink-0 rounded px-1.5 py-0.5 leading-none pointer-events-none"
+            style={{
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[0],
+              color: theme.colors.textMuted,
+              background: theme.colors.backgroundSecondary,
+              border: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            {shortcutHint}
+          </kbd>
+        )}
       </form>
 
       {/* Dropdown: recent repos before the user types, then a direct-open hint
