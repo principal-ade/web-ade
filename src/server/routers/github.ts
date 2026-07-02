@@ -94,7 +94,14 @@ async function ensureTreeInS3(
         userToken
       );
       resolvedSha = refData.sha;
-      setCachedAsync(refCacheKey, resolvedSha, 1200);
+      // A branch/HEAD ref is mutable — keep this short so a new commit is picked
+      // up within ~1 min (content reads keyed by the resolved SHA are immutable
+      // and cached hard downstream). A full-SHA ref is immutable: cache a day.
+      setCachedAsync(
+        refCacheKey,
+        resolvedSha,
+        /^[0-9a-f]{40}$/i.test(ref) ? 86400 : 60,
+      );
     } catch {
       resolvedSha = ref;
     }
@@ -808,8 +815,13 @@ export const githubRouter = router({
                 userToken
               );
               resolvedSha = refData.sha;
-              // Cache ref→SHA mapping for 20 min
-              setCachedAsync(refCacheKey, resolvedSha, 1200);
+              // Mutable branch/HEAD ref: short TTL so new commits appear within
+              // ~1 min. Immutable full-SHA ref: cache for a day.
+              setCachedAsync(
+                refCacheKey,
+                resolvedSha,
+                /^[0-9a-f]{40}$/i.test(ref) ? 86400 : 60,
+              );
             } catch {
               resolvedSha = ref;
             }

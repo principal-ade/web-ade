@@ -44,6 +44,14 @@ const CACHE_DURATIONS = {
   counts: 120, // 2 minutes - PR/issue counts can change frequently
 } as const;
 
+// A full 40-char commit SHA addresses immutable content — the bytes at that ref
+// can never change, so a SHA-pinned read is cached indefinitely and a new commit
+// is simply a new cache key (self-busting). Branch names, tags, and "HEAD" are
+// mutable refs and keep the short TTLs above.
+const IMMUTABLE_MAX_AGE = 31_536_000; // 1 year — the max sane max-age/s-maxage
+const isCommitSha = (ref: string | null | undefined): ref is string =>
+  !!ref && /^[0-9a-f]{40}$/i.test(ref);
+
 class GitHubApiError extends Error {
   constructor(
     message: string,
@@ -168,6 +176,9 @@ export async function GET(
 
     // Response data - union of all possible response types
     let data: GitHubRepoInfoResponse | GitHubTreeResponse | GitHubReadmeResponse | GitHubContributorsResponse | GitHubFileResponse | GitHubCountsResponse;
+    // Set when the response is pinned to an immutable commit SHA, so the cache
+    // headers below can be `immutable` rather than a short revalidate window.
+    let immutable = false;
 
     switch (action) {
       case "info":
@@ -254,16 +265,21 @@ export async function GET(
         // is part of the cache key so pinned reads don't collide with the
         // unpinned (HEAD) read of the same path.
         const ref = searchParams.get("ref");
+        const pinned = isCommitSha(ref);
         const endpoint = ref
           ? `/repos/${owner}/${name}/contents/${filePath}?ref=${encodeURIComponent(ref)}`
           : `/repos/${owner}/${name}/contents/${filePath}`;
         const cacheKey = ref
           ? `repo-file-${owner}-${name}-${ref}-${filePath}`
           : `repo-file-${owner}-${name}-${filePath}`;
+        // A SHA-pinned read is immutable: cache it for a year so a re-commit is
+        // picked up via its new SHA key, not by waiting out a TTL. Unpinned or
+        // branch/HEAD reads stay on the short revalidate window.
+        immutable = pinned;
         data = await makeCachedGitHubRequest<GitHubFileResponse>(
           endpoint,
           cacheKey,
-          CACHE_DURATIONS.file,
+          pinned ? IMMUTABLE_MAX_AGE : CACHE_DURATIONS.file,
           userToken,
         );
         break;
@@ -283,6 +299,7 @@ export async function GET(
           );
         }
         const ref = searchParams.get("ref");
+        const pinned = isCommitSha(ref);
         const endpoint = ref
           ? `/repos/${owner}/${name}/contents/${filePath}?ref=${encodeURIComponent(ref)}`
           : `/repos/${owner}/${name}/contents/${filePath}`;
@@ -310,12 +327,15 @@ export async function GET(
           "Content-Type",
           ghResponse.headers.get("content-type") || "application/octet-stream",
         );
-        // SHA-pinned reads are immutable; even unpinned files change rarely, so
-        // lean on HTTP caching here (binary bodies don't round-trip through
+        // SHA-pinned reads are immutable — cache them hard so a re-commit is
+        // picked up via its new SHA key. Unpinned files change rarely, so still
+        // lean on HTTP caching (binary bodies don't round-trip through
         // unstable_cache cleanly).
         rawResponse.headers.set(
           "Cache-Control",
-          `public, s-maxage=${CACHE_DURATIONS.file}, stale-while-revalidate=${CACHE_DURATIONS.file * 2}`,
+          pinned
+            ? `public, max-age=${IMMUTABLE_MAX_AGE}, immutable`
+            : `public, s-maxage=${CACHE_DURATIONS.file}, stale-while-revalidate=${CACHE_DURATIONS.file * 2}`,
         );
         return addCorsHeaders(rawResponse);
       }
@@ -350,10 +370,14 @@ export async function GET(
     const cacheDuration = CACHE_DURATIONS[action as keyof typeof CACHE_DURATIONS] || 300;
     const response = NextResponse.json(data);
 
-    // Set cache headers for CDN/browser caching
+    // Set cache headers for CDN/browser caching. SHA-pinned content is immutable,
+    // so it's cached hard and never revalidated; everything else uses the action's
+    // short TTL with stale-while-revalidate.
     response.headers.set(
       "Cache-Control",
-      `public, s-maxage=${cacheDuration}, stale-while-revalidate=${cacheDuration * 2}`,
+      immutable
+        ? `public, max-age=${IMMUTABLE_MAX_AGE}, immutable`
+        : `public, s-maxage=${cacheDuration}, stale-while-revalidate=${cacheDuration * 2}`,
     );
 
     return response;

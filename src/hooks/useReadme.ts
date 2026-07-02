@@ -18,6 +18,7 @@ export function useReadme(
   owner: string,
   repo: string,
   path: string | null,
+  sha?: string | null,
 ): Result {
   const [state, setState] = useState<Result>({
     readme: null,
@@ -42,7 +43,7 @@ export function useReadme(
         const res = await fetch(
           `/api/github/repo/${owner}/${repo}?action=file&path=${encodeURIComponent(
             path,
-          )}`,
+          )}${sha ? `&ref=${encodeURIComponent(sha)}` : ''}`,
         );
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
@@ -68,12 +69,13 @@ export function useReadme(
         // `basePath` is the README's own directory so relative paths resolve
         // against its location.
         //
-        // `branch: 'HEAD'` is deliberate. The renderer defaults a missing branch
-        // to `main`, which 404s on repos whose default branch isn't `main`
-        // (e.g. opencode → `master`). GitHub's raw host resolves the `HEAD` ref
-        // to the repo's default branch for ANY repo, so it's correct without us
-        // having to know the branch name — and it matches the content above,
-        // which the file API also reads from the default branch (HEAD).
+        // Pin the renderer's relative image/link rewriting to the same ref the
+        // content was read from. With a `sha`, raw URLs resolve against that
+        // immutable commit so images match the pinned README. Without one, fall
+        // back to `HEAD`: the renderer defaults a missing branch to `main`, which
+        // 404s on repos whose default branch isn't `main` (e.g. opencode →
+        // `master`), whereas GitHub's raw host resolves `HEAD` to the default
+        // branch for ANY repo — matching the unpinned content fetched above.
         const basePath = path.includes('/')
           ? path.slice(0, path.lastIndexOf('/'))
           : '';
@@ -81,7 +83,7 @@ export function useReadme(
           readme: {
             content,
             path,
-            repositoryInfo: { owner, repo, branch: 'HEAD', basePath },
+            repositoryInfo: { owner, repo, branch: sha ?? 'HEAD', basePath },
           },
           loading: false,
           error: null,
@@ -95,7 +97,7 @@ export function useReadme(
         });
       }
     })();
-  }, [owner, repo, path]);
+  }, [owner, repo, path, sha]);
 
   return state;
 }
