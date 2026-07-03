@@ -381,6 +381,17 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   // those, opening it clears the others so a single thing drives the right pane.
   const [activeReadmePath, setActiveReadmePath] = useState<string | null>(null);
 
+  // Small-screen flag (matches the 768px breakpoint used elsewhere). On mobile
+  // the legend and README don't auto-open — they'd crowd the city — so we seed
+  // the panel's `defaultLegendOpen` and skip the README auto-open below.
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   // Measured page-header height, so the right-docked file panel can start just
   // below the header instead of overlapping it at the top of the screen. A
   // callback ref (not a ref + mount effect) is required: this component returns
@@ -1340,7 +1351,11 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     if (didAutoOpenReadme.current) return;
     if (!readmePath) return; // wait for the file list to load
     didAutoOpenReadme.current = true;
-    if (readReadmeOpenPref(owner, repo) === false) return; // user dismissed it
+    const readmePref = readReadmeOpenPref(owner, repo);
+    if (readmePref === false) return; // user dismissed it
+    // On mobile the README shouldn't open by default (it would take the whole
+    // screen), but still honor an explicit prior "open" preference.
+    if (isMobile && readmePref !== true) return;
     if (selectedTourId || selectedCommitSha || selectedTrailId || selectedFilePath) {
       return; // something else is already showing
     }
@@ -1349,6 +1364,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     readmePath,
     owner,
     repo,
+    isMobile,
     selectedTourId,
     selectedCommitSha,
     selectedTrailId,
@@ -1634,6 +1650,8 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           showSpatialContext={configMode}
           showColorLegend
           showColorLegendToggle
+          // Mobile starts with the legend collapsed (reopenable via the toggle).
+          defaultLegendOpen={!isMobile}
           trailsExpanded={trailsExpanded}
           onCloseCommit={() => setSelectedCommitSha(null)}
           onCloseIssue={() => setSelectedIssueNumber(null)}
@@ -5915,6 +5933,8 @@ const RightPane: React.FC<{
   showColorLegend: boolean;
   /** Pin the in-panel top-right button that collapses/reopens the legend. */
   showColorLegendToggle: boolean;
+  /** Initial open state of the legend — false on mobile so it starts collapsed. */
+  defaultLegendOpen: boolean;
   /** Trails section expanded → render the Trail explorer; else the Tour panel. */
   trailsExpanded: boolean;
   /** Commit picked from the Activity list → fed to FileCityGuidePanel's commit
@@ -5963,6 +5983,7 @@ const RightPane: React.FC<{
   showSpatialContext,
   showColorLegend,
   showColorLegendToggle,
+  defaultLegendOpen,
   trailsExpanded,
   onCloseCommit,
   onCloseIssue,
@@ -6330,6 +6351,8 @@ const RightPane: React.FC<{
           // Top-right "Legend" button to collapse/reopen the file-type legend
           // (replaces the old header button).
           showColorLegendToggle={showColorLegendToggle}
+          // Start collapsed on mobile; the toggle above still reopens it.
+          defaultLegendOpen={defaultLegendOpen}
           // Top-left "Files" button to browse the idle city as a normal file
           // tree; tracks the focused package subtree.
           showFileTreeToggle
