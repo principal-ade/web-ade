@@ -13,6 +13,7 @@
     "scripts/**/*.ts"
   ],
   "ignore": [
+    "src/lib/authoring/opencode-assets/**",
     "**/*.stories.tsx",
     "**/*.test.{ts,tsx}",
     "**/*.spec.{ts,tsx}",

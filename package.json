@@ -38,6 +38,7 @@
     "@industry-theme/repository-composition-panels": "^0.7.92",
     "@mlc-ai/web-llm": "^0.2.80",
     "@monaco-editor/react": "^4.7.0",
+    "@octokit/openapi-types": "^27.0.0",
     "@octokit/rest": "^22.0.1",
     "@opencode-ai/sdk": "^1.17.3",
     "@opentelemetry/api": "^1.9.0",
@@ -100,6 +101,7 @@
     "monaco-editor": "^0.55.1",
     "monaco-editor-webpack-plugin": "^7.1.1",
     "next": "^15.5.16",
+    "pdfjs-dist": "5.4.296",
     "postcss": "^8.4.31",
     "pptx-preview": "^1.0.7",
     "react": "19.2.0",
@@ -112,6 +114,7 @@
     "themed-markdown": "^0.1.109",
     "three": "^0.175.0",
     "typescript": "^5",
+    "yaml": "^2.9.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
