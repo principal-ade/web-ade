@@ -254,13 +254,15 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
 
   const { user } = useAuth();
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
-  // Minimum loading window so the warming FileCity3D (rendered behind
-  // the loading screen) has time to mount, init WebGL, and compile its
-  // shader programs before the real panel takes over. Mirrors the trail
-  // page's MIN_LOADING_MS. See docs/nextjs-3d-rendering-issue.md.
+  // Minimum time the loading overlay stays up, so it reads as a deliberate
+  // beat instead of a flash on fast loads. The real tree now mounts *behind*
+  // the overlay as soon as its data lands (see the render gate below), so
+  // this window no longer has to cover a full WebGL warm-up — the old 2000ms
+  // floor existed to give the warming FileCity3D time, and guaranteed the
+  // warming→real swap was visible. See docs/nextjs-3d-rendering-issue.md.
   const [minDelayElapsed, setMinDelayElapsed] = useState(false);
   useEffect(() => {
-    const t = window.setTimeout(() => setMinDelayElapsed(true), 2000);
+    const t = window.setTimeout(() => setMinDelayElapsed(true), 800);
     return () => window.clearTimeout(t);
   }, []);
   const [filterQuery, setFilterQuery] = useState('');
@@ -1413,6 +1415,23 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     });
   }, [idleHighlightLayers, fileTree]);
 
+  // Everything the real tree needs before it can mount: the trail index plus
+  // the file tree (or its error — RightPane renders tree errors inline).
+  const dataReady =
+    state.kind === 'ready' && (fileTree !== null || treeError !== null);
+
+  // Once the real tree is mounted (behind the loading overlay), give its
+  // FileCity3D a short beat to init WebGL and flip cameraReady before the
+  // overlay lifts. Timer-driven for now — swap for an onCityReady signal
+  // plumbed up through FileCityGuidePanel once the panel packages expose one.
+  const [warmGraceElapsed, setWarmGraceElapsed] = useState(false);
+  useEffect(() => {
+    if (!dataReady) return;
+    const t = window.setTimeout(() => setWarmGraceElapsed(true), 500);
+    return () => window.clearTimeout(t);
+  }, [dataReady]);
+  const showLoadingOverlay = !minDelayElapsed || !warmGraceElapsed;
+
   if (state.kind === 'error') {
     return (
       <TrailErrorView
@@ -1426,14 +1445,16 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     );
   }
 
-  // Hold the loading screen until: the trail index has landed, the
-  // file tree has landed, and the warming window has elapsed. Behind
-  // the overlay we mount a hidden FileCity3D with sample data so its
-  // chunk loads, WebGL context inits, and shaders compile before the
-  // real panel mounts — no flash on first paint of the real city.
-  // Errors on the tree fetch take a separate path (inline in RightPane)
-  // so we don't strand the user on a never-resolving overlay.
-  if (state.kind === 'loading' || (fileTree === null && treeError === null) || !minDelayElapsed) {
+  // While the data the real tree needs is still loading, warm FileCity3D's
+  // WebGL pipeline behind the loading screen with sample data. The moment the
+  // data lands we mount the *real* tree behind the same overlay instead (see
+  // the main return) — the real panel finishes its own warm-up out of sight,
+  // so the warming instance is never visibly swapped for a cold one. That
+  // swap (every fresh Canvas mounts at opacity 0 until cameraReady, then
+  // fades in) is what used to read as the page loading twice. Errors on the
+  // tree fetch take a separate path (inline in RightPane) so we don't strand
+  // the user on a never-resolving overlay.
+  if (!dataReady) {
     return (
       <>
         <div style={{ position: 'fixed', inset: 0, zIndex: 0 }}>
@@ -1788,6 +1809,15 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
         />
       )}
     </div>
+    {/* The loading screen stays layered over the real tree until the minimum
+        beat and the post-mount warm-up grace have both elapsed, so the real
+        FileCity3D's cold start (blank canvas until cameraReady) happens out
+        of sight instead of as a visible second load. */}
+    {showLoadingOverlay && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 50 }}>
+        <BlockDropLoadingScreen message={`Loading ${repo}`} />
+      </div>
+    )}
     </RepoAnalysisProvider>
   );
 }
