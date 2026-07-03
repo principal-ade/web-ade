@@ -43,6 +43,7 @@ function findRootReadme(filePaths: string[]): string | null {
   );
   if (matches.length === 0) return null;
   return (
+    matches.find((p) => /^readme\.md$/i.test(p)) ??
     matches.find((p) => /\.md$/i.test(p)) ??
     matches.find((p) => /\.markdown$/i.test(p)) ??
     matches[0] ??
