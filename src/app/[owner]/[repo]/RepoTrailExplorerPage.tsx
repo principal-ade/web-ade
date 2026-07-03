@@ -1798,6 +1798,9 @@ const Header: React.FC<{
   onShowOverview,
 }) => {
   const { theme } = useTheme();
+  // Mobile: the repo opener collapses into a "Search GitHub" button that opens
+  // a full-screen search sheet (the header is too cramped for the input).
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   return (
     <header
@@ -2004,6 +2007,24 @@ const Header: React.FC<{
           <RepoSearchBar excludeFullName={`${owner}/${repo}`} />
         </div>
 
+        {/* Mobile: a compact button that opens the full-screen search sheet in
+            place of the inline opener (which is hidden below md). */}
+        <button
+          type="button"
+          onClick={() => setMobileSearchOpen(true)}
+          className="md:hidden flex items-center gap-1.5 h-8 px-2.5 rounded-md transition-opacity hover:opacity-80"
+          style={{
+            color: theme.colors.text,
+            background: theme.colors.background,
+            border: `1px solid ${theme.colors.border}`,
+            fontSize: theme.fontSizes[1],
+          }}
+          aria-label="Search GitHub"
+        >
+          <Search className="w-4 h-4" />
+          Search GitHub
+        </button>
+
         {/* Agent view — sits to the right of the opener input. */}
         <div className="hidden md:flex">
           <AgentViewButton path={`/${owner}/${repo}`} iconOnly />
@@ -2027,8 +2048,49 @@ const Header: React.FC<{
           <Bookmark className="w-5 h-5" />
         </button>
 
-        <UserAvatarMenu />
+        <div className="hidden md:block">
+          <UserAvatarMenu />
+        </div>
       </div>
+
+      {/* Mobile GitHub search sheet — full-screen so the search input + results
+          have room; reuses the shared RepoSearchBar (navigates on select). */}
+      {mobileSearchOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-[2000] flex flex-col"
+          style={{ background: theme.colors.background, color: theme.colors.text }}
+        >
+          <div
+            className="flex items-center justify-between gap-3 px-4 h-14 border-b shrink-0"
+            style={{
+              borderColor: `color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
+            }}
+          >
+            <span
+              className="font-semibold"
+              style={{ fontSize: theme.fontSizes[3], fontFamily: theme.fonts.body }}
+            >
+              Search GitHub
+            </span>
+            <button
+              type="button"
+              onClick={() => setMobileSearchOpen(false)}
+              className="inline-flex items-center justify-center rounded-md p-2 transition-opacity hover:opacity-80"
+              style={{ color: theme.colors.textMuted }}
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-4">
+            <RepoSearchBar
+              excludeFullName={`${owner}/${repo}`}
+              inputWidthClass="w-full"
+              autoFocus
+            />
+          </div>
+        </div>
+      )}
     </header>
   );
 };

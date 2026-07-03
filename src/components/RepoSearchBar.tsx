@@ -27,17 +27,20 @@ export interface RepoSearchBarProps {
   excludeFullName?: string;
   /** Width class for the input (default `w-56`). */
   inputWidthClass?: string;
+  /** Start focused with the dropdown active — used by the mobile search sheet. */
+  autoFocus?: boolean;
 }
 
 export function RepoSearchBar({
   onOpenRepo,
   excludeFullName,
   inputWidthClass = 'w-56',
+  autoFocus = false,
 }: RepoSearchBarProps) {
   const { theme } = useTheme();
   const router = useRouter();
 
-  const [openRepoActive, setOpenRepoActive] = useState(false);
+  const [openRepoActive, setOpenRepoActive] = useState(autoFocus);
   const [openRepoUrl, setOpenRepoUrl] = useState('');
   const [openRepoError, setOpenRepoError] = useState(false);
   const [openRepoResults, setOpenRepoResults] = useState<HeaderRepoSearchItem[]>(
