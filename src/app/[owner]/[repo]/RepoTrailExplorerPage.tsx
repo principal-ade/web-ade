@@ -1921,17 +1921,21 @@ const Header: React.FC<{
             className="rounded-full flex-shrink-0"
             style={{ border: `1px solid ${theme.colors.border}` }}
           />
-          <span
-            className="truncate"
-            style={{
-              fontFamily: theme.fonts.body,
-              fontSize: theme.fontSizes[2],
-              fontWeight: theme.fontWeights.semibold,
-              color: theme.colors.text,
-            }}
-          >
-            {owner}
-          </span>
+          {/* Once drilled into a view the repo name leads; drop the owner name
+              on mobile so it doesn't crowd the crumb (avatar still links out). */}
+          {!repoActive && (
+            <span
+              className="truncate"
+              style={{
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[2],
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.text,
+              }}
+            >
+              {owner}
+            </span>
+          )}
         </Link>
         {repoActive && (
           <span
@@ -2030,12 +2034,12 @@ const Header: React.FC<{
           <AgentViewButton path={`/${owner}/${repo}`} iconOnly />
         </div>
 
-        {/* Bookmarks passport — slides in the side panel. */}
+        {/* Bookmarks passport — slides in the side panel. Hidden on mobile. */}
         <button
           type="button"
           onClick={onToggleBookmarks}
           aria-pressed={bookmarksOpen}
-          className="flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
+          className="hidden md:flex items-center justify-center w-8 h-8 rounded-md transition-all hover:opacity-80"
           style={{
             color: bookmarksOpen ? theme.colors.primary : theme.colors.text,
             background: bookmarksOpen
