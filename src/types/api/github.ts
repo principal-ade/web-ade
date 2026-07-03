@@ -223,43 +223,10 @@ export interface GitHubIssue {
 
 export type GitHubIssuesResponse = GitHubIssue[];
 
-// Pull request types
-export interface GitHubPullRequest {
-  id: number;
-  number: number;
-  title: string;
-  state: 'open' | 'closed';
-  locked: boolean;
-  user: GitHubUser;
-  labels: GitHubLabel[];
-  created_at: string;
-  updated_at: string;
-  closed_at: string | null;
-  merged_at: string | null;
-  body: string | null;
-  html_url: string;
-  head: {
-    ref: string;
-    sha: string;
-    repo: {
-      full_name: string;
-    } | null;
-  };
-  base: {
-    ref: string;
-    sha: string;
-    repo: {
-      full_name: string;
-    };
-  };
-  draft: boolean;
-  mergeable?: boolean;
-  mergeable_state?: string;
-  comments?: number;
-  review_comments?: number;
-}
-
-export type GitHubPullRequestsResponse = GitHubPullRequest[];
+// Pull request payloads are typed off `@octokit/openapi-types`
+// (`components['schemas']['pull-request'|'pull-request-simple']`) at their use
+// sites — the PR routes/hooks — so the hand-rolled interface that used to live
+// here was retired.
 
 // Repository (simplified for lists)
 export interface GitHubRepo {

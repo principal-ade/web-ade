@@ -23,8 +23,6 @@ export type {
   GitHubUser,
   GitHubIssue,
   GitHubIssuesResponse,
-  GitHubPullRequest,
-  GitHubPullRequestsResponse,
   GitHubRepo,
   GitHubOrg,
   GitHubUserProfile,
