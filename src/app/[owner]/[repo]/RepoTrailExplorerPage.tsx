@@ -32,6 +32,7 @@ import {
   Play,
   Activity,
   CircleDot,
+  GitPullRequest,
   ChevronRight,
   Boxes,
   Footprints,
@@ -65,6 +66,7 @@ import type {
   CommitView,
   ReadmeView,
   IssueView,
+  PullRequestView,
   LineCountsSliceData,
 } from '@industry-theme/file-city-panel';
 import {
@@ -95,6 +97,7 @@ import type { UserActivityResponse } from '@/app/api/github/user/[username]/acti
 import { FileSourcePanel } from './FileSourcePanel';
 import { RepoActivityPane } from './RepoActivityPane';
 import { RepoIssuesPane } from './RepoIssuesPane';
+import { RepoPullRequestsPane } from './RepoPullRequestsPane';
 import { RepoAnalysisStatus } from './RepoAnalysisStatus';
 import {
   RepoAnalysisProvider,
@@ -110,6 +113,7 @@ import {
 import { useCommitsChangedFiles } from '@/hooks/useCommitsChangedFiles';
 import { useCommitView } from '@/hooks/useCommitView';
 import { useIssueView } from '@/hooks/useIssueView';
+import { usePullRequestView } from '@/hooks/usePullRequestView';
 import { useReadme } from '@/hooks/useReadme';
 import {
   buildAggregateChurnLayers,
@@ -176,6 +180,7 @@ type LeftViewMode =
   | 'tours'
   | 'activity'
   | 'issues'
+  | 'pull-requests'
   | 'structure'
   | 'contributors';
 
@@ -351,6 +356,10 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
   const [selectedIssueNumber, setSelectedIssueNumber] = useState<number | null>(
     null,
   );
+  // PR picked from the Pull requests list — when set, the right pane shows it in
+  // the File City panel's native PR mode. Mutually exclusive with
+  // commit/issue/tour/readme/file selection.
+  const [selectedPrNumber, setSelectedPrNumber] = useState<number | null>(null);
   // Commit row currently hovered in the Activity list — paints that commit's
   // files on the idle city in a distinct color over the aggregate heatmap.
   const [hoveredCommitSha, setHoveredCommitSha] = useState<string | null>(null);
@@ -1331,6 +1340,17 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
     isIssuesView ? selectedIssueNumber : null,
   );
 
+  // Selected PR rendered natively by FileCityGuidePanel's PR mode (header +
+  // description + Files/Details tabs, changed buildings lit). Only while the
+  // Pull requests view is active.
+  const isPullRequestsView = leftViewMode === 'pull-requests';
+  const { pullRequest: selectedPrView, loading: prViewLoading } =
+    usePullRequestView(
+      owner,
+      repo,
+      isPullRequestsView ? selectedPrNumber : null,
+    );
+
   // README rendered natively by FileCityGuidePanel's readme mode (markdown left
   // + city + file-type legend). Driven by `activeReadmePath`; idle when null.
   const { readme: selectedReadmeView, loading: readmeViewLoading } = useReadme(
@@ -1513,6 +1533,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
             // activity view also clears any open commit.
             if (mode !== 'activity') setSelectedCommitSha(null);
             if (mode !== 'issues') setSelectedIssueNumber(null);
+            if (mode !== 'pull-requests') setSelectedPrNumber(null);
             // The package focus (idleFocusDirectory) only belongs to the
             // Structure view; leaving it must release the city back to idle so
             // About doesn't stay zoomed on the last-clicked package.
@@ -1537,6 +1558,10 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
               // list, not a stale drill-down.
               setActivityFocusContributor(null);
             } else if (mode === 'issues') {
+              setSelectedTrailId(null);
+              setSelectedTourId(null);
+              setSelectedFilePath(null);
+            } else if (mode === 'pull-requests') {
               setSelectedTrailId(null);
               setSelectedTourId(null);
               setSelectedFilePath(null);
@@ -1567,6 +1592,11 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           onSelectIssue={(issueNumber) => {
             setSelectedIssueNumber(issueNumber);
             if (issueNumber != null) setActiveReadmePath(null);
+          }}
+          selectedPrNumber={selectedPrNumber}
+          onSelectPr={(prNumber) => {
+            setSelectedPrNumber(prNumber);
+            if (prNumber != null) setActiveReadmePath(null);
           }}
           commitFiles={commitFiles}
           onCommitShasChange={setActivityShas}
@@ -1656,11 +1686,14 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           trailsExpanded={trailsExpanded}
           onCloseCommit={() => setSelectedCommitSha(null)}
           onCloseIssue={() => setSelectedIssueNumber(null)}
+          onClosePullRequest={() => setSelectedPrNumber(null)}
           activityHeatmapLayers={activityHeatmapLayers}
           commitView={selectedCommitView}
           commitViewLoading={commitViewLoading}
           issueView={selectedIssueView}
           issueViewLoading={issueViewLoading}
+          pullRequestView={selectedPrView}
+          pullRequestViewLoading={prViewLoading}
           readmeView={selectedReadmeView}
           readmeViewLoading={readmeViewLoading}
           currentAuthor={user?.login}
@@ -2111,6 +2144,7 @@ const SLIDE_ORDER = [
   'tours',
   'activity',
   'issues',
+  'pull-requests',
   'contributors',
   'structure',
   'trails',
@@ -2172,6 +2206,9 @@ const TrailListPane: React.FC<{
   /** Issue picked from the Issues list (highlights the row). */
   selectedIssueNumber: number | null;
   onSelectIssue: (issueNumber: number | null) => void;
+  /** PR picked from the Pull requests list (highlights the row). */
+  selectedPrNumber: number | null;
+  onSelectPr: (prNumber: number | null) => void;
   /** Changed-file lists for the loaded commits — per-contributor file counts. */
   commitFiles: Map<string, ChangedFile[]>;
   /** Activity list reports its loaded SHAs + hovered commit up for the heatmap. */
@@ -2233,6 +2270,8 @@ const TrailListPane: React.FC<{
   onSelectCommit,
   selectedIssueNumber,
   onSelectIssue,
+  selectedPrNumber,
+  onSelectPr,
   commitFiles,
   onCommitShasChange,
   onFocusShasChange,
@@ -2378,6 +2417,14 @@ const TrailListPane: React.FC<{
           repo={repo}
           selectedIssueNumber={selectedIssueNumber}
           onSelectIssue={onSelectIssue}
+          onClose={() => onSetViewMode('tours')}
+        />
+      ) : leftViewMode === 'pull-requests' ? (
+        <RepoPullRequestsPane
+          owner={owner}
+          repo={repo}
+          selectedPrNumber={selectedPrNumber}
+          onSelectPr={onSelectPr}
           onClose={() => onSetViewMode('tours')}
         />
       ) : leftViewMode === 'structure' ? (
@@ -5248,6 +5295,12 @@ const RepoNavCards: React.FC<{
       description: 'Open issues and recent reports',
     },
     {
+      mode: 'pull-requests',
+      icon: <GitPullRequest size={18} />,
+      label: 'Pull requests',
+      description: 'Open PRs and what they change',
+    },
+    {
       mode: 'contributors',
       icon: <Users size={18} />,
       label: 'Contributors',
@@ -6105,6 +6158,8 @@ const RightPane: React.FC<{
   onCloseCommit: () => void;
   /** Issue mode's ✕ → clears the selection, returning to the idle city. */
   onCloseIssue: () => void;
+  /** PR mode's ✕ → clears the selection, returning to the idle city. */
+  onClosePullRequest: () => void;
   /** Aggregate churn + hovered-commit heatmap, painted on the idle tour city
    *  while browsing the Activity list. */
   activityHeatmapLayers: HighlightLayer[] | null;
@@ -6116,6 +6171,10 @@ const RightPane: React.FC<{
    *  or when no issue is picked). */
   issueView: IssueView | null;
   issueViewLoading: boolean;
+  /** Selected PR mapped to the panel's native PullRequestView (null while
+   *  loading or when no PR is picked). */
+  pullRequestView: PullRequestView | null;
+  pullRequestViewLoading: boolean;
   /** README mapped to the panel's native ReadmeView → fed to FileCityGuidePanel's
    *  readme mode via the `readme` slice (markdown left + city + file-type
    *  legend). Null while loading or when the README isn't open. */
@@ -6149,11 +6208,14 @@ const RightPane: React.FC<{
   trailsExpanded,
   onCloseCommit,
   onCloseIssue,
+  onClosePullRequest,
   activityHeatmapLayers,
   commitView,
   commitViewLoading,
   issueView,
   issueViewLoading,
+  pullRequestView,
+  pullRequestViewLoading,
   readmeView,
   readmeViewLoading,
   currentAuthor,
@@ -6348,8 +6410,10 @@ const RightPane: React.FC<{
       closeCommit: () => onCloseCommit(),
       // The issue mode's ✕ does the same for a selected issue.
       closeIssue: () => onCloseIssue(),
+      // And the PR mode's ✕ for a selected pull request.
+      closePullRequest: () => onClosePullRequest(),
     }),
-    [onOpenFile, onCloseCommit, onCloseIssue],
+    [onOpenFile, onCloseCommit, onCloseIssue, onClosePullRequest],
   );
   // Coordinates the TTS backend needs to look up this tour's cached audio.
   // Points at the source the tour was discovered in (repo or fork).
@@ -6414,6 +6478,16 @@ const RightPane: React.FC<{
         error: null,
         refresh: async () => {},
       },
+      // Picking a PR flips the panel into its native PR mode (header +
+      // description + Files/Details tabs, changed buildings lit top-right).
+      pullRequest: {
+        scope: 'repository' as const,
+        name: 'pullRequest',
+        data: pullRequestView,
+        loading: pullRequestViewLoading,
+        error: null,
+        refresh: async () => {},
+      },
       // Opening the repo README flips the panel into its native readme mode
       // (markdown left + city framed top-right + file-type legend bottom-right).
       // Gated on no tour being open: the panel ranks readme above tour, so the
@@ -6458,6 +6532,8 @@ const RightPane: React.FC<{
     commitViewLoading,
     issueView,
     issueViewLoading,
+    pullRequestView,
+    pullRequestViewLoading,
     readmeView,
     readmeViewLoading,
     analysis,

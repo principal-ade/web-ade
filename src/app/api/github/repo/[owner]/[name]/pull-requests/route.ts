@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGitHubToken } from "@/lib/auth/cookies";
-import type { GitHubPullRequest } from "@/types/api";
+import type { components } from "@octokit/openapi-types";
+
+// The list endpoint returns `pull-request-simple` elements (the single-PR
+// route returns the richer `pull-request`). Typed off the official schema so
+// the client (`useRepoPullRequests`) consumes the same shape GitHub sends.
+type GitHubPullRequestSimple = components["schemas"]["pull-request-simple"];
 
 function addCorsHeaders(response: NextResponse) {
   response.headers.set("Access-Control-Allow-Origin", "*");
@@ -75,42 +80,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const pullRequests: GitHubPullRequest[] = await response.json();
+    const pullRequests: GitHubPullRequestSimple[] = await response.json();
 
-    // Transform to match PullRequestInfo interface expected by GitPullRequestsPanel
-    const transformedPRs = pullRequests.map((pr) => ({
-      id: pr.id,
-      number: pr.number,
-      title: pr.title,
-      body: pr.body,
-      state: pr.state,
-      draft: pr.draft,
-      html_url: pr.html_url,
-      user: pr.user ? {
-        login: pr.user.login,
-        avatar_url: pr.user.avatar_url,
-        html_url: pr.user.html_url,
-      } : null,
-      created_at: pr.created_at,
-      updated_at: pr.updated_at,
-      closed_at: pr.closed_at,
-      merged_at: pr.merged_at,
-      base: pr.base ? {
-        ref: pr.base.ref,
-        sha: pr.base.sha,
-      } : null,
-      head: pr.head ? {
-        ref: pr.head.ref,
-        sha: pr.head.sha,
-      } : null,
-      comments: pr.comments,
-      review_comments: pr.review_comments,
-    }));
-
-    // Return pull requests with cache headers
+    // Return the full GitHub `pull-request-simple` objects so the client maps
+    // them itself (mirrors the issues list route). Parallel to the single-PR
+    // route, which returns the richer `pull-request`.
     const jsonResponse = NextResponse.json(
       {
-        pullRequests: transformedPRs,
+        pullRequests,
         owner,
         repo: name,
         isAuthenticated: !!userToken,

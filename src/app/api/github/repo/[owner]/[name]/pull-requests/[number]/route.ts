@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGitHubToken } from "@/lib/auth/cookies";
+import type { components } from "@octokit/openapi-types";
+
+// The single-PR detail payload — carries what `pullRequestViewFromGitHubPullRequest`
+// needs (merged/merged_at, draft, base/head, requested_reviewers, labels,
+// assignees, author_association, additions/deletions/changed_files/commits).
+type GitHubPullRequest = components["schemas"]["pull-request"];
 
 export async function GET(
   _request: NextRequest,
@@ -35,18 +41,13 @@ export async function GET(
       );
     }
 
-    const data = await response.json();
+    // Return the full GitHub payload so the client can map it with
+    // `pullRequestViewFromGitHubPullRequest` (the superset is intentional — the
+    // adapter reads merged_at, draft, base/head, requested_reviewers, labels,
+    // assignees, author_association, and the diff counters).
+    const data: GitHubPullRequest = await response.json();
 
-    // Return relevant PR details
-    const pr = {
-      number: data.number,
-      title: data.title,
-      body: data.body,
-      state: data.state,
-      html_url: data.html_url,
-    };
-
-    const jsonResponse = NextResponse.json(pr);
+    const jsonResponse = NextResponse.json(data);
 
     // Cache for 2 minutes
     jsonResponse.headers.set(
