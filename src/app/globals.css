@@ -23,6 +23,27 @@ html {
   background: var(--background);
 }
 
+/* Top safe-area inset.
+ *
+ * viewport-fit=cover makes env(safe-area-inset-top) report the device's
+ * physical inset (~47px) even inside in-app browsers (Twitter/X, Instagram,
+ * Facebook…) whose own chrome ALREADY sits below the safe area — so adding the
+ * inset there double-counts and pushes our headers down with a dead gap.
+ *
+ * The inset is only genuinely needed when we render INTO the safe area: an
+ * installed PWA / home-screen app (display-mode: standalone) or fullscreen. In
+ * a normal tab or in-app browser the browser chrome owns the notch, so the
+ * inset collapses to 0. Consume this via var(--safe-top) instead of calling
+ * env(safe-area-inset-top) directly. */
+:root {
+  --safe-top: 0px;
+}
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  :root {
+    --safe-top: env(safe-area-inset-top, 0px);
+  }
+}
+
 html,
 body {
   width: 100%;

@@ -58,7 +58,7 @@ export function TrailHeaderLite({
       style={{
         background: theme.colors.surface,
         borderColor: theme.colors.border,
-        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
+        paddingTop: 'calc(var(--safe-top) + 0.5rem)',
         paddingBottom: '0.5rem',
       }}
     >
@@ -95,7 +95,7 @@ export function TrailHeaderLite({
       <div
         className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center justify-center pointer-events-none"
         style={{
-          top: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
+          top: 'calc(var(--safe-top) + 0.5rem)',
           bottom: '0.5rem',
         }}
         aria-live="polite"

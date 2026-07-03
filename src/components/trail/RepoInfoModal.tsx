@@ -95,7 +95,7 @@ export function RepoInfoModal({ owner, repo, onClose }: RepoInfoModalProps) {
       className="fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4"
       style={{
         background: 'rgba(0,0,0,0.55)',
-        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingTop: 'var(--safe-top)',
         zIndex: 2147483000,
       }}
     >

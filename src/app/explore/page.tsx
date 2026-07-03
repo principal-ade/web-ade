@@ -27,7 +27,7 @@ export default function ExplorePage() {
         style={{
           background: `color-mix(in srgb, ${theme.colors.surface} 60%, transparent)`,
           borderColor: `color-mix(in srgb, ${theme.colors.border} 60%, transparent)`,
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
+          paddingTop: 'calc(var(--safe-top) + 0.5rem)',
           paddingBottom: '0.5rem',
           position: 'relative',
           zIndex: 10,

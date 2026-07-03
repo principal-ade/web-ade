@@ -226,7 +226,7 @@ export function EditorHeader({
         style={{
           background: theme.colors.surface,
           borderColor: theme.colors.border,
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
+          paddingTop: 'calc(var(--safe-top) + 0.5rem)',
           paddingBottom: '0.5rem',
         }}
       >

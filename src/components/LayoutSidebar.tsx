@@ -116,7 +116,7 @@ export function LayoutSidebar({
               borderBottom: `1px solid ${theme.colors.border}`,
               paddingLeft: '16px',
               paddingRight: '16px',
-              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
+              paddingTop: 'calc(var(--safe-top) + 0.5rem)',
               paddingBottom: '0.5rem',
             }}
           >
@@ -284,7 +284,7 @@ export function LayoutSidebar({
           minWidth: `${SIDEBAR_EXPANDED_WIDTH}px`,
           height: '49px',
           borderBottom: `1px solid ${theme.colors.border}`,
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
+          paddingTop: 'calc(var(--safe-top) + 0.5rem)',
           paddingBottom: '0.5rem',
         }}
       >
