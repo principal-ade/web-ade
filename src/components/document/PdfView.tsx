@@ -18,7 +18,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 
 /** Renders every page of a PDF with pdf.js (via react-pdf), sized to the
  * container width. Consistent across browsers — no reliance on a native plugin. */
-export function PdfView({ src, className }: { src: string; className?: string }) {
+function PdfView({ src, className }: { src: string; className?: string }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [numPages, setNumPages] = useState(0);

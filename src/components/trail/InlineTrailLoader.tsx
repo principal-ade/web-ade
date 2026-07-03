@@ -20,5 +20,3 @@ export function InlineTrailLoader({ size = 16 }: { size?: number }) {
     />
   );
 }
-
-export default InlineTrailLoader;

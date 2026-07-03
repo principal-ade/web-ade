@@ -161,5 +161,3 @@ export function BlockDropLoadingScreen({
     </div>
   );
 }
-
-export default BlockDropLoadingScreen;

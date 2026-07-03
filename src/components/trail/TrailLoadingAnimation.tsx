@@ -505,5 +505,3 @@ export const TrailLoadingAnimation: React.FC<TrailLoadingAnimationProps> = ({
     </div>
   );
 };
-
-export default TrailLoadingAnimation;

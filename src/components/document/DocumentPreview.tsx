@@ -134,5 +134,3 @@ export function DocumentPreview({
     </div>
   );
 }
-
-export default DocumentPreview;

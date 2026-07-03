@@ -580,6 +580,3 @@ export const ttsRouter = router({
       return computeTourAudioStatus(owner, repo, tour, options, manifest);
     }),
 });
-
-// Export type for client
-export type TTSRouter = typeof ttsRouter;

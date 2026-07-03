@@ -392,5 +392,3 @@ export const feedRouter = router({
       };
     }),
 });
-
-export type FeedRouter = typeof feedRouter;

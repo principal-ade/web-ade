@@ -171,5 +171,3 @@ export const MobileActivityFeed: React.FC<MobileActivityFeedProps> = ({
     </div>
   );
 };
-
-export default MobileActivityFeed;

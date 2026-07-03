@@ -645,5 +645,3 @@ export const MobileRepoCard: React.FC<MobileRepoCardProps> = ({ summary, hourLab
     </div>
   );
 };
-
-export default MobileRepoCard;

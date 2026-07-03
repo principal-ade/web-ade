@@ -1,6 +1,6 @@
 import type { RepoActivitySummary, ActivityCommit } from '@/hooks/useGitHubActivityFeed';
 
-export interface HourlyRepoCard {
+interface HourlyRepoCard {
   /** Unique key for this card (repo + hour) */
   key: string;
   /** Hour of day (0-23) */

@@ -15,7 +15,7 @@ import { ZodError } from 'zod';
  * Add auth, db connections, etc. here
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface TRPCContext {
+interface TRPCContext {
   // Add context properties as needed
   // e.g., session, db, etc.
 }
@@ -52,19 +52,3 @@ const t = initTRPC.context<TRPCContext>().create({
  */
 export const router = t.router;
 export const publicProcedure = t.procedure;
-
-/**
- * Middleware for logging (optional, useful for debugging)
- */
-export const loggerMiddleware = t.middleware(async ({ path, type, next }) => {
-  const start = Date.now();
-  const result = await next();
-  const duration = Date.now() - start;
-  console.log(`[tRPC] ${type} ${path} - ${duration}ms`);
-  return result;
-});
-
-/**
- * Procedure with logging enabled
- */
-export const loggedProcedure = publicProcedure.use(loggerMiddleware);

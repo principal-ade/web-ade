@@ -36,10 +36,3 @@ export interface OpenWorkflowScenariosPayload {
   commitSha?: string;
   versionSnapshot?: VersionSnapshot;
 }
-
-/**
- * Union type of all custom event payloads
- */
-export type PanelEventPayload =
-  | OpenWorkflowScenariosPayload
-  | { action: string; [key: string]: unknown };  // Fallback for other events

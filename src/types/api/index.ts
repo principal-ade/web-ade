@@ -6,40 +6,16 @@
  */
 
 export type {
-  GitHubTreeEntry,
   GitHubTreeResponse,
   GitHubRepoInfoResponse,
   GitHubReadmeResponse,
   GitHubFileResponse,
-  GitHubContributor,
   GitHubContributorsResponse,
   GitHubCountsResponse,
-  GitHubCommitAuthor,
   GitHubCommit,
-  GitHubCommitsResponse,
-  GitHubCommitFile,
   GitHubCommitDetailResponse,
-  GitHubLabel,
-  GitHubUser,
-  GitHubIssue,
-  GitHubIssuesResponse,
   GitHubRepo,
   GitHubOrg,
   GitHubUserProfile,
   GitHubSearchReposResponse,
-  GitHubErrorResponse,
 } from './github';
-
-// TTS (Tour audio) types - re-exported from lib/tts
-export type {
-  TTSGenerateRequest,
-  TTSGenerateResponse,
-  TTSBatchGenerateRequest,
-  TTSBatchResponse,
-  TTSOptions,
-  TTSError,
-  IntroductionTour,
-  IntroductionTourStep,
-} from '@/lib/tts/types';
-
-export { TTSErrorCode } from '@/lib/tts/types';

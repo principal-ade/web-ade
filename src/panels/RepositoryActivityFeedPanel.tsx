@@ -127,7 +127,7 @@ function formatDateLabel(date: Date): string | null {
   }
 }
 
-export interface RepositoryActivityFeedPanelProps {
+interface RepositoryActivityFeedPanelProps {
   owner: string;
   repo: string;
   className?: string;

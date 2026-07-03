@@ -177,7 +177,7 @@ function parseGitHubUrl(input: string): { owner: string; repo: string } | null {
   return null;
 }
 
-export interface ActivityFeedPanelProps {
+interface ActivityFeedPanelProps {
   className?: string;
 }
 

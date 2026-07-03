@@ -276,5 +276,3 @@ export const GitHubSearchingAnimation: React.FC<GitHubSearchingAnimationProps> =
     </div>
   );
 };
-
-export default GitHubSearchingAnimation;

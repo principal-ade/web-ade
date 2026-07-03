@@ -162,8 +162,6 @@ export interface GitHubCommit {
   }>;
 }
 
-export type GitHubCommitsResponse = GitHubCommit[];
-
 // Commit detail with files
 export interface GitHubCommitFile {
   filename: string;
@@ -183,45 +181,6 @@ export interface GitHubCommitDetailResponse extends GitHubCommit {
   };
   files: GitHubCommitFile[];
 }
-
-// Issue types
-export interface GitHubLabel {
-  id: number;
-  name: string;
-  color: string;
-  description?: string;
-}
-
-export interface GitHubUser {
-  login: string;
-  id: number;
-  avatar_url: string;
-  html_url: string;
-  type: string;
-}
-
-export interface GitHubIssue {
-  id: number;
-  number: number;
-  title: string;
-  state: 'open' | 'closed';
-  locked: boolean;
-  user: GitHubUser;
-  labels: GitHubLabel[];
-  assignees: GitHubUser[];
-  created_at: string;
-  updated_at: string;
-  closed_at: string | null;
-  body: string | null;
-  html_url: string;
-  comments: number;
-  pull_request?: {
-    url: string;
-    html_url: string;
-  };
-}
-
-export type GitHubIssuesResponse = GitHubIssue[];
 
 // Pull request payloads are typed off `@octokit/openapi-types`
 // (`components['schemas']['pull-request'|'pull-request-simple']`) at their use
@@ -280,9 +239,4 @@ export interface GitHubSearchReposResponse {
   total_count: number;
   incomplete_results: boolean;
   items: GitHubRepo[];
-}
-
-// Error response
-export interface GitHubErrorResponse {
-  error: string;
 }

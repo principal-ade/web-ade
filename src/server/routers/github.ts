@@ -2096,5 +2096,3 @@ export const githubRouter = router({
       }
     }),
 });
-
-export type GitHubRouter = typeof githubRouter;

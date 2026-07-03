@@ -232,5 +232,3 @@ export function RepoCardOG({
     </div>
   );
 }
-
-export default RepoCardOG;

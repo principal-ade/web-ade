@@ -6,7 +6,7 @@
  * schemas and exported to __executions__/ directory.
  */
 
-import { trace, SpanStatusCode, AttributeValue } from '@opentelemetry/api';
+import { AttributeValue } from '@opentelemetry/api';
 import {
   InMemorySpanExporter,
   SimpleSpanProcessor,
@@ -24,13 +24,10 @@ const provider = new NodeTracerProvider({
 });
 provider.register();
 
-// Get tracer instance
-export const tracer = trace.getTracer('web-ade-test', '1.0.0');
-
 /**
  * Get all captured spans from the in-memory exporter
  */
-export function getCapturedSpans() {
+function getCapturedSpans() {
   return spanExporter.getFinishedSpans();
 }
 
@@ -152,58 +149,3 @@ function convertAttributeValue(value: AttributeValue | undefined) {
     return { stringValue: String(value) };
   }
 }
-
-/**
- * Helper to create a span with automatic error handling
- */
-export function withSpan<T>(
-  name: string,
-  fn: () => T | Promise<T>,
-  attributes?: Record<string, AttributeValue>
-): Promise<T> {
-  return tracer.startActiveSpan(name, { attributes }, async (span) => {
-    try {
-      const result = await fn();
-      span.setStatus({ code: SpanStatusCode.OK });
-      span.end();
-      return result;
-    } catch (error) {
-      span.setStatus({
-        code: SpanStatusCode.ERROR,
-        message: error instanceof Error ? error.message : String(error),
-      });
-      span.recordException(error as Error);
-      span.end();
-      throw error;
-    }
-  });
-}
-
-/**
- * Create a validated span emitter that checks events against canvas schema
- * Note: This is a simplified version - full validation would require loading the canvas
- */
-export function createValidatedSpanEmitter(spanName: string) {
-  const span = tracer.startSpan(spanName);
-
-  return {
-    emitEvent(eventName: string, attributes: Record<string, AttributeValue>) {
-      // In strict mode, you would validate attributes against canvas dataSchema here
-      // For now, we just emit the event
-      span.addEvent(eventName, attributes);
-    },
-    end() {
-      span.end();
-    },
-    setError(error: Error) {
-      span.setStatus({
-        code: SpanStatusCode.ERROR,
-        message: error.message,
-      });
-      span.recordException(error);
-    },
-  };
-}
-
-// Export cleanup for afterAll hooks
-export { spanExporter };
