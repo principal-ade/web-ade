@@ -84,6 +84,15 @@ const FileCitySequenceExplorerPanel = dynamic(
   { ssr: false }
 );
 
+// Warm the file-city panel chunk at module load (mirrors the trail/repo
+// pages), so opening the File City tab — and the 3D toggle inside it — never
+// pays the chunk fetch on click. The WebGL warm-up itself still lands on the
+// first 3D toggle; fixing that belongs inside CodeCityPanel (warm during the
+// idle 2D state). See docs/nextjs-3d-rendering-issue.md.
+if (typeof window !== 'undefined') {
+  void (CodeCityPanel as { preload?: () => Promise<unknown> }).preload?.();
+}
+
 // Static panel loaders (type-safe, no SSR)
 const MarkdownPanelLoader = MarkdownPanel;
 const AlexandriaDocsPanelLoader = alexandriaDocsPanels[0]!.component;
