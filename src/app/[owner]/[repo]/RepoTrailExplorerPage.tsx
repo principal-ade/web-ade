@@ -1632,6 +1632,7 @@ export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProp
           filePaths={filePaths}
           excludedDirs={excludedDirs}
           onExcludedDirsChange={setExcludedDirs}
+          isMobile={isMobile}
         />
         <RightPane
           owner={owner}
@@ -2131,6 +2132,9 @@ const TrailListPane: React.FC<{
   filePaths: string[];
   excludedDirs: string[];
   onExcludedDirsChange: (dirs: string[]) => void;
+  /** Small-screen bottom rail — the tours view collapses to just the About
+   *  card with a Contributors button in place of the tour CTA. */
+  isMobile: boolean;
 }> = ({
   owner,
   repo,
@@ -2182,10 +2186,55 @@ const TrailListPane: React.FC<{
   filePaths,
   excludedDirs,
   onExcludedDirsChange,
+  isMobile,
 }) => {
   const { theme } = useTheme();
   // Repo-root README (if any), surfaced as a button in the About overview.
   const readmePath = useMemo(() => findReadmePath(filePaths), [filePaths]);
+
+  const toursPane = (
+    <ToursPane
+      owner={owner}
+      repo={repo}
+      tours={tours}
+      loading={toursLoading}
+      selectedTourId={selectedTourId}
+      onSelectTour={onSelectTour}
+      viewerUserId={viewerUserId}
+      viewerIsRepoAdmin={viewerIsRepoAdmin}
+      onRequestDelete={onRequestDeleteTour}
+      onSelectContributor={onSelectContributor}
+      readmePath={readmePath}
+      readmeActive={readmeActive}
+      onOpenReadme={() => {
+        if (readmePath) onOpenReadmeFile(readmePath);
+      }}
+      trailCount={entries.length}
+      packageCount={packages.length}
+      onOpenView={onSetViewMode}
+      isMobile={isMobile}
+    />
+  );
+
+  // Mobile tours/About view: render the About card in normal flow so the rail
+  // sizes to its content and *pushes the map* (RightPane is flex-1 and yields
+  // the space), capping at 70% of the viewport and scrolling past that. The
+  // SlidePane positions its panes `absolute inset-0`, so it can't take height
+  // from content — this view bypasses it; the other mobile views keep the
+  // fixed-height (h-[45%]) scroller below.
+  if (isMobile && !configMode && leftViewMode === 'tours') {
+    return (
+      <aside
+        className="flex flex-col shrink-0 w-full max-h-[70%] overflow-y-auto overscroll-none border-t"
+        style={{
+          background: theme.colors.background,
+          borderColor: theme.colors.border,
+        }}
+      >
+        {toursPane}
+      </aside>
+    );
+  }
 
   return (
     <aside
@@ -2265,26 +2314,7 @@ const TrailListPane: React.FC<{
           onSelectFile={onSelectFile}
         />
       ) : leftViewMode === 'tours' ? (
-        <ToursPane
-          owner={owner}
-          repo={repo}
-          tours={tours}
-          loading={toursLoading}
-          selectedTourId={selectedTourId}
-          onSelectTour={onSelectTour}
-          viewerUserId={viewerUserId}
-          viewerIsRepoAdmin={viewerIsRepoAdmin}
-          onRequestDelete={onRequestDeleteTour}
-          onSelectContributor={onSelectContributor}
-          readmePath={readmePath}
-          readmeActive={readmeActive}
-          onOpenReadme={() => {
-            if (readmePath) onOpenReadmeFile(readmePath);
-          }}
-          trailCount={entries.length}
-          packageCount={packages.length}
-          onOpenView={onSetViewMode}
-        />
+        toursPane
       ) : (
         <>
           <RailPaneHeader
@@ -5244,6 +5274,9 @@ const ToursPane: React.FC<{
   packageCount: number;
   // Open one of the full-rail nav-card views.
   onOpenView: (mode: LeftViewMode) => void;
+  // Small-screen bottom rail: show only the About card, with a Contributors
+  // button standing in for the tour CTA (nav cards + tours list hidden).
+  isMobile: boolean;
 }> = ({
   owner,
   repo,
@@ -5261,6 +5294,7 @@ const ToursPane: React.FC<{
   trailCount,
   packageCount,
   onOpenView,
+  isMobile,
 }) => {
   const { theme } = useTheme();
   // With exactly one tour we collapse the list into a single "Start tour" CTA
@@ -5300,6 +5334,43 @@ const ToursPane: React.FC<{
       active={readmeActive}
     />
   ) : null;
+
+  // Mobile bottom rail: just the About card, with a Contributors button in
+  // place of the tour CTA. The nav cards, tours list, and analysis footer are
+  // dropped to keep the small-screen rail focused. Rendered in normal flow (no
+  // flex-1 / internal scroller) so the enclosing rail sizes to this card's
+  // content and pushes the map; the rail itself caps the height and scrolls.
+  if (isMobile) {
+    return (
+      <RepoOverview
+        owner={owner}
+        repo={repo}
+        showBorder={false}
+        onSelectContributor={onSelectContributor}
+        ctaSlot={
+            <button
+              type="button"
+              onClick={() => onOpenView('contributors')}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90"
+              style={{
+                padding: '10px 14px',
+                fontFamily: theme.fonts.body,
+                fontSize: theme.fontSizes[1],
+                fontWeight: theme.fontWeights.semibold,
+                cursor: 'pointer',
+                background: theme.colors.primary,
+                color: '#ffffff',
+                border: `1px solid ${theme.colors.primary}`,
+              }}
+            >
+              <Users size={16} />
+              Contributors
+            </button>
+        }
+      />
+    );
+  }
+
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       {/* Pinned header: the About card + the nav cards that swap the rail to
