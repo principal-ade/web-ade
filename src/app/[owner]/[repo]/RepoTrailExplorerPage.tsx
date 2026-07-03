@@ -6569,6 +6569,17 @@ const RightPane: React.FC<{
     analysis,
   ]);
 
+  // A fresh FileCity3D canvas is blank until cameraReady, so branching the
+  // tree on trailsExpanded — unmounting one panel and cold-mounting the other
+  // on every Trails expand/collapse — repainted a visible city from scratch
+  // each time. Instead, keep each panel mounted once it has shown and flip
+  // visibility between the two layers. The trail explorer only mounts after
+  // the rail first expands, so visitors who never open Trails pay nothing.
+  const [trailPaneMounted, setTrailPaneMounted] = useState(trailsExpanded);
+  useEffect(() => {
+    if (trailsExpanded) setTrailPaneMounted(true);
+  }, [trailsExpanded]);
+
   if (treeError) {
     return (
       <main
@@ -6596,16 +6607,22 @@ const RightPane: React.FC<{
     );
   }
 
-  // The tour panel is the default right pane: idle colored city + file-type
-  // legend when nothing is picked, tour chrome once a tour is open, and the
-  // native commit view once a commit is selected (driven by the `commit`
-  // slice). The Trail explorer (with its file overlay + share modal) takes
-  // over only when the left-rail Trails section is expanded.
-  if (!trailsExpanded) {
-    return (
-      <main
-        className="flex-1 min-w-0 min-h-0 relative"
-        style={{ background: theme.colors.background }}
+  // The tour panel is the default right-pane layer: idle colored city +
+  // file-type legend when nothing is picked, tour chrome once a tour is open,
+  // and the native commit view once a commit is selected (driven by the
+  // `commit` slice). The Trail explorer layer (with its file overlay + share
+  // modal) covers it while the left-rail Trails section is expanded.
+  return (
+    <main
+      className="flex-1 min-w-0 min-h-0 relative"
+      style={{ background: theme.colors.background }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          visibility: trailsExpanded ? 'hidden' : 'visible',
+        }}
       >
         <FileCityGuidePanel
           context={tourContext}
@@ -6635,45 +6652,51 @@ const RightPane: React.FC<{
           // rather than the description + Start gate.
           defaultSkipWelcome
         />
-      </main>
-    );
-  }
-
-  // colorScheme 'dark' makes Pierre's snippet renderer resolve its dark palette
-  // via CSS light-dark(); otherwise the browser leaves color-scheme unset and the
-  // snippet renders white on the panel's black surface.
-  return (
-    <main
-      className="flex-1 min-w-0 min-h-0 relative"
-      style={{ background: theme.colors.background, colorScheme: 'dark' }}
-    >
-      <FileCityTrailExplorerPanel
-        context={context}
-        actions={actions}
-        events={events}
-        currentAuthor={currentAuthor}
-        defaultIsolationMode="hide"
-        briefSide="leading"
-        hideNonHighlightedBuildings={!showSpatialContext}
-        excludedFolders={excludedFolders}
-      />
-      {overlayFilePath && overlayTrails.length > 0 && (
-        <TrailFileTrailsOverlay
-          filePath={overlayFilePath}
-          trails={overlayTrails}
-          selectedTrailId={overlaySelectedTrailId}
-          onSelectTrail={onSelectOverlayTrail}
-          onClose={onCloseOverlay}
-        />
-      )}
-      {shareTrailId && (
-        <TrailShareModal
-          trailId={shareTrailId}
-          trailTitle={
-            selectedPayload?.id === shareTrailId ? selectedPayload?.title : null
-          }
-          onClose={() => setShareTrailId(null)}
-        />
+      </div>
+      {/* colorScheme 'dark' makes Pierre's snippet renderer resolve its dark
+          palette via CSS light-dark(); otherwise the browser leaves
+          color-scheme unset and the snippet renders white on the panel's
+          black surface. */}
+      {trailPaneMounted && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            visibility: trailsExpanded ? 'visible' : 'hidden',
+            colorScheme: 'dark',
+          }}
+        >
+          <FileCityTrailExplorerPanel
+            context={context}
+            actions={actions}
+            events={events}
+            currentAuthor={currentAuthor}
+            defaultIsolationMode="hide"
+            briefSide="leading"
+            hideNonHighlightedBuildings={!showSpatialContext}
+            excludedFolders={excludedFolders}
+          />
+          {overlayFilePath && overlayTrails.length > 0 && (
+            <TrailFileTrailsOverlay
+              filePath={overlayFilePath}
+              trails={overlayTrails}
+              selectedTrailId={overlaySelectedTrailId}
+              onSelectTrail={onSelectOverlayTrail}
+              onClose={onCloseOverlay}
+            />
+          )}
+          {shareTrailId && (
+            <TrailShareModal
+              trailId={shareTrailId}
+              trailTitle={
+                selectedPayload?.id === shareTrailId
+                  ? selectedPayload?.title
+                  : null
+              }
+              onClose={() => setShareTrailId(null)}
+            />
+          )}
+        </div>
       )}
     </main>
   );
