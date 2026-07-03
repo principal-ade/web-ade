@@ -2254,6 +2254,24 @@ const TrailListPane: React.FC<{
   // Repo-root README (if any), surfaced as a button in the About overview.
   const readmePath = useMemo(() => findReadmePath(filePaths), [filePaths]);
 
+  // Mobile: the About view sizes the rail to its content (to push the map),
+  // while the other views render through the fixed-height SlidePane. Measuring
+  // the About rail's height and reusing it for those views keeps the rail from
+  // jumping when you drill into Contributors/etc. Tracked while the tours view
+  // is mounted; the last value persists for the other views.
+  const toursAsideRef = useRef<HTMLElement>(null);
+  const [mobileRailHeight, setMobileRailHeight] = useState<number | null>(null);
+  useEffect(() => {
+    if (!isMobile) return;
+    const el = toursAsideRef.current;
+    if (!el) return;
+    const update = () => setMobileRailHeight(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isMobile, leftViewMode, configMode]);
+
   const toursPane = (
     <ToursPane
       owner={owner}
@@ -2287,6 +2305,7 @@ const TrailListPane: React.FC<{
   if (isMobile && !configMode && leftViewMode === 'tours') {
     return (
       <aside
+        ref={toursAsideRef}
         className="flex flex-col shrink-0 w-full max-h-[70%] overflow-y-auto overscroll-none border-t"
         style={{
           background: theme.colors.background,
@@ -2304,6 +2323,12 @@ const TrailListPane: React.FC<{
       style={{
         background: theme.colors.background,
         borderColor: theme.colors.border,
+        // Match the height the About rail had so switching views doesn't jump
+        // the rail (mobile only; desktop keeps md:h-auto). Falls back to the
+        // h-[45%] class until the About view has been measured.
+        ...(isMobile && mobileRailHeight != null
+          ? { height: mobileRailHeight }
+          : {}),
       }}
     >
       {/* Trails/Files views are hidden for now (SHOW_ALL_VIEW_TABS); with only
