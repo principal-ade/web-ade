@@ -50,6 +50,12 @@ export interface RepoAnalysisCache {
   sha: string | null;
   generatedAt: string;
   generatedBy: 'web-ade';
+  /** When the VM job started (ISO, stamped in-VM at job launch). Optional:
+   *  records written before duration tracking lack it. */
+  startedAt?: string;
+  /** End-to-end clone+sweep+publish wall-clock, ms (`generatedAt - startedAt`,
+   *  computed in-VM). Optional for the same reason as `startedAt`. */
+  durationMs?: number;
   analysis: RepoAnalysis;
 }
 
@@ -235,6 +241,10 @@ export interface RepoAnalysisErrorRecord {
   stage: string;
   message: string;
   failedAt: string;
+  /** When the VM job started (ISO). Optional: pre-tracking records lack it. */
+  startedAt?: string;
+  /** Wall-clock from job start to failure, ms. Optional for the same reason. */
+  durationMs?: number;
 }
 
 function repoErrorS3Key(owner: string, repo: string): string {
@@ -480,9 +490,16 @@ export async function mergeRepoIdentityMapInS3(
   }
 }
 
-/** TTL for the upload URLs handed to the VM (seconds). Generous enough to cover
- *  a cold clone + full blame sweep of a large repo. */
-const UPLOAD_URL_TTL_SECONDS = 900;
+/** TTL for the upload URLs handed to the VM (seconds). Sized from measured
+ *  launch→publish durations: 93 completed runs had p95 ~9m and no run over ~13m,
+ *  but that set is CENSORED — anything slower than the old 900s (15m) TTL 403'd
+ *  on the PUT and never became a result. A real ~17.5m run (mastra-ai/mastra)
+ *  was found dying exactly this way. 1h gives ~3.5x headroom over the worst
+ *  single-sitting run. NOTE: this does NOT rescue giant repos (kubernetes,
+ *  torvalds/linux) whose per-file `git blame` sweep idle-suspends mid-run and
+ *  stretches across DAYS of wall-clock — no wall-clock URL TTL can; those need
+ *  the structural fixes (keep-awake during blame, bounded/partial sweep). */
+const UPLOAD_URL_TTL_SECONDS = 3600;
 
 /**
  * Pre-signed PUT URLs the analysis VM uploads its result to DIRECTLY — the

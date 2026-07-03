@@ -240,10 +240,23 @@ done
  */
 function publisherPy(owner: string, repo: string): string {
   return String.raw`
-import sys, json, urllib.request, datetime
+import sys, os, json, time, urllib.request, datetime
 
 def now():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+# Start time is stamped by job.sh and exported; report end-to-end duration so
+# runs are tracked without reconstructing it from S3 object timestamps.
+STARTED_AT = os.environ.get("STARTED_AT") or None
+_STARTED_EPOCH = os.environ.get("STARTED_EPOCH")
+
+def duration_ms():
+    if not _STARTED_EPOCH:
+        return None
+    try:
+        return int((time.time() - float(_STARTED_EPOCH)) * 1000)
+    except (TypeError, ValueError):
+        return None
 
 def put(url, body):
     data = json.dumps(body).encode("utf-8")
@@ -263,6 +276,8 @@ if mode == "success":
         "sha": analysis.get("sha") or None,
         "generatedAt": now(),
         "generatedBy": "web-ade",
+        "startedAt": STARTED_AT,
+        "durationMs": duration_ms(),
         "analysis": analysis,
     })
 else:
@@ -272,6 +287,8 @@ else:
         "stage": sys.argv[3],
         "message": sys.argv[4][:500],
         "failedAt": now(),
+        "startedAt": STARTED_AT,
+        "durationMs": duration_ms(),
     })
 `;
 }
@@ -293,6 +310,11 @@ function analysisJobScript(
 ANALYSIS_URL="$1"
 ERROR_URL="$2"
 STAGE="setup"
+# Stamp when THIS job's work begins so publish.py can report end-to-end
+# duration (and how long a failure took). Exported so both publish modes see it.
+STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+STARTED_EPOCH="$(date +%s)"
+export STARTED_AT STARTED_EPOCH
 fail() {
   python3 /tmp/publish.py error "$ERROR_URL" "$STAGE" "$1" || true
   exit 1
