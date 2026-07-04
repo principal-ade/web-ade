@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Check, Github, MessageSquareOff, MessageSquarePlus, Stamp, Terminal, Undo2, X } from 'lucide-react';
+import { Check, Github, MessageSquareOff, MessageSquarePlus, Search, Stamp, Terminal, Undo2, X } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -9,6 +9,7 @@ import { BookmarkButton } from '@/components/BookmarkButton';
 import { AgentViewButton } from '@/components/AgentViewButton';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { RepoInfoModal } from '@/components/trail/RepoInfoModal';
+import { RepoSearchBar } from '@/components/RepoSearchBar';
 import { SignOffStampAnimation } from '@/components/trail/LgtmStamp';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -131,6 +132,9 @@ export function TrailHeader({
   const { isAuthenticated } = useAuth();
   const [copied, setCopied] = useState(false);
   const [repoInfoOpen, setRepoInfoOpen] = useState(false);
+  // Mobile: the repo opener collapses into a "Search GitHub" button that opens
+  // a full-screen search sheet (the header is too cramped for the input).
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [lgtmSigned, setLgtmSigned] = useState(false);
   const [lgtmAnimating, setLgtmAnimating] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -368,6 +372,24 @@ export function TrailHeader({
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Mobile: a compact button that opens the full-screen search sheet
+            (the inline opener is hidden below md, mirroring the repo page). */}
+        <button
+          type="button"
+          onClick={() => setMobileSearchOpen(true)}
+          className="md:hidden flex items-center gap-1.5 h-8 px-2.5 rounded-md transition-opacity hover:opacity-80"
+          style={{
+            color: theme.colors.text,
+            background: theme.colors.background,
+            border: `1px solid ${theme.colors.border}`,
+            fontSize: theme.fontSizes[1],
+          }}
+          aria-label="Search GitHub"
+        >
+          <Search className="w-4 h-4" />
+          Search GitHub
+        </button>
+
         {showStamp && isAuthenticated && (lgtmSigned ? (
           <button
             type="button"
@@ -523,7 +545,11 @@ export function TrailHeader({
           </a>
         )}
 
-        {showUserMenu && <UserAvatarMenu />}
+        {showUserMenu && (
+          <div className="hidden md:block">
+            <UserAvatarMenu />
+          </div>
+        )}
 
         {closeOnRight && (
           <button
@@ -551,6 +577,54 @@ export function TrailHeader({
           onClose={() => setRepoInfoOpen(false)}
         />
       )}
+
+      {/* Mobile GitHub search sheet — full-screen so the search input + results
+          have room; reuses the shared RepoSearchBar (navigates on select).
+          Portaled to document.body at the same z-tier as the sibling modals
+          so the trail explorer can't paint above it. */}
+      {mobileSearchOpen &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="md:hidden fixed inset-0 flex flex-col"
+            style={{
+              background: theme.colors.background,
+              color: theme.colors.text,
+              zIndex: 2147483000,
+            }}
+          >
+            <div
+              className="flex items-center justify-between gap-3 px-4 h-14 border-b shrink-0"
+              style={{
+                borderColor: `color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
+              }}
+            >
+              <span
+                className="font-semibold"
+                style={{ fontSize: theme.fontSizes[3], fontFamily: theme.fonts.body }}
+              >
+                Search GitHub
+              </span>
+              <button
+                type="button"
+                onClick={() => setMobileSearchOpen(false)}
+                className="inline-flex items-center justify-center rounded-md p-2 transition-opacity hover:opacity-80"
+                style={{ color: theme.colors.textMuted }}
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4">
+              <RepoSearchBar
+                excludeFullName={`${owner}/${repo}`}
+                inputWidthClass="w-full"
+                autoFocus
+              />
+            </div>
+          </div>,
+          document.body,
+        )}
 
       {lgtmAnimating &&
         typeof document !== 'undefined' &&
