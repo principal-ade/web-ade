@@ -13,8 +13,8 @@
 
 import dynamic from 'next/dynamic';
 
-const RepoTrailExplorerPage = dynamic(
-  () => import('./RepoTrailExplorerPage').then((m) => m.RepoTrailExplorerPage),
+const RepoExplorerPage = dynamic(
+  () => import('./RepoExplorerPage').then((m) => m.RepoExplorerPage),
   { ssr: false }
 );
 
@@ -25,5 +25,5 @@ export default function RepoPageClient({
   owner: string;
   repo: string;
 }) {
-  return <RepoTrailExplorerPage owner={owner} repo={repo} />;
+  return <RepoExplorerPage owner={owner} repo={repo} />;
 }

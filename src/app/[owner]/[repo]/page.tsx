@@ -4,7 +4,7 @@
  * Server-rendered shell so we can emit per-repo Open Graph / Twitter metadata
  * (`generateMetadata`) — social unfurls get the repo's File City card from
  * `/api/card/[owner]/[repo]` instead of the generic site card. The interactive
- * explorer (`RepoTrailExplorerPage`) is a client component rendered underneath,
+ * explorer (`RepoExplorerPage`) is a client component rendered underneath,
  * receiving owner/repo as props (so the split is purely a metadata boundary).
  */
 

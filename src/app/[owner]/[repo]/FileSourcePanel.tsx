@@ -31,7 +31,7 @@ function inferDocKind(path: string): 'docx' | null {
 
 // Strips the leading slash / "GitHub/" / "owner/repo/" prefixes that file
 // paths can arrive with, leaving a clean repo-relative path for the API.
-// Mirrors the normalization in RepoTrailExplorerPage's `readFile`.
+// Mirrors the normalization in RepoExplorerPage's `readFile`.
 function normalizeRepoPath(path: string, owner: string, repo: string): string {
   let clean = path;
   if (clean.startsWith('/')) clean = clean.slice(1);

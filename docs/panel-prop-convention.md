@@ -18,7 +18,7 @@ Unlike electron-app (which holds the triad strictly), **web-ade routinely passes
 
 Two patterns appear:
 
-**1. Triad + extra domain props.** Panels still receive `context`/`actions`/`events` but also take page-specific props. Examples (in `src/components/EditorLayout.tsx` and `RepoTrailExplorerPage.tsx`):
+**1. Triad + extra domain props.** Panels still receive `context`/`actions`/`events` but also take page-specific props. Examples (in `src/components/EditorLayout.tsx` and `RepoExplorerPage.tsx`):
 
 - `FileCityTrailExplorerPanel` — `currentAuthor`, `defaultIsolationMode`, `briefSide`, `hideNonHighlightedBuildings`, `excludedFolders`
 - `CanvasEditorPanelLoader` — `canvasPath`, `canvasName`, `canvasFileInfo`, `workflowTemplate`, `selectedWorkflowId`, `workflowPath`

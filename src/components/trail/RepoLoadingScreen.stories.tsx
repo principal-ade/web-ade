@@ -8,7 +8,7 @@ import {
 } from './BlockDropLoadingScreen';
 
 /**
- * The owner/repo page loading screen. RepoTrailExplorerPage renders:
+ * The owner/repo page loading screen. RepoExplorerPage renders:
  *   <BlockDropLoadingScreen message={`Loading ${repo}`} />
  * which defaults to revealing the brand logo (`/icon-512x512.png`) — a
  * block-grid mark that assembles itself as the pieces drop. Passing

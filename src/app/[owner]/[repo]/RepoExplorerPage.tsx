@@ -232,7 +232,7 @@ function lineCountsSlice(
   };
 }
 
-interface RepoTrailExplorerPageProps {
+interface RepoExplorerPageProps {
   owner: string;
   repo: string;
 }
@@ -249,7 +249,7 @@ type LoadState =
     }
   | { kind: 'error'; message: string; code: ShareErrorCode | null };
 
-export function RepoTrailExplorerPage({ owner, repo }: RepoTrailExplorerPageProps) {
+export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
   const { theme } = useTheme();
 
   const { user } = useAuth();
