@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Search, Star, Trash2, ChevronLeft, Globe, Lock } from 'lucide-react';
+import { useMemo, useState, useCallback } from 'react';
+import { Search, Star, Trash2, ChevronLeft, Globe, Lock, Share2 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { RepoRowShell } from './RepoRowShell';
 import type { Collection, CollectionRepo } from '@/lib/starred-collections/types';
@@ -19,6 +19,8 @@ export interface HomeCollectionDetailViewProps {
   collection: Collection;
   /** full_name of the currently-open repo, highlighted in the list. */
   selectedFullName?: string | null;
+  /** Current user's GitHub login (used to build share URLs for user-owned collections). */
+  userLogin?: string;
   onSelectRepo: (repo: ProjectRepo) => void;
   onBack: () => void;
   onDeleteCollection: (collectionId: string) => Promise<void>;
@@ -28,6 +30,7 @@ export interface HomeCollectionDetailViewProps {
 export function HomeCollectionDetailView({
   collection,
   selectedFullName = null,
+  userLogin,
   onSelectRepo,
   onBack,
   onDeleteCollection,
@@ -40,8 +43,29 @@ export function HomeCollectionDetailView({
   const [togglingVisibility, setTogglingVisibility] = useState(false);
   const [showVisibilityInfo, setShowVisibilityInfo] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
-  // Pending visibility value while the info modal is shown
   const [pendingVisibility, setPendingVisibility] = useState<'public' | 'private' | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const shareUrl = useMemo(() => {
+    const ownerLogin =
+      collection.ownerType === 'org'
+        ? collection.ownerLogin
+        : userLogin;
+    if (!ownerLogin) return null;
+    return `/collections/${ownerLogin}/${collection.id}`;
+  }, [collection.ownerType, collection.ownerLogin, collection.id, userLogin]);
+
+  const handleShare = useCallback(async () => {
+    if (!shareUrl) return;
+    const url = `${window.location.origin}${shareUrl}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API may fail in insecure contexts
+    }
+  }, [shareUrl]);
 
   const repos = useMemo(() => collection.repos ?? [], [collection.repos]);
 
@@ -156,7 +180,7 @@ export function HomeCollectionDetailView({
           type="button"
           onClick={handleToggleVisibility}
           disabled={togglingVisibility}
-          className="flex items-center justify-center w-7 h-7 rounded transition-colors"
+          className="ml-auto flex items-center justify-center w-7 h-7 rounded transition-colors"
           style={{
             color: collection.visibility === 'public' ? theme.colors.primary : theme.colors.textMuted,
             cursor: togglingVisibility ? 'not-allowed' : 'pointer',
@@ -169,6 +193,24 @@ export function HomeCollectionDetailView({
         >
           {collection.visibility === 'public' ? <Globe size={14} /> : <Lock size={14} />}
         </button>
+        {shareUrl && (
+          <button
+            type="button"
+            onClick={handleShare}
+            className="flex items-center justify-center w-7 h-7 rounded transition-colors"
+            style={{
+              color: copied ? theme.colors.primary : theme.colors.textMuted,
+              cursor: 'pointer',
+              background: copied
+                ? `color-mix(in srgb, ${theme.colors.primary} 10%, transparent)`
+                : `color-mix(in srgb, ${theme.colors.textMuted} 10%, transparent)`,
+            }}
+            title={copied ? 'Copied!' : 'Copy share link'}
+            aria-label="Copy share link"
+          >
+            <Share2 size={14} />
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setShowDeleteConfirm(true)}

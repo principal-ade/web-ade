@@ -59,7 +59,9 @@ export async function GET(
     const ownerId = ownerType === 'org' ? userData.login : String(userData.id);
 
     const data = await getCollections(ownerType, ownerId);
-    const collection = data?.collections.find((c) => c.id === id);
+    const collection = data?.collections.find(
+      (c) => c.id === id && c.visibility === 'public'
+    );
 
     if (!collection) {
       return NextResponse.json(

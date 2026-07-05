@@ -189,6 +189,7 @@ export function HomeLeftPanel({
           <HomeCollectionDetailView
             collection={selectedCollection}
             selectedFullName={selectedRepoFullName}
+            userLogin={user?.login}
             onSelectRepo={(repo) => onSelectRepo?.(repo)}
             onBack={() => go('collections')}
             onDeleteCollection={async (collectionId) => {
