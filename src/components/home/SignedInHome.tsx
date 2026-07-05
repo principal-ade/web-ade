@@ -17,6 +17,7 @@ import type {
   TrailListItem,
   TopicListItem,
 } from './HomeTrailsTopicsView';
+import type { Collection } from '@/lib/starred-collections/types';
 
 // localStorage key shared with the header opener / recent-repos panels.
 const RECENT_REPOS_KEY = 'recent-repositories';
@@ -173,6 +174,7 @@ export function SignedInHome({ user }: { user: User }) {
   const [sections, setSections] = useState<ProjectSection[] | null>(null);
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [starred, setStarred] = useState<ProjectRepo[] | null>(null);
+  const [collections, setCollections] = useState<Collection[] | null>(null);
   const [recentProjects, setRecentProjects] = useState<ProjectRepo[] | null>(null);
   const [recentTrails, setRecentTrails] = useState<RecentTrailItem[] | null>(null);
   const [community, setCommunity] = useState<CommunityRepoItem[] | null>(null);
@@ -372,6 +374,27 @@ export function SignedInHome({ user }: { user: User }) {
     };
   }, []);
 
+  // Starred collections (user + org collections).
+  useEffect(() => {
+    let cancelled = false;
+    setCollections(null);
+    fetch('/api/starred-collections')
+      .then((r) => (r.ok ? r.json() : { collections: [] }))
+      .then((d: { collections?: Collection[] }) => {
+        if (!cancelled) {
+          const colls = d.collections ?? [];
+          setCollections(colls);
+          setCounts((c) => ({ ...c, collections: colls.length }));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCollections([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const navCounts: HomeNavCardCounts = {
     ...counts,
     recent:
@@ -389,6 +412,7 @@ export function SignedInHome({ user }: { user: User }) {
       projects={sections}
       projectsError={projectsError}
       starred={starred}
+      collections={collections}
       recentProjects={recentProjects}
       recentTrails={recentTrails}
       communityProjects={community}

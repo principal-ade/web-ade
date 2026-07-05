@@ -7,6 +7,7 @@ import {
   Footprints,
   History,
   Star,
+  Layers,
 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 
@@ -21,6 +22,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 export type HomeNavKey =
   | 'projects'
   | 'starred'
+  | 'collections'
   | 'bookmarks'
   | 'library'
   | 'recent';
@@ -29,6 +31,7 @@ export type HomeNavKey =
 export interface HomeNavCardCounts {
   projects?: number | null;
   starred?: number | null;
+  collections?: number | null;
   bookmarks?: number | null;
   library?: number | null;
   recent?: number | null;
@@ -62,6 +65,12 @@ export const HOME_NAV_CARDS: HomeNavCardMeta[] = [
     icon: <Star size={18} />,
     label: 'Starred Projects',
     description: "Repositories you've starred",
+  },
+  {
+    key: 'collections',
+    icon: <Layers size={18} />,
+    label: 'Collections',
+    description: 'Your curated collections of repos',
   },
   {
     key: 'bookmarks',

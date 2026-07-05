@@ -18,6 +18,7 @@ import {
   type ProjectSection,
 } from './HomeProjectsView';
 import { HomeStarredView } from './HomeStarredView';
+import { HomeCollectionsView } from './HomeCollectionsView';
 import {
   HomeRecentlyVisitedView,
   type RecentTrailItem,
@@ -28,6 +29,7 @@ import {
   type TrailListItem,
   type TopicListItem,
 } from './HomeTrailsTopicsView';
+import type { Collection } from '@/lib/starred-collections/types';
 
 // ---------------------------------------------------------------------------
 // HomeLeftPanel — the signed-in home's left rail, the user-based sibling of the
@@ -47,6 +49,7 @@ const HOME_SLIDE_ORDER: readonly HomeView[] = [
   'home',
   'projects',
   'starred',
+  'collections',
   'bookmarks',
   'library',
   'recent',
@@ -68,6 +71,9 @@ export interface HomeLeftPanelProps {
   /** "Starred Projects" view: the user's starred repos, flat. `null` = loading. */
   starred?: ProjectRepo[] | null;
   starredError?: string | null;
+  /** "Collections" view: the user's starred collections. `null` = loading. */
+  collections?: Collection[] | null;
+  collectionsError?: string | null;
   /** "Recently Visited" view: recent repos (as ProjectRepos) + recent trails. */
   recentProjects?: ProjectRepo[] | null;
   recentTrails?: RecentTrailItem[] | null;
@@ -94,6 +100,8 @@ export function HomeLeftPanel({
   projectsError = null,
   starred,
   starredError = null,
+  collections,
+  collectionsError = null,
   recentProjects,
   recentTrails,
   communityProjects,
@@ -144,6 +152,16 @@ export function HomeLeftPanel({
             error={starredError}
             selectedFullName={selectedRepoFullName}
             onSelectRepo={(repo) => onSelectRepo?.(repo)}
+            onBack={() => go('home')}
+          />
+        ) : view === 'collections' ? (
+          <HomeCollectionsView
+            collections={collections ?? null}
+            error={collectionsError}
+            selectedCollectionId={null}
+            onSelectCollection={() => {
+              // TODO: Navigate to collection detail page
+            }}
             onBack={() => go('home')}
           />
         ) : view === 'recent' ? (
