@@ -8,6 +8,7 @@ import { AgentViewButton } from '@/components/AgentViewButton';
 import { HomeThemeToggle } from '@/components/HomeThemeToggle';
 import { RepoSearchBar } from '@/components/RepoSearchBar';
 import { SignedInHome } from '@/components/home/SignedInHome';
+import { Logo } from '@principal-ai/logo-component';
 
 /**
  * `/home` — the signed-in app surface (the user-based two-pane rail + File City).
@@ -35,18 +36,29 @@ export default function HomeDashboardPage() {
         }}
       >
         <div className="w-full flex items-center justify-between gap-4 px-5 py-3.5">
-          <Link
-            href="/"
-            className="flex items-center transition-opacity hover:opacity-80"
-          >
-            <h1
-              className="text-2xl font-bold m-0"
-              style={{ fontFamily: theme.fonts.body }}
+          <div className="flex items-center gap-2">
+            <Link href="/" className="flex items-center transition-opacity hover:opacity-80">
+              <Logo width={24} height={24} color={theme.colors.accent} particleColor={theme.colors.primary} letterColor={theme.colors.text} />
+            </Link>
+            <span
+              style={{
+                fontSize: theme.fontSizes[0],
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.textSecondary,
+              }}
             >
-              <span style={{ color: theme.colors.text }}>Principal</span>{' '}
-              <span style={{ color: theme.colors.primary }}>AI</span>
-            </h1>
-          </Link>
+              /
+            </span>
+            <span
+              style={{
+                fontSize: theme.fontSizes[1],
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.text,
+              }}
+            >
+              Home
+            </span>
+          </div>
           <div className="flex items-center gap-3">
             {user && (
               <div className="hidden md:block">
