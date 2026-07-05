@@ -40,11 +40,17 @@ export function HomeCollectionsView({
   const filtered = useMemo(() => {
     if (!collections) return null;
     const q = filter.trim().toLowerCase();
-    if (!q) return collections;
-    return collections.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        (c.description?.toLowerCase().includes(q) ?? false),
+    const filteredList = !q
+      ? collections
+      : collections.filter(
+          (c) =>
+            c.name.toLowerCase().includes(q) ||
+            (c.description?.toLowerCase().includes(q) ?? false),
+        );
+    
+    // Sort alphabetically by name (case-insensitive)
+    return [...filteredList].sort((a, b) =>
+      a.name.toLowerCase().localeCompare(b.name.toLowerCase()),
     );
   }, [collections, filter]);
 
