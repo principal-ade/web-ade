@@ -71,8 +71,14 @@ export function RepoFileCityPane({
   const [treeError, setTreeError] = useState<string | null>(null);
 
   // Repo file tree — required by the panel. One fetch per owner/repo.
+  // On owner/repo change the tree is cleared immediately so the old city
+  // unmounts (FileCity3D is gated on cityData, which is null without a tree);
+  // the readme stays visible via useReadme's keep-previous-value-in-loading
+  // pattern. filePaths is kept so findRootReadme continues resolving during
+  // the transition; both are overwritten when the new tree lands.
   useEffect(() => {
     let cancelled = false;
+    setFileTree(null);
     setTreeError(null);
     (async () => {
       try {
@@ -218,22 +224,19 @@ export function RepoFileCityPane({
     );
   }
 
-  if (!fileTree) {
-    return (
-      <div
-        className="flex-1 min-w-0 min-h-0 flex items-center justify-center"
-        style={{ background: theme.colors.background, color: theme.colors.textMuted }}
-      >
-        <div style={{ fontSize: theme.fontSizes[1] }}>Loading repository…</div>
-      </div>
-    );
-  }
-
   return (
     <div
       className="flex-1 min-w-0 min-h-0 relative"
       style={{ background: theme.colors.background }}
     >
+      {!fileTree && !readmeView ? (
+        <div
+          className="absolute inset-0 flex items-center justify-center"
+          style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1], zIndex: 10 }}
+        >
+          Loading repository…
+        </div>
+      ) : null}
       <FileCityGuidePanel
         context={context}
         actions={actions}
