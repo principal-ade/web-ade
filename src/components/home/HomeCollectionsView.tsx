@@ -170,6 +170,7 @@ function CollectionRow({
   onSelect: () => void;
 }) {
   const { theme } = useTheme();
+  const [isHovered, setIsHovered] = useState(false);
   const repoCount = collection.repos?.length ?? 0;
   const userCount = collection.users?.length ?? 0;
 
@@ -177,24 +178,30 @@ function CollectionRow({
     <button
       type="button"
       onClick={onSelect}
-      className="w-full text-left px-3 py-3 border-b transition-colors"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="w-full text-left px-3 py-3 border-b transition-all"
       style={{
-        borderColor: theme.colors.border,
+        borderColor: isHovered || selected ? theme.colors.primary : theme.colors.border,
         background: selected
           ? `color-mix(in srgb, ${theme.colors.primary} 8%, ${theme.colors.background})`
-          : 'transparent',
+          : isHovered
+            ? `color-mix(in srgb, ${theme.colors.primary} 4%, ${theme.colors.background})`
+            : 'transparent',
       }}
     >
       <div className="flex items-start gap-3">
         <div
-          className="shrink-0 flex items-center justify-center rounded-md"
+          className="shrink-0 flex items-center justify-center rounded-md transition-all"
           style={{
             width: 36,
             height: 36,
             background: selected
               ? theme.colors.primary
-              : theme.colors.backgroundSecondary,
-            color: selected ? 'white' : theme.colors.textMuted,
+              : isHovered
+                ? `color-mix(in srgb, ${theme.colors.primary} 15%, ${theme.colors.backgroundSecondary})`
+                : theme.colors.backgroundSecondary,
+            color: selected || isHovered ? theme.colors.primary : theme.colors.textMuted,
           }}
         >
           <Layers size={18} />
