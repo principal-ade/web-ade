@@ -375,25 +375,51 @@ export function SignedInHome({ user }: { user: User }) {
   }, []);
 
   // Starred collections (user + org collections).
-  useEffect(() => {
-    let cancelled = false;
+  const fetchCollections = () => {
     setCollections(null);
     fetch('/api/starred-collections')
       .then((r) => (r.ok ? r.json() : { collections: [] }))
       .then((d: { collections?: Collection[] }) => {
-        if (!cancelled) {
-          const colls = d.collections ?? [];
-          setCollections(colls);
-          setCounts((c) => ({ ...c, collections: colls.length }));
-        }
+        const colls = d.collections ?? [];
+        setCollections(colls);
+        setCounts((c) => ({ ...c, collections: colls.length }));
       })
       .catch(() => {
-        if (!cancelled) setCollections([]);
+        setCollections([]);
       });
-    return () => {
-      cancelled = true;
-    };
+  };
+
+  useEffect(() => {
+    fetchCollections();
   }, []);
+
+  const handleCreateCollection = async (name: string, description: string) => {
+    const response = await fetch('/api/starred-collections', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create collection');
+    }
+
+    fetchCollections();
+  };
+
+  const handleDeleteCollection = async (collectionId: string) => {
+    const response = await fetch(`/api/starred-collections/${collectionId}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete collection');
+    }
+
+    fetchCollections();
+  };
 
   const navCounts: HomeNavCardCounts = {
     ...counts,
@@ -413,6 +439,9 @@ export function SignedInHome({ user }: { user: User }) {
       projectsError={projectsError}
       starred={starred}
       collections={collections}
+      onCreateCollection={handleCreateCollection}
+      onDeleteCollection={handleDeleteCollection}
+      onRefreshCollections={fetchCollections}
       recentProjects={recentProjects}
       recentTrails={recentTrails}
       communityProjects={community}

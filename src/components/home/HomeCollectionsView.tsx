@@ -1,10 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Layers, Search, Star, Users } from 'lucide-react';
+import { Layers, Search, Star, Users, Plus, ChevronLeft } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { RailPaneHeader } from '@/components/rail/RailPaneHeader';
 import type { Collection } from '@/lib/starred-collections/types';
+import { CreateCollectionModal } from './CreateCollectionModal';
 
 // ---------------------------------------------------------------------------
 // HomeCollectionsView — the "Collections" destination: a list of the user's
@@ -20,6 +20,8 @@ export interface HomeCollectionsViewProps {
   selectedCollectionId?: string | null;
   onSelectCollection: (collection: Collection) => void;
   onBack: () => void;
+  onCreateCollection: (name: string, description: string) => Promise<void>;
+  onRefresh?: () => void;
 }
 
 export function HomeCollectionsView({
@@ -28,9 +30,12 @@ export function HomeCollectionsView({
   selectedCollectionId = null,
   onSelectCollection,
   onBack,
+  onCreateCollection,
+  onRefresh,
 }: HomeCollectionsViewProps) {
   const { theme } = useTheme();
   const [filter, setFilter] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const filtered = useMemo(() => {
     if (!collections) return null;
@@ -43,15 +48,64 @@ export function HomeCollectionsView({
     );
   }, [collections, filter]);
 
+  const handleCreateCollection = async (name: string, description: string) => {
+    await onCreateCollection(name, description);
+    onRefresh?.();
+  };
+
   return (
     <>
-      <RailPaneHeader
-        icon={<Layers size={14} />}
-        label="Collections"
-        count={collections?.length || undefined}
-        onClose={onBack}
-        closeAsBack
-      />
+      {/* Custom header with add button */}
+      <div
+        className="px-3 py-2 border-b sticky top-0 z-10 shrink-0 flex items-center gap-1.5"
+        style={{
+          borderColor: theme.colors.border,
+          background: theme.colors.background,
+        }}
+      >
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-2 -ml-1 px-1.5 py-1 rounded transition-opacity hover:opacity-70 shrink-0"
+          style={{ color: theme.colors.textSecondary, cursor: 'pointer' }}
+          title="Back to overview"
+          aria-label="Back to overview"
+        >
+          <ChevronLeft size={16} />
+          <span
+            style={{
+              fontSize: theme.fontSizes[0],
+              fontWeight: theme.fontWeights.semibold,
+              color: theme.colors.textSecondary,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
+            Collections
+          </span>
+          {collections != null && (
+            <span
+              style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted }}
+            >
+              {collections.length}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowCreateModal(true)}
+          className="ml-auto flex items-center justify-center w-7 h-7 rounded transition-colors"
+          style={{
+            color: theme.colors.primary,
+            cursor: 'pointer',
+            background: `color-mix(in srgb, ${theme.colors.primary} 10%, transparent)`,
+          }}
+          title="Create collection"
+          aria-label="Create collection"
+        >
+          <Plus size={16} />
+        </button>
+      </div>
 
       {collections != null && collections.length >= 8 && (
         <div
@@ -96,6 +150,12 @@ export function HomeCollectionsView({
           ))
         )}
       </div>
+
+      <CreateCollectionModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSave={handleCreateCollection}
+      />
     </>
   );
 }

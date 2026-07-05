@@ -1,12 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Layers, Search, Star } from 'lucide-react';
+import { Search, Star, Trash2, ChevronLeft } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { RailPaneHeader } from '@/components/rail/RailPaneHeader';
 import { RepoRowShell } from './RepoRowShell';
 import type { Collection, CollectionRepo } from '@/lib/starred-collections/types';
 import type { ProjectRepo } from './HomeProjectsView';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 // ---------------------------------------------------------------------------
 // HomeCollectionDetailView — shows the repos within a selected collection.
@@ -21,6 +21,7 @@ export interface HomeCollectionDetailViewProps {
   selectedFullName?: string | null;
   onSelectRepo: (repo: ProjectRepo) => void;
   onBack: () => void;
+  onDeleteCollection: (collectionId: string) => Promise<void>;
 }
 
 export function HomeCollectionDetailView({
@@ -28,9 +29,12 @@ export function HomeCollectionDetailView({
   selectedFullName = null,
   onSelectRepo,
   onBack,
+  onDeleteCollection,
 }: HomeCollectionDetailViewProps) {
   const { theme } = useTheme();
   const [filter, setFilter] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const repos = useMemo(() => collection.repos ?? [], [collection.repos]);
 
@@ -46,15 +50,72 @@ export function HomeCollectionDetailView({
     );
   }, [repos, filter]);
 
+  const handleDelete = async () => {
+    try {
+      setDeleting(true);
+      await onDeleteCollection(collection.id);
+      onBack();
+    } catch (error) {
+      console.error('Failed to delete collection:', error);
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   return (
     <>
-      <RailPaneHeader
-        icon={<Layers size={14} />}
-        label={collection.name}
-        count={repos.length || undefined}
-        onClose={onBack}
-        closeAsBack
-      />
+      {/* Custom header with delete button */}
+      <div
+        className="px-3 py-2 border-b sticky top-0 z-10 shrink-0 flex items-center gap-1.5"
+        style={{
+          borderColor: theme.colors.border,
+          background: theme.colors.background,
+        }}
+      >
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-2 -ml-1 px-1.5 py-1 rounded transition-opacity hover:opacity-70 shrink-0"
+          style={{ color: theme.colors.textSecondary, cursor: 'pointer' }}
+          title="Back to collections"
+          aria-label="Back to collections"
+        >
+          <ChevronLeft size={16} />
+          <span
+            style={{
+              fontSize: theme.fontSizes[0],
+              fontWeight: theme.fontWeights.semibold,
+              color: theme.colors.textSecondary,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
+            {collection.name}
+          </span>
+          {repos.length > 0 && (
+            <span
+              style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted }}
+            >
+              {repos.length}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowDeleteConfirm(true)}
+          className="ml-auto flex items-center justify-center w-7 h-7 rounded transition-colors"
+          style={{
+            color: theme.colors.error,
+            cursor: 'pointer',
+            background: `color-mix(in srgb, ${theme.colors.error} 10%, transparent)`,
+          }}
+          title="Delete collection"
+          aria-label="Delete collection"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
 
       {collection.description && (
         <div
@@ -123,6 +184,26 @@ export function HomeCollectionDetailView({
           ))
         )}
       </div>
+
+      {showDeleteConfirm && (
+        <ConfirmDialog
+          title="Delete Collection"
+          message={
+            <>
+              Are you sure you want to delete &ldquo;{collection.name}&rdquo;?
+              <br />
+              <br />
+              This action cannot be undone. The repositories themselves will not be
+              affected.
+            </>
+          }
+          confirmLabel="Delete"
+          destructive
+          busy={deleting}
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
     </>
   );
 }
