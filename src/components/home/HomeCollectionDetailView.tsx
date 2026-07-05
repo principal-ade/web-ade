@@ -176,28 +176,11 @@ export function HomeCollectionDetailView({
             </span>
           )}
         </button>
-        <button
-          type="button"
-          onClick={handleToggleVisibility}
-          disabled={togglingVisibility}
-          className="ml-auto flex items-center justify-center w-7 h-7 rounded transition-colors"
-          style={{
-            color: collection.visibility === 'public' ? theme.colors.primary : theme.colors.textMuted,
-            cursor: togglingVisibility ? 'not-allowed' : 'pointer',
-            background: collection.visibility === 'public'
-              ? `color-mix(in srgb, ${theme.colors.primary} 10%, transparent)`
-              : `color-mix(in srgb, ${theme.colors.textMuted} 10%, transparent)`,
-          }}
-          title={collection.visibility === 'public' ? 'Make private' : 'Make public'}
-          aria-label="Toggle collection visibility"
-        >
-          {collection.visibility === 'public' ? <Globe size={14} /> : <Lock size={14} />}
-        </button>
-        {shareUrl && (
+        {shareUrl && collection.visibility === 'public' && (
           <button
             type="button"
             onClick={handleShare}
-            className="flex items-center justify-center w-7 h-7 rounded transition-colors"
+            className="ml-auto flex items-center justify-center w-7 h-7 rounded transition-colors"
             style={{
               color: copied ? theme.colors.primary : theme.colors.textMuted,
               cursor: 'pointer',
@@ -211,6 +194,23 @@ export function HomeCollectionDetailView({
             <Share2 size={14} />
           </button>
         )}
+        <button
+          type="button"
+          onClick={handleToggleVisibility}
+          disabled={togglingVisibility}
+          className="flex items-center justify-center w-7 h-7 rounded transition-colors"
+          style={{
+            color: collection.visibility === 'public' ? theme.colors.primary : theme.colors.textMuted,
+            cursor: togglingVisibility ? 'not-allowed' : 'pointer',
+            background: collection.visibility === 'public'
+              ? `color-mix(in srgb, ${theme.colors.primary} 10%, transparent)`
+              : `color-mix(in srgb, ${theme.colors.textMuted} 10%, transparent)`,
+          }}
+          title={collection.visibility === 'public' ? 'Make private' : 'Make public'}
+          aria-label="Toggle collection visibility"
+        >
+          {collection.visibility === 'public' ? <Globe size={14} /> : <Lock size={14} />}
+        </button>
         <button
           type="button"
           onClick={() => setShowDeleteConfirm(true)}
