@@ -19,6 +19,7 @@ import {
 } from './HomeProjectsView';
 import { HomeStarredView } from './HomeStarredView';
 import { HomeCollectionsView } from './HomeCollectionsView';
+import { HomeCollectionDetailView } from './HomeCollectionDetailView';
 import {
   HomeRecentlyVisitedView,
   type RecentTrailItem,
@@ -42,14 +43,16 @@ import type { Collection } from '@/lib/starred-collections/types';
 // so each view (Projects, Starred, Bookmarks, …) can be filled in next.
 // ---------------------------------------------------------------------------
 
-export type HomeView = 'home' | HomeNavKey;
+export type HomeView = 'home' | HomeNavKey | 'collection-detail';
 
 // 'home' is leftmost; opening a card slides in from the right, back slides left.
+// 'collection-detail' goes deeper (right) than 'collections'.
 const HOME_SLIDE_ORDER: readonly HomeView[] = [
   'home',
   'projects',
   'starred',
   'collections',
+  'collection-detail',
   'bookmarks',
   'library',
   'recent',
@@ -114,10 +117,16 @@ export function HomeLeftPanel({
 }: HomeLeftPanelProps) {
   const { theme } = useTheme();
   const [view, setView] = useState<HomeView>('home');
+  const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
 
   const go = (next: HomeView) => {
     setView(next);
     onViewChange?.(next);
+  };
+
+  const openCollection = (collection: Collection) => {
+    setSelectedCollection(collection);
+    go('collection-detail');
   };
 
   return (
@@ -158,11 +167,16 @@ export function HomeLeftPanel({
           <HomeCollectionsView
             collections={collections ?? null}
             error={collectionsError}
-            selectedCollectionId={null}
-            onSelectCollection={() => {
-              // TODO: Navigate to collection detail page
-            }}
+            selectedCollectionId={selectedCollection?.id ?? null}
+            onSelectCollection={openCollection}
             onBack={() => go('home')}
+          />
+        ) : view === 'collection-detail' && selectedCollection ? (
+          <HomeCollectionDetailView
+            collection={selectedCollection}
+            selectedFullName={selectedRepoFullName}
+            onSelectRepo={(repo) => onSelectRepo?.(repo)}
+            onBack={() => go('collections')}
           />
         ) : view === 'recent' ? (
           <HomeRecentlyVisitedView
@@ -191,8 +205,8 @@ export function HomeLeftPanel({
             emptyMessage="You haven't published any trails or topics yet."
             onBack={() => go('home')}
           />
-        ) : (
-          <HomeNavPlaceholderView view={view} onBack={() => go('home')} />
+        ) : view === 'collection-detail' ? null : (
+          <HomeNavPlaceholderView view={view as HomeNavKey} onBack={() => go('home')} />
         )}
       </SlidePane>
     </aside>
