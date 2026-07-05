@@ -199,6 +199,11 @@ export function HomeLeftPanel({
             onUpdateCollection={async (collectionId, data) => {
               if (onUpdateCollection) {
                 await onUpdateCollection(collectionId, data);
+                setSelectedCollection((prev) =>
+                  prev && prev.id === collectionId
+                    ? { ...prev, ...data, updatedAt: new Date().toISOString() }
+                    : prev
+                );
               }
             }}
           />

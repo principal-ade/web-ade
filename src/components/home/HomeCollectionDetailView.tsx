@@ -38,6 +38,10 @@ export function HomeCollectionDetailView({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [togglingVisibility, setTogglingVisibility] = useState(false);
+  const [showVisibilityInfo, setShowVisibilityInfo] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+  // Pending visibility value while the info modal is shown
+  const [pendingVisibility, setPendingVisibility] = useState<'public' | 'private' | null>(null);
 
   const repos = useMemo(() => collection.repos ?? [], [collection.repos]);
 
@@ -66,9 +70,8 @@ export function HomeCollectionDetailView({
     }
   };
 
-  const handleToggleVisibility = async () => {
+  const executeToggle = async (next: 'public' | 'private') => {
     if (!onUpdateCollection) return;
-    const next: 'public' | 'private' = collection.visibility === 'public' ? 'private' : 'public';
     try {
       setTogglingVisibility(true);
       await onUpdateCollection(collection.id, { visibility: next });
@@ -77,6 +80,38 @@ export function HomeCollectionDetailView({
     } finally {
       setTogglingVisibility(false);
     }
+  };
+
+  const handleToggleVisibility = () => {
+    if (!onUpdateCollection) return;
+    const next: 'public' | 'private' = collection.visibility === 'public' ? 'private' : 'public';
+
+    // Check if user has dismissed the info modal
+    if (typeof window !== 'undefined' && localStorage.getItem('collection-visibility-dismissed') === 'true') {
+      executeToggle(next);
+      return;
+    }
+
+    // Show the info modal first
+    setPendingVisibility(next);
+    setDontShowAgain(false);
+    setShowVisibilityInfo(true);
+  };
+
+  const handleVisibilityInfoConfirm = () => {
+    if (dontShowAgain && typeof window !== 'undefined') {
+      localStorage.setItem('collection-visibility-dismissed', 'true');
+    }
+    setShowVisibilityInfo(false);
+    if (pendingVisibility) {
+      executeToggle(pendingVisibility);
+      setPendingVisibility(null);
+    }
+  };
+
+  const handleVisibilityInfoCancel = () => {
+    setShowVisibilityInfo(false);
+    setPendingVisibility(null);
   };
 
   return (
@@ -235,6 +270,46 @@ export function HomeCollectionDetailView({
           busy={deleting}
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
+
+      {showVisibilityInfo && (
+        <ConfirmDialog
+          title={pendingVisibility === 'public' ? 'Make Public?' : 'Make Private?'}
+          message={
+            <>
+              {pendingVisibility === 'public' ? (
+                <>
+                  Making this collection public means anyone can see the repos
+                  and users you&rsquo;ve curated in it. It will appear on your
+                  profile page.
+                </>
+              ) : (
+                <>
+                  Making this collection private means only you can see it. It
+                  will no longer appear on your profile page.
+                </>
+              )}
+              <br />
+              <br />
+              <label
+                className="flex items-center gap-2 cursor-pointer select-none"
+                style={{ fontSize: 'inherit' }}
+              >
+                <input
+                  type="checkbox"
+                  checked={dontShowAgain}
+                  onChange={(e) => setDontShowAgain(e.target.checked)}
+                  className="rounded"
+                />
+                Don&rsquo;t show this again
+              </label>
+            </>
+          }
+          confirmLabel={pendingVisibility === 'public' ? 'Make Public' : 'Make Private'}
+          busy={togglingVisibility}
+          onConfirm={handleVisibilityInfoConfirm}
+          onCancel={handleVisibilityInfoCancel}
         />
       )}
     </>
