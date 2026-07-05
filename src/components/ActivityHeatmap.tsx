@@ -64,7 +64,7 @@ export const ActivityHeatmap: React.FC<{
 
   const getColor = (count: number) => {
     if (count === 0) return `${theme.colors.border}30`;
-    const alpha = Math.floor(20 + Math.min(count / maxCount, 1) * 80).toString(16).padStart(2, '0');
+    const alpha = Math.floor(66 + Math.min(count / maxCount, 1) * 189).toString(16).padStart(2, '0');
     return `${theme.colors.primary}${alpha}`;
   };
 
@@ -76,7 +76,7 @@ export const ActivityHeatmap: React.FC<{
       ref={containerRef}
       className="owner-heatmap"
       style={{
-        display: 'flex', gap, padding: '0 16px 8px', width: '100%', height: '100%',
+        display: 'flex', gap, padding: '0 16px 16px', width: '100%', height: '100%',
         overflowX: 'auto', overflowY: 'hidden', alignItems: 'center',
         scrollbarWidth: 'none',
       }}

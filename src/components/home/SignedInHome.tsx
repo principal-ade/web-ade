@@ -1,11 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Boxes } from 'lucide-react';
-import { useTheme } from '@principal-ade/industry-theme';
 import type { User } from '@/contexts/AuthContext';
 import { HomeTwoPane } from './HomeTwoPane';
 import { RepoFileCityPane } from './RepoFileCityPane';
+import { HomeRightPaneEmptyState } from './HomeRightPaneEmptyState';
 import type { UserAboutInfo } from './UserAboutCard';
 import type { HomeNavCardCounts } from './HomeNavCards';
 import type { ProjectRepo, ProjectSection } from './HomeProjectsView';
@@ -18,6 +17,7 @@ import type {
   TopicListItem,
 } from './HomeTrailsTopicsView';
 import type { Collection } from '@/lib/starred-collections/types';
+import type { ActivityEvent, ContributedRepo } from './HomeRightPaneEmptyState';
 
 // localStorage key shared with the header opener / recent-repos panels.
 const RECENT_REPOS_KEY = 'recent-repositories';
@@ -183,6 +183,11 @@ export function SignedInHome({ user }: { user: User }) {
   const [bookmarkTrails, setBookmarkTrails] = useState<TrailListItem[] | null>(null);
   const [bookmarkTopics, setBookmarkTopics] = useState<TopicListItem[] | null>(null);
   const [counts, setCounts] = useState<HomeNavCardCounts>({});
+  
+  // User activity data for the empty state
+  const [activityData, setActivityData] = useState<Map<string, number>>(new Map());
+  const [contributedRepos, setContributedRepos] = useState<ContributedRepo[]>([]);
+  const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
 
   // Enrich the About card from the viewer's full GitHub profile (bio + stats).
   // The owner/repos endpoint returns the rich `owner` object; we ignore its repo
@@ -393,6 +398,40 @@ export function SignedInHome({ user }: { user: User }) {
     fetchCollections();
   }, []);
 
+  // Fetch user activity data for the empty state (30 days of activity)
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/github/user/${user.login}/activity?contributionDays=365&activityDays=30`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        
+        // Convert contributions array to Map for heatmap
+        const activityMap = new Map<string, number>();
+        if (data.contributions) {
+          for (const day of data.contributions) {
+            activityMap.set(day.date, day.count);
+          }
+        }
+        setActivityData(activityMap);
+        
+        // Set contributed repos
+        if (data.contributedRepos) {
+          setContributedRepos(data.contributedRepos);
+        }
+        
+        // Set activity events
+        if (data.activity) {
+          setActivityEvents(data.activity);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch activity data:', err);
+      });
+    
+    return () => { cancelled = true; };
+  }, [user.login]);
+
   const handleCreateCollection = async (name: string, description: string, visibility: 'public' | 'private') => {
     const response = await fetch('/api/starred-collections', {
       method: 'POST',
@@ -473,31 +512,13 @@ export function SignedInHome({ user }: { user: User }) {
             repo={repo.repo}
           />
         ) : (
-          <IdleRightPane />
+          <HomeRightPaneEmptyState
+            activityData={activityData}
+            contributedRepos={contributedRepos}
+            activityEvents={activityEvents}
+          />
         )
       }
     />
-  );
-}
-
-function IdleRightPane() {
-  const { theme } = useTheme();
-  return (
-    <div
-      className="flex-1 min-h-0 flex flex-col items-center justify-center gap-3 px-8 text-center"
-      style={{ background: theme.colors.backgroundSecondary }}
-    >
-      <Boxes size={40} style={{ color: theme.colors.textMuted, opacity: 0.7 }} />
-      <div
-        style={{
-          color: theme.colors.textMuted,
-          fontSize: theme.fontSizes[2],
-          maxWidth: 360,
-          lineHeight: 1.5,
-        }}
-      >
-        Pick a project from the rail to explore its File City.
-      </div>
-    </div>
   );
 }
