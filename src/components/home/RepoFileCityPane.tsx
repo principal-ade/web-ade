@@ -73,8 +73,6 @@ export function RepoFileCityPane({
   // Repo file tree — required by the panel. One fetch per owner/repo.
   useEffect(() => {
     let cancelled = false;
-    setFileTree(null);
-    setFilePaths([]);
     setTreeError(null);
     (async () => {
       try {

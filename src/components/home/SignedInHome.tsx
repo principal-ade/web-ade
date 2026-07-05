@@ -507,7 +507,6 @@ export function SignedInHome({ user }: { user: User }) {
       renderRightPane={(repo) =>
         repo ? (
           <RepoFileCityPane
-            key={repo.full_name}
             owner={repo.owner}
             repo={repo.repo}
           />
