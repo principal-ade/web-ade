@@ -302,7 +302,7 @@ export function RepoSearchBar({
           for links / GitHub repo-search results. */}
       {openRepoActive && (showOpener || showRecents) && (
         <div
-          className="absolute top-full right-0 mt-1.5 w-96 max-w-[80vw] rounded-lg overflow-hidden z-[1000]"
+          className="absolute top-full right-0 mt-1.5 w-96 max-w-[calc(100vw-2rem)] rounded-lg overflow-hidden z-[1000]"
           style={{
             background: theme.colors.surface,
             border: `1px solid ${theme.colors.border}`,
