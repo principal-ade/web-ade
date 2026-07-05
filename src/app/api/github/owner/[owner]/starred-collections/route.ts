@@ -2,8 +2,8 @@
  * GET /api/github/owner/[owner]/starred-collections
  *
  * Returns starred collections owned by a specific GitHub user or organization.
- * Public endpoint - no authentication required. All starred collections are
- * publicly visible.
+ * Public endpoint - no authentication required. Only public collections are
+ * visible. Private collections are excluded.
  *
  * Query Parameters:
  *   include_items (boolean, optional) - Include repos and users arrays. Default: true
@@ -73,6 +73,10 @@ export async function GET(
     const data = await getCollections(ownerType, ownerId);
 
     let collections: Collection[] = data?.collections ?? [];
+
+    // Only expose public collections on the public endpoint
+    collections = collections.filter((c) => c.visibility === 'public');
+
     if (!includeItems) {
       collections = collections.map((c) => ({
         ...c,

@@ -40,6 +40,7 @@ export interface Collection {
   name: string; // User-defined name (required, 1-100 chars)
   description?: string; // Optional description (max 500 chars)
   icon?: string; // Lucide icon name (optional, defaults to "Star")
+  visibility: 'public' | 'private'; // Public collections visible on profile
   ownerType: 'user' | 'org'; // Owner type (user or organization)
   ownerLogin?: string; // Organization login (only when ownerType='org')
   repos: CollectionRepo[]; // Array of repos in collection
@@ -101,6 +102,7 @@ export interface CreateCollectionRequest {
   name: string;
   description?: string;
   icon?: string;
+  visibility?: 'public' | 'private';
   orgLogin?: string; // Optional organization login for org-owned collections
 }
 
@@ -111,6 +113,7 @@ export interface UpdateCollectionRequest {
   name?: string;
   description?: string;
   icon?: string;
+  visibility?: 'public' | 'private';
 }
 
 /**
@@ -211,6 +214,7 @@ export const ErrorCodes = {
   // Validation errors (400)
   INVALID_COLLECTION_NAME: 'INVALID_COLLECTION_NAME',
   INVALID_ICON: 'INVALID_ICON',
+  INVALID_VISIBILITY: 'INVALID_VISIBILITY',
   INVALID_OWNER_REPO: 'INVALID_OWNER_REPO',
   INVALID_LOGIN: 'INVALID_LOGIN',
   INVALID_REORDER_REQUEST: 'INVALID_REORDER_REQUEST',

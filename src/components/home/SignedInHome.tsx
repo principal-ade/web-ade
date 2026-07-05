@@ -393,11 +393,11 @@ export function SignedInHome({ user }: { user: User }) {
     fetchCollections();
   }, []);
 
-  const handleCreateCollection = async (name: string, description: string) => {
+  const handleCreateCollection = async (name: string, description: string, visibility: 'public' | 'private') => {
     const response = await fetch('/api/starred-collections', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description }),
+      body: JSON.stringify({ name, description, visibility }),
     });
 
     if (!response.ok) {
@@ -416,6 +416,21 @@ export function SignedInHome({ user }: { user: User }) {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to delete collection');
+    }
+
+    fetchCollections();
+  };
+
+  const handleUpdateCollection = async (collectionId: string, data: { visibility?: 'public' | 'private' }) => {
+    const response = await fetch(`/api/starred-collections/${collectionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update collection');
     }
 
     fetchCollections();
@@ -441,6 +456,7 @@ export function SignedInHome({ user }: { user: User }) {
       collections={collections}
       onCreateCollection={handleCreateCollection}
       onDeleteCollection={handleDeleteCollection}
+      onUpdateCollection={handleUpdateCollection}
       onRefreshCollections={fetchCollections}
       recentProjects={recentProjects}
       recentTrails={recentTrails}

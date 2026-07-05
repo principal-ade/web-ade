@@ -20,6 +20,8 @@ import type {
 import {
   VALID_ICONS,
   DEFAULT_ICON,
+  VALID_VISIBILITY_VALUES,
+  DEFAULT_VISIBILITY,
   MAX_COLLECTION_NAME_LENGTH,
   MIN_COLLECTION_NAME_LENGTH,
   MAX_COLLECTION_DESCRIPTION_LENGTH,
@@ -110,6 +112,31 @@ export function validateCollectionIcon(icon?: string): string {
 }
 
 /**
+ * Validates collection visibility
+ * @throws {CollectionError} if visibility is invalid
+ * @returns Valid visibility value or default
+ */
+export function validateCollectionVisibility(
+  visibility?: string
+): 'public' | 'private' {
+  if (!visibility) {
+    return DEFAULT_VISIBILITY;
+  }
+
+  if (
+    !VALID_VISIBILITY_VALUES.includes(visibility as never)
+  ) {
+    throw new CollectionError(
+      `Invalid visibility. Must be one of: ${VALID_VISIBILITY_VALUES.join(', ')}`,
+      400,
+      ErrorCodes.INVALID_VISIBILITY
+    );
+  }
+
+  return visibility as 'public' | 'private';
+}
+
+/**
  * Validates create collection request
  * @throws {CollectionError} if request is invalid
  */
@@ -119,6 +146,7 @@ export function validateCreateCollectionRequest(
   validateCollectionName(request.name);
   validateCollectionDescription(request.description);
   validateCollectionIcon(request.icon);
+  validateCollectionVisibility(request.visibility);
 }
 
 /**
@@ -140,14 +168,19 @@ export function validateUpdateCollectionRequest(
     validateCollectionIcon(request.icon);
   }
 
+  if (request.visibility !== undefined) {
+    validateCollectionVisibility(request.visibility);
+  }
+
   // Ensure at least one field is being updated
   if (
     request.name === undefined &&
     request.description === undefined &&
-    request.icon === undefined
+    request.icon === undefined &&
+    request.visibility === undefined
   ) {
     throw new CollectionError(
-      'At least one field (name, description, or icon) must be provided',
+      'At least one field (name, description, icon, or visibility) must be provided',
       400,
       ErrorCodes.INVALID_COLLECTION_NAME
     );

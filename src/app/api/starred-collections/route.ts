@@ -15,7 +15,7 @@ import {
   checkCollectionsLimit,
   checkDuplicateCollectionName,
 } from '@/lib/starred-collections/validation';
-import {  validateCollectionIcon } from '@/lib/starred-collections/validation';
+import {  validateCollectionIcon, validateCollectionVisibility } from '@/lib/starred-collections/validation';
 import { CollectionError } from '@/lib/starred-collections/types';
 import { getUserOrgs, isOrgMember } from '@/lib/starred-collections/github-org';
 import type {
@@ -157,6 +157,7 @@ export async function POST(request: NextRequest) {
       name: body.name.trim(),
       description: body.description?.trim(),
       icon: validateCollectionIcon(body.icon),
+      visibility: validateCollectionVisibility(body.visibility),
       ownerType,
       ownerLogin: ownerType === 'org' ? ownerId : undefined,
       repos: [],

@@ -3,12 +3,14 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
-import { X } from 'lucide-react';
+import { X, Globe, Lock } from 'lucide-react';
+
+type Visibility = 'public' | 'private';
 
 interface CreateCollectionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (name: string, description: string) => Promise<void>;
+  onSave: (name: string, description: string, visibility: Visibility) => Promise<void>;
 }
 
 /**
@@ -24,6 +26,7 @@ export function CreateCollectionModal({
   const [mounted, setMounted] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [visibility, setVisibility] = useState<Visibility>('private');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,6 +39,7 @@ export function CreateCollectionModal({
     if (isOpen) {
       setName('');
       setDescription('');
+      setVisibility('private');
       setError(null);
       setSaving(false);
     }
@@ -60,7 +64,7 @@ export function CreateCollectionModal({
     try {
       setSaving(true);
       setError(null);
-      await onSave(name.trim(), description.trim());
+      await onSave(name.trim(), description.trim(), visibility);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create collection');
@@ -164,7 +168,7 @@ export function CreateCollectionModal({
           </div>
 
           {/* Description input */}
-          <div>
+          <div className="mb-4">
             <label
               className="block mb-2 text-sm font-medium"
               style={{ color: theme.colors.textSecondary }}
@@ -183,6 +187,50 @@ export function CreateCollectionModal({
                 color: theme.colors.text,
               }}
             />
+          </div>
+
+          {/* Visibility toggle */}
+          <div>
+            <label
+              className="block mb-2 text-sm font-medium"
+              style={{ color: theme.colors.textSecondary }}
+            >
+              Visibility
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setVisibility('public')}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm flex-1 transition-all"
+                style={{
+                  border: `1px solid ${visibility === 'public' ? theme.colors.primary : theme.colors.border}`,
+                  backgroundColor: visibility === 'public'
+                    ? `color-mix(in srgb, ${theme.colors.primary} 10%, transparent)`
+                    : theme.colors.background,
+                  color: visibility === 'public' ? theme.colors.primary : theme.colors.text,
+                  cursor: 'pointer',
+                }}
+              >
+                <Globe size={16} />
+                <span className="font-medium">Public</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisibility('private')}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm flex-1 transition-all"
+                style={{
+                  border: `1px solid ${visibility === 'private' ? theme.colors.primary : theme.colors.border}`,
+                  backgroundColor: visibility === 'private'
+                    ? `color-mix(in srgb, ${theme.colors.primary} 10%, transparent)`
+                    : theme.colors.background,
+                  color: visibility === 'private' ? theme.colors.primary : theme.colors.text,
+                  cursor: 'pointer',
+                }}
+              >
+                <Lock size={16} />
+                <span className="font-medium">Private</span>
+              </button>
+            </div>
           </div>
         </div>
 

@@ -20,7 +20,7 @@ export interface HomeCollectionsViewProps {
   selectedCollectionId?: string | null;
   onSelectCollection: (collection: Collection) => void;
   onBack: () => void;
-  onCreateCollection: (name: string, description: string) => Promise<void>;
+  onCreateCollection: (name: string, description: string, visibility: 'public' | 'private') => Promise<void>;
   onRefresh?: () => void;
 }
 
@@ -48,8 +48,8 @@ export function HomeCollectionsView({
     );
   }, [collections, filter]);
 
-  const handleCreateCollection = async (name: string, description: string) => {
-    await onCreateCollection(name, description);
+  const handleCreateCollection = async (name: string, description: string, visibility: 'public' | 'private') => {
+    await onCreateCollection(name, description, visibility);
     onRefresh?.();
   };
 

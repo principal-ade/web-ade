@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Search, Star, Trash2, ChevronLeft } from 'lucide-react';
+import { Search, Star, Trash2, ChevronLeft, Globe, Lock } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { RepoRowShell } from './RepoRowShell';
 import type { Collection, CollectionRepo } from '@/lib/starred-collections/types';
@@ -22,6 +22,7 @@ export interface HomeCollectionDetailViewProps {
   onSelectRepo: (repo: ProjectRepo) => void;
   onBack: () => void;
   onDeleteCollection: (collectionId: string) => Promise<void>;
+  onUpdateCollection?: (collectionId: string, data: { visibility?: 'public' | 'private' }) => Promise<void>;
 }
 
 export function HomeCollectionDetailView({
@@ -30,11 +31,13 @@ export function HomeCollectionDetailView({
   onSelectRepo,
   onBack,
   onDeleteCollection,
+  onUpdateCollection,
 }: HomeCollectionDetailViewProps) {
   const { theme } = useTheme();
   const [filter, setFilter] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [togglingVisibility, setTogglingVisibility] = useState(false);
 
   const repos = useMemo(() => collection.repos ?? [], [collection.repos]);
 
@@ -60,6 +63,19 @@ export function HomeCollectionDetailView({
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleToggleVisibility = async () => {
+    if (!onUpdateCollection) return;
+    const next: 'public' | 'private' = collection.visibility === 'public' ? 'private' : 'public';
+    try {
+      setTogglingVisibility(true);
+      await onUpdateCollection(collection.id, { visibility: next });
+    } catch (error) {
+      console.error('Failed to toggle visibility:', error);
+    } finally {
+      setTogglingVisibility(false);
     }
   };
 
@@ -103,8 +119,25 @@ export function HomeCollectionDetailView({
         </button>
         <button
           type="button"
+          onClick={handleToggleVisibility}
+          disabled={togglingVisibility}
+          className="flex items-center justify-center w-7 h-7 rounded transition-colors"
+          style={{
+            color: collection.visibility === 'public' ? theme.colors.primary : theme.colors.textMuted,
+            cursor: togglingVisibility ? 'not-allowed' : 'pointer',
+            background: collection.visibility === 'public'
+              ? `color-mix(in srgb, ${theme.colors.primary} 10%, transparent)`
+              : `color-mix(in srgb, ${theme.colors.textMuted} 10%, transparent)`,
+          }}
+          title={collection.visibility === 'public' ? 'Make private' : 'Make public'}
+          aria-label="Toggle collection visibility"
+        >
+          {collection.visibility === 'public' ? <Globe size={14} /> : <Lock size={14} />}
+        </button>
+        <button
+          type="button"
           onClick={() => setShowDeleteConfirm(true)}
-          className="ml-auto flex items-center justify-center w-7 h-7 rounded transition-colors"
+          className="flex items-center justify-center w-7 h-7 rounded transition-colors"
           style={{
             color: theme.colors.error,
             cursor: 'pointer',

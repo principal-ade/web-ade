@@ -87,6 +87,22 @@ export const METADATA_CACHE_TTL_MS = METADATA_CACHE_TTL * 1000;
 export const MAX_ETAG_RETRIES = 3;
 
 // ============================================================================
+// Visibility
+// ============================================================================
+
+/**
+ * Valid visibility values for collections
+ */
+export const VALID_VISIBILITY_VALUES = ['public', 'private'] as const;
+
+/**
+ * Default visibility for new collections
+ */
+export const DEFAULT_VISIBILITY = 'private';
+
+export type Visibility = (typeof VALID_VISIBILITY_VALUES)[number];
+
+// ============================================================================
 // Valid Lucide Icons
 // ============================================================================
 

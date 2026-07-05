@@ -13,7 +13,7 @@ import {
   validateUpdateCollectionRequest,
   checkDuplicateCollectionName,
 } from '@/lib/starred-collections/validation';
-import { validateCollectionIcon } from '@/lib/starred-collections/validation';
+import { validateCollectionIcon, validateCollectionVisibility } from '@/lib/starred-collections/validation';
 import { CollectionError, ErrorCodes } from '@/lib/starred-collections/types';
 import { findCollection } from '@/lib/starred-collections/find-collection';
 import type {
@@ -143,6 +143,10 @@ export async function PATCH(
 
       if (body.icon !== undefined) {
         collection.icon = validateCollectionIcon(body.icon);
+      }
+
+      if (body.visibility !== undefined) {
+        collection.visibility = validateCollectionVisibility(body.visibility);
       }
 
       collection.updatedAt = new Date().toISOString();

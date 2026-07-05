@@ -77,8 +77,9 @@ export interface HomeLeftPanelProps {
   /** "Collections" view: the user's starred collections. `null` = loading. */
   collections?: Collection[] | null;
   collectionsError?: string | null;
-  onCreateCollection?: (name: string, description: string) => Promise<void>;
+  onCreateCollection?: (name: string, description: string, visibility: 'public' | 'private') => Promise<void>;
   onDeleteCollection?: (collectionId: string) => Promise<void>;
+  onUpdateCollection?: (collectionId: string, data: { visibility?: 'public' | 'private' }) => Promise<void>;
   onRefreshCollections?: () => void;
   /** "Recently Visited" view: recent repos (as ProjectRepos) + recent trails. */
   recentProjects?: ProjectRepo[] | null;
@@ -110,6 +111,7 @@ export function HomeLeftPanel({
   collectionsError = null,
   onCreateCollection,
   onDeleteCollection,
+  onUpdateCollection,
   onRefreshCollections,
   recentProjects,
   recentTrails,
@@ -176,9 +178,9 @@ export function HomeLeftPanel({
             selectedCollectionId={selectedCollection?.id ?? null}
             onSelectCollection={openCollection}
             onBack={() => go('home')}
-            onCreateCollection={async (name, description) => {
+            onCreateCollection={async (name, description, visibility) => {
               if (onCreateCollection) {
-                await onCreateCollection(name, description);
+                await onCreateCollection(name, description, visibility);
               }
             }}
             onRefresh={onRefreshCollections}
@@ -192,6 +194,11 @@ export function HomeLeftPanel({
             onDeleteCollection={async (collectionId) => {
               if (onDeleteCollection) {
                 await onDeleteCollection(collectionId);
+              }
+            }}
+            onUpdateCollection={async (collectionId, data) => {
+              if (onUpdateCollection) {
+                await onUpdateCollection(collectionId, data);
               }
             }}
           />
