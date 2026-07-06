@@ -8,7 +8,7 @@ import { AgentViewButton } from '@/components/AgentViewButton';
 import { HomeThemeToggle } from '@/components/HomeThemeToggle';
 import { RepoSearchBar } from '@/components/RepoSearchBar';
 import { SignedInHome } from '@/components/home/SignedInHome';
-import { Logo } from '@principal-ai/logo-component';
+import { FileCityLogo } from '@principal-ai/logo-component';
 
 /**
  * `/home` — the signed-in app surface (the user-based two-pane rail + File City).
@@ -38,7 +38,7 @@ export default function HomeDashboardPage() {
         <div className="w-full flex items-center justify-between gap-4 px-5 py-3.5">
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center transition-opacity hover:opacity-80">
-              <Logo width={24} height={24} color={theme.colors.accent} particleColor={theme.colors.primary} letterColor={theme.colors.text} />
+              <FileCityLogo width={24} height={24} theme={theme} background="transparent" />
             </Link>
             <span
               style={{
