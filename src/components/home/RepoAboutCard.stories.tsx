@@ -197,6 +197,55 @@ export const NoContributorsYet: Story = {
   ),
 };
 
+export const Starred: Story = {
+  render: () => (
+    <StoryWrapper>
+      <RepoAboutCard
+        owner="facebook"
+        repo="react"
+        info={mockInfo}
+        contributors={mockContributors}
+        fileCount={2438}
+        starred
+        onToggleStar={() => alert('Unstar')}
+      />
+    </StoryWrapper>
+  ),
+};
+
+export const NotStarred: Story = {
+  render: () => (
+    <StoryWrapper>
+      <RepoAboutCard
+        owner="facebook"
+        repo="react"
+        info={mockInfo}
+        contributors={mockContributors}
+        fileCount={2438}
+        starred={false}
+        onToggleStar={() => alert('Star')}
+      />
+    </StoryWrapper>
+  ),
+};
+
+export const StarLoading: Story = {
+  render: () => (
+    <StoryWrapper>
+      <RepoAboutCard
+        owner="facebook"
+        repo="react"
+        info={mockInfo}
+        contributors={mockContributors}
+        fileCount={2438}
+        starred
+        onToggleStar={() => {}}
+        starLoading
+      />
+    </StoryWrapper>
+  ),
+};
+
 export const Loading: Story = {
   render: () => (
     <StoryWrapper>

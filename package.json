@@ -89,6 +89,7 @@
     "ai": "^5.0.0",
     "canvas": "^3.2.1",
     "docx-preview": "^0.3.7",
+    "esbuild": "^0.28.1",
     "eslint": "^9",
     "eslint-config-next": "15.5.6",
     "freestyle": "^0.1.63",

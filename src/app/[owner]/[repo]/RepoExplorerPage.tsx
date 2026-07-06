@@ -4127,6 +4127,36 @@ const RepoOverview: React.FC<{
   const { info, loading } = useRepoOverviewData(owner, repo);
   const contributors = useRepoContributorsData(owner, repo);
 
+  // Star toggle state — only active when the user is authenticated.
+  const { isAuthenticated } = useAuth();
+  const [starred, setStarred] = useState(false);
+  const [starLoading, setStarLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setStarred(false);
+      setStarLoading(false);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/github/star/${owner}/${repo}`)
+      .then((r) => r.json())
+      .then((data) => { if (!cancelled) setStarred(data.starred); })
+      .catch(() => { if (!cancelled) setStarred(false); });
+    return () => { cancelled = true; };
+  }, [owner, repo, isAuthenticated]);
+
+  const handleToggleStar = useCallback(async () => {
+    if (!isAuthenticated || starLoading) return;
+    setStarLoading(true);
+    try {
+      const method = starred ? 'DELETE' : 'PUT';
+      const response = await fetch(`/api/github/star/${owner}/${repo}`, { method });
+      if (response.ok) setStarred(!starred);
+    } catch { /* ignore */ }
+    finally { setStarLoading(false); }
+  }, [owner, repo, starred, starLoading, isAuthenticated]);
+
   // Which metric the contributor cards show: GitHub commit count vs the share
   // of repo lines blamed to them. The % option (and its toggle) is only
   // surfaced when a cached blame analysis exists for this repo.
@@ -4346,17 +4376,42 @@ const RepoOverview: React.FC<{
               );
             })()}
           {info.stargazers_count > 0 && (
-            <span
-              className="inline-flex items-center gap-1"
-              style={{ fontSize: theme.fontSizes[2] }}
-            >
-              <Star
-                size={16}
-                style={{ color: theme.colors.warning }}
-                fill={theme.colors.warning}
-              />
-              {info.stargazers_count.toLocaleString()}
-            </span>
+            isAuthenticated ? (
+              <button
+                type="button"
+                onClick={handleToggleStar}
+                disabled={starLoading}
+                className="inline-flex items-center gap-1 transition-opacity hover:opacity-80 disabled:opacity-50"
+                style={{
+                  fontSize: theme.fontSizes[2],
+                  color: theme.colors.textMuted,
+                  background: 'none',
+                  border: 'none',
+                  cursor: starLoading ? 'default' : 'pointer',
+                  padding: 0,
+                }}
+                title={starred ? 'Unstar repository' : 'Star repository'}
+              >
+                <Star
+                  size={16}
+                  style={{ color: starred ? theme.colors.warning : theme.colors.textMuted }}
+                  fill={starred ? theme.colors.warning : 'none'}
+                />
+                {info.stargazers_count.toLocaleString()}
+              </button>
+            ) : (
+              <span
+                className="inline-flex items-center gap-1"
+                style={{ fontSize: theme.fontSizes[2] }}
+              >
+                <Star
+                  size={16}
+                  style={{ color: theme.colors.warning }}
+                  fill={theme.colors.warning}
+                />
+                {info.stargazers_count.toLocaleString()}
+              </span>
+            )
           )}
         </div>
       </div>

@@ -51,6 +51,11 @@ export interface RepoAboutCardProps {
   totalLines?: number | null;
   /** Click a contributor face → e.g. open their profile. Falls back to GitHub. */
   onSelectContributor?: (c: { login: string; avatar_url: string }) => void;
+  /** When provided, the star becomes a toggle button. The caller manages auth
+   *  and the API call — this component only renders the button. */
+  starred?: boolean;
+  onToggleStar?: () => void;
+  starLoading?: boolean;
   /** Drop the bottom divider so a caller can group a control directly beneath. */
   showBorder?: boolean;
   /** When set, render a README button that calls `onOpenReadme`. */
@@ -108,6 +113,9 @@ export function RepoAboutCard({
   readmePath,
   onOpenReadme,
   readmeActive = false,
+  starred = false,
+  onToggleStar,
+  starLoading = false,
 }: RepoAboutCardProps) {
   const { theme } = useTheme();
 
@@ -188,17 +196,42 @@ export function RepoAboutCard({
               );
             })()}
           {info.stargazers_count > 0 && (
-            <span
-              className="inline-flex items-center gap-1"
-              style={{ fontSize: theme.fontSizes[2] }}
-            >
-              <Star
-                size={16}
-                style={{ color: theme.colors.warning }}
-                fill={theme.colors.warning}
-              />
-              {info.stargazers_count.toLocaleString()}
-            </span>
+            onToggleStar ? (
+              <button
+                type="button"
+                onClick={onToggleStar}
+                disabled={starLoading}
+                className="inline-flex items-center gap-1 transition-opacity hover:opacity-80 disabled:opacity-50"
+                style={{
+                  fontSize: theme.fontSizes[2],
+                  color: theme.colors.textMuted,
+                  background: 'none',
+                  border: 'none',
+                  cursor: starLoading ? 'default' : 'pointer',
+                  padding: 0,
+                }}
+                title={starred ? 'Unstar repository' : 'Star repository'}
+              >
+                <Star
+                  size={16}
+                  style={{ color: starred ? theme.colors.warning : theme.colors.textMuted }}
+                  fill={starred ? theme.colors.warning : 'none'}
+                />
+                {info.stargazers_count.toLocaleString()}
+              </button>
+            ) : (
+              <span
+                className="inline-flex items-center gap-1"
+                style={{ fontSize: theme.fontSizes[2] }}
+              >
+                <Star
+                  size={16}
+                  style={{ color: theme.colors.warning }}
+                  fill={theme.colors.warning}
+                />
+                {info.stargazers_count.toLocaleString()}
+              </span>
+            )
           )}
         </div>
       </div>
