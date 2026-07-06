@@ -18,6 +18,9 @@ export interface HomeCollectionsViewProps {
   collections: Collection[] | null;
   error?: string | null;
   selectedCollectionId?: string | null;
+  /** Whether the viewer can create new collections here (i.e. this is their
+   *  own collections list, not someone else's). Defaults to `true`. */
+  canCreate?: boolean;
   onSelectCollection: (collection: Collection) => void;
   onBack: () => void;
   onCreateCollection: (name: string, description: string, visibility: 'public' | 'private') => Promise<void>;
@@ -28,6 +31,7 @@ export function HomeCollectionsView({
   collections,
   error = null,
   selectedCollectionId = null,
+  canCreate = true,
   onSelectCollection,
   onBack,
   onCreateCollection,
@@ -97,20 +101,22 @@ export function HomeCollectionsView({
             </span>
           )}
         </button>
-        <button
-          type="button"
-          onClick={() => setShowCreateModal(true)}
-          className="ml-auto flex items-center justify-center w-7 h-7 rounded transition-colors"
-          style={{
-            color: theme.colors.primary,
-            cursor: 'pointer',
-            background: `color-mix(in srgb, ${theme.colors.primary} 10%, transparent)`,
-          }}
-          title="Create collection"
-          aria-label="Create collection"
-        >
-          <Plus size={16} />
-        </button>
+        {canCreate && (
+          <button
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            className="ml-auto flex items-center justify-center w-7 h-7 rounded transition-colors"
+            style={{
+              color: theme.colors.primary,
+              cursor: 'pointer',
+              background: `color-mix(in srgb, ${theme.colors.primary} 10%, transparent)`,
+            }}
+            title="Create collection"
+            aria-label="Create collection"
+          >
+            <Plus size={16} />
+          </button>
+        )}
       </div>
 
       {collections != null && collections.length >= 8 && (
@@ -141,7 +147,9 @@ export function HomeCollectionsView({
           <ListMessage>Loading collections…</ListMessage>
         ) : collections!.length === 0 ? (
           <ListMessage>
-            No collections yet. Create collections to organize your starred repositories.
+            {canCreate
+              ? 'No collections yet. Create collections to organize your starred repositories.'
+              : 'No public collections yet.'}
           </ListMessage>
         ) : filtered.length === 0 ? (
           <ListMessage>No collections match &ldquo;{filter}&rdquo;.</ListMessage>
@@ -157,11 +165,13 @@ export function HomeCollectionsView({
         )}
       </div>
 
-      <CreateCollectionModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSave={handleCreateCollection}
-      />
+      {canCreate && (
+        <CreateCollectionModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSave={handleCreateCollection}
+        />
+      )}
     </>
   );
 }

@@ -21,6 +21,9 @@ export interface HomeCollectionDetailViewProps {
   selectedFullName?: string | null;
   /** Current user's GitHub login (used to build share URLs for user-owned collections). */
   userLogin?: string;
+  /** Whether the viewer can delete/toggle visibility on this collection (i.e.
+   *  they own it). Defaults to `true`. */
+  canManage?: boolean;
   onSelectRepo: (repo: ProjectRepo) => void;
   onBack: () => void;
   onDeleteCollection: (collectionId: string) => Promise<void>;
@@ -31,6 +34,7 @@ export function HomeCollectionDetailView({
   collection,
   selectedFullName = null,
   userLogin,
+  canManage = true,
   onSelectRepo,
   onBack,
   onDeleteCollection,
@@ -194,37 +198,41 @@ export function HomeCollectionDetailView({
             <Share2 size={14} />
           </button>
         )}
-        <button
-          type="button"
-          onClick={handleToggleVisibility}
-          disabled={togglingVisibility}
-          className="flex items-center justify-center w-7 h-7 rounded transition-colors"
-          style={{
-            color: collection.visibility === 'public' ? theme.colors.primary : theme.colors.textMuted,
-            cursor: togglingVisibility ? 'not-allowed' : 'pointer',
-            background: collection.visibility === 'public'
-              ? `color-mix(in srgb, ${theme.colors.primary} 10%, transparent)`
-              : `color-mix(in srgb, ${theme.colors.textMuted} 10%, transparent)`,
-          }}
-          title={collection.visibility === 'public' ? 'Make private' : 'Make public'}
-          aria-label="Toggle collection visibility"
-        >
-          {collection.visibility === 'public' ? <Globe size={14} /> : <Lock size={14} />}
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowDeleteConfirm(true)}
-          className="flex items-center justify-center w-7 h-7 rounded transition-colors"
-          style={{
-            color: theme.colors.error,
-            cursor: 'pointer',
-            background: `color-mix(in srgb, ${theme.colors.error} 10%, transparent)`,
-          }}
-          title="Delete collection"
-          aria-label="Delete collection"
-        >
-          <Trash2 size={14} />
-        </button>
+        {canManage && (
+          <button
+            type="button"
+            onClick={handleToggleVisibility}
+            disabled={togglingVisibility}
+            className="flex items-center justify-center w-7 h-7 rounded transition-colors"
+            style={{
+              color: collection.visibility === 'public' ? theme.colors.primary : theme.colors.textMuted,
+              cursor: togglingVisibility ? 'not-allowed' : 'pointer',
+              background: collection.visibility === 'public'
+                ? `color-mix(in srgb, ${theme.colors.primary} 10%, transparent)`
+                : `color-mix(in srgb, ${theme.colors.textMuted} 10%, transparent)`,
+            }}
+            title={collection.visibility === 'public' ? 'Make private' : 'Make public'}
+            aria-label="Toggle collection visibility"
+          >
+            {collection.visibility === 'public' ? <Globe size={14} /> : <Lock size={14} />}
+          </button>
+        )}
+        {canManage && (
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="flex items-center justify-center w-7 h-7 rounded transition-colors"
+            style={{
+              color: theme.colors.error,
+              cursor: 'pointer',
+              background: `color-mix(in srgb, ${theme.colors.error} 10%, transparent)`,
+            }}
+            title="Delete collection"
+            aria-label="Delete collection"
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
       </div>
 
       {collection.description && (

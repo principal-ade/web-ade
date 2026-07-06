@@ -103,6 +103,12 @@ export function OwnerProfilePage({ owner }: { owner: string }) {
   const { theme } = useTheme();
   const { user } = useAuth();
 
+  // Whether the signed-in viewer *is* the profile they're looking at. Drives
+  // whether we fetch the viewer's own collections (incl. private) vs. the
+  // page owner's public collections, and whether collection management
+  // (create/delete/toggle visibility) is offered at all.
+  const isOwner = !!user?.login && user.login.toLowerCase() === owner.toLowerCase();
+
   const [profile, setProfile] = useState<OwnerProfile | null>(null);
   const [repos, setRepos] = useState<Repo[] | null>(null);
   const [reposError, setReposError] = useState<string | null>(null);
@@ -120,7 +126,10 @@ export function OwnerProfilePage({ owner }: { owner: string }) {
   const [trails, setTrails] = useState<TrailListItem[] | null>(null);
   const [topics, setTopics] = useState<TopicListItem[] | null>(null);
 
-  // The viewer's starred repos + collections (same as home page).
+  // The profile owner's starred repos + collections. Both are scoped to
+  // `owner`, not the signed-in viewer — see fetchCollections() below for the
+  // isOwner-aware branch that also folds in private collections when the
+  // viewer is looking at their own profile.
   const [starred, setStarred] = useState<ProjectRepo[] | null>(null);
   const [collections, setCollections] = useState<Collection[] | null>(null);
 
@@ -363,10 +372,16 @@ export function OwnerProfilePage({ owner }: { owner: string }) {
     return () => { cancelled = true; };
   }, [owner]);
 
-  // Fetch the viewer's collections (same as home page).
+  // Fetch the *page owner's* collections. When the viewer is looking at their
+  // own profile, hit the authenticated endpoint so private collections are
+  // included too; otherwise hit the public by-owner endpoint, which only
+  // returns that owner's public collections.
   const fetchCollections = () => {
     setCollections(null);
-    fetch('/api/starred-collections')
+    const url = isOwner
+      ? '/api/starred-collections'
+      : `/api/github/owner/${owner}/starred-collections`;
+    fetch(url)
       .then((r) => (r.ok ? r.json() : { collections: [] }))
       .then((d: { collections?: Collection[] }) => {
         setCollections(d.collections ?? []);
@@ -378,7 +393,8 @@ export function OwnerProfilePage({ owner }: { owner: string }) {
 
   useEffect(() => {
     fetchCollections();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [owner, isOwner]);
 
   const handleCreateCollection = async (name: string, description: string, visibility: 'public' | 'private') => {
     const response = await fetch('/api/starred-collections', {
@@ -561,9 +577,10 @@ export function OwnerProfilePage({ owner }: { owner: string }) {
           activityLoading={activityLoading}
           starred={starred}
           collections={collections}
-          onCreateCollection={handleCreateCollection}
-          onDeleteCollection={handleDeleteCollection}
-          onUpdateCollection={handleUpdateCollection}
+          canManageCollections={isOwner}
+          onCreateCollection={isOwner ? handleCreateCollection : undefined}
+          onDeleteCollection={isOwner ? handleDeleteCollection : undefined}
+          onUpdateCollection={isOwner ? handleUpdateCollection : undefined}
           onRefreshCollections={fetchCollections}
           userLogin={user?.login}
           selectedRepoFullName={selected?.full_name ?? null}

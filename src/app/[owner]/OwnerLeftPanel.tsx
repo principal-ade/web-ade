@@ -83,12 +83,16 @@ export interface OwnerLeftPanelProps {
   contributedRepos: ContributedRepo[];
   activityLoading?: boolean;
 
-  /** The viewer's starred repos. `null` = loading. */
+  /** The owner's starred repos. `null` = loading. */
   starred?: ProjectRepo[] | null;
   starredError?: string | null;
-  /** The viewer's collections. `null` = loading. */
+  /** The owner's collections. `null` = loading. */
   collections?: Collection[] | null;
   collectionsError?: string | null;
+  /** Whether the signed-in viewer can create/delete/toggle these collections
+   *  (i.e. they're viewing their own profile). Defaults to `true` to preserve
+   *  existing callers; the owner page passes this explicitly. */
+  canManageCollections?: boolean;
   onCreateCollection?: (name: string, description: string, visibility: 'public' | 'private') => Promise<void>;
   onDeleteCollection?: (collectionId: string) => Promise<void>;
   onUpdateCollection?: (collectionId: string, data: { visibility?: 'public' | 'private' }) => Promise<void>;
@@ -127,6 +131,7 @@ export function OwnerLeftPanel({
   starredError = null,
   collections,
   collectionsError = null,
+  canManageCollections = true,
   onCreateCollection,
   onDeleteCollection,
   onUpdateCollection,
@@ -300,6 +305,7 @@ export function OwnerLeftPanel({
             collections={collections ?? null}
             error={collectionsError}
             selectedCollectionId={selectedCollection?.id ?? null}
+            canCreate={canManageCollections}
             onSelectCollection={openCollection}
             onBack={() => setView('home')}
             onCreateCollection={async (name, description, visibility) => {
@@ -314,6 +320,7 @@ export function OwnerLeftPanel({
             collection={selectedCollection}
             selectedFullName={selectedRepoFullName}
             userLogin={userLogin}
+            canManage={canManageCollections}
             onSelectRepo={onSelectRepo}
             onBack={() => setView('collections')}
             onDeleteCollection={async (collectionId) => {
