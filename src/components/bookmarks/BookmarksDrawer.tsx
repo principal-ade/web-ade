@@ -5,6 +5,9 @@ import { useTheme } from '@principal-ade/industry-theme';
 import type { BookmarkRepo } from './types';
 import { BookmarksPanel } from './BookmarksPanel';
 
+import { useAuth } from '@/contexts/AuthContext';
+import { CollectionsBookmarkPanel } from './CollectionsBookmarkPanel';
+
 interface BookmarksDrawerProps {
   open: boolean;
   onClose: () => void;
@@ -22,6 +25,7 @@ export function BookmarksDrawer({
   onNavigate,
 }: BookmarksDrawerProps) {
   const { theme } = useTheme();
+  const { user } = useAuth();
   const [entered, setEntered] = React.useState(false);
 
   React.useEffect(() => {
@@ -79,11 +83,24 @@ export function BookmarksDrawer({
           background: theme.colors.background,
         }}
       >
-        <BookmarksPanel
-          currentRepo={currentRepo}
-          onNavigate={onNavigate}
-          onClose={onClose}
-        />
+        {user ? (
+          currentRepo ? (
+            <CollectionsBookmarkPanel
+              currentRepo={currentRepo}
+              onClose={onClose}
+            />
+          ) : (
+            <div className="flex h-full w-full flex-col justify-center items-center gap-2 text-sm" style={{ color: theme.colors.textMuted }}>
+              Loading repository metadata...
+            </div>
+          )
+        ) : (
+          <BookmarksPanel
+            currentRepo={currentRepo}
+            onNavigate={onNavigate}
+            onClose={onClose}
+          />
+        )}
       </div>
     </>
   );
