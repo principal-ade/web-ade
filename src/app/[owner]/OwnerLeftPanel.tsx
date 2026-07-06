@@ -6,6 +6,8 @@ import {
   ChevronRight,
   FolderGit2,
   Footprints,
+  Layers,
+  Star,
 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { SlidePane, makeSlideDirection } from '@/components/rail/SlidePane';
@@ -27,6 +29,10 @@ import {
   type CommitGroup,
   type ContributedRepo,
 } from './OwnerActivityView';
+import { HomeStarredView } from '@/components/home/HomeStarredView';
+import { HomeCollectionsView } from '@/components/home/HomeCollectionsView';
+import { HomeCollectionDetailView } from '@/components/home/HomeCollectionDetailView';
+import type { Collection } from '@/lib/starred-collections/types';
 
 // ---------------------------------------------------------------------------
 // OwnerLeftPanel — the owner page's left rail, the owner-scoped sibling of the
@@ -37,11 +43,14 @@ import {
 // back-to-overview header. Picking a repo routes to the right-pane File City.
 // ---------------------------------------------------------------------------
 
-export type OwnerView = 'home' | 'repositories' | 'activity' | 'library';
+export type OwnerView = 'home' | 'repositories' | 'starred' | 'collections' | 'collection-detail' | 'activity' | 'library';
 
 const OWNER_SLIDE_ORDER: readonly OwnerView[] = [
   'home',
   'repositories',
+  'starred',
+  'collections',
+  'collection-detail',
   'activity',
   'library',
 ];
@@ -74,6 +83,19 @@ export interface OwnerLeftPanelProps {
   contributedRepos: ContributedRepo[];
   activityLoading?: boolean;
 
+  /** The viewer's starred repos. `null` = loading. */
+  starred?: ProjectRepo[] | null;
+  starredError?: string | null;
+  /** The viewer's collections. `null` = loading. */
+  collections?: Collection[] | null;
+  collectionsError?: string | null;
+  onCreateCollection?: (name: string, description: string, visibility: 'public' | 'private') => Promise<void>;
+  onDeleteCollection?: (collectionId: string) => Promise<void>;
+  onUpdateCollection?: (collectionId: string, data: { visibility?: 'public' | 'private' }) => Promise<void>;
+  onRefreshCollections?: () => void;
+  /** The authenticated user's login, used for collection share URLs. */
+  userLogin?: string;
+
   /** full_name of the repo shown in the right pane, highlighted in the list. */
   selectedRepoFullName?: string | null;
   onSelectRepo: (repo: ProjectRepo) => void;
@@ -101,11 +123,26 @@ export function OwnerLeftPanel({
   commitGroups,
   contributedRepos,
   activityLoading = false,
+  starred,
+  starredError = null,
+  collections,
+  collectionsError = null,
+  onCreateCollection,
+  onDeleteCollection,
+  onUpdateCollection,
+  onRefreshCollections,
+  userLogin,
   selectedRepoFullName = null,
   onSelectRepo,
 }: OwnerLeftPanelProps) {
   const { theme } = useTheme();
   const [view, setView] = useState<OwnerView>('home');
+  const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
+
+  const openCollection = (collection: Collection) => {
+    setSelectedCollection(collection);
+    setView('collection-detail');
+  };
 
   // The Repositories list, with the owner's pinned repos floated to the top (in
   // pin order) ahead of the rest. Pinned repos are the enriched rows from the
@@ -127,6 +164,20 @@ export function OwnerLeftPanel({
       label: 'Repositories',
       description: `Repositories owned by ${owner}`,
       count: repos?.length,
+    },
+    {
+      key: 'starred',
+      icon: <Star size={18} />,
+      label: 'Starred',
+      description: `Repositories starred by ${owner} \u00b7 sorted by last updated`,
+      count: starred?.length,
+    },
+    {
+      key: 'collections',
+      icon: <Layers size={18} />,
+      label: 'Collections',
+      description: 'Your curated collections of repos',
+      count: collections?.length,
     },
     {
       key: 'activity',
@@ -235,6 +286,51 @@ export function OwnerLeftPanel({
             selectedFullName={selectedRepoFullName}
             onSelectRepo={onSelectRepo}
             onBack={() => setView('home')}
+          />
+        ) : view === 'starred' ? (
+          <HomeStarredView
+            repos={starred ?? null}
+            error={starredError}
+            selectedFullName={selectedRepoFullName}
+            onSelectRepo={onSelectRepo}
+            onBack={() => setView('home')}
+          />
+        ) : view === 'collections' ? (
+          <HomeCollectionsView
+            collections={collections ?? null}
+            error={collectionsError}
+            selectedCollectionId={selectedCollection?.id ?? null}
+            onSelectCollection={openCollection}
+            onBack={() => setView('home')}
+            onCreateCollection={async (name, description, visibility) => {
+              if (onCreateCollection) {
+                await onCreateCollection(name, description, visibility);
+              }
+            }}
+            onRefresh={onRefreshCollections}
+          />
+        ) : view === 'collection-detail' && selectedCollection ? (
+          <HomeCollectionDetailView
+            collection={selectedCollection}
+            selectedFullName={selectedRepoFullName}
+            userLogin={userLogin}
+            onSelectRepo={onSelectRepo}
+            onBack={() => setView('collections')}
+            onDeleteCollection={async (collectionId) => {
+              if (onDeleteCollection) {
+                await onDeleteCollection(collectionId);
+              }
+            }}
+            onUpdateCollection={async (collectionId, data) => {
+              if (onUpdateCollection) {
+                await onUpdateCollection(collectionId, data);
+                setSelectedCollection((prev) =>
+                  prev && prev.id === collectionId
+                    ? { ...prev, ...data, updatedAt: new Date().toISOString() }
+                    : prev
+                );
+              }
+            }}
           />
         ) : view === 'activity' ? (
           <OwnerActivityView

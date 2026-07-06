@@ -9,11 +9,8 @@ import { useTheme } from '@principal-ade/industry-theme';
 // RepoRowShell — the shared chrome for a repo row in the home rail's project
 // lists (Your Projects, Starred, Recently Visited). Clicking the row selects the
 // repo into the right-pane File City (`onSelect`); a hover-revealed "Open" link
-// navigates to the repo's own `/owner/repo` page. The row body is `children`, so
-// each list keeps its own layout.
-//
-// A <button> can't contain a <Link>, so the Open link is an absolutely-
-// positioned sibling that paints over the button's top-right corner.
+// sits in the right padding area so it doesn't consume content space.
+// The row body is `children`, so each list keeps its own layout.
 // ---------------------------------------------------------------------------
 
 export interface RepoRowShellProps {
@@ -49,7 +46,7 @@ export function RepoRowShell({
         type="button"
         onClick={onSelect}
         aria-pressed={selected}
-        className={`w-full text-left px-4 py-2.5 pr-16 transition-colors ${
+        className={`w-full text-left px-4 py-2.5 transition-colors ${
           contentClassName ?? ''
         }`}
         style={{
@@ -69,7 +66,7 @@ export function RepoRowShell({
         rel="noopener noreferrer"
         title={`Open ${fullName}`}
         aria-label={`Open ${fullName} in a new tab`}
-        className="absolute top-1/2 right-3 -translate-y-1/2 flex items-center gap-1 px-2 py-1 rounded-md opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100"
+        className="absolute top-2.5 right-3 flex items-center gap-1 px-2 py-1 rounded-md opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100"
         style={{
           background: `color-mix(in srgb, ${theme.colors.primary} 14%, ${theme.colors.background})`,
           color: theme.colors.primary,

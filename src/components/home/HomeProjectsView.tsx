@@ -25,6 +25,7 @@ export interface ProjectRepo {
   language?: string | null;
   stargazers_count?: number;
   private?: boolean;
+  updated_at?: string | null;
 }
 
 export interface ProjectSection {

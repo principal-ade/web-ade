@@ -24,6 +24,8 @@ export interface HomeStarredViewProps {
   onBack: () => void;
 }
 
+type SortBy = 'alphabetical' | 'stars' | 'updated';
+
 export function HomeStarredView({
   repos,
   error = null,
@@ -33,17 +35,37 @@ export function HomeStarredView({
 }: HomeStarredViewProps) {
   const { theme } = useTheme();
   const [filter, setFilter] = useState('');
+  const [sortBy, setSortBy] = useState<SortBy>('alphabetical');
 
   const filtered = useMemo(() => {
     if (!repos) return null;
     const q = filter.trim().toLowerCase();
-    if (!q) return repos;
-    return repos.filter(
-      (r) =>
-        r.full_name.toLowerCase().includes(q) ||
-        (r.description?.toLowerCase().includes(q) ?? false),
-    );
-  }, [repos, filter]);
+    const result = q
+      ? repos.filter(
+          (r) =>
+            r.full_name.toLowerCase().includes(q) ||
+            (r.description?.toLowerCase().includes(q) ?? false),
+        )
+      : [...repos];
+
+    // Apply sorting
+    switch (sortBy) {
+      case 'alphabetical':
+        result.sort((a, b) => a.full_name.toLowerCase().localeCompare(b.full_name.toLowerCase()));
+        break;
+      case 'stars':
+        result.sort((a, b) => (b.stargazers_count ?? 0) - (a.stargazers_count ?? 0));
+        break;
+      case 'updated':
+        result.sort((a, b) => {
+          if (!a.updated_at || !b.updated_at) return 0;
+          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+        });
+        break;
+    }
+
+    return result;
+  }, [repos, filter, sortBy]);
 
   return (
     <>
@@ -55,24 +77,46 @@ export function HomeStarredView({
         closeAsBack
       />
 
-      {repos != null && repos.length >= 8 && (
+      {repos != null && repos.length > 0 && (
         <div
           className="px-3 py-2 border-b flex items-center gap-2 shrink-0"
           style={{ borderColor: theme.colors.border }}
         >
-          <Search size={14} style={{ color: theme.colors.textMuted }} />
-          <input
-            type="text"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            placeholder="Filter starred"
-            className="flex-1 bg-transparent outline-none"
+          {repos.length >= 8 && (
+            <>
+              <Search size={14} style={{ color: theme.colors.textMuted }} />
+              <input
+                type="text"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                placeholder="Filter starred"
+                className="flex-1 bg-transparent outline-none"
+                style={{
+                  color: theme.colors.text,
+                  fontFamily: theme.fonts.body,
+                  fontSize: theme.fontSizes[1],
+                }}
+              />
+            </>
+          )}
+          {repos.length < 8 && <div className="flex-1" />}
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortBy)}
+            className="bg-transparent outline-none cursor-pointer"
             style={{
-              color: theme.colors.text,
+              color: theme.colors.textSecondary,
               fontFamily: theme.fonts.body,
               fontSize: theme.fontSizes[1],
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '4px',
+              padding: '2px 6px',
             }}
-          />
+          >
+            <option value="alphabetical">A-Z</option>
+            <option value="stars">Stars</option>
+            <option value="updated">Updated</option>
+          </select>
         </div>
       )}
 
@@ -100,6 +144,19 @@ export function HomeStarredView({
       </div>
     </>
   );
+}
+
+function relativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return '';
+  const diffSec = Math.max(0, (Date.now() - then) / 1000);
+  if (diffSec < 60) return 'just now';
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+  if (diffSec < 86400 * 30) return `${Math.floor(diffSec / 86400)}d ago`;
+  if (diffSec < 86400 * 365)
+    return `${Math.floor(diffSec / (86400 * 30))}mo ago`;
+  return `${Math.floor(diffSec / (86400 * 365))}y ago`;
 }
 
 function StarredRow({
@@ -178,32 +235,37 @@ function StarredRow({
         </div>
       )}
 
-      {(repo.language || (repo.stargazers_count ?? 0) > 0) && (
-        <div
-          className="mt-1 flex items-center gap-3"
-          style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[0] }}
-        >
-          {repo.language && (
-            <span className="inline-flex items-center gap-1.5">
-              <span
-                className="inline-block rounded-full"
-                style={{
-                  width: 8,
-                  height: 8,
-                  background: getLanguageColor(repo.language),
-                }}
-              />
-              {repo.language}
-            </span>
-          )}
+      <div
+        className="mt-1 flex items-center gap-3"
+        style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[0] }}
+      >
+        <span className="flex items-center gap-3 min-w-0 flex-1">
           {(repo.stargazers_count ?? 0) > 0 && (
             <span className="inline-flex items-center gap-1">
               <Star size={11} />
               {repo.stargazers_count!.toLocaleString()}
             </span>
           )}
-        </div>
-      )}
+          {repo.updated_at && (
+            <span className="inline-flex items-center gap-1">
+              Updated {relativeTime(repo.updated_at)}
+            </span>
+          )}
+        </span>
+        {repo.language && (
+          <span className="inline-flex items-center gap-1.5 shrink-0">
+            <span
+              className="inline-block rounded-full"
+              style={{
+                width: 8,
+                height: 8,
+                background: getLanguageColor(repo.language),
+              }}
+            />
+            {repo.language}
+          </span>
+        )}
+      </div>
     </RepoRowShell>
   );
 }

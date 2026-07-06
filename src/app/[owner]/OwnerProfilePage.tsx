@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Boxes, Github } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
+import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { AgentViewButton } from '@/components/AgentViewButton';
 import { RepoSearchBar } from '@/components/RepoSearchBar';
@@ -16,6 +17,7 @@ import type {
 } from '@/components/home/HomeTrailsTopicsView';
 import type { TrailByUserEntry } from '@/lib/trails/types';
 import type { TopicByUserEntry } from '@/lib/topics/types';
+import type { Collection } from '@/lib/starred-collections/types';
 import { OwnerLeftPanel } from './OwnerLeftPanel';
 import type { CommitGroup, ContributedRepo } from './OwnerActivityView';
 
@@ -52,6 +54,33 @@ interface Repo {
   private: boolean;
 }
 
+/** Minimal shape returned by /api/github/user/repos (starred, owned, org repos). */
+interface ApiRepo {
+  id: number;
+  name: string;
+  full_name: string;
+  owner: { login: string; avatar_url: string };
+  description: string | null;
+  language: string | null;
+  stargazers_count: number;
+  private: boolean;
+  updated_at: string;
+}
+
+function toProjectRepo(r: ApiRepo): ProjectRepo {
+  return {
+    id: r.id,
+    full_name: r.full_name,
+    name: r.name,
+    owner: { login: r.owner.login, avatar_url: r.owner.avatar_url },
+    description: r.description,
+    language: r.language,
+    stargazers_count: r.stargazers_count,
+    private: r.private,
+    updated_at: r.updated_at,
+  };
+}
+
 interface DailyContribution {
   date: string;
   count: number;
@@ -72,6 +101,7 @@ const ORG_PROFILE_README = 'profile/README.md';
 
 export function OwnerProfilePage({ owner }: { owner: string }) {
   const { theme } = useTheme();
+  const { user } = useAuth();
 
   const [profile, setProfile] = useState<OwnerProfile | null>(null);
   const [repos, setRepos] = useState<Repo[] | null>(null);
@@ -89,6 +119,10 @@ export function OwnerProfilePage({ owner }: { owner: string }) {
   // Principal artifacts — loaded lazily once we have the owner's numeric id.
   const [trails, setTrails] = useState<TrailListItem[] | null>(null);
   const [topics, setTopics] = useState<TopicListItem[] | null>(null);
+
+  // The viewer's starred repos + collections (same as home page).
+  const [starred, setStarred] = useState<ProjectRepo[] | null>(null);
+  const [collections, setCollections] = useState<Collection[] | null>(null);
 
   // The repo shown in the right-pane File City. Auto-seeded with the owner's
   // profile repo (see below) so the page lands on a live city instead of an
@@ -313,6 +347,76 @@ export function OwnerProfilePage({ owner }: { owner: string }) {
     });
   }, [pinnedNames, projectRepos, owner]);
 
+  // Fetch the profile owner's starred repos (public GitHub API).
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/github/user/${owner}/starred`)
+      .then((r) => (r.ok ? r.json() : { starred: [] }))
+      .then((data: { starred?: ApiRepo[] }) => {
+        if (!cancelled) {
+          setStarred((data.starred ?? []).map(toProjectRepo));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setStarred([]);
+      });
+    return () => { cancelled = true; };
+  }, [owner]);
+
+  // Fetch the viewer's collections (same as home page).
+  const fetchCollections = () => {
+    setCollections(null);
+    fetch('/api/starred-collections')
+      .then((r) => (r.ok ? r.json() : { collections: [] }))
+      .then((d: { collections?: Collection[] }) => {
+        setCollections(d.collections ?? []);
+      })
+      .catch(() => {
+        setCollections([]);
+      });
+  };
+
+  useEffect(() => {
+    fetchCollections();
+  }, []);
+
+  const handleCreateCollection = async (name: string, description: string, visibility: 'public' | 'private') => {
+    const response = await fetch('/api/starred-collections', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description, visibility }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create collection');
+    }
+    fetchCollections();
+  };
+
+  const handleDeleteCollection = async (collectionId: string) => {
+    const response = await fetch(`/api/starred-collections/${collectionId}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete collection');
+    }
+    fetchCollections();
+  };
+
+  const handleUpdateCollection = async (collectionId: string, data: { visibility?: 'public' | 'private' }) => {
+    const response = await fetch(`/api/starred-collections/${collectionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update collection');
+    }
+    fetchCollections();
+  };
+
   // Seed the right pane once repos land and the org probe has settled. Prefer
   // the owner's GitHub *profile* repo — an org's `.github` repo, or a user's
   // `<login>/<login>` repo — whose README is the intro GitHub renders on the
@@ -455,6 +559,13 @@ export function OwnerProfilePage({ owner }: { owner: string }) {
           commitGroups={commitGroups}
           contributedRepos={contributedRepos}
           activityLoading={activityLoading}
+          starred={starred}
+          collections={collections}
+          onCreateCollection={handleCreateCollection}
+          onDeleteCollection={handleDeleteCollection}
+          onUpdateCollection={handleUpdateCollection}
+          onRefreshCollections={fetchCollections}
+          userLogin={user?.login}
           selectedRepoFullName={selected?.full_name ?? null}
           onSelectRepo={setSelected}
         />
