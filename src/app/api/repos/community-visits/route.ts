@@ -25,6 +25,7 @@ import {
   getCommunityRepoVisits,
   recordCommunityRepoVisit,
 } from '@/lib/repos/community-visits';
+import { warmCarouselCache } from '@/lib/community-carousel/carousel-cache';
 
 // Shared with the trail-visits recorder so one browser has a single anon id.
 const ANON_COOKIE = 'trail-anon-id';
@@ -104,6 +105,10 @@ export async function POST(request: NextRequest) {
       },
       visitorId
     );
+
+    // Warm the carousel cache in the background so the marketing page stays
+    // fresh without blocking the visit response.
+    void warmCarouselCache().catch(() => {});
 
     const response = new NextResponse(null, { status: 204 });
     // Persist / refresh the anon cookie (only meaningful for anon visitors,

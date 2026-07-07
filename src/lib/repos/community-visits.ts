@@ -39,7 +39,7 @@ const s3Client = new S3Client({ region: BUCKET_REGION });
 const GLOBAL_KEY = `${S3_PREFIX}/_community-repos/global.json`;
 
 /** Max repos retained in the feed. Oldest (by lastVisitedAt) are pruned. */
-const COMMUNITY_CAP = 60;
+const COMMUNITY_CAP = 1000;
 
 /** Per-repo dedup-memory bound. Count becomes approximate past this many
  *  distinct visitors — see the file header. */
@@ -236,6 +236,27 @@ export async function getCommunityRepoVisits(
     )
     .slice(0, limit)
     .map(({ _seenVisitorIds: _omit, ...pub }) => pub);
+}
+
+export interface CommunityRepoVisitFeed {
+  updatedAt: string;
+  entries: PublicCommunityRepoVisit[];
+}
+
+/** Read the full feed with its last-updated timestamp. Used by the carousel
+ *  cache to detect staleness. */
+export async function getCommunityRepoVisitFeed(): Promise<CommunityRepoVisitFeed> {
+  const current = await getWithETag();
+  const data = current ? current.data : emptyIndex();
+  const entries = data.entries
+    .slice()
+    .sort(
+      (a, b) =>
+        new Date(b.lastVisitedAt).getTime() -
+        new Date(a.lastVisitedAt).getTime()
+    )
+    .map(({ _seenVisitorIds: _omit, ...pub }) => pub);
+  return { updatedAt: data.updatedAt, entries };
 }
 
 /**
