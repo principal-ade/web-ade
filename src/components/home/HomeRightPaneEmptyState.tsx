@@ -60,22 +60,24 @@ export const HomeRightPaneEmptyState: React.FC<HomeRightPaneEmptyStateProps> = (
 }) => {
   const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState<ActivityTab>('all');
+  const [filterPrivate, setFilterPrivate] = useState(false);
 
-  // Filter events based on active tab
   const filteredEvents = activityEvents.filter((event) => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'commits') return event.type === 'commit';
-    if (activeTab === 'prs') return event.type === 'pr_merged' || event.type === 'pr_opened';
-    if (activeTab === 'issues') return event.type === 'issue_opened';
-    return true;
+    const typeMatch =
+      activeTab === 'all' ||
+      (activeTab === 'commits' && event.type === 'commit') ||
+      (activeTab === 'prs' && (event.type === 'pr_merged' || event.type === 'pr_opened')) ||
+      (activeTab === 'issues' && event.type === 'issue_opened');
+
+    if (!typeMatch) return false;
+    return event.isPrivate === filterPrivate;
   });
 
-  // Calculate counts for tabs
   const counts = {
-    all: activityEvents.length,
-    commits: activityEvents.filter((e) => e.type === 'commit').length,
-    prs: activityEvents.filter((e) => e.type === 'pr_merged' || e.type === 'pr_opened').length,
-    issues: activityEvents.filter((e) => e.type === 'issue_opened').length,
+    all: activityEvents.filter((e) => e.isPrivate === filterPrivate).length,
+    commits: activityEvents.filter((e) => e.type === 'commit' && e.isPrivate === filterPrivate).length,
+    prs: activityEvents.filter((e) => (e.type === 'pr_merged' || e.type === 'pr_opened') && e.isPrivate === filterPrivate).length,
+    issues: activityEvents.filter((e) => e.type === 'issue_opened' && e.isPrivate === filterPrivate).length,
   };
 
   return (
@@ -93,15 +95,35 @@ export const HomeRightPaneEmptyState: React.FC<HomeRightPaneEmptyStateProps> = (
       >
         <div
           style={{
-            color: theme.colors.textMuted,
-            fontSize: theme.fontSizes[1],
-            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
             paddingLeft: 16,
             paddingRight: 16,
             marginBottom: 8,
           }}
         >
-          Your activity
+          <span
+            style={{
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSizes[1],
+              fontWeight: 600,
+            }}
+          >
+            Your activity
+          </span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <HeaderToggleButton
+              label="Public"
+              active={!filterPrivate}
+              onClick={() => setFilterPrivate(false)}
+            />
+            <HeaderToggleButton
+              label="Private"
+              active={filterPrivate}
+              onClick={() => setFilterPrivate(true)}
+            />
+          </div>
         </div>
         <ActivityHeatmap activityData={activityData} bannerHeight={170} />
       </div>
@@ -224,6 +246,45 @@ const TabButton: React.FC<TabButtonProps> = ({ label, count, active, onClick }) 
       >
         {count}
       </span>
+    </button>
+  );
+};
+
+interface HeaderToggleButtonProps {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}
+
+const HeaderToggleButton: React.FC<HeaderToggleButtonProps> = ({ label, active, onClick }) => {
+  const { theme } = useTheme();
+
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '3px 8px',
+        borderRadius: 4,
+        border: `1px solid ${active ? theme.colors.primary : theme.colors.border}`,
+        background: active ? theme.colors.primary : 'transparent',
+        color: active ? '#fff' : theme.colors.textMuted,
+        fontSize: theme.fontSizes[0],
+        fontWeight: 500,
+        cursor: 'pointer',
+        transition: 'all 0.15s ease',
+      }}
+      onMouseEnter={(e) => {
+        if (!active) {
+          e.currentTarget.style.borderColor = theme.colors.textMuted;
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!active) {
+          e.currentTarget.style.borderColor = theme.colors.border;
+        }
+      }}
+    >
+      {label}
     </button>
   );
 };
