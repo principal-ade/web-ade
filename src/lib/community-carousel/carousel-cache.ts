@@ -185,7 +185,7 @@ export async function getOrBuildCarousel(): Promise<CarouselCache> {
     getCommunityRepoVisitFeed(),
   ]);
 
-  if (cached && cached.sourceFeedUpdatedAt >= feed.updatedAt) {
+  if (cached && cached.sourceFeedUpdatedAt >= feed.updatedAt && cached.repoCount >= feed.entries.length) {
     return cached;
   }
 

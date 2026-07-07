@@ -1,9 +1,75 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ThemeProvider } from '@principal-ade/industry-theme';
+import Link from 'next/link';
+import { useTheme, ThemeProvider } from '@principal-ade/industry-theme';
+import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import type { CarouselCache } from '@/components/community/CommunityCarousel';
 import { CommunityReposView } from '@/components/community/CommunityReposView';
+
+function Header({ repoCount }: { repoCount: number }) {
+  const { theme } = useTheme();
+
+  return (
+    <header
+      className="border-b px-4 flex items-center justify-between gap-2 flex-shrink-0 backdrop-blur-xl"
+      style={{
+        background: `color-mix(in srgb, ${theme.colors.surface} 60%, transparent)`,
+        borderColor: `color-mix(in srgb, ${theme.colors.border} 60%, transparent)`,
+        paddingTop: 'calc(var(--safe-top) + 0.5rem)',
+        paddingBottom: '0.5rem',
+        position: 'relative',
+        zIndex: 10,
+      }}
+    >
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <Link
+          href="/"
+          className="text-xl font-bold transition-opacity hover:opacity-80"
+          style={{ fontFamily: theme.fonts.body, textDecoration: 'none' }}
+        >
+          <span style={{ color: theme.colors.text }}>Principal</span>{' '}
+          <span style={{ color: theme.colors.primary }}>AI</span>
+        </Link>
+
+        <span
+          className="mx-2"
+          style={{ color: theme.colors.textMuted }}
+          aria-hidden="true"
+        >
+          /
+        </span>
+
+        <span
+          className="text-base font-semibold truncate"
+          style={{ fontFamily: theme.fonts.body, color: theme.colors.text }}
+        >
+          Community
+        </span>
+
+        {repoCount > 0 && (
+          <span
+            style={{
+              fontSize: 13,
+              color: theme.colors.textMuted,
+              background: theme.colors.surface,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: 8,
+              padding: '2px 10px',
+              marginLeft: 12,
+            }}
+          >
+            {repoCount} {repoCount === 1 ? 'repo' : 'repos'} visited
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <UserAvatarMenu />
+      </div>
+    </header>
+  );
+}
 
 export default function CommunityReposPage() {
   const [carousel, setCarousel] = useState<CarouselCache | null>(null);
@@ -26,15 +92,40 @@ export default function CommunityReposPage() {
 
   useEffect(() => { fetchCarousel(); }, [fetchCarousel]);
 
+  const repoCount = carousel?.repos.length ?? 0;
+
   return (
     <ThemeProvider>
-      <div style={{ maxWidth: 1200, margin: '40px auto', padding: '0 32px' }}>
-        <CommunityReposView
-          data={carousel}
-          loading={loading}
-          error={error}
-          onRetry={fetchCarousel}
-        />
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+          background: 'var(--color-background, #0a0a0a)',
+        }}
+      >
+        <Header repoCount={repoCount} />
+
+        <main
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
+            padding: '32px 32px 80px',
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <CommunityReposView
+              data={carousel}
+              loading={loading}
+              error={error}
+              onRetry={fetchCarousel}
+            />
+          </div>
+        </main>
       </div>
     </ThemeProvider>
   );

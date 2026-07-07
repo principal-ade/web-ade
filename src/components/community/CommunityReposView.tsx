@@ -176,11 +176,6 @@ export function CommunityReposView({
           identityByEmail={heroIdentityByEmail ?? undefined}
           loading={heroLoading}
           error={heroError}
-          onAdvance={() => {
-            const idx = repos.findIndex((r) => r.fullName === selected.fullName);
-            const next = repos[idx + 1] ?? repos[0];
-            if (next) setSelectedFullName(next.fullName);
-          }}
         />
       )}
 
