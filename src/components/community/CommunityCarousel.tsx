@@ -356,8 +356,8 @@ const RepoCard: React.FC<{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontWeight: 700,
-            fontSize: 14,
+            fontWeight: theme.fontWeights.bold,
+            fontSize: theme.fontSizes[1],
             flexShrink: 0,
           }}
         >
@@ -538,8 +538,8 @@ const ContributorCard: React.FC<{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontWeight: 700,
-        fontSize: 14,
+        fontWeight: theme.fontWeights.bold,
+        fontSize: theme.fontSizes[1],
         flexShrink: 0,
       }}
     >

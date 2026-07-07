@@ -111,12 +111,14 @@ function ContributorCard({
   email,
   statLabel,
   identityByEmail,
+  index = 0,
 }: {
   label: string;
   name: string;
   email: string;
   statLabel: string;
   identityByEmail: Record<string, { login: string; avatarUrl: string } | null> | undefined;
+  index?: number;
 }) {
   const { theme } = useTheme();
   const avatarUrl = contributorAvatar(email, identityByEmail);
@@ -128,27 +130,30 @@ function ContributorCard({
         borderRadius: 12,
         padding: '12px 14px',
         border: `1px solid ${theme.colors.primary}22`,
+        opacity: 0,
+        transform: 'translateY(8px)',
+        animation: `heroCardIn 2s ease-out ${index * 2}s forwards`,
       }}
     >
-      <div style={{ fontSize: 11, fontWeight: 600, color: theme.colors.primary, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-        {label}
-      </div>
-      <div className="flex items-center" style={{ gap: 10 }}>
-        <AvatarImg
-          src={avatarUrl ?? `https://github.com/${encodeURIComponent(name)}.png?size=32`}
-          fallbackLetter={name.charAt(0).toUpperCase()}
-          size={32}
-        />
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: theme.colors.text }}>
-            {name}
-          </div>
-          <div style={{ fontSize: 12, color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: 4 }}>
-            <GitCommit size={11} />
-            {statLabel}
+        <div style={{ fontSize: theme.fontSizes[0], fontWeight: theme.fontWeights.semibold, color: theme.colors.primary, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+          {label}
+        </div>
+        <div className="flex items-center" style={{ gap: 10 }}>
+          <AvatarImg
+            src={avatarUrl ?? `https://github.com/${encodeURIComponent(name)}.png?size=32`}
+            fallbackLetter={name.charAt(0).toUpperCase()}
+            size={32}
+          />
+          <div>
+            <div style={{ fontSize: theme.fontSizes[2], fontWeight: theme.fontWeights.semibold, color: theme.colors.text }}>
+              {name}
+            </div>
+            <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <GitCommit size={14} />
+              {statLabel}
+            </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }
@@ -249,6 +254,7 @@ export function FileCityHero({
 
   const totalLines = analysis ? repoBlameTotals(analysis).totalLines : 0;
   const totalContributors = analysis?.contributors.length ?? 0;
+  const totalFiles = fileTree?.stats.totalFiles ?? 0;
 
   return (
     <div
@@ -261,6 +267,12 @@ export function FileCityHero({
         display: 'flex',
       }}
     >
+      <style>{`
+        @keyframes heroCardIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
       {/* ---------- Left panel: info ---------- */}
       <div
         style={{
@@ -275,41 +287,46 @@ export function FileCityHero({
           overflowY: 'auto',
         }}
       >
-        {/* Owner avatar */}
-        <AvatarImg
-          src={`https://github.com/${encodeURIComponent(repo.owner)}.png?size=80`}
-          fallbackLetter={repo.owner.charAt(0).toUpperCase()}
-          size={80}
-        />
+        {/* Owner avatar + repo name & owner */}
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+          <AvatarImg
+            src={`https://github.com/${encodeURIComponent(repo.owner)}.png?size=80`}
+            fallbackLetter={repo.owner.charAt(0).toUpperCase()}
+            size={80}
+          />
 
-        {/* Repo name & owner */}
-        <div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: theme.colors.text, lineHeight: 1.2, marginBottom: 4 }}>
-            {repo.repo}
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: theme.fontSizes[6], fontWeight: theme.fontWeights.bold, color: theme.colors.text, lineHeight: 1.2, marginBottom: 4 }}>
+              {repo.repo}
+            </div>
+            <div style={{ fontSize: theme.fontSizes[2], color: theme.colors.textMuted }}>
+              {repo.owner}
+            </div>
           </div>
-          <div style={{ fontSize: 14, color: theme.colors.textMuted, marginBottom: 12 }}>
-            {repo.owner}
-          </div>
+        </div>
 
-          {/* Key stats */}
-          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-            <div className="flex items-center gap-1.5">
-              <span style={{ fontSize: 13, color: theme.colors.textMuted }}>{formatNumber(totalLines)} lines</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Users size={14} style={{ color: theme.colors.textMuted }} />
-              <span style={{ fontSize: 13, color: theme.colors.textMuted }}>{totalContributors} contributors</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Star size={14} style={{ color: theme.colors.textMuted }} />
-              <span style={{ fontSize: 13, color: theme.colors.textMuted }}>{formatNumber(repo.stargazersCount)} stars</span>
-            </div>
+            {/* Key stats */}
+            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+              <div className="flex items-center gap-1.5">
+                <span style={{ fontSize: theme.fontSizes[2], color: theme.colors.textMuted }}>{formatNumber(totalFiles)} files</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span style={{ fontSize: theme.fontSizes[2], color: theme.colors.textMuted }}>{formatNumber(totalLines)} lines</span>
+              </div>
+          <div className="flex items-center gap-1.5">
+            <Users size={16} style={{ color: theme.colors.textMuted }} />
+            <span style={{ fontSize: theme.fontSizes[2], color: theme.colors.textMuted }}>{totalContributors} contributors</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Star size={16} style={{ color: theme.colors.textMuted }} />
+            <span style={{ fontSize: theme.fontSizes[2], color: theme.colors.textMuted }}>{formatNumber(repo.stargazersCount)} stars</span>
           </div>
         </div>
 
         {/* Most commits card */}
         {topCommitter && (
           <ContributorCard
+            index={0}
             label="Most commits"
             name={topCommitter.name}
             email={topCommitter.email}
@@ -321,6 +338,7 @@ export function FileCityHero({
         {/* Most lines card */}
         {topLineContributor && (
           <ContributorCard
+            index={1}
             label="Most lines"
             name={topLineContributor.name}
             email={topLineContributor.email}

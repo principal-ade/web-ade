@@ -69,71 +69,112 @@ export function CommunityReposView({
   const repos = data?.repos ?? [];
   const [selectedFullName, setSelectedFullName] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [autoCycle, setAutoCycle] = useState(true);
 
   const selected = repos.find((r) => r.fullName === selectedFullName) ?? repos[0] ?? null;
 
-  // --- Hero data: use props when provided, otherwise fetch for the selected repo ---
-  const hasExternalHeroData = heroFileTreeProp !== undefined;
-
-  const [internalFileTree, setInternalFileTree] = useState<FileTree | null>(null);
-  const [internalAnalysis, setInternalAnalysis] = useState<ContributionAnalysis | null>(null);
-  const [internalIdentityByEmail, setInternalIdentityByEmail] = useState<Record<string, { login: string; avatarUrl: string } | null> | null>(null);
-  const [internalLoading, setInternalLoading] = useState(false);
-  const [internalError, setInternalError] = useState<string | null>(null);
+  const handleSelect = useCallback((fullName: string) => {
+    setSelectedFullName(fullName);
+    setAutoCycle(false);
+  }, []);
 
   useEffect(() => {
-    if (hasExternalHeroData || !selected) return;
-    let cancelled = false;
-    setInternalFileTree(null);
-    setInternalAnalysis(null);
-    setInternalError(null);
-    setInternalLoading(true);
+    if (!autoCycle || repos.length <= 1) return;
+    const id = setInterval(() => {
+      setSelectedFullName((curr) => {
+        const current = curr ?? repos[0]?.fullName ?? null;
+        const idx = repos.findIndex((r) => r.fullName === current);
+        const next = repos[(idx + 1) % repos.length];
+        return next?.fullName ?? current;
+      });
+    }, 6000);
+    return () => clearInterval(id);
+  }, [autoCycle, repos]);
 
-    (async () => {
-      try {
-        const [treeData, analysisRes] = await Promise.all([
-          trpc.github.getTree.query({ owner: selected.owner, repo: selected.repo }),
-          fetch(`/api/repo-analysis/${selected.owner}/${selected.repo}`).then(async (r) => {
-            if (!r.ok) return null;
-            const text = await r.text();
-            try { return text ? JSON.parse(text) : null; }
-            catch { return null; }
-          }),
-        ]);
-        if (cancelled) return;
+  // --- Hero data: use props when provided, otherwise fetch + prefetch ahead ---
+  const hasExternalHeroData = heroFileTreeProp !== undefined;
 
-        const blobs = treeData.tree.filter((e: Record<string, unknown>) => e.type === 'blob');
-        const tree = new GitFileTreeBuilder().build({
-          files: blobs.map((e: Record<string, unknown>) => ({ path: e.path as string, size: (e.size as number) || 0 })),
-          rootPath: `/${selected.owner}/${selected.repo}`,
-          commitSha: treeData.sha as string,
-          branch: 'HEAD',
-        });
-        if (cancelled) return;
+  interface HeroData {
+    fileTree: FileTree | null;
+    analysis: ContributionAnalysis | null;
+    identityByEmail: Record<string, { login: string; avatarUrl: string } | null> | null;
+    loading: boolean;
+    error: string | null;
+  }
 
-        setInternalFileTree(tree);
-        if (analysisRes?.byEmail && analysisRes?.totalLines) {
-          setInternalAnalysis(analysisRes as ContributionAnalysis);
-        }
-        if (analysisRes?.identityByEmail) {
-          setInternalIdentityByEmail(analysisRes.identityByEmail);
-        }
-      } catch (err) {
-        if (cancelled) return;
-        setInternalError(err instanceof Error ? err.message : 'Failed to load repository');
-      } finally {
-        if (!cancelled) setInternalLoading(false);
-      }
-    })();
+  const PREFETCH_AHEAD = 2;
 
-    return () => { cancelled = true; };
-  }, [hasExternalHeroData, selected?.owner, selected?.repo, selected?.fullName]);
+  const heroCacheRef = useRef<Record<string, HeroData>>({});
+  const heroInflightRef = useRef<Set<string>>(new Set());
+  const [heroCache, setHeroCache] = useState<Record<string, HeroData>>({});
 
-  const heroFileTree = hasExternalHeroData ? (heroFileTreeProp ?? null) : internalFileTree;
-  const heroAnalysis = hasExternalHeroData ? (heroAnalysisProp ?? null) : internalAnalysis;
-  const heroIdentityByEmail = hasExternalHeroData ? (heroIdentityByEmailProp ?? null) : internalIdentityByEmail;
-  const heroLoading = hasExternalHeroData ? heroLoadingProp : internalLoading;
-  const heroError = hasExternalHeroData ? (heroErrorProp ?? null) : internalError;
+  const loadHeroRepo = useCallback(async (repo: CarouselRepo) => {
+    const key = repo.fullName;
+    if (heroCacheRef.current[key] || heroInflightRef.current.has(key)) return;
+    heroInflightRef.current.add(key);
+    setHeroCache((prev) => ({
+      ...prev,
+      [key]: { fileTree: null, analysis: null, identityByEmail: null, loading: true, error: null },
+    }));
+    try {
+      const [treeData, analysisRes] = await Promise.all([
+        trpc.github.getTree.query({ owner: repo.owner, repo: repo.repo }),
+        fetch(`/api/repo-analysis/${repo.owner}/${repo.repo}`).then(async (r) => {
+          if (!r.ok) return null;
+          const text = await r.text();
+          try { return text ? JSON.parse(text) : null; }
+          catch { return null; }
+        }),
+      ]);
+
+      const blobs = treeData.tree.filter((e: Record<string, unknown>) => e.type === 'blob');
+      const tree = new GitFileTreeBuilder().build({
+        files: blobs.map((e: Record<string, unknown>) => ({ path: e.path as string, size: (e.size as number) || 0 })),
+        rootPath: `/${repo.owner}/${repo.repo}`,
+        commitSha: treeData.sha as string,
+        branch: 'HEAD',
+      });
+
+      const data: HeroData = {
+        fileTree: tree,
+        analysis: (analysisRes?.byEmail && analysisRes?.totalLines) ? (analysisRes as ContributionAnalysis) : null,
+        identityByEmail: analysisRes?.identityByEmail ?? null,
+        loading: false,
+        error: null,
+      };
+      heroCacheRef.current[key] = data;
+      setHeroCache((prev) => ({ ...prev, [key]: data }));
+    } catch (err) {
+      const data: HeroData = {
+        fileTree: null, analysis: null, identityByEmail: null, loading: false,
+        error: err instanceof Error ? err.message : 'Failed to load repository',
+      };
+      heroCacheRef.current[key] = data;
+      setHeroCache((prev) => ({ ...prev, [key]: data }));
+    } finally {
+      heroInflightRef.current.delete(key);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (hasExternalHeroData || repos.length === 0) return;
+    const activeKey = selectedFullName ?? repos[0]?.fullName ?? null;
+    const startIdx = repos.findIndex((r) => r.fullName === activeKey);
+    if (startIdx < 0) return;
+    for (let i = 0; i <= PREFETCH_AHEAD; i++) {
+      const repo = repos[(startIdx + i) % repos.length];
+      if (repo) void loadHeroRepo(repo);
+    }
+  }, [hasExternalHeroData, selectedFullName, repos, loadHeroRepo]);
+
+  const selectedKey = selected?.fullName ?? '';
+  const cachedHero = heroCache[selectedKey] ?? heroCacheRef.current[selectedKey];
+
+  const heroFileTree = hasExternalHeroData ? (heroFileTreeProp ?? null) : (cachedHero?.fileTree ?? null);
+  const heroAnalysis = hasExternalHeroData ? (heroAnalysisProp ?? null) : (cachedHero?.analysis ?? null);
+  const heroIdentityByEmail = hasExternalHeroData ? (heroIdentityByEmailProp ?? null) : (cachedHero?.identityByEmail ?? null);
+  const heroLoading = hasExternalHeroData ? heroLoadingProp : (cachedHero?.loading ?? false);
+  const heroError = hasExternalHeroData ? (heroErrorProp ?? null) : (cachedHero?.error ?? null);
 
   if (loading) {
     return <div className="flex items-center justify-center py-24" style={{ color: theme.colors.textMuted }}>Loading community repos...</div>;
@@ -209,9 +250,9 @@ export function CommunityReposView({
 
       {/* Carousel or grid */}
       {showAll ? (
-        <GridView repos={repos} theme={theme} selectedFullName={selectedFullName} onSelect={setSelectedFullName} />
+        <GridView repos={repos} theme={theme} selectedFullName={selectedFullName} onSelect={handleSelect} />
       ) : (
-        <CarouselStrip repos={repos} theme={theme} selectedFullName={selectedFullName} onSelect={setSelectedFullName} />
+        <CarouselStrip repos={repos} theme={theme} selectedFullName={selectedFullName} onSelect={handleSelect} />
       )}
     </div>
   );

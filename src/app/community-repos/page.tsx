@@ -12,7 +12,7 @@ function Header({ repoCount }: { repoCount: number }) {
 
   return (
     <header
-      className="border-b px-4 flex items-center justify-between gap-2 flex-shrink-0 backdrop-blur-xl"
+      className="border-b px-4 flex-shrink-0 backdrop-blur-xl"
       style={{
         background: `color-mix(in srgb, ${theme.colors.surface} 60%, transparent)`,
         borderColor: `color-mix(in srgb, ${theme.colors.border} 60%, transparent)`,
@@ -22,50 +22,55 @@ function Header({ repoCount }: { repoCount: number }) {
         zIndex: 10,
       }}
     >
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        <Link
-          href="/"
-          className="text-xl font-bold transition-opacity hover:opacity-80"
-          style={{ fontFamily: theme.fonts.body, textDecoration: 'none' }}
-        >
-          <span style={{ color: theme.colors.text }}>Principal</span>{' '}
-          <span style={{ color: theme.colors.primary }}>AI</span>
-        </Link>
-
-        <span
-          className="mx-2"
-          style={{ color: theme.colors.textMuted }}
-          aria-hidden="true"
-        >
-          /
-        </span>
-
-        <span
-          className="text-base font-semibold truncate"
-          style={{ fontFamily: theme.fonts.body, color: theme.colors.text }}
-        >
-          Community
-        </span>
-
-        {repoCount > 0 && (
-          <span
-            style={{
-              fontSize: 13,
-              color: theme.colors.textMuted,
-              background: theme.colors.surface,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: 8,
-              padding: '2px 10px',
-              marginLeft: 12,
-            }}
+      <div
+        className="flex items-center justify-between gap-2 min-w-0"
+        style={{ maxWidth: 1200, margin: '0 auto', width: '100%' }}
+      >
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <Link
+            href="/"
+            className="text-xl font-bold transition-opacity hover:opacity-80"
+            style={{ fontFamily: theme.fonts.body, textDecoration: 'none' }}
           >
-            {repoCount} {repoCount === 1 ? 'repo' : 'repos'} visited
-          </span>
-        )}
-      </div>
+            <span style={{ color: theme.colors.text }}>Principal</span>{' '}
+            <span style={{ color: theme.colors.primary }}>AI</span>
+          </Link>
 
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <UserAvatarMenu />
+          <span
+            className="mx-2"
+            style={{ color: theme.colors.textMuted }}
+            aria-hidden="true"
+          >
+            /
+          </span>
+
+          <span
+            className="text-base font-semibold truncate"
+            style={{ fontFamily: theme.fonts.body, color: theme.colors.text }}
+          >
+            Community
+          </span>
+
+          {repoCount > 0 && (
+            <span
+              style={{
+                fontSize: 13,
+                color: theme.colors.textMuted,
+                background: theme.colors.surface,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: 8,
+                padding: '2px 10px',
+                marginLeft: 12,
+              }}
+            >
+              {repoCount} {repoCount === 1 ? 'repo' : 'repos'} visited
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <UserAvatarMenu />
+        </div>
       </div>
     </header>
   );
