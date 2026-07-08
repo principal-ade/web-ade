@@ -111,7 +111,13 @@ export async function GET(request: NextRequest, { params }: Params) {
     const isBot = request.headers.has('x-agent-format');
     const source = isBot ? 'api-bot' : 'page-load';
 
-    const access = await checkRepoAccess(owner, repo, githubToken ?? null, source);
+    const access = await checkRepoAccess(
+      owner, 
+      repo, 
+      githubToken ?? null, 
+      source,
+      request.nextUrl.pathname
+    );
     if (!access) {
       return noAccessResponse(format, links.humanView);
     }

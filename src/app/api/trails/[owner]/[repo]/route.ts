@@ -22,7 +22,13 @@ export async function GET(
     const isBot = _request.headers.has('x-agent-format');
     const source = isBot ? 'api-bot' : 'page-load';
 
-    const access = await checkRepoAccess(owner, repo, githubToken ?? null, source);
+    const access = await checkRepoAccess(
+      owner, 
+      repo, 
+      githubToken ?? null, 
+      source,
+      _request.nextUrl.pathname
+    );
     if (!access) {
       return NextResponse.json(
         {

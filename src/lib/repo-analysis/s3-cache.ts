@@ -324,6 +324,7 @@ export interface RepoRateLimitRecord {
   repo: string;
   scope: RateLimitScope;
   source: string;
+  requestPath?: string;
   count: number;
   firstHitAt: string;
   lastHitAt: string;
@@ -365,6 +366,7 @@ export async function recordRateLimitHit(
   repo: string,
   scope: RateLimitScope,
   source: string = 'server',
+  requestPath?: string,
   now: string = new Date().toISOString()
 ): Promise<void> {
   const key = repoRateLimitS3Key(owner, repo);
@@ -375,6 +377,7 @@ export async function recordRateLimitHit(
       repo,
       scope,
       source,
+      requestPath,
       count: (existing?.count ?? 0) + 1,
       firstHitAt: existing?.firstHitAt ?? now,
       lastHitAt: now,

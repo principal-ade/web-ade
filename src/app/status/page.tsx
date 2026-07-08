@@ -44,6 +44,7 @@ interface RateLimitRecord {
   repo: string;
   scope: 'anon' | 'user';
   source: string;
+  requestPath?: string;
   count: number;
   firstHitAt: string;
   lastHitAt: string;
@@ -346,6 +347,18 @@ export default function RepoAnalysisStatusPage() {
                       </span>
                     </div>
                   </div>
+                  {r.requestPath && (
+                    <code
+                      className="text-xs block mb-1 px-2 py-1 rounded"
+                      style={{
+                        color: theme.colors.textSecondary,
+                        background: `color-mix(in srgb, ${theme.colors.text} 5%, transparent)`,
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      {r.requestPath}
+                    </code>
+                  )}
                   <p className="m-0 text-xs" style={{ color: theme.colors.textMuted }}>
                     GitHub throttled the {scopeLabel.toLowerCase()} request budget — visitors saw a
                     retry page, not a private-repo wall.

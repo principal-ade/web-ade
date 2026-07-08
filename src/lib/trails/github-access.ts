@@ -189,7 +189,8 @@ export async function checkRepoAccess(
   owner: string,
   repo: string,
   token: string | null,
-  source?: string
+  source?: string,
+  requestPath?: string
 ): Promise<RepoAccessInfo | null> {
   const baseKey = `repo-access:${owner.toLowerCase()}/${repo.toLowerCase()}`;
   try {
@@ -232,7 +233,7 @@ export async function checkRepoAccess(
         // Record the hit for the ops /status page before surfacing. Awaited (not
         // fire-and-forget) so the write survives the serverless response, but it
         // never throws — telemetry can't turn a rate limit into a 500.
-        await recordRateLimitHit(owner, repo, token ? 'user' : 'anon', source);
+        await recordRateLimitHit(owner, repo, token ? 'user' : 'anon', source, requestPath);
         throw new TrailShareError(
           'GitHub is rate limiting requests right now. Try again in a moment.',
           429,
