@@ -55,6 +55,8 @@ export interface FileCityHeroProps {
   onAdvance?: () => void;
   /** Lowercased-email → GitHub account (login + avatarUrl). */
   identityByEmail?: Record<string, { login: string; avatarUrl: string } | null>;
+  /** Auto-cycle progress 0–1, or 0 when paused. */
+  cycleProgress?: number;
 }
 
 function AvatarImg({
@@ -165,6 +167,7 @@ export function FileCityHero({
   loading,
   error: treeError,
   identityByEmail,
+  cycleProgress,
 }: FileCityHeroProps) {
   const { theme } = useTheme();
 
@@ -265,6 +268,7 @@ export function FileCityHero({
         overflow: 'hidden',
         border: `1px solid ${theme.colors.border}`,
         display: 'flex',
+        position: 'relative',
       }}
     >
       <style>{`
@@ -273,6 +277,22 @@ export function FileCityHero({
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
+
+      {!!cycleProgress && !showLoading && (
+        <div style={{
+          position: 'absolute',
+          bottom: 0, left: 0, right: 0, height: 3,
+          background: `${theme.colors.border}44`,
+          zIndex: 20,
+        }}>
+          <div style={{
+            height: '100%',
+            width: `${cycleProgress * 100}%`,
+            background: theme.colors.primary,
+            borderRadius: '0 2px 2px 0',
+          }} />
+        </div>
+      )}
       {/* ---------- Left panel: info ---------- */}
       <div
         style={{

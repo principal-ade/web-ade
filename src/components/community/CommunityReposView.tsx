@@ -70,6 +70,7 @@ export function CommunityReposView({
   const [selectedFullName, setSelectedFullName] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [autoCycle, setAutoCycle] = useState(true);
+  const [cycleProgress, setCycleProgress] = useState(0);
 
   const selected = repos.find((r) => r.fullName === selectedFullName) ?? repos[0] ?? null;
 
@@ -79,17 +80,30 @@ export function CommunityReposView({
   }, []);
 
   useEffect(() => {
-    if (!autoCycle || repos.length <= 1) return;
-    const id = setInterval(() => {
-      setSelectedFullName((curr) => {
-        const current = curr ?? repos[0]?.fullName ?? null;
-        const idx = repos.findIndex((r) => r.fullName === current);
-        const next = repos[(idx + 1) % repos.length];
-        return next?.fullName ?? current;
-      });
-    }, 6000);
-    return () => clearInterval(id);
-  }, [autoCycle, repos]);
+    if (!autoCycle || repos.length <= 1) { setCycleProgress(0); return; }
+    const CYCLE_MS = 6000;
+    const start = Date.now();
+    let rafId: number;
+
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      if (elapsed >= CYCLE_MS) {
+        setCycleProgress(1);
+        setSelectedFullName((curr) => {
+          const current = curr ?? repos[0]?.fullName ?? null;
+          const idx = repos.findIndex((r) => r.fullName === current);
+          const next = repos[(idx + 1) % repos.length];
+          return next?.fullName ?? current;
+        });
+        return;
+      }
+      setCycleProgress(elapsed / CYCLE_MS);
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [autoCycle, selectedFullName, repos]);
 
   // --- Hero data: use props when provided, otherwise fetch + prefetch ahead ---
   const hasExternalHeroData = heroFileTreeProp !== undefined;
@@ -217,6 +231,7 @@ export function CommunityReposView({
           identityByEmail={heroIdentityByEmail ?? undefined}
           loading={heroLoading}
           error={heroError}
+          cycleProgress={cycleProgress}
         />
       )}
 

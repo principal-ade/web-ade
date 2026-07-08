@@ -92,7 +92,10 @@ async function buildCarousel(feed: CommunityRepoVisitFeed): Promise<CarouselCach
     }
   }
 
-  const repos: CarouselRepo[] = feed.entries.map((entry) => {
+  const repos: CarouselRepo[] = feed.entries
+    .slice()
+    .sort((a, b) => b.stargazersCount - a.stargazersCount)
+    .map((entry) => {
     const analysis = analysisMap.get(entry.fullName.toLowerCase());
 
     let topContributors: CarouselContributor[] = [];
@@ -179,6 +182,10 @@ async function store(cache: CarouselCache): Promise<void> {
   }
 }
 
+function sortReposByStars(repos: CarouselRepo[]): CarouselRepo[] {
+  return repos.slice().sort((a, b) => b.stargazersCount - a.stargazersCount);
+}
+
 export async function getOrBuildCarousel(): Promise<CarouselCache> {
   const [cached, feed] = await Promise.all([
     getCached(),
@@ -186,7 +193,7 @@ export async function getOrBuildCarousel(): Promise<CarouselCache> {
   ]);
 
   if (cached && cached.sourceFeedUpdatedAt >= feed.updatedAt && cached.repoCount >= feed.entries.length) {
-    return cached;
+    return { ...cached, repos: sortReposByStars(cached.repos) };
   }
 
   const built = await buildCarousel(feed);
