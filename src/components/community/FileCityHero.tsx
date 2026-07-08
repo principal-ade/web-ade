@@ -126,7 +126,7 @@ function ContributorCard({
   const avatarUrl = contributorAvatar(email, identityByEmail);
   const resolved = identityByEmail?.[email.toLowerCase()];
   const githubLogin = resolved?.login ?? null;
-  const profileUrl = githubLogin ? `https://github.com/${githubLogin}` : null;
+  const profileUrl = githubLogin ? `/${githubLogin}` : null;
 
   const baseStyle: React.CSSProperties = {
     background: `color-mix(in srgb, ${theme.colors.primary} 8%, transparent)`,
