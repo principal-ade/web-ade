@@ -46,7 +46,10 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
     validateOwnerRepo(owner, repo);
 
-    const access = await checkRepoAccess(owner, repo, githubToken ?? null, 'page-load');
+    const isBot = _request.headers.has('x-agent-format');
+    const source = isBot ? 'api-bot' : 'page-load';
+
+    const access = await checkRepoAccess(owner, repo, githubToken ?? null, source);
     if (!access) {
       return NextResponse.json(
         {

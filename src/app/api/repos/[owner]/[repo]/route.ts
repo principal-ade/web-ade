@@ -106,7 +106,12 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     validateOwnerRepo(owner, repo);
 
-    const access = await checkRepoAccess(owner, repo, githubToken ?? null, 'page-load');
+    // Distinguish bot/agent traffic (middleware rewrite via x-agent-format header)
+    // from real browser page loads. Bots hitting the API don't fire GA.
+    const isBot = request.headers.has('x-agent-format');
+    const source = isBot ? 'api-bot' : 'page-load';
+
+    const access = await checkRepoAccess(owner, repo, githubToken ?? null, source);
     if (!access) {
       return noAccessResponse(format, links.humanView);
     }

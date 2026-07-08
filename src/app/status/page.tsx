@@ -290,8 +290,8 @@ export default function RepoAnalysisStatusPage() {
             {records.map((r) => {
               const id = `${r.owner}/${r.repo}`;
               const scopeLabel = r.scope === 'user' ? 'User token' : 'Anonymous';
-              const sourceLabel = r.source === 'page-load' ? 'Page' : r.source;
-              const sourceColor = r.source === 'page-load' ? '#3fb950' : '#8b949e';
+              const sourceLabel = r.source === 'page-load' ? 'Page' : r.source === 'api-bot' ? 'Bot' : r.source;
+              const sourceColor = r.source === 'page-load' ? '#3fb950' : r.source === 'api-bot' ? '#d29922' : '#8b949e';
               return (
                 <li key={id} className="flex flex-col gap-2 rounded-lg border p-3" style={card}>
                   <div className="flex items-center justify-between gap-3">
