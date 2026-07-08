@@ -171,7 +171,7 @@ with ThreadPoolExecutor(max_workers=8) as ex:
 
 # --- Contributors. ---
 contributors = []
-for line in git(["shortlog", "-s", "-n", "-e", "--all"]).stdout.split("\n"):
+for line in git(["shortlog", "-s", "-n", "-e"]).stdout.split("\n"):
     m = re.match(r"^\s*(\d+)\s+(.+?)\s+<([^>]*)>$", line)
     if m:
         contributors.append({
@@ -349,16 +349,16 @@ HEARTBEAT_PID=$!
 trap 'kill -- -"$HEARTBEAT_PID" 2>/dev/null; kill "$HEARTBEAT_PID" 2>/dev/null; rmdir /tmp/sweep.lock 2>/dev/null' EXIT
 
 STAGE="clone"
-if [ -d /repo/.git ]; then
-  if ! ( cd /repo && git fetch ${authed} && git reset --hard FETCH_HEAD ); then
-    rm -rf /repo
-    git clone ${authed} /repo || fail "git clone failed"
+  if [ -d /repo/.git ]; then
+    if ! ( cd /repo && git fetch ${authed} && git reset --hard FETCH_HEAD ); then
+      rm -rf /repo
+      git clone --single-branch ${authed} /repo || fail "git clone failed"
+      ( cd /repo && git remote set-url origin ${tokenless} ) || true
+    fi
+  else
+    git clone --single-branch ${authed} /repo || fail "git clone failed"
     ( cd /repo && git remote set-url origin ${tokenless} ) || true
   fi
-else
-  git clone ${authed} /repo || fail "git clone failed"
-  ( cd /repo && git remote set-url origin ${tokenless} ) || true
-fi
 
 STAGE="sweep"
 python3 /tmp/sweep.py /repo > /tmp/analysis.json || fail "sweep failed"

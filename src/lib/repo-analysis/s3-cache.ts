@@ -499,7 +499,7 @@ export async function mergeRepoIdentityMapInS3(
  *  torvalds/linux) whose per-file `git blame` sweep idle-suspends mid-run and
  *  stretches across DAYS of wall-clock — no wall-clock URL TTL can; those need
  *  the structural fixes (keep-awake during blame, bounded/partial sweep). */
-const UPLOAD_URL_TTL_SECONDS = 3600;
+const UPLOAD_URL_TTL_SECONDS = 7200;
 
 /**
  * Pre-signed PUT URLs the analysis VM uploads its result to DIRECTLY — the

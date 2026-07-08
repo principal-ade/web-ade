@@ -33,7 +33,7 @@ export const dynamic = 'force-dynamic';
 
 /** Same window the per-repo GET uses: how long after launch a run is still
  *  presumed in flight before it's treated as stalled. */
-const RUN_IN_PROGRESS_WINDOW_MS = 15 * 60 * 1000;
+const RUN_IN_PROGRESS_WINDOW_MS = 60 * 60 * 1000;
 /** Tolerance when comparing the VM-stamped result time against the host-stamped
  *  launch time (two clocks), so a just-finished run reads as done, not stalled. */
 const LAUNCH_CLOCK_SKEW_MS = 60 * 1000;

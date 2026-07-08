@@ -48,8 +48,8 @@ export const maxDuration = 60;
 /** How long after a launch a run is still presumed in flight — matches the
  *  client's poll deadline, so `inProgress` ages out exactly when the client
  *  would give up polling. Sized for a cold clone + full blame sweep of a large
- *  repo (e.g. opencode ≈ 11 min). */
-const RUN_IN_PROGRESS_WINDOW_MS = 15 * 60 * 1000;
+ *  repo (e.g. opencode ≈ 11 min; mysql/mysql-server ≈ 30+ min). */
+const RUN_IN_PROGRESS_WINDOW_MS = 60 * 60 * 1000;
 /** Tolerance for comparing the VM-stamped `generatedAt` against the host-stamped
  *  launch time (two clocks) — only used in the no-token fallback where staleness
  *  can't be decided by sha. */
