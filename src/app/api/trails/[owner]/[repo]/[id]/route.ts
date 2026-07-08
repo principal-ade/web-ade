@@ -46,7 +46,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
     validateOwnerRepo(owner, repo);
 
-    const access = await checkRepoAccess(owner, repo, githubToken ?? null);
+    const access = await checkRepoAccess(owner, repo, githubToken ?? null, 'page-load');
     if (!access) {
       return NextResponse.json(
         {

@@ -43,6 +43,7 @@ interface RateLimitRecord {
   owner: string;
   repo: string;
   scope: 'anon' | 'user';
+  source: string;
   count: number;
   firstHitAt: string;
   lastHitAt: string;
@@ -289,6 +290,8 @@ export default function RepoAnalysisStatusPage() {
             {records.map((r) => {
               const id = `${r.owner}/${r.repo}`;
               const scopeLabel = r.scope === 'user' ? 'User token' : 'Anonymous';
+              const sourceLabel = r.source === 'page-load' ? 'Page' : r.source;
+              const sourceColor = r.source === 'page-load' ? '#3fb950' : '#8b949e';
               return (
                 <li key={id} className="flex flex-col gap-2 rounded-lg border p-3" style={card}>
                   <div className="flex items-center justify-between gap-3">
@@ -312,6 +315,15 @@ export default function RepoAnalysisStatusPage() {
                         }}
                       >
                         {scopeLabel}
+                      </span>
+                      <span
+                        className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold"
+                        style={{
+                          color: sourceColor,
+                          background: `color-mix(in srgb, ${sourceColor} 15%, transparent)`,
+                        }}
+                      >
+                        {sourceLabel}
                       </span>
                     </div>
                     <div className="flex shrink-0 items-center gap-3">

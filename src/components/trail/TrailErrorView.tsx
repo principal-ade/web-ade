@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { useTheme } from '@principal-ade/industry-theme';
 import { AlertTriangle, Clock, Github, MapPinOff, RefreshCw } from 'lucide-react';
+import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { event } from '@/lib/analytics';
 import { ShareErrorCodes, type ShareErrorCode } from '@/lib/trails/types';
 import { PrivatePropertySign } from '@/app/trail/[id]/PrivatePropertySign';
 
@@ -43,6 +45,16 @@ export function TrailErrorView({
   const isNotFound = code === ShareErrorCodes.NOT_FOUND;
   const isRateLimited = code === ShareErrorCodes.RATE_LIMITED;
   const showLogin = isNoAccess && !isAuthenticated;
+
+  useEffect(() => {
+    if (isRateLimited) {
+      event({
+        action: 'rate_limited',
+        category: 'Error',
+        label: window.location.pathname,
+      })
+    }
+  }, [isRateLimited])
 
   const Icon = isNotFound ? MapPinOff : isRateLimited ? Clock : AlertTriangle;
   const title = isNoAccess
