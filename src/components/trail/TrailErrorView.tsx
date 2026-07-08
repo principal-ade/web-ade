@@ -47,13 +47,30 @@ export function TrailErrorView({
   const showLogin = (isNoAccess || isRateLimited) && !isAuthenticated;
 
   useEffect(() => {
-    if (isRateLimited) {
-      event({
-        action: 'rate_limited',
-        category: 'Error',
-        label: window.location.pathname,
-      })
+    if (!isRateLimited) return
+    
+    // Retry with exponential backoff if gtag isn't ready yet
+    let attempts = 0
+    const maxAttempts = 5
+    
+    const tryEvent = () => {
+      if (window.gtag) {
+        event({
+          action: 'rate_limited',
+          category: 'Error',
+          label: window.location.pathname,
+        })
+        return true
+      }
+      
+      attempts++
+      if (attempts < maxAttempts) {
+        setTimeout(tryEvent, Math.min(100 * Math.pow(2, attempts), 1000))
+      }
+      return false
     }
+    
+    tryEvent()
   }, [isRateLimited])
 
   const Icon = isNotFound ? MapPinOff : isRateLimited ? Clock : AlertTriangle;

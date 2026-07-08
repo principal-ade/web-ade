@@ -10,7 +10,25 @@ export default function AnalyticsTracker() {
 
   useEffect(() => {
     const url = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '')
-    pageview(url)
+    
+    // Try immediately, then retry with exponential backoff if gtag isn't ready
+    let attempts = 0
+    const maxAttempts = 5
+    
+    const tryPageview = () => {
+      if (window.gtag) {
+        pageview(url)
+        return true
+      }
+      
+      attempts++
+      if (attempts < maxAttempts) {
+        setTimeout(tryPageview, Math.min(100 * Math.pow(2, attempts), 1000))
+      }
+      return false
+    }
+    
+    tryPageview()
   }, [pathname, searchParams])
 
   return null
