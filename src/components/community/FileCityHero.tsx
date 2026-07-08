@@ -124,40 +124,56 @@ function ContributorCard({
 }) {
   const { theme } = useTheme();
   const avatarUrl = contributorAvatar(email, identityByEmail);
+  const resolved = identityByEmail?.[email.toLowerCase()];
+  const githubLogin = resolved?.login ?? null;
+  const profileUrl = githubLogin ? `https://github.com/${githubLogin}` : null;
 
-  return (
-    <div
-      style={{
-        background: `color-mix(in srgb, ${theme.colors.primary} 8%, transparent)`,
-        borderRadius: 12,
-        padding: '12px 14px',
-        border: `1px solid ${theme.colors.primary}22`,
-        opacity: 0,
-        transform: 'translateY(8px)',
-        animation: `heroCardIn 2s ease-out ${index * 2}s forwards`,
-      }}
-    >
-        <div style={{ fontSize: theme.fontSizes[0], fontWeight: theme.fontWeights.semibold, color: theme.colors.primary, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-          {label}
-        </div>
-        <div className="flex items-center" style={{ gap: 10 }}>
-          <AvatarImg
-            src={avatarUrl ?? `https://github.com/${encodeURIComponent(name)}.png?size=32`}
-            fallbackLetter={name.charAt(0).toUpperCase()}
-            size={32}
-          />
-          <div>
-            <div style={{ fontSize: theme.fontSizes[2], fontWeight: theme.fontWeights.semibold, color: theme.colors.text }}>
-              {name}
-            </div>
-            <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <GitCommit size={14} />
-              {statLabel}
-            </div>
+  const baseStyle: React.CSSProperties = {
+    background: `color-mix(in srgb, ${theme.colors.primary} 8%, transparent)`,
+    borderRadius: 12,
+    padding: '12px 14px',
+    border: `1px solid ${theme.colors.primary}22`,
+    opacity: 0,
+    transform: 'translateY(8px)',
+    animation: `heroCardIn 2s ease-out ${index * 2}s forwards`,
+    textDecoration: 'none',
+    display: 'block',
+    cursor: profileUrl ? 'pointer' : 'default',
+  };
+
+  const content = (
+    <>
+      <div style={{ fontSize: theme.fontSizes[0], fontWeight: theme.fontWeights.semibold, color: theme.colors.primary, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+        {label}
+      </div>
+      <div className="flex items-center" style={{ gap: 10 }}>
+        <AvatarImg
+          src={avatarUrl ?? `https://github.com/${encodeURIComponent(name)}.png?size=32`}
+          fallbackLetter={name.charAt(0).toUpperCase()}
+          size={32}
+        />
+        <div>
+          <div style={{ fontSize: theme.fontSizes[2], fontWeight: theme.fontWeights.semibold, color: theme.colors.text }}>
+            {name}
+          </div>
+          <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <GitCommit size={14} />
+            {statLabel}
           </div>
         </div>
-    </div>
+      </div>
+    </>
   );
+
+  if (profileUrl) {
+    return (
+      <a href={profileUrl} target="_blank" rel="noopener noreferrer" style={baseStyle}>
+        {content}
+      </a>
+    );
+  }
+
+  return <div style={baseStyle}>{content}</div>;
 }
 
 export function FileCityHero({
