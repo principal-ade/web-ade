@@ -44,7 +44,7 @@ export function TrailErrorView({
   const isNoAccess = code === ShareErrorCodes.NO_REPO_ACCESS;
   const isNotFound = code === ShareErrorCodes.NOT_FOUND;
   const isRateLimited = code === ShareErrorCodes.RATE_LIMITED;
-  const showLogin = isNoAccess && !isAuthenticated;
+  const showLogin = (isNoAccess || isRateLimited) && !isAuthenticated;
 
   useEffect(() => {
     if (isRateLimited) {
@@ -65,7 +65,7 @@ export function TrailErrorView({
         ? rateLimitedTitle
         : fallbackTitle;
   const helper = isRateLimited
-    ? 'This is temporary — GitHub is limiting requests from this app right now. Give it a moment, then try again. The repository isn’t private.'
+    ? 'GitHub is limiting requests from this app right now. Give it a moment, then try again. If this repository is private or you want to expedite access, sign in with GitHub.'
     : isNoAccess && !showLogin
       ? 'Your current GitHub account does not have read access to this repository.'
       : null;
