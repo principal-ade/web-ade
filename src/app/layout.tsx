@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import AnalyticsTracker from "@/components/AnalyticsTracker";
 import "./globals.css";
 // Required by SequenceDiagramRenderer (used inside @industry-theme/file-city-panel).
 // Without this, .react-flow__viewport loses `transform-origin: 0 0` and nodes/edges
@@ -108,6 +109,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {gaId && <GoogleAnalytics gaId={gaId} />}
+        {gaId && <AnalyticsTracker />}
         <Providers>{children}</Providers>
       </body>
     </html>
