@@ -332,12 +332,20 @@ export function FileCityHero({
           />
 
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: theme.fontSizes[6], fontWeight: theme.fontWeights.bold, color: theme.colors.text, lineHeight: 1.2, marginBottom: 4 }}>
+            <a
+              href={`/${repo.owner}/${repo.repo}`}
+              target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: theme.fontSizes[6], fontWeight: theme.fontWeights.bold, color: theme.colors.text, lineHeight: 1.2, marginBottom: 4, textDecoration: 'none', display: 'block' }}
+            >
               {repo.repo}
-            </div>
-            <div style={{ fontSize: theme.fontSizes[2], color: theme.colors.textMuted }}>
+            </a>
+            <a
+              href={`/${repo.owner}`}
+              target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: theme.fontSizes[2], color: theme.colors.textMuted, textDecoration: 'none', display: 'inline-block' }}
+            >
               {repo.owner}
-            </div>
+            </a>
           </div>
         </div>
 
