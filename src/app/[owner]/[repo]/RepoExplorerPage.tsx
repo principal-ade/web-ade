@@ -4807,7 +4807,7 @@ const ContributorsPane: React.FC<{
   onClose: () => void;
 }> = ({ owner, repo, focusContributor, onClose }) => {
   const { theme } = useTheme();
-  const { analysis, setSelectedEmails } = useRepoAnalysis();
+  const { analysis, setSelectedEmails, ownershipLoading } = useRepoAnalysis();
 
   // Fallback source: GitHub contributor graph (used only before analysis).
   const githubData = useRepoContributorsData(owner, repo);
@@ -4938,6 +4938,13 @@ const ContributorsPane: React.FC<{
             : undefined
         }
       />
+
+      {ownershipLoading && !selected && (
+        <div
+          className="h-0.5 w-full shrink-0"
+          style={{ background: theme.colors.primary, opacity: 0.6 }}
+        />
+      )}
 
       <SlidePane
         viewKey={selected ? selected.key : 'list'}

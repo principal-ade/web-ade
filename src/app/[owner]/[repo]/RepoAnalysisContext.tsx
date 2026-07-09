@@ -97,6 +97,8 @@ interface RepoAnalysisContextValue {
   contributors: Array<{ name: string; email: string; commits: number; lines: number }>;
   /** Highlight layers for the selected contributor, or null when none picked. */
   contributionLayers: HighlightLayer[] | null;
+  /** True while the paginated /ownership fetch is in flight. */
+  ownershipLoading: boolean;
 }
 
 const RepoAnalysisContext = createContext<RepoAnalysisContextValue | null>(null);
@@ -114,6 +116,7 @@ export function RepoAnalysisProvider({
   const [state, setState] = useState<RepoAnalysisState>({ kind: 'idle' });
   const [meta, setMeta] = useState<RepoAnalysisMeta | null>(null);
   const [selectedEmails, setSelectedEmailsRaw] = useState<string[]>([]);
+  const [ownershipLoading, setOwnershipLoading] = useState(false);
 
   // Mirror the latest analysis/meta into refs so `run`'s poll loop can read them
   // without widening `run`'s deps (which would re-fire the mount effect on every
@@ -327,6 +330,7 @@ export function RepoAnalysisProvider({
       return;
     }
     let cancelled = false;
+    setOwnershipLoading(true);
     const fetchOwnership = async () => {
       let cursor = 0;
       const limit = 200;
@@ -347,9 +351,13 @@ export function RepoAnalysisProvider({
           break;
         }
       }
+      if (!cancelled) setOwnershipLoading(false);
     };
     void fetchOwnership();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      setOwnershipLoading(false);
+    };
   }, [owner, repo, analysis?.sha]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const clear = useCallback(() => {
@@ -357,6 +365,7 @@ export function RepoAnalysisProvider({
     setMeta(null);
     setSelectedEmailsRaw([]);
     setState({ kind: 'idle' });
+    setOwnershipLoading(false);
     personOwnershipRef.current = {};
   }, []);
 
@@ -411,9 +420,10 @@ export function RepoAnalysisProvider({
       setSelectedEmails,
       contributors,
       contributionLayers,
+      ownershipLoading,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [analysis, state, meta, run, clear, selectedEmail, setSelectedEmail, selectedEmailsKey, setSelectedEmails, contributors, contributionLayers],
+    [analysis, state, meta, run, clear, selectedEmail, setSelectedEmail, selectedEmailsKey, setSelectedEmails, contributors, contributionLayers, ownershipLoading],
   );
 
   return (
