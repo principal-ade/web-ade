@@ -357,6 +357,7 @@ export default function HomePage() {
   const [diagramRevealed, setDiagramRevealed] = useState(false);
   const [diagramHovered, setDiagramHovered] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
   const [stamp, setStamp] = useState<StampKind | null>(null);
   const [stampAnimating, setStampAnimating] = useState(false);
   const showExplanation = view !== 'title';
@@ -1252,14 +1253,22 @@ export default function HomePage() {
       >
         <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
           <span>© {new Date().getFullYear()} Principal AI</span>
-          <a
-            href="https://discord.gg/G3qdcC2DXq"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:underline"
-          >
-            Discord
-          </a>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowEnterpriseModal(true)}
+              className="hover:underline cursor-pointer"
+            >
+              For enterprise
+            </button>
+            <a
+              href="https://discord.gg/G3qdcC2DXq"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline"
+            >
+              Discord
+            </a>
+          </div>
         </div>
       </footer>
 
@@ -1267,6 +1276,57 @@ export default function HomePage() {
         open={showCreateModal}
         onClose={() => setShowCreateModal(false)}
       />
+
+      {showEnterpriseModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          onClick={() => setShowEnterpriseModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Enterprise access"
+        >
+          <div
+            className="absolute inset-0 backdrop-blur-md"
+            style={{ background: `color-mix(in srgb, ${theme.colors.background} 70%, transparent)` }}
+          />
+          <div
+            className="relative w-full max-w-xl rounded-2xl p-6 backdrop-blur-xl"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: `color-mix(in srgb, ${theme.colors.surface} 85%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${theme.colors.primary} 35%, transparent)`,
+              boxShadow: `0 30px 80px -20px color-mix(in srgb, ${theme.colors.primary} 25%, transparent)`,
+            }}
+          >
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <h3
+                className="text-2xl font-semibold tracking-tight"
+                style={{ color: theme.colors.primary }}
+              >
+                Enterprise access
+              </h3>
+              <button
+                onClick={() => setShowEnterpriseModal(false)}
+                className="p-1 rounded-lg transition-colors hover:opacity-70"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-sm leading-relaxed" style={{ color: theme.colors.textMuted }}>
+              For enterprise licensing, self-hosted deployments, and custom integrations,
+              reach out to us at{' '}
+              <a
+                href="mailto:fernando@noetic-labs.ai"
+                className="font-medium hover:underline"
+                style={{ color: theme.colors.primary }}
+              >
+                fernando@noetic-labs.ai
+              </a>
+              .
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Mobile "Explore GitHub projects" sheet — a full-screen search that
           leads with one-tap popular projects, then GitHub repo-search results
