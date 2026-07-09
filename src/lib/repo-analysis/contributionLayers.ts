@@ -505,6 +505,26 @@ export function mergeContributors(
         : g.login
           ? `https://github.com/${g.login}.png`
           : undefined);
+
+    // When precomputedContributors is present, use its stats directly —
+    // personOwnership is excluded from the API response so we can't recompute.
+    let stats: ContributionStats;
+    if (analysis.precomputedContributors) {
+      // Find the precomputed contributor whose first email matches this group's
+      // dominant member (or whose key matches the group key).
+      const pc = analysis.precomputedContributors.find(
+        (c) => c.key === g.key || c.emails.includes(emails[0]!),
+      );
+      if (pc) {
+        stats = pc.stats;
+      } else {
+        // Fallback: compute from byEmail if available (pre-transform data).
+        stats = mergedContributionStats(analysis, emails, totals);
+      }
+    } else {
+      stats = mergedContributionStats(analysis, emails, totals);
+    }
+
     return {
       key: g.key,
       emails,
@@ -514,7 +534,7 @@ export function mergeContributors(
       avatarUrl,
       htmlUrl: g.htmlUrl ?? (g.login ? `https://github.com/${g.login}` : undefined),
       commits,
-      stats: mergedContributionStats(analysis, emails, totals),
+      stats,
     };
   };
 
