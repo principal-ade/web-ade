@@ -47,7 +47,7 @@ export interface CommunityReposViewProps {
   heroLoading?: boolean;
   heroError?: string | null;
   /** Pre-fetched email→GitHub-account map (for override / Storybook). */
-  heroIdentityByEmail?: Record<string, { login: string; avatarUrl: string } | null>;
+  heroIdentityByEmail?: Record<string, { login: string; avatarUrl: string; name?: string } | null>;
 }
 
 // ---------------------------------------------------------------------------
@@ -111,7 +111,7 @@ export function CommunityReposView({
   interface HeroData {
     fileTree: FileTree | null;
     analysis: ContributionAnalysis | null;
-    identityByEmail: Record<string, { login: string; avatarUrl: string } | null> | null;
+    identityByEmail: Record<string, { login: string; avatarUrl: string; name?: string } | null> | null;
     loading: boolean;
     error: string | null;
   }

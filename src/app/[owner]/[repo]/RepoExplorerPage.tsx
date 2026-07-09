@@ -3709,6 +3709,8 @@ interface CommitAuthorIdentity {
   id: number;
   avatarUrl: string;
   htmlUrl: string;
+  /** GitHub profile display name (e.g. "Jarred Sumner"). */
+  name?: string;
 }
 const emailAuthorCache = new Map<string, CommitAuthorIdentity | null>();
 const emailAuthorInflight = new Map<string, Promise<void>>();
@@ -4224,11 +4226,12 @@ const RepoOverview: React.FC<{
           id: live.id,
           avatarUrl: live.avatarUrl,
           htmlUrl: live.htmlUrl,
+          name: live.name,
         };
       }
       const o = analysis.identityByEmail?.[key];
       return o
-        ? { login: o.login, id: o.id, avatarUrl: o.avatarUrl, htmlUrl: o.htmlUrl }
+        ? { login: o.login, id: o.id, avatarUrl: o.avatarUrl, htmlUrl: o.htmlUrl, name: o.name }
         : undefined;
     };
     return mergeContributors(analysis, analysisContributors(analysis), identityOf)
@@ -4843,7 +4846,7 @@ const ContributorsPane: React.FC<{
       // own id and are resolved inside mergeContributors.
       const identityOf = (email: string): EmailIdentity | undefined => {
         const o = emailAuthors[email.toLowerCase()];
-        return o ? { login: o.login, id: o.id, avatarUrl: o.avatarUrl, htmlUrl: o.htmlUrl } : undefined;
+        return o ? { login: o.login, id: o.id, avatarUrl: o.avatarUrl, htmlUrl: o.htmlUrl, name: o.name } : undefined;
       };
       return mergeContributors(analysis, blamePeople, identityOf).map((p) => {
         const extra = p.emails.length - 1;

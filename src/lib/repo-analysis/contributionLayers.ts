@@ -353,6 +353,8 @@ export interface EmailIdentity {
   id: number;
   avatarUrl?: string;
   htmlUrl?: string;
+  /** GitHub profile display name (e.g. "Jarred Sumner"). */
+  name?: string;
 }
 
 /** One human, after collapsing every blame email that is the same person. */
@@ -413,6 +415,8 @@ export function mergeContributors(
     login?: string;
     avatarUrl?: string;
     htmlUrl?: string;
+    /** GitHub profile display name from the identity overlay. */
+    displayName?: string;
     /** Members, kept in input order (which is lines-desc) so the first is the
      *  dominant contributor — used to pick the display name. */
     members: AnalysisContributor[];
@@ -440,6 +444,7 @@ export function mergeContributors(
         login,
         avatarUrl: overlay?.avatarUrl,
         htmlUrl: overlay?.htmlUrl,
+        displayName: overlay?.name,
         members: [],
         names: new Set(),
       };
@@ -447,6 +452,7 @@ export function mergeContributors(
     }
     g.login ??= login;
     g.avatarUrl ??= overlay?.avatarUrl;
+    g.displayName ??= overlay?.name;
     g.htmlUrl ??= overlay?.htmlUrl;
     g.members.push(p);
     const nn = normalizePersonName(p.name);
@@ -495,9 +501,8 @@ export function mergeContributors(
   const finalize = (g: Group): MergedContributor => {
     const emails = g.members.map((m) => m.email.toLowerCase());
     const commits = g.members.reduce((s, m) => s + m.commits, 0);
-    // Prefer the git author name (from the dominant member — first, since input
-    // is lines-desc); fall back to the resolved login, then an email.
-    const name = g.members[0]?.name ?? g.login ?? emails[0] ?? g.key;
+    // Prefer GitHub display name > git author name > resolved login > email > key.
+    const name = g.displayName ?? g.members[0]?.name ?? g.login ?? emails[0] ?? g.key;
     const avatarUrl =
       g.avatarUrl ??
       (g.githubId != null

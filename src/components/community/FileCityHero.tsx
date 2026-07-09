@@ -54,7 +54,7 @@ export interface FileCityHeroProps {
   error: string | null;
   onAdvance?: () => void;
   /** Lowercased-email → GitHub account (login + avatarUrl). */
-  identityByEmail?: Record<string, { login: string; avatarUrl: string } | null>;
+  identityByEmail?: Record<string, { login: string; avatarUrl: string; name?: string } | null>;
   /** Auto-cycle progress 0–1, or 0 when paused. */
   cycleProgress?: number;
 }
@@ -202,11 +202,11 @@ export function FileCityHero({
       const best = analysis.precomputedContributors.reduce((a, b) =>
         a.stats.lines > b.stats.lines ? a : b
       );
-      return {
-        name: best.name,
-        email: best.emails[0] ?? best.key,
-        lines: best.stats.lines,
-      };
+      // Prefer GitHub display name from identity overlay over git author name.
+      const email = best.emails[0] ?? best.key;
+      const identity = identityByEmail?.[email.toLowerCase()];
+      const name = identity?.name ?? best.name;
+      return { name, email, lines: best.stats.lines };
     }
 
     // Slow path: derive from raw byEmail.
@@ -220,8 +220,11 @@ export function FileCityHero({
     const contributor = analysis.contributors.find(
       (c) => c.email.toLowerCase() === bestEmail!.toLowerCase()
     );
-    return { name: contributor?.name ?? bestEmail, email: bestEmail, lines: bestLines };
-  }, [analysis]);
+    // Prefer GitHub display name from identity overlay over git author name.
+    const identity = identityByEmail?.[bestEmail.toLowerCase()];
+    const name = identity?.name ?? contributor?.name ?? bestEmail;
+    return { name, email: bestEmail, lines: bestLines };
+  }, [analysis, identityByEmail]);
 
   const events = useMemo(() => new PanelEventBus(), [repo.owner, repo.repo]);
   const repository = useMemo<FileCityGuideRepository>(

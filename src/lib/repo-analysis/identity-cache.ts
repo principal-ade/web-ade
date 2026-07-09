@@ -24,6 +24,9 @@ export interface ResolvedIdentity {
   id: number;
   avatarUrl: string;
   htmlUrl: string;
+  /** GitHub profile display name (e.g. "Jarred Sumner"), fetched separately
+   *  from GET /users/{login}. Optional — absent until the profile is fetched. */
+  name?: string;
 }
 
 /** Lowercased-email → resolved account (or null when GitHub can't attribute it).
@@ -52,6 +55,11 @@ interface CommitAuthorRow {
     avatar_url: string;
     html_url: string;
   } | null;
+}
+
+interface GitHubUser {
+  login: string;
+  name: string | null;
 }
 
 async function githubGet<T>(endpoint: string, token: string | null): Promise<T> {
@@ -117,5 +125,40 @@ export async function resolveIdentitiesByEmail(
       if (r !== undefined) out[email] = r;
     });
   }
+
+  // Enrich resolved identities with GitHub display names. Collect unique logins
+  // that are missing a `name` field (newly resolved or cached before this field
+  // existed), batch-fetch their profiles, and merge the name back.
+  const loginsNeedingName = new Set<string>();
+  for (const identity of Object.values(out)) {
+    if (identity && !identity.name) loginsNeedingName.add(identity.login);
+  }
+  if (loginsNeedingName.size > 0) {
+    const loginList = Array.from(loginsNeedingName);
+    for (let i = 0; i < loginList.length; i += CONCURRENCY) {
+      const chunk = loginList.slice(i, i + CONCURRENCY);
+      const profiles = await Promise.allSettled(
+        chunk.map((login) => githubGet<GitHubUser>(`/users/${encodeURIComponent(login)}`, token)),
+      );
+      chunk.forEach((login, j) => {
+        const result = profiles[j]!;
+        if (result.status !== 'fulfilled' || !result.value.name) return;
+        for (const identity of Object.values(out)) {
+          if (identity?.login === login) {
+            identity.name = result.value.name!;
+            const email = Object.keys(out).find((e) => out[e] === identity);
+            if (email) {
+              setCachedAsync(
+                identityByEmailCacheKey(email),
+                identity,
+                POSITIVE_TTL_SECONDS,
+              );
+            }
+          }
+        }
+      });
+    }
+  }
+
   return out;
 }
