@@ -196,17 +196,31 @@ export function FileCityHero({
 
   const topLineContributor = useMemo<{ name: string; email: string; lines: number } | null>(() => {
     if (!analysis) return null;
-    const lines = linesByEmail(analysis.byEmail);
-    let best: string | null = null;
+
+    // Fast path: use precomputed contributors when available.
+    if (analysis.precomputedContributors && analysis.precomputedContributors.length > 0) {
+      const best = analysis.precomputedContributors.reduce((a, b) =>
+        a.stats.lines > b.stats.lines ? a : b
+      );
+      return {
+        name: best.name,
+        email: best.emails[0] ?? best.key,
+        lines: best.stats.lines,
+      };
+    }
+
+    // Slow path: derive from raw byEmail.
+    const lines = linesByEmail(analysis.byEmail ?? {});
+    let bestEmail: string | null = null;
     let bestLines = 0;
     for (const [email, count] of Object.entries(lines)) {
-      if (count > bestLines) { best = email; bestLines = count; }
+      if (count > bestLines) { bestEmail = email; bestLines = count; }
     }
-    if (!best) return null;
+    if (!bestEmail) return null;
     const contributor = analysis.contributors.find(
-      (c) => c.email.toLowerCase() === best!.toLowerCase()
+      (c) => c.email.toLowerCase() === bestEmail!.toLowerCase()
     );
-    return { name: contributor?.name ?? best, email: best, lines: bestLines };
+    return { name: contributor?.name ?? bestEmail, email: bestEmail, lines: bestLines };
   }, [analysis]);
 
   const events = useMemo(() => new PanelEventBus(), [repo.owner, repo.repo]);

@@ -13,8 +13,26 @@ import type { HighlightLayer } from '@industry-theme/file-city-panel';
 
 /** The subset of the repo-analysis payload the contribution view consumes. */
 export interface ContributionAnalysis {
-  /** email → { path → lines that email owns at HEAD (per blame) }. */
-  byEmail: Record<string, Record<string, number>>;
+  /** email → { path → lines that email owns at HEAD (per blame). Present on raw
+   *  sweep output; absent after the lazy transform replaces it with
+   *  precomputedContributors + personOwnership. */
+  byEmail?: Record<string, Record<string, number>>;
+  /** Pre-computed person-keyed contributor list (populated by the lazy transform).
+   *  When present, the UI should read from this instead of deriving from byEmail. */
+  precomputedContributors?: Array<{
+    key: string;
+    emails: string[];
+    name: string;
+    login?: string;
+    githubId?: number;
+    avatarUrl?: string;
+    htmlUrl?: string;
+    commits: number;
+    stats: ContributionStats;
+  }>;
+  /** person-key → { path → lines that person owns }. Populated alongside
+   *  precomputedContributors by the lazy transform. Used for highlight layers. */
+  personOwnership?: Record<string, Record<string, number>>;
   /** path → total blamed lines in that file. */
   totalLines: Record<string, number>;
   /** `git shortlog` rows: who committed, how often. */
@@ -47,7 +65,7 @@ export function buildContributionLayers(
   options: ContributionLayerOptions = {},
 ): HighlightLayer[] {
   return buildOwnershipLayers(
-    analysis.byEmail[email.toLowerCase()],
+    getOwnershipForEmail(analysis, email),
     analysis.totalLines,
     options,
   );
@@ -68,6 +86,34 @@ export function buildMergedContributionLayers(
     analysis.totalLines,
     options,
   );
+}
+
+/** Look up the file → lines ownership map for a single email. When the
+ *  post-transform `personOwnership` is available, resolves the email to its
+ *  person key first; otherwise falls back to `byEmail`. */
+function getOwnershipForEmail(
+  analysis: ContributionAnalysis,
+  email: string,
+): Record<string, number> | undefined {
+  const lc = email.toLowerCase();
+  if (analysis.personOwnership) {
+    // Find the person key whose emails[] contains this email.
+    for (const [key, ownership] of Object.entries(analysis.personOwnership)) {
+      // The key itself may match (e.g. "email:foo@bar.com" when byEmail was
+      // absent and the person was never resolved).
+      if (key === lc) return ownership;
+    }
+    // Also check the precomputedContributors list for the email → key mapping.
+    if (analysis.precomputedContributors) {
+      for (const pc of analysis.precomputedContributors) {
+        if (pc.emails.includes(lc)) {
+          return analysis.personOwnership[pc.key];
+        }
+      }
+    }
+    return undefined;
+  }
+  return analysis.byEmail?.[lc];
 }
 
 /** Core layer builder over a raw `path → lines` ownership map. */
@@ -129,7 +175,7 @@ export function totalLinesOwned(
   analysis: ContributionAnalysis,
   email: string,
 ): number {
-  const owned = analysis.byEmail[email.toLowerCase()];
+  const owned = getOwnershipForEmail(analysis, email);
   if (!owned) return 0;
   let sum = 0;
   for (const lines of Object.values(owned)) sum += lines;
@@ -174,15 +220,33 @@ export interface AnalysisContributor {
  * coverage stats and its highlight email, so no row is ever "unresolved":
  * GitHub identity (avatar/login) is layered on afterward as a best-effort
  * overlay, never a prerequisite for the row to exist.
+ *
+ * When `precomputedContributors` is present (post-transform), returns it
+ * directly — the precomputed list is already sorted and carries stats.
  */
 export function analysisContributors(
   analysis: ContributionAnalysis,
 ): AnalysisContributor[] {
+  // Fast path: pre-computed contributor list from the lazy transform.
+  if (analysis.precomputedContributors) {
+    return analysis.precomputedContributors.map((pc) => ({
+      // Use the first email as the canonical email for highlight layer lookups.
+      email: pc.emails[0] ?? pc.key,
+      name: pc.name,
+      commits: pc.commits,
+      stats: pc.stats,
+      noreplyLogin: pc.login,
+      noreplyUserId: pc.githubId,
+    }));
+  }
+
+  // Slow path: derive from raw byEmail (pre-transform or fallback).
+  const byEmail = analysis.byEmail ?? {};
   const totals = repoBlameTotals(analysis);
   const shortlog = new Map(
     analysis.contributors.map((c) => [c.email.toLowerCase(), c] as const),
   );
-  return Object.keys(analysis.byEmail)
+  return Object.keys(byEmail)
     .map((email) => {
       const nr = parseGitHubNoreply(email);
       const sc = shortlog.get(email);
@@ -230,7 +294,7 @@ export function contributionStats(
   email: string,
   totals: { totalLines: number; totalFiles: number } = repoBlameTotals(analysis),
 ): ContributionStats {
-  return statsFromOwnership(analysis.byEmail[email.toLowerCase()] ?? {}, totals);
+  return statsFromOwnership(getOwnershipForEmail(analysis, email) ?? {}, totals);
 }
 
 /** Coverage stats for a *merged* person across all their blame emails. */
@@ -272,7 +336,7 @@ export function mergeOwnership(
 ): Record<string, number> {
   const merged: Record<string, number> = {};
   for (const email of emails) {
-    const owned = analysis.byEmail[email.toLowerCase()];
+    const owned = getOwnershipForEmail(analysis, email);
     if (!owned) continue;
     for (const [path, lines] of Object.entries(owned)) {
       merged[path] = (merged[path] ?? 0) + lines;

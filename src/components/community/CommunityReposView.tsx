@@ -151,7 +151,7 @@ export function CommunityReposView({
 
       const data: HeroData = {
         fileTree: tree,
-        analysis: (analysisRes?.byEmail && analysisRes?.totalLines) ? (analysisRes as ContributionAnalysis) : null,
+        analysis: ((analysisRes?.byEmail || analysisRes?.precomputedContributors) && analysisRes?.totalLines) ? (analysisRes as ContributionAnalysis) : null,
         identityByEmail: analysisRes?.identityByEmail ?? null,
         loading: false,
         error: null,
