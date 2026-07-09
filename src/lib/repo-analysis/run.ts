@@ -38,7 +38,7 @@ export interface RepoAnalysis {
   lineCounts: Record<string, number>;
   /** Number of files counted. */
   fileCount: number;
-  /** email → { path → lines that email owns at HEAD (per blame) }. */
+  /** email → { path → lines that email owns at HEAD (per blame). */
   byEmail: Record<string, Record<string, number>>;
   /** path → total blamed lines in that file. */
   totalLines: Record<string, number>;
@@ -46,6 +46,14 @@ export interface RepoAnalysis {
   totalLinesGlobal: number;
   /** `git shortlog` rows: who committed, how often. */
   contributors: Array<{ name: string; commits: number; email: string }>;
+
+  // --- Pre-computed fields (added by transformAnalysis, absent on raw sweep output) ---
+
+  /** Person-keyed contributor list with stats. Populated by the lazy transform
+   *  on first GET after a fresh sweep. Absent on raw sweep output. */
+  precomputedContributors?: import('./transform').PreComputedContributor[];
+  /** Ordered person-key → file → lines. Populated alongside precomputedContributors. */
+  personOwnership?: Record<string, Record<string, number>>;
 }
 
 export interface LaunchRepoAnalysisOpts {

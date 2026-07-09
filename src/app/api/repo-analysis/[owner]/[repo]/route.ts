@@ -36,8 +36,10 @@ import {
   clearRepoAnalysisErrorInS3,
   presignAnalysisUploadUrls,
   getRepoIdentityMapFromS3,
+  storeRepoAnalysisInS3,
 } from '@/lib/repo-analysis/s3-cache';
 import { resolveHeadSha } from '@/lib/trails/github-access';
+import { transformAnalysis, needsTransform } from '@/lib/repo-analysis/transform';
 
 // Needs the Node runtime (AWS SDK + Freestyle client), not edge. Both handlers
 // are now fast: GET is a cache read; POST only boots/refs a VM and launches a
@@ -134,8 +136,34 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   }
 
   const stale = currentSha != null && currentSha !== cached.sha;
+
+  // Lazy transform: first GET after a fresh sweep detects raw byEmail without
+  // precomputedContributors, runs the transform, and writes the result back
+  // to S3 so subsequent reads skip the transform entirely.
+  if (needsTransform(cached.analysis)) {
+    try {
+      const identityByEmail = identityMap?.identityByEmail ?? {};
+      const transformed = transformAnalysis(cached.analysis, identityByEmail);
+      // Mutate in place so the response below uses the transformed data
+      cached.analysis.precomputedContributors = transformed.precomputedContributors;
+      cached.analysis.personOwnership = transformed.personOwnership;
+      // Persist so subsequent reads are instant (fire-and-forget)
+      storeRepoAnalysisInS3(cached).catch((err) => {
+        console.error('[Repo Analysis] storeRepoAnalysisInS3 (post-transform) failed:', err);
+      });
+    } catch (err) {
+      console.error('[Repo Analysis] transform failed, serving raw byEmail:', err);
+    }
+  }
+
+  // Build response: ship precomputedContributors when available, fall back to byEmail
+  const { byEmail: _byEmail, personOwnership: _personOwnership, ...analysisFields } = cached.analysis;
+  const authorCount = cached.analysis.precomputedContributors
+    ? cached.analysis.precomputedContributors.length
+    : Object.keys(cached.analysis.byEmail).length;
+
   return NextResponse.json({
-    ...cached.analysis,
+    ...analysisFields,
     cached: true,
     owner,
     repo,
@@ -146,10 +174,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     inProgress,
     lastError,
     generatedAt: cached.generatedAt,
-    authorCount: Object.keys(cached.analysis.byEmail).length,
-    // Lowercased-email → GitHub account (or null). Empty until the first visit
-    // warms it; the client seeds its overlay cache from this and only resolves
-    // emails still missing, which write back into the map for the next visitor.
+    authorCount,
     identityByEmail: identityMap?.identityByEmail ?? {},
   });
 }
