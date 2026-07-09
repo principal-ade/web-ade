@@ -1250,8 +1250,16 @@ export default function HomePage() {
           color: theme.colors.textMuted,
         }}
       >
-        <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
           <span>© {new Date().getFullYear()} Principal AI</span>
+          <a
+            href="https://discord.gg/G3qdcC2DXq"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline"
+          >
+            Discord
+          </a>
         </div>
       </footer>
 
