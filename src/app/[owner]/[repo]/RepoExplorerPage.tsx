@@ -5026,7 +5026,7 @@ const ContributorsPane: React.FC<{
                             fontWeight: theme.fontWeights.semibold,
                           }}
                         >
-                          {row.name}
+                          {row.login ?? row.name}
                         </span>
                       </div>
                       <span

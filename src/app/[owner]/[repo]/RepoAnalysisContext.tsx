@@ -125,6 +125,11 @@ export function RepoAnalysisProvider({
   // Bumped on every owner/repo change; an in-flight poll loop bails the moment
   // it sees its captured epoch go stale.
   const epochRef = useRef(0);
+  // Accumulated person-key → file → lines ownership, eagerly fetched from the
+  // paginated /ownership endpoint. Populated via a background page-through
+  // (runs once after analysis loads) and read by the contributionLayers memo
+  // to build highlight layers on hover.
+  const personOwnershipRef = useRef<Record<string, Record<string, number>>>({});
 
   const applyResult = useCallback((payload: RepoAnalysisPayload) => {
     setAnalysis(payload);
@@ -311,11 +316,48 @@ export function RepoAnalysisProvider({
     };
   }, [owner, repo, run, pollUntilComplete]);
 
+  // Eagerly page through /ownership to hydrate highlight layers.
+  // Runs once after analysis loads; accumulates into personOwnershipRef.
+  useEffect(() => {
+    if (!analysis) return;
+    // If analysis already carries personOwnership (e.g. pre-transform),
+    // seed the ref and skip the fetch.
+    if (analysis.personOwnership) {
+      personOwnershipRef.current = analysis.personOwnership;
+      return;
+    }
+    let cancelled = false;
+    const fetchOwnership = async () => {
+      let cursor = 0;
+      const limit = 200;
+      while (!cancelled) {
+        try {
+          const res = await fetch(
+            `/api/repo-analysis/${owner}/${repo}/ownership?cursor=${cursor}&limit=${limit}`,
+          );
+          if (!res.ok) break;
+          const data = await res.json();
+          if (cancelled) break;
+          for (const entry of data.page ?? []) {
+            personOwnershipRef.current[entry.key] = entry.ownership;
+          }
+          if (data.nextCursor == null) break;
+          cursor = data.nextCursor;
+        } catch {
+          break;
+        }
+      }
+    };
+    void fetchOwnership();
+    return () => { cancelled = true; };
+  }, [owner, repo, analysis?.sha]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const clear = useCallback(() => {
     setAnalysis(null);
     setMeta(null);
     setSelectedEmailsRaw([]);
     setState({ kind: 'idle' });
+    personOwnershipRef.current = {};
   }, []);
 
   const setSelectedEmails = useCallback((emails: string[] | null) => {
@@ -345,7 +387,12 @@ export function RepoAnalysisProvider({
   const selectedEmailsKey = selectedEmails.join(',');
   const contributionLayers = useMemo(() => {
     if (!analysis || selectedEmails.length === 0) return null;
-    const layers = buildMergedContributionLayers(analysis, selectedEmails);
+    // Hydrate with eagerly-loaded personOwnership so highlight layers
+    // resolve even though the main API response strips it for payload size.
+    const hydrated = Object.keys(personOwnershipRef.current).length > 0
+      ? { ...analysis, personOwnership: personOwnershipRef.current }
+      : analysis;
+    const layers = buildMergedContributionLayers(hydrated, selectedEmails);
     return layers.length > 0 ? layers : null;
     // selectedEmailsKey stands in for the array identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
