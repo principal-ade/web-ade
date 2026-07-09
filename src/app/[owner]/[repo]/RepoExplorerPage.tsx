@@ -4739,6 +4739,8 @@ interface ContributorRow {
   /** Stable key: blame email (analysis) or GitHub login (fallback). */
   key: string;
   name: string;
+  /** GitHub profile display name when different from login. */
+  displayName?: string;
   /** Small subtitle under the name (the email, or @login when overlaid). */
   secondary?: string;
   avatarUrl?: string;
@@ -4855,6 +4857,7 @@ const ContributorsPane: React.FC<{
           email: p.emails[0],
           emails: p.emails,
           name: p.name,
+          displayName: p.name !== p.login ? p.name : undefined,
           // When resolved, subtitle is the primary email (+N when merged);
           // otherwise the name already headlines, so no subtitle.
           secondary: p.login
@@ -5036,7 +5039,7 @@ const ContributorsPane: React.FC<{
                             fontWeight: theme.fontWeights.semibold,
                           }}
                         >
-                          {row.login ?? row.name}
+                          {row.displayName ?? row.login ?? row.name}
                         </span>
                       </div>
                       <span
