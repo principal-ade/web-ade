@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { ChevronLeft, ChevronRight, Star, Users, GitCommit, LayoutGrid, LayoutList } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Star, Users, GitCommit, LayoutGrid, LayoutList, Play, Pause } from 'lucide-react';
 import { GitFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
 import type { ContributionAnalysis } from '@/lib/repo-analysis/contributionLayers';
 import { trpc } from '@/lib/trpc/client';
@@ -30,6 +30,38 @@ function languageColor(language: string | null): string | undefined {
   };
   return COLORS[language] ?? '#6b7280';
 }
+
+const ChevronButton: React.FC<{ onClick: () => void; title: string; children: React.ReactNode }> = ({ onClick, title, children }) => {
+  const { theme } = useTheme();
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className="flex items-center justify-center"
+      style={{
+        width: 40, height: 40,
+        borderRadius: '50%',
+        border: `1px solid ${theme.colors.border}`,
+        background: theme.colors.surface,
+        color: theme.colors.text,
+        cursor: 'pointer',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+        transition: 'all 0.15s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = theme.colors.primary;
+        e.currentTarget.style.color = theme.colors.primary;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = theme.colors.border;
+        e.currentTarget.style.color = theme.colors.text;
+      }}
+    >
+      {children}
+    </button>
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Props
@@ -67,6 +99,8 @@ export function CommunityReposView({
 }: CommunityReposViewProps) {
   const { theme } = useTheme();
   const repos = data?.repos ?? [];
+  const reposRef = useRef(repos);
+  reposRef.current = repos;
   const [selectedFullName, setSelectedFullName] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [autoCycle, setAutoCycle] = useState(true);
@@ -77,6 +111,27 @@ export function CommunityReposView({
   const handleSelect = useCallback((fullName: string) => {
     setSelectedFullName(fullName);
     setAutoCycle(false);
+  }, []);
+
+  const navigateTo = useCallback(
+    (direction: -1 | 1) => {
+      setAutoCycle(false);
+      setSelectedFullName((curr) => {
+        const list = reposRef.current;
+        const current = curr ?? list[0]?.fullName ?? null;
+        const idx = list.findIndex((r) => r.fullName === current);
+        const next = list[(idx + direction + list.length) % list.length];
+        return next?.fullName ?? current;
+      });
+    },
+    [], // reposRef is stable across renders
+  );
+
+  const handlePrev = useCallback(() => navigateTo(-1), [navigateTo]);
+  const handleNext = useCallback(() => navigateTo(1), [navigateTo]);
+
+  const handleTogglePlay = useCallback(() => {
+    setAutoCycle((prev) => !prev);
   }, []);
 
   useEffect(() => {
@@ -233,6 +288,21 @@ export function CommunityReposView({
           error={heroError}
           cycleProgress={cycleProgress}
         />
+      )}
+
+      {/* Navigation controls */}
+      {repos.length > 1 && !heroLoading && (
+        <div className="flex items-center justify-center" style={{ gap: 12 }}>
+          <ChevronButton onClick={handlePrev} title="Previous repo">
+            <ChevronLeft size={18} />
+          </ChevronButton>
+          <ChevronButton onClick={handleTogglePlay} title={autoCycle ? 'Pause auto-cycle' : 'Resume auto-cycle'}>
+            {autoCycle ? <Pause size={14} /> : <Play size={14} style={{ marginLeft: 2 }} />}
+          </ChevronButton>
+          <ChevronButton onClick={handleNext} title="Next repo">
+            <ChevronRight size={18} />
+          </ChevronButton>
+        </div>
       )}
 
       {/* Toggle bar */}
