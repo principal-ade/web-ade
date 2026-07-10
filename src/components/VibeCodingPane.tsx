@@ -149,7 +149,7 @@ export default function VibeCodingPane({
                 Scanning codebase...
               </div>
               <div className="text-xs mt-1" style={{ color: theme.colors.textMuted }}>
-                Searching for isRecord, is_record patterns
+                Searching for isRecord, is_record, is_empty patterns
               </div>
               {scanDirectory && (
                 <div className="text-xs mt-2 px-2 py-1 rounded inline-block" style={{

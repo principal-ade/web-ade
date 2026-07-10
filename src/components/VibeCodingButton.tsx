@@ -189,7 +189,7 @@ export default forwardRef<VibeCodingButtonHandle, VibeCodingButtonProps>(functio
 
     try {
       const res = await fetch(
-        `/api/github/code-search?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&q=${encodeURIComponent('isRecord,is_record')}`
+        `/api/github/code-search?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&q=${encodeURIComponent('isRecord,is_record,is_empty')}`
       );
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Request failed' }));

@@ -268,5 +268,6 @@ export interface GitHubCodeSearchResponse {
   total_files: number;
   total_occurrences: number;
   incomplete_results: boolean;
+  terms: string[];
   items: GitHubCodeSearchItem[];
 }
