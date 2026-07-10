@@ -55,6 +55,13 @@ export async function GET(request: NextRequest) {
 
     const githubToken = await getGitHubApiToken();
 
+    if (!githubToken) {
+      return NextResponse.json(
+        { error: 'Sign in required to run code search.' },
+        { status: 401 }
+      );
+    }
+
     const headers: Record<string, string> = {
       Accept: 'application/vnd.github.v3+json',
     };
@@ -76,12 +83,15 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    // Merge unique files across all term searches
+    // Merge unique files across all term searches, tracking which terms matched each file
     const uniqueItems = new Map<string, GitHubRawCodeSearchItem>();
+    const matchedTermsByFile = new Map<string, Set<string>>();
     let incompleteResults = false;
     let searchError: string | null = null;
 
-    for (const result of searches) {
+    for (let i = 0; i < searches.length; i++) {
+      const result = searches[i]!;
+      const term = terms[i]!;
       if (result.status === 'rejected') {
         const err = result.reason;
         if (err?.message?.includes('rate limit')) {
@@ -96,7 +106,11 @@ export async function GET(request: NextRequest) {
       const data = result.value;
       if (data.incomplete_results) incompleteResults = true;
       for (const item of data.items) {
-        uniqueItems.set(item.path, item);
+        if (!uniqueItems.has(item.path)) {
+          uniqueItems.set(item.path, item);
+          matchedTermsByFile.set(item.path, new Set());
+        }
+        matchedTermsByFile.get(item.path)!.add(term);
       }
     }
 
@@ -122,6 +136,7 @@ export async function GET(request: NextRequest) {
       items: allItems.map((i) => ({
         path: i.path,
         html_url: i.html_url,
+        matched_terms: Array.from(matchedTermsByFile.get(i.path) ?? []),
       })),
     });
   } catch (error) {

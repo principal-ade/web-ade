@@ -262,6 +262,7 @@ export interface GitHubRawCodeSearchResponse {
 export interface GitHubCodeSearchItem {
   path: string;
   html_url: string;
+  matched_terms: string[];
 }
 
 export interface GitHubCodeSearchResponse {

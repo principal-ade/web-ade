@@ -31,7 +31,7 @@ function getSeverity(occurrences: number): SeverityConfig {
 interface VibeCodingPaneProps {
   fileCount: number | null;
   occurrenceCount: number | null;
-  files: { path: string; html_url: string }[];
+  files: { path: string; html_url: string; matched_terms: string[] }[];
   terms: string[];
   loading: boolean;
   error: string | null;
@@ -292,47 +292,123 @@ export default function VibeCodingPane({
               </div>
             )}
 
-            {/* File List */}
+            {/* File List — grouped by matched term */}
             {files.length > 0 && (
-              <div>
-                <div className="text-xs font-medium mb-1.5" style={{ color: theme.colors.textMuted }}>
+              <div className="space-y-3">
+                <div className="text-xs font-medium" style={{ color: theme.colors.textMuted }}>
                   Matching files ({fileCount} total)
                 </div>
-                <div
-                  className="max-h-[300px] overflow-y-auto space-y-0.5 rounded-lg border"
-                  style={{
-                    borderColor: `color-mix(in srgb, ${theme.colors.textMuted} 12%, transparent)`,
-                    scrollbarWidth: 'thin',
-                  }}
-                >
-                  {files.slice(0, 50).map((f) => (
-                    <a
-                      key={f.path}
-                      href={f.html_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-2.5 py-1.5 text-xs transition-colors hover:opacity-80 rounded"
-                      style={{
-                        color: theme.colors.textSecondary,
-                        fontFamily: theme.fonts.monospace,
-                      }}
-                    >
-                      <span
-                        className="w-1.5 h-1.5 rounded-full shrink-0"
-                        style={{
-                          background: severity!.color,
-                          opacity: 0.6,
-                        }}
-                      />
-                      {f.path}
-                    </a>
-                  ))}
-                  {files.length > 50 && (
-                    <div className="px-2.5 py-1.5 text-xs" style={{ color: theme.colors.textMuted }}>
-                      +{files.length - 50} more files
-                    </div>
-                  )}
-                </div>
+                {(() => {
+                  const termOrder = terms.length > 0 ? terms : Array.from(new Set(files.flatMap((f) => f.matched_terms)));
+                  const grouped = new Map<string, typeof files>();
+                  const ungrouped: typeof files = [];
+                  for (const f of files) {
+                    const fTerms = f.matched_terms.filter((t) => termOrder.includes(t));
+                    if (fTerms.length === 0) {
+                      ungrouped.push(f);
+                      continue;
+                    }
+                    for (const t of fTerms) {
+                      if (!grouped.has(t)) grouped.set(t, []);
+                      grouped.get(t)!.push(f);
+                    }
+                  }
+                  return (
+                    <>
+                      {termOrder.map((term) => {
+                        const termFiles = grouped.get(term);
+                        if (!termFiles || termFiles.length === 0) return null;
+                        const maxShow = 20;
+                        return (
+                          <div key={term}>
+                            <div
+                              className="flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md mb-1"
+                              style={{
+                                background: `color-mix(in srgb, ${theme.colors.primary} 10%, transparent)`,
+                                color: theme.colors.primary,
+                              }}
+                            >
+                              <span className="px-1.5 py-0.5 rounded font-mono" style={{ background: `color-mix(in srgb, ${theme.colors.primary} 15%, transparent)` }}>
+                                {term}
+                              </span>
+                              <span style={{ color: theme.colors.textMuted }}>
+                                {termFiles.length} file{termFiles.length !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                            <div
+                              className="max-h-[240px] overflow-y-auto space-y-0.5 rounded-lg border ml-2"
+                              style={{
+                                borderColor: `color-mix(in srgb, ${theme.colors.textMuted} 12%, transparent)`,
+                                scrollbarWidth: 'thin',
+                              }}
+                            >
+                              {termFiles.slice(0, maxShow).map((f) => (
+                                <a
+                                  key={`${term}:${f.path}`}
+                                  href={f.html_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 px-2.5 py-1.5 text-xs transition-colors hover:opacity-80 rounded"
+                                  style={{
+                                    color: theme.colors.textSecondary,
+                                    fontFamily: theme.fonts.monospace,
+                                  }}
+                                >
+                                  <span
+                                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                                    style={{ background: severity!.color, opacity: 0.6 }}
+                                  />
+                                  {f.path}
+                                </a>
+                              ))}
+                              {termFiles.length > maxShow && (
+                                <div className="px-2.5 py-1.5 text-xs" style={{ color: theme.colors.textMuted }}>
+                                  +{termFiles.length - maxShow} more files
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {ungrouped.length > 0 && (
+                        <div>
+                          <div className="text-xs font-medium px-2 py-1 mb-1" style={{ color: theme.colors.textMuted }}>
+                            Other ({ungrouped.length})
+                          </div>
+                          <div
+                            className="max-h-[240px] overflow-y-auto space-y-0.5 rounded-lg border ml-2"
+                            style={{
+                              borderColor: `color-mix(in srgb, ${theme.colors.textMuted} 12%, transparent)`,
+                              scrollbarWidth: 'thin',
+                            }}
+                          >
+                            {ungrouped.slice(0, 20).map((f) => (
+                              <a
+                                key={f.path}
+                                href={f.html_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 px-2.5 py-1.5 text-xs transition-colors hover:opacity-80 rounded"
+                                style={{
+                                  color: theme.colors.textSecondary,
+                                  fontFamily: theme.fonts.monospace,
+                                }}
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: severity!.color, opacity: 0.6 }} />
+                                {f.path}
+                              </a>
+                            ))}
+                            {ungrouped.length > 20 && (
+                              <div className="px-2.5 py-1.5 text-xs" style={{ color: theme.colors.textMuted }}>
+                                +{ungrouped.length - 20} more files
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             )}
           </>

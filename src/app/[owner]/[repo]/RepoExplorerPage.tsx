@@ -1958,6 +1958,7 @@ const Header: React.FC<{
   filePaths,
 }) => {
   const { theme } = useTheme();
+  const { isAuthenticated } = useAuth();
   // Mobile: the repo opener collapses into a "Search GitHub" button that opens
   // a full-screen search sheet (the header is too cramped for the input).
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -2194,15 +2195,19 @@ const Header: React.FC<{
           <AgentViewButton path={`/${owner}/${repo}`} iconOnly />
         </div>
 
-        {/* Vibe coding detector — counts isRecord occurrences via code search. */}
-        <VibeCodingButton
-          owner={owner}
-          repo={repo}
-          filePaths={filePaths}
-          onHighlight={onVibeCodingHighlight}
-          onDataChange={onVibeCodingDataChange}
-          onOpenView={onOpenVibeView}
-        />
+        {/* Vibe coding detector — counts isRecord occurrences via code search.
+            Auth-gated: the underlying GitHub code-search API is rate-limit-strict,
+            so only show the button to signed-in users (auth raises the ceiling). */}
+        {isAuthenticated && (
+          <VibeCodingButton
+            owner={owner}
+            repo={repo}
+            filePaths={filePaths}
+            onHighlight={onVibeCodingHighlight}
+            onDataChange={onVibeCodingDataChange}
+            onOpenView={onOpenVibeView}
+          />
+        )}
 
         {/* Bookmarks passport — slides in the side panel. Hidden on mobile. */}
         <button

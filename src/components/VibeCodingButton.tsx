@@ -44,7 +44,7 @@ function computeScanStep(totalFiles: number): number {
 export interface VibeCodingData {
   fileCount: number | null;
   occurrenceCount: number | null;
-  files: { path: string; html_url: string }[];
+  files: { path: string; html_url: string; matched_terms: string[] }[];
   terms: string[];
   loading: boolean;
   error: string | null;
