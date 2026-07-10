@@ -10,6 +10,7 @@ interface VibeCodingButtonProps {
   repo: string;
   filePaths: string[];
   onHighlight?: (paths: string[] | null) => void;
+  onScanChange?: (scanning: boolean) => void;
 }
 
 type SeverityLevel = 'safe' | 'low' | 'moderate' | 'high' | 'critical';
@@ -30,7 +31,7 @@ const SEVERITY: Record<SeverityLevel, SeverityConfig> = {
 };
 
 function getSeverity(occurrences: number): SeverityConfig {
-  if (occurrences === 0) return SEVERITY.safe;
+  if (occurrences < 5) return SEVERITY.safe;
   if (occurrences < 10) return SEVERITY.low;
   if (occurrences < 50) return SEVERITY.moderate;
   if (occurrences < 100) return SEVERITY.high;
@@ -42,7 +43,7 @@ const SCAN_WINDOW = 80;
 const SCAN_STEP = 30;
 const SCAN_INTERVAL = 90;
 
-export default function VibeCodingButton({ owner, repo, filePaths, onHighlight }: VibeCodingButtonProps) {
+export default function VibeCodingButton({ owner, repo, filePaths, onHighlight, onScanChange }: VibeCodingButtonProps) {
   const { theme } = useTheme();
   const [fileCount, setFileCount] = useState<number | null>(null);
   const [occurrenceCount, setOccurrenceCount] = useState<number | null>(null);
@@ -58,6 +59,18 @@ export default function VibeCodingButton({ owner, repo, filePaths, onHighlight }
   const scanOffsetRef = useRef(0);
   const [scanActive, setScanActive] = useState(false);
 
+  // Deferred reveal: store API results until the scan sweep finishes.
+  const pendingResultsRef = useRef<GitHubCodeSearchResponse | null>(null);
+
+  const revealResults = useCallback((data: GitHubCodeSearchResponse) => {
+    setFileCount(data.total_files);
+    setOccurrenceCount(data.total_occurrences);
+    setTerms(data.terms);
+    setFiles(data.items);
+    onHighlight?.(data.items.map((i) => i.path));
+    pendingResultsRef.current = null;
+  }, [onHighlight]);
+
   const severity = useMemo(
     () => (occurrenceCount !== null ? getSeverity(occurrenceCount) : null),
     [occurrenceCount]
@@ -69,18 +82,44 @@ export default function VibeCodingButton({ owner, repo, filePaths, onHighlight }
     if (loading) return;
     setLoading(true);
     setError(null);
+    setFileCount(null);
+    setOccurrenceCount(null);
+    setTerms([]);
+    setFiles([]);
+    pendingResultsRef.current = null;
 
-    // Start scan animation over the city
+    // Start scan animation over the city — sweeps a sliding window through
+    // all file paths. Each tick highlights a new batch, creating the illusion
+    // of a search beam sweeping across File City.
     if (filePaths.length > 0) {
       setScanActive(true);
+      onScanChange?.(true);
       scanOffsetRef.current = 0;
       const timer = setInterval(() => {
         const offset = scanOffsetRef.current;
-        const batch = filePaths.slice(offset, offset + SCAN_WINDOW);
+        const newOffset = (offset + SCAN_STEP) % filePaths.length;
+
+        // Detect sweep completion (offset wrapped around)
+        if (newOffset < offset) {
+          if (pendingResultsRef.current) {
+            clearInterval(timer);
+            scanTimerRef.current = null;
+            setScanActive(false);
+            onScanChange?.(false);
+            revealResults(pendingResultsRef.current);
+            return;
+          }
+        }
+
+        const batch = filePaths.slice(newOffset, newOffset + SCAN_WINDOW);
         onHighlight?.(batch);
-        scanOffsetRef.current = (scanOffsetRef.current + SCAN_STEP) % filePaths.length;
+        scanOffsetRef.current = newOffset;
       }, SCAN_INTERVAL);
       scanTimerRef.current = timer;
+    } else {
+      // No files to animate — show the scanning state anyway
+      setScanActive(true);
+      onScanChange?.(true);
     }
 
     try {
@@ -93,34 +132,28 @@ export default function VibeCodingButton({ owner, repo, filePaths, onHighlight }
       }
       const data: GitHubCodeSearchResponse = await res.json();
 
-      // Stop scan, show results with a short reveal delay
       if (scanTimerRef.current) {
-        clearInterval(scanTimerRef.current);
-        scanTimerRef.current = null;
+        // Scan is still running — queue results for when the sweep finishes
+        pendingResultsRef.current = data;
+      } else {
+        // No scan animation (empty file list) or scan already completed
+        setScanActive(false);
+        onScanChange?.(false);
+        revealResults(data);
       }
-      setScanActive(false);
-
-      setFileCount(data.total_files);
-      setOccurrenceCount(data.total_occurrences);
-      setTerms(data.terms);
-      setFiles(data.items);
-
-      // Slight delay before revealing for dramatic effect
-      setTimeout(() => {
-        onHighlight?.(data.items.map((i) => i.path));
-      }, 400);
     } catch (e) {
       if (scanTimerRef.current) {
         clearInterval(scanTimerRef.current);
         scanTimerRef.current = null;
       }
       setScanActive(false);
+      onScanChange?.(false);
       setError(e instanceof Error ? e.message : 'Unknown error');
       onHighlight?.(null);
     } finally {
       setLoading(false);
     }
-  }, [owner, repo, filePaths, loading, onHighlight]);
+  }, [owner, repo, filePaths, loading, onHighlight, onScanChange, revealResults]);
 
   const clear = useCallback(() => {
     if (scanTimerRef.current) {
@@ -128,13 +161,15 @@ export default function VibeCodingButton({ owner, repo, filePaths, onHighlight }
       scanTimerRef.current = null;
     }
     setScanActive(false);
+    onScanChange?.(false);
     onHighlight?.(null);
     setFileCount(null);
     setOccurrenceCount(null);
     setTerms([]);
     setFiles([]);
     setShowDropdown(false);
-  }, [onHighlight]);
+    pendingResultsRef.current = null;
+  }, [onHighlight, onScanChange]);
 
   useEffect(() => {
     return () => {
