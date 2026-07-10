@@ -279,7 +279,6 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
   // Vibe-coding detector — paths containing isRecord, set by the header
   // button's search. Drives a highlight layer on the File City map.
   const [vibeCodingPaths, setVibeCodingPaths] = useState<string[] | null>(null);
-  const [vibeCodingScanning, setVibeCodingScanning] = useState(false);
 
   const router = useRouter();
 
@@ -1523,7 +1522,6 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
         repoActive={leftViewMode !== 'tours'}
         onShowOverview={() => setLeftViewMode('tours')}
         onVibeCodingHighlight={setVibeCodingPaths}
-        onVibeCodingScanChange={setVibeCodingScanning}
         filePaths={filePaths}
       />
       <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
@@ -1763,7 +1761,6 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
             setFileSide('right');
           }}
           vibeCodingHighlightLayer={vibeCodingHighlightLayer}
-          vibeCodingScanning={vibeCodingScanning}
         />
       </div>
       {/* Right-docked source viewer for the picked file. Independent of the
@@ -1882,8 +1879,6 @@ const Header: React.FC<{
   onShowOverview: () => void;
   /** Vibe-coding highlight: paths containing isRecord for the File City map. */
   onVibeCodingHighlight: (paths: string[] | null) => void;
-  /** Scan-active state — the readme is suppressed while the beam sweeps. */
-  onVibeCodingScanChange?: (scanning: boolean) => void;
   /** All file paths in the repo (for scan animation). */
   filePaths: string[];
 }> = ({
@@ -1900,7 +1895,6 @@ const Header: React.FC<{
   repoActive,
   onShowOverview,
   onVibeCodingHighlight,
-  onVibeCodingScanChange,
   filePaths,
 }) => {
   const { theme } = useTheme();
@@ -2141,7 +2135,7 @@ const Header: React.FC<{
         </div>
 
         {/* Vibe coding detector — counts isRecord occurrences via code search. */}
-        <VibeCodingButton owner={owner} repo={repo} filePaths={filePaths} onHighlight={onVibeCodingHighlight} onScanChange={onVibeCodingScanChange} />
+        <VibeCodingButton owner={owner} repo={repo} filePaths={filePaths} onHighlight={onVibeCodingHighlight} />
 
         {/* Bookmarks passport — slides in the side panel. Hidden on mobile. */}
         <button
@@ -6336,8 +6330,6 @@ const RightPane: React.FC<{
   onOpenFile: (filePath: string) => void;
   /** Vibe-coding highlight — files containing isRecord. */
   vibeCodingHighlightLayer: HighlightLayer | null;
-  /** Scan active — suppress the readme while the beam sweeps. */
-  vibeCodingScanning: boolean;
 }> = ({
   owner,
   repo,
@@ -6375,7 +6367,6 @@ const RightPane: React.FC<{
   onCloseOverlay,
   onOpenFile,
   vibeCodingHighlightLayer,
-  vibeCodingScanning,
 }) => {
   const { theme } = useTheme();
   // Contribution-coverage highlight for the contributor picked in the
@@ -6643,11 +6634,13 @@ const RightPane: React.FC<{
       // (markdown left + city framed top-right + file-type legend bottom-right).
       // Gated on no tour being open: the panel ranks readme above tour, so the
       // tour slice winning requires this to be null while a tour is active.
-      // Also suppressed while the vibe-coding scan sweeps across the city.
+      // Also suppressed while the vibe-coding highlight layer is present —
+      // whether the scan beam is sweeping or results are shown — so the user
+      // sees the full city with highlights first.
       readme: {
         scope: 'repository' as const,
         name: 'readme',
-        data: selectedTour?.tour || vibeCodingScanning ? null : readmeView,
+        data: selectedTour?.tour || vibeCodingHighlightLayer !== null ? null : readmeView,
         loading: readmeViewLoading,
         error: null,
         refresh: async () => {},
@@ -6690,7 +6683,6 @@ const RightPane: React.FC<{
     pullRequestViewLoading,
     readmeView,
     readmeViewLoading,
-    vibeCodingScanning,
     analysis,
   ]);
 

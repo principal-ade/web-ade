@@ -10,7 +10,6 @@ interface VibeCodingButtonProps {
   repo: string;
   filePaths: string[];
   onHighlight?: (paths: string[] | null) => void;
-  onScanChange?: (scanning: boolean) => void;
 }
 
 type SeverityLevel = 'safe' | 'low' | 'moderate' | 'high' | 'critical';
@@ -43,7 +42,7 @@ const SCAN_WINDOW = 80;
 const SCAN_STEP = 30;
 const SCAN_INTERVAL = 90;
 
-export default function VibeCodingButton({ owner, repo, filePaths, onHighlight, onScanChange }: VibeCodingButtonProps) {
+export default function VibeCodingButton({ owner, repo, filePaths, onHighlight }: VibeCodingButtonProps) {
   const { theme } = useTheme();
   const [fileCount, setFileCount] = useState<number | null>(null);
   const [occurrenceCount, setOccurrenceCount] = useState<number | null>(null);
@@ -93,7 +92,6 @@ export default function VibeCodingButton({ owner, repo, filePaths, onHighlight, 
     // of a search beam sweeping across File City.
     if (filePaths.length > 0) {
       setScanActive(true);
-      onScanChange?.(true);
       scanOffsetRef.current = 0;
       const timer = setInterval(() => {
         const offset = scanOffsetRef.current;
@@ -105,7 +103,6 @@ export default function VibeCodingButton({ owner, repo, filePaths, onHighlight, 
             clearInterval(timer);
             scanTimerRef.current = null;
             setScanActive(false);
-            onScanChange?.(false);
             revealResults(pendingResultsRef.current);
             return;
           }
@@ -119,7 +116,6 @@ export default function VibeCodingButton({ owner, repo, filePaths, onHighlight, 
     } else {
       // No files to animate — show the scanning state anyway
       setScanActive(true);
-      onScanChange?.(true);
     }
 
     try {
@@ -138,7 +134,6 @@ export default function VibeCodingButton({ owner, repo, filePaths, onHighlight, 
       } else {
         // No scan animation (empty file list) or scan already completed
         setScanActive(false);
-        onScanChange?.(false);
         revealResults(data);
       }
     } catch (e) {
@@ -147,13 +142,12 @@ export default function VibeCodingButton({ owner, repo, filePaths, onHighlight, 
         scanTimerRef.current = null;
       }
       setScanActive(false);
-      onScanChange?.(false);
       setError(e instanceof Error ? e.message : 'Unknown error');
       onHighlight?.(null);
     } finally {
       setLoading(false);
     }
-  }, [owner, repo, filePaths, loading, onHighlight, onScanChange, revealResults]);
+  }, [owner, repo, filePaths, loading, onHighlight, revealResults]);
 
   const clear = useCallback(() => {
     if (scanTimerRef.current) {
@@ -161,7 +155,6 @@ export default function VibeCodingButton({ owner, repo, filePaths, onHighlight, 
       scanTimerRef.current = null;
     }
     setScanActive(false);
-    onScanChange?.(false);
     onHighlight?.(null);
     setFileCount(null);
     setOccurrenceCount(null);
@@ -169,7 +162,7 @@ export default function VibeCodingButton({ owner, repo, filePaths, onHighlight, 
     setFiles([]);
     setShowDropdown(false);
     pendingResultsRef.current = null;
-  }, [onHighlight, onScanChange]);
+  }, [onHighlight]);
 
   useEffect(() => {
     return () => {
