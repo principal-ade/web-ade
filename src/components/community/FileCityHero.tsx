@@ -23,6 +23,11 @@ export interface FileCityHeroProps {
   repo: CarouselRepo;
   /** Auto-cycle progress 0–1, or 0 when paused. */
   cycleProgress?: number;
+  /**
+   * horizontal — side-by-side info + map (desktop).
+   * vertical — stacked full-width card (mobile).
+   */
+  layout?: 'horizontal' | 'vertical';
 }
 
 function AvatarImg({
@@ -79,11 +84,13 @@ function ContributorCard({
   name,
   statLabel,
   index = 0,
+  compact = false,
 }: {
   label: string;
   name: string;
   statLabel: string;
   index?: number;
+  compact?: boolean;
 }) {
   const { theme } = useTheme();
   const profileUrl = `/${encodeURIComponent(name)}`;
@@ -91,7 +98,7 @@ function ContributorCard({
   const baseStyle: React.CSSProperties = {
     background: `color-mix(in srgb, ${theme.colors.primary} 8%, transparent)`,
     borderRadius: 12,
-    padding: '12px 14px',
+    padding: compact ? '10px 12px' : '12px 14px',
     border: `1px solid ${theme.colors.primary}22`,
     opacity: 0,
     transform: 'translateY(8px)',
@@ -99,25 +106,34 @@ function ContributorCard({
     textDecoration: 'none',
     display: 'block',
     cursor: 'pointer',
+    flex: compact ? 1 : undefined,
+    minWidth: compact ? 0 : undefined,
   };
 
   const content = (
     <>
-      <div style={{ fontSize: theme.fontSizes[0], fontWeight: theme.fontWeights.semibold, color: theme.colors.primary, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+      <div style={{ fontSize: theme.fontSizes[0], fontWeight: theme.fontWeights.semibold, color: theme.colors.primary, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: compact ? 6 : 8 }}>
         {label}
       </div>
-      <div className="flex items-center" style={{ gap: 10 }}>
+      <div className="flex items-center" style={{ gap: compact ? 8 : 10 }}>
         <AvatarImg
           src={`https://github.com/${encodeURIComponent(name)}.png?size=32`}
           fallbackLetter={name.charAt(0).toUpperCase()}
-          size={32}
+          size={compact ? 28 : 32}
         />
-        <div>
-          <div style={{ fontSize: theme.fontSizes[2], fontWeight: theme.fontWeights.semibold, color: theme.colors.text }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{
+            fontSize: compact ? theme.fontSizes[1] : theme.fontSizes[2],
+            fontWeight: theme.fontWeights.semibold,
+            color: theme.colors.text,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>
             {name}
           </div>
-          <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: 4 }}>
-            <GitCommit size={14} />
+          <div style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <GitCommit size={compact ? 12 : 14} />
             {statLabel}
           </div>
         </div>
@@ -135,8 +151,10 @@ function ContributorCard({
 export function FileCityHero({
   repo,
   cycleProgress,
+  layout = 'horizontal',
 }: FileCityHeroProps) {
   const { theme } = useTheme();
+  const isVertical = layout === 'vertical';
   const imageUrl = useMemo(
     () => fileCityImageUrl(repo.owner, repo.repo),
     [repo.owner, repo.repo],
@@ -166,16 +184,205 @@ export function FileCityHero({
     return withLines.reduce((best, c) => (c.lines > best.lines ? c : best));
   }, [repo.topContributors]);
 
+  const infoPanel = (
+    <div
+      style={{
+        width: isVertical ? '100%' : 450,
+        minWidth: isVertical ? 0 : 450,
+        flexShrink: 0,
+        flexGrow: 0,
+        background: theme.colors.surface,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: isVertical ? 12 : 20,
+        padding: isVertical ? 16 : 24,
+        overflowY: isVertical ? 'hidden' : 'auto',
+      }}
+    >
+      <div style={{ display: 'flex', gap: isVertical ? 12 : 16, alignItems: 'center' }}>
+        <AvatarImg
+          src={`https://github.com/${encodeURIComponent(repo.owner)}.png?size=80`}
+          fallbackLetter={repo.owner.charAt(0).toUpperCase()}
+          size={isVertical ? 56 : 80}
+        />
+
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <a
+            href={`/${repo.owner}/${repo.repo}`}
+            target="_blank" rel="noopener noreferrer"
+            style={{
+              fontSize: isVertical ? theme.fontSizes[4] : theme.fontSizes[6],
+              fontWeight: theme.fontWeights.bold,
+              color: theme.colors.text,
+              lineHeight: 1.2,
+              marginBottom: 4,
+              textDecoration: 'none',
+              display: 'block',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {repo.repo}
+          </a>
+          <a
+            href={`/${repo.owner}`}
+            target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: theme.fontSizes[2], color: theme.colors.textMuted, textDecoration: 'none', display: 'inline-block' }}
+          >
+            {repo.owner}
+          </a>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: isVertical ? 14 : 20, flexWrap: 'wrap' }}>
+        {typeof repo.totalLines === 'number' && repo.totalLines > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span style={{ fontSize: isVertical ? theme.fontSizes[1] : theme.fontSizes[2], color: theme.colors.textMuted }}>
+              {formatNumber(repo.totalLines)} lines
+            </span>
+          </div>
+        )}
+        <div className="flex items-center gap-1.5">
+          <Star size={isVertical ? 14 : 16} style={{ color: theme.colors.textMuted }} />
+          <span style={{ fontSize: isVertical ? theme.fontSizes[1] : theme.fontSizes[2], color: theme.colors.textMuted }}>
+            {formatNumber(repo.stargazersCount)} stars
+          </span>
+        </div>
+      </div>
+
+      {repo.description && (
+        <div
+          style={{
+            fontSize: theme.fontSizes[1],
+            color: theme.colors.textMuted,
+            lineHeight: 1.45,
+            display: '-webkit-box',
+            WebkitLineClamp: isVertical ? 2 : 3,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {repo.description}
+        </div>
+      )}
+
+      {(topByCommits || topByLines) && (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: isVertical ? 'row' : 'column',
+            gap: isVertical ? 8 : 12,
+          }}
+        >
+          {topByCommits && (
+            <ContributorCard
+              index={0}
+              compact={isVertical}
+              label="Most commits"
+              name={topByCommits.name}
+              statLabel={`${formatNumber(topByCommits.commits)} commits`}
+            />
+          )}
+
+          {topByLines && (
+            <ContributorCard
+              index={1}
+              compact={isVertical}
+              label="Most lines"
+              name={topByLines.name}
+              statLabel={`${formatNumber(topByLines.lines)} lines`}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  const mapPanel = (
+    <div
+      style={{
+        flex: 1,
+        position: 'relative',
+        overflow: 'hidden',
+        background: theme.colors.background,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        // On vertical/mobile: map claims remaining height so the card fills the slide
+        ...(isVertical
+          ? {
+              width: '100%',
+              minHeight: 180,
+              flex: '1 1 auto',
+            }
+          : {}),
+      }}
+    >
+      {!imageLoaded && !imageError && (
+        <div
+          style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: theme.colors.textMuted, fontSize: theme.fontSizes[1],
+            zIndex: 2,
+          }}
+        >
+          Loading map...
+        </div>
+      )}
+
+      {imageError ? (
+        <div
+          style={{
+            color: theme.colors.textMuted,
+            fontSize: theme.fontSizes[1],
+            textAlign: 'center',
+            padding: 24,
+          }}
+        >
+          Could not load city map
+        </div>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={imageUrl}
+          src={imageUrl}
+          alt={`${repo.fullName} file city map`}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            opacity: imageLoaded ? 1 : 0,
+            transition: 'opacity 0.25s ease',
+          }}
+          onLoad={() => setImageLoaded(true)}
+          onError={() => setImageError(true)}
+          draggable={false}
+        />
+      )}
+    </div>
+  );
+
   return (
     <div
       style={{
         width: '100%',
-        height: 480,
-        borderRadius: 16,
+        height: isVertical ? 'auto' : 480,
+        borderRadius: isVertical ? 12 : 16,
         overflow: 'hidden',
         border: `1px solid ${theme.colors.border}`,
         display: 'flex',
+        flexDirection: isVertical ? 'column' : 'row',
         position: 'relative',
+        background: theme.colors.surface,
+        // Fill the swipe slide on mobile
+        ...(isVertical
+          ? {
+              height: '100%',
+              minHeight: '100%',
+            }
+          : {}),
       }}
     >
       <style>{`
@@ -201,150 +408,8 @@ export function FileCityHero({
         </div>
       )}
 
-      {/* ---------- Left panel: info from carousel cache ---------- */}
-      <div
-        style={{
-          width: 450,
-          minWidth: 450,
-          flexShrink: 0,
-          background: theme.colors.surface,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 20,
-          padding: 24,
-          overflowY: 'auto',
-        }}
-      >
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <AvatarImg
-            src={`https://github.com/${encodeURIComponent(repo.owner)}.png?size=80`}
-            fallbackLetter={repo.owner.charAt(0).toUpperCase()}
-            size={80}
-          />
-
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <a
-              href={`/${repo.owner}/${repo.repo}`}
-              target="_blank" rel="noopener noreferrer"
-              style={{ fontSize: theme.fontSizes[6], fontWeight: theme.fontWeights.bold, color: theme.colors.text, lineHeight: 1.2, marginBottom: 4, textDecoration: 'none', display: 'block' }}
-            >
-              {repo.repo}
-            </a>
-            <a
-              href={`/${repo.owner}`}
-              target="_blank" rel="noopener noreferrer"
-              style={{ fontSize: theme.fontSizes[2], color: theme.colors.textMuted, textDecoration: 'none', display: 'inline-block' }}
-            >
-              {repo.owner}
-            </a>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-          {typeof repo.totalLines === 'number' && repo.totalLines > 0 && (
-            <div className="flex items-center gap-1.5">
-              <span style={{ fontSize: theme.fontSizes[2], color: theme.colors.textMuted }}>
-                {formatNumber(repo.totalLines)} lines
-              </span>
-            </div>
-          )}
-          <div className="flex items-center gap-1.5">
-            <Star size={16} style={{ color: theme.colors.textMuted }} />
-            <span style={{ fontSize: theme.fontSizes[2], color: theme.colors.textMuted }}>
-              {formatNumber(repo.stargazersCount)} stars
-            </span>
-          </div>
-        </div>
-
-        {repo.description && (
-          <div
-            style={{
-              fontSize: theme.fontSizes[1],
-              color: theme.colors.textMuted,
-              lineHeight: 1.45,
-              display: '-webkit-box',
-              WebkitLineClamp: 3,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
-          >
-            {repo.description}
-          </div>
-        )}
-
-        {topByCommits && (
-          <ContributorCard
-            index={0}
-            label="Most commits"
-            name={topByCommits.name}
-            statLabel={`${formatNumber(topByCommits.commits)} commits`}
-          />
-        )}
-
-        {topByLines && (
-          <ContributorCard
-            index={1}
-            label="Most lines"
-            name={topByLines.name}
-            statLabel={`${formatNumber(topByLines.lines)} lines`}
-          />
-        )}
-      </div>
-
-      {/* ---------- Right panel: pre-rendered File City PNG ---------- */}
-      <div
-        style={{
-          flex: 1,
-          position: 'relative',
-          overflow: 'hidden',
-          background: theme.colors.background,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {!imageLoaded && !imageError && (
-          <div
-            style={{
-              position: 'absolute', inset: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: theme.colors.textMuted, fontSize: theme.fontSizes[1],
-              zIndex: 2,
-            }}
-          >
-            Loading map...
-          </div>
-        )}
-
-        {imageError ? (
-          <div
-            style={{
-              color: theme.colors.textMuted,
-              fontSize: theme.fontSizes[1],
-              textAlign: 'center',
-              padding: 24,
-            }}
-          >
-            Could not load city map
-          </div>
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={imageUrl}
-            src={imageUrl}
-            alt={`${repo.fullName} file city map`}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              opacity: imageLoaded ? 1 : 0,
-              transition: 'opacity 0.25s ease',
-            }}
-            onLoad={() => setImageLoaded(true)}
-            onError={() => setImageError(true)}
-          />
-        )}
-      </div>
+      {infoPanel}
+      {mapPanel}
     </div>
   );
 }

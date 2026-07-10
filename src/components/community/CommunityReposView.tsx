@@ -2,9 +2,11 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { ChevronLeft, ChevronRight, Star, Users, GitCommit, LayoutGrid, LayoutList, Play, Pause } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Star, Users, GitCommit, LayoutGrid, Play, Pause, X } from 'lucide-react';
 import type { CarouselCache, CarouselRepo } from './CommunityCarousel';
 import { FileCityHero, fileCityImageUrl } from './FileCityHero';
+
+const MOBILE_BREAKPOINT = 768;
 
 function formatNumber(n: number): string {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
@@ -26,6 +28,19 @@ function languageColor(language: string | null): string | undefined {
     CSS: '#563d7c',
   };
   return COLORS[language] ?? '#6b7280';
+}
+
+function useIsMobile(breakpoint = MOBILE_BREAKPOINT): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+
+  return isMobile;
 }
 
 const ChevronButton: React.FC<{ onClick: () => void; title: string; children: React.ReactNode }> = ({ onClick, title, children }) => {
@@ -97,19 +112,46 @@ export function CommunityReposView({
   onRetry,
 }: CommunityReposViewProps) {
   const { theme } = useTheme();
+  const isMobile = useIsMobile();
   const repos = data?.repos ?? [];
   const reposRef = useRef(repos);
   reposRef.current = repos;
   const [selectedFullName, setSelectedFullName] = useState<string | null>(null);
-  const [showAll, setShowAll] = useState(false);
+  const [allReposSheetOpen, setAllReposSheetOpen] = useState(false);
   const [autoCycle, setAutoCycle] = useState(true);
   const [cycleProgress, setCycleProgress] = useState(0);
+  const heroSwipeRef = useRef<HTMLDivElement>(null);
+  /** Skip scroll→selection sync while we programmatically scroll the mobile hero. */
+  const scrollingProgrammatically = useRef(false);
 
   const selected = repos.find((r) => r.fullName === selectedFullName) ?? repos[0] ?? null;
+  const selectedIndex = selected
+    ? Math.max(0, repos.findIndex((r) => r.fullName === selected.fullName))
+    : 0;
+
+  const scrollHeroToIndex = useCallback((index: number, behavior: ScrollBehavior = 'smooth') => {
+    const el = heroSwipeRef.current;
+    if (!el || index < 0) return;
+    scrollingProgrammatically.current = true;
+    el.scrollTo({ left: index * el.clientWidth, behavior });
+    // Clear flag after scroll settles (smooth ~300–500ms; instant is sync-ish)
+    window.setTimeout(() => {
+      scrollingProgrammatically.current = false;
+    }, behavior === 'smooth' ? 450 : 50);
+  }, []);
 
   const handleSelect = useCallback((fullName: string) => {
     setSelectedFullName(fullName);
     setAutoCycle(false);
+    setAllReposSheetOpen(false);
+  }, []);
+
+  const handleOpenAllRepos = useCallback(() => {
+    setAllReposSheetOpen(true);
+  }, []);
+
+  const handleCloseAllRepos = useCallback(() => {
+    setAllReposSheetOpen(false);
   }, []);
 
   const navigateTo = useCallback(
@@ -131,6 +173,35 @@ export function CommunityReposView({
 
   const handleTogglePlay = useCallback(() => {
     setAutoCycle((prev) => !prev);
+  }, []);
+
+  // Keep mobile swipe track in sync when selection changes (auto-cycle, dots, strip).
+  useEffect(() => {
+    if (!isMobile || repos.length === 0) return;
+    const idx = repos.findIndex((r) => r.fullName === (selectedFullName ?? repos[0]?.fullName));
+    if (idx < 0) return;
+    const el = heroSwipeRef.current;
+    if (!el || el.clientWidth <= 0) return;
+    const target = idx * el.clientWidth;
+    // Already snapped to this slide (e.g. user just swiped there) — skip.
+    if (Math.abs(el.scrollLeft - target) < 12) return;
+    scrollHeroToIndex(idx, 'smooth');
+  }, [selectedFullName, isMobile, repos, scrollHeroToIndex]);
+
+  // Mobile: update selection when user swipes the hero track.
+  const handleHeroSwipeScroll = useCallback(() => {
+    if (scrollingProgrammatically.current || !heroSwipeRef.current) return;
+    const el = heroSwipeRef.current;
+    const width = el.clientWidth;
+    if (width <= 0) return;
+    const index = Math.round(el.scrollLeft / width);
+    const repo = reposRef.current[index];
+    if (!repo) return;
+    setSelectedFullName((curr) => {
+      if (curr === repo.fullName) return curr;
+      setAutoCycle(false);
+      return repo.fullName;
+    });
   }, []);
 
   useEffect(() => {
@@ -201,65 +272,201 @@ export function CommunityReposView({
   }
 
   return (
-    <div className="flex flex-col" style={{ gap: 24 }}>
-      {/* Hero: carousel metadata + File City PNG (no live 3D component) */}
-      {selected && (
-        <FileCityHero
-          key={selected.fullName}
-          repo={selected}
-          cycleProgress={cycleProgress}
-        />
+    <div className="flex flex-col" style={{ gap: isMobile ? 16 : 24 }}>
+      {/* Hero */}
+      {isMobile ? (
+        <div style={{ position: 'relative', width: '100%' }}>
+          <div
+            ref={heroSwipeRef}
+            onScroll={handleHeroSwipeScroll}
+            className="community-hero-swipe"
+            style={{
+              display: 'flex',
+              overflowX: 'auto',
+              overflowY: 'hidden',
+              scrollSnapType: 'x mandatory',
+              scrollBehavior: 'smooth',
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+              width: '100%',
+              // Fill most of the viewport under the header
+              height: 'min(calc(100dvh - 140px), 720px)',
+              touchAction: 'pan-x',
+            }}
+          >
+            {repos.map((repo) => (
+              <div
+                key={repo.fullName}
+                style={{
+                  flex: '0 0 100%',
+                  width: '100%',
+                  height: '100%',
+                  scrollSnapAlign: 'start',
+                  scrollSnapStop: 'always',
+                  minWidth: 0,
+                }}
+              >
+                <FileCityHero
+                  repo={repo}
+                  layout="vertical"
+                  cycleProgress={
+                    repo.fullName === (selectedFullName ?? repos[0]?.fullName)
+                      ? cycleProgress
+                      : 0
+                  }
+                />
+              </div>
+            ))}
+          </div>
+          <style>{`
+            .community-hero-swipe::-webkit-scrollbar { display: none; }
+          `}</style>
+
+          {/* Page dots */}
+          {repos.length > 1 && (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: 6,
+                paddingTop: 12,
+              }}
+            >
+              {repos.map((repo, i) => (
+                <button
+                  key={repo.fullName}
+                  type="button"
+                  aria-label={`Go to ${repo.fullName}`}
+                  onClick={() => handleSelect(repo.fullName)}
+                  style={{
+                    width: i === selectedIndex ? 16 : 6,
+                    height: 6,
+                    borderRadius: 3,
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    background:
+                      i === selectedIndex
+                        ? theme.colors.primary
+                        : theme.colors.border,
+                    transition: 'width 0.2s ease, background 0.2s ease',
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        selected && (
+          <FileCityHero
+            key={selected.fullName}
+            repo={selected}
+            cycleProgress={cycleProgress}
+          />
+        )
       )}
 
-      {/* Navigation controls */}
-      {repos.length > 1 && (
-        <div className="flex items-center justify-center" style={{ gap: 12 }}>
+      {/* Controls: desktop = prev / play / next; mobile = play + Show all inline */}
+      <div className="flex items-center justify-center" style={{ gap: 12 }}>
+        {!isMobile && repos.length > 1 && (
           <ChevronButton onClick={handlePrev} title="Previous repo">
             <ChevronLeft size={18} />
           </ChevronButton>
+        )}
+        {repos.length > 1 && (
           <ChevronButton onClick={handleTogglePlay} title={autoCycle ? 'Pause auto-cycle' : 'Resume auto-cycle'}>
             {autoCycle ? <Pause size={14} /> : <Play size={14} style={{ marginLeft: 2 }} />}
           </ChevronButton>
+        )}
+        {!isMobile && repos.length > 1 && (
           <ChevronButton onClick={handleNext} title="Next repo">
             <ChevronRight size={18} />
           </ChevronButton>
-        </div>
-      )}
-
-      {/* Toggle bar */}
-      <div className="flex items-center justify-between" style={{ padding: '0 4px' }}>
-        <div style={{ fontSize: theme.fontSizes[2], fontWeight: theme.fontWeights.semibold, color: theme.colors.text }}>
-          {showAll ? 'All repos' : 'Browse repos'}
-        </div>
-        <button
-          onClick={() => setShowAll((s) => !s)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '6px 14px',
-            borderRadius: 8,
-            border: `1px solid ${theme.colors.border}`,
-            background: theme.colors.surface,
-            color: theme.colors.text,
-            cursor: 'pointer',
-            fontSize: theme.fontSizes[0],
-            fontWeight: theme.fontWeights.semibold,
-            transition: 'all 0.2s ease',
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = theme.colors.primary; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = theme.colors.border; }}
-        >
-          {showAll ? <><LayoutList size={14} /> Show less</> : <><LayoutGrid size={14} /> Show all</>}
-        </button>
+        )}
+        {isMobile && (
+          <button
+            type="button"
+            onClick={handleOpenAllRepos}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              height: 40,
+              padding: '0 14px',
+              borderRadius: 20,
+              border: `1px solid ${theme.colors.border}`,
+              background: theme.colors.surface,
+              color: theme.colors.text,
+              cursor: 'pointer',
+              fontSize: theme.fontSizes[0],
+              fontWeight: theme.fontWeights.semibold,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = theme.colors.primary;
+              e.currentTarget.style.color = theme.colors.primary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = theme.colors.border;
+              e.currentTarget.style.color = theme.colors.text;
+            }}
+          >
+            <LayoutGrid size={14} /> Show all
+          </button>
+        )}
       </div>
 
-      {/* Carousel or grid */}
-      {showAll ? (
-        <GridView repos={repos} theme={theme} selectedFullName={selectedFullName} onSelect={handleSelect} />
-      ) : (
-        <CarouselStrip repos={repos} theme={theme} selectedFullName={selectedFullName} onSelect={handleSelect} />
+      {/* Desktop browse strip */}
+      {!isMobile && (
+        <>
+          <div className="flex items-center justify-between" style={{ padding: '0 4px' }}>
+            <div style={{ fontSize: theme.fontSizes[2], fontWeight: theme.fontWeights.semibold, color: theme.colors.text }}>
+              Browse repos
+            </div>
+            <button
+              type="button"
+              onClick={handleOpenAllRepos}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 14px',
+                borderRadius: 8,
+                border: `1px solid ${theme.colors.border}`,
+                background: theme.colors.surface,
+                color: theme.colors.text,
+                cursor: 'pointer',
+                fontSize: theme.fontSizes[0],
+                fontWeight: theme.fontWeights.semibold,
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = theme.colors.primary; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = theme.colors.border; }}
+            >
+              <LayoutGrid size={14} /> Show all
+            </button>
+          </div>
+          <CarouselStrip
+            repos={repos}
+            theme={theme}
+            selectedFullName={selectedFullName}
+            onSelect={handleSelect}
+            isMobile={false}
+          />
+        </>
       )}
+
+      <AllReposSheet
+        open={allReposSheetOpen}
+        onClose={handleCloseAllRepos}
+        repos={repos}
+        theme={theme}
+        selectedFullName={selectedFullName}
+        onSelect={handleSelect}
+        isMobile={isMobile}
+      />
     </div>
   );
 }
@@ -273,10 +480,12 @@ const CarouselStrip: React.FC<{
   theme: ReturnType<typeof useTheme>['theme'];
   selectedFullName: string | null;
   onSelect: (fullName: string) => void;
-}> = ({ repos, theme, selectedFullName, onSelect }) => {
+  isMobile?: boolean;
+}> = ({ repos, theme, selectedFullName, onSelect, isMobile = false }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(true);
+  const cardWidth = isMobile ? 260 : 320;
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
@@ -287,17 +496,16 @@ const CarouselStrip: React.FC<{
 
   const scroll = useCallback((direction: 'left' | 'right') => {
     if (!scrollRef.current) return;
-    const cardWidth = 320;
     const gap = 16;
     scrollRef.current.scrollBy({
       left: direction === 'left' ? -(cardWidth + gap) : cardWidth + gap,
       behavior: 'smooth',
     });
-  }, []);
+  }, [cardWidth]);
 
   return (
     <div style={{ position: 'relative', width: '100%' }}>
-      {showLeftArrow && (
+      {!isMobile && showLeftArrow && (
         <button onClick={() => scroll('left')} aria-label="Scroll left" style={{
           position: 'absolute', left: -18, top: '50%', transform: 'translateY(-50%)',
           width: 40, height: 40, borderRadius: '50%', border: `1px solid ${theme.colors.border}`,
@@ -308,7 +516,7 @@ const CarouselStrip: React.FC<{
           <ChevronLeft size={20} />
         </button>
       )}
-      {showRightArrow && (
+      {!isMobile && showRightArrow && (
         <button onClick={() => scroll('right')} aria-label="Scroll right" style={{
           position: 'absolute', right: -18, top: '50%', transform: 'translateY(-50%)',
           width: 40, height: 40, borderRadius: '50%', border: `1px solid ${theme.colors.border}`,
@@ -326,6 +534,7 @@ const CarouselStrip: React.FC<{
         style={{
           display: 'flex', gap: 16, overflowX: 'auto', scrollSnapType: 'x mandatory',
           padding: '8px 4px', scrollbarWidth: 'none', msOverflowStyle: 'none',
+          WebkitOverflowScrolling: 'touch',
         }}
       >
         {repos.map((repo) => (
@@ -335,6 +544,7 @@ const CarouselStrip: React.FC<{
             theme={theme}
             selected={repo.fullName === selectedFullName}
             onClick={() => onSelect(repo.fullName)}
+            cardWidth={cardWidth}
           />
         ))}
       </div>
@@ -352,15 +562,20 @@ const MiniRepoCard: React.FC<{
   theme: ReturnType<typeof useTheme>['theme'];
   selected: boolean;
   onClick: () => void;
-}> = ({ repo, theme, selected, onClick }) => {
+  /** Fixed width for carousel; omit for fluid grid cells. */
+  cardWidth?: number;
+}> = ({ repo, theme, selected, onClick, cardWidth }) => {
   const color = languageColor(repo.language);
+  const fixedWidth = cardWidth ?? 320;
+  const isFluid = cardWidth === undefined;
 
   return (
     <button
       onClick={onClick}
       style={{
-        minWidth: 320,
-        maxWidth: 320,
+        ...(isFluid
+          ? { width: '100%', minWidth: 0 }
+          : { minWidth: fixedWidth, maxWidth: fixedWidth }),
         borderRadius: 12,
         backgroundColor: selected
           ? `color-mix(in srgb, ${theme.colors.primary} 10%, ${theme.colors.surface})`
@@ -481,31 +696,227 @@ const MiniRepoCard: React.FC<{
 };
 
 // ---------------------------------------------------------------------------
-// GridView
+// AllReposSheet — bottom sheet with the full repo grid
 // ---------------------------------------------------------------------------
 
-const GridView: React.FC<{
+const SHEET_ANIM_MS = 360;
+
+const AllReposSheet: React.FC<{
+  open: boolean;
+  onClose: () => void;
   repos: CarouselRepo[];
   theme: ReturnType<typeof useTheme>['theme'];
   selectedFullName: string | null;
   onSelect: (fullName: string) => void;
-}> = ({ repos, theme, selectedFullName, onSelect }) => (
-  <div
-    style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-      gap: 16,
-      padding: '4px 0',
-    }}
-  >
-    {repos.map((repo) => (
-      <MiniRepoCard
-        key={repo.fullName}
-        repo={repo}
-        theme={theme}
-        selected={repo.fullName === selectedFullName}
-        onClick={() => onSelect(repo.fullName)}
+  isMobile?: boolean;
+}> = ({ open, onClose, repos, theme, selectedFullName, onSelect, isMobile = false }) => {
+  // Keep mounted through the close animation so the slide-down can finish.
+  const [mounted, setMounted] = useState(false);
+  const [closing, setClosing] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      setClosing(false);
+      return;
+    }
+    if (!mounted) return;
+    setClosing(true);
+    const t = window.setTimeout(() => {
+      setMounted(false);
+      setClosing(false);
+    }, SHEET_ANIM_MS);
+    return () => window.clearTimeout(t);
+  }, [open, mounted]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  // Lock body scroll while the sheet is up.
+  useEffect(() => {
+    if (!mounted) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mounted]);
+
+  if (!mounted) return null;
+
+  const animName = closing ? 'communitySheetDown' : 'communitySheetUp';
+  const backdropAnim = closing ? 'communityBackdropOut' : 'communityBackdropIn';
+
+  return (
+    <>
+      <style>{`
+        @keyframes communitySheetUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+        @keyframes communitySheetDown {
+          from { transform: translateY(0); }
+          to { transform: translateY(100%); }
+        }
+        @keyframes communityBackdropIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes communityBackdropOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+      `}</style>
+
+      <div
+        aria-hidden
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 100,
+          background: 'rgba(0,0,0,0.45)',
+          animation: `${backdropAnim} ${SHEET_ANIM_MS}ms cubic-bezier(0.22, 1, 0.36, 1) forwards`,
+          pointerEvents: open && !closing ? 'auto' : 'none',
+        }}
       />
-    ))}
-  </div>
-);
+
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="All community repos"
+        style={{
+          position: 'fixed',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 101,
+          maxHeight: isMobile ? '92dvh' : '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+          background: theme.colors.background,
+          borderTop: `1px solid ${theme.colors.border}`,
+          borderTopLeftRadius: 16,
+          borderTopRightRadius: 16,
+          boxShadow: '0 -12px 40px rgba(0,0,0,0.4)',
+          animation: `${animName} ${SHEET_ANIM_MS}ms cubic-bezier(0.22, 1, 0.36, 1) forwards`,
+          willChange: 'transform',
+          pointerEvents: open && !closing ? 'auto' : 'none',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
+      >
+        {/* Drag affordance + header */}
+        <div
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            borderBottom: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <div
+            aria-hidden
+            style={{
+              width: 36,
+              height: 4,
+              borderRadius: 2,
+              background: theme.colors.border,
+              marginTop: 10,
+              marginBottom: 6,
+            }}
+          />
+          <div
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '8px 16px 14px',
+              gap: 12,
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: theme.fontSizes[3],
+                  fontWeight: theme.fontWeights.semibold,
+                  color: theme.colors.text,
+                }}
+              >
+                All repos
+              </div>
+              <div
+                style={{
+                  fontSize: theme.fontSizes[0],
+                  color: theme.colors.textMuted,
+                  marginTop: 2,
+                }}
+              >
+                {repos.length} {repos.length === 1 ? 'repo' : 'repos'} visited
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                border: `1px solid ${theme.colors.border}`,
+                background: theme.colors.surface,
+                color: theme.colors.text,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            padding: isMobile ? '16px 12px 24px' : '20px 24px 32px',
+          }}
+        >
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile
+                ? '1fr'
+                : 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: 12,
+              maxWidth: 1200,
+              margin: '0 auto',
+            }}
+          >
+            {repos.map((repo) => (
+              <MiniRepoCard
+                key={repo.fullName}
+                repo={repo}
+                theme={theme}
+                selected={repo.fullName === selectedFullName}
+                onClick={() => onSelect(repo.fullName)}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};

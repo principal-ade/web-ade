@@ -53,6 +53,7 @@ function Header({ repoCount }: { repoCount: number }) {
 
           {repoCount > 0 && (
             <span
+              className="community-repos-count"
               style={{
                 fontSize: 13,
                 color: theme.colors.textMuted,
@@ -61,9 +62,11 @@ function Header({ repoCount }: { repoCount: number }) {
                 borderRadius: 8,
                 padding: '2px 10px',
                 marginLeft: 12,
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
               }}
             >
-              {repoCount} {repoCount === 1 ? 'repo' : 'repos'} visited
+              {repoCount} {repoCount === 1 ? 'repo' : 'repos'}
             </span>
           )}
         </div>
@@ -113,6 +116,7 @@ export default function CommunityReposPage() {
         <Header repoCount={repoCount} />
 
         <main
+          className="community-repos-main"
           style={{
             flex: 1,
             minHeight: 0,
@@ -122,6 +126,16 @@ export default function CommunityReposPage() {
             zIndex: 1,
           }}
         >
+          <style>{`
+            @media (max-width: 767px) {
+              .community-repos-main {
+                padding: 12px 12px 48px !important;
+              }
+              .community-repos-count {
+                display: none;
+              }
+            }
+          `}</style>
           <div style={{ maxWidth: 1200, margin: '0 auto' }}>
             <CommunityReposView
               data={carousel}
