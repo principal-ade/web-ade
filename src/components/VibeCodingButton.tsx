@@ -42,6 +42,7 @@ export interface VibeCodingData {
   loading: boolean;
   error: string | null;
   scanActive: boolean;
+  scanProgress: number;
 }
 
 interface VibeCodingButtonProps {
@@ -80,6 +81,7 @@ export default forwardRef<VibeCodingButtonHandle, VibeCodingButtonProps>(functio
       loading: data.loading ?? false,
       error: data.error ?? null,
       scanActive: data.scanActive ?? false,
+      scanProgress: data.scanProgress ?? 0,
     });
   }, [onDataChange]);
 
@@ -94,6 +96,7 @@ export default forwardRef<VibeCodingButtonHandle, VibeCodingButtonProps>(functio
       loading: false,
       error: null,
       scanActive: false,
+      scanProgress: 1,
     });
     onHighlight?.(data.items.map((i) => i.path));
     pendingResultsRef.current = null;
@@ -116,6 +119,7 @@ export default forwardRef<VibeCodingButtonHandle, VibeCodingButtonProps>(functio
       loading: false,
       error: null,
       scanActive: false,
+      scanProgress: 0,
     });
     onHighlight?.(null);
   }, [emitData, onHighlight]);
@@ -148,6 +152,7 @@ export default forwardRef<VibeCodingButtonHandle, VibeCodingButtonProps>(functio
         const batch = filePaths.slice(newOffset, newOffset + SCAN_WINDOW);
         onHighlight?.(batch);
         scanOffsetRef.current = newOffset;
+        emitData({ loading: true, scanActive: true, scanProgress: newOffset / filePaths.length });
       }, SCAN_INTERVAL);
       scanTimerRef.current = timer;
     }

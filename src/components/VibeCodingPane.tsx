@@ -36,6 +36,7 @@ interface VibeCodingPaneProps {
   loading: boolean;
   error: string | null;
   scanActive: boolean;
+  scanProgress: number;
   totalRepoFiles: number;
   onClear: () => void;
   onRefresh: () => void;
@@ -50,6 +51,7 @@ export default function VibeCodingPane({
   loading,
   error,
   scanActive,
+  scanProgress,
   totalRepoFiles,
   onClear,
   onRefresh,
@@ -132,7 +134,7 @@ export default function VibeCodingPane({
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ scrollbarWidth: 'thin' }}>
         {/* LOADING STATE */}
         {loading && (
-          <div className="flex flex-col items-center gap-3 py-8">
+          <div className="flex flex-col items-center gap-4 py-8">
             <div className="relative">
               <Scan className="w-10 h-10 animate-pulse" style={{ color: theme.colors.primary }} />
               <div
@@ -148,17 +150,26 @@ export default function VibeCodingPane({
                 Searching for isRecord, is_record patterns
               </div>
             </div>
-            <div
-              className="w-full h-1.5 rounded-full overflow-hidden"
-              style={{ background: `color-mix(in srgb, ${theme.colors.textMuted} 15%, transparent)` }}
-            >
+            {/* Progress bar — driven by the scan sweep position */}
+            <div className="w-full space-y-1.5">
               <div
-                className="h-full rounded-full animate-scan"
-                style={{
-                  background: `linear-gradient(90deg, transparent, ${theme.colors.primary}, transparent)`,
-                  width: '40%',
-                }}
-              />
+                className="w-full h-2 rounded-full overflow-hidden"
+                style={{ background: `color-mix(in srgb, ${theme.colors.textMuted} 15%, transparent)` }}
+              >
+                <div
+                  className="h-full rounded-full transition-all duration-100 ease-linear"
+                  style={{
+                    background: theme.colors.primary,
+                    width: `${Math.max(2, scanProgress * 100)}%`,
+                  }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-xs" style={{ color: theme.colors.textMuted }}>
+                <span>
+                  {Math.round(scanProgress * totalRepoFiles).toLocaleString()} / {totalRepoFiles.toLocaleString()} files
+                </span>
+                <span>{Math.round(scanProgress * 100)}%</span>
+              </div>
             </div>
           </div>
         )}

@@ -290,6 +290,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
     loading: false,
     error: null,
     scanActive: false,
+    scanProgress: 0,
   });
 
   const router = useRouter();
@@ -1733,7 +1734,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
             setVibeCodingPaths(null);
             setVibeCodingData({
               fileCount: null, occurrenceCount: null, files: [], terms: [],
-              loading: false, error: null, scanActive: false,
+              loading: false, error: null, scanActive: false, scanProgress: 0,
             });
             setLeftViewMode('tours');
           }}
@@ -2574,6 +2575,7 @@ const TrailListPane: React.FC<{
           loading={vibeCodingData.loading}
           error={vibeCodingData.error}
           scanActive={vibeCodingData.scanActive}
+          scanProgress={vibeCodingData.scanProgress}
           totalRepoFiles={filePaths.length}
           onClear={onVibeCodingClear}
           onRefresh={() => {}}
