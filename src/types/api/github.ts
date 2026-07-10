@@ -240,3 +240,33 @@ export interface GitHubSearchReposResponse {
   incomplete_results: boolean;
   items: GitHubRepo[];
 }
+
+// Raw response from GitHub's /search/code endpoint
+export interface GitHubRawCodeSearchItem {
+  name: string;
+  path: string;
+  sha: string;
+  html_url: string;
+  repository: {
+    full_name: string;
+  };
+}
+
+export interface GitHubRawCodeSearchResponse {
+  total_count: number;
+  incomplete_results: boolean;
+  items: GitHubRawCodeSearchItem[];
+}
+
+// Transformed response from our /api/github/code-search route
+export interface GitHubCodeSearchItem {
+  path: string;
+  html_url: string;
+}
+
+export interface GitHubCodeSearchResponse {
+  total_files: number;
+  total_occurrences: number;
+  incomplete_results: boolean;
+  items: GitHubCodeSearchItem[];
+}

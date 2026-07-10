@@ -18,4 +18,6 @@ export type {
   GitHubOrg,
   GitHubUserProfile,
   GitHubSearchReposResponse,
+  GitHubRawCodeSearchResponse,
+  GitHubCodeSearchResponse,
 } from './github';

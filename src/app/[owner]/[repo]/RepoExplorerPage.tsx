@@ -80,6 +80,7 @@ import { trpc } from '@/lib/trpc/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { AgentViewButton } from '@/components/AgentViewButton';
+import VibeCodingButton from '@/components/VibeCodingButton';
 import { RepoSearchBar } from '@/components/RepoSearchBar';
 import { readRecentRepos } from '@/lib/recentRepos';
 import { BookmarksDrawer } from '@/components/bookmarks/BookmarksDrawer';
@@ -274,6 +275,10 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
   // *undocumented* files (inverse of coverage) so the user can see what
   // the trails haven't reached yet. Toggled from the header counter.
   const [debtMode] = useState(false);
+
+  // Vibe-coding detector — paths containing isRecord, set by the header
+  // button's search. Drives a highlight layer on the File City map.
+  const [vibeCodingPaths, setVibeCodingPaths] = useState<string[] | null>(null);
 
   const router = useRouter();
 
@@ -1220,6 +1225,27 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
     };
   }, [leftViewMode, selectedFilePath, theme.colors.accent]);
 
+  // Vibe-coding detector highlight — files containing isRecord, set by the
+  // header button's code search. Painted as a semi-transparent glow on top
+  // of the base trail coverage so you can spot LLM-adjacent files at a glance.
+  const vibeCodingHighlightLayer = useMemo<HighlightLayer | null>(() => {
+    if (!vibeCodingPaths || vibeCodingPaths.length === 0) return null;
+    return {
+      id: 'vibe-coding-isrecord',
+      name: 'isRecord files',
+      enabled: true,
+      color: theme.colors.warning ?? '#f59e0b',
+      opacity: 0.45,
+      priority: 110,
+      items: vibeCodingPaths.map((path) => ({
+        path,
+        type: 'file' as const,
+        renderStrategy: 'fill' as const,
+      })),
+      dynamic: true,
+    };
+  }, [vibeCodingPaths, theme.colors.warning]);
+
   // Stack base + hover. Higher priority renders on top. In debt mode
   // we swap the base layer to the undocumented set and skip the hover
   // overlay (which only makes sense over the coverage layer).
@@ -1229,6 +1255,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
     if (baseLayer) layers.push(baseLayer);
     if (!debtMode && hoveredHighlightLayer) layers.push(hoveredHighlightLayer);
     if (selectedFileLayer) layers.push(selectedFileLayer);
+    if (vibeCodingHighlightLayer) layers.push(vibeCodingHighlightLayer);
     return layers.length > 0 ? layers : null;
   }, [
     debtMode,
@@ -1236,6 +1263,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
     undocumentedFilesLayer,
     hoveredHighlightLayer,
     selectedFileLayer,
+    vibeCodingHighlightLayer,
   ]);
 
   // Architecture-panel highlight layers, kept independent of the trail-derived
@@ -1493,6 +1521,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
         bookmarksOpen={bookmarksOpen}
         repoActive={leftViewMode !== 'tours'}
         onShowOverview={() => setLeftViewMode('tours')}
+        onVibeCodingHighlight={setVibeCodingPaths}
       />
       <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
         {/* The delete control is driven by the app's own validated session:
@@ -1730,6 +1759,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
             setSelectedFilePath(path);
             setFileSide('right');
           }}
+          vibeCodingHighlightLayer={vibeCodingHighlightLayer}
         />
       </div>
       {/* Right-docked source viewer for the picked file. Independent of the
@@ -1846,6 +1876,8 @@ const Header: React.FC<{
   repoActive: boolean;
   /** Click the repo crumb → return to the repo overview (the About view). */
   onShowOverview: () => void;
+  /** Vibe-coding highlight: paths containing isRecord for the File City map. */
+  onVibeCodingHighlight: (paths: string[] | null) => void;
 }> = ({
   rootRef,
   owner,
@@ -1859,6 +1891,7 @@ const Header: React.FC<{
   bookmarksOpen,
   repoActive,
   onShowOverview,
+  onVibeCodingHighlight,
 }) => {
   const { theme } = useTheme();
   // Mobile: the repo opener collapses into a "Search GitHub" button that opens
@@ -2096,6 +2129,9 @@ const Header: React.FC<{
         <div className="hidden md:flex">
           <AgentViewButton path={`/${owner}/${repo}`} iconOnly />
         </div>
+
+        {/* Vibe coding detector — counts isRecord occurrences via code search. */}
+        <VibeCodingButton owner={owner} repo={repo} onHighlight={onVibeCodingHighlight} />
 
         {/* Bookmarks passport — slides in the side panel. Hidden on mobile. */}
         <button
@@ -6288,6 +6324,8 @@ const RightPane: React.FC<{
   onCloseOverlay: () => void;
   /** Clicking a building / file on the map opens it in the source drawer. */
   onOpenFile: (filePath: string) => void;
+  /** Vibe-coding highlight — files containing isRecord. */
+  vibeCodingHighlightLayer: HighlightLayer | null;
 }> = ({
   owner,
   repo,
@@ -6324,6 +6362,7 @@ const RightPane: React.FC<{
   onSelectOverlayTrail,
   onCloseOverlay,
   onOpenFile,
+  vibeCodingHighlightLayer,
 }) => {
   const { theme } = useTheme();
   // Contribution-coverage highlight for the contributor picked in the
@@ -6607,11 +6646,12 @@ const RightPane: React.FC<{
         scope: 'repository' as const,
         name: 'highlightLayers',
         data:
-          packageHighlightLayers || activityHeatmapLayers || contributionLayers
+          packageHighlightLayers || activityHeatmapLayers || contributionLayers || vibeCodingHighlightLayer
             ? [
                 ...(packageHighlightLayers ?? []),
                 ...(activityHeatmapLayers ?? []),
                 ...(contributionLayers ?? []),
+                ...(vibeCodingHighlightLayer ? [vibeCodingHighlightLayer] : []),
               ]
             : null,
         loading: false,
@@ -6627,6 +6667,7 @@ const RightPane: React.FC<{
     packageHighlightLayers,
     activityHeatmapLayers,
     contributionLayers,
+    vibeCodingHighlightLayer,
     commitView,
     commitViewLoading,
     issueView,
