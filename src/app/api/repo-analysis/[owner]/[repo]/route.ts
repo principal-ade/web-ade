@@ -37,6 +37,8 @@ import {
   presignAnalysisUploadUrls,
   getRepoIdentityMapFromS3,
   storeRepoAnalysisInS3,
+  extractCarouselEnrichmentFromAnalysis,
+  storeCarouselEnrichment,
 } from '@/lib/repo-analysis/s3-cache';
 import { resolveHeadSha } from '@/lib/trails/github-access';
 import { transformAnalysis, needsTransform } from '@/lib/repo-analysis/transform';
@@ -155,6 +157,13 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
       console.error('[Repo Analysis] transform failed, serving raw byEmail:', err);
     }
   }
+
+  // Warm carousel enrichment sidecar (fire-and-forget) — populates the lightweight
+  // cache so buildCarousel never downloads the multi-MB byEmail blob.
+  const enrichment = extractCarouselEnrichmentFromAnalysis(cached.analysis);
+  storeCarouselEnrichment(owner, repo, enrichment).catch((err) => {
+    console.error('[Repo Analysis] storeCarouselEnrichment failed:', err);
+  });
 
   // Build response: ship precomputedContributors when available, fall back to byEmail
   const { byEmail: _byEmail, personOwnership: _personOwnership, ...analysisFields } = cached.analysis;

@@ -496,6 +496,81 @@ export async function mergeRepoIdentityMapInS3(
   }
 }
 
+// --- Carousel enrichment: a lightweight sidecar extracted from the full analysis. ---
+//
+// The full repo-analysis blob (byEmail: Record<email, Record<filePath, lines>>) can
+// be megabytes for repos with many contributors. The community-carousel only needs
+// totalLines + per-contributor {name, email, commits, lines}. This sidecar stores
+// just those fields so buildCarousel reads ~KB per repo instead of MB.
+// Written lazily: first time the carousel encounters a repo without one, it reads
+// the full analysis, extracts what it needs, and persists this sidecar.
+
+export interface CarouselEnrichment {
+  totalLines: number;
+  contributors: Array<{
+    name: string;
+    email: string;
+    commits: number;
+    lines: number;
+  }>;
+}
+
+export function extractCarouselEnrichmentFromAnalysis(analysis: RepoAnalysis): CarouselEnrichment {
+  const linesPerEmail: Record<string, number> = {};
+  for (const [email, files] of Object.entries(analysis.byEmail)) {
+    linesPerEmail[email.toLowerCase()] = Object.values(files).reduce((s, v) => s + v, 0);
+  }
+  return {
+    totalLines: analysis.totalLinesGlobal,
+    contributors: analysis.contributors.map((c) => ({
+      name: c.name,
+      email: c.email,
+      commits: c.commits,
+      lines: linesPerEmail[c.email.toLowerCase()] ?? 0,
+    })),
+  };
+}
+
+const CAROUSEL_ENRICHMENT_PREFIX = 'carousel-enrichment';
+
+function carouselEnrichmentS3Key(owner: string, repo: string): string {
+  return `${CAROUSEL_ENRICHMENT_PREFIX}/${owner.toLowerCase()}/${repo.toLowerCase()}.json`;
+}
+
+export async function getCarouselEnrichment(
+  owner: string,
+  repo: string,
+): Promise<CarouselEnrichment | null> {
+  const key = carouselEnrichmentS3Key(owner, repo);
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key }),
+    );
+    if (!response.Body) return null;
+    return JSON.parse(await response.Body.transformToString()) as CarouselEnrichment;
+  } catch (error) {
+    rethrowUnlessMiss(error, key, 'getCarouselEnrichment');
+    return null;
+  }
+}
+
+export async function storeCarouselEnrichment(
+  owner: string,
+  repo: string,
+  data: CarouselEnrichment,
+): Promise<void> {
+  const key = carouselEnrichmentS3Key(owner, repo);
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key,
+      Body: JSON.stringify(data),
+      ContentType: 'application/json',
+      CacheControl: 'max-age=3600',
+    }),
+  );
+}
+
 /** TTL for the upload URLs handed to the VM (seconds). Sized from measured
  *  launch→publish durations: 93 completed runs had p95 ~9m and no run over ~13m,
  *  but that set is CENSORED — anything slower than the old 900s (15m) TTL 403'd

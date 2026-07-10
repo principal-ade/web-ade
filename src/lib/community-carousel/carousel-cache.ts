@@ -13,7 +13,13 @@ import {
   getCommunityRepoVisitFeed,
   type CommunityRepoVisitFeed,
 } from '@/lib/repos/community-visits';
-import { getRepoAnalysisFromS3 } from '@/lib/repo-analysis/s3-cache';
+import {
+  getRepoAnalysisFromS3,
+  getCarouselEnrichment,
+  storeCarouselEnrichment,
+  extractCarouselEnrichmentFromAnalysis,
+  type CarouselEnrichment,
+} from '@/lib/repo-analysis/s3-cache';
 
 const s3Client = new S3Client({ region: BUCKET_REGION });
 
@@ -58,37 +64,38 @@ function isNoSuchKey(error: unknown): boolean {
   );
 }
 
-function linesByEmailFromAnalysis(
-  byEmail: Record<string, Record<string, number>>
-): Record<string, number> {
-  const result: Record<string, number> = {};
-  for (const [email, files] of Object.entries(byEmail)) {
-    result[email.toLowerCase()] = Object.values(files).reduce((s, v) => s + v, 0);
-  }
-  return result;
+async function getOrBuildEnrichment(
+  owner: string,
+  repo: string,
+): Promise<CarouselEnrichment | null> {
+  const cached = await getCarouselEnrichment(owner, repo);
+  if (cached) return cached;
+
+  const full = await getRepoAnalysisFromS3(owner, repo);
+  if (!full) return null;
+
+  const enrichment = extractCarouselEnrichmentFromAnalysis(full.analysis);
+  storeCarouselEnrichment(owner, repo, enrichment).catch((err) => {
+    console.error(`[Carousel] Failed to store enrichment for ${owner}/${repo}:`, err);
+  });
+  return enrichment;
 }
 
 async function buildCarousel(feed: CommunityRepoVisitFeed): Promise<CarouselCache> {
-  const analysisResults = await Promise.allSettled(
+  const enrichmentResults = await Promise.allSettled(
     feed.entries.map((entry) =>
-      getRepoAnalysisFromS3(entry.owner, entry.repo).then((analysis) => ({
+      getOrBuildEnrichment(entry.owner, entry.repo).then((enrichment) => ({
         fullName: entry.fullName,
-        analysis,
-      }))
-    )
+        enrichment,
+      })),
+    ),
   );
 
-  const analysisMap = new Map<string, { linesPerEmail: Record<string, number>; contributors: Array<{ name: string; commits: number; email: string }>; totalLinesGlobal: number } | null>();
+  const enrichmentMap = new Map<string, CarouselEnrichment | null>();
 
-  for (const result of analysisResults) {
-    if (result.status === 'fulfilled' && result.value.analysis) {
-      analysisMap.set(result.value.fullName.toLowerCase(), {
-        linesPerEmail: linesByEmailFromAnalysis(result.value.analysis.analysis.byEmail),
-        contributors: result.value.analysis.analysis.contributors,
-        totalLinesGlobal: result.value.analysis.analysis.totalLinesGlobal,
-      });
-    } else if (result.status === 'fulfilled') {
-      analysisMap.set(result.value.fullName.toLowerCase(), null);
+  for (const result of enrichmentResults) {
+    if (result.status === 'fulfilled') {
+      enrichmentMap.set(result.value.fullName.toLowerCase(), result.value.enrichment);
     }
   }
 
@@ -96,38 +103,38 @@ async function buildCarousel(feed: CommunityRepoVisitFeed): Promise<CarouselCach
     .slice()
     .sort((a, b) => b.stargazersCount - a.stargazersCount)
     .map((entry) => {
-    const analysis = analysisMap.get(entry.fullName.toLowerCase());
+      const enrichment = enrichmentMap.get(entry.fullName.toLowerCase());
 
-    let topContributors: CarouselContributor[] = [];
-    let totalLines: number | undefined;
+      let topContributors: CarouselContributor[] = [];
+      let totalLines: number | undefined;
 
-    if (analysis) {
-      totalLines = analysis.totalLinesGlobal;
+      if (enrichment) {
+        totalLines = enrichment.totalLines;
 
-      topContributors = analysis.contributors
-        .map((c) => ({
-          name: c.name,
-          email: c.email,
-          commits: c.commits,
-          lines: analysis.linesPerEmail[c.email.toLowerCase()] ?? undefined,
-        }))
-        .sort((a, b) => (b.lines ?? b.commits) - (a.lines ?? a.commits))
-        .slice(0, 10);
-    }
+        topContributors = enrichment.contributors
+          .map((c) => ({
+            name: c.name,
+            email: c.email,
+            commits: c.commits,
+            lines: c.lines,
+          }))
+          .sort((a, b) => b.lines - a.lines)
+          .slice(0, 10);
+      }
 
-    return {
-      fullName: entry.fullName,
-      owner: entry.owner,
-      repo: entry.repo,
-      description: entry.description,
-      language: entry.language,
-      stargazersCount: entry.stargazersCount,
-      visitorCount: entry.visitorCount,
-      lastVisitedAt: entry.lastVisitedAt,
-      topContributors,
-      totalLines,
-    };
-  });
+      return {
+        fullName: entry.fullName,
+        owner: entry.owner,
+        repo: entry.repo,
+        description: entry.description,
+        language: entry.language,
+        stargazersCount: entry.stargazersCount,
+        visitorCount: entry.visitorCount,
+        lastVisitedAt: entry.lastVisitedAt,
+        topContributors,
+        totalLines,
+      };
+    });
 
   return {
     version: 1,
