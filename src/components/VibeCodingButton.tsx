@@ -50,6 +50,7 @@ export interface VibeCodingData {
   error: string | null;
   scanActive: boolean;
   scanProgress: number;
+  scanWindowPaths: string[];
 }
 
 interface VibeCodingButtonProps {
@@ -89,6 +90,7 @@ export default forwardRef<VibeCodingButtonHandle, VibeCodingButtonProps>(functio
       error: data.error ?? null,
       scanActive: data.scanActive ?? false,
       scanProgress: data.scanProgress ?? 0,
+      scanWindowPaths: data.scanWindowPaths ?? [],
     });
   }, [onDataChange]);
 
@@ -160,18 +162,21 @@ export default forwardRef<VibeCodingButtonHandle, VibeCodingButtonProps>(functio
         }
 
         // Add the new batch to the accumulated set
+        const windowPaths: string[] = [];
         for (let i = offset; i < newOffset; i++) {
           accumulated.add(filePaths[i]!);
+          windowPaths.push(filePaths[i]!);
         }
         // Also cover the wrap-around edge case
         if (newOffset < offset) {
           for (let i = offset; i < filePaths.length; i++) {
             accumulated.add(filePaths[i]!);
+            windowPaths.push(filePaths[i]!);
           }
         }
         onHighlight?.(Array.from(accumulated));
         scanOffsetRef.current = newOffset;
-        emitData({ loading: true, scanActive: true, scanProgress: newOffset / filePaths.length });
+        emitData({ loading: true, scanActive: true, scanProgress: newOffset / filePaths.length, scanWindowPaths: windowPaths });
       }, SCAN_INTERVAL);
       scanTimerRef.current = timer;
     }

@@ -291,6 +291,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
     error: null,
     scanActive: false,
     scanProgress: 0,
+    scanWindowPaths: [],
   });
 
   const router = useRouter();
@@ -1241,14 +1242,17 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
   // Vibe-coding detector highlight — files containing isRecord, set by the
   // header button's code search. Painted as a semi-transparent glow on top
   // of the base trail coverage so you can spot LLM-adjacent files at a glance.
+  // During the scan sweep this is the accumulated set (dim). After results
+  // arrive it's the matched files (amber severity color).
   const vibeCodingHighlightLayer = useMemo<HighlightLayer | null>(() => {
     if (!vibeCodingPaths || vibeCodingPaths.length === 0) return null;
+    const isScanning = vibeCodingData.scanActive;
     return {
       id: 'vibe-coding-isrecord',
-      name: 'isRecord files',
+      name: isScanning ? 'Scanned files' : 'isRecord files',
       enabled: true,
-      color: theme.colors.warning ?? '#f59e0b',
-      opacity: 0.45,
+      color: isScanning ? (theme.colors.primary ?? '#3b82f6') : (theme.colors.warning ?? '#f59e0b'),
+      opacity: isScanning ? 0.2 : 0.45,
       priority: 110,
       items: vibeCodingPaths.map((path) => ({
         path,
@@ -1257,7 +1261,28 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
       })),
       dynamic: true,
     };
-  }, [vibeCodingPaths, theme.colors.warning]);
+  }, [vibeCodingPaths, vibeCodingData.scanActive, theme.colors.primary, theme.colors.warning]);
+
+  // The trailing edge of the scan — the current batch being inspected.
+  // Drawn at higher priority (brighter) on top of the accumulated set so
+  // the user can see exactly where the scan beam is right now.
+  const vibeCodingScanWindowLayer = useMemo<HighlightLayer | null>(() => {
+    if (!vibeCodingData.scanActive || vibeCodingData.scanWindowPaths.length === 0) return null;
+    return {
+      id: 'vibe-coding-scan-window',
+      name: 'Scanning...',
+      enabled: true,
+      color: theme.colors.warning ?? '#f59e0b',
+      opacity: 0.5,
+      priority: 111,
+      items: vibeCodingData.scanWindowPaths.map((path) => ({
+        path,
+        type: 'file' as const,
+        renderStrategy: 'fill' as const,
+      })),
+      dynamic: true,
+    };
+  }, [vibeCodingData.scanActive, vibeCodingData.scanWindowPaths, theme.colors.warning]);
 
   // Stack base + hover. Higher priority renders on top. In debt mode
   // we swap the base layer to the undocumented set and skip the hover
@@ -1269,6 +1294,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
     if (!debtMode && hoveredHighlightLayer) layers.push(hoveredHighlightLayer);
     if (selectedFileLayer) layers.push(selectedFileLayer);
     if (vibeCodingHighlightLayer) layers.push(vibeCodingHighlightLayer);
+    if (vibeCodingScanWindowLayer) layers.push(vibeCodingScanWindowLayer);
     return layers.length > 0 ? layers : null;
   }, [
     debtMode,
@@ -1277,6 +1303,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
     hoveredHighlightLayer,
     selectedFileLayer,
     vibeCodingHighlightLayer,
+    vibeCodingScanWindowLayer,
   ]);
 
   // Architecture-panel highlight layers, kept independent of the trail-derived
@@ -1734,7 +1761,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
             setVibeCodingPaths(null);
             setVibeCodingData({
               fileCount: null, occurrenceCount: null, files: [], terms: [],
-              loading: false, error: null, scanActive: false, scanProgress: 0,
+              loading: false, error: null, scanActive: false, scanProgress: 0, scanWindowPaths: [],
             });
             setLeftViewMode('tours');
           }}
@@ -1786,6 +1813,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
             setFileSide('right');
           }}
           vibeCodingHighlightLayer={vibeCodingHighlightLayer}
+          vibeCodingScanWindowLayer={vibeCodingScanWindowLayer}
         />
       </div>
       {/* Right-docked source viewer for the picked file. Independent of the
@@ -6390,6 +6418,7 @@ const RightPane: React.FC<{
   onOpenFile: (filePath: string) => void;
   /** Vibe-coding highlight — files containing isRecord. */
   vibeCodingHighlightLayer: HighlightLayer | null;
+  vibeCodingScanWindowLayer: HighlightLayer | null;
 }> = ({
   owner,
   repo,
@@ -6427,6 +6456,7 @@ const RightPane: React.FC<{
   onCloseOverlay,
   onOpenFile,
   vibeCodingHighlightLayer,
+  vibeCodingScanWindowLayer,
 }) => {
   const { theme } = useTheme();
   // Contribution-coverage highlight for the contributor picked in the
@@ -6713,12 +6743,13 @@ const RightPane: React.FC<{
         scope: 'repository' as const,
         name: 'highlightLayers',
         data:
-          packageHighlightLayers || activityHeatmapLayers || contributionLayers || vibeCodingHighlightLayer
+          packageHighlightLayers || activityHeatmapLayers || contributionLayers || vibeCodingHighlightLayer || vibeCodingScanWindowLayer
             ? [
                 ...(packageHighlightLayers ?? []),
                 ...(activityHeatmapLayers ?? []),
                 ...(contributionLayers ?? []),
                 ...(vibeCodingHighlightLayer ? [vibeCodingHighlightLayer] : []),
+                ...(vibeCodingScanWindowLayer ? [vibeCodingScanWindowLayer] : []),
               ]
             : null,
         loading: false,
@@ -6735,6 +6766,7 @@ const RightPane: React.FC<{
     activityHeatmapLayers,
     contributionLayers,
     vibeCodingHighlightLayer,
+    vibeCodingScanWindowLayer,
     commitView,
     commitViewLoading,
     issueView,
