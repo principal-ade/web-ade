@@ -31,8 +31,16 @@ function getSeverity(occurrences: number): SeverityConfig {
 }
 
 const SCAN_WINDOW = 80;
-const SCAN_STEP = 30;
 const SCAN_INTERVAL = 90;
+const MAX_SCAN_DURATION_MS = 5000;
+
+function computeScanStep(totalFiles: number): number {
+  if (totalFiles === 0) return 1;
+  // Ticks needed to cover all files at 90ms each within the budget
+  const maxTicks = Math.ceil(MAX_SCAN_DURATION_MS / SCAN_INTERVAL);
+  const step = Math.ceil(totalFiles / Math.min(maxTicks, totalFiles));
+  return Math.max(step, 1);
+}
 
 export interface VibeCodingData {
   fileCount: number | null;
@@ -135,10 +143,11 @@ export default forwardRef<VibeCodingButtonHandle, VibeCodingButtonProps>(functio
 
     // Start scan animation over the city
     if (filePaths.length > 0) {
+      const scanStep = computeScanStep(filePaths.length);
       scanOffsetRef.current = 0;
       const timer = setInterval(() => {
         const offset = scanOffsetRef.current;
-        const newOffset = (offset + SCAN_STEP) % filePaths.length;
+        const newOffset = (offset + scanStep) % filePaths.length;
 
         if (newOffset < offset) {
           if (pendingResultsRef.current) {
