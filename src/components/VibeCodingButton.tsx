@@ -51,6 +51,7 @@ export interface VibeCodingData {
   scanActive: boolean;
   scanProgress: number;
   scanWindowPaths: string[];
+  scanDirectory: string | null;
 }
 
 interface VibeCodingButtonProps {
@@ -91,6 +92,7 @@ export default forwardRef<VibeCodingButtonHandle, VibeCodingButtonProps>(functio
       scanActive: data.scanActive ?? false,
       scanProgress: data.scanProgress ?? 0,
       scanWindowPaths: data.scanWindowPaths ?? [],
+      scanDirectory: data.scanDirectory ?? null,
     });
   }, [onDataChange]);
 
@@ -176,7 +178,11 @@ export default forwardRef<VibeCodingButtonHandle, VibeCodingButtonProps>(functio
         }
         onHighlight?.(Array.from(accumulated));
         scanOffsetRef.current = newOffset;
-        emitData({ loading: true, scanActive: true, scanProgress: newOffset / filePaths.length, scanWindowPaths: windowPaths });
+        // Derive the directory being scanned from the first file in the window
+        const firstFile = windowPaths[0];
+        const lastSlash = firstFile ? firstFile.lastIndexOf('/') : -1;
+        const dir = lastSlash >= 0 ? firstFile!.slice(0, lastSlash) : firstFile;
+        emitData({ loading: true, scanActive: true, scanProgress: newOffset / filePaths.length, scanWindowPaths: windowPaths, scanDirectory: dir ?? null });
       }, SCAN_INTERVAL);
       scanTimerRef.current = timer;
     }

@@ -37,6 +37,7 @@ interface VibeCodingPaneProps {
   error: string | null;
   scanActive: boolean;
   scanProgress: number;
+  scanDirectory: string | null;
   totalRepoFiles: number;
   onClear: () => void;
   onRefresh: () => void;
@@ -52,6 +53,7 @@ export default function VibeCodingPane({
   error,
   scanActive,
   scanProgress,
+  scanDirectory,
   totalRepoFiles,
   onClear,
   onRefresh,
@@ -149,6 +151,20 @@ export default function VibeCodingPane({
               <div className="text-xs mt-1" style={{ color: theme.colors.textMuted }}>
                 Searching for isRecord, is_record patterns
               </div>
+              {scanDirectory && (
+                <div className="text-xs mt-2 px-2 py-1 rounded inline-block" style={{
+                  background: `color-mix(in srgb, ${theme.colors.primary} 10%, transparent)`,
+                  color: theme.colors.primary,
+                  fontFamily: theme.fonts.monospace,
+                  maxWidth: '100%',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-block',
+                }}>
+                  {scanDirectory}
+                </div>
+              )}
             </div>
             {/* Progress bar — driven by the scan sweep position */}
             <div className="w-full space-y-1.5">
