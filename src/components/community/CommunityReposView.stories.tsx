@@ -1,10 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
 import { ThemeProvider } from '@principal-ade/industry-theme';
-import { GitFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
 import { CommunityReposView } from './CommunityReposView';
 import type { CarouselCache, CarouselRepo } from './CommunityCarousel';
-import type { ContributionAnalysis } from '@/lib/repo-analysis/contributionLayers';
 
 const StoryWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <ThemeProvider>
@@ -129,44 +127,6 @@ const populatedData: CarouselCache = {
   repos: sampleRepos,
 };
 
-function buildMockFileTree(rootPath: string): FileTree {
-  return new GitFileTreeBuilder().build({
-    files: [
-      { path: 'src/index.ts', size: 1200 },
-      { path: 'src/components/App.tsx', size: 3400 },
-      { path: 'src/components/Header.tsx', size: 890 },
-      { path: 'src/styles.css', size: 4500 },
-      { path: 'README.md', size: 2100 },
-      { path: 'package.json', size: 560 },
-    ],
-    rootPath,
-    commitSha: 'abc123def456',
-    branch: 'main',
-  });
-}
-
-const mockFileTree = buildMockFileTree('/vercel/next.js');
-
-const mockIdentityByEmail: Record<string, { login: string; avatarUrl: string } | null> = {
-  'ijjk@example.com': { login: 'ijjk', avatarUrl: 'https://avatars.githubusercontent.com/u/123456?v=4' },
-  'timneutkens@example.com': { login: 'timneutkens', avatarUrl: 'https://avatars.githubusercontent.com/u/456789?v=4' },
-  'shuding@example.com': { login: 'shuding', avatarUrl: 'https://avatars.githubusercontent.com/u/789012?v=4' },
-};
-
-const mockAnalysis: ContributionAnalysis = {
-  byEmail: {
-    'ijjk@example.com': { 'src/index.ts': 800, 'src/components/App.tsx': 2000, 'src/components/Header.tsx': 100 },
-    'timneutkens@example.com': { 'src/styles.css': 3000, 'src/components/App.tsx': 1200 },
-    'shuding@example.com': { 'README.md': 1500, 'package.json': 400 },
-  },
-  totalLines: { 'src/index.ts': 1200, 'src/components/App.tsx': 3400, 'src/components/Header.tsx': 890, 'src/styles.css': 4500, 'README.md': 2100, 'package.json': 560 },
-  contributors: [
-    { name: 'ijjk', commits: 12400, email: 'ijjk@example.com' },
-    { name: 'timneutkens', commits: 8900, email: 'timneutkens@example.com' },
-    { name: 'shuding', commits: 5600, email: 'shuding@example.com' },
-  ],
-};
-
 const meta: Meta<typeof CommunityReposView> = {
   title: 'Community/CommunityReposView',
   component: CommunityReposView,
@@ -180,12 +140,7 @@ type Story = StoryObj<typeof CommunityReposView>;
 export const Populated: Story = {
   render: () => (
     <StoryWrapper>
-      <CommunityReposView
-        data={populatedData}
-        heroFileTree={mockFileTree}
-        heroAnalysis={mockAnalysis}
-        heroIdentityByEmail={mockIdentityByEmail}
-      />
+      <CommunityReposView data={populatedData} />
     </StoryWrapper>
   ),
 };

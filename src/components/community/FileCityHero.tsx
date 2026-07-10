@@ -1,34 +1,16 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import {
-  PanelEventBus,
-  type PanelContextValue,
-} from '@principal-ade/panel-framework-core';
-import type { FileTree } from '@principal-ai/repository-abstraction';
-import type {
-  FileCityGuidePanelActions,
-  FileCityGuidePanelContext,
-  FileCityGuideRepository,
-} from '@industry-theme/file-city-panel';
-import { repoBlameTotals } from '@/lib/repo-analysis/contributionLayers';
-import type { ContributionAnalysis } from '@/lib/repo-analysis/contributionLayers';
 import type { CarouselRepo } from './CommunityCarousel';
-import { GitCommit, Star, Users } from 'lucide-react';
+import { GitCommit, Star } from 'lucide-react';
 
-const FileCityGuidePanel = dynamic(
-  () => import('@industry-theme/file-city-panel').then((m) => m.FileCityGuidePanel),
-  { ssr: false },
-);
+/** Matches the mobile home card; S3-cached base city map. */
+const IMAGE_WIDTH = 800;
+const IMAGE_HEIGHT = 800;
 
-function linesByEmail(byEmail: Record<string, Record<string, number>>): Record<string, number> {
-  const result: Record<string, number> = {};
-  for (const [email, files] of Object.entries(byEmail)) {
-    result[email.toLowerCase()] = Object.values(files).reduce((s, v) => s + v, 0);
-  }
-  return result;
+export function fileCityImageUrl(owner: string, repo: string): string {
+  return `/api/file-city/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}?width=${IMAGE_WIDTH}&height=${IMAGE_HEIGHT}`;
 }
 
 function formatNumber(n: number): string {
@@ -37,24 +19,8 @@ function formatNumber(n: number): string {
   return String(n);
 }
 
-function contributorAvatar(
-  email: string,
-  identityByEmail: Record<string, { login: string; avatarUrl: string } | null> | undefined,
-): string | null {
-  if (!identityByEmail) return null;
-  const resolved = identityByEmail[email.toLowerCase()];
-  return resolved?.avatarUrl ?? null;
-}
-
 export interface FileCityHeroProps {
   repo: CarouselRepo;
-  fileTree: FileTree | null;
-  analysis: ContributionAnalysis | null;
-  loading: boolean;
-  error: string | null;
-  onAdvance?: () => void;
-  /** Lowercased-email → GitHub account (login + avatarUrl). */
-  identityByEmail?: Record<string, { login: string; avatarUrl: string; name?: string } | null>;
   /** Auto-cycle progress 0–1, or 0 when paused. */
   cycleProgress?: number;
 }
@@ -78,6 +44,7 @@ function AvatarImg({
         overflow: 'hidden', position: 'relative', flexShrink: 0,
       }}
     >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         ref={imgRef}
         src={src}
@@ -110,23 +77,16 @@ function AvatarImg({
 function ContributorCard({
   label,
   name,
-  email,
   statLabel,
-  identityByEmail,
   index = 0,
 }: {
   label: string;
   name: string;
-  email: string;
   statLabel: string;
-  identityByEmail: Record<string, { login: string; avatarUrl: string } | null> | undefined;
   index?: number;
 }) {
   const { theme } = useTheme();
-  const avatarUrl = contributorAvatar(email, identityByEmail);
-  const resolved = identityByEmail?.[email.toLowerCase()];
-  const githubLogin = resolved?.login ?? null;
-  const profileUrl = githubLogin ? `/${githubLogin}` : null;
+  const profileUrl = `/${encodeURIComponent(name)}`;
 
   const baseStyle: React.CSSProperties = {
     background: `color-mix(in srgb, ${theme.colors.primary} 8%, transparent)`,
@@ -138,7 +98,7 @@ function ContributorCard({
     animation: `heroCardIn 2s ease-out ${index * 2}s forwards`,
     textDecoration: 'none',
     display: 'block',
-    cursor: profileUrl ? 'pointer' : 'default',
+    cursor: 'pointer',
   };
 
   const content = (
@@ -148,7 +108,7 @@ function ContributorCard({
       </div>
       <div className="flex items-center" style={{ gap: 10 }}>
         <AvatarImg
-          src={avatarUrl ?? `https://github.com/${encodeURIComponent(name)}.png?size=32`}
+          src={`https://github.com/${encodeURIComponent(name)}.png?size=32`}
           fallbackLetter={name.charAt(0).toUpperCase()}
           size={32}
         />
@@ -165,132 +125,46 @@ function ContributorCard({
     </>
   );
 
-  if (profileUrl) {
-    return (
-      <a href={profileUrl} target="_blank" rel="noopener noreferrer" style={baseStyle}>
-        {content}
-      </a>
-    );
-  }
-
-  return <div style={baseStyle}>{content}</div>;
+  return (
+    <a href={profileUrl} target="_blank" rel="noopener noreferrer" style={baseStyle}>
+      {content}
+    </a>
+  );
 }
 
 export function FileCityHero({
   repo,
-  fileTree,
-  analysis,
-  loading,
-  error: treeError,
-  identityByEmail,
   cycleProgress,
 }: FileCityHeroProps) {
   const { theme } = useTheme();
-
-  const topCommitter = useMemo(() => {
-    if (!analysis || analysis.contributors.length === 0) return null;
-    return analysis.contributors.reduce((best, c) =>
-      c.commits > best.commits ? c : best
-    );
-  }, [analysis]);
-
-  const topLineContributor = useMemo<{ name: string; email: string; lines: number } | null>(() => {
-    if (!analysis) return null;
-
-    // Fast path: use precomputed contributors when available.
-    if (analysis.precomputedContributors && analysis.precomputedContributors.length > 0) {
-      const best = analysis.precomputedContributors.reduce((a, b) =>
-        a.stats.lines > b.stats.lines ? a : b
-      );
-      // Prefer GitHub display name from identity overlay over git author name.
-      const email = best.emails[0] ?? best.key;
-      const identity = identityByEmail?.[email.toLowerCase()];
-      const name = identity?.name ?? best.name;
-      return { name, email, lines: best.stats.lines };
-    }
-
-    // Slow path: derive from raw byEmail.
-    const lines = linesByEmail(analysis.byEmail ?? {});
-    let bestEmail: string | null = null;
-    let bestLines = 0;
-    for (const [email, count] of Object.entries(lines)) {
-      if (count > bestLines) { bestEmail = email; bestLines = count; }
-    }
-    if (!bestEmail) return null;
-    const contributor = analysis.contributors.find(
-      (c) => c.email.toLowerCase() === bestEmail!.toLowerCase()
-    );
-    // Prefer GitHub display name from identity overlay over git author name.
-    const identity = identityByEmail?.[bestEmail.toLowerCase()];
-    const name = identity?.name ?? contributor?.name ?? bestEmail;
-    return { name, email: bestEmail, lines: bestLines };
-  }, [analysis, identityByEmail]);
-
-  const events = useMemo(() => new PanelEventBus(), [repo.owner, repo.repo]);
-  const repository = useMemo<FileCityGuideRepository>(
-    () => ({ id: repo.fullName, owner: repo.owner, name: repo.repo }),
-    [repo.fullName, repo.owner, repo.repo],
-  );
-
-  const actions = useMemo<FileCityGuidePanelActions>(
-    () => ({
-      openFile: (filePath: string) => {
-        window.open(
-          `https://github.com/${repo.owner}/${repo.repo}/blob/HEAD/${filePath}`,
-          '_blank', 'noopener,noreferrer',
-        );
-      },
-      fetchAudioUrls: async () => new Map(),
-      closeCommit: () => {},
-      closeIssue: () => {},
-    }),
+  const imageUrl = useMemo(
+    () => fileCityImageUrl(repo.owner, repo.repo),
     [repo.owner, repo.repo],
   );
 
-  const context = useMemo<PanelContextValue<FileCityGuidePanelContext>>(() => ({
-    currentScope: { type: 'repository' },
-    refresh: async () => {},
-    fileTree: {
-      scope: 'repository', name: 'fileTree',
-      data: fileTree ?? (null as unknown as FileTree),
-      loading: fileTree === null,
-      error: null,
-      refresh: async () => {},
-    },
-    lineCounts: {
-      scope: 'repository', name: 'lineCounts',
-      data: null,
-      loading: false, error: null, refresh: async () => {},
-    },
-    tour: {
-      scope: 'repository', name: 'tour', data: null,
-      loading: false, error: null, refresh: async () => {},
-    },
-    commit: {
-      scope: 'repository', name: 'commit', data: null,
-      loading: false, error: null, refresh: async () => {},
-    },
-    issue: {
-      scope: 'repository', name: 'issue', data: null,
-      loading: false, error: null, refresh: async () => {},
-    },
-    readme: {
-      scope: 'repository', name: 'readme', data: null,
-      loading: false, error: null, refresh: async () => {},
-    },
-    highlightLayers: {
-      scope: 'repository', name: 'highlightLayers',
-      data: null,
-      loading: false, error: null, refresh: async () => {},
-    },
-    repository,
-  }), [fileTree, repository]);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
-  const showLoading = loading && !fileTree && !treeError;
+  // Reset load state when the selected repo (and thus image URL) changes.
+  useEffect(() => {
+    setImageLoaded(false);
+    setImageError(false);
+  }, [imageUrl]);
 
-  const totalLines = analysis ? repoBlameTotals(analysis).totalLines : 0;
-  const totalContributors = analysis?.contributors.length ?? 0;
-  const totalFiles = fileTree?.stats.totalFiles ?? 0;
+  const topByCommits = useMemo(() => {
+    if (repo.topContributors.length === 0) return null;
+    return repo.topContributors.reduce((best, c) =>
+      c.commits > best.commits ? c : best
+    );
+  }, [repo.topContributors]);
+
+  const topByLines = useMemo(() => {
+    const withLines = repo.topContributors.filter(
+      (c): c is typeof c & { lines: number } => typeof c.lines === 'number' && c.lines > 0,
+    );
+    if (withLines.length === 0) return null;
+    return withLines.reduce((best, c) => (c.lines > best.lines ? c : best));
+  }, [repo.topContributors]);
 
   return (
     <div
@@ -311,7 +185,7 @@ export function FileCityHero({
         }
       `}</style>
 
-      {!!cycleProgress && !showLoading && (
+      {!!cycleProgress && (
         <div style={{
           position: 'absolute',
           bottom: 0, left: 0, right: 0, height: 3,
@@ -326,7 +200,8 @@ export function FileCityHero({
           }} />
         </div>
       )}
-      {/* ---------- Left panel: info ---------- */}
+
+      {/* ---------- Left panel: info from carousel cache ---------- */}
       <div
         style={{
           width: 450,
@@ -340,7 +215,6 @@ export function FileCityHero({
           overflowY: 'auto',
         }}
       >
-        {/* Owner avatar + repo name & owner */}
         <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
           <AvatarImg
             src={`https://github.com/${encodeURIComponent(repo.owner)}.png?size=80`}
@@ -366,90 +240,108 @@ export function FileCityHero({
           </div>
         </div>
 
-            {/* Key stats */}
-            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-              <div className="flex items-center gap-1.5">
-                <span style={{ fontSize: theme.fontSizes[2], color: theme.colors.textMuted }}>{formatNumber(totalFiles)} files</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span style={{ fontSize: theme.fontSizes[2], color: theme.colors.textMuted }}>{formatNumber(totalLines)} lines</span>
-              </div>
-          <div className="flex items-center gap-1.5">
-            <Users size={16} style={{ color: theme.colors.textMuted }} />
-            <span style={{ fontSize: theme.fontSizes[2], color: theme.colors.textMuted }}>{totalContributors} contributors</span>
-          </div>
+        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+          {typeof repo.totalLines === 'number' && repo.totalLines > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span style={{ fontSize: theme.fontSizes[2], color: theme.colors.textMuted }}>
+                {formatNumber(repo.totalLines)} lines
+              </span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5">
             <Star size={16} style={{ color: theme.colors.textMuted }} />
-            <span style={{ fontSize: theme.fontSizes[2], color: theme.colors.textMuted }}>{formatNumber(repo.stargazersCount)} stars</span>
+            <span style={{ fontSize: theme.fontSizes[2], color: theme.colors.textMuted }}>
+              {formatNumber(repo.stargazersCount)} stars
+            </span>
           </div>
         </div>
 
-        {/* Most commits card */}
-        {topCommitter && (
+        {repo.description && (
+          <div
+            style={{
+              fontSize: theme.fontSizes[1],
+              color: theme.colors.textMuted,
+              lineHeight: 1.45,
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {repo.description}
+          </div>
+        )}
+
+        {topByCommits && (
           <ContributorCard
             index={0}
             label="Most commits"
-            name={topCommitter.name}
-            email={topCommitter.email}
-            statLabel={`${topCommitter.commits} commits`}
-            identityByEmail={identityByEmail}
+            name={topByCommits.name}
+            statLabel={`${formatNumber(topByCommits.commits)} commits`}
           />
         )}
 
-        {/* Most lines card */}
-        {topLineContributor && (
+        {topByLines && (
           <ContributorCard
             index={1}
             label="Most lines"
-            name={topLineContributor.name}
-            email={topLineContributor.email}
-            statLabel={`${formatNumber(topLineContributor.lines)} lines`}
-            identityByEmail={identityByEmail}
+            name={topByLines.name}
+            statLabel={`${formatNumber(topByLines.lines)} lines`}
           />
         )}
       </div>
 
-      {/* ---------- Right panel: 3D city ---------- */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        {showLoading && (
+      {/* ---------- Right panel: pre-rendered File City PNG ---------- */}
+      <div
+        style={{
+          flex: 1,
+          position: 'relative',
+          overflow: 'hidden',
+          background: theme.colors.background,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {!imageLoaded && !imageError && (
           <div
             style={{
               position: 'absolute', inset: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: theme.colors.textMuted, fontSize: theme.fontSizes[1],
-              zIndex: 15, background: theme.colors.background,
+              zIndex: 2,
             }}
           >
-            Loading {repo.repo}...
+            Loading map...
           </div>
         )}
 
-        {treeError && (
+        {imageError ? (
           <div
             style={{
-              position: 'absolute', inset: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: theme.colors.textMuted, fontSize: theme.fontSizes[1],
-              zIndex: 15, background: theme.colors.background,
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSizes[1],
+              textAlign: 'center',
+              padding: 24,
             }}
           >
-            {treeError}
+            Could not load city map
           </div>
-        )}
-
-        {!treeError && (
-          <FileCityGuidePanel
-            key={repo.fullName}
-            context={context}
-            actions={actions}
-            events={events}
-            defaultIsolationMode="transparent"
-            excludedFolders={[]}
-            defaultSkipWelcome
-            showColorLegend={false}
-            showFileTreeToggle={false}
-            readmeMarkdownWidth={0}
-            showColorLegendToggle={false}
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={imageUrl}
+            src={imageUrl}
+            alt={`${repo.fullName} file city map`}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              opacity: imageLoaded ? 1 : 0,
+              transition: 'opacity 0.25s ease',
+            }}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageError(true)}
           />
         )}
       </div>

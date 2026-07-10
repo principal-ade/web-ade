@@ -3,11 +3,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ChevronLeft, ChevronRight, Star, Users, GitCommit, LayoutGrid, LayoutList, Play, Pause } from 'lucide-react';
-import { GitFileTreeBuilder, type FileTree } from '@principal-ai/repository-abstraction';
-import type { ContributionAnalysis } from '@/lib/repo-analysis/contributionLayers';
-import { trpc } from '@/lib/trpc/client';
 import type { CarouselCache, CarouselRepo } from './CommunityCarousel';
-import { FileCityHero } from './FileCityHero';
+import { FileCityHero, fileCityImageUrl } from './FileCityHero';
 
 function formatNumber(n: number): string {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
@@ -72,14 +69,21 @@ export interface CommunityReposViewProps {
   loading?: boolean;
   error?: string | null;
   onRetry?: () => void;
-  /** Pre-fetched file tree (for override / Storybook). When omitted, fetched internally. */
-  heroFileTree?: FileTree | null;
-  /** Pre-fetched analysis (for override / Storybook). When omitted, fetched internally. */
-  heroAnalysis?: ContributionAnalysis | null;
-  heroLoading?: boolean;
-  heroError?: string | null;
-  /** Pre-fetched email→GitHub-account map (for override / Storybook). */
-  heroIdentityByEmail?: Record<string, { login: string; avatarUrl: string; name?: string } | null>;
+}
+
+// ---------------------------------------------------------------------------
+// Image prefetch (warm browser cache for auto-cycle)
+// ---------------------------------------------------------------------------
+
+const PREFETCH_AHEAD = 2;
+const prefetchedUrls = new Set<string>();
+
+function prefetchFileCityImage(owner: string, repo: string): void {
+  const url = fileCityImageUrl(owner, repo);
+  if (prefetchedUrls.has(url) || typeof window === 'undefined') return;
+  prefetchedUrls.add(url);
+  const img = new Image();
+  img.src = url;
 }
 
 // ---------------------------------------------------------------------------
@@ -91,11 +95,6 @@ export function CommunityReposView({
   loading = false,
   error = null,
   onRetry,
-  heroFileTree: heroFileTreeProp,
-  heroAnalysis: heroAnalysisProp,
-  heroLoading: heroLoadingProp = false,
-  heroError: heroErrorProp = null,
-  heroIdentityByEmail: heroIdentityByEmailProp,
 }: CommunityReposViewProps) {
   const { theme } = useTheme();
   const repos = data?.repos ?? [];
@@ -160,90 +159,17 @@ export function CommunityReposView({
     return () => cancelAnimationFrame(rafId);
   }, [autoCycle, selectedFullName, repos]);
 
-  // --- Hero data: use props when provided, otherwise fetch + prefetch ahead ---
-  const hasExternalHeroData = heroFileTreeProp !== undefined;
-
-  interface HeroData {
-    fileTree: FileTree | null;
-    analysis: ContributionAnalysis | null;
-    identityByEmail: Record<string, { login: string; avatarUrl: string; name?: string } | null> | null;
-    loading: boolean;
-    error: string | null;
-  }
-
-  const PREFETCH_AHEAD = 2;
-
-  const heroCacheRef = useRef<Record<string, HeroData>>({});
-  const heroInflightRef = useRef<Set<string>>(new Set());
-  const [heroCache, setHeroCache] = useState<Record<string, HeroData>>({});
-
-  const loadHeroRepo = useCallback(async (repo: CarouselRepo) => {
-    const key = repo.fullName;
-    if (heroCacheRef.current[key] || heroInflightRef.current.has(key)) return;
-    heroInflightRef.current.add(key);
-    setHeroCache((prev) => ({
-      ...prev,
-      [key]: { fileTree: null, analysis: null, identityByEmail: null, loading: true, error: null },
-    }));
-    try {
-      const [treeData, analysisRes] = await Promise.all([
-        trpc.github.getTree.query({ owner: repo.owner, repo: repo.repo }),
-        fetch(`/api/repo-analysis/${repo.owner}/${repo.repo}`).then(async (r) => {
-          if (!r.ok) return null;
-          const text = await r.text();
-          try { return text ? JSON.parse(text) : null; }
-          catch { return null; }
-        }),
-      ]);
-
-      const blobs = treeData.tree.filter((e: Record<string, unknown>) => e.type === 'blob');
-      const tree = new GitFileTreeBuilder().build({
-        files: blobs.map((e: Record<string, unknown>) => ({ path: e.path as string, size: (e.size as number) || 0 })),
-        rootPath: `/${repo.owner}/${repo.repo}`,
-        commitSha: treeData.sha as string,
-        branch: 'HEAD',
-      });
-
-      const data: HeroData = {
-        fileTree: tree,
-        analysis: ((analysisRes?.byEmail || analysisRes?.precomputedContributors) && analysisRes?.totalLines) ? (analysisRes as ContributionAnalysis) : null,
-        identityByEmail: analysisRes?.identityByEmail ?? null,
-        loading: false,
-        error: null,
-      };
-      heroCacheRef.current[key] = data;
-      setHeroCache((prev) => ({ ...prev, [key]: data }));
-    } catch (err) {
-      const data: HeroData = {
-        fileTree: null, analysis: null, identityByEmail: null, loading: false,
-        error: err instanceof Error ? err.message : 'Failed to load repository',
-      };
-      heroCacheRef.current[key] = data;
-      setHeroCache((prev) => ({ ...prev, [key]: data }));
-    } finally {
-      heroInflightRef.current.delete(key);
-    }
-  }, []);
-
+  // Prefetch File City PNGs for the active repo and the next few (auto-cycle).
   useEffect(() => {
-    if (hasExternalHeroData || repos.length === 0) return;
+    if (repos.length === 0) return;
     const activeKey = selectedFullName ?? repos[0]?.fullName ?? null;
     const startIdx = repos.findIndex((r) => r.fullName === activeKey);
     if (startIdx < 0) return;
     for (let i = 0; i <= PREFETCH_AHEAD; i++) {
       const repo = repos[(startIdx + i) % repos.length];
-      if (repo) void loadHeroRepo(repo);
+      if (repo) prefetchFileCityImage(repo.owner, repo.repo);
     }
-  }, [hasExternalHeroData, selectedFullName, repos, loadHeroRepo]);
-
-  const selectedKey = selected?.fullName ?? '';
-  const cachedHero = heroCache[selectedKey] ?? heroCacheRef.current[selectedKey];
-
-  const heroFileTree = hasExternalHeroData ? (heroFileTreeProp ?? null) : (cachedHero?.fileTree ?? null);
-  const heroAnalysis = hasExternalHeroData ? (heroAnalysisProp ?? null) : (cachedHero?.analysis ?? null);
-  const heroIdentityByEmail = hasExternalHeroData ? (heroIdentityByEmailProp ?? null) : (cachedHero?.identityByEmail ?? null);
-  const heroLoading = hasExternalHeroData ? heroLoadingProp : (cachedHero?.loading ?? false);
-  const heroError = hasExternalHeroData ? (heroErrorProp ?? null) : (cachedHero?.error ?? null);
+  }, [selectedFullName, repos]);
 
   if (loading) {
     return <div className="flex items-center justify-center py-24" style={{ color: theme.colors.textMuted }}>Loading community repos...</div>;
@@ -276,22 +202,17 @@ export function CommunityReposView({
 
   return (
     <div className="flex flex-col" style={{ gap: 24 }}>
-      {/* File City hero — cycles through coverage views */}
+      {/* Hero: carousel metadata + File City PNG (no live 3D component) */}
       {selected && (
         <FileCityHero
           key={selected.fullName}
           repo={selected}
-          fileTree={heroFileTree}
-          analysis={heroAnalysis}
-          identityByEmail={heroIdentityByEmail ?? undefined}
-          loading={heroLoading}
-          error={heroError}
           cycleProgress={cycleProgress}
         />
       )}
 
       {/* Navigation controls */}
-      {repos.length > 1 && !heroLoading && (
+      {repos.length > 1 && (
         <div className="flex items-center justify-center" style={{ gap: 12 }}>
           <ChevronButton onClick={handlePrev} title="Previous repo">
             <ChevronLeft size={18} />
@@ -479,6 +400,7 @@ const MiniRepoCard: React.FC<{
             position: 'relative',
           }}
         >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`https://github.com/${encodeURIComponent(repo.owner)}.png?size=36`}
             alt=""
@@ -511,10 +433,6 @@ const MiniRepoCard: React.FC<{
           <Star size={12} style={{ color: theme.colors.textMuted }} />
           <span style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted }}>{formatNumber(repo.stargazersCount)}</span>
         </div>
-        <div className="flex items-center gap-1">
-          <Users size={12} style={{ color: theme.colors.textMuted }} />
-          <span style={{ fontSize: theme.fontSizes[0], color: theme.colors.textMuted }}>{repo.visitorCount}</span>
-        </div>
       </div>
 
       {repo.topContributors.length > 0 && (() => {
@@ -530,6 +448,7 @@ const MiniRepoCard: React.FC<{
                 position: 'relative',
               }}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`https://github.com/${encodeURIComponent(topCommits.name)}.png?size=24`}
                 alt=""
