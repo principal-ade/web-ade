@@ -72,3 +72,17 @@ body {
   height: 100dvh;
   width: 100%;
 }
+
+/* Scan animation for vibe coding detector */
+@keyframes scan {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+
+.animate-scan {
+  animation: scan 1.5s ease-in-out infinite;
+}

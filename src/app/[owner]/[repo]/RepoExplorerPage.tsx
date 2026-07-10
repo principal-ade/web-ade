@@ -1522,6 +1522,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
         repoActive={leftViewMode !== 'tours'}
         onShowOverview={() => setLeftViewMode('tours')}
         onVibeCodingHighlight={setVibeCodingPaths}
+        filePaths={filePaths}
       />
       <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
         {/* The delete control is driven by the app's own validated session:
@@ -1878,6 +1879,8 @@ const Header: React.FC<{
   onShowOverview: () => void;
   /** Vibe-coding highlight: paths containing isRecord for the File City map. */
   onVibeCodingHighlight: (paths: string[] | null) => void;
+  /** All file paths in the repo (for scan animation). */
+  filePaths: string[];
 }> = ({
   rootRef,
   owner,
@@ -1892,6 +1895,7 @@ const Header: React.FC<{
   repoActive,
   onShowOverview,
   onVibeCodingHighlight,
+  filePaths,
 }) => {
   const { theme } = useTheme();
   // Mobile: the repo opener collapses into a "Search GitHub" button that opens
@@ -2131,7 +2135,7 @@ const Header: React.FC<{
         </div>
 
         {/* Vibe coding detector — counts isRecord occurrences via code search. */}
-        <VibeCodingButton owner={owner} repo={repo} onHighlight={onVibeCodingHighlight} />
+        <VibeCodingButton owner={owner} repo={repo} filePaths={filePaths} onHighlight={onVibeCodingHighlight} />
 
         {/* Bookmarks passport — slides in the side panel. Hidden on mobile. */}
         <button
