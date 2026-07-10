@@ -81,6 +81,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import { AgentViewButton } from '@/components/AgentViewButton';
 import VibeCodingButton from '@/components/VibeCodingButton';
+import type { VibeCodingData } from '@/components/VibeCodingButton';
+import VibeCodingPane from '@/components/VibeCodingPane';
 import { RepoSearchBar } from '@/components/RepoSearchBar';
 import { readRecentRepos } from '@/lib/recentRepos';
 import { BookmarksDrawer } from '@/components/bookmarks/BookmarksDrawer';
@@ -183,7 +185,8 @@ type LeftViewMode =
   | 'issues'
   | 'pull-requests'
   | 'structure'
-  | 'contributors';
+  | 'contributors'
+  | 'vibe-coding';
 
 // Sample CityData used to warm FC3D's WebGL / shader caches during the
 // loading screen — same fixture the trail page uses.
@@ -279,6 +282,15 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
   // Vibe-coding detector — paths containing isRecord, set by the header
   // button's search. Drives a highlight layer on the File City map.
   const [vibeCodingPaths, setVibeCodingPaths] = useState<string[] | null>(null);
+  const [vibeCodingData, setVibeCodingData] = useState<VibeCodingData>({
+    fileCount: null,
+    occurrenceCount: null,
+    files: [],
+    terms: [],
+    loading: false,
+    error: null,
+    scanActive: false,
+  });
 
   const router = useRouter();
 
@@ -1522,6 +1534,8 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
         repoActive={leftViewMode !== 'tours'}
         onShowOverview={() => setLeftViewMode('tours')}
         onVibeCodingHighlight={setVibeCodingPaths}
+        onVibeCodingDataChange={setVibeCodingData}
+        onOpenVibeView={() => setLeftViewMode('vibe-coding')}
         filePaths={filePaths}
       />
       <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
@@ -1714,6 +1728,16 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
           excludedDirs={excludedDirs}
           onExcludedDirsChange={setExcludedDirs}
           isMobile={isMobile}
+          vibeCodingData={vibeCodingData}
+          onVibeCodingClear={() => {
+            setVibeCodingPaths(null);
+            setVibeCodingData({
+              fileCount: null, occurrenceCount: null, files: [], terms: [],
+              loading: false, error: null, scanActive: false,
+            });
+            setLeftViewMode('tours');
+          }}
+          onVibeCodingClose={() => setLeftViewMode('tours')}
         />
         <RightPane
           owner={owner}
@@ -1879,6 +1903,10 @@ const Header: React.FC<{
   onShowOverview: () => void;
   /** Vibe-coding highlight: paths containing isRecord for the File City map. */
   onVibeCodingHighlight: (paths: string[] | null) => void;
+  /** Vibe-coding state updates — mirrors the button's internal state to the pane. */
+  onVibeCodingDataChange?: (data: VibeCodingData) => void;
+  /** Open the vibe-coding results pane in the left panel. */
+  onOpenVibeView?: () => void;
   /** All file paths in the repo (for scan animation). */
   filePaths: string[];
 }> = ({
@@ -1895,6 +1923,8 @@ const Header: React.FC<{
   repoActive,
   onShowOverview,
   onVibeCodingHighlight,
+  onVibeCodingDataChange,
+  onOpenVibeView,
   filePaths,
 }) => {
   const { theme } = useTheme();
@@ -2135,7 +2165,14 @@ const Header: React.FC<{
         </div>
 
         {/* Vibe coding detector — counts isRecord occurrences via code search. */}
-        <VibeCodingButton owner={owner} repo={repo} filePaths={filePaths} onHighlight={onVibeCodingHighlight} />
+        <VibeCodingButton
+          owner={owner}
+          repo={repo}
+          filePaths={filePaths}
+          onHighlight={onVibeCodingHighlight}
+          onDataChange={onVibeCodingDataChange}
+          onOpenView={onOpenVibeView}
+        />
 
         {/* Bookmarks passport — slides in the side panel. Hidden on mobile. */}
         <button
@@ -2308,6 +2345,10 @@ const TrailListPane: React.FC<{
   /** Small-screen bottom rail — the tours view collapses to just the About
    *  card with a Contributors button in place of the tour CTA. */
   isMobile: boolean;
+  /** Vibe-coding detector state — mirrors the header button for the left pane. */
+  vibeCodingData: VibeCodingData;
+  onVibeCodingClear: () => void;
+  onVibeCodingClose: () => void;
 }> = ({
   owner,
   repo,
@@ -2362,6 +2403,9 @@ const TrailListPane: React.FC<{
   excludedDirs,
   onExcludedDirsChange,
   isMobile,
+  vibeCodingData,
+  onVibeCodingClear,
+  onVibeCodingClose,
 }) => {
   const { theme } = useTheme();
   // Repo-root README (if any), surfaced as a button in the About overview.
@@ -2520,6 +2564,20 @@ const TrailListPane: React.FC<{
           hasTrails={entries.length > 0}
           selectedPath={selectedFilePath}
           onSelectFile={onSelectFile}
+        />
+      ) : leftViewMode === 'vibe-coding' ? (
+        <VibeCodingPane
+          fileCount={vibeCodingData.fileCount}
+          occurrenceCount={vibeCodingData.occurrenceCount}
+          files={vibeCodingData.files}
+          terms={vibeCodingData.terms}
+          loading={vibeCodingData.loading}
+          error={vibeCodingData.error}
+          scanActive={vibeCodingData.scanActive}
+          totalRepoFiles={filePaths.length}
+          onClear={onVibeCodingClear}
+          onRefresh={() => {}}
+          onClose={onVibeCodingClose}
         />
       ) : leftViewMode === 'tours' ? (
         toursPane
