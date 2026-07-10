@@ -30,7 +30,6 @@ function getSeverity(occurrences: number): SeverityConfig {
   return SEVERITY.critical;
 }
 
-const SCAN_WINDOW = 80;
 const SCAN_INTERVAL = 90;
 const MAX_SCAN_DURATION_MS = 5000;
 
@@ -141,10 +140,12 @@ export default forwardRef<VibeCodingButtonHandle, VibeCodingButtonProps>(functio
 
     emitData({ loading: true, scanActive: true, error: null });
 
-    // Start scan animation over the city
+    // Start scan animation over the city — cumulatively highlights files
+    // so the city fills up progressively as the scan sweeps through.
     if (filePaths.length > 0) {
       const scanStep = computeScanStep(filePaths.length);
       scanOffsetRef.current = 0;
+      const accumulated = new Set<string>();
       const timer = setInterval(() => {
         const offset = scanOffsetRef.current;
         const newOffset = (offset + scanStep) % filePaths.length;
@@ -158,8 +159,17 @@ export default forwardRef<VibeCodingButtonHandle, VibeCodingButtonProps>(functio
           }
         }
 
-        const batch = filePaths.slice(newOffset, newOffset + SCAN_WINDOW);
-        onHighlight?.(batch);
+        // Add the new batch to the accumulated set
+        for (let i = offset; i < newOffset; i++) {
+          accumulated.add(filePaths[i]!);
+        }
+        // Also cover the wrap-around edge case
+        if (newOffset < offset) {
+          for (let i = offset; i < filePaths.length; i++) {
+            accumulated.add(filePaths[i]!);
+          }
+        }
+        onHighlight?.(Array.from(accumulated));
         scanOffsetRef.current = newOffset;
         emitData({ loading: true, scanActive: true, scanProgress: newOffset / filePaths.length });
       }, SCAN_INTERVAL);
