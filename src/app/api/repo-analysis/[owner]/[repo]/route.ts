@@ -6,6 +6,17 @@
  *   the repo's current HEAD). Never boots a VM — this is the cheap read the page
  *   paints first, so it's never blank for a repo analyzed before.
  *
+ *   Response is intentionally SLIM so mega-repos (linux/kibana) stay under the
+ *   Amplify/CloudFront ~6 MB SSR ceiling:
+ *     - meta + scalars (fileCount, totalLinesGlobal, authorCount, …)
+ *     - top-N precomputedContributors (rest via GET .../contributors)
+ *     - identityByEmail overlay seed
+ *   NOT shipped here (stay in S3 / other routes):
+ *     - byEmail, personOwnership → GET .../ownership
+ *     - lineCounts (per-file heights) → deferred separate endpoint later
+ *     - totalLines (per-file blame totals) → server-only; client uses scalars/stats
+ *     - shortlog `contributors` → redundant when precomputed exists
+ *
  * POST /api/repo-analysis/[owner]/[repo]
  *   The refresh: reuses the repo's warm VM (git fetch + re-sweep) or boots a new
  *   one and LAUNCHES the git sweep DETACHED, then returns 202 immediately. The
@@ -58,6 +69,15 @@ const RUN_IN_PROGRESS_WINDOW_MS = 60 * 60 * 1000;
  *  launch time (two clocks) — only used in the no-token fallback where staleness
  *  can't be decided by sha. */
 const LAUNCH_CLOCK_SKEW_MS = 60 * 1000;
+
+/**
+ * How many precomputed contributors ride on the main GET. Covers About avatars
+ * (~4) and the first screen of the Contributors pane; the rest is paged via
+ * GET .../contributors. Sized so even dense identity rows stay well under the
+ * Amplify response ceiling when combined with meta (full list alone is ~6 MB
+ * on torvalds/linux).
+ */
+const INLINE_CONTRIBUTORS_LIMIT = 200;
 
 interface RouteParams {
   params: Promise<{ owner: string; repo: string }>;
@@ -165,14 +185,22 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     console.error('[Repo Analysis] storeCarouselEnrichment failed:', err);
   });
 
-  // Build response: ship precomputedContributors when available, fall back to byEmail
-  const { byEmail: _byEmail, personOwnership: _personOwnership, ...analysisFields } = cached.analysis;
-  const authorCount = cached.analysis.precomputedContributors
-    ? cached.analysis.precomputedContributors.length
+  // Slim response: only scalars + a head of precomputedContributors. Heavy maps
+  // (byEmail, personOwnership, lineCounts, totalLines, shortlog contributors)
+  // stay in S3 / sibling routes so mega-repos fit under Amplify's ~6 MB ceiling.
+  const fullPrecomputed = cached.analysis.precomputedContributors;
+  const authorCount = fullPrecomputed
+    ? fullPrecomputed.length
     : Object.keys(cached.analysis.byEmail).length;
 
+  const precomputedHead = fullPrecomputed
+    ? fullPrecomputed.slice(0, INLINE_CONTRIBUTORS_LIMIT)
+    : undefined;
+  const contributorsTruncated = Boolean(
+    fullPrecomputed && fullPrecomputed.length > INLINE_CONTRIBUTORS_LIMIT,
+  );
+
   return NextResponse.json({
-    ...analysisFields,
     cached: true,
     owner,
     repo,
@@ -184,6 +212,15 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     lastError,
     generatedAt: cached.generatedAt,
     authorCount,
+    fileCount: cached.analysis.fileCount,
+    totalLinesGlobal: cached.analysis.totalLinesGlobal,
+    // Optional head of person list (lines-desc). Full list: GET .../contributors.
+    ...(precomputedHead ? { precomputedContributors: precomputedHead } : {}),
+    contributorsTruncated,
+    contributorsNextCursor: contributorsTruncated ? INLINE_CONTRIBUTORS_LIMIT : null,
+    // Per-file height map is deferred (separate endpoint later). Signal so the
+    // client doesn't treat absence as "analysis failed."
+    lineCountsAvailable: true,
     identityByEmail: identityMap?.identityByEmail ?? {},
   });
 }

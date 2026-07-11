@@ -30,22 +30,31 @@ import type { RepoAnalysisErrorRecord } from '@/lib/repo-analysis/s3-cache';
 import type { IdentityByEmail } from '@/lib/repo-analysis/identity-cache';
 import {
   buildMergedContributionLayers,
-  totalLinesOwned,
   type ContributionAnalysis,
 } from '@/lib/repo-analysis/contributionLayers';
 
-/** What the repo-analysis route returns (the fields we use). GET and POST share
- *  the analysis fields; GET adds `cached`/`stale`/`currentSha`, POST adds
- *  `durationMs`. */
+/** What the slim repo-analysis GET returns (the fields we use). Heavy maps
+ *  (byEmail, personOwnership, lineCounts, totalLines, shortlog contributors)
+ *  are omitted; ownership and the full contributor list are paged separately. */
 export interface RepoAnalysisPayload extends ContributionAnalysis {
   owner: string;
   repo: string;
   generatedAt: string;
   durationMs?: number;
   authorCount: number;
-  lineCounts: Record<string, number>;
+  /**
+   * Per-file newline counts for building heights. Omitted from the slim GET
+   * (deferred endpoint); when absent the city stays flat for heights.
+   */
+  lineCounts?: Record<string, number>;
   fileCount: number;
   totalLinesGlobal: number;
+  /** True when more precomputedContributors exist beyond the inline head. */
+  contributorsTruncated?: boolean;
+  /** Cursor for GET .../contributors when truncated; null when complete. */
+  contributorsNextCursor?: number | null;
+  /** Server still holds per-file lineCounts in S3 (heights fetch later). */
+  lineCountsAvailable?: boolean;
   /** Commit the analysis was computed at (cache freshness key). */
   sha?: string | null;
   /** Pre-resolved blame-email → GitHub account overlay (lowercased keys), embedded
@@ -99,6 +108,8 @@ interface RepoAnalysisContextValue {
   contributionLayers: HighlightLayer[] | null;
   /** True while the paginated /ownership fetch is in flight. */
   ownershipLoading: boolean;
+  /** True while the remainder of precomputedContributors is paging in. */
+  contributorsLoading: boolean;
 }
 
 const RepoAnalysisContext = createContext<RepoAnalysisContextValue | null>(null);
@@ -117,6 +128,7 @@ export function RepoAnalysisProvider({
   const [meta, setMeta] = useState<RepoAnalysisMeta | null>(null);
   const [selectedEmails, setSelectedEmailsRaw] = useState<string[]>([]);
   const [ownershipLoading, setOwnershipLoading] = useState(false);
+  const [contributorsLoading, setContributorsLoading] = useState(false);
 
   // Mirror the latest analysis/meta into refs so `run`'s poll loop can read them
   // without widening `run`'s deps (which would re-fire the mount effect on every
@@ -360,12 +372,76 @@ export function RepoAnalysisProvider({
     };
   }, [owner, repo, analysis?.sha]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Page the remainder of precomputedContributors when the main GET only
+  // shipped a head (contributorsTruncated). About avatars use the head;
+  // Contributors pane grows as pages land. Keyed only on sha so partial
+  // merges don't re-enter the loop.
+  useEffect(() => {
+    if (!analysis?.contributorsTruncated || !analysis.sha) {
+      setContributorsLoading(false);
+      return;
+    }
+    const analysisSha = analysis.sha;
+    let cursor = analysis.contributorsNextCursor ?? analysis.precomputedContributors?.length ?? 0;
+    const seen = new Set((analysis.precomputedContributors ?? []).map((c) => c.key));
+    let cancelled = false;
+    setContributorsLoading(true);
+    const fetchContributors = async () => {
+      const limit = 500;
+      while (!cancelled) {
+        try {
+          const res = await fetch(
+            `/api/repo-analysis/${owner}/${repo}/contributors?cursor=${cursor}&limit=${limit}`,
+          );
+          if (!res.ok) break;
+          const data = (await res.json()) as {
+            page?: NonNullable<RepoAnalysisPayload['precomputedContributors']>;
+            nextCursor?: number | null;
+          };
+          if (cancelled) break;
+          const page = data.page ?? [];
+          if (page.length > 0) {
+            setAnalysis((prev) => {
+              if (!prev || prev.sha !== analysisSha) return prev;
+              const merged = [...(prev.precomputedContributors ?? [])];
+              for (const row of page) {
+                if (seen.has(row.key)) continue;
+                seen.add(row.key);
+                merged.push(row);
+              }
+              return {
+                ...prev,
+                precomputedContributors: merged,
+                contributorsTruncated: data.nextCursor != null,
+                contributorsNextCursor: data.nextCursor ?? null,
+              };
+            });
+          }
+          if (data.nextCursor == null) break;
+          cursor = data.nextCursor;
+        } catch {
+          break;
+        }
+      }
+      if (!cancelled) setContributorsLoading(false);
+    };
+    void fetchContributors();
+    return () => {
+      cancelled = true;
+      setContributorsLoading(false);
+    };
+    // Re-page when the cache generation changes (new sweep) or repo changes —
+    // not on each partial merge of pages into analysis.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [owner, repo, analysis?.sha, analysis?.generatedAt]);
+
   const clear = useCallback(() => {
     setAnalysis(null);
     setMeta(null);
     setSelectedEmailsRaw([]);
     setState({ kind: 'idle' });
     setOwnershipLoading(false);
+    setContributorsLoading(false);
     personOwnershipRef.current = {};
   }, []);
 
@@ -382,15 +458,22 @@ export function RepoAnalysisProvider({
 
   const contributors = useMemo(() => {
     if (!analysis) return [];
-    // Drive the list off `contributors` (has names) but show blame-line totals.
-    return analysis.contributors
-      .map((c) => ({
-        name: c.name,
-        email: c.email,
-        commits: c.commits,
-        lines: totalLinesOwned(analysis, c.email),
-      }))
-      .sort((a, b) => b.lines - a.lines);
+    // Prefer precomputed (person-merged + stats). Shortlog is no longer on the
+    // slim GET wire.
+    if (analysis.precomputedContributors?.length) {
+      return analysis.precomputedContributors.map((pc) => ({
+        name: pc.name,
+        email: pc.emails[0] ?? pc.key,
+        commits: pc.commits,
+        lines: pc.stats.lines,
+      }));
+    }
+    return (analysis.contributors ?? []).map((c) => ({
+      name: c.name,
+      email: c.email,
+      commits: c.commits,
+      lines: 0,
+    }));
   }, [analysis]);
 
   const selectedEmailsKey = selectedEmails.join(',');
@@ -398,6 +481,7 @@ export function RepoAnalysisProvider({
     if (!analysis || selectedEmails.length === 0) return null;
     // Hydrate with eagerly-loaded personOwnership so highlight layers
     // resolve even though the main API response strips it for payload size.
+    // totalLines is also stripped — layer builder falls back to absolute intensity.
     const hydrated = Object.keys(personOwnershipRef.current).length > 0
       ? { ...analysis, personOwnership: personOwnershipRef.current }
       : analysis;
@@ -405,7 +489,7 @@ export function RepoAnalysisProvider({
     return layers.length > 0 ? layers : null;
     // selectedEmailsKey stands in for the array identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [analysis, selectedEmailsKey]);
+  }, [analysis, selectedEmailsKey, ownershipLoading]);
 
   const value = useMemo<RepoAnalysisContextValue>(
     () => ({
@@ -421,9 +505,10 @@ export function RepoAnalysisProvider({
       contributors,
       contributionLayers,
       ownershipLoading,
+      contributorsLoading,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [analysis, state, meta, run, clear, selectedEmail, setSelectedEmail, selectedEmailsKey, setSelectedEmails, contributors, contributionLayers, ownershipLoading],
+    [analysis, state, meta, run, clear, selectedEmail, setSelectedEmail, selectedEmailsKey, setSelectedEmails, contributors, contributionLayers, ownershipLoading, contributorsLoading],
   );
 
   return (

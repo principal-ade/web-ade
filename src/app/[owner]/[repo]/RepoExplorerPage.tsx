@@ -224,11 +224,16 @@ const WARMING_CITY_DATA: import('@principal-ai/file-city-react').CityData = {
 function lineCountsSlice(
   analysis: RepoAnalysisPayload | null,
 ): DataSlice<LineCountsSliceData | null> {
+  // Slim analysis GET omits per-file lineCounts (heights deferred). Only attach
+  // the slice when a non-empty map is present so the city stays flat rather
+  // than treating `{}` as "zero-height everything."
+  const counts = analysis?.lineCounts;
+  const hasCounts = counts != null && Object.keys(counts).length > 0;
   return {
     scope: 'repository',
     name: 'lineCounts',
-    data: analysis
-      ? { lineCounts: analysis.lineCounts, status: 'available' }
+    data: hasCounts
+      ? { lineCounts: counts, status: 'available' }
       : null,
     loading: false,
     error: null,
@@ -4306,13 +4311,14 @@ const RepoOverview: React.FC<{
   // coverage exist" signal — we never run the sweep here.
   const { analysis } = useRepoAnalysis();
 
-  // Total blamed lines across the repo — only known once the cached analysis has
-  // loaded, so the "N lines" fact stays hidden until then. Falsy (null before
-  // load, or 0 when the repo has no blamed lines) means we fall back to file count.
+  // Total blamed lines across the repo — scalar from the slim analysis GET
+  // (not a client reduce over the totalLines path map, which is no longer shipped).
+  // Falsy (null before load, or 0 when the repo has no blamed lines) means we fall
+  // back to file count.
   const totalLines = useMemo(
     () =>
-      analysis
-        ? Object.values(analysis.totalLines).reduce((sum, n) => sum + n, 0)
+      analysis && typeof analysis.totalLinesGlobal === 'number'
+        ? analysis.totalLinesGlobal
         : null,
     [analysis],
   );
@@ -4388,7 +4394,10 @@ const RepoOverview: React.FC<{
       }));
   }, [analysis, lineIdentities]);
 
-  // "Commits" people: the top of GitHub's contributor graph (default avatar row).
+  // "Commits" people: preferred source is GitHub's contributor graph. When that
+  // fails or is empty (rate limit / 403 / cold cache), fall back to the analysis
+  // head so the About row still paints — the slim analysis GET always ships the
+  // top line-owners with commit counts from shortlog.
   const commitPeople = useMemo<ContribCard[]>(
     () =>
       (contributors?.contributors ?? []).slice(0, AVATAR_LIMIT).map((c) => ({
@@ -4405,8 +4414,11 @@ const RepoOverview: React.FC<{
 
   // The switch only appears when the cached analysis actually yielded owners.
   const hasCoverage = linePeople.length > 0;
+  // Prefer GitHub for Commits mode; if GitHub is empty, use analysis people so
+  // the whole "Top contributors" block isn't gated off by a 403.
+  const commitCards = commitPeople.length > 0 ? commitPeople : linePeople;
   const cards =
-    metricMode === 'percent' && hasCoverage ? linePeople : commitPeople;
+    metricMode === 'percent' && hasCoverage ? linePeople : commitCards;
   const orderKey = cards.map((c) => c.key).join(',');
 
   // FLIP: snapshot each card's box, then slide any card that shares a key across

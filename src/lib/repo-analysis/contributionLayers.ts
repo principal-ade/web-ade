@@ -33,10 +33,22 @@ export interface ContributionAnalysis {
   /** person-key → { path → lines that person owns }. Populated alongside
    *  precomputedContributors by the lazy transform. Used for highlight layers. */
   personOwnership?: Record<string, Record<string, number>>;
-  /** path → total blamed lines in that file. */
-  totalLines: Record<string, number>;
-  /** `git shortlog` rows: who committed, how often. */
-  contributors: Array<{ name: string; commits: number; email: string }>;
+  /**
+   * path → total blamed lines in that file. Present on full S3 envelopes and
+   * legacy payloads; **omitted from the slim main GET** (use precomputed stats /
+   * totalLinesGlobal). When missing, highlight intensity falls back to
+   * `absolute` (owned lines / max owned).
+   */
+  totalLines?: Record<string, number>;
+  /** Scalar repo total (slim GET / envelope). Preferred over reducing totalLines. */
+  totalLinesGlobal?: number;
+  /** Scalar file count when totalLines map is absent. */
+  fileCount?: number;
+  /**
+   * `git shortlog` rows: who committed, how often. Present on full S3 envelopes;
+   * **omitted from the slim main GET** when precomputedContributors exists.
+   */
+  contributors?: Array<{ name: string; commits: number; email: string }>;
 }
 
 export interface ContributionLayerOptions {
@@ -59,6 +71,18 @@ export interface ContributionLayerOptions {
  * Build stepped-opacity layers covering every file `email` owns. Returns `[]`
  * when the email has no ownership (so callers can treat it as "no highlight").
  */
+function layerOptionsForAnalysis(
+  analysis: ContributionAnalysis,
+  options: ContributionLayerOptions,
+): ContributionLayerOptions {
+  // Slim GET omits totalLines; share intensity needs per-file denominators.
+  // Fall back to absolute intensity (owned / max owned) when the map is gone.
+  const hasTotals =
+    analysis.totalLines != null && Object.keys(analysis.totalLines).length > 0;
+  if (hasTotals || options.intensity != null) return options;
+  return { ...options, intensity: 'absolute' };
+}
+
 export function buildContributionLayers(
   analysis: ContributionAnalysis,
   email: string,
@@ -66,8 +90,8 @@ export function buildContributionLayers(
 ): HighlightLayer[] {
   return buildOwnershipLayers(
     getOwnershipForEmail(analysis, email),
-    analysis.totalLines,
-    options,
+    analysis.totalLines ?? {},
+    layerOptionsForAnalysis(analysis, options),
   );
 }
 
@@ -83,8 +107,8 @@ export function buildMergedContributionLayers(
 ): HighlightLayer[] {
   return buildOwnershipLayers(
     mergeOwnership(analysis, emails),
-    analysis.totalLines,
-    options,
+    analysis.totalLines ?? {},
+    layerOptionsForAnalysis(analysis, options),
   );
 }
 
@@ -229,22 +253,28 @@ export function analysisContributors(
 ): AnalysisContributor[] {
   // Fast path: pre-computed contributor list from the lazy transform.
   if (analysis.precomputedContributors) {
-    return analysis.precomputedContributors.map((pc) => ({
-      // Use the first email as the canonical email for highlight layer lookups.
-      email: pc.emails[0] ?? pc.key,
-      name: pc.name,
-      commits: pc.commits,
-      stats: pc.stats,
-      noreplyLogin: pc.login,
-      noreplyUserId: pc.githubId,
-    }));
+    return analysis.precomputedContributors.map((pc) => {
+      // Prefer a noreply email as the representative when present (embeds login/id);
+      // otherwise the first blame email. Precomputed login/githubId win when set.
+      const noreplyEmail = pc.emails.find((e) => parseGitHubNoreply(e));
+      const email = noreplyEmail ?? pc.emails[0] ?? pc.key;
+      const nr = parseGitHubNoreply(email);
+      return {
+        email,
+        name: pc.name,
+        commits: pc.commits,
+        stats: pc.stats,
+        noreplyLogin: pc.login ?? nr?.login,
+        noreplyUserId: pc.githubId ?? nr?.id,
+      };
+    });
   }
 
   // Slow path: derive from raw byEmail (pre-transform or fallback).
   const byEmail = analysis.byEmail ?? {};
   const totals = repoBlameTotals(analysis);
   const shortlog = new Map(
-    analysis.contributors.map((c) => [c.email.toLowerCase(), c] as const),
+    (analysis.contributors ?? []).map((c) => [c.email.toLowerCase(), c] as const),
   );
   return Object.keys(byEmail)
     .map((email) => {
@@ -267,9 +297,27 @@ export function repoBlameTotals(analysis: ContributionAnalysis): {
   totalLines: number;
   totalFiles: number;
 } {
-  let totalLines = 0;
-  for (const v of Object.values(analysis.totalLines)) totalLines += v;
-  return { totalLines, totalFiles: Object.keys(analysis.totalLines).length };
+  // Full map (S3 envelope / legacy client payloads).
+  if (analysis.totalLines && Object.keys(analysis.totalLines).length > 0) {
+    let totalLines = 0;
+    for (const v of Object.values(analysis.totalLines)) totalLines += v;
+    return { totalLines, totalFiles: Object.keys(analysis.totalLines).length };
+  }
+  // Slim GET: scalars, or stats already baked into any precomputed row.
+  if (
+    typeof analysis.totalLinesGlobal === 'number' ||
+    typeof analysis.fileCount === 'number'
+  ) {
+    return {
+      totalLines: analysis.totalLinesGlobal ?? 0,
+      totalFiles: analysis.fileCount ?? 0,
+    };
+  }
+  const sample = analysis.precomputedContributors?.[0]?.stats;
+  if (sample) {
+    return { totalLines: sample.totalLines, totalFiles: sample.totalFiles };
+  }
+  return { totalLines: 0, totalFiles: 0 };
 }
 
 export interface ContributionStats {
