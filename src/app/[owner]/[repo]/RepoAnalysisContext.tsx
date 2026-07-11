@@ -345,7 +345,9 @@ export function RepoAnalysisProvider({
     setOwnershipLoading(true);
     const fetchOwnership = async () => {
       let cursor = 0;
-      const limit = 200;
+      // Keep pages small: on mega-repos (linux) top owners have huge path maps;
+      // limit=200 returns ~413 from Amplify (~6 MB ceiling). limit=50 stays ~3.5 MB.
+      const limit = 50;
       while (!cancelled) {
         try {
           const res = await fetch(

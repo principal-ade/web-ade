@@ -16,7 +16,9 @@ export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 const DEFAULT_LIMIT = 50;
-const MAX_LIMIT = 200;
+/** Cap well under Amplify's ~6 MB response ceiling. On torvalds/linux, limit=100
+ *  is already ~5.4 MB for the densest head of the list; 200 413s. */
+const MAX_LIMIT = 50;
 
 interface RouteParams {
   params: Promise<{ owner: string; repo: string }>;
