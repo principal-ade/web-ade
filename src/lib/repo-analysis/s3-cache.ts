@@ -512,6 +512,7 @@ export interface CarouselEnrichment {
     email: string;
     commits: number;
     lines: number;
+    login?: string;
   }>;
 }
 
@@ -520,6 +521,19 @@ export function extractCarouselEnrichmentFromAnalysis(analysis: RepoAnalysis): C
   for (const [email, files] of Object.entries(analysis.byEmail)) {
     linesPerEmail[email.toLowerCase()] = Object.values(files).reduce((s, v) => s + v, 0);
   }
+
+  // Build an email→login lookup from precomputedContributors when available.
+  const loginByEmail = new Map<string, string>();
+  if (analysis.precomputedContributors) {
+    for (const pc of analysis.precomputedContributors) {
+      if (pc.login) {
+        for (const email of pc.emails) {
+          loginByEmail.set(email.toLowerCase(), pc.login);
+        }
+      }
+    }
+  }
+
   return {
     totalLines: analysis.totalLinesGlobal,
     contributors: analysis.contributors.map((c) => ({
@@ -527,6 +541,7 @@ export function extractCarouselEnrichmentFromAnalysis(analysis: RepoAnalysis): C
       email: c.email,
       commits: c.commits,
       lines: linesPerEmail[c.email.toLowerCase()] ?? 0,
+      login: loginByEmail.get(c.email.toLowerCase()) ?? undefined,
     })),
   };
 }
@@ -576,11 +591,11 @@ export async function storeCarouselEnrichment(
  *  but that set is CENSORED — anything slower than the old 900s (15m) TTL 403'd
  *  on the PUT and never became a result. A real ~17.5m run (mastra-ai/mastra)
  *  was found dying exactly this way. 1h gives ~3.5x headroom over the worst
- *  single-sitting run. NOTE: this does NOT rescue giant repos (kubernetes,
- *  torvalds/linux) whose per-file `git blame` sweep idle-suspends mid-run and
- *  stretches across DAYS of wall-clock — no wall-clock URL TTL can; those need
- *  the structural fixes (keep-awake during blame, bounded/partial sweep). */
+ *  single-sitting run. Mega-repos use a separate override. */
 const UPLOAD_URL_TTL_SECONDS = 7200;
+/** TTL override for mega-repos (?mega=true) — 25h for repos whose blame
+ *  sweep stretches across hours. */
+export const MEGA_UPLOAD_URL_TTL_SECONDS = 90000;
 
 /**
  * Pre-signed PUT URLs the analysis VM uploads its result to DIRECTLY — the
@@ -592,8 +607,10 @@ const UPLOAD_URL_TTL_SECONDS = 7200;
  */
 export async function presignAnalysisUploadUrls(
   owner: string,
-  repo: string
+  repo: string,
+  ttlSeconds?: number
 ): Promise<{ analysisUrl: string; errorUrl: string }> {
+  const expiresIn = ttlSeconds ?? UPLOAD_URL_TTL_SECONDS;
   const [analysisUrl, errorUrl] = await Promise.all([
     getSignedUrl(
       s3Client,
@@ -601,7 +618,7 @@ export async function presignAnalysisUploadUrls(
         Bucket: BUCKET_NAME,
         Key: repoAnalysisS3Key(owner, repo),
       }),
-      { expiresIn: UPLOAD_URL_TTL_SECONDS }
+      { expiresIn }
     ),
     getSignedUrl(
       s3Client,
@@ -609,7 +626,7 @@ export async function presignAnalysisUploadUrls(
         Bucket: BUCKET_NAME,
         Key: repoErrorS3Key(owner, repo),
       }),
-      { expiresIn: UPLOAD_URL_TTL_SECONDS }
+      { expiresIn }
     ),
   ]);
   return { analysisUrl, errorUrl };

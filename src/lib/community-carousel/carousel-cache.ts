@@ -32,6 +32,7 @@ export interface CarouselContributor {
   email?: string;
   commits: number;
   lines?: number;
+  login?: string;
 }
 
 export interface CarouselRepo {
@@ -117,6 +118,7 @@ async function buildCarousel(feed: CommunityRepoVisitFeed): Promise<CarouselCach
             email: c.email,
             commits: c.commits,
             lines: c.lines,
+            login: c.login,
           }))
           .sort((a, b) => b.lines - a.lines)
           .slice(0, 10);

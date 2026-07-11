@@ -22,6 +22,7 @@ export interface CarouselContributor {
   email?: string;
   commits: number;
   lines?: number;
+  login?: string;
 }
 
 export interface CarouselRepo {

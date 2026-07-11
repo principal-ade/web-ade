@@ -35,7 +35,7 @@ function AvatarImg({
   fallbackLetter,
   size,
 }: {
-  src: string;
+  src?: string;
   fallbackLetter: string;
   size: number;
 }) {
@@ -82,18 +82,22 @@ function AvatarImg({
 function ContributorCard({
   label,
   name,
+  login,
+  repoHref,
   statLabel,
   index = 0,
   compact = false,
 }: {
   label: string;
   name: string;
+  login?: string;
+  repoHref: string;
   statLabel: string;
   index?: number;
   compact?: boolean;
 }) {
   const { theme } = useTheme();
-  const profileUrl = `/${encodeURIComponent(name)}`;
+  const profileUrl = login ? `https://github.com/${encodeURIComponent(login)}` : repoHref;
 
   const baseStyle: React.CSSProperties = {
     background: `color-mix(in srgb, ${theme.colors.primary} 8%, transparent)`,
@@ -117,7 +121,7 @@ function ContributorCard({
       </div>
       <div className="flex items-center" style={{ gap: compact ? 8 : 10 }}>
         <AvatarImg
-          src={`https://github.com/${encodeURIComponent(name)}.png?size=32`}
+          src={login ? `https://github.com/${encodeURIComponent(login)}.png?size=32` : undefined}
           fallbackLetter={name.charAt(0).toUpperCase()}
           size={compact ? 28 : 32}
         />
@@ -281,6 +285,8 @@ export function FileCityHero({
               compact={isVertical}
               label="Most commits"
               name={topByCommits.name}
+              login={topByCommits.login}
+              repoHref={`/${repo.owner}/${repo.repo}`}
               statLabel={`${formatNumber(topByCommits.commits)} commits`}
             />
           )}
@@ -291,6 +297,8 @@ export function FileCityHero({
               compact={isVertical}
               label="Most lines"
               name={topByLines.name}
+              login={topByLines.login}
+              repoHref={`/${repo.owner}/${repo.repo}`}
               statLabel={`${formatNumber(topByLines.lines)} lines`}
             />
           )}
