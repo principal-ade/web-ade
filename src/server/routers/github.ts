@@ -1098,6 +1098,11 @@ export const githubRouter = router({
    * Get a repository's contributors, pre-sorted by commit count. Capped at the
    * first page (100) — enough for the avatar row + "all contributors" modal,
    * and avoids paginating through thousands on large repos.
+   *
+   * Soft-fails on GitHub 403/rate-limit/access errors: returns an empty list
+   * (HTTP 200) instead of tRPC FORBIDDEN. Mega-repos (torvalds/linux) and
+   * shared-token rate limits hit this often; the About row already falls back
+   * to repo-analysis top owners when this list is empty.
    */
   getRepoContributors: publicProcedure
     .input(getRepoInfoInputSchema) // Same owner/repo input as getRepoInfo
@@ -1116,10 +1121,30 @@ export const githubRouter = router({
       }
 
       const PER_PAGE = 100;
-      const raw = await makeGitHubRequest<GitHubContributorResponse[]>(
-        `/repos/${owner}/${repo}/contributors?per_page=${PER_PAGE}`,
-        userToken
-      );
+      let raw: GitHubContributorResponse[];
+      try {
+        raw = await makeGitHubRequest<GitHubContributorResponse[]>(
+          `/repos/${owner}/${repo}/contributors?per_page=${PER_PAGE}`,
+          userToken
+        );
+      } catch (err) {
+        // Rate limit / access denied / transient GitHub errors — don't surface
+        // as a red 403 in the browser Network tab; callers treat empty as
+        // "use analysis fallback."
+        if (
+          err instanceof TRPCError &&
+          (err.code === 'FORBIDDEN' ||
+            err.code === 'UNAUTHORIZED' ||
+            err.code === 'NOT_FOUND' ||
+            err.code === 'INTERNAL_SERVER_ERROR')
+        ) {
+          console.warn(
+            `[getRepoContributors] GitHub unavailable for ${owner}/${repo}: ${err.message}`,
+          );
+          return { contributors: [], truncated: false };
+        }
+        throw err;
+      }
 
       // Drop bot accounts (e.g. dependabot[bot]) so the row reflects people.
       const contributors = raw
