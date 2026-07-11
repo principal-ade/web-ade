@@ -407,7 +407,7 @@ export function FileCityHero({
       {!!cycleProgress && (
         <div style={{
           position: 'absolute',
-          bottom: 0, left: 0, right: 0, height: 3,
+          top: 0, left: 0, right: 0, height: 3,
           background: `${theme.colors.border}44`,
           zIndex: 20,
         }}>
@@ -415,7 +415,7 @@ export function FileCityHero({
             height: '100%',
             width: `${cycleProgress * 100}%`,
             background: theme.colors.primary,
-            borderRadius: '0 2px 2px 0',
+            borderRadius: '2px 0 0 2px',
           }} />
         </div>
       )}
