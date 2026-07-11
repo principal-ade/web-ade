@@ -308,7 +308,10 @@ export function FileCityHero({
   );
 
   const mapPanel = (
-    <div
+    <a
+      href={`/${repo.owner}/${repo.repo}`}
+      target="_blank"
+      rel="noopener noreferrer"
       style={{
         flex: 1,
         position: 'relative',
@@ -317,6 +320,7 @@ export function FileCityHero({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        textDecoration: 'none',
         // On vertical/mobile: map claims remaining height so the card fills the slide
         ...(isVertical
           ? {
@@ -369,7 +373,7 @@ export function FileCityHero({
           draggable={false}
         />
       )}
-    </div>
+    </a>
   );
 
   return (
