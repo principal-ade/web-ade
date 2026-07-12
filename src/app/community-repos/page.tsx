@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useTheme, ThemeProvider } from '@principal-ade/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { UserAvatarMenu } from '@/components/UserAvatarMenu';
 import type { CarouselCache } from '@/components/community/CommunityCarousel';
 import { CommunityReposView } from '@/components/community/CommunityReposView';
+import { TrailBackdrop } from '@/components/home/TrailBackdrop';
 
 function Header({ repoCount }: { repoCount: number }) {
   const { theme } = useTheme();
@@ -80,6 +81,7 @@ function Header({ repoCount }: { repoCount: number }) {
 }
 
 export default function CommunityReposPage() {
+  const { theme } = useTheme();
   const [carousel, setCarousel] = useState<CarouselCache | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -103,49 +105,51 @@ export default function CommunityReposPage() {
   const repoCount = carousel?.repos.length ?? 0;
 
   return (
-    <ThemeProvider>
-      <div
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative',
+        background: theme.colors.background,
+        color: theme.colors.text,
+      }}
+    >
+      {/* Ambient backdrop — out-of-focus city + trail fragments. */}
+      <TrailBackdrop theme={theme} />
+
+      <Header repoCount={repoCount} />
+
+      <main
+        className="community-repos-main"
         style={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          padding: '32px 32px 80px',
           position: 'relative',
-          background: 'var(--color-background, #0a0a0a)',
+          zIndex: 1,
         }}
       >
-        <Header repoCount={repoCount} />
-
-        <main
-          className="community-repos-main"
-          style={{
-            flex: 1,
-            minHeight: 0,
-            overflowY: 'auto',
-            padding: '32px 32px 80px',
-            position: 'relative',
-            zIndex: 1,
-          }}
-        >
-          <style>{`
-            @media (max-width: 767px) {
-              .community-repos-main {
-                padding: 12px 12px 48px !important;
-              }
-              .community-repos-count {
-                display: none;
-              }
+        <style>{`
+          @media (max-width: 767px) {
+            .community-repos-main {
+              padding: 12px 12px 48px !important;
             }
-          `}</style>
-          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-            <CommunityReposView
-              data={carousel}
-              loading={loading}
-              error={error}
-              onRetry={fetchCarousel}
-            />
-          </div>
-        </main>
-      </div>
-    </ThemeProvider>
+            .community-repos-count {
+              display: none;
+            }
+          }
+        `}</style>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <CommunityReposView
+            data={carousel}
+            loading={loading}
+            error={error}
+            onRetry={fetchCarousel}
+          />
+        </div>
+      </main>
+    </div>
   );
 }
