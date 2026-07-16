@@ -38,6 +38,8 @@ async function fetchCommitsFromGitHub(
   perPage: number,
   page: number,
   sha: string | undefined,
+  since: string | undefined,
+  until: string | undefined,
   token: string | null
 ): Promise<GitHubCommit[]> {
   const headers: Record<string, string> = {
@@ -55,6 +57,13 @@ async function fetchCommitsFromGitHub(
   });
   if (sha) {
     queryParams.set("sha", sha);
+  }
+  // ISO timestamps — GitHub's list endpoint filters by committer date.
+  if (since) {
+    queryParams.set("since", since);
+  }
+  if (until) {
+    queryParams.set("until", until);
   }
 
   const response = await fetch(
@@ -79,13 +88,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const perPage = Math.min(parseInt(searchParams.get("per_page") || "30"), 100);
   const page = parseInt(searchParams.get("page") || "1");
   const sha = searchParams.get("sha") || undefined;
+  const since = searchParams.get("since") || undefined;
+  const until = searchParams.get("until") || undefined;
 
   // Get user's GitHub token from cookies, fall back to server token
   const userToken = await getGitHubToken();
   const token = userToken || process.env.GITHUB_TOKEN || null;
 
   // Check Redis cache first
-  const redisKey = getCommitsCacheKey(owner, name, perPage, page, sha);
+  const redisKey = getCommitsCacheKey(owner, name, perPage, page, sha, since, until);
   const cachedFromRedis = await getCached<GitHubCommit[]>(redisKey);
 
   if (cachedFromRedis) {
@@ -103,7 +114,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
   try {
     // Fetch directly from GitHub (no unstable_cache layer)
-    const commits = await fetchCommitsFromGitHub(owner, name, perPage, page, sha, token);
+    const commits = await fetchCommitsFromGitHub(
+      owner,
+      name,
+      perPage,
+      page,
+      sha,
+      since,
+      until,
+      token
+    );
 
     // Store in Redis with same TTL as cache headers
     setCachedAsync(redisKey, commits, CACHE_TTL.COMMITS);

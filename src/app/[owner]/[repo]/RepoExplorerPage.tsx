@@ -40,6 +40,7 @@ import {
   Globe,
   Users,
   Building2,
+  GitCommitHorizontal,
   Twitter,
   Mail,
   Bookmark,
@@ -67,6 +68,7 @@ import type {
   ReadmeView,
   IssueView,
   PullRequestView,
+  WeekCommitsView,
   LineCountsSliceData,
 } from '@industry-theme/file-city-panel';
 import {
@@ -118,6 +120,7 @@ import { useCommitView } from '@/hooks/useCommitView';
 import { useIssueView } from '@/hooks/useIssueView';
 import { usePullRequestView } from '@/hooks/usePullRequestView';
 import { useReadme } from '@/hooks/useReadme';
+import { useWeekCommits } from '@/hooks/useWeekCommits';
 import {
   buildAggregateChurnLayers,
   buildCommitFilesLayer,
@@ -413,9 +416,12 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
   // README open in the File City panel's native readme mode (markdown left +
   // city + file-type legend). Holds the repo-relative README path; null when
-  // closed. Mutually exclusive with trail/tour/commit/file selection — like
+  // closed. Mutually exclusive with trail/tour/commit/file/week selection — like
   // those, opening it clears the others so a single thing drives the right pane.
   const [activeReadmePath, setActiveReadmePath] = useState<string | null>(null);
+  // Week-commits mode — this calendar week so far. Mutually exclusive with
+  // readme/tour/commit/issue/PR/file selection.
+  const [weekActive, setWeekActive] = useState(false);
 
   // Small-screen flag (matches the 768px breakpoint used elsewhere). On mobile
   // the legend and README don't auto-open — they'd crowd the city — so we seed
@@ -1432,10 +1438,17 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
   const { readme: selectedReadmeView, loading: readmeViewLoading } = useReadme(
     owner,
     repo,
-    activeReadmePath,
+    weekActive ? null : activeReadmePath,
     // Pin the README read to the same commit the file tree resolved, so it's a
     // coherent snapshot and hits the immutable SHA-keyed cache.
     fileTree?.sha ?? null,
+  );
+
+  // Week-commits mode — loads this calendar week so far (with header progress).
+  const { week: weekCommitsView, loading: weekCommitsLoading } = useWeekCommits(
+    owner,
+    repo,
+    weekActive,
   );
 
   // Open the readme by default on first visit, unless the user previously
@@ -1452,7 +1465,13 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
     // On mobile the README shouldn't open by default (it would take the whole
     // screen), but still honor an explicit prior "open" preference.
     if (isMobile && readmePref !== true) return;
-    if (selectedTourId || selectedCommitSha || selectedTrailId || selectedFilePath) {
+    if (
+      selectedTourId ||
+      selectedCommitSha ||
+      selectedTrailId ||
+      selectedFilePath ||
+      weekActive
+    ) {
       return; // something else is already showing
     }
     setActiveReadmePath(readmePath);
@@ -1465,6 +1484,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
     selectedCommitSha,
     selectedTrailId,
     selectedFilePath,
+    weekActive,
   ]);
 
   // Debug: log layers + a few real file-tree paths so we can confirm
@@ -1685,17 +1705,26 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
           selectedCommitSha={selectedCommitSha}
           onSelectCommit={(sha) => {
             setSelectedCommitSha(sha);
-            if (sha) setActiveReadmePath(null);
+            if (sha) {
+              setActiveReadmePath(null);
+              setWeekActive(false);
+            }
           }}
           selectedIssueNumber={selectedIssueNumber}
           onSelectIssue={(issueNumber) => {
             setSelectedIssueNumber(issueNumber);
-            if (issueNumber != null) setActiveReadmePath(null);
+            if (issueNumber != null) {
+              setActiveReadmePath(null);
+              setWeekActive(false);
+            }
           }}
           selectedPrNumber={selectedPrNumber}
           onSelectPr={(prNumber) => {
             setSelectedPrNumber(prNumber);
-            if (prNumber != null) setActiveReadmePath(null);
+            if (prNumber != null) {
+              setActiveReadmePath(null);
+              setWeekActive(false);
+            }
           }}
           commitFiles={commitFiles}
           onCommitShasChange={setActivityShas}
@@ -1713,18 +1742,13 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
             setSelectedTrailId(null);
             setSelectedTourId(null);
             setActiveReadmePath(null);
+            setWeekActive(false);
           }}
-          // The README button toggles the File City panel's native readme mode
-          // (markdown left + city + file-type legend), persisting the choice
-          // per-repo so it survives reloads. Opening collapses the trails
-          // section and clears competing selections so readme is the single
-          // active mode; closing returns to the idle city.
+          // Guide mode switch: City | README | This week. Opening a mode
+          // collapses trails and clears competing selections so one thing
+          // drives the right pane. README pref is still persisted per-repo.
           onOpenReadmeFile={(path) => {
-            if (activeReadmePath) {
-              setActiveReadmePath(null);
-              writeReadmeOpenPref(owner, repo, false);
-              return;
-            }
+            setWeekActive(false);
             setActiveReadmePath(path);
             writeReadmeOpenPref(owner, repo, true);
             setTrailsExpanded(false);
@@ -1733,8 +1757,29 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
             setSelectedTourId(null);
             setSelectedCommitSha(null);
             setSelectedIssueNumber(null);
+            setSelectedPrNumber(null);
           }}
-          readmeActive={activeReadmePath != null}
+          onSetWeekActive={(next) => {
+            setWeekActive(next);
+            if (next) {
+              setActiveReadmePath(null);
+              writeReadmeOpenPref(owner, repo, false);
+              setTrailsExpanded(false);
+              setSelectedFilePath(null);
+              setSelectedTrailId(null);
+              setSelectedTourId(null);
+              setSelectedCommitSha(null);
+              setSelectedIssueNumber(null);
+              setSelectedPrNumber(null);
+            }
+          }}
+          onSetCityMode={() => {
+            setWeekActive(false);
+            setActiveReadmePath(null);
+            writeReadmeOpenPref(owner, repo, false);
+          }}
+          readmeActive={activeReadmePath != null && !weekActive}
+          weekActive={weekActive}
           tours={tours}
           toursLoading={toursLoading}
           selectedTourId={selectedTourId}
@@ -1747,6 +1792,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
               setSelectedTrailId(null);
               setSelectedFilePath(null);
               setActiveReadmePath(null);
+              setWeekActive(false);
             }
           }}
           onRequestDeleteTour={(item) => {
@@ -1796,6 +1842,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
           onCloseCommit={() => setSelectedCommitSha(null)}
           onCloseIssue={() => setSelectedIssueNumber(null)}
           onClosePullRequest={() => setSelectedPrNumber(null)}
+          onCloseWeekCommits={() => setWeekActive(false)}
           activityHeatmapLayers={activityHeatmapLayers}
           commitView={selectedCommitView}
           commitViewLoading={commitViewLoading}
@@ -1805,6 +1852,8 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
           pullRequestViewLoading={prViewLoading}
           readmeView={selectedReadmeView}
           readmeViewLoading={readmeViewLoading}
+          weekCommitsView={weekCommitsView}
+          weekCommitsLoading={weekCommitsLoading}
           currentAuthor={user?.login}
           overlayFilePath={leftViewMode === 'files' ? selectedFilePath : null}
           overlayTrails={selectedFileTrails}
@@ -2368,11 +2417,15 @@ const TrailListPane: React.FC<{
   trailFileRows: { path: string; trailCount: number }[];
   selectedFilePath: string | null;
   onSelectFile: (path: string | null) => void;
-  // Opens the repo-root README in the source drawer (docked on the left).
+  // Opens the repo-root README in File City guide readme mode.
   onOpenReadmeFile: (path: string) => void;
-  // Whether the native readme mode is currently open (drives the README
-  // button's on/off look).
+  // Whether the native readme mode is currently open.
   readmeActive: boolean;
+  // Week-commits mode open; drives the 3-way guide switch.
+  weekActive: boolean;
+  onSetWeekActive: (next: boolean) => void;
+  /** Return to idle city (clear readme + week). */
+  onSetCityMode: () => void;
   tours: TourListItem[];
   toursLoading: boolean;
   selectedTourId: string | null;
@@ -2433,6 +2486,9 @@ const TrailListPane: React.FC<{
   onSelectFile,
   onOpenReadmeFile,
   readmeActive,
+  weekActive,
+  onSetWeekActive,
+  onSetCityMode,
   tours,
   toursLoading,
   selectedTourId,
@@ -2483,9 +2539,12 @@ const TrailListPane: React.FC<{
       onSelectContributor={onSelectContributor}
       readmePath={readmePath}
       readmeActive={readmeActive}
+      weekActive={weekActive}
       onOpenReadme={() => {
         if (readmePath) onOpenReadmeFile(readmePath);
       }}
+      onSetWeekActive={onSetWeekActive}
+      onSetCityMode={onSetCityMode}
       trailCount={entries.length}
       packageCount={packages.length}
       onOpenView={onSetViewMode}
@@ -3419,49 +3478,124 @@ const TOUR_INIT_COMMAND =
 // No tours yet: instead of inline instructions, lead with a single CTA that
 // mirrors the "Start tour" button and opens a modal explaining how to author
 // and publish one. Keeps the empty pane clean while the how-to is a click away.
-// Secondary, full-width "open the repo README" button. Shares the tour CTA's
-// shape (rounded-md, same padding/typography) so it can sit beside a tour
-// button and split the row evenly, or stand alone full-width.
-const ReadmeButton: React.FC<{
-  readmePath: string;
-  onOpenReadme?: () => void;
+type GuideModeId = 'city' | 'readme' | 'week';
+
+/**
+ * Equal-width City | README | This week switch for the About / tours rail.
+ * Matches the desktop RepoAboutCard segmented control.
+ */
+const GuideModeSwitch: React.FC<{
+  mode: GuideModeId;
+  readmePath: string | null;
+  onSetCity: () => void;
+  onOpenReadme: () => void;
+  onSetWeek: (next: boolean) => void;
   className?: string;
-  // When the README view is open the button shows a filled "on" state;
-  // otherwise it's the outlined "off" state.
-  active?: boolean;
-}> = ({ readmePath, onOpenReadme, className, active = false }) => {
+}> = ({ mode, readmePath, onSetCity, onOpenReadme, onSetWeek, className }) => {
   const { theme } = useTheme();
+  const options = [
+    {
+      id: 'city' as const,
+      label: 'City',
+      title: 'Show the file city',
+      icon: <Building2 size={14} />,
+      enabled: true,
+    },
+    {
+      id: 'readme' as const,
+      label: 'README',
+      title: readmePath ? `Open ${readmePath}` : 'No README found',
+      icon: <FileText size={14} />,
+      enabled: !!readmePath,
+    },
+    {
+      id: 'week' as const,
+      label: 'This week',
+      title: "Show commits for this week so far",
+      icon: <GitCommitHorizontal size={14} />,
+      enabled: true,
+    },
+  ];
+
+  const select = (id: GuideModeId) => {
+    if (id === mode) return;
+    if (id === 'city') onSetCity();
+    else if (id === 'readme') onOpenReadme();
+    else onSetWeek(true);
+  };
+
   return (
-    <button
-      type="button"
-      onClick={onOpenReadme}
-      aria-pressed={active}
-      className={`inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90 ${
-        className ?? 'w-full'
-      }`}
+    <div
+      role="radiogroup"
+      aria-label="File City guide mode"
+      className={className}
       style={{
-        padding: '10px 14px',
-        fontFamily: theme.fonts.body,
-        fontSize: theme.fontSizes[1],
-        fontWeight: theme.fontWeights.semibold,
-        cursor: 'pointer',
-        ...(active
-          ? {
-              background: theme.colors.primary,
-              color: '#ffffff',
-              border: `1px solid ${theme.colors.primary}`,
-            }
-          : {
-              background: 'transparent',
-              color: theme.colors.text,
-              border: `1px solid ${theme.colors.border}`,
-            }),
+        display: 'flex',
+        width: '100%',
+        alignItems: 'stretch',
+        padding: 3,
+        borderRadius: 8,
+        border: `1px solid ${theme.colors.border}`,
+        background: theme.colors.backgroundSecondary,
+        gap: 2,
+        boxSizing: 'border-box',
       }}
-      title={active ? `Close ${readmePath} and show the city` : `Open ${readmePath}`}
     >
-      {active ? <Building2 size={16} /> : <FileText size={16} />}
-      {active ? 'City' : 'README'}
-    </button>
+      {options.map((opt) => {
+        const selected = mode === opt.id;
+        const disabled = !opt.enabled;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            disabled={disabled}
+            title={opt.title}
+            onClick={() => select(opt.id)}
+            style={{
+              flex: '1 1 0',
+              minWidth: 0,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 5,
+              padding: '6px 8px',
+              border: 'none',
+              borderRadius: 6,
+              background: selected ? theme.colors.background : 'transparent',
+              color: disabled
+                ? theme.colors.textTertiary
+                : selected
+                  ? theme.colors.primary
+                  : theme.colors.textSecondary,
+              boxShadow: selected
+                ? `0 0 0 1px ${theme.colors.border}, 0 1px 2px rgba(0,0,0,0.08)`
+                : 'none',
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[1],
+              fontWeight: selected
+                ? (theme.fontWeights.semibold ?? 600)
+                : (theme.fontWeights.medium ?? 500),
+              opacity: disabled ? 0.5 : 1,
+              transition: 'background 0.12s, color 0.12s, box-shadow 0.12s',
+            }}
+          >
+            {opt.icon}
+            <span
+              style={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {opt.label}
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 };
 
@@ -3469,18 +3603,31 @@ const ToursEmptyState: React.FC<{
   readmePath?: string | null;
   onOpenReadme?: () => void;
   readmeActive?: boolean;
-}> = ({ readmePath = null, onOpenReadme, readmeActive = false }) => {
+  weekActive?: boolean;
+  onSetWeekActive?: (next: boolean) => void;
+  onSetCityMode?: () => void;
+}> = ({
+  readmePath = null,
+  onOpenReadme,
+  readmeActive = false,
+  weekActive = false,
+  onSetWeekActive,
+  onSetCityMode,
+}) => {
   const { theme } = useTheme();
   const [showAuthorModal, setShowAuthorModal] = useState(false);
+  const guideMode: GuideModeId = weekActive
+    ? 'week'
+    : readmeActive
+      ? 'readme'
+      : 'city';
   return (
     <>
-      {/* When a README exists, the two buttons split the row evenly — README
-          sits after the tour CTA. */}
-      <div className="flex items-stretch gap-2">
+      <div className="flex flex-col gap-2">
         <button
           type="button"
           onClick={() => setShowAuthorModal(true)}
-          className="flex-1 inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90"
+          className="w-full inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90"
           style={{
             padding: '10px 14px',
             fontFamily: theme.fonts.body,
@@ -3495,14 +3642,15 @@ const ToursEmptyState: React.FC<{
           <Compass size={16} />
           Create a tour
         </button>
-        {readmePath && (
-          <ReadmeButton
+        {onOpenReadme && onSetWeekActive && onSetCityMode ? (
+          <GuideModeSwitch
+            mode={guideMode}
             readmePath={readmePath}
+            onSetCity={onSetCityMode}
             onOpenReadme={onOpenReadme}
-            className="flex-1"
-            active={readmeActive}
+            onSetWeek={onSetWeekActive}
           />
-        )}
+        ) : null}
       </div>
       {showAuthorModal && (
         <TourAuthorModal onClose={() => setShowAuthorModal(false)} />
@@ -5652,12 +5800,13 @@ const ToursPane: React.FC<{
   onRequestDelete: (item: TourListItem) => void;
   // Click a contributor face in the About card → open their Contributors profile.
   onSelectContributor: (c: { login: string; avatar_url: string }) => void;
-  // Repo-root README path (or null) + handler, forwarded to RepoOverview so the
-  // About card can offer a "README" button.
+  // Repo-root README path (or null) + handlers for the City/README/Week switch.
   readmePath: string | null;
   onOpenReadme: () => void;
-  // Whether the native readme mode is open — drives the README button on/off look.
   readmeActive: boolean;
+  weekActive: boolean;
+  onSetWeekActive: (next: boolean) => void;
+  onSetCityMode: () => void;
   // Counts shown on the nav cards (Trails / Structure); Contributors fetches its
   // own count.
   trailCount: number;
@@ -5681,6 +5830,9 @@ const ToursPane: React.FC<{
   readmePath,
   onOpenReadme,
   readmeActive,
+  weekActive,
+  onSetWeekActive,
+  onSetCityMode,
   trailCount,
   packageCount,
   onOpenView,
@@ -5696,9 +5848,12 @@ const ToursPane: React.FC<{
     viewerUserId !== null &&
     (viewerIsRepoAdmin ||
       String(single.store.createdBy.githubId) === String(viewerUserId));
-  // Action buttons rendered inside the overview card, right after the
-  // description: the single-tour "Start tour" CTA (or the empty-state "Create a
-  // tour" CTA) split with the README button, or just README for multi-tour.
+  const guideMode: GuideModeId = weekActive
+    ? 'week'
+    : readmeActive
+      ? 'readme'
+      : 'city';
+  // Action block under the overview description: tour CTA + guide mode switch.
   const cta = single ? (
     <SingleTourCta
       active={single.tour.id === selectedTourId}
@@ -5710,20 +5865,28 @@ const ToursPane: React.FC<{
       readmePath={readmePath}
       onOpenReadme={onOpenReadme}
       readmeActive={readmeActive}
+      weekActive={weekActive}
+      onSetWeekActive={onSetWeekActive}
+      onSetCityMode={onSetCityMode}
     />
   ) : !loading && tours.length === 0 ? (
     <ToursEmptyState
       readmePath={readmePath}
       onOpenReadme={onOpenReadme}
       readmeActive={readmeActive}
+      weekActive={weekActive}
+      onSetWeekActive={onSetWeekActive}
+      onSetCityMode={onSetCityMode}
     />
-  ) : readmePath ? (
-    <ReadmeButton
+  ) : (
+    <GuideModeSwitch
+      mode={guideMode}
       readmePath={readmePath}
+      onSetCity={onSetCityMode}
       onOpenReadme={onOpenReadme}
-      active={readmeActive}
+      onSetWeek={onSetWeekActive}
     />
-  ) : null;
+  );
 
   // Mobile bottom rail: just the About card, with a Contributors button in
   // place of the tour CTA. The nav cards, tours list, and analysis footer are
@@ -6058,6 +6221,9 @@ const SingleTourCta: React.FC<{
   readmePath?: string | null;
   onOpenReadme?: () => void;
   readmeActive?: boolean;
+  weekActive?: boolean;
+  onSetWeekActive?: (next: boolean) => void;
+  onSetCityMode?: () => void;
 }> = ({
   active,
   onToggle,
@@ -6066,58 +6232,63 @@ const SingleTourCta: React.FC<{
   readmePath = null,
   onOpenReadme,
   readmeActive = false,
+  weekActive = false,
+  onSetWeekActive,
+  onSetCityMode,
 }) => {
   const { theme } = useTheme();
+  const guideMode: GuideModeId = weekActive
+    ? 'week'
+    : readmeActive
+      ? 'readme'
+      : 'city';
 
   return (
     <div className="flex flex-col gap-2">
-      {/* README (when present) splits the row evenly with the tour button,
-          sitting after it. */}
-      <div className="flex items-stretch gap-2">
-        <button
-          type="button"
-          onClick={onToggle}
-          className="flex-1 inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90"
-          style={{
-            padding: '10px 14px',
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[1],
-            fontWeight: theme.fontWeights.semibold,
-            cursor: 'pointer',
-            ...(active
-              ? {
-                  background: 'transparent',
-                  color: theme.colors.text,
-                  border: `1px solid ${theme.colors.border}`,
-                }
-              : {
-                  background: theme.colors.primary,
-                  color: '#ffffff',
-                  border: `1px solid ${theme.colors.primary}`,
-                }),
-          }}
-        >
-          {active ? (
-            <>
-              <X size={16} />
-              Stop tour
-            </>
-          ) : (
-            <>
-              <Play size={16} />
-              Start tour
-            </>
-          )}
-        </button>
-        {readmePath && (
-          <ReadmeButton
-            readmePath={readmePath}
-            onOpenReadme={onOpenReadme}
-            className="flex-1"
-            active={readmeActive}
-          />
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90"
+        style={{
+          padding: '10px 14px',
+          fontFamily: theme.fonts.body,
+          fontSize: theme.fontSizes[1],
+          fontWeight: theme.fontWeights.semibold,
+          cursor: 'pointer',
+          ...(active
+            ? {
+                background: 'transparent',
+                color: theme.colors.text,
+                border: `1px solid ${theme.colors.border}`,
+              }
+            : {
+                background: theme.colors.primary,
+                color: '#ffffff',
+                border: `1px solid ${theme.colors.primary}`,
+              }),
+        }}
+      >
+        {active ? (
+          <>
+            <X size={16} />
+            Stop tour
+          </>
+        ) : (
+          <>
+            <Play size={16} />
+            Start tour
+          </>
         )}
-      </div>
+      </button>
+      {onOpenReadme && onSetWeekActive && onSetCityMode ? (
+        <GuideModeSwitch
+          mode={guideMode}
+          readmePath={readmePath}
+          onSetCity={onSetCityMode}
+          onOpenReadme={onOpenReadme}
+          onSetWeek={onSetWeekActive}
+        />
+      ) : null}
 
       {canDelete && (
         <button
@@ -6406,6 +6577,8 @@ const RightPane: React.FC<{
   onCloseIssue: () => void;
   /** PR mode's ✕ → clears the selection, returning to the idle city. */
   onClosePullRequest: () => void;
+  /** Week mode's ✕ → clears week mode, returning to the idle city. */
+  onCloseWeekCommits: () => void;
   /** Aggregate churn + hovered-commit heatmap, painted on the idle tour city
    *  while browsing the Activity list. */
   activityHeatmapLayers: HighlightLayer[] | null;
@@ -6426,6 +6599,9 @@ const RightPane: React.FC<{
    *  legend). Null while loading or when the README isn't open. */
   readmeView: ReadmeView | null;
   readmeViewLoading: boolean;
+  /** This-week commits payload for FileCityGuidePanel week mode. */
+  weekCommitsView: WeekCommitsView | null;
+  weekCommitsLoading: boolean;
   /** Undefined for anonymous viewers — gates the panel's note Edit/Delete. */
   currentAuthor?: string;
   overlayFilePath: string | null;
@@ -6458,6 +6634,7 @@ const RightPane: React.FC<{
   onCloseCommit,
   onCloseIssue,
   onClosePullRequest,
+  onCloseWeekCommits,
   activityHeatmapLayers,
   commitView,
   commitViewLoading,
@@ -6467,6 +6644,8 @@ const RightPane: React.FC<{
   pullRequestViewLoading,
   readmeView,
   readmeViewLoading,
+  weekCommitsView,
+  weekCommitsLoading,
   currentAuthor,
   overlayFilePath,
   overlayTrails,
@@ -6663,8 +6842,16 @@ const RightPane: React.FC<{
       closeIssue: () => onCloseIssue(),
       // And the PR mode's ✕ for a selected pull request.
       closePullRequest: () => onClosePullRequest(),
+      // Week mode's ✕ returns to the idle city.
+      closeWeekCommits: () => onCloseWeekCommits(),
     }),
-    [onOpenFile, onCloseCommit, onCloseIssue, onClosePullRequest],
+    [
+      onOpenFile,
+      onCloseCommit,
+      onCloseIssue,
+      onClosePullRequest,
+      onCloseWeekCommits,
+    ],
   );
   // Coordinates the TTS backend needs to look up this tour's cached audio.
   // Points at the source the tour was discovered in (repo or fork).
@@ -6749,8 +6936,23 @@ const RightPane: React.FC<{
       readme: {
         scope: 'repository' as const,
         name: 'readme',
-        data: selectedTour?.tour || vibeCodingHighlightLayer !== null ? null : readmeView,
+        data:
+          selectedTour?.tour ||
+          vibeCodingHighlightLayer !== null ||
+          weekCommitsView
+            ? null
+            : readmeView,
         loading: readmeViewLoading,
+        error: null,
+        refresh: async () => {},
+      },
+      // Week-commits mode — this calendar week so far. Suppressed while a tour
+      // is open so tour chrome wins.
+      weekCommits: {
+        scope: 'repository' as const,
+        name: 'weekCommits',
+        data: selectedTour?.tour ? null : weekCommitsView,
+        loading: weekCommitsLoading,
         error: null,
         refresh: async () => {},
       },
@@ -6794,6 +6996,8 @@ const RightPane: React.FC<{
     pullRequestViewLoading,
     readmeView,
     readmeViewLoading,
+    weekCommitsView,
+    weekCommitsLoading,
     analysis,
   ]);
 

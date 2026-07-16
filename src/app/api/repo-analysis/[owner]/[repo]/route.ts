@@ -46,6 +46,7 @@ import {
   storeRepoAnalysisErrorInS3,
   clearRepoAnalysisErrorInS3,
   presignAnalysisUploadUrls,
+  MEGA_UPLOAD_URL_TTL_SECONDS,
   getRepoIdentityMapFromS3,
   storeRepoAnalysisInS3,
   extractCarouselEnrichmentFromAnalysis,
@@ -231,6 +232,10 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'owner and repo are required' }, { status: 400 });
   }
 
+  // ?mega=true → 24h idle timeout + presigned URL TTL for repos with 100k+ files
+  const mega = _req.nextUrl.searchParams.get('mega') === 'true';
+  const idleTimeoutSeconds = mega ? 86400 : undefined;
+
   const userToken = (await getGitHubToken()) ?? undefined;
 
   try {
@@ -246,7 +251,11 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
     // Scoped, expiring URLs the VM uploads its result (or failure) to directly —
     // so the multi-minute clone+sweep can run DETACHED on the VM and publish to
     // the shared cache itself, instead of being held open by this request.
-    const { analysisUrl, errorUrl } = await presignAnalysisUploadUrls(owner, repo);
+    const { analysisUrl, errorUrl } = await presignAnalysisUploadUrls(
+      owner,
+      repo,
+      mega ? MEGA_UPLOAD_URL_TTL_SECONDS : undefined
+    );
 
     const { vmId } = await launchRepoAnalysis({
       owner,
@@ -255,6 +264,7 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
       existingVmId,
       analysisUrl,
       errorUrl,
+      idleTimeoutSeconds,
     });
 
     // Record the warm VM so the next run (and a concurrent click) reuses it.

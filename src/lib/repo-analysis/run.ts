@@ -75,6 +75,8 @@ export interface LaunchRepoAnalysisOpts {
   analysisUrl: string;
   /** Pre-signed PUT URL the VM uploads a failure record to. */
   errorUrl: string;
+  /** Override the default idle timeout (600s). Mega-repos need hours. */
+  idleTimeoutSeconds?: number;
 }
 
 /** The VM the job was fired on — the caller records `vmId` so the next run can
@@ -360,11 +362,11 @@ STAGE="clone"
   if [ -d /repo/.git ]; then
     if ! ( cd /repo && git fetch ${authed} && git reset --hard FETCH_HEAD ); then
       rm -rf /repo
-      git clone --single-branch ${authed} /repo || fail "git clone failed"
+  git clone --filter=blob:none --single-branch ${authed} /repo || fail "git clone failed"
       ( cd /repo && git remote set-url origin ${tokenless} ) || true
-    fi
+    }
   else
-    git clone --single-branch ${authed} /repo || fail "git clone failed"
+    git clone --filter=blob:none --single-branch ${authed} /repo || fail "git clone failed"
     ( cd /repo && git remote set-url origin ${tokenless} ) || true
   fi
 
@@ -447,10 +449,10 @@ export async function launchRepoAnalysis(
     created = (await freestyle.vms.create({
       name: `repo-analysis-${opts.owner}-${opts.repo}`,
       persistence: { type: 'sticky', priority: 5 },
-      // Suspends ~10m after the job goes idle (the in-job heartbeat keeps it
+      // Suspends after the job goes idle (the in-job heartbeat keeps it
       // awake DURING the sweep; this only governs post-completion suspend, and
       // backstops a heartbeat outage). Sticky persistence keeps the warm clone.
-      idleTimeoutSeconds: 600,
+      idleTimeoutSeconds: opts.idleTimeoutSeconds ?? 600,
     })) as { vm: VmHandle; vmId: string };
   } catch (err) {
     throw new RepoAnalysisError(

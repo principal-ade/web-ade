@@ -137,9 +137,13 @@ export function getCommitsCacheKey(
   repo: string,
   perPage: number,
   page: number,
-  sha?: string
+  sha?: string,
+  since?: string,
+  until?: string,
 ): string {
-  return `github:v1:commits:${owner}/${repo}:${perPage}:${page}:${sha || 'HEAD'}`;
+  const range =
+    since || until ? `:since=${since || ''}:until=${until || ''}` : '';
+  return `github:v1:commits:${owner}/${repo}:${perPage}:${page}:${sha || 'HEAD'}${range}`;
 }
 
 /**
