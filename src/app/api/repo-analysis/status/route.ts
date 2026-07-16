@@ -49,6 +49,14 @@ export interface RepoAnalysisJob extends RepoAnalysisJobRecord {
   status: JobStatus;
 }
 
+/** The GITHUB_TOKEN budget at a glance — `null` means "couldn't probe / no
+ *  token set", so the page hides the card instead of rendering a question. */
+export interface TokenQuota {
+  remaining: number;
+  limit: number;
+  resetEpochSeconds: number;
+}
+
 /** Classify one merged record. Mirrors the per-repo GET's derivation: a result
  *  counts as "from this launch" when it was generated at/after the launch (sha
  *  isn't available here without a GitHub call, so time is the sole signal). A
@@ -82,12 +90,65 @@ function activityMs(r: RepoAnalysisJobRecord): number {
   );
 }
 
+/** Best-effort GitHub rate-limit probe for the server's GITHUB_TOKEN (the
+ *  budget the repo-analysis VM runs actually draw on). `null` on any failure
+ *  so the status page just hides the card — the jobs view is still useful. */
+async function fetchTokenQuota(): Promise<TokenQuota | null> {
+  // The VM clone/publish runs use the user-pinned $GITHUB_TOKEN, so report
+  // on that. With no token set, there's nothing to show.
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) return null;
+  try {
+    const res = await fetch('https://api.github.com/rate_limit', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      // Don't let a slow GitHub response stall the status page.
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) return null;
+    // We only care about the core budget (REST) — search/graphql/integration
+    //  limits are separate groups; the page surfaces remaining/limit/reset.
+    const remaining = res.headers.get('x-ratelimit-remaining');
+    const limit = res.headers.get('x-ratelimit-limit');
+    const reset = res.headers.get('x-ratelimit-reset');
+    // The /rate_limit body is canonical, but the response headers are stamped
+    //  on every GitHub response; prefer them so the body shape never matters.
+    if (remaining !== null && limit !== null && reset !== null) {
+      return {
+        remaining: Number(remaining),
+        limit: Number(limit),
+        resetEpochSeconds: Number(reset),
+      };
+    }
+    // Fall back to the body only if headers were stripped (e.g. a proxy).
+    const body = (await res.json()) as {
+      rate?: { remaining?: number; limit?: number; reset?: number };
+    };
+    const r = body.rate;
+    if (
+      r &&
+      typeof r.remaining === 'number' &&
+      typeof r.limit === 'number' &&
+      typeof r.reset === 'number'
+    ) {
+      return { remaining: r.remaining, limit: r.limit, resetEpochSeconds: r.reset };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET() {
   try {
     const now = Date.now();
-    const [records, rateLimitRecords] = await Promise.all([
+    const [records, rateLimitRecords, tokenQuota] = await Promise.all([
       listRepoAnalysisJobs(),
       listRepoRateLimitHits(),
+      fetchTokenQuota(),
     ]);
     const jobs: RepoAnalysisJob[] = records
       .map((r) => ({ ...r, status: deriveStatus(r, now) }))
@@ -110,6 +171,7 @@ export async function GET() {
 
     return NextResponse.json({
       generatedAt: new Date(now).toISOString(),
+      tokenQuota,
       counts: {
         inProgress: inProgress.length,
         stalled: stalled.length,

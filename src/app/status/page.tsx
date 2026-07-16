@@ -55,6 +55,11 @@ type TabKey = Job['status'] | 'rateLimited';
 
 interface StatusResponse {
   generatedAt: string;
+  tokenQuota: {
+    remaining: number;
+    limit: number;
+    resetEpochSeconds: number;
+  } | null;
   counts: {
     inProgress: number;
     stalled: number;
@@ -92,6 +97,70 @@ function rowActivity(job: Job): number {
     job.error?.failedAt ? Date.parse(job.error.failedAt) : 0,
     job.generatedAt ? Date.parse(job.generatedAt) : 0,
     job.launchedAt ? Date.parse(job.launchedAt) : 0
+  );
+}
+
+interface TokenQuotaSummary {
+  remaining: number;
+  limit: number;
+  resetEpochSeconds: number;
+}
+
+/** The GITHUB_TOKEN quota card: remaining/limit with a bar, and a "resets in
+ *  ~Xm" countdown to the next budget refill. GitHub's core rest budget
+ *  refills continuously (not all at once), so this is a snapshot, not a hard
+ *  deadline — copy reflects that. */
+function TokenQuotaCard({ quota }: { quota: TokenQuotaSummary }) {
+  const { theme } = useTheme();
+  const pct = quota.limit > 0 ? (quota.remaining / quota.limit) * 100 : 0;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const resetInMs = Math.max(0, quota.resetEpochSeconds * 1000 - now);
+  const resetInMin = Math.ceil(resetInMs / 60000);
+  const resetLabel =
+    resetInMs <= 0 ? 'now' : resetInMin < 60 ? `${resetInMin}m` : `${Math.floor(resetInMin / 60)}h ${resetInMin % 60}m`;
+
+  // Green when comfortable, amber when quarter-full, red below ~10%.
+  const barColor = pct > 25 ? '#3fb950' : pct > 10 ? '#d29922' : '#f85149';
+  return (
+    <div
+      className="shrink-0 rounded-lg border px-3 py-2.5"
+      style={{
+        borderColor: theme.colors.border,
+        background: `color-mix(in srgb, ${theme.colors.text} 3%, transparent)`,
+      }}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Gauge size={14} style={{ color: barColor }} />
+          <span className="text-sm font-semibold" style={{ color: theme.colors.text }}>
+            GitHub token quota
+          </span>
+        </div>
+        <span className="text-xs font-mono" style={{ color: theme.colors.textSecondary }}>
+          {quota.remaining.toLocaleString()} / {quota.limit.toLocaleString()}
+        </span>
+      </div>
+      <div
+        className="mt-2 h-1.5 w-full overflow-hidden rounded-full"
+        style={{ background: `color-mix(in srgb, ${theme.colors.text} 8%, transparent)` }}
+      >
+        <div
+          className="h-full rounded-full transition-all"
+          style={{ width: `${pct}%`, background: barColor }}
+        />
+      </div>
+      <p
+        className="m-0 mt-1.5 text-xs"
+        style={{ color: theme.colors.textMuted }}
+        title={new Date(quota.resetEpochSeconds * 1000).toLocaleString()}
+      >
+        Resets in ~{resetLabel} (refreshes continuously).
+      </p>
+    </div>
   );
 }
 
@@ -420,9 +489,14 @@ export default function RepoAnalysisStatusPage() {
               color: '#f0a0a0',
             }}
           >
-            Couldn&apos;t load status: {error}
+                        Couldn&apos;t load status: {error}
           </div>
         )}
+
+        {/* GitHub token budget — the GITHUB_TOKEN the repo-analysis VM runs
+            draw on. Hidden when the probe failed or no token is configured, so
+            the jobs view is still useful without it. */}
+        {data?.tokenQuota && <TokenQuotaCard quota={data.tokenQuota} />}
 
         {data &&
           (() => {
