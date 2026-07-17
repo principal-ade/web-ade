@@ -1425,6 +1425,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
   const isPullRequestsView = leftViewMode === 'pull-requests';
   const [visiblePrNumbers, setVisiblePrNumbers] = useState<number[]>([]);
   const [hoveredPrNumber, setHoveredPrNumber] = useState<number | null>(null);
+  const [selectedFilePrFilter, setSelectedFilePrFilter] = useState<string | null>(null);
   const prFiles = usePullRequestFiles(owner, repo, visiblePrNumbers, {
     enabled: isPullRequestsView,
   });
@@ -1452,6 +1453,15 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
     }
     return layers.length > 0 ? layers : null;
   }, [isPullRequestsView, prFiles, selectedPrNumber, hoveredPrNumber, theme.colors.primary, theme.colors.accent]);
+
+  // File-driven PR filter: when a user clicks a building in the city while in
+  // PR view, narrow the PR list to only those touching the selected file.
+  const filteredPrNumbers = useMemo<number[] | null>(() => {
+    if (!selectedFilePrFilter || prFiles.size === 0) return null;
+    return visiblePrNumbers.filter((pr) =>
+      prFiles.get(pr)?.some((f) => f.filename === selectedFilePrFilter),
+    );
+  }, [selectedFilePrFilter, prFiles, visiblePrNumbers]);
 
   // Selected PR rendered natively by FileCityGuidePanel's PR mode (header +
   // description + Files/Details tabs, changed buildings lit). Only while the
@@ -1701,7 +1711,10 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
             // activity view also clears any open commit.
             if (mode !== 'activity') setSelectedCommitSha(null);
             if (mode !== 'issues') setSelectedIssueNumber(null);
-            if (mode !== 'pull-requests') setSelectedPrNumber(null);
+            if (mode !== 'pull-requests') {
+              setSelectedPrNumber(null);
+              setSelectedFilePrFilter(null);
+            }
             // The package focus (idleFocusDirectory) only belongs to the
             // Structure view; leaving it must release the city back to idle so
             // About doesn't stay zoomed on the last-clicked package.
@@ -1869,6 +1882,8 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
           onVibeCodingClose={() => setLeftViewMode('tours')}
           onVisiblePrsChange={setVisiblePrNumbers}
           onHoverPr={setHoveredPrNumber}
+          filteredPrNumbers={filteredPrNumbers}
+          onClearFileFilter={() => setSelectedFilePrFilter(null)}
         />
         <RightPane
           owner={owner}
@@ -1918,6 +1933,12 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
           onOpenFile={(path) => {
             setSelectedFilePath(path);
             setFileSide('right');
+            // In PR view, toggle file filter on click.
+            if (isPullRequestsView) {
+              setSelectedFilePrFilter((prev) =>
+                prev === path ? null : path,
+              );
+            }
           }}
           vibeCodingHighlightLayer={vibeCodingHighlightLayer}
           vibeCodingScanWindowLayer={vibeCodingScanWindowLayer}
@@ -2549,6 +2570,9 @@ const TrailListPane: React.FC<{
   /** PR heatmap callbacks — reported up to the page for city highlighting. */
   onVisiblePrsChange: (prNumbers: number[]) => void;
   onHoverPr: (prNumber: number | null) => void;
+  /** File-driven PR filter — when a building is clicked in PR view, narrow the list. */
+  filteredPrNumbers: number[] | null;
+  onClearFileFilter: () => void;
 }> = ({
   owner,
   repo,
@@ -2611,6 +2635,8 @@ const TrailListPane: React.FC<{
   onVibeCodingClose,
   onVisiblePrsChange,
   onHoverPr,
+  filteredPrNumbers,
+  onClearFileFilter,
 }) => {
   const { theme } = useTheme();
   // Repo-root README (if any), surfaced as a button in the About overview.
@@ -2750,6 +2776,8 @@ const TrailListPane: React.FC<{
           onClose={() => onSetViewMode('tours')}
           onVisiblePrsChange={onVisiblePrsChange}
           onHoverPr={onHoverPr}
+          filteredPrNumbers={filteredPrNumbers}
+          onClearFileFilter={onClearFileFilter}
         />
       ) : leftViewMode === 'structure' ? (
         <StructurePane

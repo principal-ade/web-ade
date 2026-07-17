@@ -167,11 +167,32 @@ export const RepoPullRequestsPane: React.FC<{
   onVisiblePrsChange?: (prNumbers: number[]) => void;
   /** Hover a PR row — highlights its files on the city. */
   onHoverPr?: (prNumber: number | null) => void;
-}> = ({ owner, repo, selectedPrNumber, onSelectPr, onClose, onVisiblePrsChange, onHoverPr }) => {
+  /** When set, only show PRs in this list (file-driven filter). */
+  filteredPrNumbers?: number[] | null;
+  /** Clear the file-driven filter. */
+  onClearFileFilter?: () => void;
+}> = ({
+  owner,
+  repo,
+  selectedPrNumber,
+  onSelectPr,
+  onClose,
+  onVisiblePrsChange,
+  onHoverPr,
+  filteredPrNumbers,
+  onClearFileFilter,
+}) => {
   const { theme } = useTheme();
   const [stateFilter, setStateFilter] = React.useState<PrStateFilter>('open');
   const { pullRequests, loading, loadingMore, error, hasMore, loadMore, refresh } =
     useRepoPullRequests(owner, repo, { state: stateFilter });
+
+  // File-driven filter: when a building is clicked in the city, narrow the list.
+  const displayedPullRequests = React.useMemo(() => {
+    if (!filteredPrNumbers) return pullRequests;
+    const allowed = new Set(filteredPrNumbers);
+    return pullRequests.filter((pr) => allowed.has(pr.number));
+  }, [pullRequests, filteredPrNumbers]);
 
   React.useEffect(() => {
     onVisiblePrsChange?.(pullRequests.map((pr) => pr.number));
@@ -233,6 +254,39 @@ export const RepoPullRequestsPane: React.FC<{
         </div>
       </div>
 
+      {/* File-driven filter indicator — shown when a building was clicked in the city. */}
+      {filteredPrNumbers && (
+        <div
+          className="flex items-center gap-2 px-3 py-1.5 border-b shrink-0"
+          style={{
+            borderColor: theme.colors.border,
+            background: theme.colors.backgroundSecondary,
+          }}
+        >
+          <span
+            className="flex-1 truncate"
+            style={{
+              color: theme.colors.text,
+              fontSize: theme.fontSizes[0],
+            }}
+          >
+            {filteredPrNumbers.length} PR{filteredPrNumbers.length !== 1 ? 's' : ''} touch this file
+          </span>
+          <button
+            type="button"
+            onClick={onClearFileFilter}
+            className="shrink-0 px-1.5 py-0.5 rounded transition-opacity hover:opacity-70"
+            style={{
+              color: theme.colors.textMuted,
+              fontSize: theme.fontSizes[0],
+              cursor: 'pointer',
+            }}
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
       {loading && pullRequests.length === 0 ? (
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center py-12 gap-3">
           <InlineTrailLoader size={40} />
@@ -279,7 +333,7 @@ export const RepoPullRequestsPane: React.FC<{
         </div>
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto">
-          {pullRequests.map((pr) => (
+          {displayedPullRequests.map((pr) => (
             <PrRow
               key={pr.id}
               pr={pr}
