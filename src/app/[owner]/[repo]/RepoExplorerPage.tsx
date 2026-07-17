@@ -1485,11 +1485,15 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
   );
 
   // Week-commits mode — loads this calendar week so far (with header progress).
-  const { week: weekCommitsView, loading: weekCommitsLoading } = useWeekCommits(
+  const { week: rawWeekCommitsView, loading: weekCommitsLoading } = useWeekCommits(
     owner,
     repo,
     weekActive,
   );
+  // Null out immediately when week is off — the hook clears async (after paint)
+  // so the panel can briefly see stale week data and show the week view for a
+  // frame when switching to City / README.
+  const weekCommitsView = weekActive ? rawWeekCommitsView : null;
 
   // Open the readme by default on first visit, unless the user previously
   // closed it (persisted per-repo). Runs once, after the file list (hence the
