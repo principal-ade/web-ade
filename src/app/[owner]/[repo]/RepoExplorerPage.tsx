@@ -222,6 +222,23 @@ const WARMING_CITY_DATA: import('@principal-ai/file-city-react').CityData = {
 // as the panel's lineCounts slice; otherwise null (flat city until the user
 // runs the analysis). The VM is the sole source — no fallback to the old
 // /api/line-counts route; a failed VM run is handled separately.
+/**
+ * Strip leading slash / `GitHub/` / `owner/repo/` prefixes so building paths
+ * and GitHub PR `filename`s compare equal. Mirrors FileSourcePanel.
+ */
+function normalizeRepoRelativePath(
+  path: string,
+  owner: string,
+  repo: string,
+): string {
+  let clean = path;
+  if (clean.startsWith('/')) clean = clean.slice(1);
+  if (clean.startsWith('GitHub/')) clean = clean.slice('GitHub/'.length);
+  const repoPrefix = `${owner}/${repo}/`;
+  if (clean.startsWith(repoPrefix)) clean = clean.slice(repoPrefix.length);
+  return clean;
+}
+
 function lineCountsSlice(
   analysis: RepoAnalysisPayload | null,
 ): DataSlice<LineCountsSliceData | null> {
@@ -1431,14 +1448,21 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
   const prFiles = usePullRequestFiles(owner, repo, visiblePrNumbers, {
     enabled: isPullRequestsView,
   });
+  // Host heatmaps only paint on the idle guide city. A selected PR/commit/
+  // issue/tour/readme takes over the stage (panel ignores host layers), so
+  // skip building them — cheaper, and avoids fighting takeover modes.
+  const hostHeatmapEligible =
+    isPullRequestsView &&
+    selectedPrNumber == null &&
+    selectedCommitSha == null &&
+    selectedIssueNumber == null &&
+    selectedTourId == null &&
+    !activeReadmePath &&
+    guideMode === 'city';
   const prHeatmapLayers = useMemo<HighlightLayer[] | null>(() => {
-    if (!isPullRequestsView || prFiles.size === 0) return null;
-    // Exclude the selected PR from the aggregate — its files are lit by the
-    // panel's native PR mode instead.
+    if (!hostHeatmapEligible || prFiles.size === 0) return null;
     const aggregate = new Map<string, ChangedFile[]>(
-      [...prFiles.entries()]
-        .filter(([n]) => n !== selectedPrNumber)
-        .map(([n, files]) => [String(n), files]),
+      [...prFiles.entries()].map(([n, files]) => [String(n), files]),
     );
     const layers = buildAggregateChurnLayers(aggregate, theme.colors.primary);
     // Accent layer for the hovered PR's files.
@@ -1454,16 +1478,50 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
       }
     }
     return layers.length > 0 ? layers : null;
-  }, [isPullRequestsView, prFiles, selectedPrNumber, hoveredPrNumber, theme.colors.primary, theme.colors.accent]);
+  }, [
+    hostHeatmapEligible,
+    prFiles,
+    hoveredPrNumber,
+    theme.colors.primary,
+    theme.colors.accent,
+  ]);
+
+  // Stable handler — RightPane re-subscribes to `file:open` whenever this
+  // identity changes. An inline arrow (recreated every parent render) was
+  // tearing down the listener on every PR hover / file-list update, which
+  // can drop map clicks that fire in the same turn as a context refresh.
+  const handleMapOpenFile = useCallback(
+    (rawPath: string) => {
+      const path = normalizeRepoRelativePath(rawPath, owner, repo);
+      if (!path) return;
+      setSelectedFilePath(path);
+      setFileSide('right');
+      // In PR view, toggle file filter on click (same path the list matches).
+      if (isPullRequestsView) {
+        setSelectedFilePrFilter((prev) => {
+          const prevNorm = prev
+            ? normalizeRepoRelativePath(prev, owner, repo)
+            : null;
+          return prevNorm === path ? null : path;
+        });
+      }
+    },
+    [owner, repo, isPullRequestsView],
+  );
 
   // File-driven PR filter: when a user clicks a building in the city while in
   // PR view, narrow the PR list to only those touching the selected file.
+  // Normalize both sides — building.path and GitHub `filename` should already
+  // be repo-relative, but prefixes/slashes still show up from some trees.
   const filteredPrNumbers = useMemo<number[] | null>(() => {
     if (!selectedFilePrFilter || prFiles.size === 0) return null;
+    const want = normalizeRepoRelativePath(selectedFilePrFilter, owner, repo);
     return visiblePrNumbers.filter((pr) =>
-      prFiles.get(pr)?.some((f) => f.filename === selectedFilePrFilter),
+      prFiles.get(pr)?.some(
+        (f) => normalizeRepoRelativePath(f.filename, owner, repo) === want,
+      ),
     );
-  }, [selectedFilePrFilter, prFiles, visiblePrNumbers]);
+  }, [selectedFilePrFilter, prFiles, visiblePrNumbers, owner, repo]);
 
   // Selected PR rendered natively by FileCityGuidePanel's PR mode (header +
   // description + Files/Details tabs, changed buildings lit). Only while the
@@ -1709,8 +1767,12 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
             setLeftViewMode(mode);
             // Picking any other view dismisses the readme and week mode (it's
             // the tours-view default overlay). Doesn't touch the persisted
-            // preference, so the README button can reopen it.
+            // preference, so the README button can reopen it. Must clear
+            // `activeReadmePath` too — guideMode alone doesn't gate the
+            // readme slice, so leaving the path set keeps readme mode mounted
+            // and blocks host heatmaps (PR aggregate / activity churn).
             setGuideMode('city');
+            setActiveReadmePath(null);
             // Switching views clears the other views' selections so the map
             // returns to the idle coverage layer between them. Leaving the
             // activity view also clears any open commit.
@@ -1930,20 +1992,13 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
             setSelectedFilePath(null);
           }}
           onCloseOverlay={() => setSelectedFilePath(null)}
-          onOpenFile={(path) => {
-            setSelectedFilePath(path);
-            setFileSide('right');
-            // In PR view, toggle file filter on click.
-            if (isPullRequestsView) {
-              setSelectedFilePrFilter((prev) =>
-                prev === path ? null : path,
-              );
-            }
-          }}
+          onOpenFile={handleMapOpenFile}
           vibeCodingHighlightLayer={vibeCodingHighlightLayer}
           vibeCodingScanWindowLayer={vibeCodingScanWindowLayer}
           guideMode={guideMode}
           activeReadmePath={activeReadmePath}
+          packages={packages}
+          packagesLoading={packagesLoading}
         />
       </div>
       {/* Right-docked source viewer for the picked file. Independent of the
@@ -6490,6 +6545,9 @@ const RightPane: React.FC<{
   guideMode: 'city' | 'week' | 'readme';
   /** Non-null when a README path is loaded — gates the readme slice. */
   activeReadmePath: string | null;
+  /** Workspace package data for the panel's internal package fill layers. */
+  packages: PackageLayer[];
+  packagesLoading: boolean;
 }> = ({
   owner,
   repo,
@@ -6534,6 +6592,8 @@ const RightPane: React.FC<{
   vibeCodingScanWindowLayer,
   guideMode,
   activeReadmePath,
+  packages,
+  packagesLoading,
 }) => {
   const { theme } = useTheme();
   // Contribution-coverage highlight for the contributor picked in the
@@ -6541,17 +6601,22 @@ const RightPane: React.FC<{
   const { analysis, contributionLayers } = useRepoAnalysis();
   const events = useMemo<PanelEventBus>(() => new PanelEventBus(), []);
 
-  // The file-city map reports a building/file click by emitting a `file:open`
-  // event on this bus (see @industry-theme/file-city-panel). Route the clicked
-  // path into the source drawer.
+  // Map / list open → source drawer (+ PR file filter). Prefer a typed
+  // `file:open` subscription; keep `file:opened` for older emitters.
+  // `onOpenFile` must be stable (parent uses useCallback) so this effect
+  // doesn't unsubscribe mid-hover when PR heatmap context refreshes.
   useEffect(() => {
-    const unsub = events.onAll((e) => {
-      if (e.type === 'file:open' || e.type === 'file:opened') {
-        const path = (e.payload as { path?: string } | null)?.path;
-        if (typeof path === 'string' && path) onOpenFile(path);
-      }
-    });
-    return unsub;
+    const handle = (e: { type: string; payload?: unknown }) => {
+      if (e.type !== 'file:open' && e.type !== 'file:opened') return;
+      const path = (e.payload as { path?: string } | null)?.path;
+      if (typeof path === 'string' && path) onOpenFile(path);
+    };
+    const unsubOpen = events.on('file:open', handle);
+    const unsubOpened = events.on('file:opened', handle);
+    return () => {
+      unsubOpen();
+      unsubOpened();
+    };
   }, [events, onOpenFile]);
 
   const repository = useMemo<FileCityTrailExplorerRepository>(() => {
@@ -6858,6 +6923,19 @@ const RightPane: React.FC<{
         error: null,
         refresh: async () => {},
       },
+      // Package data for the panel's internal package-directory fill layers.
+      // The panel builds semi-transparent highlight layers from this and
+      // exposes a toggle — the host just passes the data.
+      packages: {
+        scope: 'repository' as const,
+        name: 'packages',
+        data: packages.length > 0
+          ? { packages, summary: { isMonorepo: packages.length > 1, totalPackages: packages.length, workspacePackages: packages.map(p => ({ name: p.packageData.name, path: p.packageData.path })), totalDependencies: packages.reduce((sum, p) => sum + Object.keys(p.packageData.dependencies).length, 0), totalDevDependencies: packages.reduce((sum, p) => sum + Object.keys(p.packageData.devDependencies).length, 0), availableScripts: [] } }
+          : null,
+        loading: packagesLoading,
+        error: null,
+        refresh: async () => {},
+      },
       repository: tourRepository,
     };
   }, [
@@ -6883,6 +6961,8 @@ const RightPane: React.FC<{
     weekCommitsView,
     weekCommitsLoading,
     analysis,
+    packages,
+    packagesLoading,
   ]);
 
   // A fresh FileCity3D canvas is blank until cameraReady, so branching the
@@ -6933,11 +7013,19 @@ const RightPane: React.FC<{
       className="flex-1 min-w-0 min-h-0 relative"
       style={{ background: theme.colors.background }}
     >
+      {/* Guide + trail explorers share one absolute slot. The inactive layer
+          must set `pointerEvents: 'none'` — `visibility: hidden` alone is not
+          enough once a WebGL canvas has mounted: some browsers still deliver
+          pointer events to the top canvas, so pan works (MapControls) but R3F
+          raycasts (hover/click) never hit buildings on the layer underneath.
+          z-index keeps the active layer on top for painting too. */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
           visibility: trailsExpanded ? 'hidden' : 'visible',
+          pointerEvents: trailsExpanded ? 'none' : 'auto',
+          zIndex: trailsExpanded ? 0 : 1,
         }}
       >
         <FileCityGuidePanel
@@ -6979,6 +7067,8 @@ const RightPane: React.FC<{
             position: 'absolute',
             inset: 0,
             visibility: trailsExpanded ? 'visible' : 'hidden',
+            pointerEvents: trailsExpanded ? 'auto' : 'none',
+            zIndex: trailsExpanded ? 1 : 0,
             colorScheme: 'dark',
           }}
         >
