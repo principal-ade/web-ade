@@ -1825,6 +1825,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
           onSetWeekActive={(next) => {
             setGuideMode(next ? 'week' : 'city');
             if (next) {
+              setActiveReadmePath(null);
               writeReadmeOpenPref(owner, repo, false);
               setTrailsExpanded(false);
               setSelectedFilePath(null);
@@ -1837,6 +1838,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
           }}
           onSetCityMode={() => {
             setGuideMode('city');
+            setActiveReadmePath(null);
             writeReadmeOpenPref(owner, repo, false);
           }}
           readmeActive={readmeActive}
@@ -1941,6 +1943,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
           vibeCodingHighlightLayer={vibeCodingHighlightLayer}
           vibeCodingScanWindowLayer={vibeCodingScanWindowLayer}
           guideMode={guideMode}
+          activeReadmePath={activeReadmePath}
         />
       </div>
       {/* Right-docked source viewer for the picked file. Independent of the
@@ -6485,6 +6488,8 @@ const RightPane: React.FC<{
   vibeCodingScanWindowLayer: HighlightLayer | null;
   /** Active guide mode — gates the week-commits slice on 'week'. */
   guideMode: 'city' | 'week' | 'readme';
+  /** Non-null when a README path is loaded — gates the readme slice. */
+  activeReadmePath: string | null;
 }> = ({
   owner,
   repo,
@@ -6528,6 +6533,7 @@ const RightPane: React.FC<{
   vibeCodingHighlightLayer,
   vibeCodingScanWindowLayer,
   guideMode,
+  activeReadmePath,
 }) => {
   const { theme } = useTheme();
   // Contribution-coverage highlight for the contributor picked in the
@@ -6809,6 +6815,7 @@ const RightPane: React.FC<{
         scope: 'repository' as const,
         name: 'readme',
         data:
+          !activeReadmePath ||
           selectedTour?.tour ||
           vibeCodingHighlightLayer !== null ||
           weekCommitsView
@@ -6864,6 +6871,7 @@ const RightPane: React.FC<{
     vibeCodingHighlightLayer,
     vibeCodingScanWindowLayer,
     guideMode,
+    activeReadmePath,
     commitView,
     commitViewLoading,
     issueView,
