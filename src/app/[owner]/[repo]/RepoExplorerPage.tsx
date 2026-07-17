@@ -17,8 +17,6 @@ import { useTheme } from '@principal-ade/industry-theme';
 import {
   Search,
   FileText,
-  CalendarDays,
-  AlignLeft,
   Settings,
   Check,
   X,
@@ -30,7 +28,6 @@ import {
   Star,
   GitFork,
   Play,
-  Activity,
   CircleDot,
   GitPullRequest,
   ChevronRight,
@@ -1566,6 +1563,10 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
     );
   }
 
+  const singleTour = tours.length === 1 ? (tours[0] ?? null) : null;
+  const singleTourActive = singleTour != null && singleTour.tour.id === selectedTourId;
+  const isCityMode = !weekActive && activeReadmePath == null;
+
   return (
     <RepoAnalysisProvider owner={owner} repo={repo}>
     <div
@@ -1591,6 +1592,20 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
         onVibeCodingDataChange={setVibeCodingData}
         onOpenVibeView={() => setLeftViewMode('vibe-coding')}
         filePaths={filePaths}
+        singleTour={singleTour}
+        singleTourActive={singleTourActive}
+        onToggleSingleTour={() => {
+          const nextId = singleTourActive ? null : singleTour!.tour.id;
+          setSelectedTourId(nextId);
+          if (nextId) {
+            setTrailsExpanded(false);
+            setSelectedTrailId(null);
+            setSelectedFilePath(null);
+            setActiveReadmePath(null);
+            setWeekActive(false);
+          }
+        }}
+        isCityMode={isCityMode}
       />
       <div className="flex-1 min-h-0 flex flex-col-reverse md:flex-row">
         {/* The delete control is driven by the app's own validated session:
@@ -1643,10 +1658,11 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
           leftViewMode={leftViewMode}
           onSetViewMode={(mode) => {
             setLeftViewMode(mode);
-            // Picking any other view dismisses the readme (it's the tours-view
-            // default overlay). Doesn't touch the persisted preference, so the
-            // README button can reopen it.
+            // Picking any other view dismisses the readme and week mode (it's
+            // the tours-view default overlay). Doesn't touch the persisted
+            // preference, so the README button can reopen it.
             setActiveReadmePath(null);
+            setWeekActive(false);
             // Switching views clears the other views' selections so the map
             // returns to the idle coverage layer between them. Leaving the
             // activity view also clears any open commit.
@@ -1993,6 +2009,14 @@ const Header: React.FC<{
   onOpenVibeView?: () => void;
   /** All file paths in the repo (for scan animation). */
   filePaths: string[];
+  /** The single tour in the repo (null when 0 or 2+ tours). */
+  singleTour: TourListItem | null;
+  /** Whether the single tour is currently active. */
+  singleTourActive: boolean;
+  /** Toggle the single tour on/off. */
+  onToggleSingleTour: () => void;
+  /** Whether the guide mode is city (not readme or week). */
+  isCityMode: boolean;
 }> = ({
   rootRef,
   owner,
@@ -2010,6 +2034,10 @@ const Header: React.FC<{
   onVibeCodingDataChange,
   onOpenVibeView,
   filePaths,
+  singleTour,
+  singleTourActive,
+  onToggleSingleTour,
+  isCityMode,
 }) => {
   const { theme } = useTheme();
   const { isAuthenticated } = useAuth();
@@ -2209,6 +2237,46 @@ const Header: React.FC<{
           >
             files explored
           </span>
+        </div>
+      )}
+
+      {singleTour && isCityMode && (
+        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2">
+          <button
+            type="button"
+            onClick={onToggleSingleTour}
+            className="inline-flex items-center gap-2 rounded-md transition-opacity hover:opacity-90"
+            style={{
+              padding: '6px 12px',
+              fontFamily: theme.fonts.body,
+              fontSize: theme.fontSizes[1],
+              fontWeight: theme.fontWeights.semibold,
+              cursor: 'pointer',
+              ...(singleTourActive
+                ? {
+                    background: 'transparent',
+                    color: theme.colors.text,
+                    border: `1px solid ${theme.colors.border}`,
+                  }
+                : {
+                    background: theme.colors.primary,
+                    color: '#ffffff',
+                    border: `1px solid ${theme.colors.primary}`,
+                  }),
+            }}
+          >
+            {singleTourActive ? (
+              <>
+                <X size={14} />
+                Stop tour
+              </>
+            ) : (
+              <>
+                <Play size={14} />
+                Start tour
+              </>
+            )}
+          </button>
         </div>
       )}
 
@@ -3467,14 +3535,6 @@ const TrailsEmptyState: React.FC = () => {
 // Tours arrive fully-parsed from /api/tours, so there's no lazy payload fetch.
 // ---------------------------------------------------------------------------
 
-const TOUR_SKILL_URL =
-  'https://github.com/principal-ai/file-city/blob/main/skills/file-city-tours/SKILL.md';
-
-// Shown in the Tours list when a repo has no `*.tour.json` yet — points authors
-// at the file-city-tours skill that scaffolds one.
-const TOUR_INIT_COMMAND =
-  'npx @principal-ai/file-city-cli@latest init --template onboarding';
-
 // No tours yet: instead of inline instructions, lead with a single CTA that
 // mirrors the "Start tour" button and opens a modal explaining how to author
 // and publish one. Keeps the empty pane clean while the how-to is a click away.
@@ -3495,13 +3555,6 @@ const GuideModeSwitch: React.FC<{
   const { theme } = useTheme();
   const options = [
     {
-      id: 'city' as const,
-      label: 'City',
-      title: 'Show the file city',
-      icon: <Building2 size={14} />,
-      enabled: true,
-    },
-    {
       id: 'readme' as const,
       label: 'README',
       title: readmePath ? `Open ${readmePath}` : 'No README found',
@@ -3513,6 +3566,13 @@ const GuideModeSwitch: React.FC<{
       label: 'This week',
       title: "Show commits for this week so far",
       icon: <GitCommitHorizontal size={14} />,
+      enabled: true,
+    },
+    {
+      id: 'city' as const,
+      label: 'City',
+      title: 'Show the file city',
+      icon: <Building2 size={14} />,
       enabled: true,
     },
   ];
@@ -3614,8 +3674,6 @@ const ToursEmptyState: React.FC<{
   onSetWeekActive,
   onSetCityMode,
 }) => {
-  const { theme } = useTheme();
-  const [showAuthorModal, setShowAuthorModal] = useState(false);
   const guideMode: GuideModeId = weekActive
     ? 'week'
     : readmeActive
@@ -3624,24 +3682,6 @@ const ToursEmptyState: React.FC<{
   return (
     <>
       <div className="flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={() => setShowAuthorModal(true)}
-          className="w-full inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90"
-          style={{
-            padding: '10px 14px',
-            fontFamily: theme.fonts.body,
-            fontSize: theme.fontSizes[1],
-            fontWeight: theme.fontWeights.semibold,
-            cursor: 'pointer',
-            background: 'transparent',
-            color: theme.colors.primary,
-            border: `1px solid ${theme.colors.primary}`,
-          }}
-        >
-          <Compass size={16} />
-          Create a tour
-        </button>
         {onOpenReadme && onSetWeekActive && onSetCityMode ? (
           <GuideModeSwitch
             mode={guideMode}
@@ -3652,170 +3692,7 @@ const ToursEmptyState: React.FC<{
           />
         ) : null}
       </div>
-      {showAuthorModal && (
-        <TourAuthorModal onClose={() => setShowAuthorModal(false)} />
-      )}
     </>
-  );
-};
-
-// Modal walking an author through creating + publishing a tour. Rendered to a
-// portal so it floats above the panel. Dismissed by the backdrop, the ×, or Esc.
-const TourAuthorModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const { theme } = useTheme();
-  const [copied, setCopied] = useState(false);
-  const copyCommand = async () => {
-    try {
-      await navigator.clipboard.writeText(TOUR_INIT_COMMAND);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // Clipboard can be unavailable (insecure context / denied) — no-op.
-    }
-  };
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  if (typeof document === 'undefined') return null;
-
-  const eyebrow: React.CSSProperties = {
-    fontSize: theme.fontSizes[0],
-    fontWeight: theme.fontWeights.semibold,
-    color: theme.colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-  };
-  const bodyText: React.CSSProperties = {
-    margin: 0,
-    color: theme.colors.text,
-    fontSize: theme.fontSizes[1],
-    lineHeight: 1.5,
-  };
-
-  return createPortal(
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 1000,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 16,
-        background: 'rgba(0,0,0,0.45)',
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: '100%',
-          maxWidth: 460,
-          borderRadius: 12,
-          border: `1px solid ${theme.colors.border}`,
-          background: theme.colors.surface ?? theme.colors.background,
-          boxShadow: '0 16px 48px rgba(0,0,0,0.45)',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Header */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 8,
-            padding: '14px 16px',
-            borderBottom: `1px solid ${theme.colors.border}`,
-          }}
-        >
-          <span
-            style={{
-              fontFamily: theme.fonts.body,
-              fontSize: theme.fontSizes[2],
-              fontWeight: theme.fontWeights.bold,
-              color: theme.colors.text,
-            }}
-          >
-            Author a tour
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="transition-opacity hover:opacity-80"
-            style={{
-              background: 'transparent',
-              color: theme.colors.textMuted,
-              cursor: 'pointer',
-            }}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex flex-col gap-4" style={{ padding: 16 }}>
-          <p style={bodyText}>
-            No tour has been authored for this repository yet. A tour is a guided
-            walkthrough that lives as a <code>.tour.json</code> file in the repo
-            — a sequence of steps pinned to files and lines that visitors can
-            play through.
-          </p>
-
-          <div className="flex flex-col gap-2">
-            <span style={eyebrow}>1 · Scaffold</span>
-            <p style={bodyText}>
-              Use the file-city-tours skill, or scaffold a starter from the CLI:
-            </p>
-            <button
-              type="button"
-              onClick={copyCommand}
-              title="Click to copy"
-              className="font-mono px-2 py-1.5 rounded text-left transition-opacity hover:opacity-80"
-              style={{
-                background: `color-mix(in srgb, ${theme.colors.text} 8%, transparent)`,
-                color: theme.colors.textMuted,
-                fontSize: theme.fontSizes[0],
-                wordBreak: 'break-all',
-              }}
-              aria-label={copied ? 'Command copied' : 'Copy command to clipboard'}
-            >
-              {copied ? 'Copied!' : TOUR_INIT_COMMAND}
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <span style={eyebrow}>2 · Publish</span>
-            <p style={bodyText}>
-              Once it&apos;s authored and validated, publish it with the same
-              skill — published tours show up here on the repo page for everyone.
-            </p>
-          </div>
-
-          <a
-            href={TOUR_SKILL_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-md font-medium transition-opacity hover:opacity-80"
-            style={{
-              background: `color-mix(in srgb, ${theme.colors.primary} 18%, transparent)`,
-              border: `1px solid color-mix(in srgb, ${theme.colors.primary} 50%, transparent)`,
-              color: theme.colors.primary,
-            }}
-          >
-            Open the file-city-tours skill →
-          </a>
-        </div>
-      </div>
-    </div>,
-    document.body,
   );
 };
 
@@ -3825,9 +3702,12 @@ function relativeTime(iso: string): string {
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return '';
   const secs = Math.max(0, (Date.now() - then) / 1000);
-  const DAY = 86400;
-  if (secs < DAY) return 'today';
-  const days = Math.floor(secs / DAY);
+  if (secs < 60) return 'just now';
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d ago`;
   if (days < 30) return `${Math.floor(days / 7)}w ago`;
   if (days < 365) return `${Math.floor(days / 30)}mo ago`;
@@ -4459,22 +4339,6 @@ const RepoOverview: React.FC<{
   // coverage exist" signal — we never run the sweep here.
   const { analysis } = useRepoAnalysis();
 
-  // Total blamed lines across the repo — scalar from the slim analysis GET
-  // (not a client reduce over the totalLines path map, which is no longer shipped).
-  // Falsy (null before load, or 0 when the repo has no blamed lines) means we fall
-  // back to file count.
-  const totalLines = useMemo(
-    () =>
-      analysis && typeof analysis.totalLinesGlobal === 'number'
-        ? analysis.totalLinesGlobal
-        : null,
-    [analysis],
-  );
-
-  // File count from the same analysis — shown in the About fact row when a line
-  // count isn't available (e.g. blame line totals came back empty).
-  const fileCount = analysis?.fileCount ?? null;
-
   // Eagerly resolve GitHub identity for the head of the blame map so the "Lines"
   // avatar row has faces the moment the Commits/Lines switch is visible — instead
   // of waiting for the Contributors pane to mount. Bounded to a small head (the
@@ -4753,23 +4617,12 @@ const RepoOverview: React.FC<{
           totals aren't available — on the right, once analysis loads. */}
       <div
         className="flex items-center justify-between gap-2"
-        style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+        style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[2] }}
       >
-        <span className="inline-flex items-center gap-1.5">
-          <CalendarDays size={14} />
-          Created {relativeTime(info.created_at)}
-        </span>
-        {totalLines ? (
-          <span className="inline-flex items-center gap-1.5">
-            <AlignLeft size={14} />
-            {totalLines.toLocaleString()} lines
-          </span>
-        ) : fileCount != null ? (
-          <span className="inline-flex items-center gap-1.5">
-            <FileText size={14} />
-            {fileCount.toLocaleString()} files
-          </span>
+        {info?.pushed_at ? (
+          <span>Updated {relativeTime(info.pushed_at)}</span>
         ) : null}
+        <span>Created {relativeTime(info.created_at)}</span>
       </div>
 
       {/* Contributor faces: the top contributors, each opening their profile in
@@ -5664,9 +5517,6 @@ const RepoNavCards: React.FC<{
   const { theme } = useTheme();
   const contributors = useRepoContributorsData(owner, repo);
   const contributorCount = contributors?.contributors.length ?? 0;
-  // The Activity card's subtitle carries the repo's last-push time.
-  const { info } = useRepoOverviewData(owner, repo);
-
   const cards: {
     mode: LeftViewMode;
     icon: React.ReactNode;
@@ -5674,33 +5524,6 @@ const RepoNavCards: React.FC<{
     description: string;
     count?: number;
   }[] = [
-    {
-      mode: 'activity',
-      icon: <Activity size={18} />,
-      label: 'Activity',
-      description: info?.pushed_at
-        ? `Updated ${relativeTime(info.pushed_at)}`
-        : 'Recent commits, by contributor',
-    },
-    {
-      mode: 'issues',
-      icon: <CircleDot size={18} />,
-      label: 'Issues',
-      description: 'Open issues and recent reports',
-    },
-    {
-      mode: 'pull-requests',
-      icon: <GitPullRequest size={18} />,
-      label: 'Pull requests',
-      description: 'Open PRs and what they change',
-    },
-    {
-      mode: 'contributors',
-      icon: <Users size={18} />,
-      label: 'Contributors',
-      description: 'The people who build this repo',
-      count: contributorCount || undefined,
-    },
     ...(packageCount > 0
       ? [
           {
@@ -5712,6 +5535,25 @@ const RepoNavCards: React.FC<{
           },
         ]
       : []),
+    {
+      mode: 'contributors',
+      icon: <Users size={18} />,
+      label: 'Contributors',
+      description: 'The people who build this repo',
+      count: contributorCount || undefined,
+    },
+    {
+      mode: 'pull-requests',
+      icon: <GitPullRequest size={18} />,
+      label: 'Pull requests',
+      description: 'Open PRs and what they change',
+    },
+    {
+      mode: 'issues',
+      icon: <CircleDot size={18} />,
+      label: 'Issues',
+      description: 'Open issues and recent reports',
+    },
     {
       mode: 'trails',
       icon: <Footprints size={18} />,
@@ -5856,10 +5698,6 @@ const ToursPane: React.FC<{
   // Action block under the overview description: tour CTA + guide mode switch.
   const cta = single ? (
     <SingleTourCta
-      active={single.tour.id === selectedTourId}
-      onToggle={() =>
-        onSelectTour(single.tour.id === selectedTourId ? null : single.tour.id)
-      }
       canDelete={singleCanDelete}
       onDelete={() => onRequestDelete(single)}
       readmePath={readmePath}
@@ -6206,16 +6044,12 @@ const TourAudioControl: React.FC<{
 };
 
 // ---------------------------------------------------------------------------
-// Single-tour CTA. When a repo has exactly one tour, the Tours pane shows this
-// in place of a one-row list: a prominent Start/Stop button that toggles the
-// tour in the right pane, with the author delete kept beneath it. Audio
-// controls live in the header (TourAudioControl), shown only while a tour is
-// selected.
+// Single-tour CTA. When a repo has exactly one tour, the Tours pane shows the
+// guide-mode switch and a delete link. The Start/Stop tour button lives in the
+// page header (Header component) so it's always accessible.
 // ---------------------------------------------------------------------------
 
 const SingleTourCta: React.FC<{
-  active: boolean;
-  onToggle: () => void;
   canDelete: boolean;
   onDelete: () => void;
   readmePath?: string | null;
@@ -6225,8 +6059,6 @@ const SingleTourCta: React.FC<{
   onSetWeekActive?: (next: boolean) => void;
   onSetCityMode?: () => void;
 }> = ({
-  active,
-  onToggle,
   canDelete,
   onDelete,
   readmePath = null,
@@ -6245,41 +6077,6 @@ const SingleTourCta: React.FC<{
 
   return (
     <div className="flex flex-col gap-2">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full inline-flex items-center justify-center gap-2 rounded-md transition-opacity hover:opacity-90"
-        style={{
-          padding: '10px 14px',
-          fontFamily: theme.fonts.body,
-          fontSize: theme.fontSizes[1],
-          fontWeight: theme.fontWeights.semibold,
-          cursor: 'pointer',
-          ...(active
-            ? {
-                background: 'transparent',
-                color: theme.colors.text,
-                border: `1px solid ${theme.colors.border}`,
-              }
-            : {
-                background: theme.colors.primary,
-                color: '#ffffff',
-                border: `1px solid ${theme.colors.primary}`,
-              }),
-        }}
-      >
-        {active ? (
-          <>
-            <X size={16} />
-            Stop tour
-          </>
-        ) : (
-          <>
-            <Play size={16} />
-            Start tour
-          </>
-        )}
-      </button>
       {onOpenReadme && onSetWeekActive && onSetCityMode ? (
         <GuideModeSwitch
           mode={guideMode}
