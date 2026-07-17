@@ -412,14 +412,14 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
   // Tour selection. Mutually exclusive with trail/file selection — the right
   // pane swaps to the tour panel while a tour is active.
   const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
-  // README open in the File City panel's native readme mode (markdown left +
-  // city + file-type legend). Holds the repo-relative README path; null when
-  // closed. Mutually exclusive with trail/tour/commit/file/week selection — like
-  // those, opening it clears the others so a single thing drives the right pane.
+  // Guide mode — single enum driving the right pane between the file city
+  // (idle), this-week commits, and readme views. Mutually exclusive by
+  // construction: switching modes immediately nulls the other mode's data.
+  const [guideMode, setGuideMode] = useState<'city' | 'week' | 'readme'>('city');
+  // README path shown in the panel's native readme mode. Separate from
+  // guideMode because package selection can pair a package README with the
+  // focused city (not a guide-mode switch). Gated on guideMode below.
   const [activeReadmePath, setActiveReadmePath] = useState<string | null>(null);
-  // Week-commits mode — this calendar week so far. Mutually exclusive with
-  // readme/tour/commit/issue/PR/file selection.
-  const [weekActive, setWeekActive] = useState(false);
 
   // Small-screen flag (matches the 768px breakpoint used elsewhere). On mobile
   // the legend and README don't auto-open — they'd crowd the city — so we seed
@@ -481,7 +481,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
     setSelectedFilePath(null);
     setSelectedCommitSha(null);
     setSelectedIssueNumber(null);
-    setActiveReadmePath(null);
+    setGuideMode('city');
     setTrailsExpanded(false);
     // Plain toggle lands on the contributor cards, not a stale drill-down.
     setActivityFocusContributor(null);
@@ -514,7 +514,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
       setSelectedFilePath(null);
       setSelectedCommitSha(null);
       setSelectedIssueNumber(null);
-      setActiveReadmePath(null);
+      setGuideMode('city');
       setTrailsExpanded(false);
     },
     [],
@@ -995,8 +995,10 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
     [fileTree],
   );
 
-  // Repo-root README path (if any) — also computed in the left rail, but we
-  // need it here to auto-open the readme view and to toggle it from the button.
+  // Derived from guideMode — keep the old names so downstream code compiles
+  // without touching every prop/usage.
+  const weekActive = guideMode === 'week';
+  const readmeActive = guideMode === 'readme';
   const readmePath = useMemo(() => findReadmePath(filePaths), [filePaths]);
 
   // Effective excluded file set — every file that lives under any
@@ -1519,6 +1521,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
       return; // something else is already showing
     }
     setActiveReadmePath(readmePath);
+    setGuideMode('readme');
   }, [
     readmePath,
     owner,
@@ -1648,8 +1651,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
             setTrailsExpanded(false);
             setSelectedTrailId(null);
             setSelectedFilePath(null);
-            setActiveReadmePath(null);
-            setWeekActive(false);
+            setGuideMode('city');
           }
         }}
         isCityMode={isCityMode}
@@ -1708,8 +1710,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
             // Picking any other view dismisses the readme and week mode (it's
             // the tours-view default overlay). Doesn't touch the persisted
             // preference, so the README button can reopen it.
-            setActiveReadmePath(null);
-            setWeekActive(false);
+            setGuideMode('city');
             // Switching views clears the other views' selections so the map
             // returns to the idle coverage layer between them. Leaving the
             // activity view also clears any open commit.
@@ -1772,24 +1773,21 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
           onSelectCommit={(sha) => {
             setSelectedCommitSha(sha);
             if (sha) {
-              setActiveReadmePath(null);
-              setWeekActive(false);
+              setGuideMode('city');
             }
           }}
           selectedIssueNumber={selectedIssueNumber}
           onSelectIssue={(issueNumber) => {
             setSelectedIssueNumber(issueNumber);
             if (issueNumber != null) {
-              setActiveReadmePath(null);
-              setWeekActive(false);
+              setGuideMode('city');
             }
           }}
           selectedPrNumber={selectedPrNumber}
           onSelectPr={(prNumber) => {
             setSelectedPrNumber(prNumber);
             if (prNumber != null) {
-              setActiveReadmePath(null);
-              setWeekActive(false);
+              setGuideMode('city');
             }
           }}
           commitFiles={commitFiles}
@@ -1807,14 +1805,13 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
             setFileSide('right');
             setSelectedTrailId(null);
             setSelectedTourId(null);
-            setActiveReadmePath(null);
-            setWeekActive(false);
+            setGuideMode('city');
           }}
           // Guide mode switch: City | README | This week. Opening a mode
           // collapses trails and clears competing selections so one thing
           // drives the right pane. README pref is still persisted per-repo.
           onOpenReadmeFile={(path) => {
-            setWeekActive(false);
+            setGuideMode('readme');
             setActiveReadmePath(path);
             writeReadmeOpenPref(owner, repo, true);
             setTrailsExpanded(false);
@@ -1826,9 +1823,8 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
             setSelectedPrNumber(null);
           }}
           onSetWeekActive={(next) => {
-            setWeekActive(next);
+            setGuideMode(next ? 'week' : 'city');
             if (next) {
-              setActiveReadmePath(null);
               writeReadmeOpenPref(owner, repo, false);
               setTrailsExpanded(false);
               setSelectedFilePath(null);
@@ -1840,11 +1836,10 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
             }
           }}
           onSetCityMode={() => {
-            setWeekActive(false);
-            setActiveReadmePath(null);
+            setGuideMode('city');
             writeReadmeOpenPref(owner, repo, false);
           }}
-          readmeActive={activeReadmePath != null && !weekActive}
+          readmeActive={readmeActive}
           weekActive={weekActive}
           tours={tours}
           toursLoading={toursLoading}
@@ -1857,8 +1852,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
               setTrailsExpanded(false);
               setSelectedTrailId(null);
               setSelectedFilePath(null);
-              setActiveReadmePath(null);
-              setWeekActive(false);
+              setGuideMode('city');
             }
           }}
           onRequestDeleteTour={(item) => {
@@ -1912,7 +1906,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
           onCloseCommit={() => setSelectedCommitSha(null)}
           onCloseIssue={() => setSelectedIssueNumber(null)}
           onClosePullRequest={() => setSelectedPrNumber(null)}
-          onCloseWeekCommits={() => setWeekActive(false)}
+          onCloseWeekCommits={() => setGuideMode('city')}
           activityHeatmapLayers={activityHeatmapLayers}
           prHeatmapLayers={prHeatmapLayers}
           commitView={selectedCommitView}
@@ -1946,6 +1940,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
           }}
           vibeCodingHighlightLayer={vibeCodingHighlightLayer}
           vibeCodingScanWindowLayer={vibeCodingScanWindowLayer}
+          guideMode={guideMode}
         />
       </div>
       {/* Right-docked source viewer for the picked file. Independent of the
@@ -6488,6 +6483,8 @@ const RightPane: React.FC<{
   /** Vibe-coding highlight — files containing isRecord. */
   vibeCodingHighlightLayer: HighlightLayer | null;
   vibeCodingScanWindowLayer: HighlightLayer | null;
+  /** Active guide mode — gates the week-commits slice on 'week'. */
+  guideMode: 'city' | 'week' | 'readme';
 }> = ({
   owner,
   repo,
@@ -6530,6 +6527,7 @@ const RightPane: React.FC<{
   onOpenFile,
   vibeCodingHighlightLayer,
   vibeCodingScanWindowLayer,
+  guideMode,
 }) => {
   const { theme } = useTheme();
   // Contribution-coverage highlight for the contributor picked in the
@@ -6803,11 +6801,10 @@ const RightPane: React.FC<{
       },
       // Opening the repo README flips the panel into its native readme mode
       // (markdown left + city framed top-right + file-type legend bottom-right).
-      // Gated on no tour being open: the panel ranks readme above tour, so the
-      // tour slice winning requires this to be null while a tour is active.
-      // Also suppressed while the vibe-coding highlight layer is present —
-      // whether the scan beam is sweeping or results are shown — so the user
-      // sees the full city with highlights first.
+      // Suppressed while a tour is open (panel ranks readme above tour) or
+      // during vibe-coding highlights. Also suppressed while week mode is
+      // active (mutually exclusive). Package selection can set
+      // activeReadmePath without entering guide readme mode.
       readme: {
         scope: 'repository' as const,
         name: 'readme',
@@ -6822,11 +6819,12 @@ const RightPane: React.FC<{
         refresh: async () => {},
       },
       // Week-commits mode — this calendar week so far. Suppressed while a tour
-      // is open so tour chrome wins.
+      // is open so tour chrome wins. Gated on guideMode === 'week'.
       weekCommits: {
         scope: 'repository' as const,
         name: 'weekCommits',
-        data: selectedTour?.tour ? null : weekCommitsView,
+        data:
+          guideMode !== 'week' || selectedTour?.tour ? null : weekCommitsView,
         loading: weekCommitsLoading,
         error: null,
         refresh: async () => {},
@@ -6865,6 +6863,7 @@ const RightPane: React.FC<{
     contributionLayers,
     vibeCodingHighlightLayer,
     vibeCodingScanWindowLayer,
+    guideMode,
     commitView,
     commitViewLoading,
     issueView,
