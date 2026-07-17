@@ -56,7 +56,8 @@ const PrRow: React.FC<{
   pr: GitHubPullRequestSimple;
   selected: boolean;
   onSelect: () => void;
-}> = ({ pr, selected, onSelect }) => {
+  onHover?: (hovering: boolean) => void;
+}> = ({ pr, selected, onSelect, onHover }) => {
   const { theme } = useTheme();
   // GitHub encodes a merged PR as state:'closed' + a set merged_at.
   const isMerged = Boolean(pr.merged_at);
@@ -90,9 +91,11 @@ const PrRow: React.FC<{
       onMouseEnter={(e) => {
         if (!selected)
           e.currentTarget.style.background = theme.colors.backgroundSecondary;
+        onHover?.(true);
       }}
       onMouseLeave={(e) => {
         if (!selected) e.currentTarget.style.background = 'transparent';
+        onHover?.(false);
       }}
     >
       <StateIcon
@@ -160,11 +163,19 @@ export const RepoPullRequestsPane: React.FC<{
   onSelectPr: (prNumber: number | null) => void;
   /** Close the pull-requests view and return to the tours / About rail. */
   onClose?: () => void;
-}> = ({ owner, repo, selectedPrNumber, onSelectPr, onClose }) => {
+  /** Reports the PR numbers currently visible in the list (for heatmap). */
+  onVisiblePrsChange?: (prNumbers: number[]) => void;
+  /** Hover a PR row — highlights its files on the city. */
+  onHoverPr?: (prNumber: number | null) => void;
+}> = ({ owner, repo, selectedPrNumber, onSelectPr, onClose, onVisiblePrsChange, onHoverPr }) => {
   const { theme } = useTheme();
   const [stateFilter, setStateFilter] = React.useState<PrStateFilter>('open');
   const { pullRequests, loading, loadingMore, error, hasMore, loadMore, refresh } =
     useRepoPullRequests(owner, repo, { state: stateFilter });
+
+  React.useEffect(() => {
+    onVisiblePrsChange?.(pullRequests.map((pr) => pr.number));
+  }, [pullRequests, onVisiblePrsChange]);
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -276,6 +287,7 @@ export const RepoPullRequestsPane: React.FC<{
               onSelect={() =>
                 onSelectPr(pr.number === selectedPrNumber ? null : pr.number)
               }
+              onHover={(hovering) => onHoverPr?.(hovering ? pr.number : null)}
             />
           ))}
           {hasMore && (

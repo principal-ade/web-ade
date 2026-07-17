@@ -113,6 +113,7 @@ import {
   type EmailIdentity,
 } from '@/lib/repo-analysis/contributionLayers';
 import { useCommitsChangedFiles } from '@/hooks/useCommitsChangedFiles';
+import { usePullRequestFiles } from '@/hooks/usePullRequestFiles';
 import { useCommitView } from '@/hooks/useCommitView';
 import { useIssueView } from '@/hooks/useIssueView';
 import { usePullRequestView } from '@/hooks/usePullRequestView';
@@ -1419,10 +1420,42 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
     isIssuesView ? selectedIssueNumber : null,
   );
 
+  // PR heatmap: aggregate churn across all visible PRs, plus a hover layer for
+  // the PR the user is mousing over in the list.
+  const isPullRequestsView = leftViewMode === 'pull-requests';
+  const [visiblePrNumbers, setVisiblePrNumbers] = useState<number[]>([]);
+  const [hoveredPrNumber, setHoveredPrNumber] = useState<number | null>(null);
+  const prFiles = usePullRequestFiles(owner, repo, visiblePrNumbers, {
+    enabled: isPullRequestsView,
+  });
+  const prHeatmapLayers = useMemo<HighlightLayer[] | null>(() => {
+    if (!isPullRequestsView || prFiles.size === 0) return null;
+    // Exclude the selected PR from the aggregate — its files are lit by the
+    // panel's native PR mode instead.
+    const aggregate = new Map<string, ChangedFile[]>(
+      [...prFiles.entries()]
+        .filter(([n]) => n !== selectedPrNumber)
+        .map(([n, files]) => [String(n), files]),
+    );
+    const layers = buildAggregateChurnLayers(aggregate, theme.colors.primary);
+    // Accent layer for the hovered PR's files.
+    if (hoveredPrNumber != null) {
+      const hoverFiles = prFiles.get(hoveredPrNumber);
+      if (hoverFiles) {
+        const hoverLayer = buildCommitFilesLayer(hoverFiles, {
+          id: 'pr-hover',
+          color: theme.colors.accent,
+          priority: 90,
+        });
+        if (hoverLayer) layers.push(hoverLayer);
+      }
+    }
+    return layers.length > 0 ? layers : null;
+  }, [isPullRequestsView, prFiles, selectedPrNumber, hoveredPrNumber, theme.colors.primary, theme.colors.accent]);
+
   // Selected PR rendered natively by FileCityGuidePanel's PR mode (header +
   // description + Files/Details tabs, changed buildings lit). Only while the
   // Pull requests view is active.
-  const isPullRequestsView = leftViewMode === 'pull-requests';
   const { pullRequest: selectedPrView, loading: prViewLoading } =
     usePullRequestView(
       owner,
@@ -1834,6 +1867,8 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
             setLeftViewMode('tours');
           }}
           onVibeCodingClose={() => setLeftViewMode('tours')}
+          onVisiblePrsChange={setVisiblePrNumbers}
+          onHoverPr={setHoveredPrNumber}
         />
         <RightPane
           owner={owner}
@@ -1860,6 +1895,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
           onClosePullRequest={() => setSelectedPrNumber(null)}
           onCloseWeekCommits={() => setWeekActive(false)}
           activityHeatmapLayers={activityHeatmapLayers}
+          prHeatmapLayers={prHeatmapLayers}
           commitView={selectedCommitView}
           commitViewLoading={commitViewLoading}
           issueView={selectedIssueView}
@@ -2510,6 +2546,9 @@ const TrailListPane: React.FC<{
   vibeCodingData: VibeCodingData;
   onVibeCodingClear: () => void;
   onVibeCodingClose: () => void;
+  /** PR heatmap callbacks — reported up to the page for city highlighting. */
+  onVisiblePrsChange: (prNumbers: number[]) => void;
+  onHoverPr: (prNumber: number | null) => void;
 }> = ({
   owner,
   repo,
@@ -2570,6 +2609,8 @@ const TrailListPane: React.FC<{
   vibeCodingData,
   onVibeCodingClear,
   onVibeCodingClose,
+  onVisiblePrsChange,
+  onHoverPr,
 }) => {
   const { theme } = useTheme();
   // Repo-root README (if any), surfaced as a button in the About overview.
@@ -2707,6 +2748,8 @@ const TrailListPane: React.FC<{
           selectedPrNumber={selectedPrNumber}
           onSelectPr={onSelectPr}
           onClose={() => onSetViewMode('tours')}
+          onVisiblePrsChange={onVisiblePrsChange}
+          onHoverPr={onHoverPr}
         />
       ) : leftViewMode === 'structure' ? (
         <StructurePane
@@ -6379,6 +6422,8 @@ const RightPane: React.FC<{
   /** Aggregate churn + hovered-commit heatmap, painted on the idle tour city
    *  while browsing the Activity list. */
   activityHeatmapLayers: HighlightLayer[] | null;
+  /** Aggregate churn + hovered-PR heatmap for the Pull Requests list. */
+  prHeatmapLayers: HighlightLayer[] | null;
   /** Selected commit mapped to the panel's native CommitView (null while
    *  loading or when no commit is picked). */
   commitView: CommitView | null;
@@ -6433,6 +6478,7 @@ const RightPane: React.FC<{
   onClosePullRequest,
   onCloseWeekCommits,
   activityHeatmapLayers,
+  prHeatmapLayers,
   commitView,
   commitViewLoading,
   issueView,
@@ -6761,10 +6807,11 @@ const RightPane: React.FC<{
         scope: 'repository' as const,
         name: 'highlightLayers',
         data:
-          packageHighlightLayers || activityHeatmapLayers || contributionLayers || vibeCodingHighlightLayer || vibeCodingScanWindowLayer
+          packageHighlightLayers || activityHeatmapLayers || prHeatmapLayers || contributionLayers || vibeCodingHighlightLayer || vibeCodingScanWindowLayer
             ? [
                 ...(packageHighlightLayers ?? []),
                 ...(activityHeatmapLayers ?? []),
+                ...(prHeatmapLayers ?? []),
                 ...(contributionLayers ?? []),
                 ...(vibeCodingHighlightLayer ? [vibeCodingHighlightLayer] : []),
                 ...(vibeCodingScanWindowLayer ? [vibeCodingScanWindowLayer] : []),
@@ -6782,6 +6829,7 @@ const RightPane: React.FC<{
     tourRepository,
     packageHighlightLayers,
     activityHeatmapLayers,
+    prHeatmapLayers,
     contributionLayers,
     vibeCodingHighlightLayer,
     vibeCodingScanWindowLayer,
