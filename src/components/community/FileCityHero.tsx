@@ -166,11 +166,17 @@ export function FileCityHero({
 
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
 
   // Reset load state when the selected repo (and thus image URL) changes.
+  // Also detect already-cached images so the loading overlay doesn't stick.
   useEffect(() => {
     setImageLoaded(false);
     setImageError(false);
+    const el = imgRef.current;
+    if (el && el.complete && el.naturalWidth > 0) {
+      setImageLoaded(true);
+    }
   }, [imageUrl]);
 
   const topByCommits = useMemo(() => {
@@ -358,6 +364,7 @@ export function FileCityHero({
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
         <img
+          ref={imgRef}
           key={imageUrl}
           src={imageUrl}
           alt={`${repo.fullName} file city map`}
