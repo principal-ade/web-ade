@@ -44,6 +44,7 @@ const RESERVED_OWNERS = new Set([
   'feed',
   'legacy',
   'home',
+  'file-city-tutorial',
 ]);
 
 // `/{owner}/{repo}` repo page → its agent catalog API. Like the trail/topic
@@ -132,5 +133,5 @@ export const config = {
   // `/{owner}/{repo}` repo pages. `/:owner/:repo` matches any two-segment path,
   // so the handler filters out reserved first segments (api, _next, app routes)
   // before treating it as a repo. Deeper paths are excluded.
-  matcher: ['/', '/trail/:id', '/topic/:id', '/:owner/:repo'],
+  matcher: ['/', '/file-city-tutorial', '/trail/:id', '/topic/:id', '/:owner/:repo'],
 };

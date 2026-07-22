@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     const links: HomeLinks = {
       self: `${origin}/api/home`,
       explore: `${origin}/explore`,
-      humanView: `${origin}/`,
+      humanView: `${origin}/file-city-tutorial`,
     };
 
     if (format === 'md') {
