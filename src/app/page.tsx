@@ -321,6 +321,17 @@ export default function HomePage() {
       style={{ background: theme.colors.background, color: theme.colors.text }}
     >
       <header className="sticky top-0 z-30">
+        <a
+          href="https://www.principal-ade.com/download"
+          className="absolute top-4 left-6 hidden sm:inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors hover:opacity-80"
+          style={{
+            border: `1px solid color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
+            color: theme.colors.textMuted,
+            background: `color-mix(in srgb, ${theme.colors.surface} 60%, transparent)`,
+          }}
+        >
+          Download
+        </a>
         <div className="absolute top-0 right-0 flex items-center gap-3 px-6 py-4 z-10">
           <HomeThemeToggle />
           <div className="hidden sm:flex">
