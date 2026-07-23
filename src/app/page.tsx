@@ -446,7 +446,7 @@ export default function HomePage() {
                 background: `color-mix(in srgb, ${theme.colors.surface} 60%, transparent)`,
               }}
             >
-              Explore Community Projects
+              Explore Popular Projects
             </Link>
           </div>
 
