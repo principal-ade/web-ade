@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useTheme } from '@principal-ade/industry-theme';
 import { ExternalLink, Search, Star, ChevronRight, Github } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -433,6 +434,20 @@ export default function HomePage() {
                 )}
               </div>
             )}
+          </div>
+
+          <div className="flex justify-center mt-14">
+            <Link
+              href="/community-repos"
+              className="inline-flex items-center gap-2 rounded-lg px-6 py-3 text-base font-medium transition-colors hover:opacity-80"
+              style={{
+                border: `1px solid color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
+                color: theme.colors.text,
+                background: `color-mix(in srgb, ${theme.colors.surface} 60%, transparent)`,
+              }}
+            >
+              Explore Community Projects
+            </Link>
           </div>
 
 
