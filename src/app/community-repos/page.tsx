@@ -8,7 +8,7 @@ import type { CarouselCache } from '@/components/community/CommunityCarousel';
 import { CommunityReposView } from '@/components/community/CommunityReposView';
 import { TrailBackdrop } from '@/components/home/TrailBackdrop';
 
-function Header({ repoCount }: { repoCount: number }) {
+function Header() {
   const { theme } = useTheme();
 
   return (
@@ -51,25 +51,6 @@ function Header({ repoCount }: { repoCount: number }) {
           >
             Community
           </span>
-
-          {repoCount > 0 && (
-            <span
-              className="community-repos-count"
-              style={{
-                fontSize: 13,
-                color: theme.colors.textMuted,
-                background: theme.colors.surface,
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: 8,
-                padding: '2px 10px',
-                marginLeft: 12,
-                flexShrink: 0,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {repoCount} {repoCount === 1 ? 'repo' : 'repos'}
-            </span>
-          )}
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -102,8 +83,6 @@ export default function CommunityReposPage() {
 
   useEffect(() => { fetchCarousel(); }, [fetchCarousel]);
 
-  const repoCount = carousel?.repos.length ?? 0;
-
   return (
     <div
       style={{
@@ -118,7 +97,7 @@ export default function CommunityReposPage() {
       {/* Ambient backdrop — out-of-focus city + trail fragments. */}
       <TrailBackdrop theme={theme} />
 
-      <Header repoCount={repoCount} />
+      <Header />
 
       <main
         className="community-repos-main"
@@ -135,9 +114,6 @@ export default function CommunityReposPage() {
           @media (max-width: 767px) {
             .community-repos-main {
               padding: 12px 12px 48px !important;
-            }
-            .community-repos-count {
-              display: none;
             }
           }
         `}</style>
