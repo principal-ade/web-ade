@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getGitHubToken } from '@/lib/auth/cookies';
+import { getGitHubToken } from '@/lib/auth/request';
 import { PackageLayerModule } from '@principal-ai/codebase-composition';
 import type { FileTree, FileInfo, DirectoryInfo } from '@principal-ai/repository-abstraction';
 
