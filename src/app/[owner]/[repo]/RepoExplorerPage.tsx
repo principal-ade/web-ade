@@ -1549,6 +1549,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
     owner,
     repo,
     weekActive,
+    fileTree,
   );
   // Null out immediately when week is off — the hook clears async (after paint)
   // so the panel can briefly see stale week data and show the week view for a

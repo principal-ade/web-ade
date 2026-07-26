@@ -5,6 +5,7 @@ import type {
   WeekCommitsView,
   WeekStartsOn,
 } from '@industry-theme/file-city-panel';
+import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { GitHubCommit, GitHubCommitDetailResponse } from '@/types/api';
 
 const WEEK_STARTS_ON: WeekStartsOn = 1; // Monday
@@ -84,6 +85,46 @@ async function fetchCommitDetail(
 }
 
 /**
+ * Derive the repo's file state at the start of the week by "undoing" this
+ * week's commits from the current file tree.
+ *
+ * - Files added during the week didn't exist at the start → removed
+ * - Files removed during the week existed at the start → added back
+ * - Renamed files: previous path existed at the start
+ * - Everything else in the current tree existed at the start → unchanged
+ */
+/** @internal exported for testing */
+export function deriveBaseFiles(
+  fileTree: FileTree,
+  weekCommits: CommitView[],
+): CommitFileChange[] {
+  const basePaths = new Set(fileTree.allFiles.map((f) => f.path));
+
+  // Walk commits (any order — we only care about adds/removes/renames)
+  for (const commit of weekCommits) {
+    for (const f of commit.files) {
+      if (f.status === 'added') {
+        // File was added this week — didn't exist at start
+        basePaths.delete(f.path);
+      } else if (f.status === 'removed') {
+        // File was removed this week — existed at start
+        basePaths.add(f.path);
+      } else if (f.status === 'renamed' && f.previousPath) {
+        // File was renamed — old path existed at start
+        basePaths.delete(f.path);
+        basePaths.add(f.previousPath);
+      }
+      // modified/changed/copied: file existed at start, keep as-is
+    }
+  }
+
+  return Array.from(basePaths, (path) => ({
+    path,
+    status: 'unchanged' as const,
+  }));
+}
+
+/**
  * Loads this calendar week's commits (so far) into a {@link WeekCommitsView}
  * for FileCityGuidePanel week mode.
  *
@@ -92,11 +133,16 @@ async function fetchCommitDetail(
  * with a detail call (for `files[]`). Capped at {@link MAX_COMMITS}.
  *
  * Pass `enabled: false` to idle (week = null).
+ *
+ * When `fileTree` is provided, derives `baseFiles` (the repo's file state at
+ * the start of the week) so the playback timeline can show the full starting
+ * city before any of this week's commits.
  */
 export function useWeekCommits(
   owner: string,
   repo: string,
   enabled: boolean,
+  fileTree?: FileTree | null,
 ): Result {
   const [state, setState] = useState<Result>({
     week: null,
@@ -179,6 +225,10 @@ export function useWeekCommits(
             weekStartsOn: WEEK_STARTS_ON,
             commits,
             loading: false,
+            baseFiles:
+              fileTree && commits.length > 0
+                ? deriveBaseFiles(fileTree, commits)
+                : undefined,
           },
           loading: false,
           error: null,
@@ -193,7 +243,7 @@ export function useWeekCommits(
         });
       }
     })();
-  }, [owner, repo, enabled]);
+  }, [owner, repo, enabled, fileTree]);
 
   return state;
 }
