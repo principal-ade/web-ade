@@ -329,8 +329,15 @@ function buildFileTree(
   owner: string,
   name: string
 ): FileTree {
+  // Strip external package reference directories (e.g. .repos/) so
+  // PackageLayerModule doesn't pick up their manifests as repo packages.
+  const EXCLUDED_PREFIXES = ['.repos/'];
+  const filteredTree = tree.tree.filter(
+    (item) => !EXCLUDED_PREFIXES.some((p) => item.path.startsWith(p)),
+  );
+
   // Extract all files (blobs)
-  const allFiles: FileInfo[] = tree.tree
+  const allFiles: FileInfo[] = filteredTree
     .filter((item) => item.type === 'blob')
     .map((item) => {
       const pathParts = item.path.split('/');
@@ -352,7 +359,7 @@ function buildFileTree(
   const dirMap = new Map<string, DirectoryInfo>();
 
   // Create directories from tree items
-  tree.tree
+  filteredTree
     .filter((item) => item.type === 'tree')
     .forEach((item) => {
       const pathParts = item.path.split('/');
