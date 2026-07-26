@@ -2000,6 +2000,8 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
           activeReadmePath={activeReadmePath}
           packages={packages}
           packagesLoading={packagesLoading}
+          leftViewMode={leftViewMode}
+          onSetViewMode={setLeftViewMode}
         />
       </div>
       {/* Right-docked source viewer for the picked file. Independent of the
@@ -6549,6 +6551,9 @@ const RightPane: React.FC<{
   /** Workspace package data for the panel's internal package fill layers. */
   packages: PackageLayer[];
   packagesLoading: boolean;
+  /** Current left-rail view mode — drives the packageGraph slice. */
+  leftViewMode: LeftViewMode;
+  onSetViewMode: (mode: LeftViewMode) => void;
 }> = ({
   owner,
   repo,
@@ -6595,6 +6600,8 @@ const RightPane: React.FC<{
   activeReadmePath,
   packages,
   packagesLoading,
+  leftViewMode,
+  onSetViewMode,
 }) => {
   const { theme } = useTheme();
   // Contribution-coverage highlight for the contributor picked in the
@@ -6789,6 +6796,8 @@ const RightPane: React.FC<{
       closePullRequest: () => onClosePullRequest(),
       // Week mode's ✕ returns to the idle city.
       closeWeekCommits: () => onCloseWeekCommits(),
+      // Package graph mode's ✕ returns to the idle city.
+      closePackageGraph: () => onSetViewMode('tours'),
     }),
     [
       onOpenFile,
@@ -6796,6 +6805,7 @@ const RightPane: React.FC<{
       onCloseIssue,
       onClosePullRequest,
       onCloseWeekCommits,
+      onSetViewMode,
     ],
   );
   // Coordinates the TTS backend needs to look up this tour's cached audio.
@@ -6937,6 +6947,18 @@ const RightPane: React.FC<{
         error: null,
         refresh: async () => {},
       },
+      // Package-graph mode: the React Flow dependency graph overlay that
+      // takes over the canvas when the Structure nav card is active.
+      packageGraph: {
+        scope: 'repository' as const,
+        name: 'packageGraph',
+        data: leftViewMode === 'structure' && packages.length > 0
+          ? { packages: { packages, summary: { isMonorepo: packages.length > 1, totalPackages: packages.length, workspacePackages: packages.map(p => ({ name: p.packageData.name, path: p.packageData.path })), totalDependencies: packages.reduce((sum, p) => sum + Object.keys(p.packageData.dependencies).length, 0), totalDevDependencies: packages.reduce((sum, p) => sum + Object.keys(p.packageData.devDependencies).length, 0), availableScripts: [] } } }
+          : null,
+        loading: packagesLoading,
+        error: null,
+        refresh: async () => {},
+      },
       repository: tourRepository,
     };
   }, [
@@ -6964,6 +6986,7 @@ const RightPane: React.FC<{
     analysis,
     packages,
     packagesLoading,
+    leftViewMode,
   ]);
 
   // A fresh FileCity3D canvas is blank until cameraReady, so branching the
