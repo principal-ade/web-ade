@@ -10,7 +10,7 @@ import type { GitHubCommit, GitHubCommitDetailResponse } from '@/types/api';
 
 const WEEK_STARTS_ON: WeekStartsOn = 1; // Monday
 /** Cap detail fetches so a hyperactive repo can't fire hundreds of calls. */
-const MAX_COMMITS = 50;
+const MAX_COMMITS = 100;
 const DETAIL_CONCURRENCY = 4;
 
 interface Result {
