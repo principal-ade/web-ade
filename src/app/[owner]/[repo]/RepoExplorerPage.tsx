@@ -73,6 +73,7 @@ import {
   type PackageLayer,
 } from '@industry-theme/repository-composition-panels';
 import { addRecentRepository } from '@industry-theme/github-panels';
+import { IndustryMarkdownSlide } from 'themed-markdown';
 import type { IntroductionTour } from '@principal-ai/file-city-builder';
 import type { TourAudioStatus, TourListItem } from '@/lib/tours/types';
 import { trpc } from '@/lib/trpc/client';
@@ -474,6 +475,18 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
   );
   const [selectedPackagePath, setSelectedPackagePath] = useState<string | null>(
     null,
+  );
+  // Package selected in the file city guide's package graph — drives the
+  // StructurePane to show the package's README instead of the package list.
+  const [graphSelectedPackage, setGraphSelectedPackage] = useState<{
+    packagePath: string;
+    packageName: string;
+  } | null>(null);
+  const onPackageGraphSelect = useCallback(
+    (pkg: { packagePath: string; packageName: string } | null) => {
+      setGraphSelectedPackage(pkg);
+    },
+    [],
   );
   const packageDirFromLayer = useCallback((pkg: PackageLayer | null) => {
     if (!pkg || pkg.packageData.isMonorepoRoot) return null;
@@ -1774,6 +1787,8 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
             // and blocks host heatmaps (PR aggregate / activity churn).
             setGuideMode('city');
             setActiveReadmePath(null);
+            // Clear the file city guide graph selection when leaving structure.
+            if (mode !== 'structure') setGraphSelectedPackage(null);
             // Switching views clears the other views' selections so the map
             // returns to the idle coverage layer between them. Leaving the
             // activity view also clears any open commit.
@@ -1947,6 +1962,8 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
           onHoverPr={setHoveredPrNumber}
           filteredPrNumbers={filteredPrNumbers}
           onClearFileFilter={() => setSelectedFilePrFilter(null)}
+          graphSelectedPackage={graphSelectedPackage}
+          onClearGraphSelection={() => setGraphSelectedPackage(null)}
         />
         <RightPane
           owner={owner}
@@ -2002,6 +2019,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
           packagesLoading={packagesLoading}
           leftViewMode={leftViewMode}
           onSetViewMode={setLeftViewMode}
+          onPackageGraphSelect={onPackageGraphSelect}
         />
       </div>
       {/* Right-docked source viewer for the picked file. Independent of the
@@ -2633,6 +2651,10 @@ const TrailListPane: React.FC<{
   /** File-driven PR filter — when a building is clicked in PR view, narrow the list. */
   filteredPrNumbers: number[] | null;
   onClearFileFilter: () => void;
+  /** Package selected in the file city guide's package graph — drives the
+   *  StructurePane to show the package's README. */
+  graphSelectedPackage: { packagePath: string; packageName: string } | null;
+  onClearGraphSelection: () => void;
 }> = ({
   owner,
   repo,
@@ -2697,6 +2719,8 @@ const TrailListPane: React.FC<{
   onHoverPr,
   filteredPrNumbers,
   onClearFileFilter,
+  graphSelectedPackage,
+  onClearGraphSelection,
 }) => {
   const { theme } = useTheme();
   // Repo-root README (if any), surfaced as a button in the About overview.
@@ -2843,6 +2867,11 @@ const TrailListPane: React.FC<{
         <StructurePane
           packages={packages}
           packagesLoading={packagesLoading}
+          filePaths={filePaths}
+          owner={owner}
+          repo={repo}
+          graphSelectedPackage={graphSelectedPackage}
+          onClearGraphSelection={onClearGraphSelection}
           onReadFile={onReadFile}
           onPackageHover={onPackageHover}
           onPackageSelect={onPackageSelect}
@@ -4967,6 +4996,11 @@ const RepoOverview: React.FC<{
 const StructurePane: React.FC<{
   packages: PackageLayer[];
   packagesLoading: boolean;
+  filePaths: string[];
+  owner: string;
+  repo: string;
+  graphSelectedPackage: { packagePath: string; packageName: string } | null;
+  onClearGraphSelection: () => void;
   onReadFile: (filePath: string) => Promise<string>;
   onPackageHover: (pkg: PackageLayer | null) => void;
   onPackageSelect: (pkg: PackageLayer | null) => void;
@@ -4974,12 +5008,118 @@ const StructurePane: React.FC<{
 }> = ({
   packages,
   packagesLoading,
+  filePaths,
+  owner,
+  repo,
+  graphSelectedPackage,
+  onClearGraphSelection,
   onReadFile,
   onPackageHover,
   onPackageSelect,
   onClose,
 }) => {
   const { theme } = useTheme();
+  const [readmeContent, setReadmeContent] = useState<string | null>(null);
+  const [readmeLoading, setReadmeLoading] = useState(false);
+  const [readmeError, setReadmeError] = useState<string | null>(null);
+
+  // Find README path for the graph-selected package
+  const readmePath = useMemo(() => {
+    if (!graphSelectedPackage) return null;
+    return findReadmePath(filePaths, graphSelectedPackage.packagePath);
+  }, [graphSelectedPackage, filePaths]);
+
+  // Fetch README content when graph-selected package changes
+  useEffect(() => {
+    if (!readmePath) {
+      setReadmeContent(null);
+      setReadmeError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setReadmeLoading(true);
+    setReadmeError(null);
+
+    onReadFile(readmePath)
+      .then((content) => {
+        if (!cancelled) {
+          setReadmeContent(content);
+          setReadmeLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setReadmeError(err instanceof Error ? err.message : 'Failed to load README');
+          setReadmeLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [readmePath, onReadFile]);
+
+  // Show README for the package selected in the file city guide graph
+  if (graphSelectedPackage) {
+    const basePath = readmePath?.includes('/')
+      ? readmePath.slice(0, readmePath.lastIndexOf('/'))
+      : '';
+
+    return (
+      <div className="flex-1 min-h-0 flex flex-col">
+        <RailPaneHeader
+          icon={<FileText size={14} />}
+          label={graphSelectedPackage.packageName || graphSelectedPackage.packagePath}
+          onClose={onClearGraphSelection}
+          closeAsBack
+        />
+        {readmeLoading ? (
+          <div
+            className="flex-1 min-h-0 flex items-center justify-center px-6 text-center"
+            style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+          >
+            Loading README...
+          </div>
+        ) : readmeError ? (
+          <div
+            className="flex-1 min-h-0 flex items-center justify-center px-6 text-center"
+            style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+          >
+            {readmeError}
+          </div>
+        ) : readmeContent ? (
+          <div className="flex-1 min-h-0 overflow-auto p-4">
+            <IndustryMarkdownSlide
+              content={readmeContent}
+              slideIdPrefix={`pkg-readme-${readmePath}`}
+              slideIndex={0}
+              theme={theme}
+              transparentBackground
+              disableScroll
+              containerWidth={0}
+              disableBasePadding
+              fontSizeScale={1}
+              repositoryInfo={{
+                owner,
+                repo,
+                basePath,
+              }}
+            />
+          </div>
+        ) : (
+          <div
+            className="flex-1 min-h-0 flex items-center justify-center px-6 text-center"
+            style={{ color: theme.colors.textMuted, fontSize: theme.fontSizes[1] }}
+          >
+            No README found for this package.
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Default: show package list
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       <RailPaneHeader
@@ -6554,6 +6694,8 @@ const RightPane: React.FC<{
   /** Current left-rail view mode — drives the packageGraph slice. */
   leftViewMode: LeftViewMode;
   onSetViewMode: (mode: LeftViewMode) => void;
+  /** Package selected in the file city guide's package graph. */
+  onPackageGraphSelect: (pkg: { packagePath: string; packageName: string } | null) => void;
 }> = ({
   owner,
   repo,
@@ -6602,6 +6744,7 @@ const RightPane: React.FC<{
   packagesLoading,
   leftViewMode,
   onSetViewMode,
+  onPackageGraphSelect,
 }) => {
   const { theme } = useTheme();
   // Contribution-coverage highlight for the contributor picked in the
@@ -6626,6 +6769,16 @@ const RightPane: React.FC<{
       unsubOpened();
     };
   }, [events, onOpenFile]);
+
+  // Listen for package selection from the file city guide's package graph
+  // and forward to the parent so it can show the README in the left panel.
+  useEffect(() => {
+    const unsub = events.on('package:select', (e) => {
+      const payload = e.payload as { packagePath?: string; packageName?: string } | null;
+      onPackageGraphSelect(payload?.packagePath ? { packagePath: payload.packagePath, packageName: payload.packageName ?? '' } : null);
+    });
+    return unsub;
+  }, [events, onPackageGraphSelect]);
 
   const repository = useMemo<FileCityTrailExplorerRepository>(() => {
     // Multi-repo trails filter markers by repo id. Mirror the payload's
