@@ -323,7 +323,7 @@ export default function HomePage() {
     >
       <header className="sticky top-0 z-30">
         <a
-          href="https://www.principal-ade.com/download"
+          href="https://principal-ade.com/download"
           className="absolute top-4 left-6 hidden sm:inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors hover:opacity-80"
           style={{
             border: `1px solid color-mix(in srgb, ${theme.colors.border} 70%, transparent)`,
