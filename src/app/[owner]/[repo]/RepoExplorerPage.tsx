@@ -351,32 +351,14 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
 
   // Folder include/exclude config — directory paths the user has gated
   // out of the coverage / debt calculation. Persisted to localStorage
-  // per (owner, repo). Paths are stored *with* a trailing slash so they
-  // can be matched against file paths via prefix.
-  const excludedDirsStorageKey = `principal:trail-excluded-dirs:${owner}/${repo}`;
+  // Folders excluded from the city + coverage stats. Hard-coded defaults for
+  // now — `.repos/` and `repos/` are external package reference dirs that
+  // would otherwise show up as noise in the File City guide panel. In-memory
+  // only; the folder-kebab toggle can still add/remove entries for the
+  // current session.
   const [excludedDirs, setExcludedDirs] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const raw = window.localStorage.getItem(excludedDirsStorageKey);
-      if (!raw) return [];
-      const parsed: unknown = JSON.parse(raw);
-      return Array.isArray(parsed)
-        ? parsed.filter((p): p is string => typeof p === 'string')
-        : [];
-    } catch {
-      return [];
-    }
+    return ['.repos/', 'repos/'];
   });
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(
-        excludedDirsStorageKey,
-        JSON.stringify(excludedDirs),
-      );
-    } catch {
-      // localStorage may be unavailable (private mode, quota) — best-effort.
-    }
-  }, [excludedDirsStorageKey, excludedDirs]);
 
   // When true, the left rail swaps the trail list for a directory tree
   // the user can use to gate folders in / out of the coverage calc.
@@ -1969,6 +1951,7 @@ export function RepoExplorerPage({ owner, repo }: RepoExplorerPageProps) {
           owner={owner}
           repo={repo}
           fileTree={configMode ? fileTree : filteredFileTree}
+          filteredFileTree={filteredFileTree}
           treeError={treeError}
           selectedPayload={selectedPayload}
           selectedTour={selectedTour}
@@ -6617,6 +6600,11 @@ const RightPane: React.FC<{
   owner: string;
   repo: string;
   fileTree: FileTree | null;
+  /** `fileTree` with excluded folders (.repos/, repos/, user-gated) stripped.
+   *  Same identity as `fileTree` when nothing is excluded. Passed separately so
+   *  the idle + tour city contexts feed the filtered tree to the panel, not the
+   *  raw one. */
+  filteredFileTree: FileTree | null;
   treeError: string | null;
   selectedPayload: TrailPayload | null;
   selectedTour: TourListItem | null;
@@ -6700,6 +6688,7 @@ const RightPane: React.FC<{
   owner,
   repo,
   fileTree,
+  filteredFileTree,
   treeError,
   selectedPayload,
   selectedTour,
@@ -6862,8 +6851,10 @@ const RightPane: React.FC<{
       name: 'fileTree',
       // Cast: the panel's typing requires a non-null FileTree here, but
       // we may not have one yet. The outer guard prevents render until
-      // it loads, so this cast is safe at runtime.
-      data: (fileTree ?? (null as unknown as FileTree)),
+      // it loads, so this cast is safe at runtime. Use the filtered tree
+      // so excluded folders (.repos/, repos/, user-gated) don't show up
+      // in the idle city either.
+      data: (filteredFileTree ?? (null as unknown as FileTree)),
       loading: fileTree === null,
       error: null,
       refresh: async () => {},
@@ -6907,6 +6898,7 @@ const RightPane: React.FC<{
     };
   }, [
     fileTree,
+    filteredFileTree,
     selectedPayload,
     idleHighlightLayers,
     contributionLayers,
@@ -6985,7 +6977,7 @@ const RightPane: React.FC<{
     const fileTreeSlice: DataSlice<FileTree> = {
       scope: 'repository',
       name: 'fileTree',
-      data: fileTree ?? (null as unknown as FileTree),
+      data: filteredFileTree ?? (null as unknown as FileTree),
       loading: fileTree === null,
       error: null,
       refresh: async () => {},
@@ -7116,6 +7108,7 @@ const RightPane: React.FC<{
     };
   }, [
     fileTree,
+    filteredFileTree,
     selectedTour,
     tourRepository,
     packageHighlightLayers,
